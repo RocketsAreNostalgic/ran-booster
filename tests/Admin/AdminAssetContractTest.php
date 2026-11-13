@@ -137,8 +137,8 @@ final class AdminAssetContractTest extends TestCase {
 	 * Owner-approved exception (#869): WordPress sizes plugin cards from the
 	 * viewport, which cannot follow a card's width in this grid. The overrides
 	 * are limited to the plugin-card layout selectors below, use logical
-	 * properties and one card-width @container rule. Nothing else of the core
-	 * card is restyled.
+	 * properties; the wide layout sits behind one card-width @container rule.
+	 * No other core card layout part is overridden.
 	 */
 	public function test_extensions_card_layout_follows_card_width_and_stays_within_the_plugin_card_overrides(): void {
 		$extensions = $this->asset( 'ran-booster/55-extensions.css' );
@@ -152,28 +152,71 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '__tabs', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card.plugin-card', $extensions );
 
-		// The card is an inline-size container and one @container rule decides the layout.
+		// The card is an inline-size container; one @container rule holds the wide layout.
 		self::assertSame( 1, preg_match_all( '/@container /', $extensions ) );
 		self::assertMatchesRegularExpression( '/__grid > \.plugin-card \{[^}]*container: ran-booster-extension-card \/ inline-size;/', $extensions );
 		self::assertStringContainsString( '@container ran-booster-extension-card (min-inline-size: 512px)', $extensions );
 
 		// Viewport media queries may not touch the plugin-card layout.
 		preg_match_all( '/@media [^{]+\{(?:[^{}]*\{[^}]*\})*[^{}]*\}/', $extensions, $media_blocks );
+		self::assertNotEmpty( $media_blocks[0] );
 		foreach ( $media_blocks[0] as $media_block ) {
 			self::assertDoesNotMatchRegularExpression( '/\.plugin-card|\.action-links|\.plugin-action-buttons/', $media_block );
 		}
 
 		// Only these core plugin-card parts are overridden, and only with logical properties.
-		$layout_start = (int) strpos( $extensions, '.plugin-card .name,' );
-		$card_layout  = substr( $extensions, $layout_start, (int) strpos( $extensions, '/* Keep native plugin-card spacing' ) - $layout_start );
-		self::assertNotSame( '', $card_layout );
-		$card_layout = preg_replace( '#/\*.*?\*/#s', '', $card_layout ) ?? '';
-		self::assertDoesNotMatchRegularExpression( '/(?:^|[\s;{])(?:left|right|top|bottom|margin-left|margin-right|padding-left|padding-right|float:\s*(?:left|right)|text-align:\s*(?:left|right))\b/m', $card_layout );
-		foreach ( array( '.plugin-card .name', '.plugin-card .desc > p', '.plugin-card h3', '.plugin-card .action-links', '.plugin-action-buttons', '.plugin-card-bottom' ) as $part ) {
-			self::assertStringContainsString( $part, $card_layout );
+		$marker = strpos( $extensions, ' * direction.' );
+		$end    = strpos( $extensions, '/* Keep native plugin-card spacing' );
+		self::assertNotFalse( $marker );
+		self::assertNotFalse( $end );
+		$layout_start = (int) strpos( $extensions, '*/', $marker ) + 2;
+		$card_layout  = preg_replace( '#/\*.*?\*/#s', '', substr( $extensions, $layout_start, $end - $layout_start ) ) ?? '';
+		self::assertNotSame( '', trim( $card_layout ) );
+		self::assertDoesNotMatchRegularExpression( '/(?:^|[;{\s])(?:left|right|top|bottom|(?:margin|padding)-(?:left|right|top|bottom)|(?:min-|max-)?(?:width|height)|border-(?:left|right|top|bottom)[\w-]*)\s*:/', $card_layout );
+		self::assertDoesNotMatchRegularExpression( '/(?:float|text-align)\s*:\s*(?:left|right)\b/', $card_layout );
+
+		$allowed = array(
+			'.plugin-card .name',
+			'.plugin-card .desc > p',
+			'.plugin-card h3',
+			'.plugin-card .action-links',
+			'.plugin-card .plugin-action-buttons',
+			'.plugin-card .plugin-action-buttons li',
+			'.plugin-card .plugin-action-buttons li .button',
+			'.plugin-card .plugin-action-buttons br',
+			'.plugin-card-bottom',
+			'.plugin-card-bottom :is(.column-rating, .column-compatibility)',
+			'.plugin-card-bottom .column-compatibility',
+		);
+		self::assertGreaterThan( 0, preg_match_all( '/([^{}]+)\{/', $card_layout, $selector_groups ) );
+		$seen = array();
+		foreach ( $selector_groups[1] as $group ) {
+			$group = trim( (string) preg_replace( '/\s+/', ' ', $group ) );
+			if ( str_starts_with( $group, '@container ' ) ) {
+				continue;
+			}
+			foreach ( explode( ',', $group ) as $selector ) {
+				$selector = trim( $selector );
+				if ( str_contains( $selector, ':is(' ) ) {
+					$selector = $group;
+				}
+				$selector = (string) preg_replace( '/^\.ran-booster-admin \.ran-booster-extensions__grid /', '', $selector );
+				self::assertContains( $selector, $allowed, 'Unexpected Extensions plugin-card override selector: ' . $selector );
+				$seen[ $selector ] = true;
+				if ( str_contains( $group, ':is(' ) ) {
+					break;
+				}
+			}
 		}
-		self::assertStringNotContainsString( '.plugin-card-top {', $card_layout );
-		self::assertStringNotContainsString( '.plugin-icon', $card_layout );
+		foreach ( $allowed as $selector ) {
+			self::assertArrayHasKey( $selector, $seen, 'Missing Extensions plugin-card override: ' . $selector );
+		}
+
+		// Nothing else of the core card's layout parts is overridden elsewhere in the file.
+		$outside = str_replace( $card_layout, '', (string) preg_replace( '#/\*.*?\*/#s', '', $extensions ) );
+		self::assertStringNotContainsString( '.action-links', $outside );
+		self::assertStringNotContainsString( '.plugin-action-buttons {', $outside );
+		self::assertStringNotContainsString( '.plugin-card-bottom', $outside );
 	}
 
 	/**

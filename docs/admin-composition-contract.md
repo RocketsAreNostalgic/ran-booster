@@ -995,12 +995,14 @@ move to the inline-end column once the card is 512px wide.
 Owner-approved exception to "do not reimplement WordPress plugin-card layout":
 WordPress decides plugin-card layout from viewport media queries, which cannot
 follow a card's width in this grid, so card-width layout must override them.
-The override is limited to `.name`, `.desc > p`, `h3`, `.action-links`,
-`.plugin-action-buttons` (its items and break), and the `.plugin-card-bottom`
-columns, uses logical properties only, and sits behind one `@container` rule.
-Nothing else of the core card is restyled, no viewport media query may touch
-the plugin-card layout, and the badge, details-dialog and `#TB_` rules stay as
-they were.
+The layout overrides are limited to `.name`, `.desc > p`, `h3`,
+`.action-links`, `.plugin-action-buttons` (with its `li`, `.button` and `br`)
+and the `.plugin-card-bottom` flex row with its `.column-rating` and
+`.column-compatibility` items. They use logical properties only. The stacked
+layout is the unconditional base and the wide layout sits behind one
+`@container` rule. No viewport media query may touch the plugin-card layout.
+Card chrome that is not layout (the icon radius, the top inset, the link
+pointer target) and the badge, details-dialog and `#TB_` rules are unchanged.
 
 ### Extension details dialog
 

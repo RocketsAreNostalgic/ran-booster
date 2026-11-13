@@ -1387,3 +1387,30 @@
 .ran-booster-admin .ran-booster-repository-detail td > a:only-child {
 	min-block-size: var(--ran-booster-space-24);
 }
+
+.ran-booster-feedback__item {
+	margin-block: var(--wpds-dimension-gap-sm);
+	padding: var(--wpds-dimension-padding-md);
+	border: 1px solid var(--wpds-color-stroke-surface-neutral);
+	border-radius: var(--ran-booster-radius-card);
+	background: var(--wpds-color-background-surface-neutral-weak);
+	color: var(--wpds-color-foreground-content-neutral);
+}
+
+.ran-booster-feedback__item[data-intent="success"] {
+	border-color: var(--wpds-color-stroke-surface-success);
+	background: var(--wpds-color-background-surface-success-weak);
+	color: var(--wpds-color-foreground-content-success);
+}
+
+.ran-booster-feedback__item[data-intent="error"] {
+	border-color: var(--wpds-color-stroke-surface-error);
+	background: var(--wpds-color-background-surface-error-weak);
+	color: var(--wpds-color-foreground-content-error);
+}
+
+.ran-booster-feedback__item[data-intent="warning"] {
+	border-color: var(--wpds-color-stroke-surface-warning);
+	background: var(--wpds-color-background-surface-warning-weak);
+	color: var(--wpds-color-foreground-content-warning);
+}

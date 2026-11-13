@@ -2945,6 +2945,134 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'release_refreshed', $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code() );
 	}
 
+	/** @return array<string, array{DeploymentPolicy, ?array<string, mixed>, string, string, bool}> */
+	public static function read_only_check_answers(): array {
+		$report = static fn ( string $status, string $reason, ?string $candidate = null ): array => array(
+			'status'                    => $status,
+			'reason'                    => $reason,
+			'policy'                    => 'disabled',
+			'relationship'              => null === $candidate ? null : 'newer',
+			'installed_version'         => '1.0.0',
+			'candidate_version'         => $candidate,
+			'candidate_validation_code' => null,
+			'offered'                   => false,
+		);
+
+		return array(
+			'newer release'          => array( DeploymentPolicy::DISABLED, $report( 'succeeded', 'newer_release_observed', '2.0.0' ), 'refresh_newer_while_off', 'newer_release_observed', true ),
+			'no newer release'       => array( DeploymentPolicy::DISABLED, $report( 'succeeded', 'no_newer_candidate' ), 'refresh_current_while_off', 'no_newer_candidate', true ),
+			'no candidates'          => array( DeploymentPolicy::DISABLED, $report( 'succeeded', 'no_candidates' ), 'refresh_current_while_off', 'no_candidates', true ),
+			'rejected'               => array( DeploymentPolicy::DISABLED, $report( 'rejected', 'candidate_rejected' ), 'refresh_rejected', 'candidate_rejected', true ),
+			'failed'                 => array( DeploymentPolicy::DISABLED, $report( 'failed', 'release_list_failed' ), 'refresh_check_failed', 'release_list_failed', true ),
+			'busy'                   => array( DeploymentPolicy::DISABLED, $report( 'failed', 'runtime_busy' ), 'refresh_check_failed', 'runtime_busy', true ),
+			'forced off'             => array( DeploymentPolicy::DISABLED, $report( 'skipped', 'policy_forced_off' ), 'refresh_skipped_forced_off', 'policy_forced_off', true ),
+			'older runtime'          => array( DeploymentPolicy::DISABLED, null, 'release_refreshed', '', false ),
+			'offer claimed'          => array( DeploymentPolicy::DISABLED, array_replace( $report( 'succeeded', 'newer_release_observed', '2.0.0' ), array( 'offered' => true ) ), 'release_refreshed', '', false ),
+			'manual is not asked'    => array( DeploymentPolicy::MANUAL, $report( 'succeeded', 'newer_release_observed', '2.0.0' ), 'release_refreshed', '', false ),
+			'automatic is not asked' => array( DeploymentPolicy::AUTOMATIC, $report( 'succeeded', 'newer_release_observed', '2.0.0' ), 'release_refreshed', '', false ),
+		);
+	}
+
+	/**
+	 * @param array<string, mixed>|null $report What the updater's read-only check filter answered.
+	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'read_only_check_answers' )]
+	public function test_check_releases_asks_the_read_only_check_only_while_updates_are_off( DeploymentPolicy $policy, ?array $report, string $code, string $check_reason, bool $answered ): void {
+		$package                                     = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', $policy );
+		$connection                                  = new \RAN\Tests\Activity\ActivityConnection();
+		$activity                                    = new \RAN\Activity\ActivityStore( $connection );
+		$GLOBALS['ran_booster_storage_test_options'] = array();
+		$GLOBALS['ran_booster_activity_options']     = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		[$registrar]                                 = $this->native_plugin_registrar( $package, activity: $activity );
+		$plugins                                     = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$store    = new RuntimeReleaseStore( array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
+		$asked    = 0;
+		$native   = 0;
+		$identity = array(
+			'network_id'          => 1,
+			'blog_id'             => 1,
+			'target_type'         => 'plugin',
+			'installed_identity'  => self::NATIVE_PLUGIN,
+			'provider_code'       => 'github',
+			'repository_identity' => '123456789',
+			'channel'             => 'stable',
+			'binding_hash'        => str_repeat( 'b', 64 ),
+		);
+		$facade   = $this->facade(
+			$plugins,
+			$this->createStub( ThemeRepository::class ),
+			$store,
+			$registrar,
+			new RuntimeUpdaterLock(),
+			$this->release_metadata_registry(),
+			static fn (): bool => true,
+			static fn (): bool => true,
+			static function () use ( &$native ): void {
+				++$native;
+			},
+			null,
+			static fn (): bool => true,
+			check_without_offer: static function () use ( &$asked, $registrar, $report, $identity ): ?array {
+				++$asked;
+				// The updater emits the same observation actions as a native check.
+				if ( null !== $report && 'policy_forced_off' !== $report['reason'] && 'runtime_busy' !== $report['reason'] ) {
+					$registrar->activity_check_started( array( 'check_id' => str_repeat( 'e', 32 ) ) + $identity );
+					$registrar->activity_check_completed(
+						array(
+							'check_id'                  => str_repeat( 'e', 32 ),
+							'status'                    => $report['status'],
+							'reason'                    => $report['reason'],
+							'relationship'              => $report['relationship'],
+							'installed_version'         => $report['installed_version'],
+							'candidate_version'         => $report['candidate_version'],
+							'offered_version'           => null,
+							'candidate_validation_code' => null,
+						)
+					);
+				}
+
+				return $report;
+			}
+		);
+
+		$result = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+
+		self::assertSame( $code, $result->code() );
+		self::assertSame( $check_reason, $result->check_reason() );
+		self::assertSame( DeploymentPolicy::DISABLED === $policy ? 1 : 0, $asked );
+		// An answered check never also runs the native check, so Activity records it once.
+		self::assertSame( $answered ? 0 : 1, $native );
+		if ( 'release_refreshed' === $code ) {
+			// Nothing answered, or updates are on: today's native path, never an up-to-date claim.
+			self::assertTrue( $result->successful() );
+			return;
+		}
+		self::assertFalse( $result->successful(), 'A check made while updates are off is never a success.' );
+		self::assertSame( 'refresh_newer_while_off' === $code ? '2.0.0' : '', $result->detail() );
+		if ( 'newer_release_observed' !== $check_reason ) {
+			return;
+		}
+		$completions = array_values( array_filter( $connection->prepared, static fn ( array $query ): bool => str_starts_with( $query['sql'], 'UPDATE' ) ) );
+		self::assertCount( 1, $completions );
+		self::assertSame( 'succeeded', $completions[0]['args'][0] );
+		self::assertSame( 'newer_release_observed', $completions[0]['args'][1] );
+		self::assertSame( 'established', $completions[0]['args'][5] );
+		// The Activity facts feed the past-observation row, which is never an offer.
+		self::assertSame(
+			array(
+				'version' => '2.0.0',
+				'at'      => '2026-11-13 10:00:00',
+			),
+			\RAN\Admin\PastReleaseObservation::from_record(
+				array(
+					'facts'   => $completions[0]['args'][4],
+					'sort_at' => '2026-11-13 10:00:00',
+				)
+			)
+		);
+	}
+
 	public function test_facade_projects_neutral_target_offers_and_validation_failures(): void {
 		$package = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
 		$plugins = $this->createStub( PluginRepository::class );

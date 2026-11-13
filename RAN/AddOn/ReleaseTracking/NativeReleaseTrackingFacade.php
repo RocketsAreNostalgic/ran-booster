@@ -66,6 +66,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	private WordPressUpdaterLock $updater_lock;
 	private RepositorySourceGuard $source_guard;
 
+	/** @var \Closure(string, string): mixed */
+	private \Closure $check_without_offer;
+
 	/**
 	 * @param callable(string): bool|null         $can_manage
 	 * @param callable(string, string): bool|null $verify_nonce
@@ -73,6 +76,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(): bool|null $metadata_eligible
 	 * @param callable(string): void|null         $invalidate_native
 	 * @param callable(string): ?string|null      $public_lookup_profile
+	 * @param callable(string, string): mixed|null $check_without_offer
 	 */
 	public function __construct(
 		private PluginRepository $plugins,
@@ -87,10 +91,30 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		?callable $metadata_eligible = null,
 		?callable $invalidate_native = null,
 		?callable $public_lookup_profile = null,
-		?RepositorySourceGuard $source_guard = null
+		?RepositorySourceGuard $source_guard = null,
+		?callable $check_without_offer = null
 	) {
 
 		$this->updater_lock = $updater_lock;
+
+		// One read-only check per package a minute: each call does full discovery and keeps no cache.
+		$this->check_without_offer = null === $check_without_offer
+			? static function ( string $type, string $identifier ): mixed {
+				$key = 'ran_booster_check_off_' . md5( $type . "\0" . $identifier );
+				if ( false !== get_transient( $key ) ) {
+					return array(
+						'status'  => 'skipped',
+						'reason'  => 'cooldown_active',
+						'offered' => false,
+					);
+				}
+				set_transient( $key, 1, MINUTE_IN_SECONDS );
+
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented read-only check filter.
+				return apply_filters( 'ran_wp_release_updater_check_releases_v1', null, $type, $identifier );
+			}
+
+			: \Closure::fromCallable( $check_without_offer );
 
 		$this->source_guard = $source_guard ?? new RepositorySourceGuard();
 
@@ -800,6 +824,12 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				return ReleaseTrackingResult::failed( 'refresh_failed', 'Published release information could not be refreshed.' );
 			}
 			$this->registrar->forget_check_outcome( $type, $identifier );
+			if ( DeploymentPolicy::DISABLED === $package->get_deployment_policy() ) {
+				$answer = $this->answer_without_offer( $type, $identifier );
+				if ( null !== $answer ) {
+					return $answer;
+				}
+			}
 			( $this->refresh_native )( $type );
 			$check = $this->registrar->check_outcome( $type, $identifier );
 			if ( null !== $check && 'succeeded' !== $check['status'] ) {
@@ -824,6 +854,37 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 	}
 
+
+	/**
+	 * Updates are off: ask the updater for a result that is never an offer. Null means it did not
+	 * answer (an older runtime), which is unsupported and never up to date.
+	 */
+	private function answer_without_offer( string $type, string $identifier ): ?ReleaseTrackingResult {
+		$report = ( $this->check_without_offer )( $type, $identifier );
+		$status = is_array( $report ) ? ( $report['status'] ?? null ) : null;
+		$reason = is_array( $report ) ? ( $report['reason'] ?? null ) : null;
+		if ( ! is_string( $status ) || ! is_string( $reason ) || false !== ( $report['offered'] ?? null )
+			|| 1 !== preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/', $reason ) ) {
+			return null;
+		}
+		$version = is_string( $report['candidate_version'] ?? null ) ? ReleaseTrackingPreflight::detail( $report['candidate_version'] ) : '';
+		$code    = match ( true ) {
+			'policy_forced_off' === $reason => 'refresh_skipped_forced_off',
+			'policy_disabled' === $reason => 'refresh_skipped_disabled',
+			'succeeded' === $status && 'newer_release_observed' === $reason => 'refresh_newer_while_off',
+			'succeeded' === $status && in_array( $reason, array( 'no_newer_candidate', 'no_candidates' ), true ) => 'refresh_current_while_off',
+			'rejected' === $status => 'refresh_rejected',
+			'failed' === $status => 'refresh_check_failed',
+			default => 'refresh_unchecked',
+		};
+
+		return ReleaseTrackingResult::failed(
+			$code,
+			'Published release information was not offered.',
+			detail: 'refresh_newer_while_off' === $code ? $version : '',
+			check_reason: $reason
+		);
+	}
 
 	public function return_to_branch(
 		string $type,

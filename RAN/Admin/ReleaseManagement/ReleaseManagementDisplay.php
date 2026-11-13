@@ -918,7 +918,7 @@ final class ReleaseManagementDisplay {
 
 		$message = $this->result_message( $code, $successful, $type, $channel, $status, $reason, $detail );
 		$review  = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
-		$check   = $successful ? null : FeedbackFlash::check_result( $code );
+		$check   = $successful ? null : FeedbackFlash::check_result( $code, $detail );
 		$tone    = $successful
 			? 'notice-success'
 			: ( null !== $check ? 'notice-' . $check[0] : ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists', 'refresh_unchecked', 'refresh_rejected' ), true )
@@ -967,8 +967,10 @@ final class ReleaseManagementDisplay {
 			'refresh_failed',
 			'refresh_skipped_disabled',
 			'refresh_skipped_forced_off',
+			'refresh_newer_while_off',
+			'refresh_current_while_off',
 			'refresh_rejected',
-			'refresh_check_failed' => FeedbackFlash::check_result( $code )[1] ?? '',
+			'refresh_check_failed' => FeedbackFlash::check_result( $code, $detail )[1] ?? '',
 			'branch_restored' => __( 'Branch-based package management is restored.', 'ran-booster' ),
 			'source_changed' => __( 'Package settings changed after this browser page was opened. Refresh the page, review the current settings, then try again.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'This package already registers its own release updater. Use one release owner only.', 'ran-booster' ),

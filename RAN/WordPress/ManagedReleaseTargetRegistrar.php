@@ -46,6 +46,12 @@ final class ManagedReleaseTargetRegistrar {
 	/** @var array<string, int> */
 	private array $activity_checks = array();
 
+	/** @var array<string, string> Target key by observed check id. */
+	private array $check_targets = array();
+
+	/** @var array<string, array{status: string, reason: string}> Last observed check result by target key. */
+	private array $check_outcomes = array();
+
 	public function __construct(
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
@@ -424,6 +430,7 @@ final class ManagedReleaseTargetRegistrar {
 		$id      = $this->activity->begin( (string) $package->get_provider_code(), new \RAN\Activity\ActivityRequest( 'release.check', $package->get_repository()->reference, $type, $identifier ), $capture );
 		if ( null !== $id ) {
 			$this->activity_checks[ $event['check_id'] ] = $id;
+			$this->check_targets[ $event['check_id'] ]   = self::key( $type, $identifier );
 		}
 	}
 
@@ -453,7 +460,19 @@ final class ManagedReleaseTargetRegistrar {
 			}
 			$facts[ $field ] = $value;
 		}
+		$key = $this->check_targets[ $event['check_id'] ] ?? null;
+		if ( null !== $key ) {
+			$this->check_outcomes[ $key ] = array(
+				'status' => $event['status'],
+				'reason' => $event['reason'],
+			);
+		}
 		$this->activity->complete( $id, $event['status'], $event['reason'], facts: $facts, effect: 'succeeded' === $event['status'] ? 'established' : 'none' );
+	}
+
+	/** @return array{status: string, reason: string}|null The check this request observed for the target, if any. */
+	public function check_outcome( string $type, string $identifier ): ?array {
+		return $this->check_outcomes[ self::key( $type, $identifier ) ] ?? null;
 	}
 
 	public function target( string $type, string $identifier ): ?RepositoryReleaseNativeTarget {

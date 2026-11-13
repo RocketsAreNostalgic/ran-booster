@@ -35,6 +35,8 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 
 	public ?ReleaseTrackingResult $enable_result = null;
 
+	public ?ReleaseTrackingResult $refresh_result = null;
+
 	/** @var null|callable():void */
 	public $after_candidate_list = null;
 
@@ -133,7 +135,7 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 	public function refresh( string $type, string $identifier, int $expected_source_revision, string $nonce ): ReleaseTrackingResult {
 		$this->calls[] = array( 'refresh', $type, $identifier, $expected_source_revision, $nonce );
 
-		return ReleaseTrackingResult::succeeded( 'release_refreshed', 'Release status refreshed.' );
+		return $this->refresh_result ?? ReleaseTrackingResult::succeeded( 'release_refreshed', 'Release status refreshed.' );
 	}
 
 	public function return_to_branch( string $type, string $identifier, int $expected_source_revision, string $nonce ): ReleaseTrackingResult {

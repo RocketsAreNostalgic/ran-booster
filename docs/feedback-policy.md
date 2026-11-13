@@ -19,9 +19,13 @@ same pattern, wherever it lives:
 1. A pending state while it runs: a busy control, announced to assistive
    technology.
 2. Success: a snackbar that dismisses itself.
-3. Failure: an inline message next to where the error is most useful. It
-   persists and never auto-dismisses. A short snackbar pointer to it is
-   optional.
+3. Failure or any result that is not a success: an inline message next to
+   where it is most useful. It persists and never auto-dismisses. A short
+   snackbar pointer to it, with a Show details action, always accompanies it
+   when the person started the action.
+4. A neutral outcome that is not a failure, such as a check that was not run
+   because updates are off, is an `info` snackbar that dismisses itself, with
+   the longer explanation inline.
 
 Conditions that exist without a click (credential expiry, background
 deployment failures, secrets or database blockers) are not feedback and stay
@@ -48,7 +52,7 @@ Each rule is written to be implemented and tested.
 | R1 Scope | A user-initiated action that the person waits on follows the principle above. Scope is decided by the click, not by the page or the kind of control. | Every producer in the inventory is classified; a producer outside the inventory fails review. |
 | R2 Confirmed success only | A success snackbar is shown only for an outcome the server confirmed (persisted or accepted). A click, an HTTP 200 or a generic success event is not confirmation. | Unit test: no snackbar without a closed success code carried by the confirmed response. |
 | R3 Failure never snackbar-only | Every failure that can produce a snackbar pointer also renders an inline message beside the control, field or row it concerns. The inline message persists until the person resolves or dismisses it. | For each failure code that can reach the snackbar, assert the inline region exists in the same response. |
-| R4 Failure never auto-dismisses | A failure pointer has an explicit dismiss control and no timer. A pointer is optional; the inline message is the record. | Config test per kind: success has a timer, a pointer does not. |
+| R4 Failure never auto-dismisses | A failure or warning pointer has an explicit dismiss control and no timer. A pointer is the default for every user-initiated failure or non-success result; the inline message is the record. Success and info have the one timer. | Config test per kind: success and info have a timer, a pointer does not; every non-success result of a moved producer enqueues a pointer. |
 | R5 One duration | Success snackbars use one universal duration, a single constant of 10 seconds. It is not set per call site and can be tuned later by changing that one value. | Static test: exactly one definition; no call site passes its own duration. |
 | R6 Placement | Bottom of the viewport, horizontally centred in the content column beside the admin menu, as the inline notices fill that column; at 782px and below, centred in the viewport. Width is at most 600px and keeps a gutter of at least 16px each side. Positioning uses logical CSS properties so RTL mirrors it. It never moves the layout and never depends on the Admin Shell's height. Centring is an owner decision (#880); reading it as the content column, and the 600px cap, are this document's choice. | CSS contract test: no `left`/`right` in the host rules, centring and gutter declarations; browser check at desktop, 768px and 375px widths in LTR and RTL. |
 | R7 Pending state | While the action runs the initiating control is busy (`aria-busy`, duplicate submit blocked) and one polite announcement says it is working. The pending state ends in exactly one of: success snackbar, or inline failure. | Test: busy set on submit, cleared on both outcomes, one announcement. |
@@ -56,7 +60,7 @@ Each rule is written to be implemented and tested.
 | R9 Stay local | Copy-to-clipboard confirmations and migration or Blueprint apply results stay where they are. Progress that has its own region (package update progress, Transporter) keeps its in-progress display local; its final success still goes to the snackbar (R1). | Allowlist test: these in-progress displays never call the host; the final success does. |
 | R10 Stay notices | Background or system conditions never use the snackbar: credential expiry, background deployment failure, secrets-runtime and database blockers, native update warning, unsupported multisite, extension update warning, Core self-update guidance, Needs attention. | Allowlist test: no `admin_notices` callback calls the host. |
 | R11 Dialogs | Destructive or irreversible confirmations stay in dialogs (#782). The snackbar shows only the result afterwards. | Not applicable; routed by #782. |
-| R12 Qualified success | Owner decision: a warning suppresses the success snackbar. A result that carries a warning or partial outcome (saved-before-reinstall, repository check skipped) is therefore not reduced to a success snackbar; that it stays durable and inline is this document's reading. | Producer test: a result with a warning produces no success snackbar. |
+| R12 Qualified success | Owner decision: a warning suppresses the success snackbar. A result that carries a warning or partial outcome (saved-before-reinstall, repository check skipped) is therefore not reduced to a success snackbar; it gets a warning pointer and stays durable and inline. An `info` item does not qualify a success. | Producer test: a result with a warning produces no success snackbar. |
 | R13 One copy source | The snackbar text comes from the same Core copy source as the inline text for that outcome. It is never a second string. Provider and add-on text reaches the snackbar only through the existing bounded-message screener. | Test: the snackbar message equals the string from the shared source for the same code. |
 | R14 Static fallback | Without JavaScript the same result renders server-side as a Core notice. With JavaScript the host converts that element into the snackbar without leaving a duplicate. | No-JS and JS-on browser checks; exactly one visible result per event. |
 | R15 Never lose a confirmed result | If the host cannot render (component or its styles missing), the confirmed result stays visible in its static form. | Test: with the host unavailable, the static result remains. |
@@ -68,6 +72,22 @@ from the same source as the inline release status, not from a second string.
 On `origin/main` the notice string (`refreshed_result_message()`) and the status
 string (`release_status_message()`) in `ReleaseManagementDisplay` are separate.
 P1 derives both from one source for this producer.
+
+A check that did not succeed never uses success intent or claims a release was
+or was not found. It gets a pointer and an inline notice that share one copy
+source (`FeedbackFlash::check_result()`): the snackbar shows the summary and
+the notice shows the summary and a detail line.
+
+| Result code | Updater status and reason | Intent | Summary |
+| --- | --- | --- | --- |
+| `refresh_skipped_disabled` | skipped, `policy_disabled` (package setting) | info | Check not run. Updates are off for this package. |
+| `refresh_skipped_forced_off` | skipped, `policy_forced_off` (site configuration) | info | Check not run. Site configuration turns updates off. |
+| `refresh_unchecked` | skipped, any other reason, or no check recorded | warning | Releases were not checked. Use Check releases to retry. |
+| `refresh_rejected` | rejected | warning | The newest release cannot be used. |
+| `refresh_check_failed` | failed | error | The release check failed. |
+
+The result also carries the updater's closed reason (`check_reason`, for
+example `policy_disabled`) so a caller other than the page can read it.
 
 Reinstall, update and remove follow the same pattern as saves. Release,
 webhook and extension successes follow it too.
@@ -96,7 +116,8 @@ webhook and extension successes follow it too.
 The snackbar is not the stock black pill with white text. It is styled by
 intent so it reads as part of the same system as the `@wordpress/ui` Notice and
 the Badge, even though `SnackbarList` is the approved component exception.
-The three intents map one to one with Notice and Badge. This is CSS over the
+The four intents map to the Notice and Badge token families: success, error
+and warning one to one, and `info` to the info family, so a snackbar and its inline Notice share a hue. This is CSS over the
 `SnackbarList` host (class and `icon` passed per notice, selectors scoped to
 the Booster host class). It adds no component. P2 owns it.
 
@@ -109,12 +130,12 @@ with the tokens below. It uses the same `--wpds-*` tokens as Notice
 (`assets/lib/ran-booster-wpds-tokens.css`, `@wordpress/theme` 4.0.0) for
 WordPress before 7.1. Every token name below was checked in that file.
 
-| Role | Success | Failure pointer (error) | Warning |
-| --- | --- | --- | --- |
-| Surface | `--wpds-color-background-surface-success-weak` | `--wpds-color-background-surface-error-weak` | `--wpds-color-background-surface-warning-weak` |
-| Border (1px) | `--wpds-color-stroke-surface-success-strong` | `--wpds-color-stroke-surface-error-strong` | `--wpds-color-stroke-surface-warning-strong` |
-| Text | `--wpds-color-foreground-content-success` | `--wpds-color-foreground-content-error` | `--wpds-color-foreground-content-warning` |
-| Icon | `--wpds-color-foreground-content-success-weak` | `--wpds-color-foreground-content-error-weak` | `--wpds-color-foreground-content-warning-weak` |
+| Role | Success | Info | Failure pointer (error) | Warning |
+| --- | --- | --- | --- | --- |
+| Surface | `--wpds-color-background-surface-success-weak` | `--wpds-color-background-surface-info-weak` | `--wpds-color-background-surface-error-weak` | `--wpds-color-background-surface-warning-weak` |
+| Border (1px) | `--wpds-color-stroke-surface-success-strong` | `--wpds-color-stroke-surface-info-strong` | `--wpds-color-stroke-surface-error-strong` | `--wpds-color-stroke-surface-warning-strong` |
+| Text | `--wpds-color-foreground-content-success` | `--wpds-color-foreground-content-info` | `--wpds-color-foreground-content-error` | `--wpds-color-foreground-content-warning` |
+| Icon | `--wpds-color-foreground-content-success-weak` | `--wpds-color-foreground-content-info-weak` | `--wpds-color-foreground-content-error-weak` | `--wpds-color-foreground-content-warning-weak` |
 
 The Badge uses the non-weak surface tokens
 (`--wpds-color-background-surface-success`,
@@ -122,9 +143,10 @@ The Badge uses the non-weak surface tokens
 surface like Notice because it carries a sentence, a border and an icon, as
 Notice does. Both resolve to the same hue per intent.
 
-- **Warning** is not surfaced as a snackbar today (R12 keeps warnings inline).
-  The variant is defined so the three intents stay one to one with Notice and
-  Badge, and so a future warning pointer needs no new design.
+- **Warning** is a pointer to its inline warning, never a standalone message.
+- **Info** is blue, the Notice info tokens, and is the only intent besides
+  success that dismisses itself. Success, error and warning pairings are
+  measured below; the contract test measures info the same way.
 - **Focus.** The dismiss control and the action link use
   `--wpds-color-stroke-focus` with a `--wpds-border-width-focus` ring, the same
   token the bundled `@wordpress/ui` styles and `25-admin-primitives.css` use.
@@ -139,19 +161,19 @@ Notice does. Both resolve to the same hue per intent.
 - **Icon.** A decorative CSS `::before` glyph on the item content, not the
   `SnackbarList` `icon` prop, whose layout assumes WordPress's own icon. Each
   intent has its own shape so intent never relies on colour alone: a check for
-  success, `!` for warning, a cross for error. Alternative text is empty
+  success, `i` for info, `!` for warning, a cross for error. Alternative text is empty
   (`content: "x" / ""`), after a plain `content` declaration for browsers
   without alternative text. Colour comes from the icon token above.
 - **Contrast (WCAG AA).** Computed from the token values in the bundled file.
-  Text on surface: success 15.2:1, error 15.6:1, warning 15.7:1 (needs 4.5:1).
-  Icon on surface: 4.9:1, 5.3:1, 4.9:1 (needs 3:1). Focus ring on surface:
+  Text on surface: success 15.2:1, info 15.6:1, error 15.6:1, warning 15.7:1 (needs 4.5:1).
+  Icon on surface: 4.9:1, info 4.85:1, 5.3:1, 4.9:1 (needs 3:1). Focus ring on surface:
   5.2 to 5.4:1 (needs 3:1).
   The border is a deliberate deviation from Notice. Notice uses the plain
   `stroke-surface-*` token (1.7 to 1.8:1 against its own surface). A floating
   snackbar sits on the page background, not only on its own surface (the weak
   surface against the `#f0f0f1` page is 1.07:1), so its edge must meet 3:1
   against the page. The `-strong` stroke does: 4.46 (success), 4.97 (error) and
-  4.58 (warning) against `#f0f0f1`, and 4.9 to 5.3 against the snackbar's own
+  4.58 (warning) and 4.51 (info) against `#f0f0f1`, and 4.9 to 5.3 against the snackbar's own
   surface. Text, icon and fill stay the same as Notice.
 - **Dark and light.** The bundled token file defines no dark values and
   there is no dark content theme (the Midnight admin colour scheme changes the
@@ -202,7 +224,7 @@ helper is counted once. The Disposition column states where each category goes.
 
 | # | Category | Count | Disposition |
 | --- | --- | --- | --- |
-| A | Dashboard message queue (`Dashboard::add_message`, `add_failure_message`, `add_message_with_context`, rendered by `views/notices.php`) | 31 call sites in 6 files | Success moves to the snackbar. Errors, warnings, `already-managed`, storage and provider unavailable stay inline. User-action failures may add a pointer. |
+| A | Dashboard message queue (`Dashboard::add_message`, `add_failure_message`, `add_message_with_context`, rendered by `views/notices.php`) | 31 call sites in 6 files | Success moves to the snackbar. Errors, warnings, `already-managed`, storage and provider unavailable stay inline. A user-action failure or non-success result also gets a pointer. |
 | A1 | Package install, update, edit, unlink, delete success (`add_success_notice`) | within A | Moves to the snackbar. |
 | A2 | Bulk update summary (`add_bulk_notice`) | within A | Moves; R8, links to Activity. |
 | B | Global `admin_notices` registrations | 9 registrations plus the signed-outcome fallback | Stay as notices (R10), except the release operation notice, which is user-initiated: its success moves and its failure becomes inline. |
@@ -314,15 +336,17 @@ This section is the single source for the contract.
 - The server emits at most one container,
   `.ran-booster-feedback[data-ran-booster-feedback]`, on a Booster admin screen.
 - Each result is an item, `.ran-booster-feedback__item`, with
-  `data-feedback-key` (the closed code), `data-intent` (`success`, `error` or
-  `warning`) and `role` (`alert` for error, `status` otherwise). Its text is
+  `data-feedback-key` (the closed code), `data-intent` (`success`, `info`, `error`
+  or `warning`) and `role` (`alert` for error, `status` otherwise). Its text is
   fixed Core copy.
-- Optional: `data-feedback-target` (the id of the inline failure it points to),
-  and a `.ran-booster-feedback__activity` link to Activity for queued or
-  accepted results. P1 emits neither; P3 adds them.
+- `data-feedback-target`: the id of the inline notice a pointer leads to. An
+  error or warning item without a present target stays static. Check releases
+  emits it; the other producers adopt it in P3.
+- Optional: a `.ran-booster-feedback__activity` link to Activity for queued or
+  accepted results (P3).
 - Without JavaScript the items are the visible static fallback, styled as a
-  normal notice. The host converts them into snackbars (success, and the
-  optional failure pointer) and removes the static element, leaving no
+  normal notice. The host converts them into snackbars (success, info, and
+  the failure or warning pointer) and removes the static element, leaving no
   duplicate (R14). A failure item is never snackbar-only (R3).
 - The host never evicts a pointer to a persistent error (see Behaviour).
 

@@ -582,10 +582,40 @@ test('the pointer action focuses the inline failure, making a plain element focu
 	assert.equal(env.document.activeElement, field);
 });
 
+test('an info stands alone: polite, timed like a success, with no pointer and no target needed', () => {
+	const env = boot();
+	assert.equal(
+		env.feedback.show('Not run.', { intent: 'info', id: 'i' }),
+		true
+	);
+	const [notice] = env.notices;
+	assert.match(notice.className, /ran-booster-snackbar--info/);
+	assert.equal('spokenMessage' in notice, false);
+	assert.deepEqual(notice.actions, []);
+	env.tick(DURATION - 1);
+	assert.equal(env.notices.length, 1);
+	env.tick(1);
+	assert.equal(env.notices.length, 0);
+});
+
+test('a static info is converted without a target and does not qualify a success', () => {
+	const env = boot();
+	const container = env.staticContainer([
+		{ key: 'i', intent: 'info', text: 'Check not run.' },
+		{ key: 's', intent: 'success', text: 'Saved.' },
+	]);
+	env.feedback.consume();
+	assert.equal(container.items.length, 0);
+	assert.deepEqual(
+		env.notices.map((notice) => notice.className.match(/--(\w+)/)[1]),
+		['info', 'success']
+	);
+});
+
 test('an unknown intent or empty or non-string message shows nothing', () => {
 	const env = boot();
 	const target = env.target();
-	assert.equal(env.feedback.show('Hi.', { intent: 'info', target }), false);
+	assert.equal(env.feedback.show('Hi.', { intent: 'notice', target }), false);
 	assert.equal(env.feedback.show('   '), false);
 	assert.equal(env.feedback.show(undefined), false);
 	assert.equal(env.feedback.show({ toString: () => 'Object text' }), false);
@@ -796,7 +826,7 @@ test('when the host cannot render, the confirmed static result stays visible', (
 test('unknown static intents are left alone', () => {
 	const env = boot();
 	const container = env.staticContainer([
-		{ key: 'x', intent: 'info', text: 'Something.' },
+		{ key: 'x', intent: 'notice', text: 'Something.' },
 	]);
 	env.feedback.consume();
 	assert.equal(container.items.length, 1);

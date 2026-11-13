@@ -133,7 +133,14 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( "\n.wp-core-ui .button-delete", $buttons );
 	}
 
-	public function test_extensions_styles_do_not_reimplement_the_word_press_plugin_card_layout(): void {
+	/**
+	 * Owner-approved exception (#869): WordPress sizes plugin cards from the
+	 * viewport, which cannot follow a card's width in this grid. The overrides
+	 * are limited to the plugin-card layout selectors below, use logical
+	 * properties and one card-width @container rule. Nothing else of the core
+	 * card is restyled.
+	 */
+	public function test_extensions_card_layout_follows_card_width_and_stays_within_the_plugin_card_overrides(): void {
 		$extensions = $this->asset( 'ran-booster/55-extensions.css' );
 		$view       = $this->view( 'extensions.php' );
 
@@ -144,11 +151,29 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '#TB_', $extensions );
 		self::assertStringNotContainsString( '__tabs', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card.plugin-card', $extensions );
-		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-top', $extensions );
-		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-icon', $extensions );
-		self::assertStringNotContainsString( '.ran-booster-extension-card .action-links', $extensions );
-		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-action-buttons', $extensions );
-		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-bottom', $extensions );
+
+		// The card is an inline-size container and one @container rule decides the layout.
+		self::assertSame( 1, preg_match_all( '/@container /', $extensions ) );
+		self::assertMatchesRegularExpression( '/__grid > \.plugin-card \{[^}]*container: ran-booster-extension-card \/ inline-size;/', $extensions );
+		self::assertStringContainsString( '@container ran-booster-extension-card (min-inline-size: 512px)', $extensions );
+
+		// Viewport media queries may not touch the plugin-card layout.
+		preg_match_all( '/@media [^{]+\{(?:[^{}]*\{[^}]*\})*[^{}]*\}/', $extensions, $media_blocks );
+		foreach ( $media_blocks[0] as $media_block ) {
+			self::assertDoesNotMatchRegularExpression( '/\.plugin-card|\.action-links|\.plugin-action-buttons/', $media_block );
+		}
+
+		// Only these core plugin-card parts are overridden, and only with logical properties.
+		$layout_start = (int) strpos( $extensions, '.plugin-card .name,' );
+		$card_layout  = substr( $extensions, $layout_start, (int) strpos( $extensions, '/* Keep native plugin-card spacing' ) - $layout_start );
+		self::assertNotSame( '', $card_layout );
+		$card_layout = preg_replace( '#/\*.*?\*/#s', '', $card_layout ) ?? '';
+		self::assertDoesNotMatchRegularExpression( '/(?:^|[\s;{])(?:left|right|top|bottom|margin-left|margin-right|padding-left|padding-right|float:\s*(?:left|right)|text-align:\s*(?:left|right))\b/m', $card_layout );
+		foreach ( array( '.plugin-card .name', '.plugin-card .desc > p', '.plugin-card h3', '.plugin-card .action-links', '.plugin-action-buttons', '.plugin-card-bottom' ) as $part ) {
+			self::assertStringContainsString( $part, $card_layout );
+		}
+		self::assertStringNotContainsString( '.plugin-card-top {', $card_layout );
+		self::assertStringNotContainsString( '.plugin-icon', $card_layout );
 	}
 
 	/**

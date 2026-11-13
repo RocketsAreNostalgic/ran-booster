@@ -990,9 +990,17 @@ returns it to the page on close; without JavaScript the fragment link reveals
 the same section in place. The section links to the selected release page.
 
 Each card is an inline-size container: its actions stack under the title and
-move to the inline-end column once the card is 512px wide, so the card's own
-width decides the layout and WordPress's viewport plugin-card media queries are
-overridden.
+move to the inline-end column once the card is 512px wide.
+
+Owner-approved exception to "do not reimplement WordPress plugin-card layout":
+WordPress decides plugin-card layout from viewport media queries, which cannot
+follow a card's width in this grid, so card-width layout must override them.
+The override is limited to `.name`, `.desc > p`, `h3`, `.action-links`,
+`.plugin-action-buttons` (its items and break), and the `.plugin-card-bottom`
+columns, uses logical properties only, and sits behind one `@container` rule.
+Nothing else of the core card is restyled, no viewport media query may touch
+the plugin-card layout, and the badge, details-dialog and `#TB_` rules stay as
+they were.
 
 ### Extension details dialog
 

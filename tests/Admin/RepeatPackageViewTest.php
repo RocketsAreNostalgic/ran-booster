@@ -1750,6 +1750,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$package = $this->package( $package_view );
 			$package->set_deployment_policy( $policy );
 			$package->set_source( $source, 1 );
+			$package->version = '1.0.0';
 			$observation         = array(
 				'id'      => 7,
 				'sort_at' => '2026-11-01 10:00:00',
@@ -1783,6 +1784,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'Last observed newer release', $disabled );
 		self::assertStringContainsString( '1.2.0, seen 2026-11-01 10:00:00. Not an available update.', $disabled );
 
+		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::RELEASE_ASSET, '{"relationship":"newer","candidate_version":"0.0.1"}' ) );
 		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::MANUAL, \RAN\PackageSource::RELEASE_ASSET, $newer ) );
 		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::BRANCH, $newer ) );
 		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::RELEASE_ASSET, '{"relationship":"same","candidate_version":"1.0.0"}' ) );
@@ -1956,6 +1958,7 @@ final class RepeatPackageViewTest extends TestCase {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused package fake stays beside shared view coverage.
 final class RepeatPackageViewPackage extends AbstractPackage {
 	public string $name;
+	public string $version = '';
 
 	public function __construct( private readonly string $identifier = '' ) {
 		$this->name = 'Example package';

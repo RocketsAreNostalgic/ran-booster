@@ -929,7 +929,7 @@ reconciliation, continue with the
 ### Enabling updates and past observations
 
 Enabling updates clears only WordPress's cached update check for that package
-type. The next administration request then runs one native check through the
+type. The next administration request then normally runs one native check (best effort: a request already in flight, or the updater's cooldown, can defer it to WordPress's next scheduled check) through the
 updater's own policy, cooldown and claim gates, so a cooldown still applies and a
 failed check is recorded in Activity like any other. A failed cache clear never
 blocks the policy change. While updates are `disabled`, the package shows the

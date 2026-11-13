@@ -144,10 +144,29 @@
 		}
 	}
 
-	// Mount the host once, outside every swapped region. It measures the
-	// content column as a size container, so CSS alone centres the list.
+	// The Booster frame is the one box every Booster screen shares; the
+	// toast is centred in it, wherever its width comes from.
+	function parent() {
+		return (
+			document.querySelector('.wrap.ran-booster-admin') ||
+			document.getElementById('wpcontent') ||
+			document.body
+		);
+	}
+
+	// Some swaps replace the whole frame; the host follows the current one.
+	function place() {
+		const target = state && parent();
+		if (target && state.host.parentNode !== target) {
+			target.append(state.host);
+		}
+	}
+
+	// Mount the host once. It measures the Booster frame as a size
+	// container, so CSS alone centres the list.
 	function mount() {
 		if (state) {
+			place();
 			return true;
 		}
 		const element = window.wp?.element;
@@ -174,7 +193,7 @@
 		}
 		const host = document.createElement('div');
 		host.className = 'ran-booster-snackbar-host';
-		(document.getElementById('wpcontent') || document.body).append(host);
+		parent().append(host);
 		try {
 			state = { host, root: element.createRoot(host), items: [] };
 		} catch {
@@ -297,6 +316,7 @@
 	// that cannot be shown (no host, no inline target, qualified result) as
 	// the visible static result.
 	function consume() {
+		place();
 		prune();
 		document
 			.querySelectorAll('[data-ran-booster-feedback]')

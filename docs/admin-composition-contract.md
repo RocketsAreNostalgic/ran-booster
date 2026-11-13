@@ -53,6 +53,29 @@ unsupported public API or runtime constraint needs an explicit owner exception
 or revised scope. Source, build, installed evidence and owner acceptance remain
 separate, and all merge/publication holds continue.
 
+### Approved exception: snackbar host
+
+The owner approved one exception to the `@wordpress/ui` rule (#755):
+
+- **Component and export:** `wp.components.SnackbarList`, the WordPress global
+  (script handle `wp-components`, style handle `wp-components`).
+- **Scope:** the single Booster feedback host described in the
+  [feedback policy](feedback-policy.md), and nothing else. No other
+  `wp.components` or `@wordpress/components` component is approved by it.
+- **Reason:** `@wordpress/ui` 0.26.0 exports no Snackbar or Toast. Its `Notice`
+  and `Notice.List` are in-flow, not a viewport overlay.
+- **Versions checked:** `@wordpress/ui` 0.26.0 (the pinned version); the
+  `wp.components` build shipped with WordPress 7.0.4, which is the runtime
+  source of truth because Booster does not bundle it. WordPress 7.0.4's
+  `Snackbar` hard-codes a 6 second timeout and has no pause. WordPress 7.0
+  and 7.0.3 were not checked; the 6 second timeout is assumed unchanged there.
+  Booster's host owns the timer and the queue.
+- **Not adoption:** this is a recorded exception, not package adoption. The
+  native fallback and the static no-JavaScript result remain required.
+- **Revisit trigger:** if `@wordpress/ui` gains a snackbar or toast, swap the
+  host to it. Check on every `@wordpress/ui` version change. The host,
+  timer and queue mechanics are kept swappable for that reason.
+
 ## Admin Shell continuity and page navigation
 
 Booster adopts build-time `ran/admin-shell` **2.1.1**, source

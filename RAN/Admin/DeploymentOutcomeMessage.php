@@ -30,6 +30,7 @@ final class DeploymentOutcomeMessage {
 			'provider_unavailable' => self::for_code( 'provider_unavailable' ),
 			'verified' => __( 'Repository branch and archive verified.', 'ran-booster' ),
 			'update_available' => __( 'A newer release is available.', 'ran-booster' ),
+			'newer_release_observed' => __( 'A newer release was found. It was not offered.', 'ran-booster' ),
 			'no_candidates' => __( 'No release candidates were found.', 'ran-booster' ),
 			'no_newer_candidate' => __( 'No newer release was found.', 'ran-booster' ),
 			'candidate_rejected', 'candidate_not_eligible' => __( 'The release candidate is not eligible for installation.', 'ran-booster' ),

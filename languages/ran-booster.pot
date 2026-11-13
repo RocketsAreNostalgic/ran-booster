@@ -949,106 +949,110 @@ msgid "A newer release is available."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:33
-msgid "No release candidates were found."
+msgid "A newer release was found. It was not offered."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:34
-msgid "No newer release was found."
+msgid "No release candidates were found."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:35
-msgid "The release candidate is not eligible for installation."
+msgid "No newer release was found."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:36
-msgid "Release checks are disabled by update policy."
+msgid "The release candidate is not eligible for installation."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:37
-msgid "Release discovery could not start."
+msgid "Release checks are disabled by update policy."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:38
-msgid "The available releases could not be retrieved."
+msgid "Release discovery could not start."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:39
-msgid "The installed package identity could not be verified."
+msgid "The available releases could not be retrieved."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:40
-msgid "The package filesystem is unavailable."
+msgid "The installed package identity could not be verified."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:41
-msgid "The release offer could not be recorded."
+msgid "The package filesystem is unavailable."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:42
+msgid "The release offer could not be recorded."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:43
 msgid "The release candidate could not be verified."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:44
+#: RAN/Admin/DeploymentOutcomeMessage.php:45
 msgid "Check completed."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:45
+#: RAN/Admin/DeploymentOutcomeMessage.php:46
 msgid "Check skipped."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:46
+#: RAN/Admin/DeploymentOutcomeMessage.php:47
 msgid "Check rejected."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:47
+#: RAN/Admin/DeploymentOutcomeMessage.php:48
 msgid "Check could not complete."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:60
+#: RAN/Admin/DeploymentOutcomeMessage.php:61
 msgid "Diagnostics passed"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:61
+#: RAN/Admin/DeploymentOutcomeMessage.php:62
 msgid "Diagnostic warnings"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:62
+#: RAN/Admin/DeploymentOutcomeMessage.php:63
 msgid "Diagnostics failed"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:63
+#: RAN/Admin/DeploymentOutcomeMessage.php:64
 msgid "Diagnostics not configured"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:64
+#: RAN/Admin/DeploymentOutcomeMessage.php:65
 msgid "Credential expiry"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:65
+#: RAN/Admin/DeploymentOutcomeMessage.php:66
 msgid "Credential expires (UTC)"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:66
+#: RAN/Admin/DeploymentOutcomeMessage.php:67
 msgid "Webhook operation"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:67
+#: RAN/Admin/DeploymentOutcomeMessage.php:68
 msgid "Webhook delivery"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:68
+#: RAN/Admin/DeploymentOutcomeMessage.php:69
 msgid "Webhook local record"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:69
+#: RAN/Admin/DeploymentOutcomeMessage.php:70
 msgid "Webhook local result code"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:70
+#: RAN/Admin/DeploymentOutcomeMessage.php:71
 msgid "Diagnostic partial-result reason"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:79
+#: RAN/Admin/DeploymentOutcomeMessage.php:80
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:121
 #: RAN/Troubleshooting/TroubleshootingService.php:234
 #: RAN/Troubleshooting/TroubleshootingService.php:247
@@ -1069,19 +1073,19 @@ msgstr ""
 msgid "Unknown"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:79
+#: RAN/Admin/DeploymentOutcomeMessage.php:80
 msgid "Known"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:79
+#: RAN/Admin/DeploymentOutcomeMessage.php:80
 msgid "Not reported"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:80
+#: RAN/Admin/DeploymentOutcomeMessage.php:81
 msgid "Completed"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:80
+#: RAN/Admin/DeploymentOutcomeMessage.php:81
 #: RAN/Booster.php:1041
 #: views/attempts/index.php:59
 #: views/overview-dashboard.php:29
@@ -1090,316 +1094,316 @@ msgstr ""
 msgid "Failed"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:80
+#: RAN/Admin/DeploymentOutcomeMessage.php:81
 msgid "Partially completed"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:80
+#: RAN/Admin/DeploymentOutcomeMessage.php:81
 msgid "Outcome uncertain"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:81
+#: RAN/Admin/DeploymentOutcomeMessage.php:82
 msgid "Configured; delivery not yet verified"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:81
+#: RAN/Admin/DeploymentOutcomeMessage.php:82
 msgid "Verified"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:81
+#: RAN/Admin/DeploymentOutcomeMessage.php:82
 msgid "Not verified"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:81
+#: RAN/Admin/DeploymentOutcomeMessage.php:82
 msgid "Absent"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:82
+#: RAN/Admin/DeploymentOutcomeMessage.php:83
 msgid "Confirmed"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:82
+#: RAN/Admin/DeploymentOutcomeMessage.php:83
 msgid "Not confirmed"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:92
+#: RAN/Admin/DeploymentOutcomeMessage.php:93
 msgid "WordPress completed and Booster verified the package deployment."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:93
+#: RAN/Admin/DeploymentOutcomeMessage.php:94
 msgid "The requested package bytes were already installed."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:94
+#: RAN/Admin/DeploymentOutcomeMessage.php:95
 msgid "Booster already manages the installed package. Its existing package settings were left unchanged."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:95
+#: RAN/Admin/DeploymentOutcomeMessage.php:96
 msgid "The Git provider could not prepare the deployment, but no exact cause was recorded. Check the repository and credential settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:96
+#: RAN/Admin/DeploymentOutcomeMessage.php:97
 msgid "The repository or credential configuration is invalid. Review the managed package settings."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:97
+#: RAN/Admin/DeploymentOutcomeMessage.php:98
 msgid "The Git provider rejected the selected credential. Replace or update it."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:98
+#: RAN/Admin/DeploymentOutcomeMessage.php:99
 msgid "The Git provider denied access. Check the credential permissions and repository access."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:99
+#: RAN/Admin/DeploymentOutcomeMessage.php:100
 msgid "The Git provider could not find the repository or revision. Check that it exists and that the selected credential can access it."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:100
+#: RAN/Admin/DeploymentOutcomeMessage.php:101
 msgid "The requested repository revision is no longer available. Review the configured branch or reference."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:101
+#: RAN/Admin/DeploymentOutcomeMessage.php:102
 msgid "The Git provider rate limit was reached. Wait for its quota to reset or use an authenticated credential."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:102
+#: RAN/Admin/DeploymentOutcomeMessage.php:103
 msgid "The GitHub implementation changed after this deployment was requested. Review the current Git provider and submit a new deployment."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:103
+#: RAN/Admin/DeploymentOutcomeMessage.php:104
 msgid "The Git provider could not be reached or returned an invalid response. Try again later."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:104
+#: RAN/Admin/DeploymentOutcomeMessage.php:105
 msgid "The repository ZIP exceeds this site's configured archive download limit. Reduce the repository size or review Download limits in Booster Settings; configuration overrides may lock the value."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:105
+#: RAN/Admin/DeploymentOutcomeMessage.php:106
 msgid "The repository ZIP expands beyond this site's configured archive safety limit. Reduce the repository contents or review Download limits in Booster Settings; stricter extraction safeguards still apply."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:106
+#: RAN/Admin/DeploymentOutcomeMessage.php:107
 msgid "RAN_BOOSTER_MAX_DOWNLOAD_BYTES is invalid. Set the configured constant to an integer between 1 MiB and 536,870,911 bytes (just under 512 MiB)."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:107
+#: RAN/Admin/DeploymentOutcomeMessage.php:108
 msgid "Booster stopped the package before changing files, but no exact failed check was recorded. Check the package and settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:108
+#: RAN/Admin/DeploymentOutcomeMessage.php:109
 msgid "Booster blocked an older branch package before changing files. Restore a full-site backup or use a publisher-provided down-migration for intentional recovery."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:109
+#: RAN/Admin/DeploymentOutcomeMessage.php:110
 msgid "Another deployment is using the WordPress package lock. Wait for it to finish, check Activity for a pending recovery, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:110
+#: RAN/Admin/DeploymentOutcomeMessage.php:111
 msgid "A package update policy blocked this deployment. Review the package Updates settings and WordPress file modification configuration, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:111
+#: RAN/Admin/DeploymentOutcomeMessage.php:112
 msgid "This repository conflicts with another managed package source. Review the repository package settings before retrying."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:112
+#: RAN/Admin/DeploymentOutcomeMessage.php:113
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:444
 msgid "Booster could not safely read the repository source relationship. Check package storage and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:113
+#: RAN/Admin/DeploymentOutcomeMessage.php:114
 msgid "The requested repository reference is no longer current. Refresh the package source or start a new deployment from the current reference."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:114
+#: RAN/Admin/DeploymentOutcomeMessage.php:115
 msgid "WordPress could not complete the package update; the earlier package should remain intact. Check Activity and WordPress update health, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:115
+#: RAN/Admin/DeploymentOutcomeMessage.php:116
 msgid "WordPress could not restore the plugin activation state. Check the plugin's current activation state and its error log, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:116
+#: RAN/Admin/DeploymentOutcomeMessage.php:117
 msgid "The deployment stopped before WordPress changed the package. Check Activity for a pending recovery, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:117
+#: RAN/Admin/DeploymentOutcomeMessage.php:118
 msgid "The deployment may have changed package files before it stopped. Inspect the package and Activity recovery evidence before allowing another deployment."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:118
+#: RAN/Admin/DeploymentOutcomeMessage.php:119
 msgid "WordPress completed the update, but Booster could not prove the final package state. Inspect the package and Activity recovery evidence before allowing another deployment."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:119
+#: RAN/Admin/DeploymentOutcomeMessage.php:120
 msgid "WordPress left maintenance mode active after the deployment. Inspect the package and maintenance state before trying again."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:120
+#: RAN/Admin/DeploymentOutcomeMessage.php:121
 msgid "WordPress completed the deployment, but the installed package version does not match the verified archive. Inspect the installed package header and Activity before retrying."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:121
+#: RAN/Admin/DeploymentOutcomeMessage.php:122
 msgid "WordPress completed the deployment, but the package activation state changed. Check its current activation state before retrying."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:122
+#: RAN/Admin/DeploymentOutcomeMessage.php:123
 msgid "The package changed, but Booster could not verify its management record. Review the deployment activity and any existing package settings before retrying."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:123
+#: RAN/Admin/DeploymentOutcomeMessage.php:124
 msgid "The package header has no Version value. Add a value such as Version: 0.1.0 to the main plugin header or theme style.css, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:124
+#: RAN/Admin/DeploymentOutcomeMessage.php:125
 msgid "The package Version value is invalid. Set a valid value such as Version: 0.1.0 in the main plugin header or theme style.css, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:125
+#: RAN/Admin/DeploymentOutcomeMessage.php:126
 msgid "Booster could not safely read the package header. Check that the main plugin header or theme style.css is readable text, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:126
+#: RAN/Admin/DeploymentOutcomeMessage.php:127
 msgid "The expected package header was not found. Add the main plugin header or theme style.css, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:127
+#: RAN/Admin/DeploymentOutcomeMessage.php:128
 msgid "The package compatibility header is invalid. Correct its Requires PHP or Requires at least value, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:128
+#: RAN/Admin/DeploymentOutcomeMessage.php:129
 msgid "The package requires a newer PHP version than this site uses. Update the site PHP version or use a compatible package, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:129
+#: RAN/Admin/DeploymentOutcomeMessage.php:130
 msgid "The package requires a newer WordPress version than this site uses. Update WordPress or use a compatible package, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:130
+#: RAN/Admin/DeploymentOutcomeMessage.php:131
 msgid "The configured package subdirectory is missing from the archive. Correct the package source or subdirectory setting, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:131
+#: RAN/Admin/DeploymentOutcomeMessage.php:132
 msgid "No plugin package was found in the archive. Include the intended main plugin file, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:132
+#: RAN/Admin/DeploymentOutcomeMessage.php:133
 msgid "No theme package was found in the archive. Include the intended theme style.css, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:133
+#: RAN/Admin/DeploymentOutcomeMessage.php:134
 msgid "The selected package directory contains more than one main plugin header. Leave exactly one main plugin header in that directory, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:134
+#: RAN/Admin/DeploymentOutcomeMessage.php:135
 msgid "The archive package does not match the managed package identity. Check the selected repository and package settings, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:135
+#: RAN/Admin/DeploymentOutcomeMessage.php:136
 msgid "The installed plugin is a root-level single file, which Booster cannot update safely. Install or manage a directory-based plugin package instead."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:136
+#: RAN/Admin/DeploymentOutcomeMessage.php:137
 msgid "Booster cannot inspect deployment archives because the PHP ZIP extension is unavailable. Enable the ZIP extension on this site, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:137
+#: RAN/Admin/DeploymentOutcomeMessage.php:138
 msgid "Archive deployment is supported only on a single-site WordPress installation. Use a supported single-site installation for this deployment."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:138
+#: RAN/Admin/DeploymentOutcomeMessage.php:139
 msgid "WordPress file modifications are disabled. Allow WordPress file modifications in the site configuration, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:139
+#: RAN/Admin/DeploymentOutcomeMessage.php:140
 msgid "Booster requires the direct WordPress filesystem method. Configure the direct filesystem method, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:140
+#: RAN/Admin/DeploymentOutcomeMessage.php:141
 msgid "WordPress cannot write to a deployment temporary, upgrade, or destination directory. Correct the directory ownership or permissions, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:141
+#: RAN/Admin/DeploymentOutcomeMessage.php:142
 msgid "The site does not have enough disk space for the deployment. Free sufficient space safely, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:142
+#: RAN/Admin/DeploymentOutcomeMessage.php:143
 msgid "WordPress could not create a temporary archive file. Check the server temporary directory and available disk space, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:143
+#: RAN/Admin/DeploymentOutcomeMessage.php:144
 msgid "The downloaded ZIP could not pass its integrity check. Check the download and local temporary-file storage, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:144
+#: RAN/Admin/DeploymentOutcomeMessage.php:145
 msgid "Booster could not download the package archive. Check the repository source, local temporary-file storage permissions, available disk space, and server network access, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:145
+#: RAN/Admin/DeploymentOutcomeMessage.php:146
 msgid "The package archive URL is invalid. Correct the release source or repository configuration, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:146
+#: RAN/Admin/DeploymentOutcomeMessage.php:147
 msgid "The requested archive revision is invalid. Choose an available repository revision, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:147
+#: RAN/Admin/DeploymentOutcomeMessage.php:148
 msgid "The downloaded package is not a valid ZIP archive. Publish a valid ZIP archive, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:148
+#: RAN/Admin/DeploymentOutcomeMessage.php:149
 msgid "The package archive layout is not supported. Publish a package with the expected plugin or theme layout, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:149
+#: RAN/Admin/DeploymentOutcomeMessage.php:150
 msgid "The package archive contains an unsafe path, such as ../, an absolute path, or a symlink. Rebuild the archive without unsafe paths, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:150
+#: RAN/Admin/DeploymentOutcomeMessage.php:151
 msgid "The package archive contains conflicting paths. Rebuild the archive with unique paths, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:151
+#: RAN/Admin/DeploymentOutcomeMessage.php:152
 msgid "The package archive contains invalid ZIP entry metadata. Rebuild the ZIP with valid file and directory entries, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:152
+#: RAN/Admin/DeploymentOutcomeMessage.php:153
 msgid "The package archive contains too many entries. Reduce the archive contents, rebuild it, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:153
+#: RAN/Admin/DeploymentOutcomeMessage.php:154
 msgid "The package archive is encrypted and cannot be installed. Publish an unencrypted ZIP archive, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:154
+#: RAN/Admin/DeploymentOutcomeMessage.php:155
 msgid "The package archive contains a link or device entry. Rebuild the archive with only regular files and directories, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:155
+#: RAN/Admin/DeploymentOutcomeMessage.php:156
 msgid "Booster could not safely clean up a temporary archive or Git provider authentication. Check server temporary-file access and the Git provider integration, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:156
+#: RAN/Admin/DeploymentOutcomeMessage.php:157
 msgid "The package changed while Booster prepared the deployment. Review the current package source, then start a new deployment."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:157
+#: RAN/Admin/DeploymentOutcomeMessage.php:158
 msgid "The package destination already exists and cannot be replaced safely. Link the installed plugin or theme in Booster if it is correct; otherwise inspect it and Activity before retrying."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:158
+#: RAN/Admin/DeploymentOutcomeMessage.php:159
 msgid "Booster cannot update itself during this deployment. Update Booster separately before retrying the managed package."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:159
+#: RAN/Admin/DeploymentOutcomeMessage.php:160
 msgid "Branch deployment is unavailable for this release-managed package. Use Published releases or WordPress Updates for the release source, or explicitly switch the package source back to Branch."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:160
+#: RAN/Admin/DeploymentOutcomeMessage.php:161
 msgid "WordPress is already in maintenance mode. Wait for the current update to finish, inspect Activity, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:161
+#: RAN/Admin/DeploymentOutcomeMessage.php:162
 msgid "Booster recorded an unavailable deployment outcome. Open Troubleshooting, verify the package state before retrying, and submit a redacted report if it repeats."
 msgstr ""
 
@@ -1411,51 +1415,69 @@ msgstr ""
 msgid "An add-on guide is temporarily unavailable. Check plugin compatibility and the error log."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:83
+#: RAN/Admin/Feedback/FeedbackFlash.php:94
 msgid "Release check complete."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:97
+#. translators: %s: release version.
+#: RAN/Admin/Feedback/FeedbackFlash.php:112
+#, php-format
+msgid "Newer release %s available. Updates are off for this package."
+msgstr ""
+
+#: RAN/Admin/Feedback/FeedbackFlash.php:113
+msgid "Newer release available. Updates are off for this package."
+msgstr ""
+
+#: RAN/Admin/Feedback/FeedbackFlash.php:116
+msgid "Checked a moment ago."
+msgstr ""
+
+#: RAN/Admin/Feedback/FeedbackFlash.php:117
+msgid "Checked: no newer release. Updates are off for this package."
+msgstr ""
+
+#: RAN/Admin/Feedback/FeedbackFlash.php:118
 msgid "Check not run. Updates are off for this package."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:97
+#: RAN/Admin/Feedback/FeedbackFlash.php:118
 msgid "Nothing is wrong. Turn updates on in the package settings to check for releases."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:98
+#: RAN/Admin/Feedback/FeedbackFlash.php:119
 msgid "Check not run. Site configuration turns updates off."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:98
+#: RAN/Admin/Feedback/FeedbackFlash.php:119
 msgid "Nothing is wrong. Site configuration blocks updates for every package; change it there to allow checks."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:99
+#: RAN/Admin/Feedback/FeedbackFlash.php:120
 msgid "Releases were not checked. Use Check releases to retry."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:100
+#: RAN/Admin/Feedback/FeedbackFlash.php:121
 msgid "The newest release cannot be used."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:100
+#: RAN/Admin/Feedback/FeedbackFlash.php:121
 msgid "It did not pass Booster's eligibility checks. Activity records the reason."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:101
+#: RAN/Admin/Feedback/FeedbackFlash.php:122
 msgid "The release check failed."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:101
+#: RAN/Admin/Feedback/FeedbackFlash.php:122
 msgid "Booster could not finish the check. Try again; if it repeats, see Activity."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:102
+#: RAN/Admin/Feedback/FeedbackFlash.php:123
 msgid "The release check could not start. Review this package’s published release settings, then retry."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:111
+#: RAN/Admin/Feedback/FeedbackFlash.php:136
 msgid "Release check complete. No newer eligible release was found."
 msgstr ""
 
@@ -2604,7 +2626,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:109
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:954
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1030
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1033
 msgid "Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed."
 msgstr ""
 
@@ -2966,275 +2988,275 @@ msgstr ""
 msgid "plugin"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:972
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:975
 msgid "Branch-based package management is restored."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:973
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:976
 msgid "Package settings changed after this browser page was opened. Refresh the page, review the current settings, then try again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:974
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:977
 msgid "This package already registers its own release updater. Use one release owner only."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:975
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:978
 msgid "You are not authorized to perform this published release operation. No package was installed or adopted."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:976
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:979
 msgid "Published releases are not available for this Git provider. Use Branch tracking instead."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:977
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:980
 msgid "The published release request was invalid. No package was installed or adopted. Reload and try again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:978
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:981
 msgid "Published release controls are temporarily unavailable. No package settings were changed. No package was installed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:979
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:982
 msgid "That plugin or theme is already installed or managed. No package was overwritten."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:980
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:983
 msgid "A package is present, but Booster did not establish management for it."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:981
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:984
 msgid "Booster could not confirm the final installation or management state."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:982
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:985
 msgid "Booster could not confirm the installation or management state after finalization failed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:987
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:990
 msgid "WordPress did not install the selected published release, and Booster did not adopt it."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:988
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:991
 msgid "The install request could not be completed. Review installed packages before retrying because the final state was not reported."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:989
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:992
 msgid "No eligible published release is available for the selected channel. No package was installed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:990
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:993
 msgid "The selected release does not satisfy the selected channel requirements. No package was installed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:991
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:994
 msgid "Published releases could not be checked. No package was installed and no package settings were changed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1002
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1005
 msgid "The published release operation completed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1003
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1006
 msgid "The published release operation could not be completed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1014
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1017
 msgid "No published release was found for the selected track."
 msgstr ""
 
 #. translators: %s: release tag, for example v1.2.0.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1016
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1019
 #, php-format
 msgid "Release %s has no .zip package asset."
 msgstr ""
 
 #. translators: %s: release tag, for example v1.2.0.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1018
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1021
 #, php-format
 msgid "Release %s has more than one .zip package asset."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1019
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1022
 msgid "A published release was found, but it does not have exactly one package ZIP, or its header or Update URI does not match."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1020
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1023
 msgid "Booster could not confirm an eligible published release for this track."
 msgstr ""
 
 #. translators: %s: package folder and main file name found in the ZIP, for example example/example.php.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1025
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1028
 #, php-format
 msgid "The ZIP’s folder or main file (%s) does not match this package."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1031
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1164
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1034
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1167
 msgid "Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1033
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1036
 msgid "This package uses retired published-release settings, so Booster could not start its release checker. Return it to Branch, then validate and switch it back to Published releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1034
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1037
 msgid "Release version mismatch — check published releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1035
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1038
 msgid "The published package is missing its WordPress version header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1036
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1039
 msgid "The published package has an invalid WordPress version header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1037
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1040
 msgid "The published release archive could not be inspected."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1038
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1041
 msgid "The published release assets could not be validated."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1039
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1042
 msgid "Published release validation is temporarily unavailable."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1040
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1043
 msgid "This server cannot currently run the published-release validator."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1041
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1044
 msgid "The published ZIP is missing the required Update URI header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1042
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1045
 msgid "The published ZIP’s Update URI does not match its configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1044
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1047
 msgid "The published release is not compatible with this WordPress site."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1045
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1048
 msgid "This server cannot inspect ZIP packages because its ZIP extension is unavailable."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1047
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1050
 msgid "The published ZIP has an invalid or excessive uncompressed size."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1052
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1055
 msgid "The published ZIP has an unsafe or unsupported archive structure."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1053
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1056
 msgid "The published ZIP contains more than one possible WordPress package header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1054
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1057
 msgid "The published release tag does not contain a valid package version."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1055
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1058
 msgid "Published release status needs attention."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1075
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1078
 msgid "Publish a release for the selected Stable or Preview track, then use Check releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1076
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1079
 msgid "Attach exactly one .zip package to the release, then use Check releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1077
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1080
 msgid "Keep exactly one .zip package on the release, then use Check releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1078
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1081
 msgid "Make sure the release has exactly one package ZIP asset, and that its plugin or theme header and Update URI match this repository. Then use Check releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1079
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1082
 msgid "Publish a release for the selected Stable or Preview track, make sure it has one package ZIP whose header and Update URI match this repository, then use Check releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1084
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1087
 msgid "Publish a ZIP whose folder and main file name match this package, then use Check releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1089
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1092
 msgid "Stop managing the other packages in Booster before switching this package to releases. Their files can stay installed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1090
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1093
 msgid "Return the package to Branch to keep its configured repository subdirectory."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1092
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1095
 msgid "Correct the Update URI in the packaged plugin or theme header, publish a new ZIP, then recheck."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1094
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1097
 msgid "Publish a package whose WordPress and PHP compatibility headers include this site, or choose a compatible release track."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1096
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1099
 msgid "Make the release tag and packaged WordPress Version header describe the same valid version, then publish a corrected ZIP."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1101
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1104
 msgid "Correct the plugin or theme header in the distributable ZIP, publish a new release asset, then recheck."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1103
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1106
 msgid "Ask the site administrator to restore the required PHP and temporary-file runtime support, then retry."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1105
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1108
 msgid "Return the package to Branch, verify its repository settings, then validate and switch it back to Published releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1106
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1109
 msgid "Review the release, repository access and packaged WordPress headers, then retry. If it still fails, open Troubleshooting with the error code below."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1112
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1115
 msgid "The release check completed, but its version result is unavailable. Review the package status below."
 msgstr ""
 
 #. translators: 1: installed version, 2: available version.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1123
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1126
 #, php-format
 msgid "Version %1$s is installed; version %2$s is available. WordPress controls installation."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1124
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1132
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1127
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1135
 msgid "unknown"
 msgstr ""
 
 #. translators: %s is the installed version.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1131
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1134
 #, php-format
 msgid "Version %s is installed. No newer eligible release was found."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1148
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1151
 msgid "Why this happened and how to fix it"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1150
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1153
 msgid "What Booster found:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1151
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1154
 msgid "What to do:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1152
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1155
 #: views/documentation.php:296
 #: views/documentation.php:485
 #: views/packages/index.php:141
@@ -3242,55 +3264,55 @@ msgstr ""
 msgid "Open Troubleshooting"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1153
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1156
 msgid "Technical reason:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1163
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1166
 msgid "Published releases require this plugin or theme to be at the repository root. This package can continue using its configured repository subdirectory with Branch deployments."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1165
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1168
 msgid "This package header does not declare an Update URI for its configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1166
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1169
 msgid "This package header Update URI does not match its configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1167
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1170
 msgid "The Git provider does not support published release tracking."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1168
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1171
 msgid "The configured repository is invalid."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1169
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1172
 msgid "This package already registers its own release updater. Use either that updater or Booster published-release tracking, not both."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1170
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1173
 msgid "The installed plugin or theme identity is not eligible for published release tracking."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1176
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1179
 msgid "Published releases require the repository root."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1177
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1180
 msgid "Missing from the installed package header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1178
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1181
 msgid "Does not match the configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1179
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1182
 msgid "Matches, but this package already registers its own updater."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1180
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1183
 msgid "Cannot be validated until the Git provider and repository are ready."
 msgstr ""
 

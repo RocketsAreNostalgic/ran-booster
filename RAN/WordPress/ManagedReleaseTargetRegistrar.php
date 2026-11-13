@@ -445,10 +445,10 @@ final class ManagedReleaseTargetRegistrar {
 			return;
 		}
 		$expected = match ( $event['reason'] ) {
-			'update_available', 'no_candidates', 'no_newer_candidate' => 'succeeded',
+			'update_available', 'newer_release_observed', 'no_candidates', 'no_newer_candidate' => 'succeeded',
 			'candidate_rejected', 'candidate_not_eligible' => 'rejected',
 			'policy_disabled', 'policy_forced_off', 'discovery_not_admitted' => 'skipped',
-			'unexpected_failure', 'runtime_identity_invalid', 'filesystem_unavailable', 'offer_token_unavailable', 'release_list_failed', 'candidate_invalid', 'candidate_inspection_failed', 'candidate_descriptor_mismatch', 'candidate_validation_failed' => 'failed',
+			'unexpected_failure', 'runtime_busy', 'runtime_identity_invalid', 'filesystem_unavailable', 'offer_token_unavailable', 'release_list_failed', 'candidate_invalid', 'candidate_inspection_failed', 'candidate_descriptor_mismatch', 'candidate_validation_failed' => 'failed',
 			default => null,
 		};
 		if ( null === $expected || $event['status'] !== $expected

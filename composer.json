@@ -52,7 +52,7 @@
         "ran/booster-github-provider": "1.0.0-beta.21",
         "ran/updater-support": "1.0.0-beta.7",
         "ran/wp-branch-updater": "1.0.0-beta.15",
-        "ran/wp-release-updater": "~1.0.0-beta.18"
+        "ran/wp-release-updater": "~1.0.0-beta.19"
     },
     "extra": {
         "ran-updater-runtime-protocol": 7

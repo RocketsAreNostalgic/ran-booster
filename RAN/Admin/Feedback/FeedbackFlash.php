@@ -22,6 +22,16 @@ final class FeedbackFlash {
 
 	/** Store the codes for this user's next Booster screen. A later call replaces an unread flash. */
 	public static function enqueue( string ...$codes ): void {
+		self::store( $codes );
+	}
+
+	/** Store one Check releases result, with the newer release version it may name. */
+	public static function enqueue_check_result( string $code, string $version = '' ): void {
+		self::store( array( $code ), $version );
+	}
+
+	/** @param array<array-key, string> $codes */
+	private static function store( array $codes, string $version = '' ): void {
 		$user_id = get_current_user_id();
 		$codes   = array_slice(
 			array_values( array_unique( array_filter( $codes, static fn ( string $code ): bool => null !== self::definition( $code ) ) ) ),
@@ -39,7 +49,7 @@ final class FeedbackFlash {
 				'site'  => get_current_blog_id(),
 				'at'    => time(),
 				'codes' => $codes,
-			)
+			) + ( self::valid_version( $version ) ? array( 'version' => $version ) : array() )
 		);
 	}
 
@@ -67,7 +77,8 @@ final class FeedbackFlash {
 
 		$items = '';
 		foreach ( $flash['codes'] as $code ) {
-			$definition = is_string( $code ) ? self::definition( $code ) : null;
+			$version    = is_string( $flash['version'] ?? null ) ? $flash['version'] : '';
+			$definition = is_string( $code ) ? self::definition( $code, $version ) : null;
 			if ( null !== $definition ) {
 				$target = isset( $definition[2] ) ? ' data-feedback-target="' . esc_attr( $definition[2] ) . '"' : '';
 				$items .= '<div class="ran-booster-feedback__item" data-feedback-key="' . esc_attr( $code ) . '" data-intent="' . esc_attr( $definition[0] ) . '"' . $target . ' role="' . ( 'error' === $definition[0] ? 'alert' : 'status' ) . '">' . esc_html( $definition[1] ) . '</div>';
@@ -92,8 +103,18 @@ final class FeedbackFlash {
 	 *
 	 * @return array{0: 'info'|'error'|'warning', 1: string, 2: string}|null Intent, summary and detail for a closed result code.
 	 */
-	public static function check_result( string $code ): ?array {
+	public static function check_result( string $code, string $version = '' ): ?array {
 		return match ( $code ) {
+			'refresh_newer_while_off'    => array(
+				'info',
+				self::valid_version( $version )
+					/* translators: %s: release version. */
+					? sprintf( __( 'Newer release %s available. Updates are off for this package.', 'ran-booster' ), $version )
+					: __( 'Newer release available. Updates are off for this package.', 'ran-booster' ),
+				'',
+			),
+			'refresh_recent'             => array( 'info', __( 'Checked a moment ago.', 'ran-booster' ), '' ),
+			'refresh_current_while_off'  => array( 'info', __( 'Checked: no newer release. Updates are off for this package.', 'ran-booster' ), '' ),
 			'refresh_skipped_disabled'   => array( 'info', __( 'Check not run. Updates are off for this package.', 'ran-booster' ), __( 'Nothing is wrong. Turn updates on in the package settings to check for releases.', 'ran-booster' ) ),
 			'refresh_skipped_forced_off' => array( 'info', __( 'Check not run. Site configuration turns updates off.', 'ran-booster' ), __( 'Nothing is wrong. Site configuration blocks updates for every package; change it there to allow checks.', 'ran-booster' ) ),
 			'refresh_unchecked'          => array( 'warning', __( 'Releases were not checked. Use Check releases to retry.', 'ran-booster' ), '' ),
@@ -104,9 +125,13 @@ final class FeedbackFlash {
 		};
 	}
 
+	private static function valid_version( string $version ): bool {
+		return 1 === preg_match( '/\A[0-9A-Za-z][0-9A-Za-z._-]{0,63}\z/', $version );
+	}
+
 	/** @return array{0: 'success'|'info'|'error'|'warning', 1: string, 2?: string}|null Intent, fixed Core copy and optional inline target for a closed code. */
-	private static function definition( string $code ): ?array {
-		$check = self::check_result( $code );
+	private static function definition( string $code, string $version = '' ): ?array {
+		$check = self::check_result( $code, $version );
 		return match ( $code ) {
 			'release_check_current' => array( 'success', __( 'Release check complete. No newer eligible release was found.', 'ran-booster' ) ),
 			'release_check_update'  => array( 'success', self::release_checked() ),

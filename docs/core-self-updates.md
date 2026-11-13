@@ -127,15 +127,15 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core loads lock-pinned `ran/wp-release-updater` beta.18 (Protocol 7) after its
+Core loads lock-pinned `ran/wp-release-updater` beta.19 (Protocol 7) after its
 single-site admission check and retains the public registrar. Runtime arbitration
 and prospective releases stay available independently of Core discovery. Other
 physical runtime copies must satisfy the pinned family/provenance selection
 contract; incompatible families fail closed.
 
-The published updater fact selected for this uptake is beta.18 reference
-`9aebae4f6b3e1367fae4ec8c208e1e2c202425f9`, with runtime revision
-`6a92508c74251bed44b0e21622034afb6812429ea237930d4baadf5948a9da70`.
+The published updater fact selected for this uptake is beta.19 reference
+`c6aa2e6e1456b0ad4abec24bf41a870d151eb4b2`, with runtime revision
+`75f5ddf3474cd62bad9d1fbe5788e523e0e32c8b2a561b55be454d42dd2e5307`.
 This records the released artifact identity; it does not by itself qualify
 Core integration. Qualification belongs to the exact-PR proof and review receipt.
 

@@ -523,7 +523,7 @@ final class ReleaseManagementControls {
 			$url = add_query_arg( $this->result_query_arguments( $outcome, $channel ), $url );
 			// A result that is not a success points at its inline notice, which stays the record.
 			if ( 'refresh' === $operation && ! $outcome['successful'] && null !== FeedbackFlash::check_result( $outcome['code'] ) ) {
-				FeedbackFlash::enqueue( $outcome['code'] );
+				FeedbackFlash::enqueue_check_result( $outcome['code'], ReleaseTrackingPreflight::detail( $outcome['detail'] ?? '' ) );
 			}
 		}
 

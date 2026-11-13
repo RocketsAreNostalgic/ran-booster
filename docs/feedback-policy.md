@@ -82,9 +82,20 @@ the notice shows the summary and a detail line.
 | --- | --- | --- | --- |
 | `refresh_skipped_disabled` | skipped, `policy_disabled` (package setting) | info | Check not run. Updates are off for this package. |
 | `refresh_skipped_forced_off` | skipped, `policy_forced_off` (site configuration) | info | Check not run. Site configuration turns updates off. |
+| `refresh_newer_while_off` | succeeded, `newer_release_observed`, read-only check while updates are off | info | Newer release X available. Updates are off for this package. |
+| `refresh_current_while_off` | succeeded, `no_newer_candidate` or `no_candidates`, read-only check while updates are off | info | Checked: no newer release. Updates are off for this package. |
+| `refresh_recent` | read-only check skipped because the package was checked within the last minute | info | Checked a moment ago. |
 | `refresh_unchecked` | skipped for any other reason, or no check observed (for example a filter or another plugin blocked it) | warning | Releases were not checked. Use Check releases to retry. |
 | `refresh_rejected` | rejected | warning | The newest release cannot be used. |
 | `refresh_check_failed` | failed | error | The release check failed. |
+
+While updates are off, Check releases asks the updater's read-only check, which
+never offers an update. The answer is neutral, not a success: the check ran,
+but updates stay off, so it is `info` like the other updates-off results and
+names the version (without build metadata) only when it is a bounded
+letters, digits, dot, underscore and hyphen token. An updater that does not answer keeps
+`refresh_skipped_disabled`; the read-only check is not asked for manual or
+automatic packages.
 
 The result also carries the updater's closed reason (`check_reason`, for
 example `policy_disabled`) so a caller other than the page can read it.

@@ -1566,7 +1566,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$html = $this->render_release_view( array() );
 
 		self::assertSame( 'is-ok', $this->release_status_row_class( $html ) );
-		self::assertStringContainsString( 'Version 1.0.0 is installed; no newer eligible release was found.', $html );
+		self::assertStringContainsString( 'Version 1.0.0 is installed. No newer eligible release was found.', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-release-status-notice', $html );
 		self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
 		self::assertStringNotContainsString( 'Use Check releases to look for a newer version.', $html );
@@ -1578,7 +1578,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 'is-neutral', $this->release_status_row_class( $html ) );
 		self::assertStringContainsString( 'Use Check releases to look for a newer version.', $html );
 		self::assertStringNotContainsString( 'have not been checked', $html );
-		self::assertStringNotContainsString( 'no newer eligible release was found', $html );
+		self::assertStringNotContainsString( 'ewer eligible release was found', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-release-status-notice', $html );
 		self::assertStringNotContainsString( 'No published release was found', $html );
 		self::assertStringNotContainsString( 'could not confirm an eligible published release', $html );
@@ -1707,8 +1707,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			}
 
 			$url = $controls->process_admin_post_request( $operation, $request );
-			self::assertStringContainsString( 'ran_booster_release_result=', $url, $operation );
-			self::assertStringContainsString( 'ran_booster_release_result_nonce=', $url, $operation );
+			// A confirmed Check releases result travels as a flash, not as signed query arguments.
+			self::assertSame( 'refresh' !== $operation, str_contains( $url, 'ran_booster_release_result=' ), $operation );
+			self::assertSame( 'refresh' !== $operation, str_contains( $url, 'ran_booster_release_result_nonce=' ), $operation );
 			self::assertStringContainsString( 'ran_booster_open_advanced=1', $url, $operation );
 			self::assertStringNotContainsString( 'release_deployments', $url, $operation );
 		}
@@ -1824,28 +1825,59 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'notice-success', $html );
 	}
 
-	public function test_signed_prg_notice_reads_fresh_status_without_repeating_mutation(): void {
-		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
-		$controls = ReleaseManagementFixture::controls( $tracking );
-		$request  = $this->request( 'refresh' );
-		$url      = $controls->process_admin_post_request( 'refresh', $request );
-		$query    = (string) parse_url( $url, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Parsing the already signed local PRG fixture.
+	public function test_a_confirmed_check_releases_result_travels_as_a_flash_not_as_query_arguments(): void {
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$controls                             = ReleaseManagementFixture::controls( $tracking );
+		$url                                  = $controls->process_admin_post_request( 'refresh', $this->request( 'refresh' ) );
+		$query                                = (string) parse_url( $url, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Parsing the already built local PRG fixture.
 		parse_str( $query, $_GET );
+
+		self::assertStringNotContainsString( 'ran_booster_release_', $url );
+		self::assertStringNotContainsString( 'complete', strtolower( rawurldecode( $url ) ) );
+		self::assertSame( array( 'page' => 'ran-booster-plugins' ), $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Asserting the parsed local PRG fixture.
+		self::assertSame( array( 'release_check_current' ), $GLOBALS['ran_booster_feedback_test']['meta'][1][ \RAN\Admin\Feedback\FeedbackFlash::USER_META_KEY ]['codes'] );
 
 		ob_start();
 		$controls->render_operation_notice();
-		$html = (string) ob_get_clean();
+		self::assertSame( '', (string) ob_get_clean() );
 
-		self::assertStringContainsString( 'notice-success', $html );
-		self::assertStringContainsString( 'Release check complete.', $html );
-		self::assertStringNotContainsString( 'no newer eligible release was found', $html );
-		self::assertStringNotContainsString( 'release_deployments', $html );
+		ob_start();
+		\RAN\Admin\Feedback\FeedbackFlash::render();
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'data-feedback-key="release_check_current"', $html );
+		self::assertStringContainsString( 'Release check complete. No newer eligible release was found.', $html );
 		self::assertSame(
 			array( array( 'refresh', 'plugin', 'example/example.php', 3, $this->nonce( 'refresh' ) ) ),
 			$tracking->calls
 		);
 		self::assertSame( 2, $tracking->status_reads );
+	}
+
+	public function test_check_releases_failures_and_warnings_never_use_the_flash(): void {
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', last_checked_at: '' ) );
+		$controls                             = ReleaseManagementFixture::controls( $tracking );
+		$warning                              = $controls->process_admin_post_request( 'refresh', $this->request( 'refresh' ) );
+
+		$bad_nonce             = $this->request( 'refresh' );
+		$bad_nonce['_wpnonce'] = 'wrong';
+		$failure               = $controls->process_admin_post_request( 'refresh', $bad_nonce );
+
+		self::assertStringContainsString( 'ran_booster_release_result=refresh_unchecked', $warning );
+		self::assertStringContainsString( 'ran_booster_release_result=invalid_request', $failure );
+		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'] );
+	}
+
+	public function test_other_release_operations_keep_their_existing_result_notice(): void {
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		$controls                             = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
+
+		$url = $controls->process_admin_post_request( 'enable', $this->request( 'enable' ) );
+
+		self::assertStringContainsString( 'ran_booster_release_result=release_enabled', $url );
+		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'] );
 	}
 
 	/** @return array<string, array{string, string, string, string, string}> */

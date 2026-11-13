@@ -147,6 +147,7 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 ?><div class="wrap ran-booster-admin<?php echo esc_attr( $admin_page_modifier ); ?>" data-ran-booster-shell-navigation>
 	<?php
 	\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+	\RAN\Admin\Feedback\FeedbackFlash::render();
 	?>
 	<div id="ran-booster-core-development-notice-slot">
 		<?php

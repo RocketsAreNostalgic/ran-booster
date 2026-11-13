@@ -57,7 +57,7 @@ final class ReleaseTrackingOperations {
 		return $out;
 	}
 
-	/** @return array{type:string,identifier:string,code:string,successful:bool,reason?:string,detail?:string} */
+	/** @return array{type:string,identifier:string,code:string,successful:bool,reason?:string,check_reason?:string,detail?:string} */
 	public function execute( string $operation, string $type, string $identifier, int $revision, string $channel, string $nonce ): array {
 		$result = match ( $operation ) {
 			'enable' => $this->releases->enable( $type, $identifier, $revision, $channel, $nonce ),
@@ -86,6 +86,7 @@ final class ReleaseTrackingOperations {
 		$outcome = $this->outcome( $type, $identifier, $code, $successful );
 
 		$outcome += '' === $result->reason() ? array() : array( 'reason' => $result->reason() );
+		$outcome += '' === $result->check_reason() ? array() : array( 'check_reason' => $result->check_reason() );
 
 		return $outcome + ( '' === $result->detail() ? array() : array( 'detail' => $result->detail() ) );
 	}

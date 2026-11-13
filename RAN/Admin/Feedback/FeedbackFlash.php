@@ -69,7 +69,8 @@ final class FeedbackFlash {
 		foreach ( $flash['codes'] as $code ) {
 			$definition = is_string( $code ) ? self::definition( $code ) : null;
 			if ( null !== $definition ) {
-				$items .= '<div class="ran-booster-feedback__item" data-feedback-key="' . esc_attr( $code ) . '" data-intent="' . esc_attr( $definition[0] ) . '" role="' . ( 'error' === $definition[0] ? 'alert' : 'status' ) . '">' . esc_html( $definition[1] ) . '</div>';
+				$target = isset( $definition[2] ) ? ' data-feedback-target="' . esc_attr( $definition[2] ) . '"' : '';
+				$items .= '<div class="ran-booster-feedback__item" data-feedback-key="' . esc_attr( $code ) . '" data-intent="' . esc_attr( $definition[0] ) . '"' . $target . ' role="' . ( 'error' === $definition[0] ? 'alert' : 'status' ) . '">' . esc_html( $definition[1] ) . '</div>';
 			}
 		}
 		if ( '' !== $items ) {
@@ -82,12 +83,34 @@ final class FeedbackFlash {
 		return __( 'Release check complete.', 'ran-booster' );
 	}
 
-	/** @return array{0: 'success'|'error'|'warning', 1: string}|null Intent and fixed Core copy for a closed code. */
+	/** The id of the inline notice a Check releases pointer leads to. */
+	public const CHECK_RESULT_TARGET = 'ran-booster-release-check-result';
+
+	/**
+	 * The one copy source for a Check releases result that is not a success:
+	 * the snackbar and the inline notice show the summary, and the notice adds the detail.
+	 *
+	 * @return array{0: 'info'|'error'|'warning', 1: string, 2: string}|null Intent, summary and detail for a closed result code.
+	 */
+	public static function check_result( string $code ): ?array {
+		return match ( $code ) {
+			'refresh_skipped_disabled'   => array( 'info', __( 'Check not run. Updates are off for this package.', 'ran-booster' ), __( 'Nothing is wrong. Turn updates on in the package settings to check for releases.', 'ran-booster' ) ),
+			'refresh_skipped_forced_off' => array( 'info', __( 'Check not run. Site configuration turns updates off.', 'ran-booster' ), __( 'Nothing is wrong. Site configuration blocks updates for every package; change it there to allow checks.', 'ran-booster' ) ),
+			'refresh_unchecked'          => array( 'warning', __( 'Releases were not checked. Use Check releases to retry.', 'ran-booster' ), '' ),
+			'refresh_rejected'           => array( 'warning', __( 'The newest release cannot be used.', 'ran-booster' ), __( 'It did not pass Booster\'s eligibility checks. Activity records the reason.', 'ran-booster' ) ),
+			'refresh_check_failed'       => array( 'error', __( 'The release check failed.', 'ran-booster' ), __( 'Booster could not finish the check. Try again; if it repeats, see Activity.', 'ran-booster' ) ),
+			'refresh_failed'             => array( 'error', __( 'The release check could not start. Review this package’s published release settings, then retry.', 'ran-booster' ), '' ),
+			default                      => null,
+		};
+	}
+
+	/** @return array{0: 'success'|'info'|'error'|'warning', 1: string, 2?: string}|null Intent, fixed Core copy and optional inline target for a closed code. */
 	private static function definition( string $code ): ?array {
+		$check = self::check_result( $code );
 		return match ( $code ) {
 			'release_check_current' => array( 'success', __( 'Release check complete. No newer eligible release was found.', 'ran-booster' ) ),
 			'release_check_update'  => array( 'success', self::release_checked() ),
-			default                 => null,
+			default                 => null === $check ? null : array( $check[0], $check[1], self::CHECK_RESULT_TARGET ),
 		};
 	}
 }

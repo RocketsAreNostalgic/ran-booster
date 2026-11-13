@@ -16,10 +16,12 @@ final readonly class ReleaseTrackingResult {
 		private string $code,
 		private string $message,
 		private string $reason = '',
-		private string $detail = ''
+		private string $detail = '',
+		private string $check_reason = ''
 	) {
 		if ( 1 !== preg_match( '/^[a-z][a-z0-9_]{0,63}$/', $this->code )
 			|| ( '' !== $this->reason && ! in_array( $this->reason, ReleaseTrackingPreflight::reason_codes(), true ) )
+			|| ( '' !== $this->check_reason && 1 !== preg_match( '/^[a-z][a-z0-9_]{0,63}$/', $this->check_reason ) )
 			|| ReleaseTrackingPreflight::detail( $this->detail ) !== $this->detail
 			|| '' === trim( $this->message )
 			|| strlen( $this->message ) > 255
@@ -32,8 +34,8 @@ final readonly class ReleaseTrackingResult {
 		return new self( true, $code, $message );
 	}
 
-	public static function failed( string $code, string $message, string $reason = '', string $detail = '' ): self {
-		return new self( false, $code, $message, $reason, $detail );
+	public static function failed( string $code, string $message, string $reason = '', string $detail = '', string $check_reason = '' ): self {
+		return new self( false, $code, $message, $reason, $detail, $check_reason );
 	}
 
 	public function successful(): bool {
@@ -50,6 +52,11 @@ final readonly class ReleaseTrackingResult {
 
 	public function reason(): string {
 		return $this->reason;
+	}
+
+	/** The closed reason the updater recorded for a check that did not succeed, or ''. */
+	public function check_reason(): string {
+		return $this->check_reason;
 	}
 
 	public function detail(): string {

@@ -10,7 +10,10 @@
 	// explicitDismiss and this host runs the timer.
 	const DURATION = 10000;
 	const LIMIT = 3;
-	const INTENTS = ['success', 'error', 'warning'];
+	const INTENTS = ['success', 'info', 'error', 'warning'];
+	// Success and info stand alone and dismiss themselves; an error or
+	// warning is only a pointer to its inline message.
+	const timed = (intent) => intent === 'success' || intent === 'info';
 
 	let state = null;
 	let sequence = 0;
@@ -38,9 +41,7 @@
 						explicitDismiss: true,
 						// The inline failure a pointer leads to owns the
 						// announcement, so the pointer stays silent.
-						...(item.intent === 'success'
-							? {}
-							: { spokenMessage: '' }),
+						...(timed(item.intent) ? {} : { spokenMessage: '' }),
 						actions: item.action ? [item.action] : [],
 					})),
 					onRemove: remove,
@@ -52,7 +53,7 @@
 	function arm(item) {
 		window.clearTimeout(item.timer);
 		item.timer = null;
-		if (item.intent === 'success' && !item.hover && !item.focus) {
+		if (timed(item.intent) && !item.hover && !item.focus) {
 			item.started = Date.now();
 			item.timer = window.setTimeout(
 				() => remove(item.uid),
@@ -63,7 +64,7 @@
 
 	function hold(uid, kind, on) {
 		const item = find(uid);
-		if (!item || item.intent !== 'success' || item[kind] === on) {
+		if (!item || !timed(item.intent) || item[kind] === on) {
 			return;
 		}
 		if (item.timer) {
@@ -238,7 +239,7 @@
 		if (
 			!text ||
 			!INTENTS.includes(intent) ||
-			(intent !== 'success' && !target?.isConnected)
+			(!timed(intent) && !target?.isConnected)
 		) {
 			return false;
 		}
@@ -247,7 +248,7 @@
 		if (duplicate) {
 			state.returnControl = options.returnControl || state.returnControl;
 			duplicate.remaining = DURATION;
-			if (intent === 'success') {
+			if (timed(intent)) {
 				// The component speaks only on mount; a repeat is spoken here.
 				window.wp?.a11y?.speak?.(text, 'polite');
 			} else {
@@ -272,7 +273,7 @@
 			action,
 			target,
 		};
-		if (intent !== 'success') {
+		if (!timed(intent)) {
 			item.action = {
 				label: window.wp.i18n.__('Show details', 'ran-booster'),
 				onClick: () => {
@@ -289,7 +290,7 @@
 			// dropped: with only pointers visible the new item is not shown (a
 			// success keeps its static form, a pointer's inline message is the
 			// record). To be revisited after use.
-			const evicted = state.items.find((i) => i.intent === 'success');
+			const evicted = state.items.find((i) => timed(i.intent));
 			if (!evicted) {
 				return false;
 			}
@@ -330,7 +331,7 @@
 				const failure =
 					container.hasAttribute(mark) ||
 					items.some(
-						(item) => item.getAttribute('data-intent') !== 'success'
+						(item) => !timed(item.getAttribute('data-intent'))
 					);
 				if (failure) {
 					container.setAttribute(mark, '');
@@ -340,7 +341,12 @@
 					const target = document.getElementById(
 						item.getAttribute('data-feedback-target') || ''
 					);
-					if (intent === 'success' ? failure : !target) {
+					// A qualified result keeps its success static; info stands alone.
+					if (
+						intent === 'success'
+							? failure
+							: !timed(intent) && !target
+					) {
 						return;
 					}
 					const link = item.querySelector(
@@ -360,7 +366,7 @@
 					if (show(text, { intent, id, target, action })) {
 						item.remove();
 					} else if (
-						intent === 'success' &&
+						timed(intent) &&
 						!item.hasAttribute('data-ran-booster-feedback-spoken')
 					) {
 						// Not shown: the static result stays, spoken politely once.

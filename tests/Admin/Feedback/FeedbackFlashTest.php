@@ -73,6 +73,15 @@ final class FeedbackFlashTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'][1] );
 	}
 
+	public function test_a_pointer_carries_its_intent_and_inline_target_and_info_is_a_status(): void {
+		FeedbackFlash::enqueue( 'refresh_skipped_disabled', 'refresh_check_failed' );
+
+		$html = $this->render();
+
+		self::assertStringContainsString( 'data-feedback-key="refresh_skipped_disabled" data-intent="info" data-feedback-target="ran-booster-release-check-result" role="status"', $html );
+		self::assertStringContainsString( 'data-feedback-key="refresh_check_failed" data-intent="error" data-feedback-target="ran-booster-release-check-result" role="alert"', $html );
+	}
+
 	public function test_copy_is_one_whole_string_per_code(): void {
 		FeedbackFlash::enqueue( 'release_check_current' );
 

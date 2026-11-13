@@ -116,6 +116,15 @@
 	);
 }
 
+.ran-booster-snackbar-host .components-snackbar.ran-booster-snackbar--info {
+	--ran-booster-snackbar-surface: var(
+		--wpds-color-background-surface-info-weak
+	);
+	--ran-booster-snackbar-stroke: var(--wpds-color-stroke-surface-info-strong);
+	--ran-booster-snackbar-text: var(--wpds-color-foreground-content-info);
+	--ran-booster-snackbar-icon: var(--wpds-color-foreground-content-info-weak);
+}
+
 .ran-booster-snackbar-host .components-snackbar.ran-booster-snackbar--error {
 	--ran-booster-snackbar-surface: var(
 		--wpds-color-background-surface-error-weak
@@ -180,6 +189,13 @@
 	.components-snackbar__content::before {
 	content: "\2713";
 	content: "\2713" / "";
+}
+
+.ran-booster-snackbar-host
+	.components-snackbar.ran-booster-snackbar--info
+	.components-snackbar__content::before {
+	content: "i";
+	content: "i" / "";
 }
 
 .ran-booster-snackbar-host

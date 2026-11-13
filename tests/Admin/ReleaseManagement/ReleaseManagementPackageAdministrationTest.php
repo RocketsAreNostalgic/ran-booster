@@ -1825,6 +1825,48 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'notice-success', $html );
 	}
 
+	/** @return array<string, array{string, string, string, string}> Code, intent, snackbar text, inline detail. */
+	public static function check_results_that_did_not_succeed(): array {
+		return array(
+			'disabled'     => array( 'refresh_skipped_disabled', 'info', 'Check not run. Updates are off for this package.', 'Nothing is wrong. Turn updates on in the package settings to check for releases.' ),
+			'forced off'   => array( 'refresh_skipped_forced_off', 'info', 'Check not run. Site configuration turns updates off.', 'Site configuration blocks updates for every package' ),
+			'not admitted' => array( 'refresh_unchecked', 'warning', 'Releases were not checked. Use Check releases to retry.', '' ),
+			'rejected'     => array( 'refresh_rejected', 'warning', 'The newest release cannot be used.', 'Activity records the reason.' ),
+			'failed'       => array( 'refresh_check_failed', 'error', 'The release check failed.', 'see Activity.' ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'check_results_that_did_not_succeed' )]
+	public function test_a_check_that_did_not_succeed_gets_a_pointer_and_a_matching_inline_notice( string $code, string $intent, string $text, string $detail ): void {
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking->refresh_result             = \RAN\AddOn\ReleaseTracking\ReleaseTrackingResult::failed( $code, 'Published release information was not checked.', check_reason: 'policy_disabled' );
+		$controls                             = ReleaseManagementFixture::controls( $tracking );
+		$url                                  = $controls->process_admin_post_request( 'refresh', $this->request( 'refresh' ) );
+		$query                                = (string) parse_url( $url, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Parsing the already signed local PRG fixture.
+		parse_str( $query, $_GET );
+
+		self::assertSame( array( $code ), $GLOBALS['ran_booster_feedback_test']['meta'][1][ \RAN\Admin\Feedback\FeedbackFlash::USER_META_KEY ]['codes'] );
+		ob_start();
+		\RAN\Admin\Feedback\FeedbackFlash::render();
+		$snackbar = (string) ob_get_clean();
+		self::assertStringContainsString( 'data-intent="' . $intent . '"', $snackbar );
+		self::assertStringContainsString( 'data-feedback-target="ran-booster-release-check-result"', $snackbar );
+		self::assertStringContainsString( '>' . $text . '</div>', $snackbar );
+		self::assertStringNotContainsString( 'data-intent="success"', $snackbar );
+		self::assertStringNotContainsString( 'No newer eligible release', $snackbar );
+
+		ob_start();
+		$controls->render_operation_notice();
+		$inline = (string) ob_get_clean();
+		self::assertStringContainsString( 'id="ran-booster-release-check-result"', $inline );
+		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="' . $intent . '"', $inline );
+		self::assertStringContainsString( $text, $inline );
+		self::assertStringContainsString( $detail, $inline );
+		self::assertStringNotContainsString( 'notice-success', $inline );
+	}
+
 	public function test_a_confirmed_check_releases_result_travels_as_a_flash_not_as_query_arguments(): void {
 		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
 		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
@@ -1883,15 +1925,17 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( $sentence . '</span>', $this->render_release_view( array() ) );
 	}
 
-	public function test_check_releases_failures_and_warnings_never_use_the_flash(): void {
+	public function test_only_check_results_with_inline_copy_use_the_flash(): void {
 		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
 		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', last_checked_at: '' ) );
 		$controls                             = ReleaseManagementFixture::controls( $tracking );
 		$warning                              = $controls->process_admin_post_request( 'refresh', $this->request( 'refresh' ) );
 
-		$bad_nonce             = $this->request( 'refresh' );
-		$bad_nonce['_wpnonce'] = 'wrong';
-		$failure               = $controls->process_admin_post_request( 'refresh', $bad_nonce );
+		self::assertSame( array( 'refresh_unchecked' ), $GLOBALS['ran_booster_feedback_test']['meta'][1][ \RAN\Admin\Feedback\FeedbackFlash::USER_META_KEY ]['codes'] );
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		$bad_nonce                            = $this->request( 'refresh' );
+		$bad_nonce['_wpnonce']                = 'wrong';
+		$failure                              = $controls->process_admin_post_request( 'refresh', $bad_nonce );
 
 		self::assertStringContainsString( 'ran_booster_release_result=refresh_unchecked', $warning );
 		self::assertStringContainsString( 'ran_booster_release_result=invalid_request', $failure );

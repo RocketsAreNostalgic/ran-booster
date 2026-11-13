@@ -918,17 +918,21 @@ final class ReleaseManagementDisplay {
 
 		$message = $this->result_message( $code, $successful, $type, $channel, $status, $reason, $detail );
 		$review  = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
+		$check   = $successful ? null : FeedbackFlash::check_result( $code );
 		$tone    = $successful
 			? 'notice-success'
-			: ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists', 'refresh_unchecked' ), true )
+			: ( null !== $check ? 'notice-' . $check[0] : ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists', 'refresh_unchecked', 'refresh_rejected' ), true )
 				? 'notice-warning'
-				: 'notice-error' );
+				: 'notice-error' ) );
 		?>
-		<div class="notice <?php echo esc_attr( $tone ); ?><?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( substr( $tone, 7 ) ); ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( substr( $tone, 7 ) ); ?>" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+		<div<?php echo null === $check ? '' : ' id="' . esc_attr( FeedbackFlash::CHECK_RESULT_TARGET ) . '"'; ?> class="notice <?php echo esc_attr( $tone ); ?><?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( substr( $tone, 7 ) ); ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( substr( $tone, 7 ) ); ?>" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 			<?php if ( $review ) { ?>
 				<p><strong><?php echo esc_html( 'installed_but_unmanaged' === $code ? __( 'Package present, Booster management not established', 'ran-booster' ) : __( 'Installation outcome needs review', 'ran-booster' ) ); ?></strong></p>
 			<?php } ?>
 			<p><?php echo esc_html( $message ); ?></p>
+			<?php if ( null !== $check && '' !== $check[2] ) { ?>
+				<p><?php echo esc_html( $check[2] ); ?></p>
+			<?php } ?>
 			<?php if ( $review ) { ?>
 				<p><?php esc_html_e( 'Inspect the installed version, activation state and Booster management before using Link an already installed plugin (or theme) or retrying.', 'ran-booster' ); ?></p>
 			<?php } ?>
@@ -959,8 +963,12 @@ final class ReleaseManagementDisplay {
 			),
 			'release_current',
 			'release_update_available' => $this->refreshed_result_message( $status ),
-			'refresh_unchecked' => __( 'Releases were not checked. Use Check releases to retry.', 'ran-booster' ),
-			'refresh_failed' => __( 'The release check could not start. Review this package’s published release settings, then retry.', 'ran-booster' ),
+			'refresh_unchecked',
+			'refresh_failed',
+			'refresh_skipped_disabled',
+			'refresh_skipped_forced_off',
+			'refresh_rejected',
+			'refresh_check_failed' => FeedbackFlash::check_result( $code )[1] ?? '',
 			'branch_restored' => __( 'Branch-based package management is restored.', 'ran-booster' ),
 			'source_changed' => __( 'Package settings changed after this browser page was opened. Refresh the page, review the current settings, then try again.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'This package already registers its own release updater. Use one release owner only.', 'ran-booster' ),

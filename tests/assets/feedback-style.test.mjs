@@ -8,7 +8,7 @@ const css = read('ran-booster/15-enhanced-mutations.css');
 const foundations = read('ran-booster/00-foundations.css');
 const tokens = read('lib/ran-booster-wpds-tokens.css');
 const hostSource = read('ran-booster-feedback.js');
-const INTENTS = ['success', 'error', 'warning'];
+const INTENTS = ['success', 'info', 'error', 'warning'];
 
 // Every rule of the host, with its at-rule wrapper kept so media blocks count.
 const hostCss = css
@@ -178,6 +178,13 @@ test('each intent takes its colours from the Notice and Badge tokens, never a li
 		text: 'color-foreground-content-success',
 		icon: 'color-foreground-content-success-weak',
 	});
+	// Info is the blue of the inline Notice info, so both resolve to one hue.
+	assert.deepEqual(intentTokens('info'), {
+		surface: 'color-background-surface-info-weak',
+		stroke: 'color-stroke-surface-info-strong',
+		text: 'color-foreground-content-info',
+		icon: 'color-foreground-content-info-weak',
+	});
 	assert.deepEqual(intentTokens('error'), {
 		surface: 'color-background-surface-error-weak',
 		stroke: 'color-stroke-surface-error-strong',
@@ -216,7 +223,7 @@ test('the CSS intent classes are the ones the host applies', () => {
 	}
 	assert.match(
 		hostSource,
-		/const INTENTS = \['success', 'error', 'warning'\]/
+		/const INTENTS = \['success', 'info', 'error', 'warning'\]/
 	);
 });
 
@@ -304,11 +311,17 @@ test('each intent has its own glyph with a fallback for browsers without alt tex
 	const shapes = {
 		success: glyph('success').match(/content:\s*"([^"]+)"\s*;/)[1],
 		error: glyph('error').match(/content:\s*"([^"]+)"\s*;/)[1],
+		info: glyph('info').match(/content:\s*"([^"]+)"\s*;/)[1],
 		// Warning keeps the base glyph.
 		warning: baseRule.match(/content:\s*"([^"]+)"\s*;/)[1],
 	};
-	assert.equal(new Set(Object.values(shapes)).size, 3, 'Shapes differ');
-	for (const body of [glyph('success'), glyph('error'), baseRule]) {
+	assert.equal(new Set(Object.values(shapes)).size, 4, 'Shapes differ');
+	for (const body of [
+		glyph('success'),
+		glyph('info'),
+		glyph('error'),
+		baseRule,
+	]) {
 		assert.match(
 			body,
 			/content:\s*"[^"]+";\s*content:\s*"[^"]+"\s*\/\s*"";/

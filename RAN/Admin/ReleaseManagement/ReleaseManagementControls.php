@@ -521,6 +521,10 @@ final class ReleaseManagementControls {
 			FeedbackFlash::enqueue( 'release_current' === $outcome['code'] ? 'release_check_current' : 'release_check_update' );
 		} else {
 			$url = add_query_arg( $this->result_query_arguments( $outcome, $channel ), $url );
+			// A result that is not a success points at its inline notice, which stays the record.
+			if ( 'refresh' === $operation && ! $outcome['successful'] && null !== FeedbackFlash::check_result( $outcome['code'] ) ) {
+				FeedbackFlash::enqueue( $outcome['code'] );
+			}
 		}
 
 		return $settings ? $url . '#ran-booster-advanced-source-settings' : $url;
@@ -919,7 +923,7 @@ final class ReleaseManagementControls {
 	}
 
 	/**
-	 * @param array{type:string,identifier:string,code:string,successful:bool,reason?:string,detail?:string} $outcome
+	 * @param array{type:string,identifier:string,code:string,successful:bool,reason?:string,check_reason?:string,detail?:string} $outcome
 	 * @return array<string, string>
 	 */
 	private function result_query_arguments( array $outcome, string $channel = '' ): array {

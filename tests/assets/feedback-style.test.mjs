@@ -87,12 +87,12 @@ test('the host uses logical properties only, so the layout mirrors in RTL', () =
 	);
 });
 
-test('the list sits at the bottom of the viewport and is centred in the content column', () => {
+test('the list sits at the bottom of the viewport and is centred in the Booster frame', () => {
 	assert.match(list.body, /position:\s*fixed/);
 	assert.match(list.body, /inset-block-end:/);
 	assert.match(list.body, /env\(safe-area-inset-bottom\)/);
-	// The host measures the column as a size container; the list starts at
-	// the static start of the column and a start margin centres it, so no
+	// The host measures the frame as a size container; the list starts at
+	// the static start of the frame and a start margin centres it, so no
 	// script measures and the writing direction mirrors the offset.
 	const [host] = rule(/^\.ran-booster-snackbar-host$/);
 	assert.match(host.body, /container-type:\s*inline-size/);
@@ -128,6 +128,27 @@ test('the list sits at the bottom of the viewport and is centred in the content 
 	const [container] = rule(/__notice-container$/);
 	assert.match(container.body, /justify-content:\s*center/);
 	assert.doesNotMatch(container.body, /flex-start/);
+});
+
+test('the centring box is the Booster frame, whose width the screens set', () => {
+	// The host mounts in the frame; it must be the same element that carries
+	// the per-screen width, so the host measures that box and no other.
+	assert.match(
+		hostSource,
+		/querySelector\(\s*'\.wrap\.ran-booster-admin'\s*\)[\s\S]*?\.append\(host\)/
+	);
+	assert.match(
+		foundations,
+		/\.ran-booster-admin\s*\{[^}]*max-inline-size:\s*var\(--ran-booster-width-standard\)/
+	);
+	assert.match(
+		foundations,
+		/\.ran-booster-admin--wide-collection\s*\{[^}]*max-inline-size:\s*var\(--ran-booster-width-wide\)/
+	);
+	// No fixed frame width is copied into the toast rules.
+	assert.doesNotMatch(hostCss, /1050|1400|width-(standard|wide)/);
+	const [host] = rule(/^\.ran-booster-snackbar-host$/);
+	assert.doesNotMatch(host.body, /max-inline-size|margin|padding/);
 });
 
 test('at 782px and below the list is centred in the viewport with a 16px gutter each side', () => {

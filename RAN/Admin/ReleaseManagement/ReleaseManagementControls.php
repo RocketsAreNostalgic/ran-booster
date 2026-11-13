@@ -9,6 +9,7 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\Admin\Feedback\FeedbackFlash;
 use RAN\PackageSource;
 use RAN\Storage\RepositorySourceGuard;
 use Throwable;
@@ -512,7 +513,15 @@ final class ReleaseManagementControls {
 		$channel = in_array( $operation, array( 'enable', 'change_channel' ), true )
 			? $this->release_channel_from( $request )
 			: '';
-		$url     = add_query_arg( $this->result_query_arguments( $outcome, $channel ), $url );
+		// A confirmed Check releases result travels as a closed-code flash, not as query arguments.
+		$flash = 'refresh' === $operation && $outcome['successful']
+			&& in_array( $outcome['code'], array( 'release_current', 'release_update_available' ), true )
+			&& null !== $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->fresh_status( $outcome['type'], $outcome['identifier'] ), null );
+		if ( $flash ) {
+			FeedbackFlash::enqueue( 'release_current' === $outcome['code'] ? 'release_check_current' : 'release_check_update' );
+		} else {
+			$url = add_query_arg( $this->result_query_arguments( $outcome, $channel ), $url );
+		}
 
 		return $settings ? $url . '#ran-booster-advanced-source-settings' : $url;
 	}

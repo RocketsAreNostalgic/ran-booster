@@ -6,6 +6,8 @@ namespace RAN\Admin\ReleaseManagement;
 
 use RuntimeException;
 
+require_once dirname( __DIR__, 3 ) . '/Support/FeedbackWordPressFunctions.php';
+
 function __( string $text, string $domain = 'default' ): string {
 	unset( $domain );
 

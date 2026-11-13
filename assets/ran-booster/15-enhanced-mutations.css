@@ -54,7 +54,7 @@
 		calc(env(safe-area-inset-bottom) + var(--ran-booster-space-16))
 	);
 	inline-size: var(--ran-booster-snackbar-size);
-	max-inline-size: none;
+	max-inline-size: 600px;
 	margin-inline-start: calc((100cqi - var(--ran-booster-snackbar-size)) / 2);
 }
 
@@ -62,7 +62,7 @@
 	.ran-booster-snackbar-host .components-snackbar-list {
 		--ran-booster-snackbar-size: min(
 			600px,
-			100vw - 2 * var(--ran-booster-snackbar-gutter)
+			100% - 2 * var(--ran-booster-snackbar-gutter)
 		);
 
 		inset-inline: 0;

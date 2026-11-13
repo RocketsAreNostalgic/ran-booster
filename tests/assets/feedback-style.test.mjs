@@ -124,7 +124,7 @@ test('at 782px and below the list is centred in the viewport with a 16px gutter 
 	assert.match(hostCss, /@media \(max-width: 782px\)/);
 	assert.match(
 		mobileList.body,
-		/--ran-booster-snackbar-size:\s*min\(\s*600px,\s*100vw - 2 \* var\(--ran-booster-snackbar-gutter\)/
+		/--ran-booster-snackbar-size:\s*min\(\s*600px,\s*100% - 2 \* var\(--ran-booster-snackbar-gutter\)/
 	);
 	assert.match(mobileList.body, /inset-inline:\s*0/);
 	assert.match(mobileList.body, /margin-inline:\s*auto/);

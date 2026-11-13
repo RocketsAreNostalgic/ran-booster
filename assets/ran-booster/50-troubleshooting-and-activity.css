@@ -403,20 +403,11 @@
 	margin-block-start: var(--ran-booster-space-6);
 }
 
-.ran-booster-admin .ran-booster-troubleshooting__table-wrap {
-	margin-block-start: var(--ran-booster-space-16);
-}
-
-.ran-booster-admin
-	.ran-booster-collection
-	> .ran-booster-troubleshooting__table-wrap {
-	margin-block-start: 0;
-}
-
+/* The results frame sits below its heading at the same gap as Activity. */
 .ran-booster-admin
 	.ran-booster-troubleshooting__results
 	> .ran-booster-collection {
-	margin-block-start: var(--ran-booster-space-16);
+	margin-block-start: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-troubleshooting__table th,

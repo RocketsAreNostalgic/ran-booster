@@ -15,6 +15,7 @@
 	border: 1px solid var(--ran-booster-border);
 	border-radius: var(--ran-booster-radius-inset);
 	background: var(--ran-booster-surface);
+	overflow: clip;
 }
 
 .ran-booster-admin .ran-booster-collection > .ran-booster-collection__toolbar {

@@ -989,6 +989,10 @@ card's server-rendered details section in the shared WordPress UI Dialog and
 returns it to the page on close; without JavaScript the fragment link reveals
 the same section in place. The section links to the selected release page.
 
+Each card is an inline-size container: its actions stack under the title and
+move to a right-hand column at a card width of 32rem, so the layout follows the
+card's own width, never the viewport or WordPress's plugin-card media queries.
+
 ### Extension details dialog
 
 The dialog follows the WordPress plugin-information layout: a banner header

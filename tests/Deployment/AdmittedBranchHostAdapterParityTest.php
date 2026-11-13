@@ -569,13 +569,13 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	/** @return array<string, array{?string, string, string}> */
 	public static function validator_causes(): array {
 		return array(
-			'not a zip'        => array( "not a zip /private/path token=abc\n", DeploymentOutcome::CODE_ARCHIVE_ZIP_INVALID, '1001' ),
-			'no plugin header' => array( null, DeploymentOutcome::CODE_PACKAGE_PLUGIN_MISSING, '1019' ),
+			'not a zip'        => array( "not a zip /private/path token=abc\n", DeploymentOutcome::CODE_ARCHIVE_ZIP_INVALID, '1001', 'RAN\\\\WPBranchUpdater\\\\V1\\\\Runtime\\\\ReasonedFailure' ),
+			'no plugin header' => array( null, DeploymentOutcome::CODE_PACKAGE_PLUGIN_MISSING, '1019', 'RAN\\\\WPBranchUpdater\\\\V1\\\\Runtime\\\\ReasonedFailure' ),
 		);
 	}
 
 	#[DataProvider( 'validator_causes' )]
-	public function test_validator_causes_map_to_reserved_outcomes_and_log_only_class_and_code( ?string $bytes, string $outcome, string $code ): void {
+	public function test_validator_causes_map_to_reserved_outcomes_and_log_only_class_and_code( ?string $bytes, string $outcome, string $code, string $logged_class ): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-cause-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		mkdir( $directory, 0700 );
@@ -602,7 +602,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 				self::assertSame( $outcome, $failure->outcome_code );
 			}
 			$lines = implode( "\n", array_column( $capture->snapshot()['entries'], 'line' ) );
-			self::assertStringContainsString( '"exception_class":"RuntimeException","exception_code":"' . $code . '"', $lines );
+			self::assertStringContainsString( '"exception_class":"' . $logged_class . '","exception_code":"' . $code . '"', $lines );
 			self::assertStringNotContainsString( 'private', $lines );
 			self::assertStringNotContainsString( 'token=abc', $lines );
 			self::assertStringNotContainsString( 'not a readable', $lines );

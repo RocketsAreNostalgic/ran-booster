@@ -1750,7 +1750,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$package = $this->package( $package_view );
 			$package->set_deployment_policy( $policy );
 			$package->set_source( $source, 1 );
-			$package->version = '1.0.0';
+			$package->version    = '1.0.0';
 			$observation         = array(
 				'id'      => 7,
 				'sort_at' => '2026-11-01 10:00:00',

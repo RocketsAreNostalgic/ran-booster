@@ -98,7 +98,7 @@ check_failed, claim_lost, cooldown_active, claim_unavailable, target_unavailable
 unexpected_failure, runtime_identity_invalid,
 policy_disabled, policy_forced_off, filesystem_unavailable,
 discovery_not_admitted, candidate_not_eligible, offer_token_unavailable,
-update_available, newer_release_observed, runtime_busy, release_list_failed, candidate_invalid, candidate_rejected,
+update_available, release_list_failed, candidate_invalid, candidate_rejected,
 candidate_inspection_failed, candidate_descriptor_mismatch,
 candidate_validation_failed, no_candidates and no_newer_candidate. On-screen
 codes additionally accept pathless lowercase/underscore codes up to 64 bytes;

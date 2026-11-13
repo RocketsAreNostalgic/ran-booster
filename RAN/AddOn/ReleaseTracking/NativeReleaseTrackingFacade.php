@@ -108,10 +108,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 						'offered' => false,
 					);
 				}
-				set_transient( $key, 1, MINUTE_IN_SECONDS );
-
 				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented read-only check filter.
-				return apply_filters( 'ran_wp_release_updater_check_releases_v1', null, $type, $identifier );
+				$report = apply_filters( 'ran_wp_release_updater_check_releases_v1', null, $type, $identifier );
+				if ( null !== $report ) {
+					set_transient( $key, 1, MINUTE_IN_SECONDS );
+				}
+
+				return $report;
 			}
 
 			: \Closure::fromCallable( $check_without_offer );
@@ -866,6 +869,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		if ( ! is_string( $status ) || ! is_string( $reason ) || false !== ( $report['offered'] ?? null )
 			|| 1 !== preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/', $reason ) ) {
 			return null;
+		}
+		// A claimed result counts only when the observation the updater emitted says the same.
+		$observed = $this->registrar->check_outcome( $type, $identifier );
+		$claimed  = 'succeeded' === $status && in_array( $reason, array( 'newer_release_observed', 'no_newer_candidate', 'no_candidates' ), true );
+		if ( $claimed && ( null === $observed || $observed['status'] !== $status || $observed['reason'] !== $reason ) ) {
+			$status = 'skipped';
+			$reason = 'check_not_observed';
 		}
 		$version = is_string( $report['candidate_version'] ?? null ) ? ReleaseTrackingPreflight::detail( $report['candidate_version'] ) : '';
 		$code    = match ( true ) {

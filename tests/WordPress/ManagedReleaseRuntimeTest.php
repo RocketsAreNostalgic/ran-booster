@@ -2968,6 +2968,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'forced off'             => array( DeploymentPolicy::DISABLED, $report( 'skipped', 'policy_forced_off' ), 'refresh_skipped_forced_off', 'policy_forced_off', true ),
 			'older runtime'          => array( DeploymentPolicy::DISABLED, null, 'release_refreshed', '', false ),
 			'offer claimed'          => array( DeploymentPolicy::DISABLED, array_replace( $report( 'succeeded', 'newer_release_observed', '2.0.0' ), array( 'offered' => true ) ), 'release_refreshed', '', false ),
+			'not an array'           => array( DeploymentPolicy::DISABLED, null, 'release_refreshed', '', false ),
+			'unobserved claim'       => array( DeploymentPolicy::DISABLED, $report( 'succeeded', 'no_newer_candidate' ) + array( 'unobserved' => true ), 'refresh_unchecked', 'check_not_observed', true ),
+			'bad reason'             => array( DeploymentPolicy::DISABLED, $report( 'succeeded', 'Bad Reason' ), 'release_refreshed', '', false ),
+			'unknown reason'         => array( DeploymentPolicy::DISABLED, $report( 'succeeded', 'something_new' ), 'refresh_unchecked', 'something_new', true ),
 			'manual is not asked'    => array( DeploymentPolicy::MANUAL, $report( 'succeeded', 'newer_release_observed', '2.0.0' ), 'release_refreshed', '', false ),
 			'automatic is not asked' => array( DeploymentPolicy::AUTOMATIC, $report( 'succeeded', 'newer_release_observed', '2.0.0' ), 'release_refreshed', '', false ),
 		);
@@ -3016,7 +3020,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			check_without_offer: static function () use ( &$asked, $registrar, $report, $identity ): ?array {
 				++$asked;
 				// The updater emits the same observation actions as a native check.
-				if ( null !== $report && 'policy_forced_off' !== $report['reason'] && 'runtime_busy' !== $report['reason'] ) {
+				if ( null !== $report && ! isset( $report['unobserved'] ) && ! in_array( $report['reason'], array( 'policy_forced_off', 'runtime_busy', 'Bad Reason', 'something_new' ), true ) ) {
 					$registrar->activity_check_started( array( 'check_id' => str_repeat( 'e', 32 ) ) + $identity );
 					$registrar->activity_check_completed(
 						array(

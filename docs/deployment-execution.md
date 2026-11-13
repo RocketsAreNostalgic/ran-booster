@@ -359,13 +359,21 @@ attempt row, and leaves ambiguous results for operator reconciliation instead of
 pretending they succeeded.
 
 When the runner throws after admission (a database or lock-storage failure, a
-PHP error), the coordinator logs only the exception class and code, then applies
-the confirmed-stopped transition itself: `worker_stopped` before mutation began,
-otherwise `interrupted`. A webhook attempt then follows the normal background
-failure notification. If the row cannot be written, the attempt stays `running`,
-nothing is recorded in Activity, and a manual action shows a fixed "left running"
-notice with the random reference and a link to the Reconcile stopped worker form.
-A row that is already terminal keeps the original failure.
+PHP error), the coordinator logs only the exception class and code, then
+applies the confirmed-stopped transition itself: `worker_stopped` before
+mutation began, otherwise `interrupted`. The mutation lock is released before
+the journal finishes, so a lock-release or finish failure after a deployment
+that actually completed is also recorded as `interrupted` (needs attention).
+That is conservative and consistent with reconcile semantics, but it reports a
+completed deployment as needing attention. A webhook attempt then follows the
+normal background failure notification. If the row cannot be written, the
+attempt stays `running`, nothing is recorded in Activity, and a manual action
+shows a fixed "left running" notice (HTTP 409) with the random reference and a
+link to the Reconcile stopped worker form. A row already settled by someone
+else, for example an operator reconcile, keeps the original failure.
+
+On cron, the worker reports that left-running case as `contended` with the
+attempt reference; nothing consumes the status.
 
 ## Background failure notifications
 

@@ -93,7 +93,7 @@ final class DeploymentAdminPresenter {
 		if ( $failure->is_left_running() ) {
 			/* translators: 1: random support reference, 2: activity record link. */
 			$message = sprintf( __( 'Deployment attempt left running. Reference: <code>%1$s</code>. <a href="%2$s">Reconcile it in Recent Activity</a>.', 'ran-booster' ), $reference, esc_url( $activity_url ) );
-			status_header( 500 );
+			status_header( 409 );
 
 			return $this->outcome( 'error', 'ran_booster_deployment_left_running', $message, $reference, $operation );
 		}

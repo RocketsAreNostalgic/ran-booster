@@ -761,6 +761,31 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( 'needs_attention', $notifier->stored_states[0] );
 	}
 
+	public function test_row_already_settled_by_someone_else_keeps_the_original_failure(): void {
+		$this->download_fixture( 'example' );
+		$this->database->fail_query_contains = 'DELETE FROM `wp_options`';
+		$executor                            = new ParityCoreExecutor();
+		$executor->after_execution           = function (): void {
+			$this->database->rows[0]['state']        = DeploymentState::FAILED->value;
+			$this->database->rows[0]['outcome_code'] = DeploymentOutcome::CODE_WORKER_STOPPED;
+			$this->database->rows[0]['finished_at']  = '2026-09-14 00:00:00';
+		};
+		$before                              = null;
+		$caught                              = null;
+		$coordinator                         = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ), executor: $executor );
+		$attempt                             = $this->running_update();
+		try {
+			$coordinator->execute_claimed( $attempt );
+		} catch ( \Throwable $failure ) {
+			$caught = $failure;
+		}
+		$before = $this->database->rows[0];
+
+		self::assertInstanceOf( BranchDeploymentLockStorageFailure::class, $caught );
+		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $before['outcome_code'] );
+		self::assertSame( DeploymentState::FAILED->value, $before['state'] );
+	}
+
 	public function test_unwritable_attempt_row_is_reported_left_running_with_fixed_text_only(): void {
 		$this->download_fixture( 'example' );
 		$this->database->fail_query_contains = 'UPDATE `wp_ran_booster_deployment_attempts`';

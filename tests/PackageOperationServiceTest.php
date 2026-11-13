@@ -1508,7 +1508,7 @@ final class PackageOperationServiceTest extends TestCase {
 		$dashboard            = $this->dashboard( $coordinator );
 
 		self::assertFalse( $dashboard->post_package_operation( 'update-plugin', $this->input( 'update-plugin' ) ) );
-		self::assertSame( 500, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
 		self::assertSame( 'ran_booster_deployment_left_running', $dashboard->messages[0]['code'] );

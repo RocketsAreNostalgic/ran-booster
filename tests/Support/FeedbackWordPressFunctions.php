@@ -17,7 +17,7 @@ function ran_booster_feedback_state(): array {
 function __( string $text, string $domain = 'default' ): string {
 	unset( $domain );
 
-	return $text;
+	return is_string( ran_booster_feedback_state()['translate'] ?? null ) ? ran_booster_feedback_state()['translate'] : $text;
 }
 
 function esc_html( mixed $value ): string {

@@ -73,10 +73,63 @@ final class FeedbackFlashTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'][1] );
 	}
 
-	public function test_copy_comes_from_the_shared_source(): void {
+	public function test_copy_is_one_whole_string_per_code(): void {
 		FeedbackFlash::enqueue( 'release_check_current' );
 
-		self::assertStringContainsString( FeedbackFlash::release_checked() . ' ' . FeedbackFlash::no_newer_release(), $this->render() );
+		self::assertStringContainsString( '>Release check complete. No newer eligible release was found.</div>', $this->render() );
+	}
+
+	public function test_enqueue_records_the_current_site_and_keeps_one_of_each_code(): void {
+		$GLOBALS['ran_booster_feedback_test']['blog'] = 7;
+		FeedbackFlash::enqueue( 'release_check_update', 'release_check_update' );
+
+		$stored = $this->meta()[1][ self::KEY ];
+		self::assertSame( 7, $stored['site'] );
+		self::assertSame( array( 'release_check_update' ), $stored['codes'] );
+		self::assertNotSame( '', $this->render() );
+	}
+
+	public function test_translated_copy_is_escaped(): void {
+		$GLOBALS['ran_booster_feedback_test']['translate'] = '<b onclick="x">&';
+		FeedbackFlash::enqueue( 'release_check_update' );
+
+		$html = $this->render();
+		self::assertStringContainsString( '&lt;b onclick=&quot;x&quot;&gt;&amp;', $html );
+		self::assertStringNotContainsString( '<b ', $html );
+	}
+
+	public function test_a_flash_at_exactly_the_ttl_is_still_shown(): void {
+		FeedbackFlash::enqueue( 'release_check_current' );
+		$GLOBALS['ran_booster_feedback_test']['meta'][1][ self::KEY ]['at'] = time() - 60;
+
+		self::assertNotSame( '', $this->render() );
+	}
+
+	public function test_a_non_array_codes_value_is_dropped_without_a_warning(): void {
+		$GLOBALS['ran_booster_feedback_test']['meta'][1][ self::KEY ] = array(
+			'site'  => 1,
+			'at'    => time(),
+			'codes' => null,
+		);
+
+		$warnings = 0;
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Count PHP warnings raised by malformed stored data.
+		set_error_handler(
+			static function () use ( &$warnings ): bool {
+				++$warnings;
+
+				return true;
+			}
+		);
+		try {
+			$html = $this->render();
+		} finally {
+			restore_error_handler();
+		}
+
+		self::assertSame( 0, $warnings );
+		self::assertSame( '', $html );
+		self::assertSame( array(), $this->meta()[1] );
 	}
 
 	public function test_two_tabs_consume_one_flash_once(): void {

@@ -1119,10 +1119,9 @@ final class ReleaseManagementDisplay {
 		}
 
 		return sprintf(
-			/* translators: 1: installed version, 2: the shared outcome sentence. */
-			__( 'Version %1$s is installed. %2$s', 'ran-booster' ),
-			'' !== $installed ? $installed : __( 'unknown', 'ran-booster' ),
-			FeedbackFlash::no_newer_release()
+			/* translators: %s is the installed version. */
+			__( 'Version %s is installed. No newer eligible release was found.', 'ran-booster' ),
+			'' !== $installed ? $installed : __( 'unknown', 'ran-booster' )
 		);
 	}
 

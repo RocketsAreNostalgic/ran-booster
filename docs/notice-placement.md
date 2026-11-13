@@ -105,6 +105,9 @@ add-on seam, and the first producer is Check releases.
   for `error`), whose text is the fixed Core copy resolved from the code with
   `__()`. The client host converts these items into snackbars and removes the
   element; without JavaScript it is the visible result.
-- **Copy.** The code-to-copy map lives in `FeedbackFlash`. Check releases shares
-  its clauses with the inline release status (`release_checked()` and
-  `no_newer_release()`), so the two never drift.
+- **Copy.** The code-to-copy map lives in `FeedbackFlash`. Each sentence is one
+  whole translatable string. A test asserts the Check releases fallback and the
+  inline release status end with the same outcome sentence, so they cannot drift.
+- **Limits.** With the settings-return hash anchor the static flash prints at the
+  top of the page, above the viewport, as the old top notice did. A failed
+  `update_user_meta()` silently skips the flash; the inline status remains.

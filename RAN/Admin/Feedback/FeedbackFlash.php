@@ -77,20 +77,15 @@ final class FeedbackFlash {
 		}
 	}
 
-	/** The opening clause shared by the Check releases snackbar and notice. */
+	/** The whole sentence shared by the Check releases update-available fallback and the notice. */
 	public static function release_checked(): string {
 		return __( 'Release check complete.', 'ran-booster' );
-	}
-
-	/** The outcome clause shared by the Check releases snackbar and the inline release status. */
-	public static function no_newer_release(): string {
-		return __( 'No newer eligible release was found.', 'ran-booster' );
 	}
 
 	/** @return array{0: 'success'|'error'|'warning', 1: string}|null Intent and fixed Core copy for a closed code. */
 	private static function definition( string $code ): ?array {
 		return match ( $code ) {
-			'release_check_current' => array( 'success', self::release_checked() . ' ' . self::no_newer_release() ),
+			'release_check_current' => array( 'success', __( 'Release check complete. No newer eligible release was found.', 'ran-booster' ) ),
 			'release_check_update'  => array( 'success', self::release_checked() ),
 			default                 => null,
 		};

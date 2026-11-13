@@ -1855,6 +1855,34 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 2, $tracking->status_reads );
 	}
 
+	public function test_an_update_available_check_enqueues_the_update_code_and_no_redirect_arguments(): void {
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', update_available: true ) );
+		$controls                             = ReleaseManagementFixture::controls( $tracking );
+
+		$url = $controls->process_admin_post_request( 'refresh', $this->request( 'refresh' ) );
+
+		self::assertStringNotContainsString( 'ran_booster_release_', $url );
+		self::assertSame( array( 'release_check_update' ), $GLOBALS['ran_booster_feedback_test']['meta'][1][ \RAN\Admin\Feedback\FeedbackFlash::USER_META_KEY ]['codes'] );
+		ob_start();
+		\RAN\Admin\Feedback\FeedbackFlash::render();
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'No newer eligible release', $html );
+		self::assertStringContainsString( 'Release check complete.', $html );
+	}
+
+	public function test_the_fallback_and_the_inline_status_end_with_the_same_outcome_sentence(): void {
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		\RAN\Admin\Feedback\FeedbackFlash::enqueue( 'release_check_current' );
+		ob_start();
+		\RAN\Admin\Feedback\FeedbackFlash::render();
+		$flash    = trim( (string) preg_replace( '/<[^>]*>/', '', (string) ob_get_clean() ) );
+		$sentence = 'No newer eligible release was found.';
+
+		self::assertStringEndsWith( $sentence, $flash );
+		self::assertStringContainsString( $sentence . '</span>', $this->render_release_view( array() ) );
+	}
+
 	public function test_check_releases_failures_and_warnings_never_use_the_flash(): void {
 		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
 		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', last_checked_at: '' ) );

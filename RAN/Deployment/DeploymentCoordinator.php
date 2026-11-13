@@ -234,12 +234,57 @@ class DeploymentCoordinator {
 		return $this->execute_running( $attempt );
 	}
 
-	/** Execute one durably running row through the normalized admitted branch runner. */
+	/** Execute one durably running row; a runner throw is settled, never left silent. */
 	private function execute_running( DeploymentAttempt $attempt ): DeploymentOutcome {
 		if ( DeploymentState::RUNNING !== $attempt->get_state() ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
 
+		try {
+			return $this->run_attempt( $attempt );
+		} catch ( Throwable $failure ) {
+			return $this->settle_after_throw( $attempt, $failure );
+		}
+	}
+
+	/**
+	 * This process owned the claim and has stopped executing it, so the existing
+	 * confirmed-stopped transition applies. A row already terminal keeps the
+	 * original failure; an unwritable row stays running and is reported as such.
+	 */
+	private function settle_after_throw( DeploymentAttempt $attempt, Throwable $failure ): DeploymentOutcome {
+		$context = $attempt->log_context() + array( 'step' => 'execute_running' );
+		BoosterLogger::log_exception( 'deployment execution threw', $failure, $context );
+		try {
+			$current = $this->attempts->find_exact( $attempt->get_id() );
+			if ( null !== $current && DeploymentState::RUNNING !== $current->get_state() ) {
+				$settled = null;
+			} else {
+				$settled = $this->attempts->reconcile_confirmed_stopped( $attempt->get_id() );
+			}
+		} catch ( Throwable $storage ) {
+			BoosterLogger::log_exception( 'deployment attempt left running', $storage, $context );
+			$data = $attempt->safe_data();
+			$left = DeploymentStorageFailure::left_running(
+				array(
+					'id'             => $data['id'],
+					'correlation_id' => $data['correlation_id'],
+					'state'          => 'running',
+					'package_type'   => $data['package_type'],
+					'package_slug'   => $data['package_slug'],
+				)
+			);
+			throw $left;
+		}
+		if ( null === $settled ) {
+			throw $failure;
+		}
+
+		return $this->finished_outcome( $settled );
+	}
+
+	/** Execute one durably running row through the normalized admitted branch runner. */
+	private function run_attempt( DeploymentAttempt $attempt ): DeploymentOutcome {
 		$context = $attempt->log_context();
 		BoosterLogger::log( 'deployment execution started', $context + array( 'step' => 'execute_running' ) );
 		$host = new AdmittedBranchHostAdapter(

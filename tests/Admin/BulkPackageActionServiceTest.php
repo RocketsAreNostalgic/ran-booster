@@ -852,6 +852,26 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_recheck_deleted'] );
 	}
 
+	public function test_an_unchanged_disabling_does_not_clear_the_update_cache(): void {
+		$release = BulkActionPackage::make( 'release/release.php', 'fixture' );
+		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$release->set_deployment_policy( DeploymentPolicy::MANUAL );
+		$plugins          = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
+		$plugins->changed = 0;
+
+		$this->service( $plugins, true )->execute(
+			self::action(
+				'plugin',
+				array(
+					'bulk_action' => 'policy-disabled',
+					'identifiers' => array( 'release/release.php' ),
+				)
+			)
+		);
+
+		self::assertSame( array(), $GLOBALS['ran_booster_recheck_deleted'] );
+	}
+
 	public function test_a_failed_cache_clear_does_not_block_disabling(): void {
 		$GLOBALS['ran_booster_recheck_failure'] = true;
 		$release                                = BulkActionPackage::make( 'release/release.php', 'fixture' );

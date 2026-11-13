@@ -20,13 +20,14 @@
 
 /*
  * The one snackbar host (ran-booster-feedback.js). It sits at the
- * bottom of the viewport and never moves the layout. Like the inline notices,
- * which fill the content column beside the admin menu, a toast is centred in
- * that column; at 782px and below the menu is gone and it is centred in the
- * viewport. The host is a zero-height child of #wpcontent that measures the
- * column as a size container, and the list leaves its inline offset unset, so
- * the list starts at the start of the column and a start margin centres it:
- * no scripted measuring, and the writing direction mirrors the offset.
+ * bottom of the viewport and never moves the layout. A toast is centred in the
+ * Booster frame (.wrap.ran-booster-admin), whose width differs by screen, not
+ * in the page; at 782px and below the frame fills the viewport and it is
+ * centred in the viewport. The host is a zero-height child of the frame that
+ * measures it as a size container, and the list leaves its inline offset
+ * unset, so the list starts at the start of the frame and a start margin
+ * centres it: no scripted measuring, and the writing direction mirrors the
+ * offset.
  */
 
 /*

@@ -82,6 +82,7 @@ function build(options = {}) {
 			return options.candidates?.(selector) ?? [];
 		},
 		getElementById: (id) => targets.get(id) ?? null,
+		querySelector: (selector) => targets.get(selector) ?? null,
 		createElement() {
 			// Every created node knows which nodes it contains and whether
 			// the component rendered into it.
@@ -639,16 +640,46 @@ test('an unavailable host shows nothing so the caller keeps its own result', () 
 	assert.equal(broken.root.unmounted, true);
 });
 
-test('the host mounts once inside the content column container', () => {
+test('the host mounts once inside the Booster frame, not the content column', () => {
+	const env = boot();
+	const mounted = [];
+	const frame = element();
+	frame.append = (child) => {
+		child.parentNode = frame;
+		mounted.push(['frame', child]);
+	};
+	env.targets.set('.wrap.ran-booster-admin', frame);
+	env.targets.get('wpcontent').append = (child) =>
+		mounted.push(['wpcontent', child]);
+	env.feedback.show('One.');
+	env.feedback.show('Two.');
+	assert.deepEqual(mounted, [['frame', env.host]]);
+	assert.equal(env.roots.length, 1);
+});
+
+test('a swap that replaces the frame re-parents the host into the new frame', () => {
+	const env = boot();
+	const first = element();
+	const second = element();
+	first.append = (child) => (child.parentNode = first);
+	second.append = (child) => (child.parentNode = second);
+	env.targets.set('.wrap.ran-booster-admin', first);
+	env.feedback.show('One.');
+	assert.equal(env.host.parentNode, first);
+	env.targets.set('.wrap.ran-booster-admin', second);
+	env.documentListeners.get('htmx:afterSwap')?.();
+	assert.equal(env.host.parentNode, second);
+	assert.equal(env.roots.length, 1);
+});
+
+test('without a Booster frame the host falls back to the content column', () => {
 	const env = boot();
 	let appendedTo = null;
 	env.targets.get('wpcontent').append = (child) => {
 		appendedTo = child;
 	};
 	env.feedback.show('One.');
-	env.feedback.show('Two.');
 	assert.equal(appendedTo, env.host);
-	assert.equal(env.roots.length, 1);
 });
 
 test('a server-rendered success becomes a snackbar and leaves no duplicate', () => {

@@ -9,6 +9,7 @@ require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.ph
 require_once dirname( __DIR__ ) . '/Support/WPPluginDependencies.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/WordPress/ReleaseRecheckWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
@@ -45,6 +46,8 @@ final class BulkPackageActionServiceTest extends TestCase {
 		$GLOBALS['ran_booster_bulk_dependency_initializations']          = 0;
 		$GLOBALS['ran_booster_bulk_plugins_with_active_dependents']      = array();
 		$GLOBALS['ran_booster_repository_admin_capabilities']            = array();
+		$GLOBALS['ran_booster_recheck_deleted']                          = array();
+		unset( $GLOBALS['ran_booster_recheck_failure'] );
 		$this->updater_lock = $this->createStub( WordPressUpdaterLock::class );
 		$this->updater_lock->method( 'acquire' )->willReturn( 'bulk-fixture-lock' );
 		$this->updater_lock->method( 'release' )->willReturn( true );
@@ -61,7 +64,9 @@ final class BulkPackageActionServiceTest extends TestCase {
 			$GLOBALS['ran_booster_bulk_deactivation_failures'],
 			$GLOBALS['ran_booster_bulk_dependency_initializations'],
 			$GLOBALS['ran_booster_bulk_plugins_with_active_dependents'],
-			$GLOBALS['ran_booster_repository_admin_capabilities']
+			$GLOBALS['ran_booster_repository_admin_capabilities'],
+			$GLOBALS['ran_booster_recheck_deleted'],
+			$GLOBALS['ran_booster_recheck_failure']
 		);
 	}
 
@@ -740,6 +745,83 @@ final class BulkPackageActionServiceTest extends TestCase {
 
 		self::assertSame( 'unavailable', $result->error_code );
 		self::assertCount( 1, $plugins->snapshots );
+	}
+
+	public function test_enabling_a_disabled_release_package_requests_exactly_one_fresh_check(): void {
+		$release = BulkActionPackage::make( 'release/release.php', 'fixture' );
+		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$release->set_deployment_policy( DeploymentPolicy::DISABLED );
+		$other = BulkActionPackage::make( 'other/other.php', 'fixture' );
+		$other->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$other->set_deployment_policy( DeploymentPolicy::DISABLED );
+		$plugins = new BulkActionPluginRepository(
+			array(
+				'release/release.php' => $release,
+				'other/other.php'     => $other,
+			)
+		);
+
+		$this->service( $plugins, true )->execute(
+			self::action(
+				'plugin',
+				array(
+					'bulk_action' => 'policy-automatic',
+					'identifiers' => array( 'release/release.php', 'other/other.php' ),
+				)
+			)
+		);
+
+		self::assertSame( array( 'update_plugins' ), $GLOBALS['ran_booster_recheck_deleted'] );
+	}
+
+	/** @return iterable<string, array{PackageSource, DeploymentPolicy, string}> */
+	public static function no_recheck_cases(): iterable {
+		yield 'disabling a release package' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::MANUAL, 'policy-disabled' );
+		yield 'manual to automatic' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::MANUAL, 'policy-automatic' );
+		yield 'enabling a branch package' => array( PackageSource::BRANCH, DeploymentPolicy::DISABLED, 'policy-manual' );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'no_recheck_cases' )]
+	public function test_other_policy_changes_do_not_request_a_check( PackageSource $source, DeploymentPolicy $before, string $bulk_action ): void {
+		$package = BulkActionPackage::make( 'release/release.php', 'fixture' );
+		if ( PackageSource::RELEASE_ASSET === $source ) {
+			$package->set_source( $source, 2 );
+		}
+		$package->set_deployment_policy( $before );
+		$plugins = new BulkActionPluginRepository( array( 'release/release.php' => $package ) );
+
+		$this->service( $plugins, true )->execute(
+			self::action(
+				'plugin',
+				array(
+					'bulk_action' => $bulk_action,
+					'identifiers' => array( 'release/release.php' ),
+				)
+			)
+		);
+
+		self::assertSame( array(), $GLOBALS['ran_booster_recheck_deleted'] );
+	}
+
+	public function test_a_failed_check_request_does_not_block_the_policy_change(): void {
+		$GLOBALS['ran_booster_recheck_failure'] = true;
+		$release                                = BulkActionPackage::make( 'release/release.php', 'fixture' );
+		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$release->set_deployment_policy( DeploymentPolicy::DISABLED );
+		$plugins = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
+
+		$result = $this->service( $plugins, true )->execute(
+			self::action(
+				'plugin',
+				array(
+					'bulk_action' => 'policy-manual',
+					'identifiers' => array( 'release/release.php' ),
+				)
+			)
+		);
+
+		self::assertSame( 1, $result->changed );
+		self::assertSame( DeploymentPolicy::MANUAL, $plugins->policy );
 	}
 
 	private function service(

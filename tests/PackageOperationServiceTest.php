@@ -7,6 +7,7 @@ namespace RAN\Tests;
 require_once __DIR__ . '/Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/Support/WPError.php';
+require_once __DIR__ . '/WordPress/ReleaseRecheckWordPressFunctions.php';
 require_once __DIR__ . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once __DIR__ . '/Deployment/AttemptRepositoryDatabase.php';
 
@@ -351,6 +352,38 @@ final class PackageOperationServiceTest extends TestCase {
 	/** @return list<array{string}> */
 	public static function conflicting_branch_operations(): array {
 		return array( array( 'install-plugin' ), array( 'install-theme' ), array( 'edit-plugin' ), array( 'edit-theme' ) );
+	}
+
+	#[DataProvider( 'recheck_edit_cases' )]
+	public function test_edit_requests_one_check_only_when_a_release_package_is_enabled( PackageSource $source, DeploymentPolicy $before, DeploymentPolicy $after, bool $expected ): void {
+		$GLOBALS['ran_booster_recheck_deleted'] = array();
+		unset( $GLOBALS['ran_booster_recheck_failure'] );
+		$plugin = $this->plugin();
+		$plugin->set_source( $source, 1 );
+		$plugin->set_deployment_policy( $before );
+		$service = $this->service( new OperationPluginRepository( $plugin ), new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() );
+
+		$edit = PackageOperation::from_input(
+			'edit-plugin',
+			$this->input(
+				'edit-plugin',
+				array(
+					'deployment_policy'          => $after->value,
+					'expected_deployment_policy' => $before->value,
+					'expected_source'            => $source->value,
+				)
+			)
+		);
+
+		self::assertSame( 'edited', $service->execute( $edit )['status'] );
+		self::assertSame( $expected ? array( 'update_plugins' ) : array(), $GLOBALS['ran_booster_recheck_deleted'] );
+	}
+
+	/** @return iterable<string, array{PackageSource, DeploymentPolicy, DeploymentPolicy, bool}> */
+	public static function recheck_edit_cases(): iterable {
+		yield 'release disabled to manual' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::DISABLED, DeploymentPolicy::MANUAL, true );
+		yield 'release manual to disabled' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::MANUAL, DeploymentPolicy::DISABLED, false );
+		yield 'branch disabled to manual' => array( PackageSource::BRANCH, DeploymentPolicy::DISABLED, DeploymentPolicy::MANUAL, false );
 	}
 
 	public function test_link_edit_and_unlink_use_the_explicit_repositories(): void {

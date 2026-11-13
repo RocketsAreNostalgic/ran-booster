@@ -15,6 +15,7 @@ use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\WordPress\ManagedReleaseConfiguration;
+use RAN\WordPress\ReleaseRecheck;
 use RuntimeException;
 
 /**
@@ -324,10 +325,14 @@ final readonly class PackageOperationService {
 			throw new PackageRepositoryChangeRejected( 'Stop managing this package before adopting a different repository.' );
 		}
 		$this->source_guard->assert_allowed( $repository->provider->value, $repository->reference->provider_repository_id, 'plugin' === $operation->package_type ? 1 : 2, $identifier, $existing->get_source() );
-		$result = 'plugin' === $operation->package_type
+		$enabling = ReleaseRecheck::would_enable( $existing->get_source(), $existing->get_deployment_policy(), $operation->deployment_policy );
+		$result   = 'plugin' === $operation->package_type
 			? $this->plugins->edit_plugin( $identifier, $this->edit_input( $operation, $repository, $existing, $release_managed ) )
 			: $this->themes->edit_theme( $identifier, $this->edit_input( $operation, $repository, $existing, $release_managed ) );
 		$result->require_success();
+		if ( $enabling ) {
+			ReleaseRecheck::request( $operation->package_type );
+		}
 
 		return array(
 			'status'  => 'edited',

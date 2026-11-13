@@ -2888,6 +2888,62 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( $reason, $result->check_reason() );
 	}
 
+	public function test_a_refresh_that_observes_no_check_does_not_reuse_the_previous_outcome(): void {
+		$package     = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		[$registrar] = $this->native_plugin_registrar( $package );
+		$plugins     = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$store  = new RuntimeReleaseStore( array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
+		$fire   = true;
+		$facade = $this->facade(
+			$plugins,
+			$this->createStub( ThemeRepository::class ),
+			$store,
+			$registrar,
+			new RuntimeUpdaterLock(),
+			$this->release_metadata_registry(),
+			static fn (): bool => true,
+			static fn (): bool => true,
+			static function () use ( $registrar, &$fire ): void {
+				if ( ! $fire ) {
+					return;
+				}
+				$check_id = str_repeat( 'd', 32 );
+				$registrar->activity_check_started(
+					array(
+						'check_id'            => $check_id,
+						'network_id'          => 1,
+						'blog_id'             => 1,
+						'target_type'         => 'plugin',
+						'installed_identity'  => self::NATIVE_PLUGIN,
+						'provider_code'       => 'github',
+						'repository_identity' => '123456789',
+						'channel'             => 'stable',
+						'binding_hash'        => str_repeat( 'b', 64 ),
+					)
+				);
+				$registrar->activity_check_completed(
+					array(
+						'check_id'                  => $check_id,
+						'status'                    => 'skipped',
+						'reason'                    => 'policy_disabled',
+						'relationship'              => null,
+						'installed_version'         => '1.0.0',
+						'candidate_version'         => null,
+						'offered_version'           => null,
+						'candidate_validation_code' => null,
+					)
+				);
+			},
+			null,
+			static fn (): bool => true
+		);
+
+		self::assertSame( 'refresh_skipped_disabled', $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code() );
+		$fire = false;
+		self::assertSame( 'release_refreshed', $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code() );
+	}
+
 	public function test_facade_projects_neutral_target_offers_and_validation_failures(): void {
 		$package = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
 		$plugins = $this->createStub( PluginRepository::class );

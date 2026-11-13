@@ -82,7 +82,7 @@ the notice shows the summary and a detail line.
 | --- | --- | --- | --- |
 | `refresh_skipped_disabled` | skipped, `policy_disabled` (package setting) | info | Check not run. Updates are off for this package. |
 | `refresh_skipped_forced_off` | skipped, `policy_forced_off` (site configuration) | info | Check not run. Site configuration turns updates off. |
-| `refresh_unchecked` | skipped, any other reason, or no check recorded | warning | Releases were not checked. Use Check releases to retry. |
+| `refresh_unchecked` | skipped for any other reason, or no check observed (a filter or another plugin blocked it; the manual action clears the update transient first) | warning | Releases were not checked. Use Check releases to retry. |
 | `refresh_rejected` | rejected | warning | The newest release cannot be used. |
 | `refresh_check_failed` | failed | error | The release check failed. |
 

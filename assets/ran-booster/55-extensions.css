@@ -82,6 +82,7 @@
 	align-items: center;
 	gap: var(--ran-booster-space-8) var(--ran-booster-space-16);
 	float: none;
+	clear: none;
 	margin: 0;
 	padding: 0;
 	text-align: start;
@@ -138,7 +139,7 @@
 	text-align: start;
 }
 
-@container ran-booster-extension-card (min-inline-size: 32rem) {
+@container ran-booster-extension-card (min-inline-size: 512px) {
 	.ran-booster-admin .ran-booster-extensions__grid .plugin-card .name,
 	.ran-booster-admin .ran-booster-extensions__grid .plugin-card .desc > p {
 		margin-inline: 148px 136px;

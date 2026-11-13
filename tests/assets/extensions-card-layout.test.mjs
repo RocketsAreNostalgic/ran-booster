@@ -39,7 +39,7 @@ test('each Extensions card is a named inline-size container', () => {
 test('the card layout is decided by the card, not the viewport', () => {
 	assert.match(
 		bare,
-		/@container ran-booster-extension-card \(min-inline-size: 32rem\)/
+		/@container ran-booster-extension-card \(min-inline-size: 512px\)/
 	);
 	// The only viewport queries left in this file belong to the details dialog.
 	for (const [, condition] of bare.matchAll(/@media\s+([^{]+)\{/g)) {
@@ -83,4 +83,24 @@ test('card layout rules use logical properties only', () => {
 		layout,
 		/(?:^|[\s;{])(?:left|right|margin-left|margin-right|padding-left|padding-right|text-align:\s*(?:left|right)|float:\s*(?:left|right))\b/m
 	);
+});
+
+test('resets keep the icon, text and action column from overlapping', () => {
+	assert.match(base, /\.desc > p \{\s*margin-inline: 148px 0;/);
+	assert.match(query, /margin-inline: 148px 136px;/);
+	assert.match(base, /\.plugin-card h3 \{[^}]*margin-inline: 0;/);
+	assert.match(base.match(actionLinks)[1], /inset:\s*auto;/);
+	assert.match(base, /\.plugin-action-buttons\s*\{[^}]*clear:\s*none;/);
+	assert.equal(css.match(/@container/g).length, 1);
+});
+
+test('no viewport query touches the plugin-card layout', () => {
+	for (const [, , inner] of bare.matchAll(
+		/@media\s+([^{]+)\{([\s\S]*?\n\})/g
+	)) {
+		assert.doesNotMatch(
+			inner,
+			/\.plugin-card|\.action-links|\.plugin-action-buttons/
+		);
+	}
 });

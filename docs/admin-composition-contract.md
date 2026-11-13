@@ -990,8 +990,9 @@ returns it to the page on close; without JavaScript the fragment link reveals
 the same section in place. The section links to the selected release page.
 
 Each card is an inline-size container: its actions stack under the title and
-move to a right-hand column at a card width of 32rem, so the layout follows the
-card's own width, never the viewport or WordPress's plugin-card media queries.
+move to the inline-end column once the card is 512px wide, so the card's own
+width decides the layout and WordPress's viewport plugin-card media queries are
+overridden.
 
 ### Extension details dialog
 

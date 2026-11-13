@@ -139,8 +139,8 @@ the pointer is over it or focus is inside it, and also dismisses with its
 control or Escape. An error or warning item is only a pointer to a persistent
 inline message (`data-feedback-target`), is silent, never times out, and is
 never shown without its target. A result that carries a warning keeps its
-success static. The host mounts under `#wpcontent` and aligns with the content
-column through CSS alone. Intent colours use the same design tokens as the
+success static. The host mounts inside the Booster frame (`.wrap.ran-booster-admin`,
+falling back to `#wpcontent`) and centres on that frame through CSS alone. Intent colours use the same design tokens as the
 Notice and Badge.
 
 Other completed operations retain their server results or correlated persistent

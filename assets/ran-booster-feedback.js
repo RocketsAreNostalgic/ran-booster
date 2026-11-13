@@ -174,7 +174,13 @@
 		}
 		const host = document.createElement('div');
 		host.className = 'ran-booster-snackbar-host';
-		(document.getElementById('wpcontent') || document.body).append(host);
+		// The Booster frame is the one box every Booster screen shares; the
+		// toast is centred in it, wherever its width comes from.
+		(
+			document.querySelector('.wrap.ran-booster-admin') ||
+			document.getElementById('wpcontent') ||
+			document.body
+		).append(host);
 		try {
 			state = { host, root: element.createRoot(host), items: [] };
 		} catch {

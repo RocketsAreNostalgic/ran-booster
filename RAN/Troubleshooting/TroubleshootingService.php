@@ -344,14 +344,14 @@ final class TroubleshootingService {
 	private function installation_value( mixed $value, string $kind ): string {
 		$grammar = match ( $kind ) {
 			// A display name or implementation id: words, digits, spaces and common name punctuation, with no long opaque run.
-			'label' => '/\A(?=.{1,64}\z)(?!.*[A-Za-z0-9]{20})(?!.*(?:gh[pousr]_|github_pat_))[A-Za-z0-9][A-Za-z0-9 .,()\'+\/-]*\z/',
+			'label' => '/\A(?=.{1,64}\z)(?!.*[A-Za-z0-9]{20})[A-Za-z0-9][A-Za-z0-9 .,()\'+\/-]*\z/',
 			// A provider code, algorithm id or state: lowercase words joined by . _ / or -.
 			'slug' => '/\A(?=.{1,96}\z)(?!.*(?:gh[pousr]_|github_pat_))(?!.*[a-z0-9]{33})[a-z][a-z0-9]*(?:[._\/-][a-z0-9]+)*\z/',
-			// A version, or the literal Unknown that Core itself reports when a package version cannot be read.
-			'version' => '/\A(?:Unknown|(?=.{1,64}\z)v?[0-9]+(?:\.[0-9]+){0,3}(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?(?:\+[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?)\z/',
+			// A version, the literal Unknown that Core reports when a package version cannot be read, or a Composer dev version.
+			'version' => '/\A(?:Unknown|dev-[A-Za-z0-9._-]{1,60}|(?=.{1,64}\z)[0-9]+(?:\.(?:[0-9]+|x))*-dev|(?=.{1,64}\z)v?[0-9]+(?:\.[0-9]+){0,3}(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?(?:\+[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?)\z/',
 			'commit' => '/\A(?:[0-9a-f]{40}|[0-9a-f]{64})\z/',
 			// A Booster interface or class name: the RAN namespace and identifier segments.
-			'class' => '/\A(?=.{1,191}\z)RAN(?:\\\\[A-Za-z_][A-Za-z0-9_]*)+\z/',
+			'class' => '/\A(?=.{1,191}\z)(?!.*(?:gh[pousr]_|github_pat_|glpat-))(?!.*[A-Za-z0-9]{41})RAN(?:\\\\[A-Za-z_][A-Za-z0-9_]*)+\z/',
 		};
 
 		return is_string( $value ) && 1 === preg_match( $grammar, $value ) ? $value : __( 'Unavailable', 'ran-booster' );

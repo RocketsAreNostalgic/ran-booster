@@ -946,7 +946,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		$screen = new \ReflectionMethod( ReleaseWorkflowRequestController::class, 'result_display_text' );
 		$kept   = 'Review the release settings, then retry.';
 		self::assertSame( $kept, $screen->invoke( $this->controller(), $kept ) );
-		foreach ( array( 'See https://example.test/help', 'Cannot read /srv/private/file', 'Token ghp_abcdefghijklmnop1234', '<b>bold</b>', str_repeat( 'word ', 103 ), ' padded ', '', 42, null ) as $unsafe ) {
+		foreach ( array( 'See https://example.test/help', 'Cannot read /srv/private/file', 'Token ghp_abcdefghijklmnop1234', '<b>bold</b>', str_repeat( 'ok go ', 85 ) . 'end', ' padded ', '', 42, null ) as $unsafe ) {
 			self::assertSame( '', $screen->invoke( $this->controller(), $unsafe ), is_scalar( $unsafe ) ? (string) $unsafe : 'non-string' );
 		}
 	}

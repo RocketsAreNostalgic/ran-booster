@@ -11,6 +11,13 @@ final class BoosterLogger {
 
 	private const PREFIX = '[ran-booster]';
 
+	/**
+	 * The shape Core stores package slugs and notice codes in (DeploymentAttempt::identifier, Dashboard diagnostic ids),
+	 * without the vendor token prefixes, digest words and 32 hex digits that FailureText would also drop.
+	 * It is deliberately looser than identifier(): leading digits, long words and short hex-like slugs are real slugs.
+	 */
+	private const STORED_ID = '/\A(?!.*(?<![a-z0-9])(?:gh[pousr][_-]|github_pat_|gl(?:pat|dt|rt|cbt|ptt|soat)-|xox[abprs]-|xapp-|npm_|(?:sk|pk|rk)_(?:live|test)_|sk-|shp(?:at|ca|pa|ss)_|dop_v1_|ya29\.|wordpress_(?:logged_in|sec|test_cookie)|wp-settings-|private[ _.-]?key|sha[ _-]?[0-9]|md5|blake2))(?!(?:[^0-9a-f]*[0-9a-f]){32})[a-z0-9][a-z0-9._-]{0,190}\z/';
+
 	private static ?TemporaryDebugCapture $capture = null;
 
 	/** @var array<string, true> */
@@ -129,10 +136,11 @@ final class BoosterLogger {
 		return match ( $key ) {
 			'correlation_id' => self::exact( '/\A[0-9a-f]{32}\z/', $line ),
 			'resolved_ref' => FailureText::commit_id( $line ) ?? FailureText::identifier( $line ),
-			'exception_class' => self::exact( '/\A[A-Za-z_][A-Za-z0-9_]*(?:\\\\[A-Za-z_][A-Za-z0-9_]*)*\z/', $line ),
+			'exception_class' => self::exact( '/\A(?!.*(?:gh[pousr]_|github_pat_|glpat-))(?!.*[A-Za-z0-9]{41})[A-Za-z_][A-Za-z0-9_]*(?:\\\\[A-Za-z_][A-Za-z0-9_]*)*\z/i', $line ),
 			'exception_code' => self::exact( '/\A-?[0-9]{1,10}\z/', $line ),
 			'transition' => self::transition( $line ),
-			'diagnostic_id', 'event', 'operation', 'outcome_code', 'package_slug', 'provider', 'resolved_by', 'source', 'state', 'step' => FailureText::identifier( $line ),
+			'diagnostic_id', 'package_slug' => self::exact( self::STORED_ID, $line ),
+			'event', 'operation', 'outcome_code', 'provider', 'resolved_by', 'source', 'state', 'step' => FailureText::identifier( $line ),
 			default => FailureText::strict( $line, 191 ) === $line ? $line : null,
 		};
 	}

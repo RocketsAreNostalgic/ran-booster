@@ -4,7 +4,6 @@ declare( strict_types = 1 );
 
 namespace RAN\Admin\WebhookManagement\Operation;
 
-use RAN\UpdaterSupport\V1\FailureText;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\AddOn\WebhookAssistance\WebhookProfileMetadata;
@@ -161,8 +160,8 @@ final class WebhookOperationCoordinator {
 			|| ! is_string( $remediation ) ) {
 			return $this->outcome( 'operation_failed' );
 		}
-		// Drop only unsafe guidance; the confirmed operation facts must still be recorded.
-		$remediation = FailureText::display( $remediation, 512 ) === $remediation ? $remediation : null;
+		// The result has already screened its guidance (empty when dropped); the confirmed operation facts must still be recorded.
+		$remediation = '' === $remediation ? null : $remediation;
 
 		if ( 'setup' === $operation ) {
 			$outcome    = $this->record_setup( $target, $result, $credential_id, $state, $code, $observed, $delivery );

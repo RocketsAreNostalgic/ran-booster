@@ -186,6 +186,7 @@ final class TroubleshootingServiceTest extends TestCase {
 			'mixed case run'    => array( 'Ab3dEf9hIjKlMnOpQrStUvWxYz0123456789' ),
 			'newline'           => array( "ok\nline" ),
 			'foreign namespace' => array( 'Evil\\Thing' ),
+			'token class'       => array( 'RAN\\ghp_abcdefghijklmnop1234' ),
 			'empty'             => array( '' ),
 			'oversized'         => array( str_repeat( 'a-', 100 ) ),
 		);

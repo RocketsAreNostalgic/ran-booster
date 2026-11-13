@@ -264,7 +264,6 @@ final class BoosterLoggerTest extends TestCase {
 			$text,
 			array(
 				'attempt_id'    => $text,
-				'diagnostic_id' => $text,
 				'step'          => 'ok',
 			)
 		);
@@ -291,16 +290,16 @@ final class BoosterLoggerTest extends TestCase {
 
 	#[DataProvider( 'identifier_corpus' )]
 	public function test_closed_identifiers_survive_in_identifier_keys( string $id ): void {
-		BoosterLogger::log( 'id', array( 'diagnostic_id' => $id ) );
+		BoosterLogger::log( 'id', array( 'step' => $id ) );
 
-		self::assertStringContainsString( '"diagnostic_id":' . wp_json_encode( $id, JSON_UNESCAPED_SLASHES ), $this->last_line() );
+		self::assertStringContainsString( '"step":' . wp_json_encode( $id, JSON_UNESCAPED_SLASHES ), $this->last_line() );
 	}
 
 	#[DataProvider( 'not_identifier_corpus' )]
 	public function test_non_identifiers_are_dropped_from_identifier_keys( string $id ): void {
-		BoosterLogger::log( 'id', array( 'diagnostic_id' => $id ) );
+		BoosterLogger::log( 'id', array( 'step' => $id ) );
 
-		self::assertStringNotContainsString( 'diagnostic_id', $this->last_line() );
+		self::assertStringNotContainsString( 'step', $this->last_line() );
 	}
 
 	public function test_dotted_and_dashed_closed_ids_are_kept_and_a_credential_message_is_withheld(): void {
@@ -313,6 +312,50 @@ final class BoosterLoggerTest extends TestCase {
 		);
 
 		self::assertSame( '[ran-booster] message withheld {"diagnostic_id":"gh.credential.valid","provider":"github-fine-grained"}', $this->last_line() );
+	}
+
+	/** @return array<string, array{string, bool}> */
+	public static function stored_ids(): array {
+		return array(
+			'leading digit'          => array( '3d-flipbook', true ),
+			'trailing underscore'    => array( 'my_plugin_', true ),
+			'double underscore'      => array( 'plugin__x', true ),
+			'hex-like short slug'    => array( 'a1b2c3d4e5f6a7b8c9', true ),
+			'long alphanumeric run'  => array( str_repeat( 'a', 30 ) . '-tools', true ),
+			'sk inside a word'       => array( 'disk-image', true ),
+			'dotted notice code'     => array( 'ran_booster.admin-error', true ),
+			'longest accepted'       => array( 'z' . str_repeat( 'y', 190 ), true ),
+			'one over the bound'     => array( 'z' . str_repeat( 'y', 191 ), false ),
+			'classic token'          => array( 'ghp_abcdefghijklmnop1234', false ),
+			'fine grained token'     => array( 'github_pat_abcdefghijklmnop', false ),
+			'gitlab token'           => array( 'glpat-abcdefghijkl', false ),
+			'payment key'            => array( 'sk-abcdefghijkl', false ),
+			'npm token'              => array( 'npm_abcdefghijkl', false ),
+			'digest word'            => array( 'sha256_abcdef', false ),
+			'forty hex'              => array( str_repeat( 'ab', 20 ), false ),
+			'uppercase'              => array( 'My-Plugin', false ),
+			'slash'                  => array( 'dir/plugin', false ),
+			'leading separator'      => array( '-plugin', false ),
+		);
+	}
+
+	#[DataProvider( 'stored_ids' )]
+	public function test_package_slugs_and_notice_codes_keep_the_shape_core_stores_them_in( string $value, bool $kept ): void {
+		foreach ( array( 'package_slug', 'diagnostic_id' ) as $key ) {
+			BoosterLogger::log( 'stored', array( $key => $value ) );
+			self::assertSame( $kept, str_contains( $this->last_line(), '"' . $key . '"' ), $key . ' ' . $value );
+		}
+	}
+
+	public function test_exception_code_and_class_bounds_are_exact(): void {
+		foreach ( array( '1234567890' => true, '12345678901' => false, '-5' => true ) as $code => $kept ) {
+			BoosterLogger::log( 'code', array( 'exception_code' => (string) $code ) );
+			self::assertSame( $kept, str_contains( $this->last_line(), 'exception_code' ), (string) $code );
+		}
+		foreach ( array( str_repeat( 'a_', 95 ) . 'a' => true, str_repeat( 'a_', 96 ) => false, 'RAN\\Deployment\\DeploymentFailure' => true, 'RAN\\ghp_abcdefghijklmnop1234' => false, 'Vendor\\github_pat_abc' => false, 'RAN\\' . str_repeat( 'a', 41 ) => false ) as $class => $kept ) {
+			BoosterLogger::log( 'class', array( 'exception_class' => (string) $class ) );
+			self::assertSame( $kept, str_contains( $this->last_line(), 'exception_class' ), (string) $class );
+		}
 	}
 
 	public function test_the_exact_correlation_id_is_kept_locally_and_anything_else_is_dropped(): void {

@@ -137,6 +137,22 @@ final class FailureTextShapeScreenTest extends TestCase {
 		self::assertSame( 'configured_pending_delivery', $operation->to_array()['code'], 'The confirmed operation facts survive.' );
 	}
 
+	public function test_a_result_with_screened_out_guidance_can_be_copied_without_losing_its_facts(): void {
+		$configuration = array(
+			'endpoint'     => 'matched',
+			'events'       => 'matched',
+			'content_type' => 'matched',
+			'active'       => 'matched',
+		);
+		$result        = new RepositoryWebhookOperationResult( 'succeeded', 'configured_pending_delivery', '2026-08-02T20:00:00Z', '77', $configuration, 'configured_pending_delivery', 'See https://example.test/help?token=abc for guidance.' );
+		$partial       = $result->as_partial( 'operation_lock_release_failed', 'Retry later.' )->to_array();
+		self::assertSame( 'Retry later.', $partial['remediation'] );
+		self::assertSame( '', $result->to_array()['remediation'] );
+		$profile = new \RAN\AddOn\WebhookAssistance\WebhookProfileMetadata( 'wh_0123456789abcdef01234567', 'gh', 'repository', 'owner/repository', '1234', 1, 'created', 'file', false );
+		self::assertSame( '', $result->with_profile( $profile )->to_array()['remediation'] );
+		self::assertSame( 'configured_pending_delivery', $result->with_profile( $profile )->to_array()['code'] );
+	}
+
 	#[DataProvider( 'benign' )]
 	public function test_benign_entries_are_accepted_by_the_diagnostic_result( string $text ): void {
 		if ( strlen( $text ) > 512 ) {

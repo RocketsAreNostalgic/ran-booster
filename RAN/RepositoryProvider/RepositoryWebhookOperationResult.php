@@ -32,7 +32,10 @@ final readonly class RepositoryWebhookOperationResult {
 			$this->assert_value( $value, array( 'matched', 'mismatched', 'unknown' ) );
 		}
 		$this->assert_value( $delivery, array( 'configured_pending_delivery', 'verified', 'unverified', 'unknown', 'absent' ) );
-		$this->assert_text( $remediation, 512 );
+		// Empty means no guidance: it is what a screened-out text becomes, and copies of a result pass it back in.
+		if ( '' !== $remediation ) {
+			$this->assert_text( $remediation, 512 );
+		}
 		// The guidance is kept only when the shared screen accepts the whole text; otherwise it is empty, never redacted or partly kept.
 		$this->remediation = FailureText::display( $remediation, 512 ) ?? '';
 	}

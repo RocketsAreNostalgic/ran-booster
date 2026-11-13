@@ -22,7 +22,10 @@ final readonly class RepositoryWebhookFitnessResult {
 		$this->assert_value( $evidence, array( 'observed', 'inferred', 'unknown_by_design', 'assessment_unavailable', 'stale' ) );
 		$this->assert_text( $code, 96, '/\A[a-z0-9][a-z0-9._-]*\z/D' );
 		$this->assert_text( $checked_at, 32, '/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/D' );
-		$this->assert_text( $remediation, 512 );
+		// Empty means no guidance: it is what a screened-out text becomes, and copies of a result pass it back in.
+		if ( '' !== $remediation ) {
+			$this->assert_text( $remediation, 512 );
+		}
 		// The guidance is kept only when the shared screen accepts the whole text; otherwise it is empty, never redacted or partly kept.
 		$this->remediation = FailureText::display( $remediation, 512 ) ?? '';
 	}

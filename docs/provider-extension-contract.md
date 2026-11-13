@@ -206,6 +206,11 @@ and Core falls back to its own copy: an `InvalidCredentialInput` keeps its
 reason and shows Core's copy for that reason, and webhook remediation is emptied
 without discarding the confirmed operation facts.
 
+Declared technical identifiers are not failure text. The Troubleshooting
+installation report shows a provider code, algorithm id, version, commit id or
+`RAN\...` class name only when it fits a fixed grammar for that field, and shows
+`Unavailable` otherwise. Those values do not pass through `FailureText`.
+
 Core's own translated copy does not pass through `FailureText`. It is shown
 through Core's own escaped output and may use any Unicode punctuation. Only text
 that a provider supplied reaches these sinks.

@@ -90,6 +90,144 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertSame( $payload['installation_details'], $ran['installation_details'] );
 	}
 
+	public function test_every_value_the_shipped_github_provider_declares_is_shown_in_the_installation_report(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$contract    = \RAN\BoosterGitHubProvider\V1\GitHubProvider::compatibility_contract();
+		$declaration = array(
+			'display_name'    => 'RAN Booster GitHub Provider',
+			'display_version' => '1.0.0-beta.21',
+		) + $contract;
+		foreach ( array(
+			$declaration,
+			array(
+				'display_name'    => 'ran/booster-github-provider',
+				'display_version' => 'Unknown',
+			) + $contract,
+		) as $declared ) {
+			$service = $this->service();
+			$payload = $service->with_installation_context(
+				$service->form_payload(),
+				array(
+					'state'      => 'available',
+					'available'  => true,
+					'current'    => array(
+						'selected'    => 'bundled',
+						'declaration' => $declared,
+					),
+					'candidates' => array(),
+				)
+			);
+			$rows    = $payload['installation_details']['GitHub provider'];
+			self::assertSame( $declared['display_name'], $rows['Name'] );
+			self::assertSame( $declared['display_version'], $rows['Version'] );
+			self::assertSame( 'ran/booster-github-provider', $rows['Implementation'] );
+			self::assertSame( '15', $rows['Provider API'] );
+			self::assertSame( '2', $rows['Compatibility revision'] );
+			self::assertSame( 'github-hmac-sha256-v1', $rows['Webhook signing format'] );
+			self::assertSame( 'github-classic-pat-v1', $rows['API credential format 1'] );
+			self::assertSame( 'github-fine-grained-pat-v1', $rows['API credential format 2'] );
+			foreach ( $contract['facets'] as $index => $facet ) {
+				self::assertSame( $facet, $rows[ 'Capability ' . ( $index + 1 ) ] );
+			}
+			self::assertCount( 15, $contract['facets'] );
+			self::assertSame( 'available', $rows['Selection state'] );
+		}
+	}
+
+	public function test_the_real_bitbucket_and_github_provider_identities_and_core_update_values_are_shown(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		foreach ( array( array( 'bb', 'Bitbucket' ), array( 'gh', 'GitHub' ) ) as $identity ) {
+			$provider                  = new TroubleshootingProviderFixture( $identity[0], static fn (): array => array() );
+			$service                   = $this->service( $provider );
+			$form                      = $service->form_payload();
+			$form['selected_provider'] = $identity[0];
+			$form['providers']         = array( $identity[0] => $identity[1] );
+			$form['core_self_update']  = array(
+				'installed_version' => '1.0.0-beta.45',
+				'requested_mode'    => 'auto',
+				'effective_mode'    => 'enabled',
+				'reason'            => 'release_marker_missing_or_invalid',
+				'updater_state'     => 'idle',
+				'updater_code'      => 'check_failed',
+				'offered_version'   => '1.0.0-beta.46',
+				'marker_version'    => '1.0.0-beta.45+build.7',
+				'marker_commit'     => str_repeat( 'ab', 20 ),
+			);
+			$rows                      = $service->with_installation_context( $form, null )['installation_details'];
+			self::assertSame( $identity[1], $rows['Diagnostic Git provider']['Git provider'] );
+			self::assertSame( $identity[0], $rows['Diagnostic Git provider']['Git provider code'] );
+			self::assertSame( '1.0.0-beta.45', $rows['Core updates']['Installed version'] );
+			self::assertSame( 'release_marker_missing_or_invalid', $rows['Core updates']['Policy reason'] );
+			self::assertSame( '1.0.0-beta.46', $rows['Core updates']['Offered version'] );
+			self::assertSame( '1.0.0-beta.45+build.7', $rows['Core updates']['Marker version'] );
+			self::assertSame( str_repeat( 'ab', 20 ), $rows['Core updates']['Marker commit'] );
+			foreach ( array(
+				'Requested mode' => 'auto',
+				'Effective mode' => 'enabled',
+				'Updater state'  => 'idle',
+				'Updater code'   => 'check_failed',
+			) as $label => $value ) {
+				self::assertSame( $value, $rows['Core updates'][ $label ] );
+			}
+		}
+	}
+
+	/** @return array<string, array{string}> */
+	public static function hostile_declared_values(): array {
+		return array(
+			'token prefix'      => array( 'ghp_abcdefghijklmnop1234' ),
+			'fine grained'      => array( 'github_pat_abcdefghijklmnop1234' ),
+			'url'               => array( 'https://example.test/x' ),
+			'path'              => array( '/srv/private/config.php' ),
+			'windows path'      => array( 'C:\\private\\config.php' ),
+			'header'            => array( 'Authorization: Bearer Abcdefgh12345678' ),
+			'markup'            => array( '<b>x</b>' ),
+			'long opaque run'   => array( str_repeat( 'a', 41 ) ),
+			'mixed case run'    => array( 'Ab3dEf9hIjKlMnOpQrStUvWxYz0123456789' ),
+			'newline'           => array( "ok\nline" ),
+			'foreign namespace' => array( 'Evil\\Thing' ),
+			'empty'             => array( '' ),
+			'oversized'         => array( str_repeat( 'a-', 100 ) ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'hostile_declared_values' )]
+	public function test_hostile_declared_values_are_unavailable_in_every_installation_field( string $hostile ): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$service                  = $this->service();
+		$form                     = $service->form_payload();
+		$form['core_self_update'] = array_fill_keys( array( 'installed_version', 'requested_mode', 'effective_mode', 'reason', 'updater_state', 'updater_code', 'offered_version', 'marker_version', 'marker_commit' ), $hostile );
+		$declaration              = array(
+			'display_name'           => $hostile,
+			'display_version'        => $hostile,
+			'implementation_id'      => $hostile,
+			'provider_api_version'   => 15,
+			'compatibility_revision' => $hostile,
+			'webhook_signing_format' => $hostile,
+			'facets'                 => array( $hostile ),
+			'api_credential_formats' => array( $hostile ),
+		);
+		$payload                  = $service->with_installation_context(
+			$form,
+			array(
+				'state'      => $hostile,
+				'available'  => true,
+				'current'    => array(
+					'selected'    => 'external',
+					'declaration' => $declaration,
+				),
+				'candidates' => array(),
+			)
+		);
+		$details                  = $payload['installation_details'];
+		foreach ( array( 'Name', 'Version', 'Implementation', 'Compatibility revision', 'Webhook signing format', 'Capability 1', 'API credential format 1', 'Selection state' ) as $label ) {
+			self::assertSame( 'Unavailable', $details['GitHub provider'][ $label ], $label );
+		}
+		foreach ( array( 'Installed version', 'Requested mode', 'Effective mode', 'Policy reason', 'Updater state', 'Updater code', 'Offered version', 'Marker version', 'Marker commit' ) as $label ) {
+			self::assertSame( 'Unavailable', $details['Core updates'][ $label ], $label );
+		}
+	}
+
 	public function test_operator_check_context_projects_only_safe_recorded_values(): void {
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 		$provider                 = new TroubleshootingProviderFixture( 'gh', static fn (): array => array() );

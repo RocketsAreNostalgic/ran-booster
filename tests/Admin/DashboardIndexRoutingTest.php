@@ -3390,14 +3390,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 	 * @param list<mixed> $reads Scripted activity reads in the order the presenter issues them.
 	 * @return array{0: array<string, mixed>, 1: list<string>}
 	 */
-	private function release_check_activity( array $reads ): array {
+	private function release_check_activity( array $reads, \RAN\Deployment\DeploymentPolicy $policy = \RAN\Deployment\DeploymentPolicy::DISABLED ): array {
 		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
 		require_once __DIR__ . '/../Activity/ActivityConnection.php';
 		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ]     = '1';
 		$GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
 		$connection               = new \RAN\Tests\Activity\ActivityConnection();
 		$connection->read_results = $reads;
-		$package                  = $this->managed_package( 'example/example.php', 'Example Plugin', 'repository-1', \RAN\PackageSource::RELEASE_ASSET );
+		$package                  = $this->managed_package( 'example/example.php', 'Example Plugin', 'repository-1', \RAN\PackageSource::RELEASE_ASSET, policy: $policy );
 		$presenter                = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( new DashboardActivityWpdb() ), activity_store: new \RAN\Activity\ActivityStore( $connection ) );
 		$activity                 = $presenter->package_activity( array( $package ), 'plugin' );
 
@@ -3424,6 +3424,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'context', $queries[3], 'Only the passive fallback ignores the settings context.' );
 	}
 
+	public function test_an_enabled_release_package_never_reads_across_settings_revisions(): void {
+		[ $check, $queries ] = $this->release_check_activity( array( array(), array(), array() ), \RAN\Deployment\DeploymentPolicy::MANUAL );
+
+		self::assertArrayNotHasKey( 'earlier_observation', $check );
+		self::assertCount( 3, $queries );
+		self::assertStringNotContainsString( 'context', $queries[2], 'The third read is the ordinary fallback, not an established cross-revision read.' );
+		self::assertStringNotContainsString( "effect <> 'none'", $queries[2] );
+	}
+
 	public function test_a_real_settings_revision_bump_keeps_the_established_release_observation(): void {
 		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
 		require_once __DIR__ . '/../Activity/ActivityConnection.php';
@@ -3448,6 +3457,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-1', 'main' ) );
 		$package->set_adoption_token( 'gh:repository-1:11111111-1111-4111-8111-111111111111' );
 		$package->set_source( \RAN\PackageSource::RELEASE_ASSET, 1 );
+		$package->set_deployment_policy( \RAN\Deployment\DeploymentPolicy::DISABLED );
 		$evidence = new \RAN\Admin\RepositoryBranchCheckEvidenceStore();
 		$before   = $evidence->activity_context( 'plugin', $package, 'release.check' )['context'];
 

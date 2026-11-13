@@ -418,8 +418,8 @@ final class DeploymentAdminPresenter {
 							'observation' => null,
 						)
 						: $this->activity_store->summary( $type, $capture['subject_identity'], $capture['adoption_token'], $capture['context'], $purpose );
-					if ( null !== $capture['adoption_token'] && true === $items[ $package->get_identifier() ]['check']['available'] && null === $items[ $package->get_identifier() ]['check']['observation'] ) {
-						// A settings save starts a new context, so look across revisions for the last established result.
+					if ( null !== $capture['adoption_token'] && PackageSource::RELEASE_ASSET === $package->get_source() && \RAN\Deployment\DeploymentPolicy::DISABLED === $package->get_deployment_policy() && true === $items[ $package->get_identifier() ]['check']['available'] && null === $items[ $package->get_identifier() ]['check']['observation'] ) {
+						// A settings save starts a new context, so a disabled release package looks across revisions for its last established result.
 						$established = $this->activity_store->latest_for_adoption( $type, $capture['subject_identity'], $capture['adoption_token'], $purpose, true );
 						if ( true === $established['available'] ) {
 							$items[ $package->get_identifier() ]['check']['earlier_observation'] = $established['record'];

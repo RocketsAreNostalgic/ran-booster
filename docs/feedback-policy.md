@@ -33,7 +33,8 @@ The snackbar host is the WordPress global `wp.components.SnackbarList`. It is
 the single approved exception to the `@wordpress/ui` rule, because
 `@wordpress/ui` 0.26.0 exports no Snackbar or Toast. The exact exception, scope,
 versions checked and revisit trigger are recorded in the
-[component package section of the composition contract](admin-composition-contract.md#component-package-direction).
+[component package section of the composition
+contract](admin-composition-contract.md#component-package-direction).
 This is not package adoption. Booster owns the host, the timer and the queue;
 the mechanics stay swappable so the component can be replaced if
 `@wordpress/ui` gains a snackbar or toast.
@@ -49,7 +50,7 @@ Each rule is written to be implemented and tested.
 | R3 Failure never snackbar-only | Every failure that can produce a snackbar pointer also renders an inline message beside the control, field or row it concerns. The inline message persists until the person resolves or dismisses it. | For each failure code that can reach the snackbar, assert the inline region exists in the same response. |
 | R4 Failure never auto-dismisses | A failure pointer has an explicit dismiss control and no timer. A pointer is optional; the inline message is the record. | Config test per kind: success has a timer, a pointer does not. |
 | R5 One duration | Success snackbars use one universal duration, a single constant of 10 seconds. It is not set per call site and can be tuned later by changing that one value. | Static test: exactly one definition; no call site passes its own duration. |
-| R6 Placement | Bottom of the viewport, in every Booster surface. Positioning uses logical CSS properties so RTL mirrors it. It never moves the layout and never depends on the Admin Shell's height. Alignment to the Booster content column is this document's choice for the owner's "aligned to the content column" wording. | CSS contract test: no `left`/`right` in the host rules; browser check in LTR and RTL. |
+| R6 Placement | Bottom of the viewport, in every Booster surface. Positioning uses logical CSS properties so RTL mirrors it. It never moves the layout and never depends on the Admin Shell's height. Alignment to the Booster content column is this document's choice, not an owner decision. | CSS contract test: no `left`/`right` in the host rules; browser check in LTR and RTL. |
 | R7 Pending state | While the action runs the initiating control is busy (`aria-busy`, duplicate submit blocked) and one polite announcement says it is working. The pending state ends in exactly one of: success snackbar, or inline failure. | Test: busy set on submit, cleared on both outcomes, one announcement. |
 | R8 Queued or accepted | A queued or accepted result (for example bulk "Queued N updates") is a success snackbar that includes one action linking to Activity. There is no separate message history or recent-messages list. | Test: the action is present and its URL is Core-built. |
 | R9 Stay local | Copy-to-clipboard confirmations and migration or Blueprint apply results stay where they are. Progress that has its own region (package update progress, Transporter) keeps its in-progress display local; its final success still goes to the snackbar (R1). | Allowlist test: these in-progress displays never call the host; the final success does. |
@@ -115,7 +116,8 @@ WordPress before 7.1. Every token name below was checked in that file.
 | Text | `--wpds-color-foreground-content-success` | `--wpds-color-foreground-content-error` | `--wpds-color-foreground-content-warning` |
 | Icon | `--wpds-color-foreground-content-success-weak` | `--wpds-color-foreground-content-error-weak` | `--wpds-color-foreground-content-warning-weak` |
 
-The Badge uses the non-weak surface tokens (`--wpds-color-background-surface-success`,
+The Badge uses the non-weak surface tokens
+(`--wpds-color-background-surface-success`,
 `-error`, `-warning`) with the same text tokens. The snackbar uses the weak
 surface like Notice because it carries a sentence, a border and an icon, as
 Notice does. Both resolve to the same hue per intent.
@@ -125,7 +127,8 @@ Notice does. Both resolve to the same hue per intent.
   Badge, and so a future warning pointer needs no new design.
 - **Focus.** The dismiss control and the action link use
   `--wpds-color-stroke-focus` with a `--wpds-border-width-focus` ring, the same
-  token the bundled `@wordpress/ui` styles and `25-admin-primitives.css` use. The ring has 5.2 to 5.4:1
+  token the bundled `@wordpress/ui` styles and `25-admin-primitives.css` use.
+  The ring has 5.2 to 5.4:1
   contrast against each weak surface. Do not use the WordPress component's
   own accent ring.
 - **Shape and spacing.** Radius `--wpds-border-radius-lg`; padding
@@ -148,7 +151,8 @@ Notice does. Both resolve to the same hue per intent.
   4.58 (warning) against `#f0f0f1`, and 4.9 to 5.3 against the snackbar's own
   surface. Text, icon and fill stay the same as Notice.
 - **Dark and light.** The bundled token file defines no dark values and
-  there is no dark content theme (the Midnight admin colour scheme changes the chrome, not the content palette), so there is one palette today.
+  there is no dark content theme (the Midnight admin colour scheme changes the
+  chrome, not the content palette), so there is one palette today.
   P2 uses only `--wpds-*` tokens and no colour literals, so a dark theme
   delivered by `wp-theme` applies without a change here.
 - **Forced colours.** Under `@media (forced-colors: active)` the surface is
@@ -216,7 +220,8 @@ helper is counted once. The Disposition column states where each category goes.
 
 ### Category notes
 
-- **A.** Producers are `Dashboard` (4 uses), `Dispatcher` (2), `BoosterServiceProvider`
+- **A.** Producers are `Dashboard` (4 uses), `Dispatcher` (2),
+  `BoosterServiceProvider`
   (1), `DeploymentAdminController` (4), `PackageAdminController` (12) and
   `ProviderProfileAdminController` (8). The three definitions in `Dashboard`
   are not counted. Messages live for one request.
@@ -243,7 +248,9 @@ helper is counted once. The Disposition column states where each category goes.
 
 ## Delivery plan
 
-The owner merges each pull request. Per owner decision 8, the transport (P1) and the host (P2) are built in parallel against the interface contract below, so two pull requests are open at once. Budgets are estimates. Each
+The owner merges each pull request. Per owner decision 8, the transport (P1) and
+the host (P2) are built in parallel against the interface contract below, so two
+pull requests are open at once. Budgets are estimates. Each
 pull request names its Core invariant, the rejected smaller alternative and the
 projected production-line, type, public-seam and persistent-state delta before
 coding, per `AGENTS.md`.
@@ -259,7 +266,8 @@ coding, per `AGENTS.md`.
 | P6 | Evidence only: installed-ZIP acceptance on desktop and mobile, RTL, JavaScript on and off, reduced motion, keyboard, screen reader, single site and multisite | 0 | 0 | about +80 (`docs/evidence/`) | P1 to P5 |
 | P7 | Retire presenters and styles once no consumer remains | about -80 | about -40 | about +5 | P3, P4 |
 
-Order: P0 first. P1 and P2 run in parallel, then P3 and P4. P5 follows #859. The failure-copy integration is P5 only.
+Order: P0 first. P1 and P2 run in parallel, then P3 and P4. P5 follows #859. The
+failure-copy integration is P5 only.
 
 ### Tests and evidence required per pull request
 
@@ -269,7 +277,8 @@ Every pull request runs `composer check` and `pnpm check`.
   only (no secret-shaped input survives), expiry or single use as the chosen
   transport requires, per-user and per-site isolation, and no display text in
   any URL.
-- P2: Node tests for queue limit and eviction order, dedupe by `data-feedback-key`, timer
+- P2: Node tests for queue limit and eviction order, dedupe by
+  `data-feedback-key`, timer
   and pause, dismiss and Escape, focus return, `pagehide` and
   `htmx:beforeHistorySave` teardown, no double `wp.a11y.speak`, and the
   host-unavailable fallback. CSS contract tests for logical properties and
@@ -295,7 +304,8 @@ at render time. There is no event id and no subject. Codes are deduplicated,
 so two events with the same code in one render collapse to one message; that is
 accepted. The flash holds no message text and nothing about it appears in the
 URL. No secret, provider response, path or exception text may enter it, and
-unknown codes are dropped on write and on read.
+unknown codes are dropped on write and on read. A later `FeedbackFlash::enqueue`
+replaces an unread flash, and `render()` requires `manage_options`.
 
 ### Interface contract between the flash (P1) and the host (P2)
 

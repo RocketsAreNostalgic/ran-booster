@@ -2893,9 +2893,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		[$registrar] = $this->native_plugin_registrar( $package );
 		$plugins     = $this->createStub( PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
-		$store  = new RuntimeReleaseStore( array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
-		$fire   = true;
-		$facade = $this->facade(
+		$store         = new RuntimeReleaseStore( array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
+		$updater       = new \stdClass();
+		$updater->fire = true;
+		$facade        = $this->facade(
 			$plugins,
 			$this->createStub( ThemeRepository::class ),
 			$store,
@@ -2904,8 +2905,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$this->release_metadata_registry(),
 			static fn (): bool => true,
 			static fn (): bool => true,
-			static function () use ( $registrar, &$fire ): void {
-				if ( ! $fire ) {
+			static function () use ( $registrar, $updater ): void {
+				if ( ! $updater->fire ) {
 					return;
 				}
 				$check_id = str_repeat( 'd', 32 );
@@ -2940,7 +2941,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 
 		self::assertSame( 'refresh_skipped_disabled', $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code() );
-		$fire = false;
+		$updater->fire = false;
 		self::assertSame( 'release_refreshed', $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code() );
 	}
 

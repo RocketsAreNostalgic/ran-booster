@@ -2494,6 +2494,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-collection > \.ran-booster-collection__toolbar \{[^}]*padding: var\(--ran-booster-space-12\) var\(--ran-booster-space-16\);[^}]*border-block-end: 1px solid var\(--ran-booster-border\);[^}]*background: var\(--ran-booster-surface-subtle\);/', $css );
 		self::assertMatchesRegularExpression( '/\.ran-booster-admin\.ran-booster-admin \.ran-booster-collection > :is\(\.ran-booster-data-table-wrap, \.ran-booster-repository-list\) \{ border: 0; border-radius: 0; \}/', $css );
 		self::assertStringNotContainsString( 'overflow: hidden', (string) preg_replace( '/.*\.ran-booster-collection \{([^}]*)\}.*/', '$1', $css ) );
+		// The clipping frame keeps a focusable table region's ring inside its edge.
+		self::assertMatchesRegularExpression( '/\.ran-booster-collection > \.ran-booster-data-table-wrap:focus \{ outline-offset: -2px; \}/', $css );
 	}
 
 	public function test_package_table_sits_in_the_shared_collection_frame_and_keeps_its_structure(): void {

@@ -18,6 +18,13 @@
 	overflow: clip;
 }
 
+/* The frame clips at its edge, so a focusable table region draws its ring inside it. */
+.ran-booster-admin
+	.ran-booster-collection
+	> .ran-booster-data-table-wrap:focus {
+	outline-offset: -2px;
+}
+
 .ran-booster-admin .ran-booster-collection > .ran-booster-collection__toolbar {
 	margin: 0;
 	padding: var(--ran-booster-space-12) var(--ran-booster-space-16);

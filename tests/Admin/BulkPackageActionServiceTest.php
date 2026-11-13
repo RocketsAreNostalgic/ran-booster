@@ -803,6 +803,26 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_recheck_deleted'] );
 	}
 
+	public function test_an_unchanged_policy_does_not_request_a_check(): void {
+		$release = BulkActionPackage::make( 'release/release.php', 'fixture' );
+		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$release->set_deployment_policy( DeploymentPolicy::DISABLED );
+		$plugins          = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
+		$plugins->changed = 0;
+
+		$this->service( $plugins, true )->execute(
+			self::action(
+				'plugin',
+				array(
+					'bulk_action' => 'policy-manual',
+					'identifiers' => array( 'release/release.php' ),
+				)
+			)
+		);
+
+		self::assertSame( array(), $GLOBALS['ran_booster_recheck_deleted'] );
+	}
+
 	public function test_a_failed_check_request_does_not_block_the_policy_change(): void {
 		$GLOBALS['ran_booster_recheck_failure'] = true;
 		$release                                = BulkActionPackage::make( 'release/release.php', 'fixture' );
@@ -892,6 +912,7 @@ final class BulkActionPluginRepository extends PluginRepository {
 	/** @var list<array<string, mixed>> */
 	public array $snapshots          = array();
 	public ?DeploymentPolicy $policy = null;
+	public ?int $changed             = null;
 
 	/** @param array<string, Package> $packages */
 	public function __construct( array $packages = array() ) {
@@ -913,8 +934,8 @@ final class BulkActionPluginRepository extends PluginRepository {
 
 		return array(
 			'selected'  => count( $snapshots ),
-			'changed'   => count( $snapshots ),
-			'unchanged' => 0,
+			'changed'   => $this->changed ?? count( $snapshots ),
+			'unchanged' => count( $snapshots ) - ( $this->changed ?? count( $snapshots ) ),
 		);
 	}
 }

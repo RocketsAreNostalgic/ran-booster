@@ -1746,7 +1746,7 @@ final class RepeatPackageViewTest extends TestCase {
 
 	public function test_disabled_release_package_shows_the_last_observed_newer_release_as_a_past_observation(): void {
 		$package_view = PackagePagePresenter::plugin();
-		$render       = function ( \RAN\Deployment\DeploymentPolicy $policy, \RAN\PackageSource $source, string $facts ) use ( $package_view ): string {
+		$render       = function ( \RAN\Deployment\DeploymentPolicy $policy, \RAN\PackageSource $source, string $facts, bool $after_settings_save = false ) use ( $package_view ): string {
 			$package = $this->package( $package_view );
 			$package->set_deployment_policy( $policy );
 			$package->set_source( $source, 1 );
@@ -1763,11 +1763,18 @@ final class RepeatPackageViewTest extends TestCase {
 			$package_activity    = array(
 				'items' => array(
 					$package->get_identifier() => array(
-						'check' => array(
-							'available'   => true,
-							'latest'      => array_merge( $observation, array( 'id' => 8 ) ),
-							'observation' => $observation,
-						),
+						'check' => $after_settings_save
+							? array(
+								'available'           => true,
+								'latest'              => null,
+								'observation'         => null,
+								'earlier_observation' => $observation,
+							)
+							: array(
+								'available'   => true,
+								'latest'      => array_merge( $observation, array( 'id' => 8 ) ),
+								'observation' => $observation,
+							),
 					),
 				),
 			);
@@ -1784,6 +1791,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'Last observed newer release', $disabled );
 		self::assertStringContainsString( '1.2.0, seen 2026-11-01 10:00:00. Not an available update.', $disabled );
 
+		self::assertStringContainsString( '1.2.0, seen 2026-11-01 10:00:00.', $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::RELEASE_ASSET, $newer, true ), 'The observation survives a settings save.' );
 		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::RELEASE_ASSET, '{"relationship":"newer","candidate_version":"0.0.1"}' ) );
 		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::MANUAL, \RAN\PackageSource::RELEASE_ASSET, $newer ) );
 		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::BRANCH, $newer ) );

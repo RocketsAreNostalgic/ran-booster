@@ -590,7 +590,10 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 							<?php if ( null !== $observed_check && ( $observed_check['id'] ?? null ) !== ( $latest_check['id'] ?? null ) ) { ?>
 								<div><dt><?php esc_html_e( 'Last established result', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) ( $observed_check['sort_at'] ?? '' ) . ' — ' . \RAN\Admin\DeploymentOutcomeMessage::for_activity( (string) ( $observed_check['status'] ?? '' ), (string) ( $observed_check['reason'] ?? '' ), (string) ( $observed_check['message'] ?? '' ) ) ); ?></dd></div>
 							<?php } ?>
-							<?php $past_release = $policy_disabled && $release_managed && null !== $observed_check ? \RAN\Admin\PastReleaseObservation::from_record( $observed_check ) : null; ?>
+							<?php
+							$past_source  = $observed_check ?? ( is_array( $check_summary['earlier_observation'] ?? null ) ? $check_summary['earlier_observation'] : null );
+							$past_release = $policy_disabled && $release_managed && null !== $past_source ? \RAN\Admin\PastReleaseObservation::from_record( $past_source ) : null;
+							?>
 							<?php $past_release = null !== $past_release && ( '' === $installed_version || version_compare( $past_release['version'], $installed_version, '>' ) ) ? $past_release : null; ?>
 							<?php if ( null !== $past_release ) { ?>
 								<div>

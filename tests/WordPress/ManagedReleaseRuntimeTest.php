@@ -2834,12 +2834,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'observed_check_outcomes' )]
 	public function test_refresh_never_reports_success_for_a_check_that_did_not_succeed( string $status, string $reason, string $code ): void {
-		$package                                     = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
-		$GLOBALS['ran_booster_storage_test_options'] = array();
-		$GLOBALS['ran_booster_activity_options']     = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
-		$activity                                    = new \RAN\Activity\ActivityStore( new \RAN\Tests\Activity\ActivityConnection() );
-		[$registrar]                                 = $this->native_plugin_registrar( $package, activity: $activity );
-		$plugins                                     = $this->createStub( PluginRepository::class );
+		$package = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		// No Activity store: the outcome must not depend on Activity recording.
+		[$registrar] = $this->native_plugin_registrar( $package );
+		$plugins     = $this->createStub( PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$store  = new RuntimeReleaseStore( array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
 		$facade = $this->facade(

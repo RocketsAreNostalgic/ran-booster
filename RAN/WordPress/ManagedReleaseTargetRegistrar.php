@@ -378,9 +378,9 @@ final class ManagedReleaseTargetRegistrar {
 
 	/** @param array<string, mixed> $event Optional observational protocol; never update authority. */
 	public function activity_check_started( array $event ): void {
-		if ( null === $this->activity || array_diff( array( 'check_id', 'network_id', 'blog_id', 'target_type', 'installed_identity', 'provider_code', 'repository_identity', 'channel', 'binding_hash' ), array_keys( $event ) ) || count( $event ) !== 9
+		if ( array_diff( array( 'check_id', 'network_id', 'blog_id', 'target_type', 'installed_identity', 'provider_code', 'repository_identity', 'channel', 'binding_hash' ), array_keys( $event ) ) || count( $event ) !== 9
 			|| ! is_string( $event['check_id'] ?? null ) || ! preg_match( '/\A[a-f0-9]{32}\z/', $event['check_id'] )
-			|| isset( $this->activity_checks[ $event['check_id'] ] )
+			|| isset( $this->check_targets[ $event['check_id'] ] )
 			|| ( $event['blog_id'] ?? null ) !== get_current_blog_id()
 			|| ( $event['network_id'] ?? null ) !== get_current_network_id()
 			|| ! in_array( $event['target_type'] ?? null, array( 'plugin', 'theme' ), true ) ) {
@@ -426,18 +426,22 @@ final class ManagedReleaseTargetRegistrar {
 		if ( null === $configuration || PackageSource::RELEASE_ASSET !== $package->get_source() || $this->authority( $package, $configuration ) !== $snapshot['authority'] ) {
 			return;
 		}
+		$this->check_targets[ $event['check_id'] ] = self::key( $type, $identifier );
+		if ( null === $this->activity ) {
+			return;
+		}
 		$capture = ( new \RAN\Admin\RepositoryBranchCheckEvidenceStore() )->activity_context( $type, $package, 'release.check' );
 		$id      = $this->activity->begin( (string) $package->get_provider_code(), new \RAN\Activity\ActivityRequest( 'release.check', $package->get_repository()->reference, $type, $identifier ), $capture );
 		if ( null !== $id ) {
 			$this->activity_checks[ $event['check_id'] ] = $id;
-			$this->check_targets[ $event['check_id'] ]   = self::key( $type, $identifier );
 		}
 	}
 
 	/** @param array<string, mixed> $event Completion uses only its captured begin identity. */
 	public function activity_check_completed( array $event ): void {
-		$id = is_string( $event['check_id'] ?? null ) ? ( $this->activity_checks[ $event['check_id'] ] ?? null ) : null;
-		if ( null === $this->activity || null === $id || array_diff( array( 'check_id', 'status', 'reason', 'relationship', 'installed_version', 'candidate_version', 'offered_version', 'candidate_validation_code' ), array_keys( $event ) ) || count( $event ) !== 8 || ! is_string( $event['status'] ?? null ) || ! is_string( $event['reason'] ?? null ) ) {
+		$id  = is_string( $event['check_id'] ?? null ) ? ( $this->activity_checks[ $event['check_id'] ] ?? null ) : null;
+		$key = is_string( $event['check_id'] ?? null ) ? ( $this->check_targets[ $event['check_id'] ] ?? null ) : null;
+		if ( null === $key || array_diff( array( 'check_id', 'status', 'reason', 'relationship', 'installed_version', 'candidate_version', 'offered_version', 'candidate_validation_code' ), array_keys( $event ) ) || count( $event ) !== 8 || ! is_string( $event['status'] ?? null ) || ! is_string( $event['reason'] ?? null ) ) {
 			return;
 		}
 		$expected = match ( $event['reason'] ) {
@@ -460,14 +464,18 @@ final class ManagedReleaseTargetRegistrar {
 			}
 			$facts[ $field ] = $value;
 		}
-		$key = $this->check_targets[ $event['check_id'] ] ?? null;
-		if ( null !== $key ) {
-			$this->check_outcomes[ $key ] = array(
-				'status' => $event['status'],
-				'reason' => $event['reason'],
-			);
+		$this->check_outcomes[ $key ] = array(
+			'status' => $event['status'],
+			'reason' => $event['reason'],
+		);
+		if ( null === $this->activity || null === $id ) {
+			return;
 		}
 		$this->activity->complete( $id, $event['status'], $event['reason'], facts: $facts, effect: 'succeeded' === $event['status'] ? 'established' : 'none' );
+	}
+
+	public function forget_check_outcome( string $type, string $identifier ): void {
+		unset( $this->check_outcomes[ self::key( $type, $identifier ) ] );
 	}
 
 	/** @return array{status: string, reason: string}|null The check this request observed for the target, if any. */

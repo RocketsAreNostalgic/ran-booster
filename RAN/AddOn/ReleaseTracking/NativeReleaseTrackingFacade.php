@@ -799,6 +799,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			if ( ! $target->refresh() ) {
 				return ReleaseTrackingResult::failed( 'refresh_failed', 'Published release information could not be refreshed.' );
 			}
+			$this->registrar->forget_check_outcome( $type, $identifier );
 			( $this->refresh_native )( $type );
 			$check = $this->registrar->check_outcome( $type, $identifier );
 			if ( null !== $check && 'succeeded' !== $check['status'] ) {

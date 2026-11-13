@@ -449,8 +449,12 @@ test('a pointer to a persistent error is never evicted while a success can be', 
 	);
 });
 
-test('pointers go oldest first only when no success is left, and the new success stays', () => {
+test('three pointers are never evicted: a new success is spoken, not shown, and a new pointer is omitted', () => {
 	const env = boot();
+	const spoken = [];
+	env.window.wp.a11y = {
+		speak: (message, level) => spoken.push([message, level]),
+	};
 	for (const id of ['a', 'b', 'c']) {
 		env.feedback.show(`Pointer ${id}.`, {
 			intent: id === 'b' ? 'warning' : 'error',
@@ -458,10 +462,47 @@ test('pointers go oldest first only when no success is left, and the new success
 			target: env.target(`target-${id}`),
 		});
 	}
-	env.feedback.show('Saved.');
+	const before = env.notices.map((notice) => notice.content);
+	assert.equal(env.feedback.show('Saved.'), false);
+	assert.equal(
+		env.feedback.show('Pointer d.', {
+			intent: 'error',
+			id: 'd',
+			target: env.target('target-d'),
+		}),
+		false
+	);
 	assert.deepEqual(
 		env.notices.map((notice) => notice.content),
-		['Pointer b.', 'Pointer c.', 'Saved.']
+		before
+	);
+	const container = env.staticContainer([
+		{ key: 's', intent: 'success', text: 'Settings saved.' },
+	]);
+	env.feedback.consume();
+	assert.equal(container.items.length, 1, 'The static result stays.');
+	assert.deepEqual(spoken, [['Settings saved.', 'polite']]);
+});
+
+test('two successes and a pointer: a new success evicts the oldest success', () => {
+	const env = boot();
+	env.feedback.show('One.');
+	env.feedback.show('Failed.', {
+		intent: 'error',
+		id: 'p',
+		target: env.target(),
+	});
+	env.feedback.show('Two.');
+	env.feedback.show('Three.');
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Failed.', 'Two.', 'Three.']
+	);
+	env.feedback.show('Four.');
+	env.feedback.show('Five.');
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Failed.', 'Four.', 'Five.']
 	);
 });
 

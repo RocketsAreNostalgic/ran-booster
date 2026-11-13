@@ -247,18 +247,21 @@
 				},
 			};
 		}
-		state.returnControl = options.returnControl || state.returnControl;
-		state.items.push(item);
-		while (state.items.length > LIMIT) {
-			// The oldest success goes first; a pointer only when nothing
-			// else is left, since its inline message remains.
-			const evicted =
-				state.items.slice(0, -1).find((i) => i.intent === 'success') ||
-				state.items[0];
+		if (state.items.length >= LIMIT) {
+			// The oldest success goes. A pointer to a persistent error is never
+			// dropped: with only pointers visible the new item is not shown (a
+			// success keeps its static form, a pointer's inline message is the
+			// record). To be revisited after use.
+			const evicted = state.items.find((i) => i.intent === 'success');
+			if (!evicted) {
+				return false;
+			}
 			restoreFocus(evicted.uid);
 			window.clearTimeout(evicted.timer);
 			state.items = state.items.filter((i) => i !== evicted);
 		}
+		state.returnControl = options.returnControl || state.returnControl;
+		state.items.push(item);
 		try {
 			render();
 			if (!state.host.querySelector('.components-snackbar')) {
@@ -308,6 +311,9 @@
 					const id = item.getAttribute('data-feedback-key');
 					if (show(text, { intent, id, target, action })) {
 						item.remove();
+					} else if (intent === 'success') {
+						// Not shown: the static result stays, spoken politely.
+						window.wp?.a11y?.speak?.(text.trim(), 'polite');
 					}
 				});
 				if (!container.querySelector('[data-feedback-key]')) {

@@ -3,8 +3,10 @@ declare(strict_types=1);
 namespace RAN\RepositoryProvider;
 
 use InvalidArgumentException;
+use RAN\UpdaterSupport\V1\FailureText;
 /** Bounded, non-secret fitness evidence for one explicit webhook action. */
 final readonly class RepositoryWebhookFitnessResult {
+	private string $remediation;
 	public function __construct(
 		private string $support,
 		private string $suitability,
@@ -12,7 +14,7 @@ final readonly class RepositoryWebhookFitnessResult {
 		private string $evidence,
 		private string $code,
 		private string $checked_at,
-		private string $remediation
+		string $remediation
 	) {
 		$this->assert_value( $support, array( 'supported', 'unsupported', 'unknown' ) );
 		$this->assert_value( $suitability, array( 'suitable', 'insufficient', 'unknown' ) );
@@ -21,6 +23,8 @@ final readonly class RepositoryWebhookFitnessResult {
 		$this->assert_text( $code, 96, '/\A[a-z0-9][a-z0-9._-]*\z/D' );
 		$this->assert_text( $checked_at, 32, '/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/D' );
 		$this->assert_text( $remediation, 512 );
+		// The guidance is kept only when the shared screen accepts the whole text; otherwise it is empty, never redacted or partly kept.
+		$this->remediation = FailureText::display( $remediation, 512 ) ?? '';
 	}
 	/** @return array{support:string,suitability:string,least_privilege:string,evidence:string,code:string,checked_at:string,remediation:string} */
 

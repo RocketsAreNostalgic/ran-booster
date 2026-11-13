@@ -184,6 +184,32 @@ a configuration notice, never operation authority. This placement is
 not a capability enumerator, generic form schema, callback registry or provider
 HTML seam.
 
+### Failure text screening
+
+Core screens provider-authored text with one shared screener,
+`RAN\UpdaterSupport\V1\FailureText` from `ran/updater-support`, never with a Core
+copy of its rules. It screens the whole text before bounding it and drops a
+rejected text whole; it never redacts or truncates. Core uses it by mode:
+
+| Mode | Core sink |
+| --- | --- |
+| `display( $text, $max )` | `ProviderDiagnosticResult` message and remediation (512), `InvalidCredentialInput` message (512), `RepositoryWebhookOperationResult` and `RepositoryWebhookFitnessResult` remediation (512), the webhook controller and coordinator (255 and 512) and the release workflow result text (512) |
+| `identifier( $text )`, `commit_id( $text )` | `BoosterLogger` ids and commit ids |
+| `strict( $text, $max )` | `BoosterLogger` string values that are not ids |
+
+`display()` takes curated sentences only: printable ASCII, no URL, path, markup,
+assignment, token or digest shape, and no `/`, `\`, `@`, `=`, `<`, `>` or `&`.
+Write fixed provider remediation in plain ASCII words and do not quote token
+prefixes such as `ghp_` or `github_pat_`. A provider never passes echoed remote
+text, a `WP_Error` message or an exception message. A rejected value is dropped
+and Core falls back to its own copy: an `InvalidCredentialInput` keeps its
+reason and shows Core's copy for that reason, and webhook remediation is emptied
+without discarding the confirmed operation facts.
+
+Core's own translated copy does not pass through `FailureText`. It is shown
+through Core's own escaped output and may use any Unicode punctuation. Only text
+that a provider supplied reaches these sinks.
+
 ### Optional release workflow management
 
 `RepositoryReleaseWorkflowManagementV3` is the release-workflow management

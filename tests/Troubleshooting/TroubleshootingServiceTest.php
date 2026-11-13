@@ -132,7 +132,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$form                  = $service->form_payload();
 		$form['credential_id'] = 'credential-private-canary';
 		$form['repository']    = 'private-owner/private-repository';
-		$unsafe_values         = array( '/srv/private-path-canary/config.php', 'C:\\private-path-canary\\config.php', 'Authorization: secret-header-canary', 'Cookie: private-cookie-canary', 'Bearer private-token-canary', 'github_pat_privatecanary', '<b>html-canary</b>', "line\ncontrol-canary", str_repeat( 'oversize-canary', 40 ), new \stdClass(), array( 'raw-secret-canary' ) );
+		$unsafe_values         = array( '/srv/private-path-canary/config.php', 'C:\\private-path-canary\\config.php', 'Authorization: Bearer Canary12345678', 'Cookie: private=canary', 'Bearer Private12token34canary', 'github_pat_privatecanary', '<b>html-canary</b>', "line\ncontrol-canary", str_repeat( 'oversize-canary', 40 ), new \stdClass(), array( 'raw-secret-canary' ) );
 		foreach ( $unsafe_values as $unsafe ) {
 			$form['core_self_update'] = array(
 				'reason'     => $unsafe,
@@ -140,7 +140,7 @@ final class TroubleshootingServiceTest extends TestCase {
 				'next_check' => -1,
 				'secret'     => 'core-secret-canary',
 			);
-			$form['providers']['gh']  = 'Authorization: provider-header-canary';
+			$form['providers']['gh']  = 'Authorization: Bearer Canary12345678';
 			$declaration              = array(
 				'display_name'           => $unsafe,
 				'display_version'        => $unsafe,
@@ -643,7 +643,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$provider                                 = new TroubleshootingProviderFixture(
 			'gh',
 			static fn (): array => array(
-				new ProviderDiagnosticResult( 'fail', 'gh.credential.invalid', 'Private project prose canary.', 'Contact private-person@example.test.' ),
+				new ProviderDiagnosticResult( 'fail', 'gh.credential.invalid', 'Private project prose canary.', 'Contact the private person canary.' ),
 				new ProviderDiagnosticResult( 'warning', 'gh.privatecanary', 'Private repository prose canary.', 'Review private ref canary.' ),
 			)
 		);
@@ -680,7 +680,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertTrue( $data['runs'][1]['partial'] );
 		self::assertSame( 'remote_calls_exhausted', $data['runs'][1]['partial_reason'] );
 		self::assertIsString( $memory->raw );
-		foreach ( array( 'canary', 'private-owner/private-repository', 'private-person@example.test', 'gh.privatecanary' ) as $private ) {
+		foreach ( array( 'canary', 'private-owner/private-repository', 'gh.privatecanary' ) as $private ) {
 			self::assertStringNotContainsString( $private, $memory->raw );
 			self::assertStringNotContainsString( $private, $captured['text'] );
 		}

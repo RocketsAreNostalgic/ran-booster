@@ -3,9 +3,11 @@ declare(strict_types=1);
 namespace RAN\RepositoryProvider;
 
 use InvalidArgumentException;
+use RAN\UpdaterSupport\V1\FailureText;
 use RAN\AddOn\WebhookAssistance\WebhookProfileMetadata;
 /** Bounded, non-secret truth about one fixed webhook operation. */
 final readonly class RepositoryWebhookOperationResult {
+	private string $remediation;
 	/** @param array{endpoint:string,events:string,content_type:string,active:string} $configuration */
 	public function __construct(
 		private string $state,
@@ -14,7 +16,7 @@ final readonly class RepositoryWebhookOperationResult {
 		private ?string $hook_id,
 		private array $configuration,
 		private string $delivery,
-		private string $remediation,
+		string $remediation,
 		private ?WebhookProfileMetadata $profile = null
 	) {
 		$this->assert_value( $state, array( 'succeeded', 'partial', 'ambiguous', 'failed' ) );
@@ -31,6 +33,8 @@ final readonly class RepositoryWebhookOperationResult {
 		}
 		$this->assert_value( $delivery, array( 'configured_pending_delivery', 'verified', 'unverified', 'unknown', 'absent' ) );
 		$this->assert_text( $remediation, 512 );
+		// The guidance is kept only when the shared screen accepts the whole text; otherwise it is empty, never redacted or partly kept.
+		$this->remediation = FailureText::display( $remediation, 512 ) ?? '';
 	}
 	public function succeeded(): bool {
 		return 'succeeded' === $this->state;

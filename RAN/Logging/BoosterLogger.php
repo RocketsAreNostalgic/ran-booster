@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Logging;
 
-use RAN\RepositoryProvider\ProviderDiagnosticResult;
+use RAN\UpdaterSupport\V1\FailureText;
 use Throwable;
 
 final class BoosterLogger {
@@ -40,7 +40,7 @@ final class BoosterLogger {
 			return false;
 		}
 
-		$line            = self::PREFIX . ' ' . self::one_line( $message );
+		$line            = self::PREFIX . ' ' . self::screened_message( $message );
 		$sanitized       = self::sanitize_context( $context );
 		$encoded_context = wp_json_encode(
 			$sanitized,
@@ -67,7 +67,8 @@ final class BoosterLogger {
 	public static function log_exception( string $message, Throwable $exception, array $context = array() ): void {
 		$context['exception_class'] = $exception::class;
 		$code                       = $exception->getCode();
-		if ( is_int( $code ) || is_string( $code ) ) {
+		// A string code (for example a database state) is provider-shaped text, so only an integer code is recorded.
+		if ( is_int( $code ) ) {
 			$context['exception_code'] = (string) $code;
 		}
 
@@ -96,8 +97,8 @@ final class BoosterLogger {
 			}
 
 			if ( is_string( $value ) ) {
-				$line = self::one_line( $value );
-				if ( '' !== $line && ! self::is_exact_identifier( $key, $line ) && ! ProviderDiagnosticResult::is_safe_text( $line, 191 ) ) {
+				$line = self::screened_value( $key, self::one_line( $value ) );
+				if ( null === $line ) {
 					continue;
 				}
 				$safe[ $key ] = $line;
@@ -109,17 +110,43 @@ final class BoosterLogger {
 		return $safe;
 	}
 
-	/** Exact id shapes that the prose screen must not drop: commit ids, correlation ids and fixed snake_case diagnostic ids. */
-	private static function is_exact_identifier( string $key, string $value ): bool {
+	/** The log message is Core's own fixed text: shape-screened and never truncated; a rejected message is replaced, not redacted. */
+	private static function screened_message( string $message ): string {
+		$line = self::one_line( $message );
+
+		return FailureText::display( $line, 512 ) === $line ? $line : 'message withheld';
+	}
+
+	/**
+	 * A string context value, or null to drop the field. Ids and commit ids take the closed shared shapes; the
+	 * exact correlation id, class names and numeric codes are matched locally; any other value is untrusted text.
+	 */
+	private static function screened_value( string $key, string $line ): ?string {
+		if ( '' === $line ) {
+			return '';
+		}
+
 		return match ( $key ) {
-			'correlation_id' => 1 === preg_match( '/\A[0-9a-f]{32}\z/', $value ),
-			'resolved_ref' => 1 === preg_match( '/\A(?:[0-9a-f]{40}|[0-9a-f]{64})\z/', $value ) || self::is_snake_identifier( $value ),
-			default => self::is_snake_identifier( $value ),
+			'correlation_id' => self::exact( '/\A[0-9a-f]{32}\z/', $line ),
+			'resolved_ref' => FailureText::commit_id( $line ) ?? FailureText::identifier( $line ),
+			'exception_class' => self::exact( '/\A[A-Za-z_][A-Za-z0-9_]*(?:\\\\[A-Za-z_][A-Za-z0-9_]*)*\z/', $line ),
+			'exception_code' => self::exact( '/\A-?[0-9]{1,10}\z/', $line ),
+			'transition' => self::transition( $line ),
+			'diagnostic_id', 'event', 'operation', 'outcome_code', 'package_slug', 'provider', 'resolved_by', 'source', 'state', 'step' => FailureText::identifier( $line ),
+			default => FailureText::strict( $line, 191 ) === $line ? $line : null,
 		};
 	}
 
-	private static function is_snake_identifier( string $value ): bool {
-		return 1 === preg_match( '/\A[a-z][a-z0-9_]{0,95}\z/', $value ) && 0 === preg_match( '/[0-9a-f]{32}|\A(?:gh[pousr]_|github_pat_|glpat)/', $value ) && strlen( (string) preg_replace( '/\D/', '', $value ) ) < 8;
+	/** The value when it matches one closed local shape and the 191 byte bound, otherwise null. */
+	private static function exact( string $pattern, string $line ): ?string {
+		return 1 === preg_match( $pattern, $line ) && strlen( $line ) <= 191 ? $line : null;
+	}
+
+	/** A state transition such as `queued->running`: exactly two closed identifiers. */
+	private static function transition( string $line ): ?string {
+		$parts = explode( '->', $line );
+
+		return 2 === count( $parts ) && null !== FailureText::identifier( $parts[0] ) && null !== FailureText::identifier( $parts[1] ) ? $line : null;
 	}
 
 	private static function one_line( string $value ): string {

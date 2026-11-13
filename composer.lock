@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c0f2a1f66b04a10ed19e98a45a557a8a",
+    "content-hash": "f1e8a7495638436b4acb721f3ef309b2",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -114,16 +114,16 @@
         },
         {
             "name": "ran/updater-support",
-            "version": "v1.0.0-beta.4",
+            "version": "v1.0.0-beta.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-updater-support.git",
-                "reference": "357db930b407941bd19a9e890c925d3d16ae9b15"
+                "reference": "548e4d29856797ce827e349fe013b42e32e050a6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-updater-support/zipball/357db930b407941bd19a9e890c925d3d16ae9b15",
-                "reference": "357db930b407941bd19a9e890c925d3d16ae9b15",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-updater-support/zipball/548e4d29856797ce827e349fe013b42e32e050a6",
+                "reference": "548e4d29856797ce827e349fe013b42e32e050a6",
                 "shasum": ""
             },
             "require": {
@@ -134,7 +134,7 @@
                 "phpcompatibility/phpcompatibility-paragonie": "2.0.0-alpha2",
                 "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2",
                 "phpstan/phpstan": "^2.1",
-                "ran/coding-standards": "dev-main"
+                "ran/coding-standards": "^1.0"
             },
             "type": "library",
             "autoload": {
@@ -153,8 +153,17 @@
                 "validate:strict": [
                     "composer validate --strict --no-check-publish"
                 ],
+                "test:standards": [
+                    "node --test tests/owned-methods.test.mjs"
+                ],
                 "test:contract": [
                     "php tests/contract.php"
+                ],
+                "test:failure-text": [
+                    "php tests/failure-text.php"
+                ],
+                "test:failure-text-mutation": [
+                    "php tests/failure-text-mutation.php"
                 ],
                 "standards": [
                     "phpcs --standard=.phpcs.xml"
@@ -163,7 +172,8 @@
                     "phpcbf --standard=.phpcs.xml --report=summary"
                 ],
                 "analyze": [
-                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=512M"
+                    "@analyze:production",
+                    "@analyze:maintained"
                 ],
                 "test:release-control": [
                     "node --test tests/release-workflow-contract.test.mjs"
@@ -172,8 +182,21 @@
                     "bash -o pipefail -c 'find src tests -type f -name \"*.php\" -print0 | xargs -0 -n1 php -l'"
                 ],
                 "test": [
+                    "@test:analysis-coverage",
                     "@test:contract",
+                    "@test:failure-text",
+                    "@test:failure-text-mutation",
+                    "@test:standards",
                     "@test:release-control"
+                ],
+                "test:analysis-coverage": [
+                    "bash tests/analysis-coverage.sh"
+                ],
+                "analyze:production": [
+                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=512M"
+                ],
+                "analyze:maintained": [
+                    "phpstan analyse --configuration=phpstan-maintained.neon --no-progress --memory-limit=512M"
                 ]
             },
             "license": [
@@ -185,7 +208,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-updater-support/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-updater-support"
             },
-            "time": "2026-09-23T11:24:10+00:00"
+            "time": "2026-11-13T00:41:49+00:00"
         },
         {
             "name": "ran/wp-branch-updater",

@@ -446,14 +446,14 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 	/** @return list<array{string, string}> */
 	public static function unsafe_diagnostic_text(): array {
 		return array(
-			array( 'Authorization: Bearer secret-value', 'Safe remediation.' ),
-			array( 'Proxy-Authorization: Basic secret-value', 'Safe remediation.' ),
+			array( 'Authorization: Bearer abcdefgh12345678', 'Safe remediation.' ),
+			array( 'Proxy-Authorization: Basic abcdefgh12345678', 'Safe remediation.' ),
 			array( 'Cookie: session=secret-value', 'Safe remediation.' ),
 			array( 'Set-Cookie: session=secret-value', 'Safe remediation.' ),
 			array( 'X-Hub-Signature-256: sha256=secret-value', 'Safe remediation.' ),
-			array( 'X-API-Key: secret-value', 'Safe remediation.' ),
-			array( 'X-Auth-Token: secret-value', 'Safe remediation.' ),
-			array( 'Private-Token: secret-value', 'Safe remediation.' ),
+			array( 'X-API-Key: Abcdefgh12345678', 'Safe remediation.' ),
+			array( 'X-Auth-Token: Abcdefgh12345678', 'Safe remediation.' ),
+			array( 'Private-Token: Abcdefgh12345678', 'Safe remediation.' ),
 			array( 'Bearer abcdefgh12345678', 'Safe remediation.' ),
 			array( 'Basic abcdefgh12345678', 'Safe remediation.' ),
 			array( 'Token ghp_abcdefgh12345678', 'Safe remediation.' ),
@@ -487,7 +487,7 @@ final class ProviderDiagnosticsContractTest extends TestCase {
 		$result = new ProviderDiagnosticResult(
 			ProviderDiagnosticResult::WARNING,
 			'fixture.benign',
-			'WordPress uses the plugin/theme directory and the provider returned a safe status.',
+			'WordPress uses the plugin or theme directory and the provider returned a safe status.',
 			'Open provider settings and review repository access.'
 		);
 

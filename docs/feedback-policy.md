@@ -76,7 +76,7 @@ webhook and extension successes follow it too.
 
 | Aspect | Specification |
 | --- | --- |
-| Queue | At most 3 visible, newest last. When a fourth arrives, the oldest success is dropped first. A pointer to a persistent error is never dropped. What happens when three pointers are visible and a new item arrives is not yet decided; until it is, a new success is announced politely and its static form is kept (R15), and a new pointer is omitted because its inline message is the record. To be revisited after use (see Open decision). |
+| Queue | At most 3 visible, newest last. When a fourth arrives, the oldest success is dropped first. A pointer to a persistent error is never dropped by the queue (activating its Show details action removes it). What happens when three pointers are visible and a new item arrives is not yet decided; until it is, a new success is announced politely and its static form is kept (R15), and a new pointer is omitted because its inline message is the record. To be revisited after use (see Open decision). |
 | Duplicates | Each item has a key (the closed code). The same key never produces two snackbars. |
 | Duration | Decided: one constant, 10 seconds (R5), tunable later in that one place. WordPress's own `Snackbar` hard-codes 6 seconds and cannot be configured or paused, so the host renders success items with the explicit-dismiss presentation (which also gives the dismiss control) and owns the timer that removes them. |
 | Pause | The timer pauses while the pointer is over the item or focus is inside it, and resumes with the remaining time. This is Booster-owned. |
@@ -112,7 +112,7 @@ WordPress before 7.1. Every token name below was checked in that file.
 | Role | Success | Failure pointer (error) | Warning |
 | --- | --- | --- | --- |
 | Surface | `--wpds-color-background-surface-success-weak` | `--wpds-color-background-surface-error-weak` | `--wpds-color-background-surface-warning-weak` |
-| Border (1px, `--wpds-border-width-xs`) | `--wpds-color-stroke-surface-success-strong` | `--wpds-color-stroke-surface-error-strong` | `--wpds-color-stroke-surface-warning-strong` |
+| Border (1px) | `--wpds-color-stroke-surface-success-strong` | `--wpds-color-stroke-surface-error-strong` | `--wpds-color-stroke-surface-warning-strong` |
 | Text | `--wpds-color-foreground-content-success` | `--wpds-color-foreground-content-error` | `--wpds-color-foreground-content-warning` |
 | Icon | `--wpds-color-foreground-content-success-weak` | `--wpds-color-foreground-content-error-weak` | `--wpds-color-foreground-content-warning-weak` |
 
@@ -132,13 +132,16 @@ Notice does. Both resolve to the same hue per intent.
   contrast against each weak surface. Do not use the WordPress component's
   own accent ring.
 - **Shape and spacing.** Radius `--wpds-border-radius-lg`; padding
-  `--wpds-dimension-padding-md`; gap between icon, text and controls
-  `--wpds-dimension-gap-xs` (as Notice) and between stacked items
-  `--wpds-dimension-gap-sm`. No pixel literals other than the existing
-  host-width clamp.
-- **Icon.** The same intent icons as Notice (success check, error, warning),
-  passed through the `SnackbarList` `icon` prop. Colour comes from the icon
-  token above, not from the text colour.
+  `--wpds-dimension-padding-md`; gap between glyph, text and controls
+  `--wpds-dimension-gap-md`. Stacked items keep WordPress's own 8px list
+  spacing. Pixel literals: the 1px border, the 600px width clamp, the 24px
+  and 16px bottom offsets (as spacing tokens) and the 2px focus offset.
+- **Icon.** A decorative CSS `::before` glyph on the item content, not the
+  `SnackbarList` `icon` prop, whose layout assumes WordPress's own icon. Each
+  intent has its own shape so intent never relies on colour alone: a check for
+  success, `!` for warning, a cross for error. Alternative text is empty
+  (`content: "x" / ""`), after a plain `content` declaration for browsers
+  without alternative text. Colour comes from the icon token above.
 - **Contrast (WCAG AA).** Computed from the token values in the bundled file.
   Text on surface: success 15.2:1, error 15.6:1, warning 15.7:1 (needs 4.5:1).
   Icon on surface: 4.9:1, 5.3:1, 4.9:1 (needs 3:1). Focus ring on surface:
@@ -155,25 +158,22 @@ Notice does. Both resolve to the same hue per intent.
   chrome, not the content palette), so there is one palette today.
   P2 uses only `--wpds-*` tokens and no colour literals, so a dark theme
   delivered by `wp-theme` applies without a change here.
-- **Forced colours.** Under `@media (forced-colors: active)` the surface is
-  `Canvas`, the border and text are `CanvasText`, the icon uses `currentColor`
-  and the focus ring uses `Highlight`. No blend modes. Intent must still be
-  readable without colour: the icon shape and the message text carry it. This
-  follows the existing `forced-colors` blocks in
-  `assets/ran-booster/00-foundations.css`.
-- **Motion.** Enter and exit use `--wpds-motion-duration-md` and
-  `--wpds-motion-easing-balanced`. `SnackbarList` already disables its own
-  layout and variants when the user prefers reduced motion; P2 adds
-  `@media (prefers-reduced-motion: reduce)` so no transition or animation of
-  Booster's own runs either.
+- **Forced colours.** A minimal `@media (forced-colors: active)` block sets the
+  border to `CanvasText`; the surface, text, glyph and focus ring are left to
+  the user agent, so nothing relies on a background colour. Intent stays
+  readable without colour through the glyph shape and the message text. A
+  contract test covers the block. It is not yet verified in a browser.
+- **Motion.** Booster adds no animation or transition and uses no motion
+  token. Enter and exit are `SnackbarList`'s own, which it disables when the
+  user prefers reduced motion. A contract test keeps the host rules free of
+  `transition` and `animation`.
 - **Gaps in the token set.** No token fits the elevation. The token file has no
-  shadow or elevation token, and the WordPress snackbar's shadow is a literal.
-  P2 relies on the `-strong` border for separation, and keeps the component's
-  shadow only if the owner wants it at the visual check. No other intent
-  lacks a token.
-- **Check.** P2 includes a visual check per intent (success, error pointer,
-  warning) in light, in forced colours and in RTL, with the computed contrast
-  recorded.
+  shadow or elevation token, so the host uses one soft shadow
+  (`0 2px 8px` of `--ran-booster-color-black-a15`) in addition to the
+  `-strong` border. No other intent lacks a token.
+- **Check.** P2 records a visual check per intent in light, at desktop, 768
+  and narrow widths and in RTL, with the computed contrast, in the pull
+  request. The forced-colours check is not done.
 
 ## Copy and the shared failure vocabulary
 

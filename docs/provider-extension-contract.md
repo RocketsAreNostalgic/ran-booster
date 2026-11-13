@@ -217,9 +217,9 @@ The old Core screens dropped a credential word followed by `:` or `=`.
 `display()` is by policy for fixed Core and provider-authored sentences, so it
 does not treat prose about credentials as a credential. These therefore pass:
 `token: x`, `secret: hunter2`, `password: hunter2`, `api_key: abc`,
-`signature: abc`, and a lowercase `Bearer abcdefgh`. Header names with a value
-(`Authorization:`, `Cookie:`, `Private-Token:`) are dropped from support beta.6
-and later. `strict()`, used for the logger's free values, drops a credential word
+`signature: abc`, `Private-Token: x` and a lowercase `Bearer abcdefgh`. The
+header names `Authorization:`, `Proxy-Authorization:`, `Cookie:`, `X-API-Key:`
+and `X-Auth-Token:` are dropped from support beta.6 and later. `strict()`, used for the logger's free values, drops a credential word
 beside any other text. This is an accepted trade-off: never pass echoed remote
 text to a `display()` sink.
 

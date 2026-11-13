@@ -27,6 +27,8 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/RepositoryProvider/GitHubCredentialPolicyHostIntegrationTest.php',
 		'tests/RepositoryProvider/GitHubExternalExtensionParityTest.php',
 		// Host composition retains the actual provider's bundled compatibility baseline.
+		// Proves the real readiness message keeps its delivery time through the display screen.
+		'tests/RepositoryProvider/GitHubWebhookReadinessMessageTest.php',
 		'tests/RepositoryProvider/HostSelectionDatabase.php',
 		'tests/RepositoryProvider/Support/ShippedSecretPolicyCatalog.php',
 		'tests/Runtime/ReleaseManagementCutoverBootstrapTest.php',

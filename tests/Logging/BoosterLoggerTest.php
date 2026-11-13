@@ -263,8 +263,8 @@ final class BoosterLoggerTest extends TestCase {
 		BoosterLogger::log(
 			$text,
 			array(
-				'attempt_id'    => $text,
-				'step'          => 'ok',
+				'attempt_id' => $text,
+				'step'       => 'ok',
 			)
 		);
 
@@ -317,25 +317,25 @@ final class BoosterLoggerTest extends TestCase {
 	/** @return array<string, array{string, bool}> */
 	public static function stored_ids(): array {
 		return array(
-			'leading digit'          => array( '3d-flipbook', true ),
-			'trailing underscore'    => array( 'my_plugin_', true ),
-			'double underscore'      => array( 'plugin__x', true ),
-			'hex-like short slug'    => array( 'a1b2c3d4e5f6a7b8c9', true ),
-			'long alphanumeric run'  => array( str_repeat( 'a', 30 ) . '-tools', true ),
-			'sk inside a word'       => array( 'disk-image', true ),
-			'dotted notice code'     => array( 'ran_booster.admin-error', true ),
-			'longest accepted'       => array( 'z' . str_repeat( 'y', 190 ), true ),
-			'one over the bound'     => array( 'z' . str_repeat( 'y', 191 ), false ),
-			'classic token'          => array( 'ghp_abcdefghijklmnop1234', false ),
-			'fine grained token'     => array( 'github_pat_abcdefghijklmnop', false ),
-			'gitlab token'           => array( 'glpat-abcdefghijkl', false ),
-			'payment key'            => array( 'sk-abcdefghijkl', false ),
-			'npm token'              => array( 'npm_abcdefghijkl', false ),
-			'digest word'            => array( 'sha256_abcdef', false ),
-			'forty hex'              => array( str_repeat( 'ab', 20 ), false ),
-			'uppercase'              => array( 'My-Plugin', false ),
-			'slash'                  => array( 'dir/plugin', false ),
-			'leading separator'      => array( '-plugin', false ),
+			'leading digit'         => array( '3d-flipbook', true ),
+			'trailing underscore'   => array( 'my_plugin_', true ),
+			'double underscore'     => array( 'plugin__x', true ),
+			'hex-like short slug'   => array( 'a1b2c3d4e5f6a7b8c9', true ),
+			'long alphanumeric run' => array( str_repeat( 'a', 30 ) . '-tools', true ),
+			'sk inside a word'      => array( 'disk-image', true ),
+			'dotted notice code'    => array( 'ran_booster.admin-error', true ),
+			'longest accepted'      => array( 'z' . str_repeat( 'y', 190 ), true ),
+			'one over the bound'    => array( 'z' . str_repeat( 'y', 191 ), false ),
+			'classic token'         => array( 'ghp_abcdefghijklmnop1234', false ),
+			'fine grained token'    => array( 'github_pat_abcdefghijklmnop', false ),
+			'gitlab token'          => array( 'glpat-abcdefghijkl', false ),
+			'payment key'           => array( 'sk-abcdefghijkl', false ),
+			'npm token'             => array( 'npm_abcdefghijkl', false ),
+			'digest word'           => array( 'sha256_abcdef', false ),
+			'forty hex'             => array( str_repeat( 'ab', 20 ), false ),
+			'uppercase'             => array( 'My-Plugin', false ),
+			'slash'                 => array( 'dir/plugin', false ),
+			'leading separator'     => array( '-plugin', false ),
 		);
 	}
 
@@ -348,11 +348,22 @@ final class BoosterLoggerTest extends TestCase {
 	}
 
 	public function test_exception_code_and_class_bounds_are_exact(): void {
-		foreach ( array( '1234567890' => true, '12345678901' => false, '-5' => true ) as $code => $kept ) {
+		foreach ( array(
+			'1234567890'  => true,
+			'12345678901' => false,
+			'-5'          => true,
+		) as $code => $kept ) {
 			BoosterLogger::log( 'code', array( 'exception_code' => (string) $code ) );
 			self::assertSame( $kept, str_contains( $this->last_line(), 'exception_code' ), (string) $code );
 		}
-		foreach ( array( str_repeat( 'a_', 95 ) . 'a' => true, str_repeat( 'a_', 96 ) => false, 'RAN\\Deployment\\DeploymentFailure' => true, 'RAN\\ghp_abcdefghijklmnop1234' => false, 'Vendor\\github_pat_abc' => false, 'RAN\\' . str_repeat( 'a', 41 ) => false ) as $class => $kept ) {
+		foreach ( array(
+			str_repeat( 'a_', 95 ) . 'a'         => true,
+			str_repeat( 'a_', 96 )               => false,
+			'RAN\\Deployment\\DeploymentFailure' => true,
+			'RAN\\ghp_abcdefghijklmnop1234'      => false,
+			'Vendor\\github_pat_abc'             => false,
+			'RAN\\' . str_repeat( 'a', 41 )      => false,
+		) as $class => $kept ) {
 			BoosterLogger::log( 'class', array( 'exception_class' => (string) $class ) );
 			self::assertSame( $kept, str_contains( $this->last_line(), 'exception_class' ), (string) $class );
 		}

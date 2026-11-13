@@ -644,13 +644,31 @@ test('the host mounts once inside the Booster frame, not the content column', ()
 	const env = boot();
 	const mounted = [];
 	const frame = element();
-	frame.append = (child) => mounted.push(['frame', child]);
+	frame.append = (child) => {
+		child.parentNode = frame;
+		mounted.push(['frame', child]);
+	};
 	env.targets.set('.wrap.ran-booster-admin', frame);
 	env.targets.get('wpcontent').append = (child) =>
 		mounted.push(['wpcontent', child]);
 	env.feedback.show('One.');
 	env.feedback.show('Two.');
 	assert.deepEqual(mounted, [['frame', env.host]]);
+	assert.equal(env.roots.length, 1);
+});
+
+test('a swap that replaces the frame re-parents the host into the new frame', () => {
+	const env = boot();
+	const first = element();
+	const second = element();
+	first.append = (child) => (child.parentNode = first);
+	second.append = (child) => (child.parentNode = second);
+	env.targets.set('.wrap.ran-booster-admin', first);
+	env.feedback.show('One.');
+	assert.equal(env.host.parentNode, first);
+	env.targets.set('.wrap.ran-booster-admin', second);
+	env.documentListeners.get('htmx:afterSwap')?.();
+	assert.equal(env.host.parentNode, second);
 	assert.equal(env.roots.length, 1);
 });
 

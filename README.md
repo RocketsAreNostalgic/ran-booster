@@ -212,7 +212,7 @@ derives the expanded limit at four times that value and retains its other ZIP,
 identity, path and free-space checks. The same policy covers every registered
 Git provider's branch-source manual installs and updates, webhook updates, and
 Transporter Blueprint installs. GitHub release inspection, installation and managed updates also receive the
-compressed limit through the released `ran/wp-release-updater` beta.17 API
+compressed limit through the released `ran/wp-release-updater` beta.18 API
 (Protocol 7); that updater has independent expanded-archive safeguards.
 Prospective release installation uses separate custody and creates no deployment attempt.
 Inspection discards its validation ZIP; installation freshly reacquires the

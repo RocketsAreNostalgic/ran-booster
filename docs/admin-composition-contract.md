@@ -67,8 +67,9 @@ The owner approved one exception to the `@wordpress/ui` rule (#755):
 - **Versions checked:** `@wordpress/ui` 0.26.0 (the pinned version); the
   `wp.components` build shipped with WordPress 7.0.4, which is the runtime
   source of truth because Booster does not bundle it. WordPress 7.0.4's
-  `Snackbar` hard-codes a 6 second timeout and has no pause; Booster's host
-  owns the timer and the queue.
+  `Snackbar` hard-codes a 6 second timeout and has no pause. WordPress 7.0
+  and 7.0.3 were not checked; the 6 second timeout is assumed unchanged there.
+  Booster's host owns the timer and the queue.
 - **Not adoption:** this is a recorded exception, not package adoption. The
   native fallback and the static no-JavaScript result remain required.
 - **Revisit trigger:** if `@wordpress/ui` gains a snackbar or toast, swap the

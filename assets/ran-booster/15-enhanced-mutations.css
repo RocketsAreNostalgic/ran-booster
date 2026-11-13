@@ -20,17 +20,34 @@
 
 /*
  * The one snackbar host (ran-booster-feedback.js). It sits at the
- * bottom of the viewport, over the Booster content column and never moves
- * the layout. The host is a child of #wpcontent and the list leaves its
- * inline offset unset, so the list keeps the static position at the start of
- * the content column: no measuring, and the writing direction mirrors it.
+ * bottom of the viewport and never moves the layout. Like the inline notices,
+ * which fill the content column beside the admin menu, a toast is centred in
+ * that column; at 782px and below the menu is gone and it is centred in the
+ * viewport. The host is a zero-height child of #wpcontent that measures the
+ * column as a size container, and the list leaves its inline offset unset, so
+ * the list starts at the start of the column and a start margin centres it:
+ * no scripted measuring, and the writing direction mirrors the offset.
  */
+
+/*
+ * Inline-size containment ignores content width, so where the host is
+ * shrink-to-fit an auto width can resolve to 0; the width is stated.
+ */
+
+.ran-booster-snackbar-host {
+	container-type: inline-size;
+	inline-size: 100%;
+}
 
 .ran-booster-snackbar-host .components-snackbar-list {
 	--ran-booster-snackbar-gutter: max(
 		var(--ran-booster-space-16),
 		env(safe-area-inset-left),
 		env(safe-area-inset-right)
+	);
+	--ran-booster-snackbar-size: min(
+		600px,
+		100cqi - 2 * var(--ran-booster-snackbar-gutter)
 	);
 
 	position: fixed;
@@ -40,20 +57,26 @@
 		var(--ran-booster-space-24),
 		calc(env(safe-area-inset-bottom) + var(--ran-booster-space-16))
 	);
-	max-inline-size: min(600px, 100vw - 2 * var(--ran-booster-snackbar-gutter));
+	inline-size: var(--ran-booster-snackbar-size);
+	max-inline-size: 600px;
+	margin-inline-start: calc((100cqi - var(--ran-booster-snackbar-size)) / 2);
 }
 
 @media (max-width: 782px) {
 	.ran-booster-snackbar-host .components-snackbar-list {
-		inset-inline: var(--ran-booster-snackbar-gutter);
-		inline-size: auto;
-		max-inline-size: none;
+		--ran-booster-snackbar-size: min(
+			600px,
+			100% - 2 * var(--ran-booster-snackbar-gutter)
+		);
+
+		inset-inline: 0;
+		margin-inline: auto;
 	}
 }
 
 .ran-booster-snackbar-host .components-snackbar-list__notice-container {
 	display: flex;
-	justify-content: flex-start;
+	justify-content: center;
 }
 
 /*

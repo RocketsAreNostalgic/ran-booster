@@ -144,8 +144,8 @@
 		}
 	}
 
-	// Mount the host once, outside every swapped region. Its static position
-	// is the start of the content column, so CSS alone aligns it.
+	// Mount the host once, outside every swapped region. It measures the
+	// content column as a size container, so CSS alone centres the list.
 	function mount() {
 		if (state) {
 			return true;

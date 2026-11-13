@@ -25,8 +25,10 @@ const rule = (pattern) =>
 const listRules = rule(
 	/^\.ran-booster-snackbar-host \.components-snackbar-list$/
 );
-// The base list rule, and the one inside the 782px media query.
-const [list, mobileList] = listRules;
+// The base list rule and the one inside the 782px media query, told apart by
+// content, not by order.
+const list = listRules.find(({ body }) => /position:\s*fixed/.test(body));
+const mobileList = listRules.find(({ body }) => /inset-inline:/.test(body));
 
 function token(name) {
 	const match = tokens.match(new RegExp(`wpds-${name}:\\s*(#[0-9a-f]+)`));
@@ -85,33 +87,63 @@ test('the host uses logical properties only, so the layout mirrors in RTL', () =
 	);
 });
 
-test('the list sits at the bottom of the viewport and keeps the content column offset', () => {
+test('the list sits at the bottom of the viewport and is centred in the content column', () => {
 	assert.match(list.body, /position:\s*fixed/);
 	assert.match(list.body, /inset-block-end:/);
 	assert.match(list.body, /env\(safe-area-inset-bottom\)/);
-	assert.match(list.body, /max-inline-size:/);
-	// The inline offset stays auto so the static position, the start of the
-	// content column, aligns it with no measurement.
+	// The host measures the column as a size container; the list starts at
+	// the static start of the column and a start margin centres it, so no
+	// script measures and the writing direction mirrors the offset.
+	const [host] = rule(/^\.ran-booster-snackbar-host$/);
+	assert.match(host.body, /container-type:\s*inline-size/);
+	assert.match(host.body, /inline-size:\s*100%/);
+	assert.match(
+		list.body,
+		/--ran-booster-snackbar-size:\s*min\(\s*600px,\s*100cqi\s*-\s*2\s*\*\s*var\(--ran-booster-snackbar-gutter\)/
+	);
+	assert.match(
+		list.body,
+		/inline-size:\s*var\(--ran-booster-snackbar-size\)/
+	);
+	assert.match(
+		list.body,
+		/margin-inline-start:\s*calc\(\s*\(\s*100cqi\s*-\s*var\(--ran-booster-snackbar-size\)\s*\)\s*\/\s*2\s*\)/
+	);
 	assert.doesNotMatch(list.body, /inset-inline(-start)?\s*:/);
+	// The cap holds where container query units are unsupported.
+	assert.match(list.body, /max-inline-size:\s*600px/);
+	// Containment, transform or filter on the host would make it the
+	// containing block of the fixed list and anchor it to the page.
+	assert.doesNotMatch(
+		host.body,
+		/(^|[\s;])(contain|transform|filter|backdrop-filter|perspective)\s*:|will-change:\s*[^;]*transform/
+	);
 	assert.doesNotMatch(
 		list.body,
 		/overflow/,
 		'Overflow would clip the focus ring.'
 	);
 	assert.doesNotMatch(list.body, /(^|[\s;])(top|bottom)\s*:/);
+	// Each toast is centred in the list, so a short one is not start-aligned.
+	const [container] = rule(/__notice-container$/);
+	assert.match(container.body, /justify-content:\s*center/);
+	assert.doesNotMatch(container.body, /flex-start/);
 });
 
-test('at 782px and below the list is the viewport minus a 16px gutter each side', () => {
-	assert.match(
-		hostCss,
-		/@media \(max-width: 782px\)\s*\{[^@]*inset-inline:\s*var\(--ran-booster-snackbar-gutter\)/
-	);
+test('at 782px and below the list is centred in the viewport with a 16px gutter each side', () => {
+	assert.match(hostCss, /@media \(max-width: 782px\)/);
 	assert.match(
 		mobileList.body,
-		/inset-inline:\s*var\(--ran-booster-snackbar-gutter\)/
+		/--ran-booster-snackbar-size:\s*min\(\s*600px,\s*100%\s*-\s*2\s*\*\s*var\(--ran-booster-snackbar-gutter\)/
 	);
-	// WordPress sets width: 100%, which would overconstrain the two insets.
-	assert.match(mobileList.body, /inline-size:\s*auto/);
+	assert.match(mobileList.body, /inset-inline:\s*0/);
+	assert.doesNotMatch(mobileList.body, /100vw|cqi|margin-inline-start/);
+	assert.match(mobileList.body, /margin-inline:\s*auto/);
+	assert.doesNotMatch(
+		mobileList.body,
+		/(^|[\s;])(left|right)\s*:/,
+		'Logical offsets only.'
+	);
 	assert.match(
 		list.body,
 		/--ran-booster-snackbar-gutter:\s*max\(\s*var\(--ran-booster-space-16\),\s*env\(safe-area-inset-left\),\s*env\(safe-area-inset-right\)/

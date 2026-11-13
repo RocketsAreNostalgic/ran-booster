@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.0.0-beta.45](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.44...v1.0.0-beta.45) (2026-11-12)
+
+
+### Bug Fixes
+
+* **admin:** bundle the design tokens for WordPress 7.0 ([#809](https://github.com/RocketsAreNostalgic/ran-booster/issues/809)) ([73cab96](https://github.com/RocketsAreNostalgic/ran-booster/commit/73cab96a11f21c5505a6f4f749465b72b7c16ad1))
+* **admin:** save unchanged repo settings despite rate limits ([#802](https://github.com/RocketsAreNostalgic/ran-booster/issues/802)) ([2a8a0d9](https://github.com/RocketsAreNostalgic/ran-booster/commit/2a8a0d93b3945a2c3e5a30209f6af1c5ccfd5db4))
+* **admin:** stop Installation disclosures shifting on mount ([#812](https://github.com/RocketsAreNostalgic/ran-booster/issues/812)) ([2b4b04a](https://github.com/RocketsAreNostalgic/ran-booster/commit/2b4b04aeb03284d96f6628a8697da0ebd89bb5ee))
+* **deployment:** log and map branch archive failure causes ([49d8f66](https://github.com/RocketsAreNostalgic/ran-booster/commit/49d8f66661fe2999f87a02ea67e625c1b699686c))
+* **deps:** adopt release updater beta.17 ([#814](https://github.com/RocketsAreNostalgic/ran-booster/issues/814)) ([7f82e9a](https://github.com/RocketsAreNostalgic/ran-booster/commit/7f82e9acce626cd964e8aec3c4418beda1e97584))
+* **diagnostics:** keep curated guidance and fixed ids past the screen ([54f842c](https://github.com/RocketsAreNostalgic/ran-booster/commit/54f842c13d6a299b0fff77ea37f2edd59e683536))
+* **diagnostics:** log and map deployment failure causes ([#860](https://github.com/RocketsAreNostalgic/ran-booster/issues/860)) ([3810022](https://github.com/RocketsAreNostalgic/ran-booster/commit/3810022cc269b7a7d48756efb5ce9098b19144c0))
+* **diagnostics:** screen failure text before it reaches sinks ([591420a](https://github.com/RocketsAreNostalgic/ran-booster/commit/591420a5a2a5418031277714bd5cd1136abbfecb))
+* **docs:** keep a newly opened article's heading in view ([#813](https://github.com/RocketsAreNostalgic/ran-booster/issues/813)) ([d63773d](https://github.com/RocketsAreNostalgic/ran-booster/commit/d63773d2c3df5a058623eb64f58ef0da1e90abe0))
+* **docs:** scope the article re-seat to article headers ([#815](https://github.com/RocketsAreNostalgic/ran-booster/issues/815)) ([76acec3](https://github.com/RocketsAreNostalgic/ran-booster/commit/76acec352b6e9eda3f6f0220a727a965c90f8d57))
+* **i18n:** stop translating before init at plugin load ([#803](https://github.com/RocketsAreNostalgic/ran-booster/issues/803)) ([15dd310](https://github.com/RocketsAreNostalgic/ran-booster/commit/15dd310d96264b25dc1e67a41ab4a5c525ee36e2))
+* **releases:** clarify the release check and update flow ([#821](https://github.com/RocketsAreNostalgic/ran-booster/issues/821)) ([b9d92c7](https://github.com/RocketsAreNostalgic/ran-booster/commit/b9d92c76a9c87c1552d4b599d4af081f2ae5f286))
+* **releases:** exact rejection reasons and picker default ([#835](https://github.com/RocketsAreNostalgic/ran-booster/issues/835)) ([6c4c3d7](https://github.com/RocketsAreNostalgic/ran-booster/commit/6c4c3d79abff8e94623be5374d43b0364dc6ebdd))
+* **releases:** keep the rejection detail redirect-safe ([d7dc68b](https://github.com/RocketsAreNostalgic/ran-booster/commit/d7dc68b63d010b53d754c19e1258141a71fe5efa))
+* **releases:** make Update now work from the stored offer ([#823](https://github.com/RocketsAreNostalgic/ran-booster/issues/823)) ([38af35a](https://github.com/RocketsAreNostalgic/ran-booster/commit/38af35affd8ff16c30384f551bce6a7b9784b6ed))
+* **releases:** name why a published release is rejected ([5331bd1](https://github.com/RocketsAreNostalgic/ran-booster/commit/5331bd108443c8fff9a1fbe63632a3e71e27a2d4)), closes [#826](https://github.com/RocketsAreNostalgic/ran-booster/issues/826)
+* **releases:** preselect the installed release in the picker ([96be1ab](https://github.com/RocketsAreNostalgic/ran-booster/commit/96be1ab497acf3e05df724296cf51d3f22b8bc9d)), closes [#820](https://github.com/RocketsAreNostalgic/ran-booster/issues/820)
+* **releases:** say why a release check found no release ([#831](https://github.com/RocketsAreNostalgic/ran-booster/issues/831)) ([e72f265](https://github.com/RocketsAreNostalgic/ran-booster/commit/e72f265df1e381c1928ba493c30c96eb9674e2c0))
+* **releases:** show an earlier check on the Manage Plugins list ([#824](https://github.com/RocketsAreNostalgic/ran-booster/issues/824)) ([7cf9208](https://github.com/RocketsAreNostalgic/ran-booster/commit/7cf9208c576fdbe54db387e14f4d06fad1a79788))
+* **releases:** stop reporting a check that recorded nothing ([#811](https://github.com/RocketsAreNostalgic/ran-booster/issues/811)) ([6253913](https://github.com/RocketsAreNostalgic/ran-booster/commit/6253913127b9f19dbd924c2633f9b457350dd65d))
+* **settings:** keep newer scope revisions across a rollback ([#806](https://github.com/RocketsAreNostalgic/ran-booster/issues/806)) ([ed26dd1](https://github.com/RocketsAreNostalgic/ran-booster/commit/ed26dd16c49e6278c8a4cb628707cdea89808791))
+* **troubleshooting:** record built-with versions in releases ([#807](https://github.com/RocketsAreNostalgic/ran-booster/issues/807)) ([2713cce](https://github.com/RocketsAreNostalgic/ran-booster/commit/2713cce0b183e21b8c3ef6741aa5c06145e25daf))
+
 ## [1.0.0-beta.44](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.43...v1.0.0-beta.44) (2026-11-12)
 
 

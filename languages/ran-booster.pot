@@ -10996,7 +10996,7 @@ msgctxt "plugin"
 msgid "%s update failed."
 msgstr ""
 
-#: assets/ran-booster-feedback.js:241
+#: assets/ran-booster-feedback.js:242
 msgid "Show details"
 msgstr ""
 

@@ -355,7 +355,7 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	#[DataProvider( 'recheck_edit_cases' )]
-	public function test_edit_requests_one_check_only_when_a_release_package_is_enabled( PackageSource $source, DeploymentPolicy $before, DeploymentPolicy $after, bool $expected ): void {
+	public function test_edit_clears_the_update_cache_only_when_updates_are_turned_on_or_off_for_a_release_package( PackageSource $source, DeploymentPolicy $before, DeploymentPolicy $after, bool $expected ): void {
 		$GLOBALS['ran_booster_recheck_deleted'] = array();
 		unset( $GLOBALS['ran_booster_recheck_failure'] );
 		$plugin = $this->plugin();
@@ -382,7 +382,11 @@ final class PackageOperationServiceTest extends TestCase {
 	/** @return iterable<string, array{PackageSource, DeploymentPolicy, DeploymentPolicy, bool}> */
 	public static function recheck_edit_cases(): iterable {
 		yield 'release disabled to manual' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::DISABLED, DeploymentPolicy::MANUAL, true );
-		yield 'release manual to disabled' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::MANUAL, DeploymentPolicy::DISABLED, false );
+		yield 'release manual to disabled' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::MANUAL, DeploymentPolicy::DISABLED, true );
+		yield 'release automatic to disabled' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::AUTOMATIC, DeploymentPolicy::DISABLED, true );
+		yield 'release manual to automatic' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::MANUAL, DeploymentPolicy::AUTOMATIC, false );
+		yield 'release disabled to disabled' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::DISABLED, DeploymentPolicy::DISABLED, false );
+		yield 'branch manual to disabled' => array( PackageSource::BRANCH, DeploymentPolicy::MANUAL, DeploymentPolicy::DISABLED, false );
 		yield 'branch disabled to manual' => array( PackageSource::BRANCH, DeploymentPolicy::DISABLED, DeploymentPolicy::MANUAL, false );
 	}
 

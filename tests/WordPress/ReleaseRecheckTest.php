@@ -25,7 +25,8 @@ final class ReleaseRecheckTest extends TestCase {
 	public static function policy_matrix(): iterable {
 		foreach ( array( DeploymentPolicy::MANUAL, DeploymentPolicy::AUTOMATIC ) as $after ) {
 			yield 'release disabled to ' . $after->value => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::DISABLED, $after, true );
-			yield 'release ' . $after->value . ' to disabled' => array( PackageSource::RELEASE_ASSET, $after, DeploymentPolicy::DISABLED, false );
+			yield 'release ' . $after->value . ' to disabled' => array( PackageSource::RELEASE_ASSET, $after, DeploymentPolicy::DISABLED, true );
+			yield 'branch ' . $after->value . ' to disabled' => array( PackageSource::BRANCH, $after, DeploymentPolicy::DISABLED, false );
 			yield 'branch disabled to ' . $after->value => array( PackageSource::BRANCH, DeploymentPolicy::DISABLED, $after, false );
 		}
 		yield 'release manual to automatic' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::MANUAL, DeploymentPolicy::AUTOMATIC, false );
@@ -33,8 +34,8 @@ final class ReleaseRecheckTest extends TestCase {
 	}
 
 	#[DataProvider( 'policy_matrix' )]
-	public function test_only_enabling_a_release_package_requests_a_check( PackageSource $source, DeploymentPolicy $before, DeploymentPolicy $after, bool $expected ): void {
-		self::assertSame( $expected, ReleaseRecheck::would_enable( $source, $before, $after ) );
+	public function test_only_turning_updates_on_or_off_for_a_release_package_clears_the_cache( PackageSource $source, DeploymentPolicy $before, DeploymentPolicy $after, bool $expected ): void {
+		self::assertSame( $expected, ReleaseRecheck::would_reset( $source, $before, $after ) );
 	}
 
 	public function test_request_clears_only_the_package_type_update_cache(): void {

@@ -776,7 +776,8 @@ final class BulkPackageActionServiceTest extends TestCase {
 
 	/** @return iterable<string, array{PackageSource, DeploymentPolicy, string}> */
 	public static function no_recheck_cases(): iterable {
-		yield 'disabling a release package' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::MANUAL, 'policy-disabled' );
+		yield 'disabling a branch package' => array( PackageSource::BRANCH, DeploymentPolicy::MANUAL, 'policy-disabled' );
+		yield 'disabled to disabled' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::DISABLED, 'policy-disabled' );
 		yield 'manual to automatic' => array( PackageSource::RELEASE_ASSET, DeploymentPolicy::MANUAL, 'policy-automatic' );
 		yield 'enabling a branch package' => array( PackageSource::BRANCH, DeploymentPolicy::DISABLED, 'policy-manual' );
 	}
@@ -803,6 +804,34 @@ final class BulkPackageActionServiceTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_recheck_deleted'] );
 	}
 
+	/** @return iterable<string, array{DeploymentPolicy}> */
+	public static function disabling_cases(): iterable {
+		yield 'manual to disabled' => array( DeploymentPolicy::MANUAL );
+		yield 'automatic to disabled' => array( DeploymentPolicy::AUTOMATIC );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'disabling_cases' )]
+	public function test_disabling_release_packages_clears_the_update_cache_once( DeploymentPolicy $before ): void {
+		$packages = array();
+		foreach ( array( 'release/release.php', 'other/other.php' ) as $file ) {
+			$packages[ $file ] = BulkActionPackage::make( $file, 'fixture' );
+			$packages[ $file ]->set_source( PackageSource::RELEASE_ASSET, 2 );
+			$packages[ $file ]->set_deployment_policy( $before );
+		}
+
+		$this->service( new BulkActionPluginRepository( $packages ), true )->execute(
+			self::action(
+				'plugin',
+				array(
+					'bulk_action' => 'policy-disabled',
+					'identifiers' => array( 'release/release.php', 'other/other.php' ),
+				)
+			)
+		);
+
+		self::assertSame( array( 'update_plugins' ), $GLOBALS['ran_booster_recheck_deleted'] );
+	}
+
 	public function test_an_unchanged_policy_does_not_request_a_check(): void {
 		$release = BulkActionPackage::make( 'release/release.php', 'fixture' );
 		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
@@ -821,6 +850,47 @@ final class BulkPackageActionServiceTest extends TestCase {
 		);
 
 		self::assertSame( array(), $GLOBALS['ran_booster_recheck_deleted'] );
+	}
+
+	public function test_an_unchanged_disabling_does_not_clear_the_update_cache(): void {
+		$release = BulkActionPackage::make( 'release/release.php', 'fixture' );
+		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$release->set_deployment_policy( DeploymentPolicy::MANUAL );
+		$plugins          = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
+		$plugins->changed = 0;
+
+		$this->service( $plugins, true )->execute(
+			self::action(
+				'plugin',
+				array(
+					'bulk_action' => 'policy-disabled',
+					'identifiers' => array( 'release/release.php' ),
+				)
+			)
+		);
+
+		self::assertSame( array(), $GLOBALS['ran_booster_recheck_deleted'] );
+	}
+
+	public function test_a_failed_cache_clear_does_not_block_disabling(): void {
+		$GLOBALS['ran_booster_recheck_failure'] = true;
+		$release                                = BulkActionPackage::make( 'release/release.php', 'fixture' );
+		$release->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$release->set_deployment_policy( DeploymentPolicy::MANUAL );
+		$plugins = new BulkActionPluginRepository( array( 'release/release.php' => $release ) );
+
+		$result = $this->service( $plugins, true )->execute(
+			self::action(
+				'plugin',
+				array(
+					'bulk_action' => 'policy-disabled',
+					'identifiers' => array( 'release/release.php' ),
+				)
+			)
+		);
+
+		self::assertSame( 1, $result->changed );
+		self::assertSame( DeploymentPolicy::DISABLED, $plugins->policy );
 	}
 
 	public function test_a_failed_check_request_does_not_block_the_policy_change(): void {

@@ -75,7 +75,7 @@ webhook and extension successes follow it too.
 
 | Aspect | Specification |
 | --- | --- |
-| Queue | At most 3 visible, newest last. A fourth evicts the oldest success. If no success is visible, it evicts the oldest failure pointer. Evicting a pointer loses nothing because the inline message remains. |
+| Queue | At most 3 visible, newest last. When a fourth arrives, the oldest success is dropped first. A pointer to a persistent error is never dropped. If three pointers are visible, a new item is not shown: a new pointer is omitted because its inline message is the record, and a new success is omitted. The order is to be revisited after it has been seen in use. |
 | Duplicates | Each event has an id. The same id never produces two snackbars. |
 | Duration | Decided: one constant, 10 seconds (R5), tunable later in that one place. WordPress's own `Snackbar` hard-codes 6 seconds and cannot be configured or paused, so the host renders success items with the explicit-dismiss presentation (which also gives the dismiss control) and owns the timer that removes them. |
 | Pause | The timer pauses while the pointer is over the item or focus is inside it, and resumes with the remaining time. This is Booster-owned. |
@@ -199,7 +199,7 @@ helper is counted once. The Disposition column states where each category goes.
 | A2 | Bulk update summary (`add_bulk_notice`) | within A | Moves; R8, links to Activity. |
 | B | Global `admin_notices` registrations | 9 registrations plus the signed-outcome fallback | Stay as notices (R10), except the release operation notice, which is user-initiated: its success moves and its failure becomes inline. |
 | C | Signed operation outcomes (`SignedAdminInteractionFlow`, Admin Interaction API 3) | 1 flow; kinds SUCCESS, ACCEPTED, VALIDATION_FAILURE, UNEXPECTED_FAILURE | SUCCESS and ACCEPTED move. Failures stay in the declared inline region. Message text leaves the URL (R16). Add-ons get this through `respond()` with no new API. |
-| D | Redirect-with-query-arg results | 6 producers, 5 query vocabularies | Success moves, failures stay inline. Transport is open decision 1 below. |
+| D | Redirect-with-query-arg results | 6 producers, 5 query vocabularies | Success moves, failures stay inline. Transport is decided: per-user one-shot flash (see Server-to-page transport). |
 | E | Existing snackbar (`presentGeneralSnackbar`) | 1 host, 3 consumers | Kept and generalised into the single host. |
 | F | Inline live regions and result markup in views | 54 matches in 27 files | Stay. They are field, row and per-control feedback. Confirmation paragraphs duplicated next to a save become redundant. |
 | F1 | Copy-to-clipboard confirmations | within F | Stay local (R9). |
@@ -247,7 +247,7 @@ coding, per `AGENTS.md`.
 | PR | Content | Production | Tests | Docs | Depends on |
 | --- | --- | --- | --- | --- | --- |
 | P0 | This policy and the exception record | 0 | 0 | this document | none |
-| P1 | Server-to-page transport of a result (per open decision 1), one consume point on Booster screens, static notice with event id, remove message text from the signed-outcome URL, keep the API 3 signature | about +120 / -90 | about +260 | about +40 | P0 and open decision 1 |
+| P1 | Server-to-page transport of a result (the flash described in Server-to-page transport), one consume point on Booster screens, static notice with event id, remove message text from the signed-outcome URL, keep the API 3 signature | about +120 / -90 | about +260 | about +40 | P0 |
 | P2 | One client host (`ranBoosterFeedback.show()`): generalise `presentGeneralSnackbar`, queue of 3, Booster-owned timer and pause, CSS-only logical positioning, mobile gutters, dedupe against the static element, remove the JS centre measurement, and the intent styling in Visual treatment (success, error pointer, warning; Notice and Badge tokens, CSS over the host, no new component, visual check per intent) | about +80 / -110 JS, +30 CSS | about +180 | about +20 | P0 (can run against the existing event before P1) |
 | P3 | Move existing producers on current strings: package install, update, edit, unlink, delete, reinstall, update and remove operations, bulk with Activity link, Check releases and other release results, extension install and activate, webhook results. Failures stay inline | about +60 / -120 | about +150 | about +10 | P1, P2 |
 | P4 | Signed outcome and add-on path: SUCCESS and ACCEPTED use the transport; document that add-ons get the snackbar through `respond()` | about +30 | about +80 | about +60 (`enhanced-admin-interactions.md`) | P1 |
@@ -281,21 +281,21 @@ Every pull request runs `composer check` and `pnpm check`.
   success and an inline failure; Needs attention unchanged; the exact installed
   archive and its hash.
 
+## Server-to-page transport (decided)
+
+A server result reaches the next page load through a per-user one-shot flash.
+The handler stores closed codes only (kind, code, subject, event id) in a
+per-user, per-site slot with a short lifetime and redirects to a clean URL. The
+next Booster render reads and deletes it. It holds no message text, and nothing
+about it appears in the URL (R16). No secret, provider response, path or
+exception text may enter it.
+
+If this proves arduous or becomes another subsystem to maintain, P1 falls back
+to signed data-free tokens without message text, as package and bulk results
+use today, and the owner is told.
+
 ## Open decision
 
-**How a server result reaches the next page load.** This policy does not
-depend on the answer; P1 implements whichever is chosen. Two options remain:
-
-- **Per-user one-shot flash.** The handler stores closed codes only (kind, code,
-  subject, event id) in a per-user, per-site slot with a short lifetime,
-  redirects to a clean URL, and the next Booster screen reads and deletes it.
-  Adds one persistent key family and a last-write-wins case when two tabs
-  submit.
-- **Signed data-free tokens.** The redirect carries a signed token naming the
-  closed code and subject, with no message text, as package and bulk results do
-  today. Adds no stored state but keeps several query vocabularies unless they
-  are unified.
-
-No choice is made here. The rule that binds either option is R16: no display
-text in a URL and no secret, provider response or path in a stored or signed
-payload.
+Revisit the queue order (see Behaviour) after it has been seen in use. No other
+decision is open: the duration (10 seconds, one constant), the transport, the
+exception and rules R1 to R16 are decided.

@@ -19,7 +19,9 @@ use RAN\Storage\DeploymentWriteConnection;
 final class ActivityStore {
 	public const VERSION_OPTION = 'ran_booster_activity_schema';
 	public const TABLE_SUFFIX   = 'ran_booster_activity';
-	private const PURPOSES      = array( 'branch.check', 'release.check', 'workflow.assessment' );
+	/** Seconds before a repeated background skip of the same kind is recorded again. */
+	public const SKIPPED_HEARTBEAT = 86400;
+	private const PURPOSES         = array( 'branch.check', 'release.check', 'workflow.assessment' );
 	private string $table;
 
 	public function __construct( private ?object $database = null, ?string $table = null ) {
@@ -249,6 +251,19 @@ final class ActivityStore {
 		return $this->complete_record( null, $correlation, $status, $reason, $message, $remediation, $facts, $effect );
 	}
 
+	/**
+	 * Drops this still-unfinished row when the context's newest earlier row is the same skip inside the heartbeat window.
+	 * An unreadable history counts as a repeat, so a background skip is never recorded blind.
+	 */
+	public function discard_repeated_skip( int $id, string $reason ): bool {
+		$rows = $this->rows( $this->prepare( "SELECT status,reason,started_at FROM {$this->table} WHERE context_key = (SELECT context_key FROM {$this->table} AS own WHERE own.id = %d) AND id < %d ORDER BY id DESC LIMIT 1", $id, $id ) );
+		$last = $rows[0] ?? null;
+		if ( null !== $rows && ( null === $last || 'skipped' !== $last['status'] || $reason !== $last['reason'] || strtotime( (string) $last['started_at'] . ' UTC' ) <= time() - self::SKIPPED_HEARTBEAT ) ) {
+			return false;
+		}
+		return 1 === $this->query( $this->prepare( "DELETE FROM {$this->table} WHERE id = %d AND status = 'incomplete'", $id ) );
+	}
+
 	/** @param array<string, scalar|null> $facts */
 	private function complete_record( ?int $id, ?string $correlation, string $status, string $reason, string $message, string $remediation, array $facts, string $effect ): bool {
 		try {
@@ -424,7 +439,8 @@ final class ActivityStore {
 		if ( null === $where ) {
 			return $unavailable;
 		}
-		$latest   = $this->rows( "SELECT * FROM {$this->table} WHERE $where ORDER BY id DESC LIMIT 1" );
+		// A skipped row leads only when the context has nothing else, so a skip never hides a result.
+		$latest   = $this->rows( "SELECT * FROM {$this->table} WHERE $where ORDER BY status = 'skipped', id DESC LIMIT 1" );
 		$observed = $this->rows( "SELECT * FROM {$this->table} WHERE $where AND effect <> 'none' ORDER BY id DESC LIMIT 1" );
 		if ( null === $latest || null === $observed ) {
 			return $unavailable;

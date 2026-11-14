@@ -8,6 +8,7 @@ require_once __DIR__ . '/ManagedReleaseRuntimeWordPressFunctions.php';
 require_once __DIR__ . '/RuntimeReleaseStore.php';
 require_once __DIR__ . '/RuntimeUpdaterFacade.php';
 require_once __DIR__ . '/../Activity/ActivityConnection.php';
+require_once __DIR__ . '/../Activity/InMemoryActivityConnection.php';
 require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
 require_once __DIR__ . '/../Storage/StorageTestEnvironment.php';
 require_once __DIR__ . '/RuntimeReleaseProvider.php';
@@ -4078,6 +4079,190 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			)
 		);
 		self::assertSame( array(), $connection->inserted );
+	}
+
+	/** @return array{0: ManagedReleaseTargetRegistrar, 1: \RAN\Activity\ActivityStore, 2: \RAN\Tests\Activity\InMemoryActivityConnection, 3: Package} */
+	private function recording_world(): array {
+		$package                                     = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::DISABLED );
+		$connection                                  = new \RAN\Tests\Activity\InMemoryActivityConnection();
+		$activity                                    = new \RAN\Activity\ActivityStore( $connection );
+		$GLOBALS['ran_booster_storage_test_options'] = array();
+		$GLOBALS['ran_booster_activity_options']     = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		[$registrar]                                 = $this->native_plugin_registrar( $package, activity: $activity );
+
+		return array( $registrar, $activity, $connection, $package );
+	}
+
+	/** Emits the updater's start and completion actions for one check. */
+	private function emit_check( ManagedReleaseTargetRegistrar $registrar, string $status, string $reason ): void {
+		static $sequence = 0;
+		$check_id        = str_pad( dechex( ++$sequence ), 32, '0', STR_PAD_LEFT );
+		$registrar->activity_check_started(
+			array(
+				'check_id'            => $check_id,
+				'network_id'          => 1,
+				'blog_id'             => 1,
+				'target_type'         => 'plugin',
+				'installed_identity'  => self::NATIVE_PLUGIN,
+				'provider_code'       => 'github',
+				'repository_identity' => '123456789',
+				'channel'             => 'stable',
+				'binding_hash'        => str_repeat( 'b', 64 ),
+			)
+		);
+		$registrar->activity_check_completed(
+			array(
+				'check_id'                  => $check_id,
+				'status'                    => $status,
+				'reason'                    => $reason,
+				'relationship'              => null,
+				'installed_version'         => null,
+				'candidate_version'         => null,
+				'offered_version'           => null,
+				'candidate_validation_code' => null,
+			)
+		);
+	}
+
+	/** @return list<string> status:reason of every stored row, oldest first. */
+	private function recorded( \RAN\Tests\Activity\InMemoryActivityConnection $connection ): array {
+		return array_map( static fn ( array $row ): string => $row['status'] . ':' . $row['reason'], $connection->rows );
+	}
+
+	private function latest_check_row( \RAN\Activity\ActivityStore $activity, Package $package ): string {
+		$context = ( new \RAN\Admin\RepositoryBranchCheckEvidenceStore() )->activity_context( 'plugin', $package, 'release.check' );
+		self::assertNotNull( $context['adoption_token'] );
+		$latest = $activity->summary( 'plugin', $context['subject_identity'], $context['adoption_token'], $context['context'], 'release.check' )['latest'];
+
+		return null === $latest ? 'none' : $latest['status'] . ':' . $latest['reason'];
+	}
+
+	public function test_background_skipped_checks_record_once_per_kind_inside_the_heartbeat(): void {
+		[$registrar, , $connection] = $this->recording_world();
+		$this->emit_check( $registrar, 'succeeded', 'no_newer_candidate' );
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		self::assertSame( array( 'succeeded:no_newer_candidate', 'skipped:policy_disabled' ), $this->recorded( $connection ) );
+		// A different skip reason is a different fact; the repeat of it is dropped in turn.
+		$this->emit_check( $registrar, 'skipped', 'policy_forced_off' );
+		$this->emit_check( $registrar, 'skipped', 'policy_forced_off' );
+		self::assertSame( array( 'succeeded:no_newer_candidate', 'skipped:policy_disabled', 'skipped:policy_forced_off' ), $this->recorded( $connection ) );
+		// Nothing is left unfinished by a dropped repeat.
+		self::assertNotContains( 'incomplete', array_column( $connection->rows, 'status' ) );
+	}
+
+	public function test_a_repeated_skip_older_than_the_heartbeat_records_one_more_row(): void {
+		[$registrar, , $connection] = $this->recording_world();
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		$connection->rows[0]['started_at'] = gmdate( 'Y-m-d H:i:s', time() - \RAN\Activity\ActivityStore::SKIPPED_HEARTBEAT - 60 );
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		self::assertSame( array( 'skipped:policy_disabled', 'skipped:policy_disabled' ), $this->recorded( $connection ) );
+		$connection->rows[1]['started_at'] = gmdate( 'Y-m-d H:i:s', time() - \RAN\Activity\ActivityStore::SKIPPED_HEARTBEAT + 120 );
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		self::assertCount( 2, $connection->rows, 'Just inside the interval is still a repeat.' );
+	}
+
+	public function test_a_manual_check_records_every_row_and_never_reads_history_first(): void {
+		[$registrar, , $connection] = $this->recording_world();
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		$registrar->mark_manual_check( 'plugin', self::NATIVE_PLUGIN );
+		$connection->fail_reads = true;
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		self::assertSame( array( 'skipped:policy_disabled', 'skipped:policy_disabled', 'skipped:policy_disabled' ), $this->recorded( $connection ) );
+	}
+
+	public function test_an_unreadable_history_drops_a_background_skip_instead_of_recording_blind(): void {
+		[$registrar, , $connection] = $this->recording_world();
+		$connection->fail_reads     = true;
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		self::assertSame( array(), $this->recorded( $connection ) );
+		// Only the policy skips are thinned: a real check result is never dropped by this rule.
+		$this->emit_check( $registrar, 'failed', 'release_list_failed' );
+		self::assertSame( array( 'failed:release_list_failed' ), $this->recorded( $connection ) );
+	}
+
+	public function test_last_recorded_check_leads_with_the_latest_established_result(): void {
+		[$registrar, $activity, $connection, $package] = $this->recording_world();
+		self::assertSame( 'none', $this->latest_check_row( $activity, $package ) );
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		self::assertSame( 'skipped:policy_disabled', $this->latest_check_row( $activity, $package ), 'With nothing established the skip is shown.' );
+		$registrar->mark_manual_check( 'plugin', self::NATIVE_PLUGIN );
+		$this->emit_check( $registrar, 'succeeded', 'newer_release_observed' );
+		// A later background skip of another kind is recorded, yet the manual result still leads.
+		$this->emit_check( $registrar, 'skipped', 'policy_forced_off' );
+		self::assertSame( array( 'skipped:policy_disabled', 'succeeded:newer_release_observed', 'skipped:policy_forced_off' ), $this->recorded( $connection ) );
+		self::assertSame( 'succeeded:newer_release_observed', $this->latest_check_row( $activity, $package ) );
+		$this->emit_check( $registrar, 'rejected', 'candidate_rejected' );
+		self::assertSame( 'rejected:candidate_rejected', $this->latest_check_row( $activity, $package ), 'A newer rejected or failed result leads over the older one and over skips.' );
+	}
+
+	public function test_each_package_context_thins_its_skips_independently(): void {
+		$connection                              = new \RAN\Tests\Activity\InMemoryActivityConnection();
+		$store                                   = new \RAN\Activity\ActivityStore( $connection );
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$kept                                    = array();
+		$tokens                                  = array(
+			'one/one.php' => \RAN\AdoptionIdentity::create( 'gh', '123' ),
+			'two/two.php' => \RAN\AdoptionIdentity::create( 'gh', '123' ),
+		);
+		foreach ( array( 'one/one.php', 'two/two.php', 'one/one.php', 'two/two.php' ) as $identity ) {
+			$capture = array(
+				'subject_type'     => 'plugin',
+				'subject_identity' => $identity,
+				'adoption_token'   => $tokens[ $identity ],
+				'context'          => 'source/access',
+				'purpose'          => 'release.check',
+				'provenance'       => 'core',
+			);
+			$id      = $store->begin( 'gh', new \RAN\Activity\ActivityRequest( 'release.check', new RepositoryReference( 'owner/repository', '123', false, null ), 'plugin', $identity ), $capture );
+			self::assertNotNull( $id );
+			if ( ! $store->discard_repeated_skip( $id, 'policy_disabled' ) ) {
+				$store->complete( $id, 'skipped', 'policy_disabled' );
+				$kept[] = $identity;
+			}
+		}
+		self::assertSame( array( 'one/one.php', 'two/two.php' ), $kept );
+	}
+
+	public function test_manual_check_releases_records_after_background_skips_and_repeats_inside_the_cooldown(): void {
+		[$registrar, $activity, $connection, $package] = $this->recording_world();
+		$plugins                                       = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$store  = new RuntimeReleaseStore( array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
+		$facade = $this->facade(
+			$plugins,
+			$this->createStub( ThemeRepository::class ),
+			$store,
+			$registrar,
+			new RuntimeUpdaterLock(),
+			$this->release_metadata_registry(),
+			static fn (): bool => true,
+			static fn (): bool => true,
+			static function (): void {},
+			null,
+			static fn (): bool => true,
+			check_without_offer: function () use ( $registrar ): array {
+				$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+
+				return array(
+					'status'  => 'skipped',
+					'reason'  => 'policy_disabled',
+					'offered' => false,
+				);
+			}
+		);
+		$this->emit_check( $registrar, 'skipped', 'policy_disabled' );
+		self::assertCount( 1, $connection->rows );
+		$codes = array(
+			$facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code(),
+			$facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code(),
+		);
+		self::assertSame( array( 'refresh_skipped_disabled', 'refresh_skipped_disabled' ), $codes );
+		self::assertCount( 3, $connection->rows, 'Both manual checks that ran are recorded next to the earlier background skip.' );
+		self::assertSame( 'skipped:policy_disabled', $this->latest_check_row( $activity, $package ) );
 	}
 
 	/**

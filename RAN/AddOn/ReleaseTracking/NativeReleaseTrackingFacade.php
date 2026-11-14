@@ -827,6 +827,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				return ReleaseTrackingResult::failed( 'refresh_failed', 'Published release information could not be refreshed.' );
 			}
 			$this->registrar->forget_check_outcome( $type, $identifier );
+			$this->registrar->mark_manual_check( $type, $identifier );
 			if ( DeploymentPolicy::DISABLED === $package->get_deployment_policy() ) {
 				$answer = $this->answer_without_offer( $type, $identifier );
 				if ( null !== $answer ) {

@@ -1080,6 +1080,7 @@ final class OnboardingViewTest extends TestCase {
 				array( 'conflict', true, 'Provider selection conflict' ),
 				array( 'storage_unavailable', true, 'Provider selection storage is unavailable' ),
 				array( 'recovery_required', true, 'Provider selection needs recovery' ),
+				array( 'replacement_load_failed', true, 'Selected provider could not load' ),
 			) as list( $selection, $detected_flag, $label ) ) {
 				$extra['provider_summaries'][0]['selection']            = $selection;
 				$extra['provider_summaries'][0]['replacement_detected'] = $detected_flag && 'decision_required' === $selection;

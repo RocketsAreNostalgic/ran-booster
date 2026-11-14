@@ -982,10 +982,10 @@ review and approve the return on the Core-owned GitHub page. A selected replacem
 that is missing or incompatible still shows actionable guidance, even when no
 candidate remains enabled. A selected active replacement whose provider factory
 throws during registration is the closed state `replacement_load_failed`: Core
-logs only the exception class, shows no approval (a new approval re-runs the same
+never exposes exception text, shows no approval (a new approval re-runs the same
 factory), and points to installing a build for this release or returning to
-bundled GitHub. The Installation report carries only the closed code.
-Interrupted installations retain their protected recovery confirmations; absence never causes silent fallback.
+bundled GitHub. The Installation report carries only the closed code. Interrupted installations retain their protected recovery
+confirmations; absence never causes silent fallback.
 
 Troubleshooting → Diagnostics puts explicit diagnostic checks and their current
 results first. Secondary **Installation details** contains **GitHub provider

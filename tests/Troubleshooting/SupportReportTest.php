@@ -322,7 +322,7 @@ final class SupportReportTest extends TestCase {
 		$facts                                   = new InstallationFacts(
 			new ProviderRegistry(),
 			github_observation: static fn(): array => array(
-				'state'                  => 'missing',
+				'state'                  => 'replacement_load_failed',
 				'admitted'               => false,
 				'selected'               => 'external',
 				'version'                => '2.3.4',
@@ -334,7 +334,7 @@ final class SupportReportTest extends TestCase {
 		$text                                    = ( new SupportReport( $facts, activity: new ActivityStore( $connection ) ) )->generate( array() )['text'];
 		$data                                    = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
 		$selection                               = $data['sections']['installation']['data']['github_selection'];
-		self::assertSame( 'missing', $selection['state'] );
+		self::assertSame( 'replacement_load_failed', $selection['state'] );
 		self::assertFalse( $selection['admitted'] );
 		self::assertSame( 'external', $selection['selected'] );
 		self::assertSame( '2.3.4', $selection['version'] );

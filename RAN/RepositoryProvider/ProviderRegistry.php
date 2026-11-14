@@ -325,7 +325,7 @@ final class ProviderRegistry {
 		} catch ( \Throwable $failure ) {
 			$this->github_collection_invalid = true;
 			// Only a selected replacement whose own factory threw could not load; bundled stays a generic failure.
-			$this->github_replacement_load_failed = null !== $basename && InvalidProviderPolicy::FACTORY_THREW === $failure->getCode();
+			$this->github_replacement_load_failed = null !== $basename && $failure instanceof InvalidProviderPolicy && InvalidProviderPolicy::FACTORY_THREW === $failure->getCode();
 		} finally {
 			$this->registration_context = $context;
 			$this->github_finalizing    = false;

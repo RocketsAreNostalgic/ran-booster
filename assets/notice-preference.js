@@ -5,12 +5,14 @@
 		return;
 	}
 	window.ranBoosterNoticePreferenceInitialized = true;
-	let acknowledgedDevelopmentState = '';
+	const developmentSelector =
+		'[data-ran-booster-development-safety], [data-ran-booster-core-development-notice]';
+	const acknowledgedDevelopmentStates = new Set();
 	function removeDevelopmentNotice(notice) {
 		if (notice.contains(notice.ownerDocument.activeElement)) {
-			const heading = document.getElementById(
-				'ran-booster-onboarding-heading'
-			);
+			const heading =
+				document.getElementById('ran-booster-onboarding-heading') ||
+				document.querySelector('#wpbody-content h1');
 			if (heading) {
 				heading.setAttribute('tabindex', '-1');
 				heading.focus();
@@ -25,12 +27,12 @@
 	}
 	function initDevelopmentNotice() {
 		document
-			.querySelectorAll('[data-ran-booster-development-safety]')
+			.querySelectorAll(developmentSelector)
 			.forEach(function (notice) {
 				if (
-					acknowledgedDevelopmentState &&
-					notice.dataset.ranBoosterNoticeState ===
-						acknowledgedDevelopmentState
+					acknowledgedDevelopmentStates.has(
+						notice.dataset.ranBoosterNoticeState
+					)
 				) {
 					removeDevelopmentNotice(notice);
 					return;
@@ -63,6 +65,14 @@
 			config: 'ranBoosterDevelopmentSafetyNotice',
 			mode: 'acknowledge',
 			modes: ['acknowledge'],
+			development: true,
+		},
+		{
+			selector: '[data-ran-booster-core-development-notice]',
+			config: 'ranBoosterCoreDevelopmentNotice',
+			mode: 'acknowledge',
+			modes: ['acknowledge'],
+			development: true,
 		},
 	];
 	const pending = new WeakSet();
@@ -99,8 +109,7 @@
 					'[data-ran-booster-notice-preference-mode], .notice-dismiss'
 				)
 			);
-			const isDevelopment =
-				entry.config === 'ranBoosterDevelopmentSafetyNotice';
+			const isDevelopment = entry.development === true;
 			const ariaDisabled = isDevelopment
 				? button.getAttribute('aria-disabled')
 				: null;
@@ -168,7 +177,7 @@
 							return;
 						}
 						if (developmentState) {
-							acknowledgedDevelopmentState = developmentState;
+							acknowledgedDevelopmentStates.add(developmentState);
 							removeDevelopmentNotice(notice);
 							initDevelopmentNotice();
 						} else {

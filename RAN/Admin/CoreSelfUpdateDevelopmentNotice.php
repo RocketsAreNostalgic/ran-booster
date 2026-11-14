@@ -12,6 +12,9 @@ use RAN\WordPress\CoreSelfUpdatePolicy;
  */
 final class CoreSelfUpdateDevelopmentNotice {
 
+	public const NOTICE_STATE  = 'source-checkout-v1';
+	public const USER_META_KEY = '_ran_booster_core_development_notice_dismissed';
+
 	private bool $rendered = false;
 
 	public function __construct(
@@ -39,6 +42,13 @@ final class CoreSelfUpdateDevelopmentNotice {
 			&& BoosterNoticeScope::allows( $this->screen_id )
 			&& 'disabled' === ( $diagnostics['effective_mode'] ?? null )
 			&& 'source_checkout' === ( $diagnostics['reason'] ?? null );
+	}
+
+	/** Whether the notice stands alone for this user, which a dismissal ends. */
+	public function should_show(): bool {
+		$user_id = get_current_user_id();
+
+		return $this->should_render() && ( $user_id < 1 || ! ( new NoticePreference() )->is_suppressed( $user_id, self::USER_META_KEY, self::NOTICE_STATE ) );
 	}
 
 	/** Render the source-policy fact within the local-development guidance. */
@@ -76,17 +86,19 @@ final class CoreSelfUpdateDevelopmentNotice {
 	}
 
 	private function render_notice( bool $inline ): void {
-		if ( $this->rendered || ! $this->should_render() ) {
+		if ( $this->rendered || ! $this->should_show() ) {
 			return;
 		}
 		$this->rendered = true;
 		?>
-		<div class="notice notice-info<?php echo $inline ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-core-development-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+		<div class="notice notice-info<?php echo $inline ? ' inline' : ''; ?> is-dismissible ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-core-development-notice data-ran-booster-notice-state="<?php echo esc_attr( self::NOTICE_STATE ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster development detected:', 'ran-booster' ); ?></strong>
 				<?php esc_html_e( 'Core updates are disabled to protect this source checkout.', 'ran-booster' ); ?>
 			</p>
-		</div><?php NoticeIcon::print_intent( 'info' ); ?></div>
+		</div>
+		<button type="button" class="notice-dismiss" hidden style="display:none"><span class="screen-reader-text"><?php esc_html_e( 'Dismiss this notice.', 'ran-booster' ); ?></span></button>
+		<?php NoticeIcon::print_intent( 'info' ); ?></div>
 		<?php
 	}
 }

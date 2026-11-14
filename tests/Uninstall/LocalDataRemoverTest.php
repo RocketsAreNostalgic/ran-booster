@@ -97,6 +97,7 @@ final class LocalDataRemoverTest extends TestCase {
 		);
 		$this->database->user_meta = array(
 			DevelopmentSafetyNoticeController::USER_META_KEY => array( 1 ),
+			\RAN\Admin\CoreSelfUpdateDevelopmentNotice::USER_META_KEY => array( 6 ),
 			CredentialExpiryNotice::USER_META_KEY   => array( 2 ),
 			DeploymentAdminPresenter::USER_META_KEY => array( 3 ),
 			\RAN\Admin\Feedback\FeedbackFlash::USER_META_KEY => array( 5 ),

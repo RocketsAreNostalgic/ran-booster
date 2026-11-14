@@ -44,6 +44,18 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 		);
 	}
 
+	public function test_source_checkout_dismissal_uses_its_own_user_meta_and_leaves_the_other_notice(): void {
+		$_POST['state'] = \RAN\Admin\CoreSelfUpdateDevelopmentNotice::NOTICE_STATE;
+
+		$result = ( new DevelopmentSafetyNoticeController() )->handle();
+
+		self::assertTrue( $result['success'] );
+		self::assertSame(
+			array( \RAN\Admin\CoreSelfUpdateDevelopmentNotice::USER_META_KEY => 'source-checkout-v1' ),
+			$GLOBALS['ran_booster_repository_admin_user_meta'][17]
+		);
+	}
+
 	public function test_unauthorized_request_cannot_persist_dismissal(): void {
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
 
@@ -65,7 +77,7 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 	}
 
 	public function test_missing_or_stale_state_cannot_acknowledge_current_notice(): void {
-		foreach ( array( '', '1', 'local-development-v1' ) as $state ) {
+		foreach ( array( '', '1', 'local-development-v1', 'source-checkout-v0' ) as $state ) {
 			$_POST['state'] = $state;
 			$result         = ( new DevelopmentSafetyNoticeController() )->handle();
 			self::assertFalse( $result['success'] );

@@ -125,6 +125,7 @@ class Booster {
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_scripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_credential_expiry_notice_script' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_background_deployment_failure_notice_script' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'load_core_development_notice_script' ) );
 		add_action(
 			'admin_enqueue_scripts',
 			function ( $hook ): void {
@@ -1227,6 +1228,30 @@ class Booster {
 			'ranBoosterBackgroundFailureNotice',
 			\RAN\Admin\DeploymentAdminController::AJAX_ACTION,
 			\RAN\Admin\DeploymentAdminController::NONCE_ACTION
+		);
+	}
+
+	/**
+	 * Load the dismissal asset beside a visible source-checkout notice, and on
+	 * General Settings of a source checkout, where a save can reveal the notice.
+	 *
+	 * @param mixed $hook Admin screen identifier supplied by WordPress.
+	 */
+	public function load_core_development_notice_script( $hook ): void {
+		// General Settings can introduce the notice out of band when the Core
+		// updates preference is switched on, so a source checkout loads the
+		// support there whatever the current preference.
+		$may_appear = 'ran-booster_page_ran-booster-settings' === $hook
+			&& current_user_can( 'manage_options' )
+			&& \RAN\WordPress\CoreSelfUpdatePolicy::has_source_tree_indicator( rtrim( $this->booster_path ?? '', '/' ) );
+		if ( ! $may_appear && ! $this->service( \RAN\Admin\CoreSelfUpdateDevelopmentNotice::class )->should_show() ) {
+			return;
+		}
+
+		$this->load_notice_preference_script(
+			'ranBoosterCoreDevelopmentNotice',
+			\RAN\Admin\DevelopmentSafetyNoticeController::AJAX_ACTION,
+			\RAN\Admin\DevelopmentSafetyNoticeController::NONCE_ACTION
 		);
 	}
 

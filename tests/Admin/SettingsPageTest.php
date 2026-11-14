@@ -51,6 +51,7 @@ final class SettingsPageTest extends TestCase {
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_general_response_refreshes_only_the_source_notice_from_fresh_policy(): void {
 		require_once dirname( __DIR__ ) . '/Support/BoosterNoticeScopeWordPressFunctions.php';
+		require_once dirname( __DIR__ ) . '/Support/SourceNoticePreferenceWordPressFunctions.php';
 		$GLOBALS['ran_booster_notice_scope_screen'] = null; // admin_init runs before WordPress sets the current screen.
 		$GLOBALS['ran_booster_test_capabilities']   = array( 'manage_options' => true );
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Controlled fresh-option boundary.

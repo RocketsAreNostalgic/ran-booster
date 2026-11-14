@@ -95,7 +95,7 @@ final class CoreSelfUpdatePolicy {
 		return is_string( $value ) ? strtolower( trim( $value ) ) : 'invalid';
 	}
 
-	private static function has_source_tree_indicator( string $plugin_root ): bool {
+	public static function has_source_tree_indicator( string $plugin_root ): bool {
 		return is_dir( $plugin_root . '/.git' )
 			|| is_file( $plugin_root . '/.git' )
 			|| is_link( $plugin_root . '/.git' )

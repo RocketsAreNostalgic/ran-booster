@@ -11,6 +11,12 @@ final class DevelopmentSafetyNoticeController {
 	public const NOTICE_STATE  = 'local-development-v2';
 	public const USER_META_KEY = '_ran_booster_development_safety_notice_dismissed';
 
+	/** One acknowledgement per notice, keyed by the signed-state token the notice renders. */
+	private const USER_META_KEYS = array(
+		self::NOTICE_STATE                            => self::USER_META_KEY,
+		CoreSelfUpdateDevelopmentNotice::NOTICE_STATE => CoreSelfUpdateDevelopmentNotice::USER_META_KEY,
+	);
+
 	public function __construct( private NoticePreference $preferences = new NoticePreference() ) {
 	}
 
@@ -41,14 +47,15 @@ final class DevelopmentSafetyNoticeController {
 			? wp_unslash( $_POST['mode'] )
 			: NoticePreference::MODE_ACKNOWLEDGE;
 		$state = isset( $_POST['state'] ) && is_string( $_POST['state'] ) ? wp_unslash( $_POST['state'] ) : '';
-		if ( self::NOTICE_STATE !== $state ) {
+		$key   = self::USER_META_KEYS[ $state ] ?? null;
+		if ( null === $key ) {
 			return wp_send_json_error(
 				array( 'message' => __( 'The notice dismissal request expired. Reload the page and try again.', 'ran-booster' ) ),
 				403
 			);
 		}
 		if ( NoticePreference::MODE_ACKNOWLEDGE !== $mode
-			|| ! $this->preferences->save( $user_id, self::USER_META_KEY, self::NOTICE_STATE, $mode ) ) {
+			|| ! $this->preferences->save( $user_id, $key, $state, $mode ) ) {
 			return wp_send_json_error(
 				array( 'message' => __( 'RAN Booster could not remember the notice dismissal.', 'ran-booster' ) ),
 				500

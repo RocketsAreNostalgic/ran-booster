@@ -463,6 +463,36 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
 	}
 
+	public function test_source_checkout_notice_loads_its_small_asset_on_any_admin_screen_only_when_shown(): void {
+		$this->booster( false, false, true, array( \RAN\Admin\CoreSelfUpdateDevelopmentNotice::class ) )->load_core_development_notice_script( 'plugins.php' );
+
+		self::assertSame( array( 'ran-booster-notice-preference' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+		self::assertSame(
+			DevelopmentSafetyNoticeController::AJAX_ACTION,
+			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-notice-preference']['ranBoosterCoreDevelopmentNotice']['action']
+		);
+	}
+
+	public function test_settings_screen_of_a_source_checkout_loads_the_dismissal_support_before_the_notice_exists(): void {
+		$booster               = $this->booster();
+		$booster->booster_path = dirname( __DIR__, 2 ) . '/';
+		$booster->booster_url  = 'https://example.test/wp-content/plugins/ran-booster/';
+
+		$booster->load_core_development_notice_script( 'plugins.php' );
+		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+
+		$booster->load_core_development_notice_script( 'ran-booster_page_ran-booster-settings' );
+		self::assertSame( array( 'ran-booster-notice-preference' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+		self::assertArrayHasKey( 'ranBoosterCoreDevelopmentNotice', $GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-notice-preference'] );
+	}
+
+	public function test_source_checkout_notice_asset_is_absent_when_hidden_or_dismissed(): void {
+		$this->booster()->load_core_development_notice_script( 'plugins.php' );
+
+		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_registered_scripts'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+	}
+
 	/** @return list<array{string}> */
 	public static function package_admin_hook_provider(): array {
 		return array(
@@ -970,6 +1000,10 @@ final class BoosterAssetsTest extends TestCase {
 					}
 
 					public function should_render(): bool {
+						return $this->visible;
+					}
+
+					public function should_show(): bool {
 						return $this->visible;
 					}
 				}

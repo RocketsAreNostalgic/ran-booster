@@ -953,8 +953,9 @@ final class ReleaseManagementDisplay {
 			'release_repository_conflict',
 			'repository_release_owner_exists' => __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' ),
 			'installed' => __( 'The published release was installed and is now managed by Booster. WordPress activation was not changed.', 'ran-booster' ),
-			'release_enabled' => __( 'Release tracking enabled.', 'ran-booster' ),
-			'release_channel_changed' => __( 'Release track changed. The installed package was not changed and Automatic was reset to Manual.', 'ran-booster' ),
+			'release_enabled',
+			'release_channel_changed',
+			'branch_restored' => FeedbackFlash::release_operation_success( $code ) ?? '',
 			'release_channel_current' => sprintf(
 				/* translators: 1: package type, 2: release track. */
 				__( 'This %1$s is already using the %2$s release track. No settings were changed.', 'ran-booster' ),
@@ -972,7 +973,6 @@ final class ReleaseManagementDisplay {
 			'refresh_current_while_off',
 			'refresh_rejected',
 			'refresh_check_failed' => FeedbackFlash::check_result( $code, $detail )[1] ?? '',
-			'branch_restored' => __( 'Branch-based package management is restored.', 'ran-booster' ),
 			'source_changed' => __( 'Package settings changed after this browser page was opened. Refresh the page, review the current settings, then try again.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'This package already registers its own release updater. Use one release owner only.', 'ran-booster' ),
 			'forbidden' => __( 'You are not authorized to perform this published release operation. No package was installed or adopted.', 'ran-booster' ),

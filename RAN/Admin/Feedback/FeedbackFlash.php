@@ -129,9 +129,23 @@ final class FeedbackFlash {
 		return 1 === preg_match( '/\A[0-9A-Za-z][0-9A-Za-z._-]{0,63}\z/', $version );
 	}
 
+	/** The one copy source for a release settings operation success, shared by the snackbar and the inline notice. */
+	public static function release_operation_success( string $code ): ?string {
+		return match ( $code ) {
+			'release_enabled'         => __( 'Release tracking enabled.', 'ran-booster' ),
+			'release_channel_changed' => __( 'Release track changed. The installed package was not changed and Automatic was reset to Manual.', 'ran-booster' ),
+			'branch_restored'         => __( 'Branch-based package management is restored.', 'ran-booster' ),
+			default                   => null,
+		};
+	}
+
 	/** @return array{0: 'success'|'info'|'error'|'warning', 1: string, 2?: string}|null Intent, fixed Core copy and optional inline target for a closed code. */
 	private static function definition( string $code, string $version = '' ): ?array {
-		$check = self::check_result( $code, $version );
+		$check     = self::check_result( $code, $version );
+		$operation = self::release_operation_success( $code );
+		if ( null !== $operation ) {
+			return array( 'success', $operation );
+		}
 		return match ( $code ) {
 			'release_check_current' => array( 'success', __( 'Release check complete. No newer eligible release was found.', 'ran-booster' ) ),
 			'release_check_update'  => array( 'success', self::release_checked() ),

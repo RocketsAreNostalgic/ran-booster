@@ -1955,6 +1955,27 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$providers->seal();
 		self::assertSame( 'gh', $visibility->hidden_navigation_key() );
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->provider_tab_url( 'gh' ), 'Post-action redirects must not target the hidden tab.' );
+		$links = new \RAN\Admin\ProviderTabLinks( static fn (): AdminTabRegistry => new AdminTabRegistry( $providers, $selection ), static fn (): \RAN\Admin\GitHubVisibility => $visibility );
+		$base  = 'https://example.test/wp-admin/admin.php';
+		self::assertSame( $base . '?page=ran-booster&tab=overview', $links->url( $base, 'gh', '&view=credentials' ) );
+		self::assertSame( $base . '?page=ran-booster&tab=overview', $links->url( $base, 'ghost', '&view=credentials' ) );
+		self::assertSame( $base . '?page=ran-booster&tab=bb&view=credentials', $links->url( $base, 'bb', '&view=credentials' ) );
+		$failure = array(
+			'provider'      => 'gh',
+			'credential_id' => 'saved',
+		);
+		foreach ( array( \RAN\Admin\ManagedPluginFailureRows::class, \RAN\Admin\DeploymentAdminPresenter::class ) as $emitter ) {
+			$reflection = new \ReflectionClass( $emitter );
+			$instance   = $reflection->newInstanceWithoutConstructor();
+			$reflection->getProperty( 'links' )->setValue( $instance, $links );
+			$credential_url = $reflection->getMethod( 'credential_url' );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $credential_url->invoke( $instance, $failure ), $emitter );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=bb&view=credentials&replace_credential=saved', $credential_url->invoke( $instance, array( 'provider' => 'bb' ) + $failure ), $emitter );
+		}
+		$hidden_dashboard = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility );
+		foreach ( array( 'recover-github-native', 'adopt-github' ) as $action ) {
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $this->redirect_for( $hidden_dashboard, $action ), $action );
+		}
 
 		foreach ( array( 'gh', ' GH ' ) as $tab ) {
 			$_GET['tab'] = $tab;
@@ -1990,6 +2011,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		$_GET['tab'] = 'gh';
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->provider_tab_url( 'gh' ) );
+		$visible_dashboard = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility );
+		foreach ( array( 'recover-github-native', 'adopt-github' ) as $action ) {
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->redirect_for( $visible_dashboard, $action ), $action );
+		}
 		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
 		self::assertArrayNotHasKey( 'route_not_found', $data );
 		self::assertSame( 'provider.php', $data['tab_view'] );
@@ -2064,6 +2089,29 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertTrue( $data['route_not_found'] );
 		self::assertSame( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=overview', $data['route_not_found_url'] );
+	}
+
+	private function redirect_for( Dashboard $dashboard, string $action ): string {
+		$dispatcher = new class() extends \RAN\Dispatcher {
+			public function __construct() {
+			}
+
+			protected function redirect_to( string $url ): never {
+				throw new RuntimeException( $url );
+			}
+		};
+		$profiles   = $this->createMock( \RAN\Admin\ProviderProfileAdminController::class );
+		( new \ReflectionProperty( \RAN\Dispatcher::class, 'dashboard' ) )->setValue( $dispatcher, $dashboard );
+		( new \ReflectionProperty( \RAN\Dispatcher::class, 'provider_profiles' ) )->setValue( $dispatcher, $profiles );
+		$_POST = array( 'ran_booster' => array( 'action' => $action ) );
+		try {
+			$dispatcher->dispatch_post_requests();
+		} catch ( RuntimeException $redirect ) {
+			return $redirect->getMessage();
+		} finally {
+			$_POST = array();
+		}
+		self::fail( 'The action did not redirect.' );
 	}
 
 	/** @param array<string, mixed> $data */

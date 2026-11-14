@@ -21,7 +21,7 @@ final class CredentialExpiryNotice {
 
 	private bool $storage_unavailable = false;
 
-	public function __construct( private CredentialExpiryReminder $reminders ) {
+	public function __construct( private CredentialExpiryReminder $reminders, private ?ProviderTabLinks $links = null ) {
 	}
 
 	/**
@@ -51,10 +51,7 @@ final class CredentialExpiryNotice {
 			: admin_url( 'admin.php' );
 		$items    = array();
 		foreach ( array_slice( $this->affected, 0, 5 ) as $row ) {
-			$url = $base_url . '?page=ran-booster&tab=' . rawurlencode( $row['provider'] ) . '&view=credentials';
-			if ( $row['editable'] && '' !== $row['id'] ) {
-				$url .= '&replace_credential=' . rawurlencode( $row['id'] );
-			}
+			$url     = ProviderTabLinks::link( $this->links, $base_url, $row['provider'], '&view=credentials' . ( $row['editable'] && '' !== $row['id'] ? '&replace_credential=' . rawurlencode( $row['id'] ) : '' ) );
 			$items[] = array(
 				'provider'             => $row['provider'],
 				'provider_label'       => $row['provider_label'],
@@ -141,7 +138,7 @@ final class CredentialExpiryNotice {
 						echo esc_html( sprintf( __( '%1$s (%2$s): %3$s.', 'ran-booster' ), $status['label'], $status['provider_label'], $status['badge_label'] ) );
 						?>
 						<?php if ( $status['editable'] ) { ?>
-							<a href="<?php echo esc_url( $base_url . '?page=ran-booster&tab=' . rawurlencode( $status['provider'] ) . '&view=credentials&replace_credential=' . rawurlencode( $status['id'] ) ); ?>"><?php /* translators: %s is the credential label. */ echo esc_html( sprintf( __( 'Replace %s', 'ran-booster' ), $status['label'] ) ); ?></a>
+							<a href="<?php echo esc_url( ProviderTabLinks::link( $this->links, $base_url, $status['provider'], '&view=credentials&replace_credential=' . rawurlencode( $status['id'] ) ) ); ?>"><?php /* translators: %s is the credential label. */ echo esc_html( sprintf( __( 'Replace %s', 'ran-booster' ), $status['label'] ) ); ?></a>
 						<?php } else { ?>
 							<span><?php esc_html_e( 'This credential is managed by deployment configuration; update it there.', 'ran-booster' ); ?></span>
 						<?php } ?>
@@ -150,7 +147,7 @@ final class CredentialExpiryNotice {
 			</ul>
 			<p>
 				<?php foreach ( $providers as $provider => $label ) { ?>
-					<a href="<?php echo esc_url( $base_url . '?page=ran-booster&tab=' . rawurlencode( $provider ) . '&view=credentials' ); ?>"><?php /* translators: %s is a repository provider label. */ echo esc_html( sprintf( __( 'Review %s credentials', 'ran-booster' ), $label ) ); ?></a>
+					<a href="<?php echo esc_url( ProviderTabLinks::link( $this->links, $base_url, $provider, '&view=credentials' ) ); ?>"><?php /* translators: %s is a repository provider label. */ echo esc_html( sprintf( __( 'Review %s credentials', 'ran-booster' ), $label ) ); ?></a>
 				<?php } ?>
 			</p>
 				<p>

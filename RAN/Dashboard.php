@@ -7,6 +7,8 @@ use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminRoutes;
 use RAN\Admin\AdminTab;
 use RAN\Admin\AdminTabRegistry;
+use RAN\Admin\GitHubVisibility;
+use RAN\Admin\ProviderTabLinks;
 use RAN\Admin\BulkPackageResult;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\DevelopmentEnvironmentDetector;
@@ -77,6 +79,8 @@ class Dashboard {
 	private ?array $support_report_payload = null;
 
 	private ?AdminTabRegistry $admin_tabs;
+
+	private ?ProviderTabLinks $tab_links = null;
 	private ?AdminAddOnRegistry $admin_add_ons;
 	private ?RepositoryWebhookManagementControls $webhook_management;
 	private ?ReleaseWorkflowControls $release_workflow;
@@ -161,7 +165,8 @@ class Dashboard {
 			attempts: $deployment_attempts,
 			plugins: $plugins,
 			themes: $themes,
-			activity_store: $activity
+			activity_store: $activity,
+			links: $this->tab_links()
 		);
 
 		$this->package_admin = new PackageAdminController( $package_operations, deployments: $this->deployment_admin, removals: $this->removals );
@@ -1495,7 +1500,14 @@ class Dashboard {
 
 	/** Return target after a provider management action; a hidden provider tab sends the user to Overview instead of not-found. */
 	public function provider_tab_url( string $provider_code ): string {
-		return admin_url( 'admin.php?page=ran-booster&tab=' . ( $provider_code === $this->hidden_provider_tab_key() ? 'overview' : rawurlencode( $provider_code ) ) );
+		return $this->tab_links()->url( admin_url( 'admin.php' ), $provider_code );
+	}
+
+	private function tab_links(): ProviderTabLinks {
+		return $this->tab_links ??= new ProviderTabLinks(
+			fn (): AdminTabRegistry => $this->admin_tabs ?? throw new LogicException( 'Booster admin tabs are not configured.' ),
+			fn (): ?GitHubVisibility => $this->github_visibility
+		);
 	}
 
 	private function hidden_provider_tab_key(): ?string {

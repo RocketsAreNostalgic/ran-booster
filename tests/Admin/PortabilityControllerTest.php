@@ -704,6 +704,7 @@ final class PortabilityControllerTest extends TestCase {
 		$reflection = new ReflectionClass( PortabilityController::class );
 		$controller = $this->controller();
 		$reflection->getProperty( 'provider_settings' )->setValue( $controller, $settings );
+		$reflection->getProperty( 'links' )->setValue( $controller, null );
 		$choices = $reflection->getMethod( 'credential_choices' );
 		self::assertSame( array( 'saved_one' ), array_column( $choices->invoke( $controller, 'fixture', $settings->build_package_list() ), 'id' ) );
 		self::assertSame( array(), $choices->invoke( $controller, 'other-provider', $settings->build_package_list() ) );
@@ -739,6 +740,13 @@ final class PortabilityControllerTest extends TestCase {
 			array()
 		);
 		self::assertSame( array( 'saved_one' ), array_column( $rows[0]['target_choices'], 'id' ) );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=fixture&view=credentials', $rows[0]['settings_url'] );
+		$unregistered = new \RAN\Admin\ProviderTabLinks( static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new ProviderRegistry() ), static fn (): ?\RAN\Admin\GitHubVisibility => null );
+		$second       = $this->controller();
+		$reflection->getProperty( 'provider_settings' )->setValue( $second, $settings );
+		$reflection->getProperty( 'links' )->setValue( $second, $unregistered );
+		$fallback = $reflection->getMethod( 'credential_rows' )->invoke( $second, $blueprint, array(), array() );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $fallback[0]['settings_url'] );
 		$html = $reflection->getMethod( 'render_review' )->invoke( $controller, array(), $rows );
 		self::assertStringContainsString( 'value="saved_one" selected=', $html );
 		self::assertStringContainsString( 'Saved &lt;one&gt;', $html );

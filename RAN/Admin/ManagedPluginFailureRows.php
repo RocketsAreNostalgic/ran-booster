@@ -15,7 +15,8 @@ final readonly class ManagedPluginFailureRows {
 
 	public function __construct(
 		private PluginRepository $plugins,
-		private BackgroundDeploymentFailureMonitor $monitor
+		private BackgroundDeploymentFailureMonitor $monitor,
+		private ?ProviderTabLinks $links = null
 	) {
 	}
 
@@ -89,9 +90,6 @@ final readonly class ManagedPluginFailureRows {
 
 	/** @param array<string, int|string|null> $failure */
 	private function credential_url( array $failure ): string {
-		return admin_url(
-			'admin.php?page=ran-booster&tab=' . rawurlencode( (string) $failure['provider'] )
-			. '&view=credentials&replace_credential=' . rawurlencode( (string) $failure['credential_id'] )
-		);
+		return ProviderTabLinks::link( $this->links, admin_url( 'admin.php' ), (string) $failure['provider'], '&view=credentials&replace_credential=' . rawurlencode( (string) $failure['credential_id'] ) );
 	}
 }

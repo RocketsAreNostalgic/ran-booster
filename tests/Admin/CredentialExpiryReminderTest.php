@@ -167,6 +167,30 @@ final class CredentialExpiryReminderTest extends TestCase {
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_notice_and_summary_links_fall_back_to_overview_when_the_provider_tab_is_unavailable(): void {
+		require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+		$this->credential( 'overview_expiry', 'Overview credential' );
+		$this->provider_expiry( 'overview_expiry', $this->now->modify( '+2 days' ) );
+		$render = static function ( CredentialExpiryNotice $notice ): string {
+			ob_start();
+			$notice->render();
+			return (string) ob_get_clean() . (string) wp_json_encode( $notice->overview_summary() );
+		};
+
+		$available = ( new \RAN\Admin\ProviderTabLinks( static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'gh' ) ) ) ), static fn (): ?\RAN\Admin\GitHubVisibility => null ) );
+		$html      = $render( new CredentialExpiryNotice( $this->reminders(), $available ) );
+		self::assertStringContainsString( 'tab=gh&amp;view=credentials&amp;replace_credential=overview_expiry', $html );
+
+		$without_gh = new \RAN\Admin\ProviderTabLinks( static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) ) ), static fn (): ?\RAN\Admin\GitHubVisibility => null );
+		$html       = $render( new CredentialExpiryNotice( $this->reminders(), $without_gh ) );
+		self::assertStringNotContainsString( 'tab=gh', $html );
+		self::assertStringNotContainsString( 'tab=gh', str_replace( '\\/', '/', $html ) );
+		self::assertStringContainsString( 'tab=overview', $html );
+		self::assertStringNotContainsString( 'replace_credential', $html );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_overview_reuses_the_expiry_notice_captured_for_this_request(): void {
 		require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 		$this->credential( 'overview_expiry', 'Overview credential' );

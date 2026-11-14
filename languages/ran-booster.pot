@@ -613,12 +613,12 @@ msgstr ""
 msgid "Dismiss this notice."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:125
+#: RAN/Admin/CredentialExpiryNotice.php:122
 msgid "Credential expiry reminder:"
 msgstr ""
 
 #. translators: %d is the number of expiring credentials.
-#: RAN/Admin/CredentialExpiryNotice.php:130
+#: RAN/Admin/CredentialExpiryNotice.php:127
 #, php-format
 msgid "%d credential needs attention."
 msgid_plural "%d credentials need attention."
@@ -626,44 +626,44 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: credential label. 2: repository provider label. 3: credential expiry status.
-#: RAN/Admin/CredentialExpiryNotice.php:141
+#: RAN/Admin/CredentialExpiryNotice.php:138
 #, php-format
 msgid "%1$s (%2$s): %3$s."
 msgstr ""
 
 #. translators: %s is the credential label.
-#: RAN/Admin/CredentialExpiryNotice.php:144
+#: RAN/Admin/CredentialExpiryNotice.php:141
 #, php-format
 msgid "Replace %s"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:146
+#: RAN/Admin/CredentialExpiryNotice.php:143
 msgid "This credential is managed by deployment configuration; update it there."
 msgstr ""
 
 #. translators: %s is a repository provider label.
-#: RAN/Admin/CredentialExpiryNotice.php:153
+#: RAN/Admin/CredentialExpiryNotice.php:150
 #, php-format
 msgid "Review %s credentials"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:158
+#: RAN/Admin/CredentialExpiryNotice.php:155
 msgid "Remind me in 5 days"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:160
+#: RAN/Admin/CredentialExpiryNotice.php:157
 msgid "Dismiss this reminder"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:200
+#: RAN/Admin/CredentialExpiryNotice.php:197
 msgid "Booster cannot read saved credentials."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:201
+#: RAN/Admin/CredentialExpiryNotice.php:198
 msgid "Credential-backed operations remain paused."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:204
+#: RAN/Admin/CredentialExpiryNotice.php:201
 #: views/provider.php:425
 msgid "Review Secure credential storage in Settings"
 msgstr ""
@@ -776,76 +776,76 @@ msgid "Retry is allowed. No package files or settings were changed."
 msgstr ""
 
 #. translators: %d is the number of managed packages with a current background deployment failure.
-#: RAN/Admin/DeploymentAdminPresenter.php:53
+#: RAN/Admin/DeploymentAdminPresenter.php:54
 #, php-format
 msgid "%d managed package needs attention."
 msgid_plural "%d managed packages need attention."
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:57
-#: RAN/Admin/ManagedPluginFailureRows.php:71
+#: RAN/Admin/DeploymentAdminPresenter.php:58
+#: RAN/Admin/ManagedPluginFailureRows.php:72
 msgid "Replace credential"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:60
+#: RAN/Admin/DeploymentAdminPresenter.php:61
 msgid "RAN Booster automatic deployment failed:"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:63
-#: RAN/Admin/ManagedPluginFailureRows.php:69
+#: RAN/Admin/DeploymentAdminPresenter.php:64
+#: RAN/Admin/ManagedPluginFailureRows.php:70
 msgid "Review deployment"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:64
+#: RAN/Admin/DeploymentAdminPresenter.php:65
 msgid "Acknowledge this incident"
 msgstr ""
 
 #. translators: 1: safe deployment result, 2: random support reference, 3: activity page URL.
-#: RAN/Admin/DeploymentAdminPresenter.php:76
+#: RAN/Admin/DeploymentAdminPresenter.php:77
 #, php-format
 msgid "%1$s Reference: <code>%2$s</code>. <a href=\"%3$s\">View deployment activity</a>."
 msgstr ""
 
 #. translators: 1: random support reference, 2: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:95
+#: RAN/Admin/DeploymentAdminPresenter.php:96
 #, php-format
 msgid "Deployment attempt left running. Reference: <code>%1$s</code>. <a href=\"%2$s\">Reconcile it in Recent Activity</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:102
+#: RAN/Admin/DeploymentAdminPresenter.php:103
 #, php-format
 msgid "Booster could not confirm how an earlier deployment of the %1$s %2$s ended, so it has paused retries. No deployment is currently running. <a href=\"%3$s\">Check the package and allow another attempt</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: deployment state, 4: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:105
+#: RAN/Admin/DeploymentAdminPresenter.php:106
 #, php-format
 msgid "Booster is already tracking the %1$s %2$s in state %3$s. <a href=\"%4$s\">Review this deployment activity record</a> before trying again."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:254
-#: RAN/Admin/DeploymentAdminPresenter.php:290
-#: RAN/Admin/DeploymentAdminPresenter.php:304
+#: RAN/Admin/DeploymentAdminPresenter.php:255
+#: RAN/Admin/DeploymentAdminPresenter.php:291
+#: RAN/Admin/DeploymentAdminPresenter.php:305
 msgid "GitHub"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:254
-#: RAN/Admin/DeploymentAdminPresenter.php:290
-#: RAN/Admin/DeploymentAdminPresenter.php:304
+#: RAN/Admin/DeploymentAdminPresenter.php:255
+#: RAN/Admin/DeploymentAdminPresenter.php:291
+#: RAN/Admin/DeploymentAdminPresenter.php:305
 msgid "Bitbucket"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:282
+#: RAN/Admin/DeploymentAdminPresenter.php:283
 msgid "Older activity filters were cleared. Use Git provider and Activity subject to filter activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:304
+#: RAN/Admin/DeploymentAdminPresenter.php:305
 #: RAN/Admin/PackageAdminController.php:369
 #: RAN/Admin/PackageAdminController.php:388
-#: RAN/Admin/PortabilityController.php:631
-#: RAN/Admin/PortabilityController.php:757
+#: RAN/Admin/PortabilityController.php:632
+#: RAN/Admin/PortabilityController.php:758
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
 #: RAN/Admin/ProviderSettingsPresenter.php:1592
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:155
@@ -855,11 +855,11 @@ msgstr ""
 msgid "Theme"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:304
+#: RAN/Admin/DeploymentAdminPresenter.php:305
 #: RAN/Admin/PackageAdminController.php:369
 #: RAN/Admin/PackageAdminController.php:388
-#: RAN/Admin/PortabilityController.php:631
-#: RAN/Admin/PortabilityController.php:757
+#: RAN/Admin/PortabilityController.php:632
+#: RAN/Admin/PortabilityController.php:758
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
 #: RAN/Admin/ProviderSettingsPresenter.php:1591
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:155
@@ -869,28 +869,28 @@ msgstr ""
 msgid "Plugin"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:309
+#: RAN/Admin/DeploymentAdminPresenter.php:310
 msgid "That Git provider filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:312
+#: RAN/Admin/DeploymentAdminPresenter.php:313
 msgid "That Git provider is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:328
+#: RAN/Admin/DeploymentAdminPresenter.php:329
 msgid "Non-package events"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:336
+#: RAN/Admin/DeploymentAdminPresenter.php:337
 msgid "That Activity subject filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:339
-#: RAN/Admin/DeploymentAdminPresenter.php:352
+#: RAN/Admin/DeploymentAdminPresenter.php:340
+#: RAN/Admin/DeploymentAdminPresenter.php:353
 msgid "That Activity subject is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:355
+#: RAN/Admin/DeploymentAdminPresenter.php:356
 msgid "The Activity subject filter was cleared because it does not match the selected Git provider."
 msgstr ""
 
@@ -1505,12 +1505,12 @@ msgstr ""
 msgid "Choose an account owner from the managed repositories before creating an owner-scoped webhook secret."
 msgstr ""
 
-#: RAN/Admin/ManagedPluginFailureRows.php:67
+#: RAN/Admin/ManagedPluginFailureRows.php:68
 msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:67
-#: RAN/Dashboard.php:1559
+#: RAN/Dashboard.php:1571
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1519,7 +1519,7 @@ msgid "Booster could not confirm safe management removal. Refresh this page and 
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:170
-#: RAN/Dashboard.php:899
+#: RAN/Dashboard.php:904
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -1899,74 +1899,74 @@ msgstr ""
 msgid "Package update progress is temporarily unavailable."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:51
-#: RAN/Admin/PortabilityController.php:182
-#: RAN/Admin/PortabilityController.php:210
+#: RAN/Admin/PortabilityController.php:52
+#: RAN/Admin/PortabilityController.php:183
+#: RAN/Admin/PortabilityController.php:211
 msgid "Your session expired. Reload the page and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:57
-#: RAN/Admin/PortabilityController.php:76
+#: RAN/Admin/PortabilityController.php:58
+#: RAN/Admin/PortabilityController.php:77
 msgid "The selected packages or repository credentials changed or are invalid. Reload this page and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:71
+#: RAN/Admin/PortabilityController.php:72
 msgid "Encrypted credential storage is unavailable, so Booster did not export credentials."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:78
+#: RAN/Admin/PortabilityController.php:79
 msgid "Booster could not read the managed package selection. Try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:91
+#: RAN/Admin/PortabilityController.php:92
 msgid "Booster could not create the Blueprint ZIP. Try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:103
+#: RAN/Admin/PortabilityController.php:104
 msgid "Booster could not read the Blueprint ZIP. Try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:188
+#: RAN/Admin/PortabilityController.php:189
 msgid "Choose a valid Blueprint ZIP."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:196
-#: RAN/Admin/PortabilityController.php:229
+#: RAN/Admin/PortabilityController.php:197
+#: RAN/Admin/PortabilityController.php:230
 msgid "The repository credential decisions are invalid. Review the Blueprint again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:202
+#: RAN/Admin/PortabilityController.php:203
 msgid "Booster could not read this Blueprint. If it includes credentials, enter its ZIP password and try again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:216
+#: RAN/Admin/PortabilityController.php:217
 msgid "Choose the same Blueprint and package row to apply."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:399
+#: RAN/Admin/PortabilityController.php:400
 msgid "The reviewed release evidence changed or expired. Review the Blueprint again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:452
+#: RAN/Admin/PortabilityController.php:453
 #: views/portability.php:224
 msgid "Choose a Blueprint password before exporting credentials."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:455
+#: RAN/Admin/PortabilityController.php:456
 #: views/portability.php:224
 msgid "The passwords do not match. Nothing was exported."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:625
+#: RAN/Admin/PortabilityController.php:626
 msgid "Repository verified. Release readiness will be checked when applying; files and activation will be preserved."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:675
+#: RAN/Admin/PortabilityController.php:676
 #: RAN/Portability/TargetPackageReason.php:40
 msgid "Target credential storage is unavailable. Configure secure storage, then review and apply this row again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:684
+#: RAN/Admin/PortabilityController.php:685
 #: RAN/Portability/PortabilityApplicationService.php:455
 msgid "Booster could not apply this package. Review the Blueprint again and check repository access."
 msgstr ""
@@ -5042,101 +5042,101 @@ msgstr ""
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
-#: RAN/Dashboard.php:575
+#: RAN/Dashboard.php:580
 msgid "You cannot access Booster Settings."
 msgstr ""
 
-#: RAN/Dashboard.php:646
+#: RAN/Dashboard.php:651
 msgid "The saved Settings document is malformed. Runtime safety defaults remain in effect; no values were repaired."
 msgstr ""
 
-#: RAN/Dashboard.php:678
+#: RAN/Dashboard.php:683
 #: RAN/Dispatcher.php:677
 msgid "Settings saved."
 msgstr ""
 
-#: RAN/Dashboard.php:697
+#: RAN/Dashboard.php:702
 msgid "Settings could not be saved. Reload the page and try again."
 msgstr ""
 
-#: RAN/Dashboard.php:706
+#: RAN/Dashboard.php:711
 msgid "Enter a valid value within the displayed limits."
 msgstr ""
 
-#: RAN/Dashboard.php:717
+#: RAN/Dashboard.php:722
 msgid "Settings saved; cached update offers could not be cleared. Discovery remains disabled."
 msgstr ""
 
-#: RAN/Dashboard.php:726
+#: RAN/Dashboard.php:731
 msgid "Settings changed or GitHub eligibility changed. Review the current values and save again."
 msgstr ""
 
-#: RAN/Dashboard.php:727
+#: RAN/Dashboard.php:732
 msgid "Settings were not saved. Check the fields or reload the page and try again."
 msgstr ""
 
-#: RAN/Dashboard.php:737
+#: RAN/Dashboard.php:742
 msgid "The Core updates check completed."
 msgstr ""
 
-#: RAN/Dashboard.php:738
+#: RAN/Dashboard.php:743
 msgid "The Core updates check did not complete successfully. Review the check status below."
 msgstr ""
 
-#: RAN/Dashboard.php:751
+#: RAN/Dashboard.php:756
 #: views/settings.php:31
 msgid "Storage status is unavailable. No setup or recovery action has been performed."
 msgstr ""
 
-#: RAN/Dashboard.php:779
+#: RAN/Dashboard.php:784
 msgid "Storage health has not been checked in this request."
 msgstr ""
 
-#: RAN/Dashboard.php:909
+#: RAN/Dashboard.php:914
 msgid "Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package."
 msgstr ""
 
-#: RAN/Dashboard.php:928
+#: RAN/Dashboard.php:933
 msgid "Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it."
 msgstr ""
 
-#: RAN/Dashboard.php:943
+#: RAN/Dashboard.php:948
 msgid "Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:944
+#: RAN/Dashboard.php:949
 msgid "Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:949
+#: RAN/Dashboard.php:954
 msgid "Booster cannot verify this installed package and its management record. No management changes have been made."
 msgstr ""
 
-#: RAN/Dashboard.php:974
+#: RAN/Dashboard.php:979
 msgid "Booster’s saved update revision is invalid. It cannot safely use this package’s management settings."
 msgstr ""
 
-#: RAN/Dashboard.php:975
+#: RAN/Dashboard.php:980
 msgid "Booster’s saved update source is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:976
+#: RAN/Dashboard.php:981
 msgid "Booster’s saved deployment policy is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:977
+#: RAN/Dashboard.php:982
 msgid "Booster’s saved repository credential reference is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:978
+#: RAN/Dashboard.php:983
 msgid "Booster’s saved repository privacy setting is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:979
+#: RAN/Dashboard.php:984
 msgid "Booster’s saved management configuration for this package is invalid and cannot be opened safely."
 msgstr ""
 
-#: RAN/Dashboard.php:1251
+#: RAN/Dashboard.php:1256
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 

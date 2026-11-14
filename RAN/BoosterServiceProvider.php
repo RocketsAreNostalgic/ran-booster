@@ -283,7 +283,12 @@ final class BoosterServiceProvider {
 			$expiry_observations
 		);
 		$container->bind( CredentialExpiryReminder::class, $expiry_reminders );
-		$container->bind( CredentialExpiryNotice::class, new CredentialExpiryNotice( $expiry_reminders ) );
+		$provider_tab_links = new \RAN\Admin\ProviderTabLinks(
+			static fn (): \RAN\Admin\AdminTabRegistry => $container->make( \RAN\Admin\AdminTabRegistry::class ),
+			static fn (): ?\RAN\Admin\GitHubVisibility => $container->make( \RAN\Admin\GitHubVisibility::class )
+		);
+		$container->bind( \RAN\Admin\ProviderTabLinks::class, $provider_tab_links );
+		$container->bind( CredentialExpiryNotice::class, new CredentialExpiryNotice( $expiry_reminders, $provider_tab_links ) );
 		$container->bind( CredentialExpiryNoticeController::class, new CredentialExpiryNoticeController( $expiry_reminders ) );
 		$background_failure_monitor = new BackgroundDeploymentFailureMonitor(
 			$container->make( DeploymentAttemptRepository::class ),
@@ -295,7 +300,8 @@ final class BoosterServiceProvider {
 			ManagedPluginFailureRows::class,
 			new ManagedPluginFailureRows(
 				$container->make( PluginRepository::class ),
-				$background_failure_monitor
+				$background_failure_monitor,
+				$provider_tab_links
 			)
 		);
 		$container->bind( CorePackageExecutor::class, new CorePackageExecutor() );

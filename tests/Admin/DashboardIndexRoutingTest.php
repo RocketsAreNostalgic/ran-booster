@@ -1954,6 +1954,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$visibility = new \RAN\Admin\GitHubVisibility( new \RAN\Settings\GeneralPreferenceStore(), $providers, $selection, new GitHubVisibilityConnection() );
 		$providers->seal();
 		self::assertSame( 'gh', $visibility->hidden_navigation_key() );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->provider_tab_url( 'gh' ), 'Post-action redirects must not target the hidden tab.' );
 
 		foreach ( array( 'gh', ' GH ' ) as $tab ) {
 			$_GET['tab'] = $tab;
@@ -1966,9 +1967,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	/**
 	 * Every internal tab=gh emitter (native-update warning, recover and adopt
-	 * forms, redirects) exists only while the GitHub selection is not in the
+	 * forms) exists only while the GitHub selection is not in the
 	 * plain available state, which is exactly when GitHubVisibility refuses to
-	 * hide the GitHub tab.
+	 * hide the GitHub tab. The post-action redirects use the same decision.
 	 */
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
@@ -1988,7 +1989,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'github_selection_unknown', $visibility->projection()['reason'] );
 
 		$_GET['tab'] = 'gh';
-		$data        = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->provider_tab_url( 'gh' ) );
+		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
 		self::assertArrayNotHasKey( 'route_not_found', $data );
 		self::assertSame( 'provider.php', $data['tab_view'] );
 		self::assertContains( 'gh', array_column( $data['tabs'], 'key' ) );

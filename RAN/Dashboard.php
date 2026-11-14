@@ -1493,6 +1493,11 @@ class Dashboard {
 		);
 	}
 
+	/** Return target after a provider management action; a hidden provider tab sends the user to Overview instead of not-found. */
+	public function provider_tab_url( string $provider_code ): string {
+		return admin_url( 'admin.php?page=ran-booster&tab=' . ( $provider_code === $this->hidden_provider_tab_key() ? 'overview' : rawurlencode( $provider_code ) ) );
+	}
+
 	private function hidden_provider_tab_key(): ?string {
 		try {
 			return $this->github_visibility?->hidden_navigation_key();

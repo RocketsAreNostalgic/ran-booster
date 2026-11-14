@@ -15,20 +15,23 @@ final class RepositoryReleaseInspectionRejected extends RuntimeException {
 	/** An optional lower-case reason name for an incompatible release; anything else is dropped. */
 	public readonly ?string $detail;
 
-	private function __construct( public readonly string $reason, ?string $detail = null ) {
-		$this->detail = null !== $detail && 1 === preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/D', $detail ) ? $detail : null;
+	public readonly ?ProviderFailure $failure;
+
+	private function __construct( public readonly string $reason, ?string $detail = null, ?ProviderFailure $failure = null ) {
+		$this->failure = ProviderFailure::within( $failure, ProviderFailure::RELEASE_REASONS );
+		$this->detail  = null !== $detail && 1 === preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/D', $detail ) ? $detail : null;
 		parent::__construct( 'The exact repository release could not be inspected.' );
 	}
 
-	public static function no_releases(): self {
-		return new self( self::NO_RELEASES );
+	public static function no_releases( ?ProviderFailure $failure = null ): self {
+		return new self( self::NO_RELEASES, null, $failure );
 	}
 
-	public static function invalid_release(): self {
-		return new self( self::INVALID_RELEASE );
+	public static function invalid_release( ?ProviderFailure $failure = null ): self {
+		return new self( self::INVALID_RELEASE, null, $failure );
 	}
 
-	public static function incompatible( ?string $detail = null ): self {
-		return new self( self::INCOMPATIBLE, $detail );
+	public static function incompatible( ?string $detail = null, ?ProviderFailure $failure = null ): self {
+		return new self( self::INCOMPATIBLE, $detail, $failure );
 	}
 }

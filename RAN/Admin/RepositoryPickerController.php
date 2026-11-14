@@ -6,8 +6,10 @@ namespace RAN\Admin;
 
 use InvalidArgumentException;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
+use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\InvalidProviderCode;
 use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderFailure;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryBrowseRequest;
 use RAN\RepositoryProvider\RepositoryBrowser;
@@ -52,10 +54,12 @@ final class RepositoryPickerController {
 		}
 
 		$public_lookup_requested = false;
+		$provider_name           = '';
 
 		try {
 			$provider_input = isset( $_POST['provider'] ) ? wp_unslash( $_POST['provider'] ) : '';
 			$provider_code  = ProviderCode::parse( is_string( $provider_input ) ? $provider_input : '' );
+			$provider_name  = $provider_code->value;
 			$mode_input     = isset( $_POST['mode'] ) ? wp_unslash( $_POST['mode'] ) : 'authenticated';
 			$mode           = is_string( $mode_input ) ? sanitize_key( $mode_input ) : '';
 
@@ -149,6 +153,14 @@ final class RepositoryPickerController {
 				$status
 			);
 		} catch ( RuntimeException $exception ) {
+			BoosterLogger::log_provider_failure(
+				'repository browse failed',
+				$exception,
+				array(
+					'operation' => 'repository_browse',
+					'provider'  => $provider_name,
+				)
+			);
 			$status = (int) $exception->getCode();
 			if ( $status < 400 || $status > 599 ) {
 				$status = 500;
@@ -156,11 +168,21 @@ final class RepositoryPickerController {
 
 			return wp_send_json_error(
 				array(
-					'message' => $this->error_message_for_status( $status ),
+					// A provider's own reason is worded by Core; a plain exception keeps the status copy.
+					'message' => ProviderFailure::carried( $exception )?->message() ?? $this->error_message_for_status( $status ),
 				),
 				$status
 			);
-		} catch ( Throwable ) {
+		} catch ( Throwable $exception ) {
+			BoosterLogger::log_exception(
+				'repository browse failed',
+				$exception,
+				array(
+					'operation' => 'repository_browse',
+					'provider'  => $provider_name,
+				)
+			);
+
 			return wp_send_json_error(
 				array(
 					'message' => __( 'Repository browsing failed. Please try again.', 'ran-booster' ),

@@ -6,6 +6,7 @@ namespace RAN\AddOn\ReleaseTracking;
 
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -40,7 +41,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * Provider-supplied rejection reasons Core has specific copy for. A reason without copy would show the
 	 * generic text, which is less helpful than the listing-derived reason, so it is not accepted yet.
 	 */
-	private const EXPLAINED_PROVIDER_REASONS = array( 'package_asset_missing', 'package_asset_ambiguous' );
+	private const EXPLAINED_PROVIDER_REASONS = array( 'package_asset_missing', 'package_asset_ambiguous', 'release_incompatible' );
 
 	private const SOURCE_CHANGED_MESSAGE = 'Package settings changed after this browser page was opened. Refresh this browser page, review the current settings, then try again.';
 	private const SUBDIRECTORY_MESSAGE   = 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.';
@@ -437,7 +438,15 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			foreach ( $this->release_browser_repositories( $package ) as $repository ) {
 				try {
 					return $listing->list_release_candidates( $type, $repository, $channel );
-				} catch ( RepositoryReleaseReadUnavailable ) {
+				} catch ( RepositoryReleaseReadUnavailable $unavailable ) {
+					BoosterLogger::log_provider_failure(
+						'release read failed',
+						$unavailable,
+						array(
+							'operation' => 'list_release_candidates',
+							'provider'  => (string) $package->get_provider_code(),
+						)
+					);
 					continue;
 				}
 			}
@@ -489,7 +498,15 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 					$inspection = $inspector->inspect_release( $type, $repository, $release_id, $tag, $channel );
 					break;
-				} catch ( RepositoryReleaseReadUnavailable ) {
+				} catch ( RepositoryReleaseReadUnavailable $unavailable ) {
+					BoosterLogger::log_provider_failure(
+						'release read failed',
+						$unavailable,
+						array(
+							'operation' => 'inspect_release',
+							'provider'  => (string) $package->get_provider_code(),
+						)
+					);
 					continue;
 				}
 			}
@@ -1184,7 +1201,15 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			foreach ( $repositories as $repository ) {
 				try {
 					return $this->repository_preflight( $type, $repository, $package_root, $header_file, $channel, $package, $listing, $inspector, $metadata );
-				} catch ( RepositoryReleaseReadUnavailable ) {
+				} catch ( RepositoryReleaseReadUnavailable $unavailable ) {
+					BoosterLogger::log_provider_failure(
+						'release read failed',
+						$unavailable,
+						array(
+							'operation' => 'release_preflight',
+							'provider'  => (string) $package->get_provider_code(),
+						)
+					);
 					continue;
 				}
 			}
@@ -1234,7 +1259,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					// even when the older one failed differently: it is the release the maintainer last published.
 					if ( null === $newest ) {
 						$newest = $candidate;
-						$detail = $failure->detail;
+						// The provider's failure reason wins over its legacy detail.
+						$detail = null !== $failure->failure && in_array( $failure->failure->reason, self::EXPLAINED_PROVIDER_REASONS, true )
+							? $failure->failure->reason
+							: $failure->detail;
 					}
 					if ( 2 === $inspected ) {
 						return $this->rejected_release_preflight( $package_root, $newest, $detail );

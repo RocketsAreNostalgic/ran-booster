@@ -12,6 +12,7 @@ require_once __DIR__ . '/DeploymentWorkerPhpFunctions.php';
 require_once __DIR__ . '/../Storage/StorageTestEnvironment.php';
 require_once __DIR__ . '/../RepositoryProvider/Support/RepositoryResolverWordPressFunctions.php';
 require_once __DIR__ . '/../RepositoryProvider/AuthenticatedPreparedArchiveWordPressFunctions.php';
+require_once __DIR__ . '/../Logging/LoggingWordPressFunctions.php';
 
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -853,6 +854,60 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( 'failed', $notifier->stored_states[0] );
 		self::assertSame( DeploymentState::FAILED, $notifier->attempts[0]->get_state() );
 		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $notifier->attempts[0]->get_outcome()?->get_code() );
+	}
+
+	public function test_a_provider_archive_failure_is_logged_by_reason_and_maps_to_the_closed_outcome(): void {
+		$provider                  = new ParityRepositoryProvider( null );
+		$provider->prepare_failure = new RuntimeException( 'sentinel-provider-message ghp_abcdefghijklmnop1234', 404 );
+		$outcome                   = null;
+		$lines                     = $this->captured_logs(
+			function () use ( $provider, &$outcome ): void {
+				$outcome = $this->coordinator( $provider )->execute_claimed( $this->running_update() );
+			}
+		);
+
+		self::assertInstanceOf( DeploymentOutcome::class, $outcome );
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_REPOSITORY_MISSING, $outcome->get_code() );
+		self::assertStringContainsString( 'branch provider archive request failed', $lines );
+		self::assertStringContainsString( '"reason":"repository_not_found_or_no_access","http_status":404', $lines );
+		self::assertStringContainsString( '"step":"prepare_archive"', $lines );
+		self::assertStringNotContainsString( 'sentinel-provider-message', $lines );
+		self::assertStringNotContainsString( 'ghp_', $lines );
+	}
+
+	public function test_a_carried_provider_reason_wins_over_the_exception_code_for_the_outcome(): void {
+		$provider                  = new ParityRepositoryProvider( null );
+		$provider->prepare_failure = new \RAN\RepositoryProvider\ProviderRequestFailed( new \RAN\RepositoryProvider\ProviderFailure( 'rate_limited_secondary', 403, 30 ) );
+		$outcome                   = null;
+		$lines                     = $this->captured_logs(
+			function () use ( $provider, &$outcome ): void {
+				$outcome = $this->coordinator( $provider )->execute_claimed( $this->running_update() );
+			}
+		);
+
+		self::assertInstanceOf( DeploymentOutcome::class, $outcome );
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_RATE_LIMITED, $outcome->get_code() );
+		self::assertStringContainsString( '"reason":"rate_limited_secondary","http_status":403,"retry_after":30', $lines );
+	}
+
+	public function test_a_head_verification_failure_is_logged_by_reason_and_maps_to_the_closed_outcome(): void {
+		$archive            = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$archive->on_verify = static function (): void {
+			throw new \RAN\RepositoryProvider\ProviderRequestFailed( new \RAN\RepositoryProvider\ProviderFailure( 'http_5xx', 500 ) );
+		};
+		$this->download_fixture( 'example' );
+		$outcome = null;
+		$lines   = $this->captured_logs(
+			function () use ( $archive, &$outcome ): void {
+				$outcome = $this->coordinator( new ParityRepositoryProvider( $archive ) )->execute_claimed( $this->running_update() );
+			}
+		);
+
+		self::assertInstanceOf( DeploymentOutcome::class, $outcome );
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $outcome->get_code() );
+		self::assertStringContainsString( 'branch head verification failed', $lines );
+		self::assertStringContainsString( '"reason":"http_5xx","http_status":500', $lines );
+		self::assertStringContainsString( '"step":"verify_current_head"', $lines );
 	}
 
 	/** @param callable(): void $operation */

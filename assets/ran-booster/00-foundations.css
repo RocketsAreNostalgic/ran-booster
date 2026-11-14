@@ -131,6 +131,19 @@
 	);
 	--ran-booster-card-heading-gap: var(--ran-booster-space-8);
 	--ran-booster-card-gap: var(--ran-booster-space-24);
+
+	/*
+	 * Header rhythm. A section header (Card title or prominent disclosure
+	 * trigger) insets by --ran-booster-header-inset-inline; a trigger keeps
+	 * --ran-booster-header-trigger-inset-block above and below its 24px line,
+	 * which is the height of a section header. A header nested inside one of
+	 * those uses the panel pair. See "Header rhythm" in
+	 * docs/admin-composition-contract.md.
+	 */
+	--ran-booster-header-inset-inline: var(--ran-booster-space-24);
+	--ran-booster-header-trigger-inset-block: var(--ran-booster-space-18);
+	--ran-booster-panel-header-inset-inline: var(--ran-booster-space-18);
+	--ran-booster-panel-header-inset-block: var(--ran-booster-space-16);
 	--ran-booster-radius-control: 2px;
 	--ran-booster-radius-surface: 3px;
 	--ran-booster-radius-card: var(--wpds-border-radius-lg);
@@ -160,6 +173,12 @@
 	--ran-booster-shadow-switch-knob:
 		0 1px 1px rgb(0 0 0 / 3%), 0 1px 2px rgb(0 0 0 / 2%),
 		0 3px 3px rgb(0 0 0 / 2%), 0 4px 4px rgb(0 0 0 / 1%);
+}
+
+@media screen and (max-width: 480px) {
+	:root {
+		--ran-booster-header-inset-inline: var(--ran-booster-space-16);
+	}
 }
 
 /*

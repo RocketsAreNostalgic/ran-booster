@@ -45,7 +45,7 @@
 .ran-booster-admin .ran-booster-troubleshooting__entry-warning {
 	display: block;
 	margin: 0;
-	padding: 0 16px 16px;
+	padding: 0 var(--ran-booster-header-inset-inline) 16px;
 	color: var(--ran-booster-status-warning);
 	font-size: var(--ran-booster-font-size-md);
 	font-weight: 400;
@@ -291,7 +291,7 @@
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: var(--ran-booster-space-8);
-	padding: 16px;
+	padding: 16px var(--ran-booster-header-inset-inline);
 }
 
 .ran-booster-admin

@@ -386,7 +386,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'padding-inline-start: var(--ran-booster-space-8);', $rule[1] );
 		self::assertStringContainsString( 'text-overflow: ellipsis;', $rule[1], 'Ellipsis is the last resort for labels no phone can fit.' );
 		self::assertStringNotContainsString( 'overflow: hidden', $rule[1] );
-		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 480px\) \{\s*\.ran-booster-admin\s+\.ran-booster-package-operation-settings\s+:is\(\s*\.ran-booster-settings-section__header,\s*\.ran-booster-settings-section__body\s*\) \{\s*padding-inline: var\(--ran-booster-space-16\);/', $css );
+		// The phone inset is the shared header token's one narrow value, not a rule of this Card.
+		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 480px\) \{\s*:root \{\s*--ran-booster-header-inset-inline: var\(--ran-booster-space-16\);/', $this->asset( 'ran-booster/00-foundations.css' ) );
+		self::assertDoesNotMatchRegularExpression( '/package-operation-settings\s*:is\(\s*\.ran-booster-settings-section__header/', $css );
 		// The option labels are product copy and are not shortened for the control.
 		self::assertStringContainsString( "'Manual — update only when requested'", $this->view( 'packages/fields/deployment-policy.php' ) );
 	}
@@ -784,7 +786,7 @@ final class AdminAssetContractTest extends TestCase {
 		// The toggle row and the native summary keep 16px vertical padding closed and open, scoped to Installation sections.
 		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="installation-section"\],\s*\[data-ran-booster-ui-disclosure="settings-card"\]\s*\)\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*> \[role="button"\],[^{]*> summary \{\s*padding-block: 16px;\s*\}/', $activity );
 		// The warning row carries 16px bottom padding and sits outside the toggle.
-		self::assertMatchesRegularExpression( '/__entry-warning \{[^}]*display: block;[^}]*padding: 0 16px 16px;/', $activity );
+		self::assertMatchesRegularExpression( '/__entry-warning \{[^}]*display: block;[^}]*padding: 0 var\(--ran-booster-header-inset-inline\) 16px;/', $activity );
 		// With a warning the open header drops its shadow and the warning row carries the divider; no border adds height.
 		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure-warned\]\s*\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header \{\s*box-shadow: none;\s*\}/', $activity );
 		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*\.ran-booster-troubleshooting__entry-warning \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);\s*\}/', $activity );
@@ -1078,17 +1080,12 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_settings_cards_share_one_inline_inset_for_header_body_and_footer(): void {
 		$css = $this->asset( 'ran-booster/65-package-settings.css' );
 		// One declaration owns the value; nothing else in the Settings Card rules spells 24px.
-		self::assertSame( 1, preg_match_all( '/--ran-booster-settings-card-inset: var\(--ran-booster-space-24\);/', $css ) );
+		self::assertSame( 1, preg_match_all( '/--ran-booster-settings-card-inset: var\(--ran-booster-header-inset-inline\);/', $css ) );
 		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card \{\s*--ran-booster-settings-card-inset:/', $css );
-		// Header (mounted button and native summary, plus the body-less header row) use the token as inline padding only.
-		if ( 1 !== preg_match( '/\[role="button"\],[^{]*> summary,[^{]*\.ran-booster-troubleshooting__entry-row \{([^}]*)\}/', $css, $header ) ) {
-			self::fail( 'The Settings Card header inset rule is missing.' );
-		}
-		self::assertStringContainsString( 'padding-inline: var(--ran-booster-settings-card-inset);', $header[1] );
-		self::assertStringNotContainsString( 'padding-block', $header[1] );
-		self::assertDoesNotMatchRegularExpression( '/padding: /', $header[1] );
-		// The Installation Cards keep their own header padding: nothing in the Settings rules targets them.
-		self::assertStringNotContainsString( 'installation-section', $header[0] );
+		// The header (mounted button, native summary and body-less header row) takes the same inset from the shared header rules, so no Settings rule sets it.
+		self::assertDoesNotMatchRegularExpression( '/settings__card\[data-ran-booster-ui-disclosure="settings-card"\]/', $css );
+		self::assertDoesNotMatchRegularExpression( '/settings__card\s*\.ran-booster-troubleshooting__entry-row/', $css );
+		self::assertMatchesRegularExpression( '/__entry-row \{[^}]*padding: 16px var\(--ran-booster-header-inset-inline\);/', $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' ) );
 		// Body and footer use the same token.
 		self::assertStringContainsString( 'padding: var(--ran-booster-space-16) var(--ran-booster-settings-card-inset);', $css );
 		self::assertStringContainsString( 'margin-inline: calc(-1 * var(--ran-booster-settings-card-inset));', $css );
@@ -1160,7 +1157,7 @@ final class AdminAssetContractTest extends TestCase {
 		$settings   = $this->asset( 'ran-booster/65-package-settings.css' );
 		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		// Header: the prominent shared Disclosure header, 16px padding closed and open (see the Installation contract above).
-		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure-density="prominent"\]\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*> \[role="button"\] \{\s*padding: 12px 16px;/', $primitives );
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure-density="prominent"\]\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*> \[role="button"\] \{\s*padding: var\(--ran-booster-header-trigger-inset-block\)\s*var\(--ran-booster-header-inset-inline\);/', $primitives );
 		// Divider under the header only while open, from the shared rule for every Disclosure (no Settings copy).
 		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header,[^{]*> summary \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);/', $primitives );
 		self::assertStringNotContainsString( 'settings-card', $primitives );
@@ -1294,10 +1291,10 @@ final class AdminAssetContractTest extends TestCase {
 		$css = $this->asset( 'ran-booster/65-package-settings.css' );
 
 		// The body takes the inset the band bleeds through and is footed only while the band is not hidden.
-		self::assertMatchesRegularExpression( '/\.ran-booster-package-operation-settings\s*\.ran-booster-settings-section__body \{\s*--ran-booster-card-inset-inline: var\(--ran-booster-space-24\);/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-package-operation-settings\s*\.ran-booster-settings-section__body \{\s*--ran-booster-card-inset-inline: var\(--ran-booster-header-inset-inline\);/', $css );
 		self::assertMatchesRegularExpression( '/\.ran-booster-settings-section__body\.ran-booster-settings-section__body--footed:not\(\s*:has\(> \[data-ran-booster-branch-install-actions\]\[hidden\]\)\s*\) \{\s*padding-block-end: 0;/', $css );
 		self::assertMatchesRegularExpression( '/\[data-ran-booster-branch-install-actions\]\s*\.ran-booster-card-footer\.ran-booster-package-install-actions \{\s*margin-block-start: var\(--ran-booster-card-gap\);/', $css );
-		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 480px\) \{.*?--ran-booster-card-inset-inline: var\(--ran-booster-space-16\);/s', $css );
+		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 480px\) \{\s*:root \{\s*--ran-booster-header-inset-inline: var\(--ran-booster-space-16\);/', $this->asset( 'ran-booster/00-foundations.css' ) );
 		self::assertMatchesRegularExpression( '/max-width: 782px\) \{.*?\.ran-booster-card-footer\.ran-booster-package-install-actions,[^{]*\{\s*align-items: stretch;\s*flex-direction: column;/s', $css );
 		// The old zeroed divider inside the wrapper is gone.
 		self::assertDoesNotMatchRegularExpression( '/\[data-ran-booster-branch-install-actions\]\s*\.ran-booster-settings-actions/', $css );

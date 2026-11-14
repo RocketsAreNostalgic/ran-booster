@@ -1795,9 +1795,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			}
 
 			$url = $controls->process_admin_post_request( $operation, $request );
-			// A confirmed Check releases result travels as a flash, not as signed query arguments.
-			self::assertSame( 'refresh' !== $operation, str_contains( $url, 'ran_booster_release_result=' ), $operation );
-			self::assertSame( 'refresh' !== $operation, str_contains( $url, 'ran_booster_release_result_nonce=' ), $operation );
+			// A confirmed release operation travels as a flash, not as signed query arguments.
+			self::assertStringNotContainsString( 'ran_booster_release_result', $url, $operation );
 			self::assertStringContainsString( 'ran_booster_open_advanced=1', $url, $operation );
 			self::assertStringNotContainsString( 'release_deployments', $url, $operation );
 		}
@@ -2058,13 +2057,42 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'] );
 	}
 
-	public function test_other_release_operations_keep_their_existing_result_notice(): void {
+	/** @return array<string, array{string, string, string}> */
+	public static function settings_operation_successes(): array {
+		return array(
+			'use releases'     => array( 'enable', 'release_enabled', 'Release tracking enabled.' ),
+			'change track'     => array( 'change_channel', 'release_channel_changed', 'Release track changed. The installed package was not changed and Automatic was reset to Manual.' ),
+			'return to branch' => array( 'return_to_branch', 'branch_restored', 'Branch-based package management is restored.' ),
+		);
+	}
+
+	#[DataProvider( 'settings_operation_successes' )]
+	public function test_a_confirmed_settings_operation_travels_as_a_flash_with_the_shared_copy( string $operation, string $code, string $copy ): void {
 		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
 		$controls                             = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
+		$request                              = $this->request( $operation );
+		$request['release_channel']           = 'stable';
 
-		$url = $controls->process_admin_post_request( 'enable', $this->request( 'enable' ) );
+		$url = $controls->process_admin_post_request( $operation, $request );
 
-		self::assertStringContainsString( 'ran_booster_release_result=release_enabled', $url );
+		self::assertStringNotContainsString( 'ran_booster_release_', $url );
+		self::assertSame( array( $code ), $GLOBALS['ran_booster_feedback_test']['meta'][1][ \RAN\Admin\Feedback\FeedbackFlash::USER_META_KEY ]['codes'] );
+		ob_start();
+		\RAN\Admin\Feedback\FeedbackFlash::render();
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'data-feedback-key="' . $code . '" data-intent="success" role="status">' . $copy . '</div>', $html );
+		self::assertSame( $copy, \RAN\Admin\Feedback\FeedbackFlash::release_operation_success( $code ) );
+	}
+
+	public function test_a_failed_settings_operation_keeps_its_inline_result_and_sets_no_flash(): void {
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		$controls                             = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
+		$request                              = $this->request( 'enable' );
+		$request['_wpnonce']                  = 'wrong';
+
+		$url = $controls->process_admin_post_request( 'enable', $request );
+
+		self::assertStringContainsString( 'ran_booster_release_result=invalid_request', $url );
 		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'] );
 	}
 

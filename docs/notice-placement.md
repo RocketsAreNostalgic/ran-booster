@@ -87,7 +87,10 @@ deploy to retained sites or close #560 from this pilot.
 
 `RAN\Admin\Feedback\FeedbackFlash` carries a confirmed click result to the next
 Booster screen without putting display text in a URL. It is Core-internal, not an
-add-on seam, and the first producer is Check releases.
+add-on seam. Check releases was the first producer; the Use releases, Change
+release track and Use branch successes (`release_enabled`,
+`release_channel_changed`, `branch_restored`) are the second. Their failures keep
+the signed inline result.
 
 - **Storage.** One user-meta row, `_ran_booster_feedback_flash`, per user:
   `{site, at, codes}`. `codes` are closed Core codes (at most three); no message,

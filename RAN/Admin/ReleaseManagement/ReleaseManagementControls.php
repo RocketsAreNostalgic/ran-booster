@@ -521,6 +521,9 @@ final class ReleaseManagementControls {
 			&& null !== $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->fresh_status( $outcome['type'], $outcome['identifier'] ), null );
 		if ( $flash ) {
 			FeedbackFlash::enqueue( 'release_current' === $outcome['code'] ? 'release_check_current' : 'release_check_update' );
+		} elseif ( $outcome['successful'] && in_array( $operation, array( 'enable', 'change_channel', 'return_to_branch' ), true ) && null !== FeedbackFlash::release_operation_success( $outcome['code'] ) ) {
+			// A confirmed settings operation travels as a closed-code flash too; the new state is its own record.
+			FeedbackFlash::enqueue( $outcome['code'] );
 		} else {
 			$url = add_query_arg( $this->result_query_arguments( $outcome, $channel ), $url );
 			// A result that is not a success points at its inline notice, which stays the record.

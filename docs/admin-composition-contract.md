@@ -479,6 +479,10 @@ pill is static markup from `RAN\Admin\Component\StatusBadge` (`print_tone()`,
 `ran-booster-wp-ui-static.css`. A script that changes one in place calls
 `window.ranBoosterBadge.update()`.
 
+`StatusBadge::INTENTS` is the single list of status tones (`neutral`, `pending`,
+`info`, `ok`, `success`, `warning`, `error`) and maps each to its Badge intent.
+Validators, presenters and renderers derive from it; none keeps its own list.
+
 - Intents: `none` for neutral or off, `stable` for ready or on, `medium` for
   needs attention, `high` for failed, `informational` for a deliberate choice
   that is neither, such as manual updates.
@@ -1241,8 +1245,9 @@ $rows = apply_filters(
 
 `$surface` is `plugin` or `theme`, and `$package_projections` is keyed by package
 identifier. Returned rows may address only those identifiers. Each row accepts
-a bounded `status` string and a `badges` list whose tones are `neutral`, `ok`,
-`pending`, `warning` or `error`.
+a bounded `status` string and a `badges` list whose tones are the keys of
+`StatusBadge::INTENTS`: `neutral`, `pending`, `info`, `ok`, `success`, `warning`
+or `error`. Any other tone is rejected.
 
 Core obtains structured actions separately for each package:
 

@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use LogicException;
 use RAN\Admin\Component\AdminActionNormalizer;
 use RAN\Admin\Component\AdminPackageSourceChoiceNormalizer;
+use RAN\Admin\Component\StatusBadge;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
@@ -655,7 +656,8 @@ final class PackagePagePresenter {
 					|| '' === trim( $badge['label'] )
 					|| strlen( $badge['label'] ) > 96
 					|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $badge['label'] )
-					|| ! in_array( $badge['tone'] ?? null, array( 'neutral', 'ok', 'pending', 'warning', 'error' ), true ) ) {
+					|| ! is_string( $badge['tone'] ?? null )
+					|| ! isset( StatusBadge::INTENTS[ $badge['tone'] ] ) ) {
 					throw new LogicException( 'Package management badges must be bounded display values.' );
 				}
 				$badges[] = array(

@@ -71,13 +71,6 @@ $activity_badge_variants      = array(
 	'failed'          => 'error',
 	'needs_attention' => 'error',
 );
-$badge_intents                = array(
-	'neutral' => 'none',
-	'ok'      => 'stable',
-	'pending' => 'informational',
-	'warning' => 'medium',
-	'error'   => 'high',
-);
 $bulk_form_id                 = 'ran-booster-' . $package_view->get_type() . '-bulk-form';
 $bulk_action_id               = 'ran-booster-' . $package_view->get_type() . '-bulk-action';
 $bulk_select_all_id           = 'ran-booster-' . $package_view->get_type() . '-select-all';
@@ -498,7 +491,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			</td>
 			<td class="ran-booster-package-row__summary">
 				<?php if ( is_array( $prominent_status ) ) { ?>
-					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $prominent_status['label'], (string) ( $badge_intents[ $prominent_status['tone'] ] ?? 'none' ), $prominent_status_activity ? array( 'data-ran-booster-activity-badge' => '' ) : array() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
+					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $prominent_status['label'], \RAN\Admin\Component\StatusBadge::intent_for( (string) $prominent_status['tone'] ), $prominent_status_activity ? array( 'data-ran-booster-activity-badge' => '' ) : array() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				<?php } elseif ( ! $release_managed ) { ?>
 					<?php
 					\RAN\Admin\Component\StatusBadge::print_intent(
@@ -618,7 +611,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 										<?php
 										\RAN\Admin\Component\StatusBadge::print_intent(
 											(string) ( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ),
-											(string) $badge_intents[ $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ],
+											\RAN\Admin\Component\StatusBadge::intent_for( $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ),
 											array(
 												'data-ran-booster-activity-state' => '',
 												'class' => 'ran-booster-deployment-state ran-booster-deployment-state--' . (string) $latest_activity['state'],

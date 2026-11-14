@@ -6,6 +6,7 @@ namespace RAN\Admin\ReleaseManagement;
 
 use RAN\Admin\Component\ExternalLinkMarker;
 use RAN\Admin\Component\NoticeIcon;
+use RAN\Admin\Component\StatusBadge;
 
 /** @internal Fixed Core presentation for optional provider release workflows. */
 final class ReleaseWorkflowDisplay {
@@ -59,15 +60,7 @@ final class ReleaseWorkflowDisplay {
 		if ( true === ( $projection['show_automation'] ?? false ) ) {
 			$state  = (array) ( $projection['automation'] ?? array() );
 			$view   = (array) ( $projection['workflow_view'] ?? array() );
-			$intent = array(
-				'ran-booster-badge--neutral' => 'none',
-				'ran-booster-badge--pending' => 'none',
-				'ran-booster-badge--ok'      => 'stable',
-				'ran-booster-badge--success' => 'stable',
-				'ran-booster-badge--warning' => 'medium',
-				'ran-booster-badge--error'   => 'high',
-				'ran-booster-badge--info'    => 'informational',
-			)[ (string) ( $state['tone'] ?? '' ) ] ?? '';
+			$intent = StatusBadge::detail_intent( (string) ( $state['tone'] ?? '' ) );
 			$notice = '';
 			if ( true === ( $projection['automation_notice'] ?? false ) ) {
 				if ( true === ( $projection['automation_unavailable'] ?? false ) ) {
@@ -97,7 +90,7 @@ final class ReleaseWorkflowDisplay {
 			$html .= '<div data-ran-booster-ui-disclosure="repository-release-workflow" data-ran-booster-ui-disclosure-density="compact">'
 				. '<details id="ran-booster-repository-release-workflow" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-release-automation ran-booster-disclosure"' . ( $open ? ' open' : '' ) . '>'
 				. '<summary>' . esc_html__( 'Release workflow', 'ran-booster' )
-				. ' <small class="ran-booster-advanced-source-summary" data-ran-booster-ui-disclosure-meta>' . \RAN\Admin\Component\StatusBadge::for_intent( (string) ( $state['label'] ?? '' ), $intent ) . '</small></summary>'
+				. ' <small class="ran-booster-advanced-source-summary" data-ran-booster-ui-disclosure-meta>' . StatusBadge::for_intent( (string) ( $state['label'] ?? '' ), $intent ) . '</small></summary>'
 				. '<div data-ran-booster-ui-disclosure-content class="ran-booster-repository-release-automation__body ran-booster-disclosure__body">'
 				. '<p class="description ran-booster-repository-release-automation__provenance">' . esc_html( (string) ( $state['provenance'] ?? '' ) ) . '</p>';
 			if ( '' !== $notice || '' !== $result_notice ) {

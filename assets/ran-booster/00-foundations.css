@@ -167,7 +167,7 @@
  *
  * WordPress's wp-theme sheet fixes the brand tokens at the modern scheme's
  * blue for every admin colour scheme. Booster's own roots (the admin screens
- * and the body-mounted repository picker; the vendored Shell keeps its own
+ * and the body-mounted portals of the repository picker and the dialog; the vendored Shell keeps its own
  * colour handling) take the brand tone from the user's admin colour instead,
  * so brand controls and the secondary Button follow the scheme. Nothing
  * outside these roots changes.
@@ -182,7 +182,8 @@
 
 /* stylelint-disable plugin-wpds/no-setting-wpds-custom-properties -- This is the sanctioned bridge from Booster's brand seam to the design-system brand tokens. */
 .ran-booster-admin,
-.ran-booster-repository-picker-portal {
+.ran-booster-repository-picker-portal,
+.ran-booster-ui-dialog-portal {
 	--wpds-color-foreground-interactive-brand: var(
 		--ran-booster-brand-action,
 		var(--wp-admin-theme-color)

@@ -6,15 +6,21 @@ const assetsDirectory = new URL('../../assets/', import.meta.url);
 const read = (path) => fs.readFileSync(new URL(path, assetsDirectory), 'utf8');
 const foundations = read('ran-booster/00-foundations.css');
 
-const BRAND_ROOTS = [
-	'.ran-booster-admin',
-	'.ran-booster-repository-picker-portal',
-];
+// Every body-mounted Booster portal is a bridge root, found from the scripts.
+const portals = fs
+	.readdirSync(assetsDirectory)
+	.filter((file) => file.endsWith('.js'))
+	.flatMap((file) =>
+		[
+			...read(file).matchAll(
+				/className\s*=\s*'(ran-booster-[a-z-]*-portal)'/g
+			),
+		].map((match) => `.${match[1]}`)
+	);
+const BRAND_ROOTS = ['.ran-booster-admin', ...new Set(portals)];
 
 const bridge = (() => {
-	const marker =
-		'.ran-booster-admin,\n.ran-booster-repository-picker-portal {';
-	const start = foundations.indexOf(marker);
+	const start = foundations.indexOf(`${BRAND_ROOTS[0]},\n`);
 	assert.notEqual(start, -1, 'The brand bridge rule must exist.');
 	return foundations.slice(start, foundations.indexOf('\n}', start) + 2);
 })();
@@ -25,11 +31,19 @@ const mapped = Object.fromEntries(
 	)
 );
 
+test('every body-mounted portal is found and is a bridge root', () => {
+	assert.ok(portals.includes('.ran-booster-ui-dialog-portal'));
+	assert.ok(portals.includes('.ran-booster-repository-picker-portal'));
+});
+
 test('the bridge is scoped to Booster roots only', () => {
 	const selector = bridge.slice(0, bridge.indexOf('{'));
 	assert.deepEqual(
-		selector.split(',').map((part) => part.trim()),
-		BRAND_ROOTS
+		selector
+			.split(',')
+			.map((part) => part.trim())
+			.sort(),
+		[...BRAND_ROOTS].sort()
 	);
 });
 

@@ -633,8 +633,12 @@ WordPress core's `.button`. Markup takes its classes from
 WordPress's `wp-theme` sheet (and Booster's bundled copy of it before 7.1)
 fixes the design system's brand tokens at the modern scheme's blue for every
 admin colour scheme. Booster therefore bridges the brand tokens inside its own
-roots only: `.ran-booster-admin` and `.ran-booster-repository-picker-portal`,
-the repository picker's body-mounted overlay. The bridge is one rule in
+roots only: `.ran-booster-admin` and every body-mounted Booster portal, which
+renders outside it: `.ran-booster-repository-picker-portal` (the repository
+picker) and `.ran-booster-ui-dialog-portal` (the shared dialog, which holds the
+Extensions details and its actions). Any new body-mounted Booster root must be
+added to the bridge rule; an asset test finds each `*-portal` class set in the
+scripts and fails when one is missing. The bridge is one rule in
 `00-foundations.css`; nothing is set on `:root`, `html` or `body`, so unrelated
 admin screens and the vendored Admin Shell keep their own colours.
 

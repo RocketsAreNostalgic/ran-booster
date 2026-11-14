@@ -35,6 +35,26 @@ final class StatusBadge {
 	public const SUPPORTED_INTENTS = array( 'none', 'stable', 'medium', 'high', 'informational' );
 
 	/**
+	 * Returns the Badge intent for a tone. Unknown tones are neutral.
+	 *
+	 * Every tone producer, validator and renderer takes its vocabulary from
+	 * INTENTS, so a tone one of them accepts cannot be rejected by another.
+	 */
+	public static function intent_for( string $tone ): string {
+		return self::INTENTS[ $tone ] ?? 'none';
+	}
+
+	/**
+	 * Returns the Badge intent for a detail row's tone.
+	 *
+	 * Detail rows draw a pending state grey; only the standalone status Badge
+	 * draws it informational blue.
+	 */
+	public static function detail_intent( string $tone ): string {
+		return self::intent_for( 'pending' === $tone ? 'neutral' : $tone );
+	}
+
+	/**
 	 * Returns the Badge markup for a tone. Unknown tones render as neutral.
 	 *
 	 * @param array<string,string> $attributes Extra attributes: data-*, role, class or hidden.

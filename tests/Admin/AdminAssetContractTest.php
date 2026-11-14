@@ -423,7 +423,7 @@ final class AdminAssetContractTest extends TestCase {
 
 		self::assertFileDoesNotExist( dirname( __DIR__, 2 ) . '/assets/ran-booster/35-status-utilities.css' );
 		self::assertStringNotContainsString( 'notice notice-warning inline ran-booster-debug-capture__scope', $debug );
-		self::assertStringContainsString( "StatusBadge::for_intent( (string) \$prominent_status['label'], (string) ( \$badge_intents[ \$prominent_status['tone'] ] ?? 'none' ), \$prominent_status_activity ? array( 'data-ran-booster-activity-badge' => '' ) : array() )", $packages );
+		self::assertStringContainsString( "StatusBadge::for_intent( (string) \$prominent_status['label'], \\RAN\\Admin\\Component\\StatusBadge::intent_for( (string) \$prominent_status['tone'] ), \$prominent_status_activity ? array( 'data-ran-booster-activity-badge' => '' ) : array() )", $packages );
 		self::assertStringContainsString( 'Stored · Validity checked on use', $projection );
 		self::assertStringContainsString( 'ran-booster-delete-credential-package-link', $provider );
 		self::assertStringNotContainsString( '.ran-booster-badge', $component );

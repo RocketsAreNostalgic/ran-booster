@@ -1656,8 +1656,7 @@ final readonly class ProviderSettingsPresenter {
 				? (string) ( $profile['expiry_status']['badge_label'] ?? __( 'Stored · Validity checked on use', 'ran-booster' ) )
 				: __( 'Not configured', 'ran-booster' );
 			$status_key           = ! empty( $profile['configured'] )
-				&& ! str_contains( (string) ( $profile['expiry_status']['badge_class'] ?? '' ), 'error' )
-				&& ! str_contains( (string) ( $profile['expiry_status']['badge_class'] ?? '' ), 'warning' ) ? 'ready' : 'attention';
+				&& ! in_array( $profile['expiry_status']['badge_tone'] ?? '', array( 'error', 'warning' ), true ) ? 'ready' : 'attention';
 			$kind                 = is_string( $profile['kind'] ?? null ) ? $profile['kind'] : '';
 			$label                = is_string( $profile['label'] ?? null ) ? $profile['label'] : '';
 			$rows[]               = $profile + array(

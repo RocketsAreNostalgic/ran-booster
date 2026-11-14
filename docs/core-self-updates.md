@@ -175,10 +175,19 @@ source checkout instead sees one informational notice:
 > **RAN Booster development detected:** Core updates are disabled to protect
 > this source checkout.
 
-An administrator can dismiss the notice with its dismiss control. The dismissal
-is saved for that user (user meta, so network-wide on multisite) against the
-notice's state token, `source-checkout-v1`; other administrators keep their own
-state, and a future change to the notice text raises the token so it reappears.
+An administrator can dismiss the notice with its dismiss control. The notice
+describes this site's checkout, so its dismissal is site-scoped by design. It is
+stored for the user against the state token `source-checkout-v1`, through user
+meta without a blog prefix because multisite is not supported. Supporting it
+means storing the value per blog and changing that one key; the key constant
+`CoreSelfUpdateDevelopmentNotice::USER_META_KEY` is the only place the storage
+identity is named, and the dismissal endpoint, the notice and uninstall all read
+it from there. The credential-expiry and background-failure notices are
+network-level by intent: they describe credentials and deployments that the
+whole installation shares. Other administrators keep their own state, and a
+future change to the notice text raises the token so it reappears. See
+[multisite groundwork](multisite-groundwork.md).
+
 Dismissal changes only visibility: source-checkout detection, the disabled Core
 update path, the Troubleshooting status and the same sentence inside the
 local-development guidance are unchanged. Requests need the `manage_options`

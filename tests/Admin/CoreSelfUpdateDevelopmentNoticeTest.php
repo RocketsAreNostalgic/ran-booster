@@ -176,4 +176,16 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		$notice->render_local_fact();
 		self::assertStringContainsString( 'Core updates are disabled to protect this source checkout.', (string) ob_get_clean() );
 	}
+
+	public function test_one_key_names_the_dismissal_for_the_endpoint_the_notice_and_uninstall(): void {
+		$policy = CoreSelfUpdatePolicy::detect( dirname( __DIR__, 2 ) . '/ran-booster.php', '0.1.0-alpha.23' );
+		$this->dismiss( CoreSelfUpdateDevelopmentNotice::NOTICE_STATE );
+
+		$written = array_keys( $GLOBALS['ran_booster_repository_admin_user_meta'][17] );
+		self::assertSame( array( CoreSelfUpdateDevelopmentNotice::USER_META_KEY ), $written );
+		self::assertFalse( ( new CoreSelfUpdateDevelopmentNotice( $policy, 'plugins' ) )->should_show(), 'The notice reads the key the endpoint wrote.' );
+
+		$removed = ( new \ReflectionClassConstant( \RAN\Uninstall\LocalDataRemover::class, 'USER_META_KEYS' ) )->getValue();
+		self::assertContains( $written[0], $removed, 'Uninstall removes the key the endpoint wrote.' );
+	}
 }

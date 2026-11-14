@@ -4,6 +4,7 @@ namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonP
 
 use LogicException;
 use RAN\Admin\AdminAddOnRegistry;
+use RAN\Admin\AdminRoutes;
 use RAN\Admin\AdminTab;
 use RAN\Admin\AdminTabRegistry;
 use RAN\Admin\BulkPackageResult;
@@ -249,6 +250,27 @@ class Dashboard {
 			);
 		}
 
+		$provider_view   = null;
+		$provider_task   = null;
+		$repository_view = null;
+		$panel           = null;
+		if ( null !== $selected_tab && $selected_tab->is_provider() ) {
+			$provider_view   = $this->requested_route_slug( 'view', AdminRoutes::PROVIDER_VIEWS, 'overview' );
+			$provider_task   = $this->requested_route_slug( 'panel', AdminRoutes::PROVIDER_TASKS, 'status' );
+			$repository_view = $this->requested_route_slug( 'repository_view', AdminRoutes::REPOSITORY_VIEWS, 'status' );
+		} elseif ( null !== $selected_tab && 'troubleshooting' === $selected_tab->get_key() ) {
+			$panel = null !== $this->support_report_payload
+				? 'support-report'
+				: ( null !== $this->troubleshooting_payload ? 'diagnostics' : $this->requested_route_slug( 'panel', AdminRoutes::TROUBLESHOOTING_PANELS, 'installation' ) );
+		}
+		if ( null !== $selected_tab && ( ( $selected_tab->is_provider() && ( null === $provider_view || null === $provider_task || null === $repository_view ) ) || ( 'troubleshooting' === $selected_tab->get_key() && null === $panel ) ) ) {
+			// Closed result: an unknown panel or view never renders another panel.
+			unset( $data['tab_view'] );
+			$data['route_not_found']     = true;
+			$data['route_not_found_url'] = $admin_url . '?page=ran-booster&tab=overview';
+			return $this->render( 'index', $data );
+		}
+
 		if ( null !== $selected_tab && $selected_tab->is_provider() ) {
 			$provider                               = $selected_tab->get_provider();
 			$data                                   = array_merge(
@@ -256,9 +278,9 @@ class Dashboard {
 				$this->provider_settings->build( null === $provider ? null : $provider->value )
 			);
 			$data['credential_validation_feedback'] = $this->credential_validation_feedback;
-			$data['provider_view']                  = $this->requested_provider_view();
-			$data['provider_task']                  = $this->requested_provider_task();
-			$data['repository_view']                = $this->requested_provider_repository_view();
+			$data['provider_view']                  = $provider_view;
+			$data['provider_task']                  = $provider_task;
+			$data['repository_view']                = $repository_view;
 			$data['provider_list_state']            = $this->requested_provider_list_state();
 			$data['replace_credential']             = $this->requested_provider_repository_id( 'replace_credential' );
 
@@ -312,7 +334,6 @@ class Dashboard {
 			$data['documentation_url']      = $admin_url . '?page=ran-booster&tab=documentation';
 			$data['documentation_scope']    = is_multisite() ? 'network' : 'site';
 		} elseif ( null !== $selected_tab && 'troubleshooting' === $selected_tab->get_key() ) {
-			$panel                         = $this->requested_troubleshooting_panel();
 			$data['troubleshooting_panel'] = $panel;
 			if ( 'installation' === $panel ) {
 				if ( 'GET' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) {
@@ -325,7 +346,7 @@ class Dashboard {
 					'report_filename'  => $this->support_report_payload['filename'] ?? '',
 					'report_generated' => null !== $this->support_report_payload,
 				);
-			} elseif ( 'debug-capture' === $panel ) {
+			} elseif ( 'logging' === $panel ) {
 				$data['troubleshooting'] = array();
 				$data['debug_capture']   = $this->debug_capture_payload();
 			} elseif ( 'activity' === $panel ) {
@@ -1320,55 +1341,22 @@ class Dashboard {
 		return ! $posted_package && $open_picker;
 	}
 
-	private function requested_troubleshooting_panel(): string {
-		if ( null !== $this->support_report_payload ) {
-			return 'support-report';
-		}
-		if ( null !== $this->troubleshooting_payload ) {
-			return 'diagnostics';
-		}
+	/**
+	 * Read one allowlisted routing slug.
+	 *
+	 * @param list<string> $allowed Fixed slugs.
+	 * @return string|null The default when absent, the slug when allowed, null when unknown.
+	 */
+	private function requested_route_slug( string $key, array $allowed, string $fallback ): ?string {
 		// Read-only allowlisted routing state.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only panel selection is sanitized and restricted to the fixed diagnostics, debug-capture and activity routes.
-		$panel = isset( $_GET['panel'] ) && is_string( $_GET['panel'] )
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Sanitize the panel before the fixed route allowlist; no mutation is performed.
-			? sanitize_key( wp_unslash( $_GET['panel'] ) )
-			: 'installation';
-
-		if ( 'deployment-activity' === $panel ) {
-			return 'activity';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing selector; no mutation is performed.
+		if ( ! isset( $_GET[ $key ] ) ) {
+			return $fallback;
 		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Sanitize the selector before the fixed allowlist; no mutation is performed.
+		$value = is_string( $_GET[ $key ] ) ? sanitize_key( wp_unslash( $_GET[ $key ] ) ) : '';
 
-		return in_array( $panel, array( 'installation', 'diagnostics', 'debug-capture', 'activity', 'support-report' ), true ) ? $panel : 'installation';
-	}
-
-	private function requested_provider_view(): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only provider presentation selector.
-		$view = isset( $_GET['view'] ) && is_string( $_GET['view'] )
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only provider presentation selector.
-			? sanitize_key( wp_unslash( $_GET['view'] ) )
-			: '';
-
-		return in_array( $view, array( 'credentials', 'secrets' ), true ) ? $view : 'overview';
-	}
-
-	private function requested_provider_task(): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only provider presentation selector.
-		$task = isset( $_GET['panel'] ) && is_string( $_GET['panel'] )
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only provider presentation selector.
-			? sanitize_key( wp_unslash( $_GET['panel'] ) )
-			: '';
-
-		return in_array( $task, array( 'repositories', 'setup' ), true ) ? $task : 'status';
-	}
-
-	private function requested_provider_repository_view(): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository presentation selector.
-		$view = isset( $_GET['repository_view'] ) && is_string( $_GET['repository_view'] )
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded repository presentation selector.
-			? sanitize_key( wp_unslash( $_GET['repository_view'] ) )
-			: '';
-
-		return in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? $view : 'status';
+		return in_array( $value, $allowed, true ) ? $value : null;
 	}
 
 	private function requested_provider_repository_id( string $key = 'repository' ): string {

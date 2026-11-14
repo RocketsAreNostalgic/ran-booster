@@ -597,7 +597,7 @@ class Dispatcher {
 		$admin_url = is_multisite()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
-		$this->redirect_to( $admin_url . '?page=ran-booster&tab=troubleshooting&panel=debug-capture' );
+		$this->redirect_to( $admin_url . '?page=ran-booster&tab=troubleshooting&panel=logging' );
 	}
 
 	/** @param array<string,mixed> $request */

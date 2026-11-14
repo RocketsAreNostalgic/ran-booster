@@ -211,7 +211,7 @@ final class ExtensionsPageTest extends TestCase {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Preserve the test's simulated request.
 		$original = $_GET;
 		try {
-			foreach ( array( null, 'installation', 'diagnostics', 'activity', 'debug-capture', 'support-report', 'invalid' ) as $panel ) {
+			foreach ( array( null, 'installation', 'diagnostics', 'activity', 'logging', 'support-report', 'invalid' ) as $panel ) {
 				$_GET = array(
 					'page' => 'ran-booster',
 					'tab'  => '  TROUBLESHOOTING  ',

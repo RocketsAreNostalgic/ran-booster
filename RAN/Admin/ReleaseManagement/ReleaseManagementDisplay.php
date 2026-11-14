@@ -1145,7 +1145,7 @@ final class ReleaseManagementDisplay {
 			array(
 				'page'  => 'ran-booster',
 				'tab'   => 'troubleshooting',
-				'panel' => 'debug-capture',
+				'panel' => 'logging',
 			),
 			admin_url( 'admin.php' )
 		);

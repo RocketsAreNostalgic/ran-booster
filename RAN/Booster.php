@@ -773,7 +773,7 @@ class Booster {
 			? sanitize_key( wp_unslash( $panel_input ) )
 			: 'diagnostics';
 
-		return ! in_array( $panel, array( 'activity', 'deployment-activity' ), true );
+		return ! in_array( $panel, array( 'activity' ), true );
 	}
 
 	/**

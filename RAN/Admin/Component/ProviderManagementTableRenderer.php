@@ -63,7 +63,7 @@ final class ProviderManagementTableRenderer {
 		<?php } ?>
 		<div class="ran-booster-data-table-wrap">
 		<table class="ran-booster-data-table ran-booster-provider-management-table ran-booster-provider-management-table--<?php echo esc_attr( $type ); ?>">
-			<caption class="screen-reader-text"><?php echo esc_html( self::ACCESS === $type ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></caption>
+			<caption class="screen-reader-text"><?php echo esc_html( self::ACCESS === $type ? __( 'Credentials', 'ran-booster' ) : __( 'Signing secrets', 'ran-booster' ) ); ?></caption>
 			<thead>
 				<tr>
 					<?php foreach ( $columns as $column ) { ?>

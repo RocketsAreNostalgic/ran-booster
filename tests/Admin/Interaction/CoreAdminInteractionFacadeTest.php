@@ -433,7 +433,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			),
 			array(
 				'action'    => 'save-webhook-profile',
-				'view'      => 'secrets',
+				'view'      => 'signing-secrets',
 				'message'   => 'Push-to-Deploy secret saved.',
 				'list_args' => array(),
 			),
@@ -492,7 +492,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		foreach (
 			array(
 				array( 'delete-access-profile', 'credentials', 'Repository credential removed.' ),
-				array( 'delete-webhook-profile', 'secrets', 'Push-to-Deploy secret removed.' ),
+				array( 'delete-webhook-profile', 'signing-secrets', 'Push-to-Deploy secret removed.' ),
 			) as $case
 		) {
 			$this->headers                    = array();
@@ -564,7 +564,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 
 	public function test_core_provider_profile_failure_is_local_for_htmx_and_prg_for_no_java_script(): void {
 		$facade                           = $this->facade();
-		$_GET['view']                     = 'secrets';
+		$_GET['view']                     = 'signing-secrets';
 		$request                          = $facade->provider_profile_request(
 			'save-webhook-profile',
 			'fixture'
@@ -613,7 +613,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 	}
 
 	public function test_core_provider_profile_route_rejects_an_operation_view_mismatch(): void {
-		$_GET['view'] = 'secrets';
+		$_GET['view'] = 'signing-secrets';
 
 		$this->expectException( InvalidArgumentException::class );
 		$this->facade()->provider_profile_request( 'save-access-profile', 'fixture' );

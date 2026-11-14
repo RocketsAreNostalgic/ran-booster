@@ -141,7 +141,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 
 		$start_redirect = $this->dispatch_capture_operation( $capture, 'start' );
 		self::assertSame( 'active', $capture->snapshot()['state'] );
-		self::assertStringContainsString( 'panel=debug-capture', $start_redirect );
+		self::assertStringContainsString( 'panel=logging', $start_redirect );
 
 		$stop_redirect = $this->dispatch_capture_operation( $capture, 'stop' );
 		self::assertSame( 'retained', $capture->snapshot()['state'] );

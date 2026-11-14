@@ -282,7 +282,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 		$current_implementation = $selection_status['current']['declaration'] ?? null;
 		$healthy_replacement    = 'available' === $selection_status['state'] && $github_selection['available'];
 		?>
-		<section aria-label="<?php esc_attr_e( 'GitHub provider management', 'ran-booster' ); ?>">
+		<section class="ran-booster-provider__management" aria-label="<?php esc_attr_e( 'GitHub provider management', 'ran-booster' ); ?>">
 			<?php if ( $healthy_replacement && is_array( $current_implementation ) ) { ?>
 				<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
 				<div data-ran-booster-ui-disclosure="provider-manage" data-ran-booster-ui-disclosure-density="compact">

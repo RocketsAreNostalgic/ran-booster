@@ -10,11 +10,21 @@
 	box-sizing: border-box;
 }
 
-/* Separate existing overview tasks without changing their interior layout. */
+/*
+ * Separate existing overview tasks without changing their interior layout.
+ * The provider management block (notice and review disclosure) is a stacked
+ * item too, so it takes the same Card gap below it.
+ */
+
+.ran-booster-admin
+	.ran-booster-provider--overview
+	> :is(.ran-booster-provider-section, .ran-booster-provider__management) {
+	margin-block-end: var(--ran-booster-card-gap);
+}
+
 .ran-booster-admin
 	.ran-booster-provider--overview
 	> .ran-booster-provider-section {
-	margin-block-end: var(--ran-booster-card-gap);
 	border: 1px solid var(--ran-booster-border);
 	background: var(--ran-booster-surface);
 }

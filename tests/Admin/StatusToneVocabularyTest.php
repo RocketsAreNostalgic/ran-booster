@@ -108,6 +108,26 @@ final class StatusToneVocabularyTest extends TestCase {
 		self::assertSame( $tone, $rows['p']['badges'][0]['tone'] );
 	}
 
+	public function test_the_package_page_presenter_still_rejects_a_tone_outside_the_vocabulary(): void {
+		$presenter = PackagePagePresenter::plugin();
+		$this->expectException( LogicException::class );
+		( new ReflectionMethod( $presenter, 'normalize_extension_rows' ) )->invoke(
+			$presenter,
+			array(
+				'p' => array(
+					'badges' => array(
+						array(
+							'label' => 'Badge',
+							'tone'  => 'future',
+						),
+					),
+				),
+			),
+			array( 'p' => true ),
+			array( 'p' => true )
+		);
+	}
+
 	#[DataProvider( 'tones' )]
 	public function test_every_renderer_draws_the_intent_the_vocabulary_names( string $tone ): void {
 		$expected = StatusBadge::detail_intent( $tone );
@@ -180,23 +200,46 @@ final class StatusToneVocabularyTest extends TestCase {
 	}
 
 	public function test_no_presenter_or_view_carries_the_retired_badge_class_vocabulary(): void {
-		$files = array_merge(
-			$this->files( '/RAN/Admin/*.php' ),
-			$this->files( '/RAN/Admin/*/*.php' ),
-			$this->files( '/views/*.php' ),
-			$this->files( '/views/*/*.php' )
-		);
-		self::assertNotEmpty( $files );
+		$root  = dirname( __DIR__, 2 );
+		$files = array();
+		foreach ( array( 'RAN/Admin', 'views' ) as $directory ) {
+			foreach ( new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root . '/' . $directory, \FilesystemIterator::SKIP_DOTS ) ) as $file ) {
+				if ( $file instanceof \SplFileInfo && 'php' === $file->getExtension() ) {
+					$files[] = substr( $file->getPathname(), strlen( $root ) + 1 );
+				}
+			}
+		}
+		self::assertContains( 'RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php', $files );
 		foreach ( $files as $file ) {
-			self::assertStringNotContainsString( 'ran-booster-badge--', $this->read( substr( $file, strlen( dirname( __DIR__, 2 ) ) + 1 ) ), $file );
+			self::assertStringNotContainsString( 'ran-booster-badge--', $this->read( $file ), $file );
 		}
 	}
 
-	/** @return list<string> */
-	private function files( string $pattern ): array {
-		$found = glob( dirname( __DIR__, 2 ) . $pattern );
-
-		return false === $found ? array() : $found;
+	public function test_every_literal_tone_in_the_views_and_historical_status_tones_is_in_the_vocabulary(): void {
+		$checked = 0;
+		foreach ( array( 'views/packages/index.php', 'views/attempts/index.php' ) as $path ) {
+			$source = $this->read( $path );
+			foreach ( array( 'activity_badge_variants', 'state_tones' ) as $name ) {
+				if ( 1 !== preg_match( '/\$' . $name . '\s*=\s*array\((.*?)\n\);/s', $source, $block ) ) {
+					continue;
+				}
+				preg_match_all( '/=>\s*\'([a-z]+)\'/', $block[1], $tones );
+				foreach ( $tones[1] as $tone ) {
+					++$checked;
+					self::assertArrayHasKey( $tone, StatusBadge::INTENTS, 'The tone "' . $tone . '" in ' . $path . ' is not in the vocabulary.' );
+				}
+			}
+		}
+		$source = $this->read( 'RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php' );
+		if ( 1 !== preg_match( '/function historical_status_tone\(.*?\n\t\}\n/s', $source, $method ) ) {
+			self::fail( 'The historical status tone method was not found.' );
+		}
+		preg_match_all( '/=>\s*\'([a-z]+)\'/', $method[0], $tones );
+		foreach ( $tones[1] as $tone ) {
+			++$checked;
+			self::assertArrayHasKey( $tone, StatusBadge::INTENTS, 'The historical status tone "' . $tone . '" is not in the vocabulary.' );
+		}
+		self::assertGreaterThan( 8, $checked );
 	}
 
 	private function read( string $path ): string {

@@ -260,24 +260,122 @@ test('the nested panel header matches the readiness panel header', () => {
 	);
 });
 
+const TOKENS =
+	/--ran-booster-(?:header-inset-inline|panel-header-inset-inline|settings-card-inset|receiver-inset)\b/;
+const HEADER_OR_BODY =
+	/(?:header|[-_]body|entry-row|__actions|\[role="button"\]|> summary)$/;
+
+/* The declared inline values of a padding declaration, each as written. */
+const inlineValues = (property, value) => {
+	const parts = [];
+	let nesting = 0;
+	let current = '';
+	for (const ch of value.trim()) {
+		if (ch === '(') {
+			nesting += 1;
+		}
+		if (ch === ')') {
+			nesting -= 1;
+		}
+		if (/\s/.test(ch) && nesting === 0) {
+			if (current) {
+				parts.push(current);
+			}
+			current = '';
+		} else {
+			current += ch;
+		}
+	}
+	if (current) {
+		parts.push(current);
+	}
+	switch (property) {
+		case 'padding-inline':
+			return parts.slice(0, 2);
+		case 'padding-inline-start':
+		case 'padding-inline-end':
+		case 'padding-left':
+		case 'padding-right':
+			return parts.slice(0, 1);
+		case 'padding':
+			if (parts.length === 1) {
+				return parts;
+			}
+			if (parts.length === 2) {
+				return [parts[1]];
+			}
+			if (parts.length === 3) {
+				return [parts[1]];
+			}
+			return [parts[1], parts[3]];
+		default:
+			return [];
+	}
+};
+
+/* Every header, body, entry row, trigger or summary declaration whose inline padding is not a token and not zero. */
+const bypasses = (css) => {
+	const found = [];
+	for (const r of parse(css)) {
+		if (!branches(r.selector).some((b) => HEADER_OR_BODY.test(b))) {
+			continue;
+		}
+		for (const declaration of r.body.split(';')) {
+			const [property, ...rest] = declaration.split(':');
+			const name = property.trim();
+			const value = rest.join(':').trim();
+			const bad = inlineValues(name, value).filter(
+				(v) => !TOKENS.test(v) && !/^0(?:px)?$/.test(v)
+			);
+			if (bad.length) {
+				found.push(`${r.selector} => ${name}: ${value}`);
+			}
+		}
+	}
+	return found;
+};
+
+test('a header or body inline-padding bypass is detected whatever its spelling', () => {
+	const bypass = [
+		'.a .ran-booster-troubleshooting__disclosure-body { padding-inline: 12px; }',
+		'.a .ran-booster-package-danger-zone__actions { padding-inline: 12px; }',
+		'.a .ran-booster-settings-section__header { padding-left: 12px; }',
+		'.a .ran-booster-settings-section__header { padding-inline-start: 12px; }',
+		'.a .ran-booster-settings-section__body { padding-inline: 1rem; }',
+		'.a .ran-booster-settings-section__body { padding-inline: 12px; margin-inline: var(--ran-booster-header-inset-inline); }',
+		'.a .ran-booster-settings-section__body { padding: 8px var(--ran-booster-space-16) 8px; }',
+		'.a .x > summary { padding: 8px 12px 8px 12px; }',
+	];
+	for (const css of bypass) {
+		assert.equal(bypasses(css).length, 1, css);
+	}
+	for (const ok of [
+		'.a .ran-booster-settings-section__body { padding-inline: var(--ran-booster-header-inset-inline); }',
+		'.a .ran-booster-troubleshooting__entry-row { padding: 16px var(--ran-booster-header-inset-inline); }',
+		'.a .ran-booster-disclosure__body > :first-child { margin-block-start: 0; }',
+		'.a .x > summary { padding-block: 16px; }',
+	]) {
+		assert.deepEqual(bypasses(ok), [], ok);
+	}
+});
+
 test('no stylesheet gives a Card or disclosure header or body its own inline inset', () => {
 	/*
 	 * Documented exceptions, each with its role in the contract: the page frame,
-	 * the compact disclosure baseline (generic body, mounted button and native
-	 * fallback, which prominent rules outrank), and the Provider Card gutters
-	 * (24px, 18px at 782px).
+	 * the modal dialog header, the Documentation chapter summary (compact
+	 * profile) and the compact disclosure baseline (generic body, mounted button
+	 * and native fallback), which prominent rules outrank.
 	 */
 	const exceptions = [
-		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-page-shell__header',
-		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-page-shell__body',
-		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-disclosure > summary',
-		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-disclosure__body',
-		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-page-shell__header, .ran-booster-admin .ran-booster-page-shell__body',
-		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-ui-disclosure__header > [role="button"]',
-		'25-admin-primitives.css :: .ran-booster-admin [data-ran-booster-ui-disclosure]:not( [data-ran-booster-ui-disclosure="documentation"] ) > details[data-ran-booster-ui-disclosure-fallback] > summary',
-		'30-provider-cards.css :: .ran-booster-admin .ran-booster-provider-section__header',
-		'30-provider-cards.css :: .ran-booster-admin .ran-booster-provider-section__body',
-		'80-responsive.css :: .ran-booster-admin .ran-booster-provider-section__header, .ran-booster-admin .ran-booster-provider-section__body',
+		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-page-shell__header => padding-inline: var(--ran-booster-space-24)',
+		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-page-shell__body => padding-inline: var(--ran-booster-space-24)',
+		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-disclosure > summary => padding-inline: var(--ran-booster-space-16)',
+		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-disclosure__body => padding: var(--ran-booster-space-16)',
+		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-page-shell__header, .ran-booster-admin .ran-booster-page-shell__body => padding-inline: var(--ran-booster-space-18)',
+		'25-admin-primitives.css :: .ran-booster-dialog__header => padding-inline-start: var(--ran-booster-space-20)',
+		'25-admin-primitives.css :: .ran-booster-admin .ran-booster-ui-disclosure__header > [role="button"] => padding: 8px 16px',
+		'25-admin-primitives.css :: .ran-booster-admin [data-ran-booster-ui-disclosure]:not( [data-ran-booster-ui-disclosure="documentation"] ) > details[data-ran-booster-ui-disclosure-fallback] > summary => padding: 8px 16px',
+		'ran-booster-documentation.css :: .ran-booster-admin .ran-booster-documentation__section.ran-booster-disclosure > summary => padding-inline-end: calc(3 * var(--ran-booster-space-16))',
 	];
 	const sheets = [
 		...fs
@@ -287,24 +385,9 @@ test('no stylesheet gives a Card or disclosure header or body its own inline ins
 			.readdirSync(root)
 			.filter((f) => f.endsWith('.css') && f !== 'ran-admin-shell.css'),
 	];
-	const found = [];
-	for (const sheet of sheets) {
-		for (const r of parse(read(sheet))) {
-			const target = branches(r.selector).some((b) =>
-				/(__header|__body|\[role="button"\]|> summary)$/.test(b)
-			);
-			const raw =
-				/(?:^|; )padding(?:-inline)?:[^;]*(?:space-\d+|\d+px)/.test(
-					r.body
-				) &&
-				!/header-inset|panel-header|settings-card-inset|trigger-inset/.test(
-					r.body
-				);
-			if (target && raw) {
-				found.push(`${sheet.split('/').pop()} :: ${r.selector}`);
-			}
-		}
-	}
+	const found = sheets.flatMap((sheet) =>
+		bypasses(read(sheet)).map((d) => `${sheet.split('/').pop()} :: ${d}`)
+	);
 	assert.deepEqual(found, exceptions);
 });
 
@@ -345,5 +428,28 @@ test('Installation and Settings headers keep 16px block padding and take only th
 	assert.match(
 		troubleshooting,
 		/\[data-ran-booster-ui-disclosure="settings-card"\][^{]*\{\s*padding-block:\s*16px;/
+	);
+});
+
+test('a sub-heading inside a section uses the shared sub-heading modifier', () => {
+	const title = rules.findIndex(
+		(r) => r.selector === '.ran-booster-admin .ran-booster-section__title'
+	);
+	const sub = rules.findIndex(
+		(r) =>
+			r.selector === '.ran-booster-admin .ran-booster-section__title--sub'
+	);
+	assert.ok(sub > title, 'the modifier must follow the section title rule');
+	assert.match(
+		rules[sub].body,
+		/font-size: var\(--ran-booster-font-size-md\)/
+	);
+	const view = fs.readFileSync(
+		new URL('../../views/packages/source-choices.php', import.meta.url),
+		'utf8'
+	);
+	assert.match(
+		view,
+		/<h4 id="ran-booster-package-source-heading" class="ran-booster-section__title ran-booster-section__title--sub">/
 	);
 });

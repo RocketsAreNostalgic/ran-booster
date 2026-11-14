@@ -577,21 +577,27 @@ headers line up in mixed compositions and no page compensates for another.
   headers carry a strapline or warning row, and they are never composed with
   section Cards. They take the shared inline inset, and their warning row follows
   it.
-- Provider and Repository Cards keep their own gutters: 24px, 18px at 782px and
-  below, in `30-provider-cards.css`. Their header and body share that value, and
-  they are never composed with package section Cards. They are the one documented
-  exception to the shared inset, and `header-rhythm.test.mjs` names them.
+- Provider and Repository Cards take the same inset: provider sections, Card
+  content, repository-page sections and the receiver strip all read
+  `--ran-booster-header-inset-inline`, so every Card on a provider page shares one
+  text edge at every width. There is no separate 782px step.
 - The native `<details>` fallback measures the same as the mounted header,
   including a nested trigger's 13px title.
 - The compact profile keeps its slim padding and 13/500 type: Documentation
   disclosures never take the section padding or a minimum height.
-- Heading levels follow the document outline, not the size: a section title
-  inside a disclosure body, such as Update source, is a section title (15/600),
-  and a panel title such as Branch readiness or Release readiness is a
-  sub-heading (13/600) whichever of `h3` or `h4` the outline needs.
+- A sub-heading inside a section is 13/600 through the shared
+  `.ran-booster-section__title--sub` modifier or the bare `h4`-`h6` rule, in the
+  mounted and the native fallback state alike. Update source (`h4`), Branch
+  readiness (`h4`) and the nested Release track trigger are sub-headings in
+  Advanced settings; Release readiness is a panel title that is an `h3` and takes
+  the same 13/600 from the readiness panel rule. A section title (Repository
+  configuration, Package operation) is 15/600 as an `h2` or `h3`.
 - A page does not set its own header inset or block padding. `tests/assets/header-rhythm.test.mjs`
   asserts the tokens, their one narrow override, the shared rules and that no
-  package or settings rule re-compensates them.
+  stylesheet gives a header, body, entry row, trigger or summary its own inline
+  padding (any property spelling or unit) outside a short named list: the page
+  frame, the modal dialog header, and the compact disclosure and Documentation
+  baselines.
 
 ### Corner radius
 

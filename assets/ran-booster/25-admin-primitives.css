@@ -659,6 +659,12 @@
 	line-height: 1.5;
 }
 
+/* A sub-heading inside a section: the 13/600 sub-heading size, same title box. */
+.ran-booster-admin .ran-booster-section__title--sub {
+	font-size: var(--ran-booster-font-size-md);
+	line-height: var(--ran-booster-line-height-heading);
+}
+
 /*
  * A ruled section heading runs the Settings group divider (same colour,
  * thickness and 8px gap as the group legend) from the end of the text to the

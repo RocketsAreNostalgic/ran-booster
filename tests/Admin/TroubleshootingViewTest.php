@@ -2693,6 +2693,8 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 
 		foreach ( $panels as $html ) {
+			preg_match_all( '/data-ran-booster-provider-task="([a-z-]+)"/', $html, $task_values );
+			self::assertSame( array(), array_diff( $task_values[1], \RAN\Admin\AdminRoutes::PROVIDER_TASKS ) );
 			$document = new \DOMDocument();
 			$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 			$xpath = new \DOMXPath( $document );
@@ -4134,6 +4136,12 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
+		// Every emitted view selector must be a real route.
+		preg_match_all( '/[?&;](?:amp;)?view=([a-z-]+)|name="view" value="([a-z-]+)"/', $html, $emitted, PREG_SET_ORDER );
+		self::assertNotEmpty( $emitted );
+		foreach ( $emitted as $match ) {
+			self::assertContains( '' !== $match[1] ? $match[1] : $match[2], \RAN\Admin\AdminRoutes::PROVIDER_VIEWS );
+		}
 		self::assertStringNotContainsString( 'Back to Bitbucket overview', $html );
 		$this->assert_flat_profile_layout( $html );
 		self::assertStringContainsString( 'id="ran-booster-provider-profile-region"', $html );

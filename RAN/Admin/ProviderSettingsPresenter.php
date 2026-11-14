@@ -1824,7 +1824,7 @@ final readonly class ProviderSettingsPresenter {
 				$sort[ $orderby ] = $provider_url(
 					array_filter(
 						array(
-							'view'     => $view,
+							'view'     => 'secrets' === $view ? 'signing-secrets' : $view,
 							's'        => $state['search'],
 							'kind'     => $state['kind'],
 							'scope'    => $state['scope'],
@@ -1840,7 +1840,7 @@ final readonly class ProviderSettingsPresenter {
 			$page_url        = static fn ( int $page ): string => $provider_url(
 				array_filter(
 					array(
-						'view'     => $view,
+						'view'     => 'secrets' === $view ? 'signing-secrets' : $view,
 						's'        => $state['search'],
 						'kind'     => $state['kind'],
 						'scope'    => $state['scope'],
@@ -1866,7 +1866,7 @@ final readonly class ProviderSettingsPresenter {
 						array(
 							'page'    => 'ran-booster',
 							'tab'     => $provider_code,
-							'view'    => $view,
+							'view'    => 'secrets' === $view ? 'signing-secrets' : $view,
 							's'       => $state['search'],
 							'kind'    => 'credentials' === $view ? $state['kind'] : '',
 							'scope'   => $state['scope'],

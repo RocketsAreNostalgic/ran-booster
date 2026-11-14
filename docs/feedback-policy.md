@@ -113,6 +113,11 @@ skipped row only when the package has no other result.
 The result also carries the updater's closed reason (`check_reason`, for
 example `policy_disabled`) so a caller other than the page can read it.
 
+Use releases, Change release track and Use branch confirm through the same
+flash (`release_enabled`, `release_channel_changed`, `branch_restored`), with
+the sentence taken from `FeedbackFlash::release_operation_success()`, which the
+inline notice also uses. Their failures keep the signed inline result.
+
 Reinstall, update and remove follow the same pattern as saves. Release,
 webhook and extension successes follow it too.
 

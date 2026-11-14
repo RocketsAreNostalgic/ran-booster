@@ -1483,7 +1483,19 @@ msgstr ""
 msgid "The release check could not start. Review this package’s published release settings, then retry."
 msgstr ""
 
+#: RAN/Admin/Feedback/FeedbackFlash.php:135
+msgid "Release tracking enabled."
+msgstr ""
+
 #: RAN/Admin/Feedback/FeedbackFlash.php:136
+msgid "Release track changed. The installed package was not changed and Automatic was reset to Manual."
+msgstr ""
+
+#: RAN/Admin/Feedback/FeedbackFlash.php:137
+msgid "Branch-based package management is restored."
+msgstr ""
+
+#: RAN/Admin/Feedback/FeedbackFlash.php:150
 msgid "Release check complete. No newer eligible release was found."
 msgstr ""
 
@@ -2614,7 +2626,7 @@ msgstr ""
 msgid "Package update orchestration guide"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:780
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:783
 msgid "View all conflicting packages"
 msgstr ""
 
@@ -2980,30 +2992,18 @@ msgstr ""
 msgid "The published release was installed and is now managed by Booster. WordPress activation was not changed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:956
-msgid "Release tracking enabled."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:957
-msgid "Release track changed. The installed package was not changed and Automatic was reset to Manual."
-msgstr ""
-
 #. translators: 1: package type, 2: release track.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:960
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:961
 #, php-format
 msgid "This %1$s is already using the %2$s release track. No settings were changed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:961
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:962
 msgid "theme"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:961
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:962
 msgid "plugin"
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:975
-msgid "Branch-based package management is restored."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:976

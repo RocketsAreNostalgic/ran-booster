@@ -480,7 +480,7 @@ final class ManagedReleaseTargetRegistrar {
 		$this->activity->complete( $id, $event['status'], $event['reason'], facts: $facts, effect: 'succeeded' === $event['status'] ? 'established' : 'none' );
 	}
 
-	/** A user-started check always records its row; only background skips are thinned. */
+	/** A user-started check always records its row; only background skips are thinned. The mark lasts the request on purpose: one manual refresh can emit more than one check. */
 	public function mark_manual_check( string $type, string $identifier ): void {
 		$this->manual_checks[ self::key( $type, $identifier ) ] = true;
 	}

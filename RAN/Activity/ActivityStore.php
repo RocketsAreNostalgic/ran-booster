@@ -253,7 +253,7 @@ final class ActivityStore {
 
 	/**
 	 * Drops this still-unfinished row when the context's newest earlier row is the same skip inside the heartbeat window.
-	 * An unreadable history counts as a repeat, so a background skip is never recorded blind.
+	 * An unreadable history counts as a repeat, so the row is dropped when the delete still works (best effort).
 	 */
 	public function discard_repeated_skip( int $id, string $reason ): bool {
 		$rows = $this->rows( $this->prepare( "SELECT status,reason,started_at FROM {$this->table} WHERE context_key = (SELECT context_key FROM {$this->table} AS own WHERE own.id = %d) AND id < %d ORDER BY id DESC LIMIT 1", $id, $id ) );

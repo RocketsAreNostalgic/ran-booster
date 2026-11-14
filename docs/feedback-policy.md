@@ -103,8 +103,8 @@ skipped one. A background or native refresh that is skipped by policy
 (`policy_disabled` or `policy_forced_off`) records a row only when the package's
 newest Activity row is not the same skip, or that same skip is older than
 `ActivityStore::SKIPPED_HEARTBEAT` (24 hours), so an unchanged policy adds at
-most one row a day. A background skip whose history cannot be read is not
-recorded. A manual click inside the one-minute cooldown (`refresh_recent`) ran no
+most one row a day. A background skip whose history cannot be read is
+dropped on a best-effort basis. A manual click inside the one-minute cooldown (`refresh_recent`) ran no
 check and records nothing. Activity rows are never updated or collapsed, and
 `discovery_not_admitted` skips record as before. "Last recorded check" in
 Release details shows the newest result that is not a skipped row, and shows a

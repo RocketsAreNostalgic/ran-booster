@@ -1232,14 +1232,19 @@ class Booster {
 	}
 
 	/**
-	 * Load the dismissal asset only beside a visible source-checkout notice.
+	 * Load the dismissal asset beside a visible source-checkout notice, and on
+	 * General Settings of a source checkout, where a save can reveal the notice.
 	 *
-	 * @param mixed $hook Unused screen identifier supplied by WordPress.
+	 * @param mixed $hook Admin screen identifier supplied by WordPress.
 	 */
 	public function load_core_development_notice_script( $hook ): void {
-		unset( $hook );
-
-		if ( ! $this->service( \RAN\Admin\CoreSelfUpdateDevelopmentNotice::class )->should_show() ) {
+		// General Settings can introduce the notice out of band when the Core
+		// updates preference is switched on, so a source checkout loads the
+		// support there whatever the current preference.
+		$may_appear = 'ran-booster_page_ran-booster-settings' === $hook
+			&& current_user_can( 'manage_options' )
+			&& \RAN\WordPress\CoreSelfUpdatePolicy::has_source_tree_indicator( rtrim( $this->booster_path ?? '', '/' ) );
+		if ( ! $may_appear && ! $this->service( \RAN\Admin\CoreSelfUpdateDevelopmentNotice::class )->should_show() ) {
 			return;
 		}
 

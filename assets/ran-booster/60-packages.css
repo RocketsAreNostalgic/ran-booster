@@ -232,10 +232,21 @@
 	min-inline-size: 0;
 }
 
+/*
+ * The Badge is an inline box, where a vertical margin never applies. Make the
+ * summary status Badge its own block so the gap below it is real. A hidden
+ * placeholder stays hidden.
+ */
+
 .ran-booster-admin
 	.ran-booster-package-row__summary
-	> [data-ran-booster-badge] {
+	> [data-ran-booster-badge]:not([hidden]) {
+	display: block;
+	box-sizing: border-box;
+	inline-size: fit-content;
+	max-inline-size: 100%;
 	margin-block-end: var(--ran-booster-space-7);
+	overflow-wrap: anywhere;
 }
 
 .ran-booster-admin .ran-booster-package-row__management {

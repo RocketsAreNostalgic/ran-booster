@@ -483,6 +483,10 @@ pill is static markup from `RAN\Admin\Component\StatusBadge` (`print_tone()`,
   before text, tinted pill spans and middot status suffixes in headings are
   retired; the provider status summaries, package row states and the active
   update source tab use the Badge.
+- A Badge is an inline box, so a vertical margin on it never applies. A Badge
+  that needs space above or below it is made block-level (`display: block` with
+  `inline-size: fit-content`), as the Packages list summary Badge is, with the
+  gap taken from a `--ran-booster-space-*` token.
 - Booster CSS may lay a Badge out (margin, width, wrapping, alignment) but does
   not repaint it. The owner-selected General settings spacing and accent are
   set through the `--wpds-*` properties the Badge reads.

@@ -7,7 +7,10 @@ surfaces.
 Core also retains a separate, bounded public add-on tab API for a plugin whose
 workflow genuinely requires its own dashboard surface. The hooks documented
 below replace the former Documentation and Package Extension registries; they
-do not replace or deprecate dashboard-tab registration.
+do not replace or deprecate dashboard-tab registration. An add-on owns its tab
+key; a request for a `tab` that is not a built-in tab or a currently registered
+add-on key (including the key of a deactivated add-on) renders Core's
+"Page not found." notice instead of Overview.
 
 The hooks belong to concrete Core surfaces. Core owns their routes,
 capabilities, base projections, tables, wrappers, validation, escaping and

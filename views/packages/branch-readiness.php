@@ -63,14 +63,15 @@ $identity_ready                  = $saved_identity_ready || ( null !== $reposito
 		array( 'repository_locator_invalid', 'repository_identity_unavailable', 'repository_identity_conflict' ),
 		$repository_reasons
 	) );
-$repository_detail_available     = '' !== $repository_id && $identity_ready;
-$secret_coverage                 = (string) ( $repository_readiness['local_secret_coverage'] ?? 'unknown' );
-$secret_ready                    = in_array( $secret_coverage, array( 'repository', 'shared' ), true );
-$published_release_source        = true === ( $release_managed ?? false )
+// An unregistered provider has no admin tab to link to.
+$repository_detail_available = '' !== $repository_id && $identity_ready && empty( $provider_unavailable );
+$secret_coverage             = (string) ( $repository_readiness['local_secret_coverage'] ?? 'unknown' );
+$secret_ready                = in_array( $secret_coverage, array( 'repository', 'shared' ), true );
+$published_release_source    = true === ( $release_managed ?? false )
 	|| 'release_asset' === ( $package_current_source ?? null )
 	|| 'release_asset' === ( $package_source_view ?? null );
-$retained_readiness              = true === ( $package_branch_readiness['retained'] ?? false );
-$secret_label                    = match ( $secret_coverage ) {
+$retained_readiness          = true === ( $package_branch_readiness['retained'] ?? false );
+$secret_label                = match ( $secret_coverage ) {
 	'repository' => __( 'A repository-specific signing secret is saved.', 'ran-booster' ),
 	'shared' => __( 'A shared owner signing secret covers this repository.', 'ran-booster' ),
 	'none' => __( 'No matching local signing secret is saved.', 'ran-booster' ),

@@ -7,6 +7,8 @@ use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminRoutes;
 use RAN\Admin\AdminTab;
 use RAN\Admin\AdminTabRegistry;
+use RAN\Admin\GitHubVisibility;
+use RAN\Admin\ProviderTabLinks;
 use RAN\Admin\BulkPackageResult;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\DevelopmentEnvironmentDetector;
@@ -77,6 +79,8 @@ class Dashboard {
 	private ?array $support_report_payload = null;
 
 	private ?AdminTabRegistry $admin_tabs;
+
+	private ?ProviderTabLinks $tab_links = null;
 	private ?AdminAddOnRegistry $admin_add_ons;
 	private ?RepositoryWebhookManagementControls $webhook_management;
 	private ?ReleaseWorkflowControls $release_workflow;
@@ -161,7 +165,8 @@ class Dashboard {
 			attempts: $deployment_attempts,
 			plugins: $plugins,
 			themes: $themes,
-			activity_store: $activity
+			activity_store: $activity,
+			links: $this->tab_links()
 		);
 
 		$this->package_admin = new PackageAdminController( $package_operations, deployments: $this->deployment_admin, removals: $this->removals );
@@ -191,15 +196,21 @@ class Dashboard {
 		}
 
 		$requested_tab = null;
+		$tab_present   = false;
 
 		if ( null !== $forced_tab && '' !== $forced_tab ) {
 
 			$requested_tab = $forced_tab;
+			$tab_present   = true;
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		} elseif ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
+		} elseif ( isset( $_GET['tab'] ) ) {
 			// Read-only navigation state; no action is performed from this query value.
+			$tab_present = true;
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-			$requested_tab = wp_unslash( $_GET['tab'] );
+			if ( is_string( $_GET['tab'] ) ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+				$requested_tab = wp_unslash( $_GET['tab'] );
+			}
 		}
 
 		$requested_add_on_key = is_string( $requested_tab ) ? strtolower( trim( $requested_tab ) ) : '';
@@ -208,16 +219,18 @@ class Dashboard {
 			: $this->admin_add_ons->get( $requested_add_on_key );
 		$selected_tab         = null;
 		if ( null === $selected_add_on ) {
-			$selected_tab = $this->admin_tabs->resolve( $requested_tab );
-			$selected_key = $selected_tab->get_key();
-		} else {
-			$selected_key = $selected_add_on->key();
+			// No tab selects Overview. A present tab must name an available tab, or the not-found result is rendered.
+			$selected_tab = $tab_present ? $this->admin_tabs->find( $requested_add_on_key ) : $this->admin_tabs->resolve( null );
+			if ( null !== $selected_tab && $selected_tab->get_key() === $this->hidden_provider_tab_key() ) {
+				$selected_tab = null;
+			}
 		}
-		$tabs      = $this->tab_navigation( $selected_key );
-		$admin_url = is_multisite()
+		$selected_key = $selected_add_on?->key() ?? $selected_tab?->get_key() ?? '';
+		$tabs         = $this->tab_navigation( $selected_key );
+		$admin_url    = is_multisite()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
-		$data      = array(
+		$data         = array(
 			'tab'  => $selected_key,
 			'tabs' => $tabs,
 		);
@@ -263,8 +276,8 @@ class Dashboard {
 				? 'support-report'
 				: ( null !== $this->troubleshooting_payload ? 'diagnostics' : $this->requested_route_slug( 'panel', AdminRoutes::TROUBLESHOOTING_PANELS, 'installation' ) );
 		}
-		if ( null !== $selected_tab && ( ( $selected_tab->is_provider() && ( null === $provider_view || null === $provider_task || null === $repository_view ) ) || ( 'troubleshooting' === $selected_tab->get_key() && null === $panel ) ) ) {
-			// Closed result: an unknown panel or view never renders another panel.
+		if ( ( null === $selected_add_on && null === $selected_tab ) || ( null !== $selected_tab && ( ( $selected_tab->is_provider() && ( null === $provider_view || null === $provider_task || null === $repository_view ) ) || ( 'troubleshooting' === $selected_tab->get_key() && null === $panel ) ) ) ) {
+			// Closed result: an unknown tab, panel or view never renders another page.
 			unset( $data['tab_view'] );
 			$data['route_not_found']     = true;
 			$data['route_not_found_url'] = $admin_url . '?page=ran-booster&tab=overview';
@@ -339,7 +352,8 @@ class Dashboard {
 				if ( 'GET' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) {
 					$this->storage_status( false );
 				}
-				$data['troubleshooting'] = $this->troubleshooting->installation_payload( $this->provider_settings->github_selection_diagnostics(), $this->storage_installation_projection() );
+				$data['troubleshooting']            = $this->troubleshooting->installation_payload( $this->provider_settings->github_selection_diagnostics(), $this->storage_installation_projection() );
+				$data['selection_provider_tab_url'] = $this->scoped_provider_tab_url( 'gh' );
 			} elseif ( 'support-report' === $panel ) {
 				$data['troubleshooting'] = array(
 					'report'           => $this->support_report_payload['text'] ?? '',
@@ -505,12 +519,13 @@ class Dashboard {
 		return (string) ob_get_clean();
 	}
 
-	/** @return array{troubleshooting:array<string,mixed>,github_selection_diagnostics:array<string,mixed>|null} */
+	/** @return array{troubleshooting:array<string,mixed>,github_selection_diagnostics:array<string,mixed>|null,selection_provider_tab_url:string} */
 	private function troubleshooting_view_data(): array {
 		$selection = $this->provider_settings->github_selection_diagnostics();
 		return array(
 			'troubleshooting'              => $this->troubleshooting->with_installation_context( $this->troubleshooting_payload ?? $this->troubleshooting->form_payload(), $selection ),
 			'github_selection_diagnostics' => $selection,
+			'selection_provider_tab_url'   => $this->scoped_provider_tab_url( 'gh' ),
 		);
 	}
 
@@ -1485,6 +1500,30 @@ class Dashboard {
 		);
 	}
 
+	/** Return target after a provider management action; a hidden provider tab sends the user to Overview instead of not-found. */
+	public function provider_tab_url( string $provider_code ): string {
+		return $this->tab_links()->url( admin_url( 'admin.php' ), $provider_code );
+	}
+
+	private function scoped_provider_tab_url( string $provider_code ): string {
+		return $this->tab_links()->url( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ), $provider_code );
+	}
+
+	private function tab_links(): ProviderTabLinks {
+		return $this->tab_links ??= new ProviderTabLinks(
+			fn (): AdminTabRegistry => $this->admin_tabs ?? throw new LogicException( 'Booster admin tabs are not configured.' ),
+			fn (): ?GitHubVisibility => $this->github_visibility
+		);
+	}
+
+	private function hidden_provider_tab_key(): ?string {
+		try {
+			return $this->github_visibility?->hidden_navigation_key();
+		} catch ( Throwable ) {
+			return null;
+		}
+	}
+
 	/**
 	 * @return list<array{key: string, label: string, url: string, active: bool, provider: bool}>
 	 */
@@ -1498,12 +1537,7 @@ class Dashboard {
 			: admin_url( 'admin.php' );
 		$tabs      = array();
 
-		$hidden_provider_key = null;
-		try {
-			$hidden_provider_key = $this->github_visibility?->hidden_navigation_key();
-		} catch ( Throwable ) {
-			$hidden_provider_key = null;
-		}
+		$hidden_provider_key = $this->hidden_provider_tab_key();
 		foreach ( $this->admin_tabs->all() as $tab ) {
 			if ( null !== $hidden_provider_key && $hidden_provider_key === $tab->get_key() ) {
 				continue;

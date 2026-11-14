@@ -40,7 +40,8 @@ final readonly class PortabilityController {
 		private ManagedPackageBlueprintExporter $exporter,
 		private BlueprintArchive $archive,
 		private PortabilityApplicationService $application,
-		private ProviderSettingsPresenter $provider_settings
+		private ProviderSettingsPresenter $provider_settings,
+		private ?ProviderTabLinks $links = null
 	) {
 	}
 
@@ -650,7 +651,7 @@ final readonly class PortabilityController {
 			$row['credential'] = array(
 				'choices'      => $this->credential_choices( $item->package->provider, $provider_list ),
 				'selected_id'  => $selected_credential_id,
-				'settings_url' => admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $item->package->provider ) . '&view=credentials' ),
+				'settings_url' => ProviderTabLinks::link( $this->links, admin_url( 'admin.php' ), $item->package->provider, '&view=credentials' ),
 			);
 		}
 
@@ -779,7 +780,7 @@ final readonly class PortabilityController {
 				'action'            => $decision['action']->value ?? null,
 				'target_id'         => $decision['target_id'] ?? null,
 				'target_choices'    => array_values( array_filter( $provider['credential_profiles'] ?? array(), static fn ( array $candidate ): bool => 'file' === ( $candidate['source'] ?? null ) ) ),
-				'settings_url'      => admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $credential->provider ) . '&view=credentials' ),
+				'settings_url'      => ProviderTabLinks::link( $this->links, admin_url( 'admin.php' ), $credential->provider, '&view=credentials' ),
 			);
 		}
 

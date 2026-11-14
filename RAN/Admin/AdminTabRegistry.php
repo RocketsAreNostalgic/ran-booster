@@ -41,14 +41,14 @@ final class AdminTabRegistry {
 		return array_values( $this->tabs );
 	}
 
+	/** The registered tab for an exact (case- and space-insensitive) key, or null. */
+	public function find( string $requested_key ): ?AdminTab {
+		return $this->tabs[ strtolower( trim( $requested_key ) ) ] ?? null;
+	}
+
+	/** The default tab for a request that names none; an unknown key never maps to it. */
 	public function resolve( mixed $requested_key ): AdminTab {
-		if ( ! is_string( $requested_key ) ) {
-			return $this->tabs[ $this->default_key ];
-		}
-
-		$requested_key = strtolower( trim( $requested_key ) );
-
-		return $this->tabs[ $requested_key ] ?? $this->tabs[ $this->default_key ];
+		return ( is_string( $requested_key ) ? $this->find( $requested_key ) : null ) ?? $this->tabs[ $this->default_key ];
 	}
 
 	private function add( AdminTab $tab ): void {

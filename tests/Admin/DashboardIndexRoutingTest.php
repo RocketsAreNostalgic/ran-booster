@@ -1964,6 +1964,75 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
+	/**
+	 * Every internal tab=gh emitter (native-update warning, recover and adopt
+	 * forms, redirects) exists only while the GitHub selection is not in the
+	 * plain available state, which is exactly when GitHubVisibility refuses to
+	 * hide the GitHub tab.
+	 */
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_github_recovery_state_is_never_hidden_so_its_links_resolve(): void {
+		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', true );
+		require_once __DIR__ . '/GitHubVisibilityConnection.php';
+		$providers = $this->providers( true );
+		$selection = $this->queued_selection( new AttemptRepositoryDatabase(), $providers );
+		$make      = static fn (): \RAN\Admin\GitHubVisibility => new \RAN\Admin\GitHubVisibility( new \RAN\Settings\GeneralPreferenceStore(), $providers, $selection, new GitHubVisibilityConnection() );
+
+		self::assertSame( 'gh', $make()->hidden_navigation_key(), 'Control: an available selection is hidden.' );
+
+		$selection->begin_native_mutation( 'plugin', 'target/main.php', static fn (): bool => true );
+		self::assertSame( 'recovery_required', $selection->status()['state'] );
+		$visibility = $make();
+		self::assertNull( $visibility->hidden_navigation_key() );
+		self::assertSame( 'github_selection_unknown', $visibility->projection()['reason'] );
+
+		$_GET['tab'] = 'gh';
+		$data        = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
+		self::assertArrayNotHasKey( 'route_not_found', $data );
+		self::assertSame( 'provider.php', $data['tab_view'] );
+		self::assertContains( 'gh', array_column( $data['tabs'], 'key' ) );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_github_adoption_state_is_never_hidden_so_its_form_resolves(): void {
+		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', true );
+		require_once __DIR__ . '/GitHubVisibilityConnection.php';
+		$bundled   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' ), '/unused/plugins', $bundled );
+		$providers = new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) );
+		$providers->seal();
+		self::assertFalse( $selection->status()['available'] );
+		$visibility = new \RAN\Admin\GitHubVisibility( new \RAN\Settings\GeneralPreferenceStore(), $providers, $selection, new GitHubVisibilityConnection() );
+		self::assertNull( $visibility->hidden_navigation_key() );
+
+		$directory = sys_get_temp_dir() . '/adoption-visible-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable private sidecar fixture.
+		mkdir( $directory, 0700 );
+		$_GET['tab'] = 'gh';
+		$data        = $this->dashboard( new SecretsFile( $directory . '/secrets', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
+		self::assertArrayNotHasKey( 'route_not_found', $data );
+		self::assertSame( 'provider.php', $data['tab_view'] );
+		self::assertContains( 'gh', array_column( $data['tabs'], 'key' ) );
+		if ( is_file( $directory . '/secrets.lock' ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture lock.
+			unlink( $directory . '/secrets.lock' );
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable private sidecar fixture.
+		rmdir( $directory );
+	}
+
 	public function test_a_registered_add_on_tab_and_every_built_in_tab_still_resolve(): void {
 		$registry = new AdminAddOnRegistry( array(), 7, 7 );
 		$registry->register( new AdminAddOnTab( 'ran-booster-fixture', 'fixture', 'Fixture', static function (): void {}, 7, 7, 7, 7 ) );

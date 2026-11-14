@@ -120,6 +120,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( '<code>temporarily-offline</code>', $html );
 		self::assertStringContainsString( '<code>owner/exact-repository</code>', $html );
 		self::assertStringContainsString( '<code>stable-provider-id</code>', $html );
+		self::assertStringNotContainsString( 'tab=temporarily-offline', $html, 'No control may link to the not-found tab of an unregistered provider.' );
 		self::assertStringContainsString( '<fieldset  disabled="disabled"', $html );
 		self::assertStringContainsString( 'temporarily-offline — Git provider unavailable', $html );
 		self::assertStringNotContainsString( 'href="https://github.com/owner/exact-repository"', $html );
@@ -149,6 +150,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, '<strong>Git provider unavailable.</strong>' ) );
 		self::assertStringContainsString( 'The selected replacement GitHub provider could not load. This package remains linked but cannot be edited or deployed until it does.', $html );
 		self::assertStringNotContainsString( 'until its Git provider is registered again', $html );
+		self::assertStringNotContainsString( 'tab=temporarily-offline', $html );
 	}
 
 	public function test_unavailable_provider_notice_escapes_repository_identity(): void {

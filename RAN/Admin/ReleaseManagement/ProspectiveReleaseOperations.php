@@ -277,6 +277,7 @@ final class ProspectiveReleaseOperations {
 			'unsupported_provider',
 			'no_releases',
 			'release_invalid',
+			'release_changed',
 			'unable_to_check',
 			'install_failed',
 			'package_already_exists',

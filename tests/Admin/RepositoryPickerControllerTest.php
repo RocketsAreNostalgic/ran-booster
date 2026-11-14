@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
+require_once __DIR__ . '/../Support/ProviderFailureWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\RepositoryPickerController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
 use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderFailure;
+use RAN\RepositoryProvider\ProviderRequestFailed;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\PublicRepositoryBrowseMetadata;
@@ -25,12 +28,15 @@ use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class RepositoryPickerControllerTest extends TestCase {
 
+	use \RAN\Tests\Support\CapturesBoosterLog;
+
 	private InMemoryPublicRepositoryLookupProfileStore $public_lookup_profiles;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
 
+		$this->start_log_capture();
 		$_POST                        = array();
 		$this->public_lookup_profiles = new InMemoryPublicRepositoryLookupProfileStore();
 		$GLOBALS['ran_booster_repository_admin_translations'] = array();
@@ -40,6 +46,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 	protected function tearDown(): void {
 		$_POST = array();
 		unset( $GLOBALS['ran_booster_repository_admin_translations'] );
+		$this->stop_log_capture();
 
 		parent::tearDown();
 	}
@@ -431,6 +438,86 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'upstream-response-canary', $result['data']['message'] );
 		self::assertStringNotContainsString( 'header-canary', $result['data']['message'] );
 		self::assertStringNotContainsString( 'token-canary', $result['data']['message'] );
+	}
+
+	/** @return array<string, array{ProviderFailure, int, string}> */
+	public static function carried_failure_provider(): array {
+		return array(
+			'rate limit with a retry time' => array( new ProviderFailure( 'rate_limited', retry_after: 120 ), 429, 'The Git provider rate limit has been reached. Try again in about 2 minutes.' ),
+			'expired credential'           => array( new ProviderFailure( 'credential_expired' ), 401, 'The credential has expired.' ),
+			'under-scoped credential'      => array( new ProviderFailure( 'permission_denied', 403 ), 403, 'The credential lacks permission for this request.' ),
+			'dns failure'                  => array( new ProviderFailure( 'dns_failed' ), 504, 'This site could not look up the Git provider host.' ),
+			'blocked by the site'          => array( new ProviderFailure( 'blocked_by_site' ), 504, 'This site blocks outbound requests to the Git provider.' ),
+			'store failure'                => array( new ProviderFailure( 'credential_store_unavailable' ), 503, 'Booster could not read the saved credential.' ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'carried_failure_provider' )]
+	public function test_a_carried_provider_failure_is_worded_by_core_and_never_echoes_provider_text( ProviderFailure $failure, int $status, string $message ): void {
+		$provider = new class( $failure ) implements RepositoryProvider, RepositoryBrowser {
+
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+			public function __construct( private ProviderFailure $failure ) {
+			}
+
+			public function get_metadata(): ProviderMetadata {
+				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
+			}
+
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of browse_repositories retains the production method contract.
+			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
+				throw new ProviderRequestFailed( $this->failure );
+			}
+		};
+		$_POST    = array(
+			'provider'      => 'gh',
+			'mode'          => 'accessible',
+			'credential_id' => 'fixture-profile',
+		);
+
+		$result = $this->controller( $provider )->handle();
+
+		self::assertFalse( $result['success'] );
+		self::assertSame( $status, $result['status'] );
+		self::assertSame( $message, $result['data']['message'] );
+		$lines = $this->captured_log_lines();
+		self::assertCount( 1, $lines );
+		self::assertStringContainsString( '"reason":"' . $failure->reason . '"', $lines[0] );
+		self::assertStringContainsString( '"operation":"repository_browse","provider":"gh"', $lines[0] );
+		self::assertStringContainsString( '"exception_class":"RAN\\\\RepositoryProvider\\\\ProviderRequestFailed"', $lines[0] );
+	}
+
+	public function test_an_old_provider_exception_keeps_the_status_copy_and_a_message_with_secrets_is_never_shown(): void {
+		$provider = new class() implements RepositoryProvider, RepositoryBrowser {
+
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+			public function get_metadata(): ProviderMetadata {
+				return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
+			}
+
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of browse_repositories retains the production method contract.
+			public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
+				throw new RuntimeException( 'sentinel-provider-message ghp_abcdefghijklmnop1234', 404 );
+			}
+		};
+		$_POST    = array(
+			'provider'      => 'gh',
+			'mode'          => 'accessible',
+			'credential_id' => 'fixture-profile',
+		);
+
+		$result = $this->controller( $provider )->handle();
+
+		self::assertSame( 404, $result['status'] );
+		self::assertSame( 'The requested repository owner could not be found.', $result['data']['message'] );
+		self::assertStringNotContainsString( 'sentinel-provider-message', implode( ' ', array_map( 'strval', $result['data'] ) ) );
+		$lines = $this->captured_log_lines();
+		self::assertCount( 1, $lines );
+		self::assertStringContainsString( '"reason":"repository_not_found_or_no_access","http_status":404', $lines[0] );
+		self::assertStringNotContainsString( 'sentinel-provider-message', $lines[0] );
+		self::assertStringNotContainsString( 'ghp_', $lines[0] );
 	}
 
 	public function test_partial_results_use_only_the_controllers_fixed_safe_message(): void {

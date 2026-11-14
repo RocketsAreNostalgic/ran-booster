@@ -9,6 +9,7 @@ require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.ph
 require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/ProviderFailureWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
@@ -20,6 +21,7 @@ use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 use RAN\Dashboard;
 use RAN\Dispatcher;
 use RAN\RepositoryProvider\CredentialValidationResult;
+use RAN\RepositoryProvider\ProviderFailure;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
@@ -28,10 +30,13 @@ use RAN\Storage\CredentialUsageReader;
 use RAN\WordPress\WordPressUpdaterLock;
 
 final class CredentialValidationHtmxDispatcherTest extends TestCase {
+	use \RAN\Tests\Support\CapturesBoosterLog;
+
 	private HtmxCredentialValidationTestController $controller;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		$this->start_log_capture();
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$GLOBALS['ran_booster_test_capability_checks']        = array();
@@ -44,6 +49,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
+		$this->stop_log_capture();
 		$_POST = array();
 		unset(
 			$_SERVER['REQUEST_METHOD'],
@@ -144,6 +150,51 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			self::assertSame( 'The repository provider rate-limited credential validation. Try again later.', $response->error );
 			self::assertSame( 422, $response->status );
 		}
+	}
+
+	/** @return array<string, array{CredentialValidationResult, string, string}> */
+	public static function carried_failure_provider(): array {
+		return array(
+			'expired'     => array( CredentialValidationResult::invalid( new ProviderFailure( 'credential_expired', credential_expires_at: '2026-01-31T00:00:00Z' ) ), 'The credential expired on 2026-01-31.', 'credential_expired' ),
+			'under scope' => array( CredentialValidationResult::invalid( new ProviderFailure( 'permission_denied', 403 ) ), 'The credential lacks permission for this request.', 'permission_denied' ),
+			'store'       => array( CredentialValidationResult::unavailable( new ProviderFailure( 'credential_store_unavailable' ) ), 'Booster could not read the saved credential.', 'credential_store_unavailable' ),
+			'rate limit'  => array( CredentialValidationResult::rate_limited( new ProviderFailure( 'rate_limited', 429, 180 ) ), 'The Git provider rate limit has been reached. Try again in about 3 minutes.', 'rate_limited' ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'carried_failure_provider' )]
+	public function test_a_carried_failure_gives_the_specific_core_copy_and_is_logged_by_reason( CredentialValidationResult $result, string $message, string $reason ): void {
+		$dashboard                  = $this->createMock( Dashboard::class );
+		$dispatcher                 = $this->dispatcher( $dashboard, $result );
+		$_SERVER['HTTP_HX_REQUEST'] = 'TRUE';
+		$_POST['ran_booster']       = $this->request();
+
+		try {
+			$dispatcher->dispatch_post_requests();
+			self::fail( 'An HTMX validation failure must return the local error fragment.' );
+		} catch ( HtmxCredentialValidationResponse $response ) {
+			self::assertSame( $message, $response->error );
+			self::assertSame( 422, $response->status );
+		}
+		$lines = $this->captured_log_lines();
+		self::assertCount( 1, $lines );
+		self::assertStringContainsString( '"reason":"' . $reason . '"', $lines[0] );
+		self::assertStringContainsString( '"operation":"credential_validation"', $lines[0] );
+	}
+
+	public function test_a_failure_without_a_carrier_logs_nothing_and_keeps_the_fixed_sentence(): void {
+		$dashboard                  = $this->createMock( Dashboard::class );
+		$dispatcher                 = $this->dispatcher( $dashboard, CredentialValidationResult::invalid() );
+		$_SERVER['HTTP_HX_REQUEST'] = 'TRUE';
+		$_POST['ran_booster']       = $this->request();
+
+		try {
+			$dispatcher->dispatch_post_requests();
+			self::fail( 'An HTMX validation failure must return the local error fragment.' );
+		} catch ( HtmxCredentialValidationResponse $response ) {
+			self::assertSame( 'The repository provider rejected this credential.', $response->error );
+		}
+		self::assertSame( array(), $this->captured_log_lines() );
 	}
 
 	public function test_htmx_unexpected_failure_returns_a_bounded_local_error(): void {

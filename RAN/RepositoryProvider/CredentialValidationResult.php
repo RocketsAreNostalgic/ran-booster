@@ -24,7 +24,8 @@ final readonly class CredentialValidationResult {
 
 	private function __construct(
 		public string $reason,
-		public ?CredentialExpiryReport $expiry = null
+		public ?CredentialExpiryReport $expiry = null,
+		public ?ProviderFailure $failure = null
 	) {
 		if ( self::VALID !== $reason ) {
 			if ( null !== $expiry ) {
@@ -38,26 +39,26 @@ final readonly class CredentialValidationResult {
 		return new self( self::VALID, $expiry );
 	}
 
-	public static function invalid(): self {
-		return self::failure( self::INVALID );
+	public static function invalid( ?ProviderFailure $failure = null ): self {
+		return self::failure( self::INVALID, $failure );
 	}
 
-	public static function unavailable(): self {
-		return self::failure( self::UNAVAILABLE );
-	}
-
-
-	public static function rate_limited(): self {
-		return self::failure( self::RATE_LIMITED );
+	public static function unavailable( ?ProviderFailure $failure = null ): self {
+		return self::failure( self::UNAVAILABLE, $failure );
 	}
 
 
-	public static function invalid_response(): self {
-		return self::failure( self::INVALID_RESPONSE );
+	public static function rate_limited( ?ProviderFailure $failure = null ): self {
+		return self::failure( self::RATE_LIMITED, $failure );
 	}
 
-	private static function failure( string $reason ): self {
-		return new self( $reason );
+
+	public static function invalid_response( ?ProviderFailure $failure = null ): self {
+		return self::failure( self::INVALID_RESPONSE, $failure );
+	}
+
+	private static function failure( string $reason, ?ProviderFailure $failure ): self {
+		return new self( $reason, null, ProviderFailure::within( $failure, ProviderFailure::CREDENTIAL_CHECK_REASONS ) );
 	}
 
 
@@ -67,8 +68,13 @@ final readonly class CredentialValidationResult {
 
 
 	public function get_display_message(): ?string {
-		return self::VALID === $this->reason
-			? null
+		if ( self::VALID === $this->reason ) {
+			return null;
+		}
+		$reasoned = $this->failure?->message();
+
+		return null !== $reasoned && strlen( $reasoned ) <= self::MAX_DISPLAY_MESSAGE_BYTES
+			? $reasoned
 			: self::bounded_failure_message( $this->reason );
 	}
 

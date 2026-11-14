@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Deployment;
 
 use InvalidArgumentException;
+use RAN\RepositoryProvider\ProviderFailure;
 use RAN\RepositoryProvider\StaleDeployment;
 use Throwable;
 
@@ -176,18 +177,8 @@ final readonly class DeploymentOutcome {
 			return self::from_code( self::CODE_STALE_EVENT );
 		}
 
-		$code = match ( (int) $failure->getCode() ) {
-			400, 422      => self::CODE_PROVIDER_REQUEST_INVALID,
-			401           => self::CODE_PROVIDER_CREDENTIAL_REJECTED,
-			403           => self::CODE_PROVIDER_ACCESS_DENIED,
-			404           => self::CODE_PROVIDER_REPOSITORY_MISSING,
-			410           => self::CODE_PROVIDER_REFERENCE_UNAVAILABLE,
-			429           => self::CODE_PROVIDER_RATE_LIMITED,
-			502, 503, 504 => self::CODE_PROVIDER_UNAVAILABLE,
-			default       => self::CODE_PROVIDER_FAILED,
-		};
-
-		return self::from_code( $code );
+		// A provider's reason wins; otherwise the reason Core derives from the legacy integer code.
+		return self::from_code( ProviderFailure::from_throwable( $failure )?->deployment_outcome_code() ?? self::CODE_PROVIDER_FAILED );
 	}
 
 	public function get_code(): string {

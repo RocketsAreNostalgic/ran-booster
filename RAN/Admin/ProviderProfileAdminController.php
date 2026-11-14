@@ -157,6 +157,16 @@ class ProviderProfileAdminController {
 			$activity_id = $this->begin_credential_activity( $provider, $id );
 			$result      = $validator->validate_credential( $id );
 			$this->complete_credential_activity( $activity_id, $result );
+			if ( null !== $result->failure ) {
+				BoosterLogger::log_failure(
+					'credential validation failed',
+					$result->failure,
+					array(
+						'operation' => 'credential_validation',
+						'provider'  => $provider->value,
+					)
+				);
+			}
 			if ( $result->is_valid() ) {
 				if ( null !== $result->expiry ) {
 

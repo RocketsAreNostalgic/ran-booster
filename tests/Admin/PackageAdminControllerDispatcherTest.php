@@ -7,6 +7,7 @@ namespace RAN\Tests\Admin;
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/ProviderFailureWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
@@ -630,6 +631,49 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertFalse( $result );
 	}
 
+	public function test_a_carried_provider_failure_is_worded_by_core_when_a_changed_repository_is_blocked(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( 0, new \RAN\RepositoryProvider\ProviderFailure( 'repository_identity_changed' ) ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'add_failure_message' )
+			->with(
+				self::callback(
+					static fn ( mixed $message ): bool => $message instanceof WP_Error
+						&& 'The repository changed identity. Review the package source.' === $message->get_error_message()
+				),
+				self::anything(),
+				self::callback( static fn ( array $context ): bool => 'repository_identity_changed' === ( $context['reason'] ?? null ) )
+			);
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: new EditBoundaryPluginRepository( $package ),
+			themes: new EditBoundaryThemeRepository( $package ),
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', array_merge( $this->unchanged_edit_request(), array( 'repository' => 'owner/replacement' ) ), true );
+
+		self::assertFalse( $result );
+	}
+
+	public function test_a_carried_rate_limit_still_lets_an_unchanged_settings_save_proceed(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( 0, new \RAN\RepositoryProvider\ProviderFailure( 'rate_limited', retry_after: 60 ) ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
+		$dashboard->expects( self::once() )->method( 'post_package_operation' )->willReturn( 'https://example.test/redirect' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: new EditBoundaryPluginRepository( $package ),
+			themes: new EditBoundaryThemeRepository( $package ),
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', $this->unchanged_edit_request(), true );
+
+		self::assertSame( 'https://example.test/redirect', $result );
+	}
+
 	#[DataProvider( 'definitive_lookup_failures' )]
 	public function test_definitive_provider_answers_still_block_an_unchanged_repository( int $code ): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
@@ -813,7 +857,7 @@ final class FailingLookupProvider implements RepositoryProvider {
 
 	public int $lookups = 0;
 
-	public function __construct( private readonly int $code ) {
+	public function __construct( private readonly int $code, private readonly ?\RAN\RepositoryProvider\ProviderFailure $failure = null ) {
 	}
 
 	public function get_metadata(): ProviderMetadata {
@@ -824,7 +868,9 @@ final class FailingLookupProvider implements RepositoryProvider {
 		unset( $request );
 		++$this->lookups;
 
-		throw new \RuntimeException( 'Provider lookup failed.', $this->code );
+		throw null === $this->failure
+			? new \RuntimeException( 'Provider lookup failed.', $this->code )
+			: new \RAN\RepositoryProvider\ProviderRequestFailed( $this->failure );
 	}
 
 	public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {

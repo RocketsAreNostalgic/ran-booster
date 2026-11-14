@@ -27,6 +27,8 @@ use RAN\Deployment\ReleaseArtifactCleanupFailure;
 	use RAN\RepositoryProvider\ProviderCode;
 	use RAN\RepositoryProvider\ProviderDiagnosticRequest;
 	use RAN\RepositoryProvider\ProviderDiagnostics;
+	use RAN\RepositoryProvider\ProviderFailure;
+	use RAN\RepositoryProvider\ProviderRequestFailed;
 	use RAN\RepositoryProvider\ProviderMetadata;
 	use RAN\RepositoryProvider\ProviderRegistry;
 	use RAN\RepositoryProvider\RepositoryDescriptor;
@@ -46,6 +48,7 @@ use RAN\Deployment\ReleaseArtifactCleanupFailure;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
+	use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 	use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\Database;
@@ -66,6 +69,7 @@ use RAN\Storage\RepositorySourceGuard;
 
 final class NativeProspectiveReleaseFacadeTest extends TestCase {
 	use \RAN\Tests\Support\GitHubSelectionFixture;
+	use \RAN\Tests\Support\CapturesBoosterLog;
 
 
 	private const FINGERPRINT = 'v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -90,6 +94,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		ProspectiveRepositoryProvider::$acquisition_input = array();
 		ProspectiveRepositoryProvider::$acquisition       = null;
 		$this->source_guard_database                      = null;
+		$this->start_log_capture();
 
 		$GLOBALS['ran_booster_prospective_options']              = array();
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
@@ -99,6 +104,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
+		$this->stop_log_capture();
 		ProspectiveRepositoryProvider::$acquisition = null;
 		if ( null !== $this->artifact_path && file_exists( $this->artifact_path ) ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only temporary artifact cleanup.
@@ -759,6 +765,70 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 1, ProspectiveRepositoryProvider::$acquisition_calls );
 		self::assertSame( 0, $executor->install_calls );
 		self::assertSame( 0, $plugins->adoption_calls );
+	}
+
+	public function test_a_changed_release_at_acquisition_is_reported_as_changed_before_install(): void {
+		ProspectiveRepositoryProvider::$acquisition = RepositoryReleaseAcquisitionRejected::changed();
+		$plugins                                    = new ProspectivePluginRepository();
+		$executor                                   = new ProspectiveExecutor();
+		$facade                                     = $this->facade( $plugins, $executor );
+
+		$result = $facade->install(
+			'plugin',
+			$this->repository_request(),
+			'42',
+			'v1.2.3',
+			self::FINGERPRINT,
+			'stable',
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
+		);
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'release_changed', $result->code() );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
+	}
+
+	public function test_an_acquisition_provider_failure_keeps_the_closed_code_and_logs_only_its_reason(): void {
+		ProspectiveRepositoryProvider::$acquisition = new ProviderRequestFailed( new ProviderFailure( 'credential_expired' ) );
+		$facade                                     = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor() );
+
+		$result = $facade->install(
+			'plugin',
+			$this->repository_request(),
+			'42',
+			'v1.2.3',
+			self::FINGERPRINT,
+			'stable',
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
+		);
+
+		self::assertSame( 'unable_to_check', $result->code() );
+		$lines = $this->captured_log_lines();
+		self::assertCount( 1, $lines );
+		self::assertStringContainsString( '"reason":"credential_expired","operation":"acquire_release"', $lines[0] );
+		self::assertStringContainsString( '"exception_code":"401"', $lines[0] );
+		self::assertStringContainsString( '"operation":"acquire_release","provider":"gh"', $lines[0] );
+	}
+
+	public function test_an_inspection_read_failure_is_logged_with_its_reason_and_keeps_the_closed_code(): void {
+		$provider = new ProspectiveRepositoryProvider(
+			inspection: new RepositoryReleaseReadUnavailable( 'sentinel-provider-message ghp_abcdefghijklmnop1234', 0, null, new ProviderFailure( 'rate_limited', 429, 90 ) )
+		);
+		$facade   = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor(), provider: $provider );
+
+		$result = $facade->inspect( 'plugin', $this->repository_request(), '42', 'v1.2.3', 'stable', 'valid-nonce' );
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'unable_to_check', $result->code() );
+		$lines = $this->captured_log_lines();
+		self::assertCount( 1, $lines );
+		self::assertStringContainsString( '"reason":"rate_limited","http_status":429,"retry_after":90', $lines[0] );
+		self::assertStringContainsString( '"operation":"inspect_release","provider":"gh"', $lines[0] );
+		self::assertStringNotContainsString( 'sentinel-provider-message', $lines[0] );
+		self::assertStringNotContainsString( 'ghp_', $lines[0] );
 	}
 
 	public function test_provider_acquisition_cleanup_failure_is_preserved_before_install(): void {

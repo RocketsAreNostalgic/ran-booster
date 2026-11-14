@@ -191,15 +191,21 @@ class Dashboard {
 		}
 
 		$requested_tab = null;
+		$tab_present   = false;
 
 		if ( null !== $forced_tab && '' !== $forced_tab ) {
 
 			$requested_tab = $forced_tab;
+			$tab_present   = true;
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		} elseif ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
+		} elseif ( isset( $_GET['tab'] ) ) {
 			// Read-only navigation state; no action is performed from this query value.
+			$tab_present = true;
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-			$requested_tab = wp_unslash( $_GET['tab'] );
+			if ( is_string( $_GET['tab'] ) ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+				$requested_tab = wp_unslash( $_GET['tab'] );
+			}
 		}
 
 		$requested_add_on_key = is_string( $requested_tab ) ? strtolower( trim( $requested_tab ) ) : '';
@@ -208,16 +214,18 @@ class Dashboard {
 			: $this->admin_add_ons->get( $requested_add_on_key );
 		$selected_tab         = null;
 		if ( null === $selected_add_on ) {
-			$selected_tab = $this->admin_tabs->resolve( $requested_tab );
-			$selected_key = $selected_tab->get_key();
-		} else {
-			$selected_key = $selected_add_on->key();
+			// No tab selects Overview. A present tab must name an available tab, or the not-found result is rendered.
+			$selected_tab = $tab_present ? $this->admin_tabs->find( $requested_add_on_key ) : $this->admin_tabs->resolve( null );
+			if ( null !== $selected_tab && $selected_tab->get_key() === $this->hidden_provider_tab_key() ) {
+				$selected_tab = null;
+			}
 		}
-		$tabs      = $this->tab_navigation( $selected_key );
-		$admin_url = is_multisite()
+		$selected_key = $selected_add_on?->key() ?? $selected_tab?->get_key() ?? '';
+		$tabs         = $this->tab_navigation( $selected_key );
+		$admin_url    = is_multisite()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
-		$data      = array(
+		$data         = array(
 			'tab'  => $selected_key,
 			'tabs' => $tabs,
 		);
@@ -263,8 +271,8 @@ class Dashboard {
 				? 'support-report'
 				: ( null !== $this->troubleshooting_payload ? 'diagnostics' : $this->requested_route_slug( 'panel', AdminRoutes::TROUBLESHOOTING_PANELS, 'installation' ) );
 		}
-		if ( null !== $selected_tab && ( ( $selected_tab->is_provider() && ( null === $provider_view || null === $provider_task || null === $repository_view ) ) || ( 'troubleshooting' === $selected_tab->get_key() && null === $panel ) ) ) {
-			// Closed result: an unknown panel or view never renders another panel.
+		if ( ( null === $selected_add_on && null === $selected_tab ) || ( null !== $selected_tab && ( ( $selected_tab->is_provider() && ( null === $provider_view || null === $provider_task || null === $repository_view ) ) || ( 'troubleshooting' === $selected_tab->get_key() && null === $panel ) ) ) ) {
+			// Closed result: an unknown tab, panel or view never renders another page.
 			unset( $data['tab_view'] );
 			$data['route_not_found']     = true;
 			$data['route_not_found_url'] = $admin_url . '?page=ran-booster&tab=overview';
@@ -1485,6 +1493,14 @@ class Dashboard {
 		);
 	}
 
+	private function hidden_provider_tab_key(): ?string {
+		try {
+			return $this->github_visibility?->hidden_navigation_key();
+		} catch ( Throwable ) {
+			return null;
+		}
+	}
+
 	/**
 	 * @return list<array{key: string, label: string, url: string, active: bool, provider: bool}>
 	 */
@@ -1498,12 +1514,7 @@ class Dashboard {
 			: admin_url( 'admin.php' );
 		$tabs      = array();
 
-		$hidden_provider_key = null;
-		try {
-			$hidden_provider_key = $this->github_visibility?->hidden_navigation_key();
-		} catch ( Throwable ) {
-			$hidden_provider_key = null;
-		}
+		$hidden_provider_key = $this->hidden_provider_tab_key();
 		foreach ( $this->admin_tabs->all() as $tab ) {
 			if ( null !== $hidden_provider_key && $hidden_provider_key === $tab->get_key() ) {
 				continue;

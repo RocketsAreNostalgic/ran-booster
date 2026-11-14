@@ -1880,34 +1880,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
-	/** @return list<array{mixed}> */
-	public static function fallback_tab_provider(): array {
-		return array(
-			array( null ),
-			array( '' ),
-			array( 'unknown' ),
-			array( array( 'gh' ) ),
-		);
-	}
-
-	#[DataProvider( 'fallback_tab_provider' )]
-	public function test_missing_unknown_and_array_tabs_fall_back_without_deriving_aview( mixed $requested ): void {
-		if ( null !== $requested ) {
-			$_GET['tab'] = $requested;
-		}
-
-		$data = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
-
-		self::assertSame( 'overview', $data['tab'] );
-		self::assertSame( 'onboarding.php', $data['tab_view'] );
-		self::assertArrayNotHasKey( 'selected_provider', $data );
-		self::assertSame( array( 'GitHub', 'Bitbucket' ), array_column( $data['onboarding']['provider_links'], 'label' ) );
-		self::assertSame(
-			'https://example.test/wp-admin/admin.php?page=ran-booster-transporter',
-			$data['onboarding']['portability_url']
-		);
-	}
-
 	public function test_navigation_uses_the_correct_single_and_network_admin_bases(): void {
 		$_GET['tab'] = 'documentation';
 		$single_site = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
@@ -1933,14 +1905,115 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	public function test_legacy_add_on_tab_requests_fall_back_to_the_overview(): void {
-		$_GET['tab'] = 'assisted-hooks';
-
+	public function test_no_tab_selects_the_overview(): void {
 		$data = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
 
 		self::assertSame( 'overview', $data['tab'] );
 		self::assertSame( 'onboarding.php', $data['tab_view'] );
-		self::assertArrayNotHasKey( 'add_on_tab', $data );
+		self::assertArrayNotHasKey( 'route_not_found', $data );
+		self::assertArrayNotHasKey( 'selected_provider', $data );
+		self::assertSame( array( 'GitHub', 'Bitbucket' ), array_column( $data['onboarding']['provider_links'], 'label' ) );
+		self::assertSame(
+			'https://example.test/wp-admin/admin.php?page=ran-booster-transporter',
+			$data['onboarding']['portability_url']
+		);
+	}
+
+	/** @return array<string, array{mixed}> */
+	public static function unavailable_tab_requests(): array {
+		return array(
+			'unknown key'                  => array( 'nonexistent' ),
+			'retired add-on key'           => array( 'assisted-hooks' ),
+			'unregistered add-on key'      => array( 'fixture-gone' ),
+			'empty key'                    => array( '' ),
+			'whitespace key'               => array( '   ' ),
+			'array value'                  => array( array( 'overview' ) ),
+			'markup in the key'            => array( '<script>alert(1)</script>' ),
+			'retired transporter page key' => array( 'transporter' ),
+		);
+	}
+
+	#[DataProvider( 'unavailable_tab_requests' )]
+	public function test_a_present_unavailable_tab_is_a_closed_not_found_result( mixed $tab ): void {
+		$registry = new AdminAddOnRegistry( array(), 7, 7 );
+		$registry->seal();
+		$_GET['tab'] = $tab;
+
+		$data = $this->dashboard( $this->throwing_secrets(), admin_add_ons: $registry )->get_index()['data'];
+
+		$this->assert_closed_tab_not_found( $data );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_a_hidden_provider_tab_request_renders_not_found(): void {
+		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', true );
+		require_once __DIR__ . '/GitHubVisibilityConnection.php';
+		$providers  = $this->providers( true );
+		$selection  = $this->queued_selection( new AttemptRepositoryDatabase(), $providers );
+		$visibility = new \RAN\Admin\GitHubVisibility( new \RAN\Settings\GeneralPreferenceStore(), $providers, $selection, new GitHubVisibilityConnection() );
+		$providers->seal();
+		self::assertSame( 'gh', $visibility->hidden_navigation_key() );
+
+		$_GET['tab'] = 'gh';
+		$data        = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
+
+		$this->assert_closed_tab_not_found( $data );
+		self::assertNotContains( 'gh', array_column( $data['tabs'], 'key' ) );
+	}
+
+	public function test_a_registered_add_on_tab_and_every_built_in_tab_still_resolve(): void {
+		$registry = new AdminAddOnRegistry( array(), 7, 7 );
+		$registry->register( new AdminAddOnTab( 'ran-booster-fixture', 'fixture', 'Fixture', static function (): void {}, 7, 7, 7, 7 ) );
+		$registry->seal();
+
+		foreach ( array( 'overview', 'OVERVIEW ', 'gh', 'bb', 'documentation', 'troubleshooting', 'portability', 'fixture' ) as $tab ) {
+			$_GET['tab'] = $tab;
+			$data        = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), admin_add_ons: $registry, provider_credentials: true )->get_index()['data'];
+			self::assertArrayNotHasKey( 'route_not_found', $data, $tab );
+			self::assertSame( strtolower( trim( $tab ) ), $data['tab'], $tab );
+		}
+	}
+
+	public function test_a_forced_tab_is_unchanged_by_the_query_string(): void {
+		$_GET['tab'] = 'nonexistent';
+		$data        = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index( 'portability' )['data'];
+
+		self::assertSame( 'portability', $data['tab'] );
+		self::assertArrayNotHasKey( 'route_not_found', $data );
+	}
+
+	public function test_a_network_admin_unavailable_tab_links_back_to_the_network_overview(): void {
+		$GLOBALS['ran_booster_dashboard_test_multisite'] = true;
+		$_GET['tab']                                     = 'nonexistent';
+
+		$data = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
+
+		self::assertTrue( $data['route_not_found'] );
+		self::assertSame( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=overview', $data['route_not_found_url'] );
+	}
+
+	/** @param array<string, mixed> $data */
+	private function assert_closed_tab_not_found( array $data ): void {
+		self::assertTrue( $data['route_not_found'] );
+		self::assertSame( '', $data['tab'] );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $data['route_not_found_url'] );
+		foreach ( array( 'tab_view', 'add_on_tab', 'add_on_context', 'onboarding', 'provider_view', 'provider_task', 'repository_view', 'troubleshooting_panel' ) as $key ) {
+			self::assertArrayNotHasKey( $key, $data, $key );
+		}
+		self::assertNotContains( true, array_column( $data['tabs'], 'active' ) );
+
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard route model as caller variables required by the production index view.
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/index.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Page not found.', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=overview">Back to Overview</a>', $html );
+		foreach ( array( '<script', 'alert(1)', 'nonexistent', 'fixture-gone', 'assisted-hooks' ) as $echo ) {
+			self::assertStringNotContainsString( $echo, $html );
+		}
 	}
 
 	public function test_native_package_hooks_receive_bounded_projections_for_settings_rows_and_actions(): void {
@@ -4339,7 +4412,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null,
 		?PackageRemovalService $removals = null,
 		?\RAN\Admin\CredentialExpiryNotice $credential_expiry_notice = null,
-		?\RAN\Secrets\SecretsStorageProvisioner $secrets_storage = null
+		?\RAN\Secrets\SecretsStorageProvisioner $secrets_storage = null,
+		?\RAN\Admin\GitHubVisibility $github_visibility = null
 	): RoutingDashboard {
 		$providers         = $providers ?? $this->providers( $provider_credentials );
 		$branch_check_lock = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
@@ -4389,6 +4463,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$admin_add_ons,
 			removals: $removals,
 			activity: $this->empty_activity_store(),
+			github_visibility: $github_visibility,
 			credential_expiry_notice: $credential_expiry_notice
 		);
 	}

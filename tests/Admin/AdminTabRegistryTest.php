@@ -45,6 +45,9 @@ final class AdminTabRegistryTest extends TestCase {
 		self::assertSame( 'documentation.php', $registry->resolve( 'documentation' )->get_view() );
 		self::assertSame( 'portability.php', $registry->resolve( 'portability' )->get_view() );
 		self::assertFalse( $registry->resolve( 'documentation' )->is_provider() );
+		self::assertSame( 'bb', $registry->find( ' BB ' )?->get_key() );
+		self::assertNull( $registry->find( 'unknown' ) );
+		self::assertNull( $registry->find( '' ) );
 	}
 
 	public function test_provider_tabs_use_deterministic_host_order_instead_of_registration_order(): void {

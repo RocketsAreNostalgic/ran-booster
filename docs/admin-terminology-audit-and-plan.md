@@ -56,7 +56,8 @@ Do not replace every occurrence of "automation," "branch," or "release."
 
 ## Route slugs
 
-A panel or view slug is its visible label, lowercase and hyphenated.
+A panel or view slug is its visible label, lowercase and hyphenated. The same
+closed rule applies to the top-level `tab` key.
 `RAN\Admin\AdminRoutes` owns the lists; the navigation views and the
 Dashboard read them, and contract tests compare each rendered label with its
 slug.
@@ -68,12 +69,16 @@ slug.
 | Provider view | Credentials, Signing secrets (the provider overview has no label) | `credentials`, `signing-secrets` (`overview`) |
 | Repository view | Status, Branch, Releases | `status`, `branch`, `releases` |
 
-An absent panel or view selects its section default. A present value outside
-the list is a closed not-found result: a "Page not found." notice with a link
-back to Overview. Booster never renders another panel for it and never echoes
-the value. Retired slugs (`debug-capture`, `deployment-activity`, `setup`,
+An absent `tab`, panel or view selects its default (Overview for `tab`). A
+present value outside the list is a closed not-found result: a "Page not
+found." notice with a link back to Overview. Booster never renders another
+page for it and never echoes the value. That covers an unknown, empty or
+array-valued `tab`, an unregistered add-on key, a hidden provider tab and a
+deactivated add-on; the notice does not reveal whether a deactivated add-on
+exists. Retired slugs (`debug-capture`, `deployment-activity`, `setup`,
 `secrets`) have no alias or redirect. Top-level tab keys and the public add-on
-tab registry keys are unchanged.
+tab registry keys are unchanged. The page keeps HTTP 200; a real 404 status
+for tabs and panels together is a separate follow-up.
 
 ## Audit findings
 

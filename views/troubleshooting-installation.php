@@ -2,6 +2,7 @@
 /**
  * @var array<string, mixed> $troubleshooting
  * @var array<string, mixed> $core_self_update
+ * @var string|null $selection_provider_tab_url
  */
 if ( ! defined( 'WPINC' ) ) {
 	die; }
@@ -218,7 +219,7 @@ foreach ( $components as $component ) {
 	// the state and hosts the recovery and decision forms.
 	$entry_warning = '';
 	if ( $problem ) {
-		$provider_settings_url  = ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster&tab=gh';
+		$provider_settings_url  = $selection_provider_tab_url ?? ( ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster&tab=gh' );
 		$provider_settings_link = '<a href="' . esc_url( $provider_settings_url ) . '">' . esc_html__( 'Review provider settings', 'ran-booster' ) . '</a>';
 		/* translators: %s: link to the GitHub provider settings. */
 		$problem_message = $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. %s.', 'ran-booster' );

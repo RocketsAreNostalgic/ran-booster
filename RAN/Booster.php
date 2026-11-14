@@ -1325,7 +1325,7 @@ class Booster {
 		<div class="notice notice-warning<?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-native-update-warning<?php echo true === $warning ? '' : ' hidden'; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
 			<?php esc_html_e( 'A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed.', 'ran-booster' ); ?>
 			<?php if ( $can_manage ) : ?>
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>"><?php esc_html_e( 'Review GitHub management.', 'ran-booster' ); ?></a>
+				<a href="<?php echo esc_url( $this->service( \RAN\Admin\ProviderTabLinks::class )->url( admin_url( 'admin.php' ), 'gh' ) ); ?>"><?php esc_html_e( 'Review GitHub management.', 'ran-booster' ); ?></a>
 			<?php else : ?>
 				<?php esc_html_e( 'Contact a site administrator.', 'ran-booster' ); ?>
 			<?php endif; ?>

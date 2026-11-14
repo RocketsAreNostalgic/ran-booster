@@ -747,6 +747,11 @@ final class PortabilityControllerTest extends TestCase {
 		$reflection->getProperty( 'links' )->setValue( $second, $unregistered );
 		$fallback = $reflection->getMethod( 'credential_rows' )->invoke( $second, $blueprint, array(), array() );
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $fallback[0]['settings_url'] );
+		$package_item  = new \RAN\Portability\BlueprintPlanItem( $package, \RAN\Portability\TargetPackageAction::INSTALL, \RAN\Portability\TargetPackageReason::NONE );
+		$provider_list = null;
+		$row_arguments = array( $package_item, null, 'saved_one', false, &$provider_list );
+		$row           = $reflection->getMethod( 'row' )->invokeArgs( $second, $row_arguments );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $row['credential']['settings_url'] );
 		$html = $reflection->getMethod( 'render_review' )->invoke( $controller, array(), $rows );
 		self::assertStringContainsString( 'value="saved_one" selected=', $html );
 		self::assertStringContainsString( 'Saved &lt;one&gt;', $html );

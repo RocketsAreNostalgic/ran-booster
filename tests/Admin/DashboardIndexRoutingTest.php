@@ -1973,6 +1973,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=bb&view=credentials&replace_credential=saved', $credential_url->invoke( $instance, array( 'provider' => 'bb' ) + $failure ), $emitter );
 		}
 		$hidden_dashboard = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility );
+		$_GET             = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'installation',
+		);
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $hidden_dashboard->get_index()['data']['selection_provider_tab_url'] );
+		$_GET = array( 'tab' => 'gh' );
 		foreach ( array( 'recover-github-native', 'adopt-github' ) as $action ) {
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $this->redirect_for( $hidden_dashboard, $action ), $action );
 		}
@@ -2012,6 +2018,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET['tab'] = 'gh';
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->provider_tab_url( 'gh' ) );
 		$visible_dashboard = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility );
+		$_GET              = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'installation',
+		);
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $visible_dashboard->get_index()['data']['selection_provider_tab_url'] );
+		$_GET = array( 'tab' => 'gh' );
 		foreach ( array( 'recover-github-native', 'adopt-github' ) as $action ) {
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->redirect_for( $visible_dashboard, $action ), $action );
 		}

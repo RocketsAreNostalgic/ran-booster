@@ -136,6 +136,21 @@ final class NativeUpdateWarningTest extends TestCase {
 		self::assertStringContainsString( 'admin.php?page=ran-booster&tab=gh', $html );
 	}
 
+	public function test_link_falls_back_to_overview_when_the_provider_tab_is_unavailable(): void {
+		$booster = $this->booster(
+			array(
+				'state'     => 'recovery_required',
+				'available' => false,
+			),
+			'bb'
+		);
+		ob_start();
+		$this->render_warning( $booster );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'admin.php?page=ran-booster&tab=overview', $html );
+		self::assertStringNotContainsString( 'tab=gh', $html );
+	}
+
 	public function test_heartbeat_omits_unknown_and_unauthorized_statuses(): void {
 		$requested = array( 'ran_booster_native_update_warning' => true );
 		$booster   = $this->booster(
@@ -220,8 +235,15 @@ final class NativeUpdateWarningTest extends TestCase {
 	}
 
 	/** @param array<string,mixed> $status */
-	private function booster( array $status ): Booster {
+	private function booster( array $status, string $tab_provider = 'gh' ): Booster {
 		$container = new CoreContainer();
+		$container->bind(
+			'RAN\\Admin\\ProviderTabLinks',
+			new \RAN\Admin\ProviderTabLinks(
+				static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new \RAN\RepositoryProvider\ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( $tab_provider ) ) ) ),
+				static fn (): ?\RAN\Admin\GitHubVisibility => null
+			)
+		);
 		$container->bind(
 			'RAN\\Admin\\ProviderSettingsPresenter',
 			new class( $status ) {

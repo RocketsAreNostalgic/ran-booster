@@ -15,13 +15,13 @@
  * The Managed Plugins and Managed Themes heading row reuses the provider
  * management header (action pinned to the inline end, stacked on narrow
  * screens). The title carries its own subtitle spacing below, so the row adds no
- * bottom margin, and the heading and action centre on one line. WordPress core
- * nudges .page-title-action with a physical margin and top offset; neutralise
- * both so the action sits on the row's centre line in either direction.
+ * bottom margin. Align items at the start so a taller action does not shift the
+ * heading down compared with an empty collection. WordPress core nudges
+ * .page-title-action with a physical margin and top offset; neutralise both.
  */
 
 .ran-booster-admin .ran-booster-package-heading-row {
-	align-items: center;
+	align-items: flex-start;
 	margin-block-end: 0;
 }
 

@@ -2209,8 +2209,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-provider-management__header \{[^}]*justify-content: space-between;/', $css );
 		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 782px\)[\s\S]+\.ran-booster-provider-management__header,[\s\S]+?flex-direction: column;/', $css );
 
-		// The package row only centres the line and drops the row margin; the action's core offsets are neutralised.
-		self::assertMatchesRegularExpression( '/\.ran-booster-package-heading-row \{\s+align-items: center;\s+margin-block-end: 0;\s+\}/', $pkg );
+		// The package heading stays at the row start with or without an action; core offsets are neutralised.
+		self::assertMatchesRegularExpression( '/\.ran-booster-package-heading-row \{\s+align-items: flex-start;\s+margin-block-end: 0;\s+\}/', $pkg );
 		self::assertMatchesRegularExpression( '/\.ran-booster-package-heading-row \.page-title-action \{\s+position: static;\s+margin: 0;\s+\}/', $pkg );
 
 		// The old inline placement rules are gone.

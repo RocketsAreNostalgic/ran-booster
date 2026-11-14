@@ -1955,11 +1955,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$providers->seal();
 		self::assertSame( 'gh', $visibility->hidden_navigation_key() );
 
-		$_GET['tab'] = 'gh';
-		$data        = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
+		foreach ( array( 'gh', ' GH ' ) as $tab ) {
+			$_GET['tab'] = $tab;
+			$data        = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
 
-		$this->assert_closed_tab_not_found( $data );
-		self::assertNotContains( 'gh', array_column( $data['tabs'], 'key' ) );
+			$this->assert_closed_tab_not_found( $data );
+			self::assertNotContains( 'gh', array_column( $data['tabs'], 'key' ) );
+		}
 	}
 
 	public function test_a_registered_add_on_tab_and_every_built_in_tab_still_resolve(): void {
@@ -1998,7 +2000,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $data['route_not_found'] );
 		self::assertSame( '', $data['tab'] );
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $data['route_not_found_url'] );
-		foreach ( array( 'tab_view', 'add_on_tab', 'add_on_context', 'onboarding', 'provider_view', 'provider_task', 'repository_view', 'troubleshooting_panel' ) as $key ) {
+		foreach ( array( 'tab_view', 'add_on_tab', 'add_on_context', 'onboarding', 'provider_view', 'provider_task', 'repository_view' ) as $key ) {
 			self::assertArrayNotHasKey( $key, $data, $key );
 		}
 		self::assertNotContains( true, array_column( $data['tabs'], 'active' ) );

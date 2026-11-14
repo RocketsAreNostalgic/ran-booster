@@ -228,6 +228,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				)
 			);
 		} catch ( Throwable $failure ) {
+			BoosterLogger::log_provider_failure( 'branch provider archive request failed', $failure, $this->attempt->log_context() + array( 'step' => 'prepare_archive' ) );
 			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
 		}
 
@@ -559,6 +560,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		} catch ( StaleDeployment ) {
 			$this->stage( DeploymentOutcome::CODE_STALE_EVENT );
 		} catch ( Throwable $failure ) {
+			BoosterLogger::log_provider_failure( 'branch head verification failed', $failure, $this->attempt->log_context() + array( 'step' => 'verify_current_head' ) );
 			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
 		}
 	}

@@ -230,7 +230,15 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					default => 'unable_to_check',
 				}
 			);
-		} catch ( Throwable ) {
+		} catch ( Throwable $failure ) {
+			BoosterLogger::log_provider_failure(
+				'release inspection failed',
+				$failure,
+				array(
+					'operation' => 'inspect_release',
+					'provider'  => $repository_request['provider'] ?? null,
+				)
+			);
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}
 	}
@@ -306,11 +314,21 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			);
 		} catch ( RepositoryReleaseAcquisitionRejected $rejection ) {
 			return ProspectiveReleaseResult::failure(
-				RepositoryReleaseAcquisitionRejected::CLEANUP_FAILED === $rejection->reason
-					? 'installation_cleanup_failed'
-					: 'release_invalid'
+				match ( $rejection->reason ) {
+					RepositoryReleaseAcquisitionRejected::CLEANUP_FAILED => 'installation_cleanup_failed',
+					RepositoryReleaseAcquisitionRejected::CHANGED => 'release_changed',
+					default => 'release_invalid',
+				}
 			);
-		} catch ( Throwable ) {
+		} catch ( Throwable $failure ) {
+			BoosterLogger::log_provider_failure(
+				'release acquisition failed',
+				$failure,
+				array(
+					'operation' => 'acquire_release',
+					'provider'  => $repository_request['provider'] ?? null,
+				)
+			);
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}
 

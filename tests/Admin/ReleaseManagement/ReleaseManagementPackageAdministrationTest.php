@@ -319,6 +319,16 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Conflicting packages', $html );
 	}
 
+	public function test_a_release_that_changed_at_acquisition_says_so_and_offers_a_recheck(): void {
+		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		ob_start();
+		$display->render_operation_notice( 'release_changed', false );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'The release changed after it was inspected. No package was installed. Use Check releases and try again.', $html );
+		self::assertStringNotContainsString( 'needs attention', $html );
+	}
+
 	#[DataProvider( 'installation_review_outcomes' )]
 	public function test_installation_review_notice_orders_state_and_safe_action( string $code, string $heading, string $state ): void {
 		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();

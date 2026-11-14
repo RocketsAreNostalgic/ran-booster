@@ -471,9 +471,20 @@ final class NormalizedValuesTest extends TestCase {
 		string $expected_message
 	): void {
 		$factory_method = new \ReflectionMethod( CredentialValidationResult::class, $factory );
-		$result         = $factory_method->invokeArgs( null, array( $untrusted_message ) );
+		$result         = $factory_method->invokeArgs( null, array() );
 
-		self::assertSame( 0, $factory_method->getNumberOfParameters() );
+		// The only optional input is the typed carrier; provider text cannot be passed.
+		self::assertSame( 1, $factory_method->getNumberOfParameters() );
+		$parameter_type = $factory_method->getParameters()[0]->getType();
+		self::assertInstanceOf( \ReflectionNamedType::class, $parameter_type );
+		self::assertSame( \RAN\RepositoryProvider\ProviderFailure::class, $parameter_type->getName() );
+		self::assertTrue( $parameter_type->allowsNull() );
+		try {
+			$factory_method->invokeArgs( null, array( $untrusted_message ) );
+			self::fail( 'A factory must not accept provider text.' );
+		} catch ( \TypeError $error ) {
+			self::assertStringContainsString( 'ProviderFailure', $error->getMessage() );
+		}
 		self::assertInstanceOf( CredentialValidationResult::class, $result );
 		self::assertFalse( $result->is_valid() );
 		self::assertSame( $reason, $result->reason );

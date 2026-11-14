@@ -272,10 +272,12 @@ final class ProviderContractsTest extends TestCase {
 			RepositoryReleaseAcquisitionRejected::CLEANUP_FAILED,
 			RepositoryReleaseAcquisitionRejected::cleanup_failed()->reason
 		);
+		self::assertSame( RepositoryReleaseAcquisitionRejected::CHANGED, RepositoryReleaseAcquisitionRejected::changed()->reason );
 		self::assertSame(
 			array(
 				'INVALID_RELEASE' => 'invalid_release',
 				'CLEANUP_FAILED'  => 'cleanup_failed',
+				'CHANGED'         => 'release_changed',
 			),
 			( new \ReflectionClass( RepositoryReleaseAcquisitionRejected::class ) )->getConstants()
 		);

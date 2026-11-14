@@ -1181,6 +1181,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Page not found.', $html );
+		self::assertStringContainsString( 'class="notice notice-error inline ', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=overview">Back to Overview</a>', $html );
 		self::assertStringNotContainsString( '<script', $html );
 		self::assertStringNotContainsString( 'alert(1)', $html );
@@ -2143,6 +2144,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Page not found.', $html );
+		self::assertStringContainsString( 'class="notice notice-error inline ', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=overview">Back to Overview</a>', $html );
 		foreach ( array( '<script', 'alert(1)', 'nonexistent', 'fixture-gone', 'assisted-hooks' ) as $echo ) {
 			self::assertStringNotContainsString( $echo, $html );

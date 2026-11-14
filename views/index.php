@@ -6,13 +6,13 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 if ( ! empty( $route_not_found ) && isset( $route_not_found_url ) ) { ?>
-	<div class="notice notice-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Page not found.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $route_not_found_url ); ?>"><?php esc_html_e( 'Back to Overview', 'ran-booster' ); ?></a></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
+	<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Page not found.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $route_not_found_url ); ?>"><?php esc_html_e( 'Back to Overview', 'ran-booster' ); ?></a></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 <?php } elseif ( isset( $add_on_tab, $add_on_context ) && $add_on_tab instanceof \RAN\Admin\AdminAddOnTab && $add_on_context instanceof \RAN\Admin\AdminAddOnContext ) { ?>
 	<?php try { ?>
 		<?php $add_on_tab->render( $add_on_context ); ?>
 	<?php } catch ( \Throwable $failure ) { ?>
 		<?php \RAN\Logging\BoosterLogger::log_exception( 'add-on tab rendering failed', $failure, array( 'step' => 'admin_add_on_render' ) ); ?>
-		<div class="notice notice-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'This Booster add-on could not render its tab. Check the plugin compatibility and error log.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
+		<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'This Booster add-on could not render its tab. Check the plugin compatibility and error log.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 	<?php } ?>
 <?php } else { ?>
 	<?php

@@ -1873,6 +1873,8 @@ final class RepeatPackageViewTest extends TestCase {
 			'pending' => 'informational',
 			'warning' => 'medium',
 			'error'   => 'high',
+			'success' => 'stable',
+			'info'    => 'informational',
 		) as $tone => $intent ) {
 			$html = $render(
 				null,

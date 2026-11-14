@@ -37,7 +37,7 @@ final class CredentialExpiryReminder {
 
 	/**
 	 * @param array<string, mixed> $profile Display-safe credential profile.
-	 * @return array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:?string,source:?string,observed_at:?string,stage:string,days:?int,badge_class:string,badge_label:string,event_marker:string}
+	 * @return array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:?string,source:?string,observed_at:?string,stage:string,days:?int,badge_tone:string,badge_label:string,event_marker:string}
 	 */
 	public function status( string $provider, array $profile ): array {
 		$id          = is_string( $profile['id'] ?? null ) ? $profile['id'] : '';
@@ -72,7 +72,7 @@ final class CredentialExpiryReminder {
 				'observed_at'          => null,
 				'stage'                => 'unknown',
 				'days'                 => null,
-				'badge_class'          => 'ran-booster-badge--neutral',
+				'badge_tone'           => 'neutral',
 				'badge_label'          => __( 'Expiry unknown', 'ran-booster' ),
 				'event_marker'         => (string) ( $observation['event_generation'] ?? '' ),
 			);
@@ -85,23 +85,23 @@ final class CredentialExpiryReminder {
 		$date      = $expires->format( 'Y-m-d' );
 
 		if ( $remaining <= 0 ) {
-			$stage       = 'expired';
-			$badge_class = 'ran-booster-badge--error';
+			$stage      = 'expired';
+			$badge_tone = 'error';
 			/* translators: %s is the credential expiry date in YYYY-MM-DD format. */
 			$badge_label = sprintf( __( 'Expired %s', 'ran-booster' ), $date );
 		} elseif ( $remaining <= self::URGENT_SECONDS ) {
-			$stage       = 'urgent';
-			$badge_class = 'ran-booster-badge--error';
+			$stage      = 'urgent';
+			$badge_tone = 'error';
 			/* translators: %d is the number of days until the credential expires. */
 			$badge_label = sprintf( _n( 'Expires in %d day', 'Expires in %d days', $days, 'ran-booster' ), $days );
 		} elseif ( $remaining <= self::WARNING_SECONDS ) {
-			$stage       = 'warning';
-			$badge_class = 'ran-booster-badge--warning';
+			$stage      = 'warning';
+			$badge_tone = 'warning';
 			/* translators: %d is the number of days until the credential expires. */
 			$badge_label = sprintf( _n( 'Expires in %d day', 'Expires in %d days', $days, 'ran-booster' ), $days );
 		} else {
-			$stage       = 'future';
-			$badge_class = 'ran-booster-badge--neutral';
+			$stage      = 'future';
+			$badge_tone = 'neutral';
 			/* translators: %s is the credential expiry date in YYYY-MM-DD format. */
 			$badge_label = sprintf( __( 'Expires %s', 'ran-booster' ), $date );
 		}
@@ -117,14 +117,14 @@ final class CredentialExpiryReminder {
 			'observed_at'          => 'provider' === $source ? ( $observation['provider_checked_at'] ?? null ) : null,
 			'stage'                => $stage,
 			'days'                 => $days,
-			'badge_class'          => $badge_class,
+			'badge_tone'           => $badge_tone,
 			'badge_label'          => $badge_label,
 			'event_marker'         => (string) ( $observation['event_generation'] ?? '' ),
 		);
 	}
 
 	/**
-	 * @return list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string}>
+	 * @return list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_tone:string,badge_label:string,event_marker:string}>
 	 */
 	public function affected(): array {
 		$affected = array();
@@ -133,7 +133,7 @@ final class CredentialExpiryReminder {
 			foreach ( $this->secrets->credential_profiles( $provider ) as $profile ) {
 				$status = $this->status( $provider, $profile );
 				if ( in_array( $status['stage'], array( 'warning', 'urgent', 'expired' ), true ) ) {
-					/** @var array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string} $status */
+					/** @var array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_tone:string,badge_label:string,event_marker:string} $status */
 					$affected[] = $status;
 				}
 			}

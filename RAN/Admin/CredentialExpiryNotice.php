@@ -16,7 +16,7 @@ final class CredentialExpiryNotice {
 
 	private bool $rendered = false;
 
-	/** @var list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string}>|null */
+	/** @var list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_tone:string,badge_label:string,event_marker:string}>|null */
 	private ?array $affected = null;
 
 	private bool $storage_unavailable = false;
@@ -160,7 +160,7 @@ final class CredentialExpiryNotice {
 		<?php
 	}
 
-	/** @return list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string}> */
+	/** @return list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_tone:string,badge_label:string,event_marker:string}> */
 	private function snapshot(): array {
 		if ( null === $this->affected ) {
 			try {

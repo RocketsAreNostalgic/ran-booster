@@ -659,6 +659,12 @@
 	line-height: 1.5;
 }
 
+/* A sub-heading inside a section: the 13/600 sub-heading size, same title box. */
+.ran-booster-admin .ran-booster-section__title--sub {
+	font-size: var(--ran-booster-font-size-md);
+	line-height: var(--ran-booster-line-height-heading);
+}
+
 /*
  * A ruled section heading runs the Settings group divider (same colour,
  * thickness and 8px gap as the group legend) from the end of the text to the
@@ -1062,7 +1068,8 @@
 	> .ran-booster-ui-disclosure
 	> .ran-booster-ui-disclosure__header
 	> [role="button"] {
-	padding: 12px 16px;
+	padding: var(--ran-booster-header-trigger-inset-block)
+		var(--ran-booster-header-inset-inline);
 	font-size: var(--ran-booster-font-size-lg);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: 24px;
@@ -1074,10 +1081,73 @@
 	)
 	> details[data-ran-booster-ui-disclosure-fallback]
 	> summary {
-	padding: 12px 16px;
+	padding: var(--ran-booster-header-trigger-inset-block)
+		var(--ran-booster-header-inset-inline);
 	font-size: var(--ran-booster-font-size-lg);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: 24px;
+}
+
+/*
+ * A prominent disclosure inside another prominent disclosure is a nested
+ * panel, not a section: its trigger takes the panel header inset and the
+ * sub-heading type (13/600), like the readiness panel header it sits beside.
+ * Both selectors carry one attribute more than the section rules above.
+ */
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	> *
+	> .ran-booster-ui-disclosure
+	> .ran-booster-ui-disclosure__header
+	> [role="button"],
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	[data-ran-booster-ui-disclosure-density="prominent"][data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary {
+	padding: var(--ran-booster-panel-header-inset-block)
+		var(--ran-booster-panel-header-inset-inline);
+	font-size: var(--ran-booster-font-size-md);
+}
+
+/* The native fallback's title carries its own size, so it follows the summary. */
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	[data-ran-booster-ui-disclosure-density="prominent"][data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary
+	.ran-booster-section__title {
+	font-size: inherit;
+}
+
+/*
+ * A prominent disclosure's body shares its trigger's text edge, so the header
+ * text, the fields and any footer band line up: the section inset, or the
+ * panel inset when the disclosure is nested. A compact disclosure inside keeps
+ * its own 16px body.
+ */
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	[data-ran-booster-ui-disclosure-content].ran-booster-disclosure__body:not(
+		[data-ran-booster-ui-disclosure-density="compact"] *
+	) {
+	padding-inline: var(--ran-booster-header-inset-inline);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	[data-ran-booster-ui-disclosure-content].ran-booster-disclosure__body:not(
+		[data-ran-booster-ui-disclosure-density="compact"] *
+	) {
+	padding-inline: var(--ran-booster-panel-header-inset-inline);
 }
 
 .ran-booster-admin

@@ -45,7 +45,7 @@
 .ran-booster-admin .ran-booster-troubleshooting__entry-warning {
 	display: block;
 	margin: 0;
-	padding: 0 16px 16px;
+	padding: 0 var(--ran-booster-header-inset-inline) 16px;
 	color: var(--ran-booster-status-warning);
 	font-size: var(--ran-booster-font-size-md);
 	font-weight: 400;
@@ -54,10 +54,11 @@
 
 /*
  * Every Installation header keeps 16px of vertical padding closed and open, so
- * nothing shifts on toggle. The native fallback selector repeats the density
- * and disclosure attributes so it outranks the prominent-density summary rule
- * (12px) in 25-admin-primitives.css, which would otherwise make the fallback
- * 8px shorter than the mounted header and shift the page when it mounts.
+ * nothing shifts on toggle; the shared prominent trigger would give 18px. The
+ * native fallback selector repeats the density and disclosure attributes so it
+ * outranks the prominent-density summary rule in 25-admin-primitives.css, which
+ * would otherwise make the fallback 2px taller per side than the mounted header
+ * and shift the page when it mounts.
  */
 
 .ran-booster-admin
@@ -291,7 +292,7 @@
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: var(--ran-booster-space-8);
-	padding: 16px;
+	padding: 16px var(--ran-booster-header-inset-inline);
 }
 
 .ran-booster-admin

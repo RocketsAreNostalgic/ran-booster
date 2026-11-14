@@ -44,6 +44,7 @@ use Throwable;
  *   credentials_url: string, available: bool, browse: bool, credentialed_public_browse: bool,
  *   provider_default_public_lookup_profile: bool, deploy: bool, webhooks: bool,
  *   default_credential_id: string, credential_kind_labels?: array<string, string>,
+ *   unavailable_reason?: 'replacement_load_failed',
  *   credential_profiles: list<PackageCredential>,
  *   public_lookup: array{supports_default: bool, configured_id: string, configured_label: string, stale: bool}|null
  * }
@@ -275,7 +276,8 @@ final readonly class ProviderSettingsPresenter {
 			if ( null === $recovery ) {
 				$error = __( 'Native recovery details could not be verified. Restore access to selection and management storage before continuing.', 'ran-booster' );
 			}
-		} else {
+		} elseif ( 'replacement_load_failed' !== $status['state'] ) {
+			// Approving again re-runs the same failing factory, so no approval is offered for a replacement that cannot load.
 			try {
 				$review = $this->github_selection->adoption_review( $this->secrets );
 			} catch ( SecretsStorageUnavailable ) {
@@ -370,7 +372,7 @@ final readonly class ProviderSettingsPresenter {
 		$codes     = array_column( $providers, 'code' );
 
 		if ( ! in_array( $stored_provider, $codes, true ) ) {
-			$providers[] = array(
+			$unavailable = array(
 
 				'code'                                   => $stored_provider,
 
@@ -388,6 +390,10 @@ final readonly class ProviderSettingsPresenter {
 				'credential_profiles'                    => array(),
 				'public_lookup'                          => null,
 			);
+			if ( 'gh' === $stored_provider && $this->providers->github_replacement_load_failed() ) {
+				$unavailable['unavailable_reason'] = 'replacement_load_failed';
+			}
+			$providers[] = $unavailable;
 		}
 
 		return array(

@@ -170,6 +170,8 @@ final class GitHubProviderSelection {
 	 * Passive local display only: never constructs a provider or reads credential material.
 	 * Availability concerns ordinary operations; recovery still blocks native mutation/adoption.
 	 *
+	 * State `replacement_load_failed`: the selected replacement's provider factory threw; only the closed code is exposed.
+	 *
 	 * @return array{state:string,available:bool,current:?array<string,mixed>,candidates:array<string,?array<string,mixed>>}
 	 */
 	public function status(): array {
@@ -198,6 +200,7 @@ final class GitHubProviderSelection {
 				in_array( null, $candidates, true ) => 'incompatible',
 				! in_array( $selected, $active, true ) => 'missing',
 				$result['available'] => 'available',
+				true === $this->registry?->github_replacement_load_failed() => 'replacement_load_failed',
 				default => 'decision_required',
 			};
 			if ( $state !== $this->store->read( true ) || $active !== $this->store->active_plugins() || array_map( static fn ( ?GitHubReplacementDeclaration $candidate ): ?string => $candidate?->implementation_fingerprint, $candidates ) !== array_map( static fn ( ?GitHubReplacementDeclaration $candidate ): ?string => $candidate?->implementation_fingerprint, $this->discover( $active ) ) ) {
@@ -243,6 +246,7 @@ final class GitHubProviderSelection {
 				in_array( null, $this->candidates, true ) => 'incompatible',
 				! in_array( $declaration->plugin_basename, $this->active, true ) => 'missing',
 				$result['admitted'] => 'admitted',
+				true === $this->registry?->github_replacement_load_failed() => 'replacement_load_failed',
 				default => 'decision_required',
 			};
 			$result['version']                = is_string( $display['display_version'] ?? null ) ? $display['display_version'] : 'Unknown';

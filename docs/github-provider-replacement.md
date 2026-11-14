@@ -66,6 +66,7 @@ other active PHP plugins.
 | **Multiple GitHub providers are active** | Deactivate extras, leaving only the intended candidate, then review again. Booster does not elect a winner. |
 | **A GitHub provider is incompatible** | Use a compatible version or deactivate it before reviewing another choice. |
 | **The selected GitHub provider is missing** | Restore the approved compatible plugin, or deactivate every replacement and explicitly review a return to bundled GitHub. |
+| **The selected GitHub provider could not load** | The approved replacement is active but Booster could not create it, for example because its bundled libraries differ from this Booster release. No approval is offered, because approving again runs the same load. Install a version built for this Booster release, or deactivate the replacement and review a return to bundled GitHub. Packages show the same cause. |
 | **Review GitHub provider** | Read the current review and make the consent choices above. |
 | **GitHub provider selection is unavailable** | Restore storage before continuing; do not edit selection records to force a choice. |
 | **An installation needs recovery** | Follow the recovery procedure below before switching. |

@@ -424,12 +424,13 @@ final class TroubleshootingViewTest extends TestCase {
 	 */
 	public static function provider_problem_states(): array {
 		return array(
-			'missing'             => array( 'missing', 'The selected GitHub provider plugin is not active or available. Review provider settings.' ),
-			'conflict'            => array( 'conflict', 'Multiple GitHub provider plugins need review. Review provider settings.' ),
-			'incompatible'        => array( 'incompatible', 'A GitHub provider plugin is incompatible. Review provider settings.' ),
-			'recovery_required'   => array( 'recovery_required', 'GitHub provider recovery is required. Review provider settings.' ),
-			'decision_required'   => array( 'decision_required', 'The GitHub provider selection needs a decision. Review provider settings.' ),
-			'storage_unavailable' => array( 'storage_unavailable', 'GitHub provider selection could not be checked. Review provider settings.' ),
+			'missing'                 => array( 'missing', 'The selected GitHub provider plugin is not active or available. Review provider settings.' ),
+			'conflict'                => array( 'conflict', 'Multiple GitHub provider plugins need review. Review provider settings.' ),
+			'incompatible'            => array( 'incompatible', 'A GitHub provider plugin is incompatible. Review provider settings.' ),
+			'recovery_required'       => array( 'recovery_required', 'GitHub provider recovery is required. Review provider settings.' ),
+			'decision_required'       => array( 'decision_required', 'The GitHub provider selection needs a decision. Review provider settings.' ),
+			'replacement_load_failed' => array( 'replacement_load_failed', 'The selected GitHub provider could not load. Review provider settings.' ),
+			'storage_unavailable'     => array( 'storage_unavailable', 'GitHub provider selection could not be checked. Review provider settings.' ),
 		);
 	}
 

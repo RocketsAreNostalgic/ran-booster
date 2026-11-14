@@ -38,6 +38,7 @@ final class ProviderRegistry {
 	private ?\Closure $bundled_github_factory;
 	private bool $github_collection_invalid                         = false;
 	private bool $github_finalizing                                 = false;
+	private bool $github_replacement_load_failed                    = false;
 	private ?GitHubReplacementDeclaration $github_final_declaration = null;
 
 	/**
@@ -147,7 +148,7 @@ final class ProviderRegistry {
 				$provider = $factory( $credentials, $delivery_evidence, $this->registration_context );
 			} catch ( \Throwable $exception ) {
 				BoosterLogger::log_exception( 'provider registration provider factory failed', $exception, array( 'step' => 'provider_factory' ) );
-				throw InvalidProviderPolicy::invalid_provider_factory();
+				throw InvalidProviderPolicy::invalid_provider_factory( true );
 			}
 
 			if ( $this->github_finalizing && ! $this->registration_context->operation_allowed() ) {
@@ -321,14 +322,21 @@ final class ProviderRegistry {
 		$this->github_finalizing    = true;
 		try {
 			$this->register_with_credential_store( 'gh', $factory );
-		} catch ( \Throwable ) {
+		} catch ( \Throwable $failure ) {
 			$this->github_collection_invalid = true;
+			// Only a selected replacement whose own factory threw could not load; bundled stays a generic failure.
+			$this->github_replacement_load_failed = null !== $basename && InvalidProviderPolicy::FACTORY_THREW === $failure->getCode();
 		} finally {
 			$this->registration_context = $context;
 			$this->github_finalizing    = false;
 		}
 	}
 
+
+	/** True when the selected GitHub replacement's factory threw during registration; the exception is only logged. */
+	public function github_replacement_load_failed(): bool {
+		return $this->github_replacement_load_failed;
+	}
 
 	public function is_sealed(): bool {
 		return $this->sealed;

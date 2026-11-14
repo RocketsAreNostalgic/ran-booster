@@ -286,7 +286,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'Create a repository signing secret', $html );
 		self::assertStringNotContainsString( 'request_credential', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-provider&amp;view=credentials">Manage credentials</a>', $html );
-		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-provider&amp;view=secrets">Manage signing secrets</a>', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-provider&amp;view=signing-secrets">Manage signing secrets</a>', $html );
 		self::assertSame( 2, substr_count( $html, 'class="ran-booster-repository-webhook-management__select-action"' ) );
 		self::assertStringNotContainsString( 'hx-post=', $html );
 		self::assertStringNotContainsString( 'hx-target=', $html );
@@ -1175,7 +1175,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'name="repository_webhook_management_operation" value="setup"', $html );
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up</button>', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-provider&amp;view=credentials">Manage credentials</a>', $html );
-		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-provider&amp;view=secrets">Manage signing secrets</a>', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-provider&amp;view=signing-secrets">Manage signing secrets</a>', $html );
 		self::assertDoesNotMatchRegularExpression( '/<form[^>]*ran-booster-repository-webhook-management__form[^>]*aria-disabled="true"/', $html );
 		self::assertStringNotContainsString( 'Manage credentials</a> disabled', $html );
 		self::assertStringNotContainsString( 'Manage signing secrets</a> disabled', $html );

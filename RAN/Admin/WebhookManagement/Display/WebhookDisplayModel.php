@@ -302,7 +302,7 @@ final class WebhookDisplayModel {
 				? __( 'Choose a signing secret', 'ran-booster' )
 				: ( 'local_profile_missing' === $status ? __( 'Recorded signing secret is unavailable', 'ran-booster' ) : __( 'Recorded signing secret', 'ran-booster' ) ),
 			'credentials_url'             => $this->provider_settings_url( $provider_code, 'credentials' ),
-			'secrets_url'                 => $this->provider_settings_url( $provider_code, 'secrets' ),
+			'secrets_url'                 => $this->provider_settings_url( $provider_code, 'signing-secrets' ),
 			'form_action'                 => WebhookManagementAdminUrl::for_path( 'admin-post.php' ),
 			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
 			'provider_code'               => $provider_code,
@@ -399,7 +399,7 @@ final class WebhookDisplayModel {
 			'webhook_profile_placeholder' => __( 'Choose a signing secret', 'ran-booster' ),
 			'management_credential_id'    => null,
 			'credentials_url'             => $this->provider_settings_url( $provider_code, 'credentials' ),
-			'secrets_url'                 => $this->provider_settings_url( $provider_code, 'secrets' ),
+			'secrets_url'                 => $this->provider_settings_url( $provider_code, 'signing-secrets' ),
 			'form_action'                 => WebhookManagementAdminUrl::for_path( 'admin-post.php' ),
 			'admin_action'                => 'ran_booster_repository_webhook_management_operation',
 			'provider_code'               => $provider_code,

@@ -1578,7 +1578,7 @@ final readonly class ProviderSettingsPresenter {
 		);
 
 		return array(
-			'provider_view'                     => in_array( $data['provider_view'] ?? null, array( 'credentials', 'secrets' ), true ) ? $data['provider_view'] : 'overview',
+			'provider_view'                     => in_array( $data['provider_view'] ?? null, \RAN\Admin\AdminRoutes::PROVIDER_VIEWS, true ) ? $data['provider_view'] : 'overview',
 			'provider_list_state'               => $state,
 			'public_lookup_profile'             => is_array( $data['public_lookup_profile'] ?? null ) ? $data['public_lookup_profile'] : null,
 			'webhook_setup'                     => is_array( $provider['webhook_setup'] ?? null ) ? $provider['webhook_setup'] : null,
@@ -1593,7 +1593,7 @@ final readonly class ProviderSettingsPresenter {
 			),
 			'overview_url'                      => $provider_url(),
 			'credentials_url'                   => $provider_url( array( 'view' => 'credentials' ) ),
-			'secrets_url'                       => $provider_url( array( 'view' => 'secrets' ) ),
+			'secrets_url'                       => $provider_url( array( 'view' => 'signing-secrets' ) ),
 			'provider_list_action_url'          => admin_url( 'admin.php' ),
 			'provider_mutation_fields'          => $mutation_fields,
 			'delete_webhook_interaction_values' => is_string( $interaction_values ) ? $interaction_values : '{}',

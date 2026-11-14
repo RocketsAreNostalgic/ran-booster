@@ -54,6 +54,27 @@ Keep "published releases" in explanatory text when publication state matters.
 Do not replace every occurrence of "automation," "branch," or "release."
 "Publish releases" is an action, not a navigation label.
 
+## Route slugs
+
+A panel or view slug is its visible label, lowercase and hyphenated.
+`RAN\Admin\AdminRoutes` owns the lists; the navigation views and the
+Dashboard read them, and contract tests compare each rendered label with its
+slug.
+
+| Route | Label | Slug |
+| --- | --- | --- |
+| Troubleshooting panel | Installation, Diagnostics, Activity, Logging, Support report | `installation`, `diagnostics`, `activity`, `logging`, `support-report` |
+| Provider panel | Status, Repositories, Webhook receiver | `status`, `repositories`, `webhook-receiver` |
+| Provider view | Credentials, Signing secrets (the provider overview has no label) | `credentials`, `signing-secrets` (`overview`) |
+| Repository view | Status, Branch, Releases | `status`, `branch`, `releases` |
+
+An absent panel or view selects its section default. A present value outside
+the list is a closed not-found result: a "Page not found." notice with a link
+back to Overview. Booster never renders another panel for it and never echoes
+the value. Retired slugs (`debug-capture`, `deployment-activity`, `setup`,
+`secrets`) have no alias or redirect. Top-level tab keys and the public add-on
+tab registry keys are unchanged.
+
 ## Audit findings
 
 The audit inspected the reachable checkpoint's owning renderers and their tests.

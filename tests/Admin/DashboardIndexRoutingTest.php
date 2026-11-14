@@ -1096,8 +1096,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function test_provider_route_selects_focused_views_tasks_and_bounded_list_state(): void {
 		$_GET = array(
 			'tab'             => 'bb',
-			'view'            => 'secrets',
-			'panel'           => 'setup',
+			'view'            => 'signing-secrets',
+			'panel'           => 'webhook-receiver',
 			'repository_view' => 'releases',
 			's'               => ' workspace ',
 			'scope'           => 'owner',
@@ -1108,8 +1108,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
 
-		self::assertSame( 'secrets', $data['provider_view'] );
-		self::assertSame( 'setup', $data['provider_task'] );
+		self::assertSame( 'signing-secrets', $data['provider_view'] );
+		self::assertSame( 'webhook-receiver', $data['provider_task'] );
 		self::assertSame( 'releases', $data['repository_view'] );
 		self::assertSame(
 			array(
@@ -1125,10 +1125,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$data['provider_list_state']
 		);
 
-		$_GET['view']            = 'unknown';
-		$_GET['panel']           = 'unknown';
-		$_GET['repository_view'] = 'unknown';
-		$_GET['orderby']         = 'unknown';
+		$_GET['orderby'] = 'unknown';
+		unset( $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
 
 		$fallback = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
 
@@ -1136,6 +1134,77 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'status', $fallback['provider_task'] );
 		self::assertSame( 'status', $fallback['repository_view'] );
 		self::assertSame( 'name', $fallback['provider_list_state']['orderby'] );
+	}
+
+	/** @return array<string, array{string, array<string, mixed>}> */
+	public static function unknown_route_requests(): array {
+		return array(
+			'old logging slug'              => array( 'troubleshooting', array( 'panel' => 'debug-capture' ) ),
+			'retired activity alias'        => array( 'troubleshooting', array( 'panel' => 'deployment-activity' ) ),
+			'guessed troubleshooting panel' => array( 'troubleshooting', array( 'panel' => 'invalid' ) ),
+			'empty troubleshooting panel'   => array( 'troubleshooting', array( 'panel' => '' ) ),
+			'array troubleshooting panel'   => array( 'troubleshooting', array( 'panel' => array( 'diagnostics' ) ) ),
+			'old webhook receiver slug'     => array( 'bb', array( 'panel' => 'setup' ) ),
+			'invalid provider panel'        => array( 'bb', array( 'panel' => 'secrets' ) ),
+			'old signing secrets slug'      => array( 'bb', array( 'view' => 'secrets' ) ),
+			'unknown provider view'         => array( 'bb', array( 'view' => 'unknown' ) ),
+			'unknown repository view'       => array(
+				'bb',
+				array(
+					'panel'           => 'repositories',
+					'repository_view' => 'unknown',
+				),
+			),
+			'markup in the slug'            => array( 'bb', array( 'panel' => '<script>alert(1)</script>' ) ),
+		);
+	}
+
+	/**
+	 * @param array<string, mixed> $query
+	 */
+	#[DataProvider( 'unknown_route_requests' )]
+	public function test_unknown_panel_or_view_is_a_closed_not_found_result( string $tab, array $query ): void {
+		$_GET = array_merge( array( 'tab' => $tab ), $query );
+
+		$data = $this->dashboard( $this->throwing_secrets(), provider_credentials: true )->get_index()['data'];
+
+		self::assertTrue( $data['route_not_found'] );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $data['route_not_found_url'] );
+		foreach ( array( 'tab_view', 'troubleshooting_panel', 'troubleshooting', 'provider_view', 'provider_task', 'repository_view' ) as $key ) {
+			self::assertArrayNotHasKey( $key, $data, $key );
+		}
+
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard route model as caller variables required by the production index view.
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/index.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Page not found.', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=overview">Back to Overview</a>', $html );
+		self::assertStringNotContainsString( '<script', $html );
+		self::assertStringNotContainsString( 'alert(1)', $html );
+		self::assertStringNotContainsString( 'debug-capture', $html );
+	}
+
+	public function test_known_panels_and_views_are_not_reported_as_not_found(): void {
+		foreach ( array(
+			array( 'troubleshooting', array( 'panel' => 'logging' ) ),
+			array( 'bb', array( 'view' => 'signing-secrets' ) ),
+			array( 'bb', array( 'view' => 'credentials' ) ),
+			array( 'bb', array( 'panel' => 'webhook-receiver' ) ),
+			array(
+				'bb',
+				array(
+					'panel'           => 'repositories',
+					'repository_view' => 'releases',
+				),
+			),
+		) as list( $tab, $query ) ) {
+			$_GET = array_merge( array( 'tab' => $tab ), $query );
+			$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), provider_credentials: true )->get_index()['data'];
+			self::assertArrayNotHasKey( 'route_not_found', $data, (string) wp_json_encode( $query ) );
+		}
 	}
 
 	public function test_provider_route_renders_the_prepared_accessible_filtered_and_paginated_outcome(): void {
@@ -1215,14 +1284,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-card="provider"', $html );
 
 		// Provider list views use the outer section as a Card host.
-		foreach ( array( array( 'gh', 'credentials', true ), array( 'bb', 'credentials', true ), array( 'gh', 'secrets', true ), array( 'bb', 'secrets', true ), array( 'gh', 'overview', false ), array( 'other', 'credentials', true ) ) as list( $code, $view, $expected ) ) {
+		foreach ( array( array( 'gh', 'credentials', true ), array( 'bb', 'credentials', true ), array( 'gh', 'signing-secrets', true ), array( 'bb', 'signing-secrets', true ), array( 'gh', 'overview', false ), array( 'other', 'credentials', true ) ) as list( $code, $view, $expected ) ) {
 			$provider['code'] = $code;
 			$provider_view    = $view;
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/provider.php';
 			$rendered = (string) ob_get_clean();
 			self::assertSame( $expected ? 1 : 0, preg_match( '/<section class="ran-booster-page-shell ran-booster-provider[^>]*data-ran-booster-card="provider"/', $rendered ) );
-			if ( in_array( $view, array( 'credentials', 'secrets' ), true ) ) {
+			if ( in_array( $view, array( 'credentials', 'signing-secrets' ), true ) ) {
 				if ( 1 !== preg_match( '/<div class="ran-booster-collection">\s*<div class="ran-booster-collection__toolbar">\s*<form class="ran-booster-provider-list-controls" method="get"[\s\S]*?<\/form>\s*<\/div>\s*<div class="ran-booster-data-table-wrap">\s*<table [\s\S]*?<\/table>\s*<\/div>\s*<div class="ran-booster-provider-table-navigation">/', $rendered ) ) {
 					self::fail( 'The ' . $view . ' filters, table and pagination must share one collection frame.' );
 				}
@@ -2515,17 +2584,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'private failure', $data['troubleshooting']['storage']['message'] );
 	}
 
-	public function test_fixed_troubleshooting_routes_default_and_alias(): void {
+	public function test_fixed_troubleshooting_routes_and_their_default(): void {
 		$dashboard = $this->dashboard( $this->throwing_secrets() );
 		foreach ( array(
 			array( null, 'installation' ),
-			array( 'invalid', 'installation' ),
-			array( array( 'diagnostics' ), 'installation' ),
 			array( 'installation', 'installation' ),
 			array( 'diagnostics', 'diagnostics' ),
 			array( 'activity', 'activity' ),
-			array( 'deployment-activity', 'activity' ),
-			array( 'debug-capture', 'debug-capture' ),
+			array( 'logging', 'logging' ),
 			array( 'support-report', 'support-report' ),
 		) as list( $panel, $expected ) ) {
 			$_GET = array( 'tab' => 'troubleshooting' );
@@ -2539,7 +2605,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function test_deployment_activity_uses_its_own_read_payload_without_diagnostics_results(): void {
 		$_GET = array(
 			'tab'   => 'troubleshooting',
-			'panel' => 'deployment-activity',
+			'panel' => 'activity',
 		);
 
 		$data = $this->dashboard( $this->throwing_secrets() )->get_index()['data'];
@@ -2561,12 +2627,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertTrue( $capture->append( '[ran-booster] safe dashboard event' ) );
 			$_GET = array(
 				'tab'   => 'troubleshooting',
-				'panel' => 'debug-capture',
+				'panel' => 'logging',
 			);
 
 			$data = $this->dashboard( $this->throwing_secrets(), null, null, null, null, null, $capture )->get_index()['data'];
 
-			self::assertSame( 'debug-capture', $data['troubleshooting_panel'] );
+			self::assertSame( 'logging', $data['troubleshooting_panel'] );
 			self::assertSame( array(), $data['troubleshooting'] );
 			self::assertSame( 'active', $data['debug_capture']['state'] );
 			self::assertSame( 'ran-booster-debug.php', $data['debug_capture']['filename'] );
@@ -3616,7 +3682,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$database->rows = array_map( static fn ( int $id ): array => DashboardActivityWpdb::attempt( $id, 'succeeded' ), range( 1, 9 ) );
 		$_GET           = array(
 			'tab'   => 'troubleshooting',
-			'panel' => 'deployment-activity',
+			'panel' => 'activity',
 		);
 
 		$data = $this->dashboard(
@@ -3648,7 +3714,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		$_GET = array(
 			'tab'   => 'troubleshooting',
-			'panel' => 'deployment-activity',
+			'panel' => 'activity',
 		);
 
 		$data = $this->dashboard(
@@ -3684,7 +3750,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$themes->method( 'all_deployment_themes' )->willThrowException( PackageStorageFailure::invalid_provider_identity() );
 		$_GET = array(
 			'tab'   => 'troubleshooting',
-			'panel' => 'deployment-activity',
+			'panel' => 'activity',
 		);
 
 		$data = $this->dashboard(
@@ -3708,7 +3774,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$attempts       = $this->deployment_attempts( $database );
 		$_GET           = array(
 			'tab'   => 'troubleshooting',
-			'panel' => 'deployment-activity',
+			'panel' => 'activity',
 		);
 
 		$first_page = $this->dashboard( $this->throwing_secrets(), null, null, $attempts )->get_index()['data']['deployment_activity'];
@@ -3729,7 +3795,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$database->rows = array( DashboardActivityWpdb::attempt( 1, 'succeeded' ) );
 		$_GET           = array(
 			'tab'    => 'troubleshooting',
-			'panel'  => 'deployment-activity',
+			'panel'  => 'activity',
 			'before' => 'v1|' . hash( 'sha256', '' ) . '|2026-07-19 00:00:00|deployment|1',
 		);
 
@@ -3748,7 +3814,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function test_malformed_deployment_history_cursor_fails_closed(): void {
 		$_GET = array(
 			'tab'    => 'troubleshooting',
-			'panel'  => 'deployment-activity',
+			'panel'  => 'activity',
 			'before' => '01',
 		);
 
@@ -3763,7 +3829,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function test_malformed_activity_identity_does_not_fall_back_to_abroad_list(): void {
 		$_GET = array(
 			'tab'       => 'troubleshooting',
-			'panel'     => 'deployment-activity',
+			'panel'     => 'activity',
 			'attempt'   => '01',
 			'reference' => str_repeat( 'a', 32 ),
 		);
@@ -3778,7 +3844,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function test_array_activity_identity_does_not_fall_back_to_abroad_list(): void {
 		$_GET = array(
 			'tab'       => 'troubleshooting',
-			'panel'     => 'deployment-activity',
+			'panel'     => 'activity',
 			'attempt'   => array( '1' ),
 			'reference' => array( str_repeat( 'a', 32 ) ),
 		);
@@ -4137,7 +4203,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$attempts       = $this->deployment_attempts( $database );
 		$_GET           = array(
 			'tab'       => 'troubleshooting',
-			'panel'     => 'deployment-activity',
+			'panel'     => 'activity',
 			'attempt'   => '1',
 			'reference' => $attempt['correlation_id'],
 		);
@@ -4223,7 +4289,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		$_GET     = array(
 			'tab'       => 'troubleshooting',
-			'panel'     => 'deployment-activity',
+			'panel'     => 'activity',
 			'attempt'   => '43',
 			'reference' => $attempt['correlation_id'],
 		);

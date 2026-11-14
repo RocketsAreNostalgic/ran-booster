@@ -234,7 +234,7 @@ final class AdminIndexViewTest extends TestCase {
 		$messages        = array();
 		$troubleshooting = array( 'providers' => array() );
 
-		$panels = array( 'installation', 'diagnostics', 'activity', 'debug-capture', 'support-report', 'unknown' );
+		$panels = array( 'installation', 'diagnostics', 'activity', 'logging', 'support-report' );
 		foreach ( array( false, true ) as $network ) {
 			$GLOBALS['ran_booster_package_view_multisite'] = $network;
 			$admin_base                                    = $network ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
@@ -277,8 +277,7 @@ final class AdminIndexViewTest extends TestCase {
 				}
 				self::assertSame( 5.0, $xpath->evaluate( 'count(//nav[@aria-label="Troubleshooting views"]/a)' ) );
 				self::assertSame( 1.0, $xpath->evaluate( 'count(//nav[@aria-label="Troubleshooting views"]/a[@aria-current="page"])' ) );
-				$current = 'unknown' === $panel ? 'installation' : $panel;
-				self::assertSame( $admin_base . '?page=ran-booster&tab=troubleshooting&panel=' . $current, $xpath->evaluate( 'string(//nav[@aria-label="Troubleshooting views"]/a[@aria-current="page"]/@href)' ) );
+				self::assertSame( $admin_base . '?page=ran-booster&tab=troubleshooting&panel=' . $panel, $xpath->evaluate( 'string(//nav[@aria-label="Troubleshooting views"]/a[@aria-current="page"]/@href)' ) );
 				self::assertSame( 0.0, $xpath->evaluate( 'count(//nav[@aria-label="Troubleshooting views"]//*[@role="tab"])' ) );
 			}
 		}
@@ -309,8 +308,8 @@ final class AdminIndexViewTest extends TestCase {
 				),
 			);
 			foreach ( array(
-				'credentials' => 'Manage Credentials',
-				'secrets'     => 'Manage Webhook Secrets',
+				'credentials'     => 'Manage Credentials',
+				'signing-secrets' => 'Manage Signing Secrets',
 			) as $provider_view => $current_label ) {
 				$data = array(
 					'provider'            => $provider,
@@ -340,7 +339,7 @@ final class AdminIndexViewTest extends TestCase {
 				self::assertSame( $current_label, $xpath->evaluate( 'string(//ol[@class="ran-admin-shell__breadcrumbs"]//span[@aria-current="page"])' ) );
 				self::assertSame( 1.0, $xpath->evaluate( 'count(//ol[@class="ran-admin-shell__breadcrumbs"]//a)' ) );
 				self::assertSame( 0.0, $xpath->evaluate( 'count(//ol[@class="ran-admin-shell__breadcrumbs"]//a[@aria-current])' ) );
-				self::assertSame( 'credentials' === $provider_view ? 'Credentials' : 'Webhook secrets', $xpath->evaluate( 'string(//*[@id="ran-booster-provider-heading"])' ) );
+				self::assertSame( 'credentials' === $provider_view ? 'Credentials' : 'Signing secrets', $xpath->evaluate( 'string(//*[@id="ran-booster-provider-heading"])' ) );
 			}
 			$tab_view = 'documentation.php';
 			ob_start();

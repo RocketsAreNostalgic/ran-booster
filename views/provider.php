@@ -215,7 +215,7 @@ $render_webhook_cell  = static function ( array $profile, string $column ) use (
 	<?php
 };
 $is_repository_detail = 'overview' === $provider_view && 'repositories' === $provider_task && '' !== $requested_repository_id;
-$provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets' ), true );
+$provider_is_card     = in_array( $provider_view, \RAN\Admin\AdminRoutes::PROVIDER_MANAGEMENT_VIEWS, true );
 /*
  * One shared "delivery not ready" notice, printed at the top of every
  * repository integrations sub-panel while the site cannot receive webhook
@@ -246,7 +246,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 <?php if ( 'overview' !== $provider_view ) { ?>
 	<header class="ran-booster-action-row ran-booster-provider-management__header">
 		<div>
-			<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( 'credentials' === $provider_view ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></h2>
+			<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( 'credentials' === $provider_view ? __( 'Credentials', 'ran-booster' ) : __( 'Signing secrets', 'ran-booster' ) ); ?></h2>
 			<p class="ran-booster-page-heading__description">
 				<?php
 				echo esc_html(
@@ -259,7 +259,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 		</div>
 		<?php if ( 'credentials' === $provider_view && $has_credential_settings ) { ?>
 			<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></button>
-		<?php } elseif ( 'secrets' === $provider_view && $has_webhook_settings ) { ?>
+		<?php } elseif ( 'signing-secrets' === $provider_view && $has_webhook_settings ) { ?>
 			<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="webhook"><?php esc_html_e( 'Add webhook secret', 'ran-booster' ); ?></button>
 		<?php } ?>
 	</header>
@@ -540,9 +540,9 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 							<ul class="filter-links ran-section-navigation ran-section-navigation--thin">
 							<?php
 							foreach ( array(
-								'status'       => __( 'Status', 'ran-booster' ),
-								'repositories' => __( 'Repositories', 'ran-booster' ),
-								'setup'        => __( 'Webhook receiver', 'ran-booster' ),
+								'status'           => __( 'Status', 'ran-booster' ),
+								'repositories'     => __( 'Repositories', 'ran-booster' ),
+								'webhook-receiver' => __( 'Webhook receiver', 'ran-booster' ),
 							) as $task => $label ) {
 								?>
 								<li><a class="ran-wp-ui-box-sizing ran-wp-ui-reset-a ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-link is-unstyled ran-booster-provider-task-tab ran-section-navigation__link<?php echo $provider_task === $task ? ' current' : ''; ?>" href="<?php echo esc_url( $task_urls[ $task ] ); ?>" hx-get="<?php echo esc_url( $task_request_urls[ $task ] ); ?>" data-ran-booster-provider-task="<?php echo esc_attr( $task ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $provider_task === $task ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?></a></li>
@@ -601,7 +601,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 							<?php } ?>
 							<p class="ran-booster-standalone-link-row"><a href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View Activity', 'ran-booster' ); ?></a></p>
 					</section>
-				<?php } elseif ( 'setup' === $provider_task ) { ?>
+				<?php } elseif ( 'webhook-receiver' === $provider_task ) { ?>
 					<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="setup" aria-labelledby="ran-booster-webhook-instructions-heading">
 							<?php if ( empty( $provider['capabilities']['webhooks'] ) ) { ?>
 								<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title"><?php esc_html_e( 'Webhook receiver', 'ran-booster' ); ?></h4>
@@ -823,7 +823,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 				);
 			?>
 		<?php } ?>
-	<?php } elseif ( 'secrets' === $provider_view ) { ?>
+	<?php } elseif ( 'signing-secrets' === $provider_view ) { ?>
 		<?php if ( $has_webhook_settings ) { ?>
 			<div id="ran-booster-delete-webhook-profile-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 			<?php

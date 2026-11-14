@@ -24,11 +24,11 @@ final class CoreAdminInteractionFacade implements
 			'error' => 'ran-booster-delete-access-profile-error',
 		),
 		'save-webhook-profile'   => array(
-			'view'  => 'secrets',
+			'view'  => 'signing-secrets',
 			'error' => 'ran-booster-webhook-profile-error',
 		),
 		'delete-webhook-profile' => array(
-			'view'  => 'secrets',
+			'view'  => 'signing-secrets',
 			'error' => 'ran-booster-delete-webhook-profile-error',
 		),
 	);
@@ -156,10 +156,10 @@ final class CoreAdminInteractionFacade implements
 			'tab'  => $provider,
 		);
 		$view = $this->query_value( 'view' );
-		$view = in_array( $view, array( 'credentials', 'secrets' ), true ) ? $view : 'overview';
+		$view = in_array( $view, \RAN\Admin\AdminRoutes::PROVIDER_VIEWS, true ) ? $view : 'overview';
 		if ( 'overview' === $view ) {
 			$panel = $this->query_value( 'panel' );
-			if ( in_array( $panel, array( 'setup', 'repositories' ), true ) ) {
+			if ( in_array( $panel, \RAN\Admin\AdminRoutes::PROVIDER_TASKS, true ) && 'status' !== $panel ) {
 				$args['panel'] = $panel;
 				if ( 'repositories' === $panel ) {
 					$repository = $this->query_text( 'repository', 191 );

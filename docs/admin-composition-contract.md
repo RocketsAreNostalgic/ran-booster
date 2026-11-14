@@ -341,7 +341,7 @@ headers and `data-label` cells that stack at 782px and below. Nothing in it
 can scroll, so its wrapper is not a focusable region. The Activity heading sits
 8px (`--ran-booster-card-heading-gap`) above its description.
 
-The provider Credentials and Webhook secrets tables, drawn for every provider
+The provider Credentials and Signing secrets tables, drawn for every provider
 by `ProviderManagementTableRenderer`, use the same collection frame:
 `.ran-booster-data-table-wrap` around a `.ran-booster-data-table`, without the
 `--rows` modifier or the core `widefat striped` classes. Like Activity, each
@@ -350,7 +350,7 @@ validated, a `__result` row whose single `colspan` cell holds the validation
 result Notice at full width. The result row is `hidden` until a result exists;
 the Validate response swaps the result host inside it and replaces the Health
 cell's short label out of band, and the enhanced-mutation script shows the row
-while its Notice is visible. Webhook secrets print no result row. Headers are
+while its Notice is visible. Signing secrets print no result row. Headers are
 13px/600 on the Card surface, record groups alternate the subtle surface with
 one divider between groups, so a hidden result row never shifts the stripe,
 and the wrapper takes the inset radius. The frame uses `overflow: clip`, so a

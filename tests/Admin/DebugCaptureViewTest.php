@@ -82,7 +82,7 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringContainsString( 'data-copy-failed-message="Clipboard access failed. The captured events are selected; use your browser copy command."', $html );
 		self::assertStringContainsString( '[ran-booster] safe &lt;event&gt;', $html );
 		self::assertStringContainsString( 'next &amp; event', $html );
-		self::assertStringContainsString( 'panel=debug-capture', $html );
+		self::assertStringContainsString( 'panel=logging', $html );
 		self::assertStringContainsString( 'class="ran-booster-debug-capture__primary-actions"', $html );
 		self::assertStringContainsString( 'rows="10" readonly', $html );
 		self::assertStringContainsString( '>Refresh</a>', $html );

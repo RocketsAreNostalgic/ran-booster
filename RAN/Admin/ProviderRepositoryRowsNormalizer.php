@@ -41,7 +41,7 @@ final class ProviderRepositoryRowsNormalizer {
 		$provider_url   = static fn ( array $args = array() ): string => add_query_arg( $args, $base_url );
 		$task_urls      = array();
 		$task_requests  = array();
-		foreach ( array( 'status', 'repositories', 'setup' ) as $task ) {
+		foreach ( \RAN\Admin\AdminRoutes::PROVIDER_TASKS as $task ) {
 			$task_urls[ $task ]     = $provider_url( array( 'panel' => $task ) );
 			$task_requests[ $task ] = add_query_arg(
 				array(
@@ -107,7 +107,7 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 
 		return array(
-			'provider_task'                       => in_array( $data['provider_task'] ?? null, array( 'repositories', 'setup' ), true ) ? $data['provider_task'] : 'status',
+			'provider_task'                       => in_array( $data['provider_task'] ?? null, \RAN\Admin\AdminRoutes::PROVIDER_TASKS, true ) ? $data['provider_task'] : 'status',
 			'managed_repositories'                => $managed,
 			'webhook_endpoint'                    => $endpoint,
 			'webhook_assistance_provider_capable' => null !== $site,
@@ -434,7 +434,7 @@ final class ProviderRepositoryRowsNormalizer {
 					'label'  => 'shared' === $coverage ? __( 'Review shared owner secret', 'ran-booster' ) : __( 'Review repository secret', 'ran-booster' ),
 					'url'    => $provider_url(
 						array(
-							'view' => 'secrets',
+							'view' => 'signing-secrets',
 							's'    => $secret_target,
 						)
 					),

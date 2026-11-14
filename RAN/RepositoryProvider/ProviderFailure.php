@@ -123,6 +123,20 @@ final readonly class ProviderFailure {
 		return is_int( $code ) && isset( self::LEGACY_REASONS[ $code ] ) ? new self( self::LEGACY_REASONS[ $code ], $code ) : null;
 	}
 
+	/** Whether a retry later may succeed without any change by the administrator. */
+	public function is_transient(): bool {
+		return in_array( $this->reason, array( ...self::RATE, ...self::TRANSPORT, 'http_5xx', 'credential_store_unavailable' ), true );
+	}
+
+	/**
+	 * @param array<string, mixed> $data
+	 * @throws \LogicException Always: a failure is only valid through its constructor.
+	 */
+	public function __unserialize( array $data ): void {
+		unset( $data );
+		throw new \LogicException( 'A provider failure cannot be unserialized.' );
+	}
+
 	/** The integer code a host that predates the carrier reads: the status, else the reason's default. */
 	public function legacy_code(): int {
 		return $this->http_status ?? match ( true ) {

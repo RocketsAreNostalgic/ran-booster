@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\RepositoryProvider;
 
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -15,6 +16,9 @@ use RuntimeException;
 final class ProviderRequestFailed extends RuntimeException {
 
 	public function __construct( public readonly ProviderFailure $failure ) {
+		if ( ! in_array( $failure->reason, ProviderFailure::REQUEST_REASONS, true ) ) {
+			throw new InvalidArgumentException( 'A request failure cannot carry a release reason.' );
+		}
 		parent::__construct( 'The repository provider request failed.', $failure->legacy_code() );
 	}
 }

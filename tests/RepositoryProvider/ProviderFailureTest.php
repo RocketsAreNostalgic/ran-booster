@@ -188,6 +188,27 @@ final class ProviderFailureTest extends TestCase {
 		self::assertSame( 'The repository provider request failed.', ( new ProviderRequestFailed( new ProviderFailure( 'dns_failed' ) ) )->getMessage() );
 	}
 
+	public function test_a_request_failure_rejects_a_release_reason_and_a_failure_cannot_be_unserialized(): void {
+		try {
+			new ProviderRequestFailed( new ProviderFailure( 'release_changed' ) );
+			self::fail( 'A release reason is not a request failure.' );
+		} catch ( InvalidArgumentException ) {
+			self::assertSame( 'release_changed', ( new ProviderFailure( 'release_changed' ) )->reason );
+		}
+		$this->expectException( \LogicException::class );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize,WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- The test proves a serialized carrier is refused.
+		unserialize( serialize( new ProviderFailure( 'http_5xx' ) ) );
+	}
+
+	public function test_only_retry_later_reasons_are_transient(): void {
+		foreach ( array( 'rate_limited', 'dns_failed', 'http_5xx', 'credential_store_unavailable' ) as $reason ) {
+			self::assertTrue( ( new ProviderFailure( $reason ) )->is_transient(), $reason );
+		}
+		foreach ( array( 'credential_rejected', 'repository_not_found', 'ref_not_found', 'http_4xx_other' ) as $reason ) {
+			self::assertFalse( ( new ProviderFailure( $reason, 503 ) )->is_transient(), $reason );
+		}
+	}
+
 	public function test_old_style_read_unavailable_calls_are_unchanged(): void {
 		$previous = new RuntimeException( 'earlier' );
 		$read     = new RepositoryReleaseReadUnavailable( 'message', 503, $previous );

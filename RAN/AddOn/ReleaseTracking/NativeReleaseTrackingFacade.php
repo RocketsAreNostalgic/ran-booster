@@ -1259,7 +1259,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					if ( null === $newest ) {
 						$newest = $candidate;
 						// The provider's failure reason wins over its legacy detail.
-						$detail = $failure->failure->reason ?? $failure->detail;
+						$detail = null !== $failure->failure && in_array( $failure->failure->reason, self::EXPLAINED_PROVIDER_REASONS, true )
+							? $failure->failure->reason
+							: $failure->detail;
 					}
 					if ( 2 === $inspected ) {
 						return $this->rejected_release_preflight( $package_root, $newest, $detail );

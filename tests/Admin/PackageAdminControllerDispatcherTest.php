@@ -674,6 +674,23 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertSame( 'https://example.test/redirect', $result );
 	}
 
+	public function test_a_carried_definitive_reason_blocks_even_with_a_transient_looking_status(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( 0, new \RAN\RepositoryProvider\ProviderFailure( 'repository_not_found', 503 ) ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: new EditBoundaryPluginRepository( $package ),
+			themes: new EditBoundaryThemeRepository( $package ),
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', $this->unchanged_edit_request(), true );
+
+		self::assertFalse( $result );
+	}
+
 	#[DataProvider( 'definitive_lookup_failures' )]
 	public function test_definitive_provider_answers_still_block_an_unchanged_repository( int $code ): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );

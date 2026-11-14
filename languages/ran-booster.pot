@@ -5422,142 +5422,142 @@ msgstr ""
 msgid "WP Pusher cannot be activated while RAN Booster is active. Keep WP Pusher inactive and use the migration guidance in Booster."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:159
+#: RAN/RepositoryProvider/ProviderFailure.php:173
 msgid "No credential is saved for this request."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:160
+#: RAN/RepositoryProvider/ProviderFailure.php:174
 msgid "Booster could not read the saved credential."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:161
+#: RAN/RepositoryProvider/ProviderFailure.php:175
 msgid "The saved credential is not in a format the provider accepts."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:162
+#: RAN/RepositoryProvider/ProviderFailure.php:176
 msgid "The Git provider rejected the credential."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:164
+#: RAN/RepositoryProvider/ProviderFailure.php:178
 msgid "The credential lacks permission for this request."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:165
+#: RAN/RepositoryProvider/ProviderFailure.php:179
 msgid "The Git provider rate limit has been reached."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:166
+#: RAN/RepositoryProvider/ProviderFailure.php:180
 msgid "The Git provider is throttling requests."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:167
+#: RAN/RepositoryProvider/ProviderFailure.php:181
 msgid "The repository was not found, or the credential cannot access it."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:168
+#: RAN/RepositoryProvider/ProviderFailure.php:182
 msgid "The repository does not exist."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:169
+#: RAN/RepositoryProvider/ProviderFailure.php:183
 msgid "The requested revision is not available."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:170
+#: RAN/RepositoryProvider/ProviderFailure.php:184
 msgid "The repository owner could not be found."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:171
+#: RAN/RepositoryProvider/ProviderFailure.php:185
 msgid "The repository changed identity. Review the package source."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:172
+#: RAN/RepositoryProvider/ProviderFailure.php:186
 msgid "The repository has no default branch."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:173
+#: RAN/RepositoryProvider/ProviderFailure.php:187
 msgid "The Git provider took too long to respond."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:174
+#: RAN/RepositoryProvider/ProviderFailure.php:188
 msgid "This site could not look up the Git provider host."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:175
+#: RAN/RepositoryProvider/ProviderFailure.php:189
 msgid "This site could not make a secure connection to the Git provider."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:176
+#: RAN/RepositoryProvider/ProviderFailure.php:190
 msgid "This site blocks outbound requests to the Git provider."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:177
+#: RAN/RepositoryProvider/ProviderFailure.php:191
 msgid "The Git provider redirected the request somewhere that is not allowed."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:178
+#: RAN/RepositoryProvider/ProviderFailure.php:192
 msgid "The Git provider could not be reached."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:179
+#: RAN/RepositoryProvider/ProviderFailure.php:193
 msgid "The Git provider refused the request."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:180
+#: RAN/RepositoryProvider/ProviderFailure.php:194
 msgid "The Git provider reported an error."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:181
+#: RAN/RepositoryProvider/ProviderFailure.php:195
 msgid "The Git provider returned an invalid response."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:182
+#: RAN/RepositoryProvider/ProviderFailure.php:196
 msgid "The Git provider returned too much data."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:183
+#: RAN/RepositoryProvider/ProviderFailure.php:197
 msgid "This site’s filesystem method does not support the operation."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:184
+#: RAN/RepositoryProvider/ProviderFailure.php:198
 msgid "This server cannot read ZIP packages."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:185
+#: RAN/RepositoryProvider/ProviderFailure.php:199
 msgid "A newer operation replaced this one."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:186
+#: RAN/RepositoryProvider/ProviderFailure.php:200
 msgid "No published release was found for this track."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:187
+#: RAN/RepositoryProvider/ProviderFailure.php:201
 msgid "The release could not be validated."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:188
+#: RAN/RepositoryProvider/ProviderFailure.php:202
 msgid "The release changed after it was inspected."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:189
+#: RAN/RepositoryProvider/ProviderFailure.php:203
 msgid "The release is not a compatible package."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:199
+#: RAN/RepositoryProvider/ProviderFailure.php:213
 msgid "The credential has expired."
 msgstr ""
 
 #. translators: %s: date the credential expired, for example 2026-01-31.
-#: RAN/RepositoryProvider/ProviderFailure.php:203
+#: RAN/RepositoryProvider/ProviderFailure.php:217
 #, php-format
 msgid "The credential expired on %s."
 msgstr ""
 
-#: RAN/RepositoryProvider/ProviderFailure.php:212
+#: RAN/RepositoryProvider/ProviderFailure.php:226
 msgid "Try again in less than a minute."
 msgstr ""
 
 #. translators: %d: whole minutes until the request may be retried.
-#: RAN/RepositoryProvider/ProviderFailure.php:217
+#: RAN/RepositoryProvider/ProviderFailure.php:231
 #, php-format
 msgid "Try again in about %d minute."
 msgid_plural "Try again in about %d minutes."

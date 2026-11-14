@@ -932,8 +932,8 @@ code, and a carried reason with the reason copy below.
 
 ### Reason vocabulary
 
-The vocabulary is closed. A provider uses only these ids; Core treats an
-unknown reason on a carrier as if the carrier held none. It refines the coarser
+The vocabulary is closed. A provider uses only these ids; the constructor
+rejects any other. It refines the coarser
 `ReleaseFailure` codes of the release updater (see
 [Updater correspondence](#updater-correspondence)).
 
@@ -975,7 +975,8 @@ paraphrased; typed numbers are rendered by Core as text.
 | `release_incompatible` | The release is not a valid package for this repository | None | The release is not a compatible package. |
 
 The release group also accepts `package_asset_missing` and
-`package_asset_ambiguous`, which keep their current copy.
+`package_asset_ambiguous`. A rejection that carries one of them keeps its
+existing wording; elsewhere they read as an incompatible package.
 
 ### Typed facts
 
@@ -990,7 +991,7 @@ headers, `WP_Error` messages or exception messages anywhere.
 ### Where each signal goes
 
 Attach the `ProviderFailure` to the carrier the operation already uses.
-`ProviderRequestFailed` requires a failure and takes any reason. The other
+`ProviderRequestFailed` requires a failure and takes any reason outside the release group; it throws `InvalidArgumentException` for a release reason. The other
 carriers accept one group of reasons and treat a reason from any other group as
 absent: the release read carrier accepts every group except release, the
 release rejection carriers accept the release group, and the saved-credential
@@ -1005,6 +1006,16 @@ check accepts the credential, rate, transport and http groups.
 | Saved credential check | `CredentialValidationResult` | Optional argument of `invalid()`, `unavailable()`, `rate_limited()` and `invalid_response()`. `valid()` accepts none |
 | Submitted credential shape | `InvalidCredentialInput` | Unchanged: closed `reason` and a fixed message |
 | Diagnostics | `ProviderDiagnosticResult` | Unchanged: stable `code`, safe `message` and `remediation`, optional `Throwable` |
+
+On the credential check, pair the factory with its reason (`invalid()` with a
+credential or permission reason, `rate_limited()` with a rate reason,
+`unavailable()` with a store, transport or http reason); Core shows the
+reason's sentence and records the factory's status.
+
+For package save, a carried failure is retried-later (an unchanged settings
+save proceeds) when its reason is a rate limit, a transport failure, `http_5xx`
+or `credential_store_unavailable`, whatever its `http_status`; a plain exception
+uses its code. A `ProviderFailure` cannot be unserialized.
 
 Other thrown types are unknown failures. `StaleDeployment` still means the
 branch head moved. `InvalidArgumentException` still means malformed caller

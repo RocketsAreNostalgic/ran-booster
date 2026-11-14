@@ -679,7 +679,7 @@ final class PackageAdminController {
 			|| ! $stored_package instanceof Package
 			|| $this->enabled( $request, 'reinstall_after_save' )
 			|| $this->enabled( $request, 'check_repository_branch_after_save' )
-			|| ! in_array( $failure->getCode(), self::TRANSIENT_LOOKUP_CODES, true ) ) {
+			|| ! ( ProviderFailure::carried( $failure )?->is_transient() ?? in_array( $failure->getCode(), self::TRANSIENT_LOOKUP_CODES, true ) ) ) {
 			return null;
 		}
 		try {

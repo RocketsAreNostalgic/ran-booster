@@ -1062,7 +1062,8 @@
 	> .ran-booster-ui-disclosure
 	> .ran-booster-ui-disclosure__header
 	> [role="button"] {
-	padding: 12px 16px;
+	padding: var(--ran-booster-header-trigger-inset-block)
+		var(--ran-booster-header-inset-inline);
 	font-size: var(--ran-booster-font-size-lg);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: 24px;
@@ -1074,10 +1075,37 @@
 	)
 	> details[data-ran-booster-ui-disclosure-fallback]
 	> summary {
-	padding: 12px 16px;
+	padding: var(--ran-booster-header-trigger-inset-block)
+		var(--ran-booster-header-inset-inline);
 	font-size: var(--ran-booster-font-size-lg);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: 24px;
+}
+
+/*
+ * A prominent disclosure inside another prominent disclosure is a nested
+ * panel, not a section: its trigger takes the panel header inset and the
+ * sub-heading type (13/600), like the readiness panel header it sits beside.
+ * Both selectors carry one attribute more than the section rules above.
+ */
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	> *
+	> .ran-booster-ui-disclosure
+	> .ran-booster-ui-disclosure__header
+	> [role="button"],
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	[data-ran-booster-ui-disclosure-density="prominent"][data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary {
+	padding: var(--ran-booster-panel-header-inset-block)
+		var(--ran-booster-panel-header-inset-inline);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin

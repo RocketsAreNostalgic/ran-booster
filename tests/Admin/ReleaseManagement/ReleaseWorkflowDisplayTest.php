@@ -27,7 +27,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 				array(
 					'show_automation' => true,
 					'automation'      => array(
-						'tone'  => 'ran-booster-badge--' . $tone,
+						'tone'  => $tone,
 						'label' => 'Exact <workflow> "quoted"',
 					),
 				)
@@ -127,7 +127,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			),
 			'show_automation'    => true,
 			'automation'         => array(
-				'tone'        => 'ran-booster-badge--info',
+				'tone'        => 'info',
 				'label'       => 'Not assessed',
 				'message'     => 'Releases are available; their publishing method has not been assessed.',
 				'notice_tone' => 'notice-info',

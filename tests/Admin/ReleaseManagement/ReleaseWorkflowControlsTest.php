@@ -109,12 +109,12 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		$never        = $state_method->invoke( $presenter, '', false, false, false, 'unassessed' );
 		self::assertIsArray( $never );
 		self::assertSame( 'Not assessed', $never['label'] );
-		self::assertSame( 'ran-booster-badge--neutral', $never['tone'] );
+		self::assertSame( 'neutral', $never['tone'] );
 		self::assertSame( 'notice-info', $never['notice_tone'] );
 		$blocked = $state_method->invoke( $presenter, '', false, false, true, 'unassessed' );
 		self::assertIsArray( $blocked );
 		self::assertSame( 'Blocked', $blocked['label'] );
-		self::assertSame( 'ran-booster-badge--error', $blocked['tone'] );
+		self::assertSame( 'error', $blocked['tone'] );
 	}
 
 	public function test_registered_workflow_provider_without_metadata_leaves_repository_rows_untouched_without_warning_or_output(): void {

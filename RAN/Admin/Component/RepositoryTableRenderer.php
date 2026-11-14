@@ -126,24 +126,7 @@ final class RepositoryTableRenderer {
 			<div>
 				<strong><?php echo esc_html( $label ); ?></strong>
 				<?php if ( '' !== $tone ) { ?>
-					<?php
-					$intent = array(
-						'neutral' => 'none',
-						'pending' => 'none',
-						'ok'      => 'stable',
-						'success' => 'stable',
-						'warning' => 'medium',
-						'error'   => 'high',
-						'info'    => 'informational',
-					)[ $tone ] ?? '';
-					if ( '' === $intent || '' === $value ) {
-						?>
-						<?php echo StatusBadge::for_intent( (string) $value, 'none' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
-						<?php
-					} else {
-						?>
-						<?php echo StatusBadge::for_intent( (string) $value, (string) $intent ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
-					<?php } ?>
+					<?php echo StatusBadge::for_intent( $value, '' === $value ? 'none' : StatusBadge::detail_intent( $tone ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				<?php } elseif ( '' !== $datetime ) { ?>
 					<time datetime="<?php echo esc_attr( $datetime ); ?>"><?php echo esc_html( $value ); ?></time>
 				<?php } else { ?>

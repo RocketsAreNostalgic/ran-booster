@@ -77,6 +77,26 @@ return static function ( wpdb $database ): void {
 		$expect( $replacement['available'] && null === $replacement['latest'], 're-adoption cannot inherit old evidence' );
 		$changed = $store->summary( 'plugin', 'activity-proof/plugin.php', $capture['adoption_token'], 'source-2/access-1', 'release.check' );
 		$expect( $changed['available'] && null === $changed['observation'], 'source/access currentness' );
+		// Repeated background skips are thinned by the store's own SQL, and a skip never leads over a result.
+		$skip_capture = array_replace( $capture, array( 'context' => 'skip-proof/access' ) );
+		$first_skip   = $store->begin( 'gh', $request, $skip_capture );
+		$expect( null !== $first_skip && ! $store->discard_repeated_skip( $first_skip, 'policy_disabled' ) && $store->complete( $first_skip, 'skipped', 'policy_disabled' ), 'first skip is recorded' );
+		$skip_repeat = $store->begin( 'gh', $request, $skip_capture );
+		$expect( null !== $skip_repeat && $store->discard_repeated_skip( $skip_repeat, 'policy_disabled' ), 'repeated skip is discarded' );
+		$skip_other = $store->begin( 'gh', $request, $skip_capture );
+		$expect( null !== $skip_other && ! $store->discard_repeated_skip( $skip_other, 'policy_forced_off' ) && $store->complete( $skip_other, 'skipped', 'policy_forced_off' ), 'a different skip reason is recorded' );
+		$skip_result = $store->begin( 'gh', $request, $skip_capture );
+		$expect( null !== $skip_result && $store->complete( $skip_result, 'failed', 'release_list_failed' ), 'a failed result is recorded' );
+		$late_skip = $store->begin( 'gh', $request, $skip_capture );
+		$expect( null !== $late_skip && $store->complete( $late_skip, 'skipped', 'policy_disabled' ), 'a later skip is recorded' );
+		$skip_summary = $store->summary( 'plugin', 'activity-proof/plugin.php', $capture['adoption_token'], 'skip-proof/access', 'release.check' );
+		$expect( $skip_summary['available'] && (int) ( $skip_summary['latest']['id'] ?? 0 ) === $skip_result, 'a skip never leads over a recorded result' );
+		// Maintenance keeps the result the summary shows, even past retention and behind newer skips.
+		$query( $database->prepare( 'UPDATE %i SET started_at = %s WHERE context = %s', $table, '2000-01-01 00:00:00', 'skip-proof/access' ) );
+		$expect( false !== $store->prune( array( $skip_capture ) ), 'prune with skipped history' );
+		$kept = $store->summary( 'plugin', 'activity-proof/plugin.php', $capture['adoption_token'], 'skip-proof/access', 'release.check' );
+		$expect( $kept['available'] && (int) ( $kept['latest']['id'] ?? 0 ) === $skip_result, 'prune keeps the newest non-skipped result' );
+		$query( $database->prepare( 'DELETE FROM %i WHERE context = %s', $table, 'skip-proof/access' ) );
 		$query( $database->prepare( 'UPDATE %i SET sort_at = %s', $table, '2026-01-01 12:00:00' ) );
 		$page = $store->activity_history(
 			array(

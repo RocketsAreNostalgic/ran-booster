@@ -97,6 +97,19 @@ letters, digits, dot, underscore and hyphen token. An updater that does not answ
 `refresh_skipped_disabled`; the read-only check is not asked for manual or
 automatic packages.
 
+Activity keeps the checks that ran, without letting WordPress's own refreshes
+bury them. A manual Check releases that ran always records its row, including a
+skipped one. A background or native refresh that is skipped by policy
+(`policy_disabled` or `policy_forced_off`) records a row only when the package's
+newest Activity row is not the same skip, or that same skip is older than
+`ActivityStore::SKIPPED_HEARTBEAT` (24 hours), so an unchanged policy adds at
+most one row a day. A background skip whose history cannot be read is
+dropped on a best-effort basis. A manual click inside the one-minute cooldown (`refresh_recent`) ran no
+check and records nothing. Activity rows are never updated or collapsed, and
+`discovery_not_admitted` skips record as before. "Last recorded check" in
+Release details shows the newest result that is not a skipped row, and shows a
+skipped row only when the package has no other result.
+
 The result also carries the updater's closed reason (`check_reason`, for
 example `policy_disabled`) so a caller other than the page can read it.
 

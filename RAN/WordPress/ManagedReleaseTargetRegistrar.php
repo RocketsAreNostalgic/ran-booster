@@ -49,6 +49,9 @@ final class ManagedReleaseTargetRegistrar {
 	/** @var array<string, string> Target key by observed check id. */
 	private array $check_targets = array();
 
+	/** @var array<string, true> Targets whose check in this request was started by a person. */
+	private array $manual_checks = array();
+
 	/** @var array<string, array{status: string, reason: string}> Last observed check result by target key. */
 	private array $check_outcomes = array();
 
@@ -471,7 +474,15 @@ final class ManagedReleaseTargetRegistrar {
 		if ( null === $this->activity || null === $id ) {
 			return;
 		}
+		if ( in_array( $event['reason'], array( 'policy_disabled', 'policy_forced_off' ), true ) && ! isset( $this->manual_checks[ $key ] ) && $this->activity->discard_repeated_skip( $id, $event['reason'] ) ) {
+			return;
+		}
 		$this->activity->complete( $id, $event['status'], $event['reason'], facts: $facts, effect: 'succeeded' === $event['status'] ? 'established' : 'none' );
+	}
+
+	/** A user-started check always records its row; only background skips are thinned. The mark lasts the request on purpose: one manual refresh can emit more than one check. */
+	public function mark_manual_check( string $type, string $identifier ): void {
+		$this->manual_checks[ self::key( $type, $identifier ) ] = true;
 	}
 
 	public function forget_check_outcome( string $type, string $identifier ): void {

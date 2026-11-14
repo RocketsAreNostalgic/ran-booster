@@ -501,8 +501,8 @@ final class ActivityStore {
 			return false;
 		}
 		$active_sql = empty( $active ) ? '0 = 1' : implode( ' OR ', $active );
-		// UNION materializes the same-table protection query on supported MySQL/MariaDB.
-		$protection        = "SELECT retained_id FROM (SELECT MAX(id) retained_id FROM {$this->table} WHERE $active_sql GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION SELECT MAX(id) retained_id FROM {$this->table} WHERE ($active_sql) AND effect <> 'none' GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context) AS protected_activity";
+		// UNION materializes the same-table protection query on supported MySQL/MariaDB. The last two branches keep what summary() shows: the newest established row and the newest row that is not a skip.
+		$protection        = "SELECT retained_id FROM (SELECT MAX(id) retained_id FROM {$this->table} WHERE $active_sql GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION SELECT MAX(id) retained_id FROM {$this->table} WHERE ($active_sql) AND effect <> 'none' GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION SELECT MAX(id) retained_id FROM {$this->table} WHERE ($active_sql) AND status <> 'skipped' GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context) AS protected_activity";
 		$retention         = self::retention_policy();
 		$maximum_rows      = $retention['maximum_rows'];
 		$deployment_safety = $this->deployment_safety_sql();

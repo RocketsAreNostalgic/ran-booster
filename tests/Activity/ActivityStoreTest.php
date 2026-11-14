@@ -495,6 +495,20 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertContains( $capture['adoption_token'], $this->connection->prepared[0]['args'] );
 	}
 
+	public function test_prune_protects_the_newest_non_skipped_row_that_summary_shows(): void {
+		$this->connection->read_results = array(
+			array(
+				(object) array(
+					'id'     => '1',
+					'status' => 'skipped',
+				),
+			),
+		);
+		$this->store->prune( array( self::capture() ) );
+		self::assertStringContainsString( "AND status <> 'skipped' GROUP BY context_key", $this->connection->queries[0] );
+		self::assertStringContainsString( "AND status <> 'skipped' GROUP BY context_key", $this->connection->queries[1] );
+	}
+
 	public function test_prune_reports_actual_deletions_when_a_candidate_changes(): void {
 		$this->connection->read_results  = array(
 			array(

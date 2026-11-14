@@ -91,6 +91,11 @@ return static function ( wpdb $database ): void {
 		$expect( null !== $late_skip && $store->complete( $late_skip, 'skipped', 'policy_disabled' ), 'a later skip is recorded' );
 		$skip_summary = $store->summary( 'plugin', 'activity-proof/plugin.php', $capture['adoption_token'], 'skip-proof/access', 'release.check' );
 		$expect( $skip_summary['available'] && (int) ( $skip_summary['latest']['id'] ?? 0 ) === $skip_result, 'a skip never leads over a recorded result' );
+		// Maintenance keeps the result the summary shows, even past retention and behind newer skips.
+		$query( $database->prepare( 'UPDATE %i SET started_at = %s WHERE context = %s', $table, '2000-01-01 00:00:00', 'skip-proof/access' ) );
+		$expect( false !== $store->prune( array( $skip_capture ) ), 'prune with skipped history' );
+		$kept = $store->summary( 'plugin', 'activity-proof/plugin.php', $capture['adoption_token'], 'skip-proof/access', 'release.check' );
+		$expect( $kept['available'] && (int) ( $kept['latest']['id'] ?? 0 ) === $skip_result, 'prune keeps the newest non-skipped result' );
 		$query( $database->prepare( 'DELETE FROM %i WHERE context = %s', $table, 'skip-proof/access' ) );
 		$query( $database->prepare( 'UPDATE %i SET sort_at = %s', $table, '2026-01-01 12:00:00' ) );
 		$page = $store->activity_history(

@@ -162,6 +162,74 @@
 		0 3px 3px rgb(0 0 0 / 2%), 0 4px 4px rgb(0 0 0 / 1%);
 }
 
+/*
+ * Booster brand seam: the one place the design system's brand tone is chosen.
+ *
+ * WordPress's wp-theme sheet fixes the brand tokens at the modern scheme's
+ * blue for every admin colour scheme. Booster's own roots (the admin screens
+ * and the body-mounted portals of the repository picker and the dialog; the vendored Shell keeps its own
+ * colour handling) take the brand tone from the user's admin colour instead,
+ * so brand controls and the secondary Button follow the scheme. Nothing
+ * outside these roots changes.
+ *
+ * Override with `--ran-booster-brand-action` (base: stroke, text, solid fill and
+ * focus), `--ran-booster-brand-action-active` (pressed solid fill and stroke),
+ * `--ran-booster-brand-action-deep` (pressed text), `--ran-booster-brand-action-contrast`
+ * (text on the solid fill) and `--ran-booster-brand-action-tint` (pressed outline
+ * fill), on :root or on a root below. The unset defaults are the WordPress
+ * admin colour and its two darker steps.
+ */
+
+/* stylelint-disable plugin-wpds/no-setting-wpds-custom-properties -- This is the sanctioned bridge from Booster's brand seam to the design-system brand tokens. */
+.ran-booster-admin,
+.ran-booster-repository-picker-portal,
+.ran-booster-ui-dialog-portal {
+	--wpds-color-foreground-interactive-brand: var(
+		--ran-booster-brand-action,
+		var(--wp-admin-theme-color)
+	);
+	--wpds-color-foreground-interactive-brand-active: var(
+		--ran-booster-brand-action-deep,
+		var(--wp-admin-theme-color-darker-20)
+	);
+	--wpds-color-foreground-interactive-brand-strong: var(
+		--ran-booster-brand-action-contrast,
+		var(--ran-booster-color-neutral-0)
+	);
+	--wpds-color-foreground-interactive-brand-strong-active: var(
+		--ran-booster-brand-action-contrast,
+		var(--ran-booster-color-neutral-0)
+	);
+	--wpds-color-background-interactive-brand-strong: var(
+		--ran-booster-brand-action,
+		var(--wp-admin-theme-color)
+	);
+	--wpds-color-background-interactive-brand-strong-active: var(
+		--ran-booster-brand-action-active,
+		var(--wp-admin-theme-color-darker-10)
+	);
+	--wpds-color-background-interactive-brand-weak-active: var(
+		--ran-booster-brand-action-tint,
+		color-mix(
+			in srgb,
+			var(--ran-booster-brand-action, var(--wp-admin-theme-color)) 10%,
+			var(--ran-booster-color-neutral-0)
+		)
+	);
+	--wpds-color-stroke-interactive-brand: var(
+		--ran-booster-brand-action,
+		var(--wp-admin-theme-color)
+	);
+	--wpds-color-stroke-interactive-brand-active: var(
+		--ran-booster-brand-action-active,
+		var(--wp-admin-theme-color-darker-10)
+	);
+	--wpds-color-stroke-focus: var(
+		--ran-booster-brand-action,
+		var(--wp-admin-theme-color)
+	);
+}
+/* stylelint-enable plugin-wpds/no-setting-wpds-custom-properties */
 .ran-booster-admin {
 	max-inline-size: var(--ran-booster-width-standard);
 }

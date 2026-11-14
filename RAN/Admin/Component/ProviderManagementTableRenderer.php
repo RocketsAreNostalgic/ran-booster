@@ -223,11 +223,11 @@ final class ProviderManagementTableRenderer {
 						<option value="20" <?php selected( 20, $pagination['per_page'] ); ?>>20</option>
 						<option value="50" <?php selected( 50, $pagination['per_page'] ); ?>>50</option>
 					</select>
-					<button type="submit" class="<?php echo esc_attr( ButtonClasses::secondary( true ) . ' screen-reader-text' ); ?>"><?php esc_html_e( 'Apply', 'ran-booster' ); ?></button>
+					<button type="submit" class="<?php echo esc_attr( ButtonClasses::for( 'neutral', 'outline', true ) . ' screen-reader-text' ); ?>"><?php esc_html_e( 'Apply', 'ran-booster' ); ?></button>
 				</form>
-				<a class="<?php echo esc_attr( ButtonClasses::secondary( true, true ) . ( 1 >= $current ? ' disabled' : '' ) ); ?>" href="<?php echo esc_url( $pagination['previous_url'] ); ?>" aria-disabled="<?php echo 1 >= $current ? 'true' : 'false'; ?>" <?php echo 1 >= $current ? 'tabindex="-1"' : ''; ?>>&lsaquo;</a>
+				<a class="<?php echo esc_attr( ButtonClasses::for( 'neutral', 'outline', true, true ) . ( 1 >= $current ? ' disabled' : '' ) ); ?>" href="<?php echo esc_url( $pagination['previous_url'] ); ?>" aria-disabled="<?php echo 1 >= $current ? 'true' : 'false'; ?>" <?php echo 1 >= $current ? 'tabindex="-1"' : ''; ?>>&lsaquo;</a>
 				<span><?php echo esc_html( $pagination['page_label'] ); ?></span>
-				<a class="<?php echo esc_attr( ButtonClasses::secondary( true, true ) . ( $current >= $pages ? ' disabled' : '' ) ); ?>" href="<?php echo esc_url( $pagination['next_url'] ); ?>" aria-disabled="<?php echo $current >= $pages ? 'true' : 'false'; ?>" <?php echo $current >= $pages ? 'tabindex="-1"' : ''; ?>>&rsaquo;</a>
+				<a class="<?php echo esc_attr( ButtonClasses::for( 'neutral', 'outline', true, true ) . ( $current >= $pages ? ' disabled' : '' ) ); ?>" href="<?php echo esc_url( $pagination['next_url'] ); ?>" aria-disabled="<?php echo $current >= $pages ? 'true' : 'false'; ?>" <?php echo $current >= $pages ? 'tabindex="-1"' : ''; ?>>&rsaquo;</a>
 			</div>
 		</div>
 		<?php

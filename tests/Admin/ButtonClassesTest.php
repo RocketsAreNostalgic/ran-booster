@@ -15,7 +15,8 @@ final class ButtonClassesTest extends TestCase {
 		self::assertSame( self::BASE . ' is-neutral is-outline', ButtonClasses::for( 'neutral', 'outline' ) );
 		self::assertSame( self::BASE . ' is-neutral is-minimal is-compact', ButtonClasses::for( 'neutral', 'minimal', true ) );
 		self::assertSame( ButtonClasses::for( 'brand', 'solid' ), ButtonClasses::primary() );
-		self::assertSame( ButtonClasses::for( 'neutral', 'outline', true, true ), ButtonClasses::secondary( true, true ) );
+		self::assertSame( self::BASE . ' is-brand is-outline', ButtonClasses::secondary() );
+		self::assertSame( ButtonClasses::for( 'brand', 'outline', true, true ), ButtonClasses::secondary( true, true ) );
 	}
 
 	public function test_anchors_take_the_anchor_reset_instead_of_the_button_reset(): void {

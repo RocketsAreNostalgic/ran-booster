@@ -75,9 +75,12 @@ final class ButtonClasses {
 	}
 
 	/**
-	 * Returns the class list for a secondary action: neutral outline.
+	 * Returns the class list for a secondary action: brand outline. The brand
+	 * tone is Booster's admin-accent bridge (00-foundations.css), so it follows
+	 * the user's admin colour scheme. Controls that sit with native form
+	 * controls (pagination, bulk Apply) ask for `for( 'neutral', 'outline' )`.
 	 */
 	public static function secondary( bool $compact = false, bool $anchor = false ): string {
-		return self::for( 'neutral', 'outline', $compact, $anchor );
+		return self::for( 'brand', 'outline', $compact, $anchor );
 	}
 }

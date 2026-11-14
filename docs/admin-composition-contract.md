@@ -588,9 +588,13 @@ WordPress core's `.button`. Markup takes its classes from
 ```
 
 - `primary()` is brand solid, for the one main action of a form or panel;
-  `secondary()` is neutral outline, for every other action.
+  `secondary()` is brand outline, for every other action. A control that sits
+  with native form controls (the provider table's pagination and page-size
+  Apply, the bulk-action Apply) asks for `for( 'neutral', 'outline' )`
+  explicitly, so that cluster keeps the neutral control border.
   `for( $tone, $variant )` takes `brand`, `neutral` or `danger` and `solid`,
   `outline` or `minimal`.
+- The brand tone is the user's admin colour; see "Brand seam" below.
 - The default is the library's 40px, the height of WordPress 7.1's own buttons.
   Pass `$compact` (32px) only where the button sits with 32px controls: the bulk
   action Apply and the provider table pagination. At 782px and below a compact
@@ -623,6 +627,40 @@ WordPress core's `.button`. Markup takes its classes from
   stylesheet, the icon-only copy controls and password tools, the segmented
   release track options, and the no-JS fallback for the mounted Skip onboarding
   button. `button-link` is Link, not Button, and is out of scope.
+
+#### Brand seam
+
+WordPress's `wp-theme` sheet (and Booster's bundled copy of it before 7.1)
+fixes the design system's brand tokens at the modern scheme's blue for every
+admin colour scheme. Booster therefore bridges the brand tokens inside its own
+roots only: `.ran-booster-admin` and every body-mounted Booster portal, which
+renders outside it: `.ran-booster-repository-picker-portal` (the repository
+picker) and `.ran-booster-ui-dialog-portal` (the shared dialog, which holds the
+Extensions details and its actions). Any new body-mounted Booster root must be
+added to the bridge rule; an asset test finds each `*-portal` class set in the
+scripts and fails when one is missing. The bridge is one rule in
+`00-foundations.css`; nothing is set on `:root`, `html` or `body`, so unrelated
+admin screens and the vendored Admin Shell keep their own colours.
+
+It maps ten `--wpds-color-*` brand tokens (stroke, text, solid fill and focus
+ring, with their pressed variants) to five overridable Booster tokens whose
+unset defaults are the WordPress admin colour (`--wp-admin-theme-color` and its
+`-darker-10` and `-darker-20` steps, which every admin scheme defines):
+
+| Booster token | Drives | Default |
+| --- | --- | --- |
+| `--ran-booster-brand-action` | stroke, text, solid fill, focus ring | admin colour |
+| `--ran-booster-brand-action-active` | pressed solid fill and outline stroke | admin colour, darker 10 |
+| `--ran-booster-brand-action-deep` | pressed text | admin colour, darker 20 |
+| `--ran-booster-brand-action-contrast` | text on the solid fill | `#fff` |
+| `--ran-booster-brand-action-tint` | pressed outline fill | 10% of the base on white |
+
+`--ran-booster-brand` (the navy identity colour used by onboarding) is a
+different token and is not part of the seam. Disabled and neutral tokens are
+not bridged. To brand Booster, set these tokens
+on `:root` or on the roots above; do not set `--wpds-color-*` brand tokens in
+any other Booster stylesheet (an asset test enforces this). Status colours
+stay separate from brand colours.
 
 #### Action placement
 

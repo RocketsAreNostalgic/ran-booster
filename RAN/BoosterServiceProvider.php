@@ -435,7 +435,8 @@ final class BoosterServiceProvider {
 					),
 					'read',
 				),
-				new \RAN\Admin\ReleaseManagement\NativeManagedReleaseBrowser( $container->make( NativeReleaseTrackingFacade::class ) )
+				new \RAN\Admin\ReleaseManagement\NativeManagedReleaseBrowser( $container->make( NativeReleaseTrackingFacade::class ) ),
+				links: $container->make( \RAN\Admin\ProviderTabLinks::class )
 			)
 		);
 	}

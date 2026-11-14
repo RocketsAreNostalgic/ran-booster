@@ -25,7 +25,9 @@ final class ManagedReleaseBrowserOperations {
 		}
 		$candidates = $this->browser->list_candidates( $type, $identifier, $revision, $channel, $nonce );
 		if ( null === $candidates ) {
-			return $this->outcome( 'unable_to_check' );
+			$provider = $this->browser->anonymous_rate_limit_provider();
+
+			return $this->outcome( 'unable_to_check', false, null === $provider ? array() : array( 'rate_limited_provider' => $provider ) );
 		}
 		$status = $this->releases->status( $type, $identifier );
 		if ( $revision !== $status->source_revision() || 'release_asset' !== $status->source() ) {

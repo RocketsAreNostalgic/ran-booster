@@ -14,7 +14,8 @@ final class ReleaseManagementFixture {
 		?ReleaseTrackingFacadeDouble $tracking = null,
 		?ProspectiveReleaseFacadeDouble $prospective = null,
 		?callable $read_candidates = null,
-		?\RAN\Storage\RepositorySourceGuard $source_guard = null
+		?\RAN\Storage\RepositorySourceGuard $source_guard = null,
+		?\RAN\Admin\ProviderTabLinks $links = null
 	): ReleaseManagementControls {
 		$prospective ??= new ProspectiveReleaseFacadeDouble();
 		$tracking    ??= new ReleaseTrackingFacadeDouble( self::status() );
@@ -28,7 +29,8 @@ final class ReleaseManagementFixture {
 				return $prospective->list_candidates( $type, $repository, $channel, '' );
 			},
 			$tracking,
-			$source_guard
+			$source_guard,
+			$links
 		);
 	}
 

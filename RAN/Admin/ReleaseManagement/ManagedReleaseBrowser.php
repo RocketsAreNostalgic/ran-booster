@@ -11,5 +11,8 @@ use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 interface ManagedReleaseBrowser {
 	public function list_candidates( string $type, string $identifier, int $revision, string $channel, string $nonce ): ?RepositoryReleaseCandidateList;
 
+	/** The provider whose anonymous public lookup was rate-limited in the last listing, if any. */
+	public function anonymous_rate_limit_provider(): ?string;
+
 	public function inspect_candidate( string $type, string $identifier, int $revision, string $release_id, string $tag, string $channel, string $nonce ): ?ReleaseTrackingPreflight;
 }

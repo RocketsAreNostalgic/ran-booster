@@ -759,6 +759,63 @@ test('unsupported server responses use the provider state without retrying', () 
 	);
 });
 
+test('the Add Releases failure adds the lookup-credential hint only for a retryable provider failure', () => {
+	const hint = {
+		text: 'A dedicated lookup credential helps avoid rate limits.',
+		link: 'Choose a lookup credential',
+		url: 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-public-lookup-profile-region',
+	};
+	const run = (code, lookupHint) => {
+		const message = {
+			children: [],
+			append(...nodes) {
+				this.children.push(...nodes);
+			},
+		};
+		const factory = new Function(
+			'env',
+			`
+			const { document, window, message, wp } = env;
+			const noop = () => {};
+			const forceBranchForUnsupportedProvider = noop, setChoiceState = noop, setHidden = noop;
+			const includesPrereleases = () => false;
+			const install = {}, details = {}, candidates = {};
+			let selectedRelease = null;
+			const setStatus = noop;
+			${earlierDisclosureHelpers.slice(earlierDisclosureHelpers.indexOf('const appendLookupHint ='))}
+			${declaration('showUnavailable')}
+			return showUnavailable;
+		`
+		);
+		factory({
+			document: {
+				createElement: (tag) => ({ tagName: tag }),
+			},
+			window: {
+				location: {
+					href: 'https://example.test/wp-admin/post.php',
+					origin: 'https://example.test',
+				},
+			},
+			message,
+			wp: { i18n: { __: (text) => text } },
+		})(code, lookupHint);
+		return message.children;
+	};
+
+	const shown = run('unable_to_check', hint);
+	assert.equal(shown[0], ` ${hint.text} `);
+	assert.equal(shown[1].href, hint.url);
+	assert.equal(shown[1].textContent, hint.link);
+	assert.deepEqual(run('unable_to_check', null), []);
+	assert.deepEqual(run('no_releases', hint), []);
+	assert.deepEqual(run('release_invalid', hint), []);
+	assert.deepEqual(
+		run('unable_to_check', { ...hint, url: 'https://evil.test/' }),
+		[]
+	);
+});
+
 test('inspection context and its nonce travel together to final form submission', () => {
 	const fields = new Map();
 	let submissions = 0;
@@ -879,7 +936,7 @@ test('managed release failures show the static warning Notice without a redraw e
 	const showError = Function(
 		'errorMessage',
 		'errorNotice',
-		`${declaration('showError')} return showError;`
+		`const appendLookupHint = () => {}; ${declaration('showError')} return showError;`
 	)(errorMessage, errorNotice);
 	// The PHP-rendered Notice has no dispatchEvent here: calling one throws.
 	showError('Could not load releases.');

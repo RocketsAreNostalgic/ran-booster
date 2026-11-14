@@ -30,6 +30,7 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 	public bool $throw_on_nonce = false;
 
 	public ?RepositoryReleaseCandidateList $candidate_list = null;
+	public ?string $anonymous_rate_limit_provider          = null;
 
 	public ?ReleaseTrackingPreflight $candidate_inspection = null;
 
@@ -105,6 +106,10 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 		}
 
 		return $this->candidate_list;
+	}
+
+	public function anonymous_rate_limit_provider(): ?string {
+		return $this->anonymous_rate_limit_provider;
 	}
 
 	public function set_status( ReleaseTrackingStatus $status ): void {

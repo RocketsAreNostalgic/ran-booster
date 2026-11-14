@@ -56,7 +56,9 @@ final class ProspectiveReleaseOperations {
 		$data  = $this->normalize_candidate_list_data( $result->data() );
 		$codes = array( 'runtime_unsupported', 'unsupported_provider', 'no_releases', 'unable_to_check' );
 		if ( ! $result->successful() && in_array( $result->code(), $codes, true ) ) {
-			return $outcome( $result->code(), false );
+			$provider = $result->data()['rate_limited_provider'] ?? null;
+
+			return $outcome( $result->code(), false, 'unable_to_check' === $result->code() && is_string( $provider ) && 1 === preg_match( '/\A[a-z0-9][a-z0-9_-]{0,31}\z/D', $provider ) ? array( 'rate_limited_provider' => $provider ) : array() );
 		}
 		if ( $result->successful() && 'release_candidates_available' === $result->code() && isset( $data['candidates'] ) && count( $data['candidates'] ) > 0 && count( $data['candidates'] ) <= 8 && ( ! isset( $data['channel'] ) || hash_equals( $channel, (string) $data['channel'] ) ) ) {
 			return $outcome( 'release_candidates_available', true, $data );

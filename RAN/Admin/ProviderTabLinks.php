@@ -52,4 +52,18 @@ final class ProviderTabLinks {
 			? $links->url( $base_url, $code, $query )
 			: $base_url . '?page=ran-booster&tab=' . rawurlencode( $code ) . $query;
 	}
+
+	/**
+	 * The one anonymous rate-limit hint, shared by every release lookup surface. The link goes to the
+	 * provider page's Public repository lookup card, or to Overview when that page is unavailable.
+	 *
+	 * @return array{text:string,link:string,url:string}
+	 */
+	public static function lookup_hint( ?self $links, string $base_url, string $code ): array {
+		return array(
+			'text' => __( 'A dedicated lookup credential helps avoid rate limits.', 'ran-booster' ),
+			'link' => __( 'Choose a lookup credential', 'ran-booster' ),
+			'url'  => self::link( $links, $base_url, $code, '#ran-booster-public-lookup-profile-region' ),
+		);
+	}
 }

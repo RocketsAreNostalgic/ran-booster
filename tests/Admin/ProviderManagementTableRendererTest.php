@@ -51,7 +51,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 
 		self::assertSame( array( 'name', 'scope', 'usage', 'health', 'actions' ), $rendered_columns );
 		self::assertStringContainsString( 'ran-booster-provider-management-table--webhook', $html );
-		self::assertStringContainsString( '<caption class="screen-reader-text">Webhook secrets</caption>', $html );
+		self::assertStringContainsString( '<caption class="screen-reader-text">Signing secrets</caption>', $html );
 		self::assertStringNotContainsString( 'Credential type', $html );
 		self::assertSame( 5, substr_count( $html, '<th scope="col">' ) );
 	}

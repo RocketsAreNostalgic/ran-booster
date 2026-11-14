@@ -50,7 +50,7 @@ $troubleshooting_base = isset( $troubleshooting_base ) && is_string( $troublesho
 	? $troubleshooting_base
 	: ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) )
 		. '?page=ran-booster&tab=troubleshooting';
-$refresh_url          = $troubleshooting_base . '&panel=debug-capture';
+$refresh_url          = $troubleshooting_base . '&panel=logging';
 $status_labels        = array(
 	'inactive'    => __( 'Inactive', 'ran-booster' ),
 	'active'      => __( 'Capture active', 'ran-booster' ),

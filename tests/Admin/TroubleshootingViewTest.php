@@ -211,7 +211,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 	#[DataProvider( 'logging_states_and_footer_bands' )]
 	public function test_logging_card_is_footed_only_when_the_capture_band_renders( string $state, bool $has_band ): void {
-		$troubleshooting_panel = 'debug-capture';
+		$troubleshooting_panel = 'logging';
 		$troubleshooting       = array( 'providers' => array() );
 		$debug_capture         = array(
 			'state'           => $state,
@@ -770,7 +770,7 @@ final class TroubleshootingViewTest extends TestCase {
 			),
 			'components'  => array( array( 'Name' => '<component>' ) ),
 		);
-		foreach ( array( null, 'invalid' ) as $troubleshooting_panel ) {
+		foreach ( array( null ) as $troubleshooting_panel ) {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 			$html = (string) ob_get_clean();
@@ -922,7 +922,7 @@ final class TroubleshootingViewTest extends TestCase {
 			array( 'diagnostics', 'list' ),
 			array( 'activity', 'list' ),
 			array( 'activity', 'detail' ),
-			array( 'debug-capture', 'list' ),
+			array( 'logging', 'list' ),
 			array( 'support-report', 'list' ),
 		) as $case ) {
 			list( $troubleshooting_panel, $mode ) = $case;
@@ -951,8 +951,10 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $region . '//*[@data-ran-booster-card="troubleshooting"]//*[@data-ran-booster-card])' ), $troubleshooting_panel . ':' . $mode );
 			self::assertSame( 5.0, $xpath->evaluate( 'count(' . $region . '//nav/a)' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//nav/a[@aria-current="page" and contains(@href, "panel=' . $troubleshooting_panel . '")])' ) );
-			foreach ( array( 'installation', 'diagnostics', 'activity', 'debug-capture', 'support-report' ) as $index => $key ) {
+			foreach ( \RAN\Admin\AdminRoutes::TROUBLESHOOTING_PANELS as $index => $key ) {
 				self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//nav/a[' . ( $index + 1 ) . '][contains(@href, "panel=' . $key . '")])' ) );
+				// Contract: each slug is its visible label, lowercased and hyphenated.
+				self::assertSame( $key, strtolower( str_replace( ' ', '-', trim( (string) $xpath->evaluate( 'string(' . $region . '//nav/a[' . ( $index + 1 ) . '])' ) ) ) ) );
 			}
 			if ( 'diagnostics' === $troubleshooting_panel ) {
 				self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//form[@hx-target="#ran-booster-troubleshooting-diagnostics-region"])' ) );
@@ -961,7 +963,7 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function test_logging_follows_deployment_activity_in_accessible_secondary_navigation(): void {
-		$troubleshooting_panel = 'debug-capture';
+		$troubleshooting_panel = 'logging';
 		$troubleshooting       = array();
 		$debug_capture         = array(
 			'state'    => 'inactive',
@@ -991,7 +993,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertInstanceOf( \DOMNodeList::class, $panel_nav );
 		self::assertCount( 0, $heading_panels );
 		self::assertCount( 0, $panel_nav );
-		self::assertStringContainsString( 'panel=debug-capture" aria-current="page"', $html );
+		self::assertStringContainsString( 'panel=logging" aria-current="page"', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading" class="ran-booster-section__title">Logging</h3>', $html );
 		self::assertStringContainsString( 'Start 60-minute capture', $html );
 		self::assertStringNotContainsString( '>Debug capture</a>', $html );
@@ -2315,7 +2317,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-status-summary--attention', $html );
 		self::assertStringContainsString( 'panel=status', $html );
 		self::assertStringContainsString( 'panel=repositories', $html );
-		self::assertStringContainsString( 'panel=setup', $html );
+		self::assertStringContainsString( 'panel=webhook-receiver', $html );
 		self::assertStringContainsString( 'owner/example', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-list" role="list"', $html );
 		self::assertStringContainsString( 'data-ran-booster-provider-repository', $html );
@@ -2368,7 +2370,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Copy the secret before saving.', $html );
 		self::assertStringContainsString( 'saving it here does not create or verify the remote webhook', $html );
 
-		$provider_task      = 'setup';
+		$provider_task      = 'webhook-receiver';
 		$provider_view_data = $this->provider_view_data( get_defined_vars() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 		extract( $provider_view_data );
@@ -2587,7 +2589,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( '&lt;unsafe &amp; reason&gt;', $html );
 		$delivery_notices = array();
-		foreach ( array( 'status', 'setup', 'repositories' ) as $delivery_task ) {
+		foreach ( array( 'status', 'webhook-receiver', 'repositories' ) as $delivery_task ) {
 			$provider_task = $delivery_task;
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/provider.php';
@@ -2611,7 +2613,7 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertStringNotContainsString( 'ran-booster-webhook-endpoint', $head[0], $delivery_task );
 			self::assertStringContainsString( 'notice-warning', $delivery_notices[ $delivery_task ], $delivery_task );
 		}
-		self::assertSame( $delivery_notices['status'], $delivery_notices['setup'] );
+		self::assertSame( $delivery_notices['status'], $delivery_notices['webhook-receiver'] );
 		$provider_task = 'status';
 		foreach ( array(
 			array(
@@ -2677,7 +2679,7 @@ final class TroubleshootingViewTest extends TestCase {
 			'repositories' => $repositories,
 		);
 		$panels                               = array();
-		foreach ( array( 'status', 'repositories', 'setup' ) as $panel_name ) {
+		foreach ( array( 'status', 'repositories', 'webhook-receiver' ) as $panel_name ) {
 			$provider_task      = $panel_name;
 			$provider_view_data = $this->provider_view_data( get_defined_vars() );
 			if ( null !== $mutate_view_data ) {
@@ -2688,6 +2690,24 @@ final class TroubleshootingViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/provider.php';
 			$panels[ $panel_name ] = (string) ob_get_clean();
+		}
+
+		foreach ( $panels as $html ) {
+			preg_match_all( '/data-ran-booster-provider-task="([a-z-]+)"/', $html, $task_values );
+			self::assertSame( array(), array_diff( $task_values[1], \RAN\Admin\AdminRoutes::PROVIDER_TASKS ) );
+			$document = new \DOMDocument();
+			$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+			$xpath = new \DOMXPath( $document );
+			$links = $xpath->query( '//a[contains(@class,"ran-booster-provider-task-tab")]' );
+			self::assertInstanceOf( \DOMNodeList::class, $links );
+			self::assertCount( count( \RAN\Admin\AdminRoutes::PROVIDER_TASKS ), $links );
+			foreach ( \RAN\Admin\AdminRoutes::PROVIDER_TASKS as $index => $slug ) {
+				$link = $links->item( $index );
+				self::assertInstanceOf( \DOMElement::class, $link );
+				self::assertStringContainsString( 'panel=' . $slug, $link->getAttribute( 'href' ) );
+				// Contract: each slug is its visible label, lowercased and hyphenated.
+				self::assertSame( $slug, strtolower( str_replace( ' ', '-', trim( (string) $xpath->evaluate( 'string(.)', $link ) ) ) ) );
+			}
 		}
 
 		return $panels;
@@ -2724,7 +2744,7 @@ final class TroubleshootingViewTest extends TestCase {
 			),
 			'repositories' => array(),
 		);
-		$html  = $this->render_provider_panels( $ready, $this->branch_and_release_repositories() )['setup'];
+		$html  = $this->render_provider_panels( $ready, $this->branch_and_release_repositories() )['webhook-receiver'];
 
 		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
 		self::assertStringContainsString( '<section class="ran-booster-settings-section ran-booster-card ran-booster-provider-receiver" data-ran-booster-card="provider" data-ran-booster-receiver-setup><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">', $html );
@@ -2791,7 +2811,7 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 		self::assertStringContainsString( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', $html );
 
-		$empty = $this->render_provider_panels( $ready, array() )['setup'];
+		$empty = $this->render_provider_panels( $ready, array() )['webhook-receiver'];
 		self::assertStringNotContainsString( 'role="tablist"', $empty );
 		self::assertStringNotContainsString( 'Automated setup', $empty );
 		self::assertStringNotContainsString( 'Manage webhook', $empty );
@@ -2830,7 +2850,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 			return $data;
 		};
-		$html         = $this->render_provider_panels( $ready, $this->branch_and_release_repositories(), $with_records )['setup'];
+		$html         = $this->render_provider_panels( $ready, $this->branch_and_release_repositories(), $with_records )['webhook-receiver'];
 
 		self::assertStringContainsString( 'data-ran-booster-webhook-set="true">', $html );
 		self::assertMatchesRegularExpression( '~<option value="branch-1" data-ran-booster-webhook-set="true">\s*🟢 owner/branch-repo — webhook set up\s*</option>~u', $html );
@@ -3604,7 +3624,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$provider['capabilities']['webhooks'] = true;
 		$credential_profiles                  = array();
 		$webhook_profiles                     = array();
-		$provider_task                        = 'setup';
+		$provider_task                        = 'webhook-receiver';
 		$provider_view_data                   = $this->provider_view_data( get_defined_vars() );
 		foreach ( array( 'gh', 'bb', 'other' ) as $provider_code ) {
 			$provider_view_data['provider']['code'] = $provider_code;
@@ -3634,7 +3654,7 @@ final class TroubleshootingViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 			self::assertStringNotContainsString( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', $html );
 		}
-		$provider_task                        = 'setup';
+		$provider_task                        = 'webhook-receiver';
 		$provider['capabilities']['webhooks'] = false;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
@@ -3751,7 +3771,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Repository hooks', $status_html );
 		self::assertStringNotContainsString( 'id="ran-booster-webhook-instructions-heading"', $status_html );
 
-		$provider_task      = 'setup';
+		$provider_task      = 'webhook-receiver';
 		$provider_view_data = $this->provider_view_data( get_defined_vars() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 		extract( $provider_view_data );
@@ -3762,7 +3782,7 @@ final class TroubleshootingViewTest extends TestCase {
 		// Only the task navigation is boosted; the manual setup disclosure carries no internal link.
 		self::assertSame( 1, substr_count( $setup_html, 'hx-boost="true"' ) );
 		self::assertMatchesRegularExpression(
-			'/panel=setup"[^>]+data-ran-booster-provider-task="setup"[^>]+aria-current="page">Webhook receiver<\/a>/',
+			'/panel=webhook-receiver"[^>]+data-ran-booster-provider-task="webhook-receiver"[^>]+aria-current="page">Webhook receiver<\/a>/',
 			$setup_html
 		);
 		self::assertStringContainsString( '<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title">Webhook receiver</h4>', $setup_html );
@@ -3983,7 +4003,7 @@ final class TroubleshootingViewTest extends TestCase {
 						'provider'                     => $provider,
 						'credential_profiles'          => array(),
 						'webhook_profiles'             => array(),
-						'provider_task'                => 'setup',
+						'provider_task'                => 'webhook-receiver',
 						'webhook_assistance_readiness' => array(
 							'site' => array(
 								'status'       => 'ready',
@@ -4052,7 +4072,7 @@ final class TroubleshootingViewTest extends TestCase {
 			'available'    => false,
 			'repositories' => array(),
 		);
-		$provider_task         = 'setup';
+		$provider_task         = 'webhook-receiver';
 		$provider_view_data    = $this->provider_view_data( get_defined_vars() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 		extract( $provider_view_data );
@@ -4107,7 +4127,7 @@ final class TroubleshootingViewTest extends TestCase {
 				array( 'target' => 'workspace/two' ),
 			),
 		);
-		$provider_view                        = 'secrets';
+		$provider_view                        = 'signing-secrets';
 
 		$provider_view_data = $this->provider_view_data( get_defined_vars() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
@@ -4116,10 +4136,16 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
+		// Every emitted view selector must be a real route.
+		preg_match_all( '/[?&;](?:amp;)?view=([a-z-]+)|name="view" value="([a-z-]+)"/', $html, $emitted, PREG_SET_ORDER );
+		self::assertNotEmpty( $emitted );
+		foreach ( $emitted as $match ) {
+			self::assertContains( ( $match[1] ?? '' ) !== '' ? $match[1] : ( $match[2] ?? '' ), \RAN\Admin\AdminRoutes::PROVIDER_VIEWS );
+		}
 		self::assertStringNotContainsString( 'Back to Bitbucket overview', $html );
 		$this->assert_flat_profile_layout( $html );
 		self::assertStringContainsString( 'id="ran-booster-provider-profile-region"', $html );
-		self::assertStringContainsString( '<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1">Webhook secrets</h2>', $html );
+		self::assertStringContainsString( '<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1">Signing secrets</h2>', $html );
 		self::assertStringContainsString( 'Manage local signing material used to verify Bitbucket webhook deliveries.', $html );
 		self::assertStringContainsString( '>Add webhook secret</button>', $html );
 		self::assertStringContainsString( 'ran-booster-provider-management-table--webhook', $html );
@@ -4143,7 +4169,7 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function test_empty_credential_and_secret_lists_retain_flat_controls_and_add_actions(): void {
-		foreach ( array( 'credentials', 'secrets' ) as $provider_view ) {
+		foreach ( array( 'credentials', 'signing-secrets' ) as $provider_view ) {
 			$provider                                = $this->provider_without_optional_settings();
 			$provider['credential_kinds']            = array(
 				array(

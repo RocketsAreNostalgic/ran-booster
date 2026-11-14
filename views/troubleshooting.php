@@ -11,9 +11,7 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$troubleshooting_panel = isset( $troubleshooting_panel ) && in_array( $troubleshooting_panel, array( 'installation', 'diagnostics', 'debug-capture', 'activity', 'support-report' ), true )
-	? $troubleshooting_panel
-	: 'installation';
+$troubleshooting_panel = isset( $troubleshooting_panel ) && is_string( $troubleshooting_panel ) ? $troubleshooting_panel : 'installation';
 $admin_base            = is_multisite()
 	? network_admin_url( 'admin.php' )
 	: admin_url( 'admin.php' );
@@ -35,9 +33,9 @@ $secondary_navigation  = array(
 		'url'   => $troubleshooting_base . '&panel=activity',
 	),
 	array(
-		'key'   => 'debug-capture',
+		'key'   => 'logging',
 		'label' => __( 'Logging', 'ran-booster' ),
-		'url'   => $troubleshooting_base . '&panel=debug-capture',
+		'url'   => $troubleshooting_base . '&panel=logging',
 	),
 	array(
 		'key'   => 'support-report',
@@ -110,14 +108,14 @@ $repository_placeholder = array() === $locator_examples
 		<?php
 		// The Diagnostics form, the Support report form and the Logging capture actions finish the Card with a footer band; Logging has none when the capture is unavailable or unreadable.
 		$troubleshooting_footed = in_array( $troubleshooting_panel, array( 'diagnostics', 'support-report' ), true )
-			|| ( 'debug-capture' === $troubleshooting_panel && is_array( $debug_capture ?? null ) && in_array( $debug_capture['state'] ?? null, array( 'inactive', 'active', 'retained' ), true ) );
+			|| ( 'logging' === $troubleshooting_panel && is_array( $debug_capture ?? null ) && in_array( $debug_capture['state'] ?? null, array( 'inactive', 'active', 'retained' ), true ) );
 		?>
 		<div class="ran-booster-card" data-ran-booster-card="troubleshooting"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content<?php echo $troubleshooting_footed ? ' ran-booster-card__content--footed' : ''; ?>">
 	<?php if ( 'installation' === $troubleshooting_panel ) { ?>
 		<?php require __DIR__ . '/troubleshooting-installation.php'; ?>
 	<?php } elseif ( 'support-report' === $troubleshooting_panel ) { ?>
 		<?php require __DIR__ . '/troubleshooting-support-report.php'; ?>
-	<?php } elseif ( 'debug-capture' === $troubleshooting_panel ) { ?>
+	<?php } elseif ( 'logging' === $troubleshooting_panel ) { ?>
 		<?php require __DIR__ . '/debug-capture.php'; ?>
 	<?php } elseif ( 'activity' === $troubleshooting_panel ) { ?>
 		<?php

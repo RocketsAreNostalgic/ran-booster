@@ -84,7 +84,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 				array(
 					'page'  => 'ran-booster',
 					'tab'   => 'troubleshooting',
-					'panel' => 'debug-capture',
+					'panel' => 'logging',
 				),
 				true,
 			),
@@ -93,7 +93,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 				array(
 					'page'  => 'ran-booster',
 					'tab'   => 'troubleshooting',
-					'panel' => 'deployment-activity',
+					'panel' => 'activity',
 				),
 				false,
 			),
@@ -150,7 +150,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 				array(
 					'page'  => 'ran-booster',
 					'tab'   => 'troubleshooting',
-					'panel' => array( 'deployment-activity' ),
+					'panel' => array( 'activity' ),
 				),
 				true,
 			),
@@ -216,7 +216,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 	public function test_deployment_activity_get_retains_durable_bootstrap_reads(): void {
 		$fixture = $this->registered_fixture();
 		$this->request( 'GET', 'troubleshooting' );
-		$_GET['panel'] = 'deployment-activity';
+		$_GET['panel'] = 'activity';
 
 		$this->run_admin_init();
 

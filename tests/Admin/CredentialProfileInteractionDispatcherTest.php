@@ -358,7 +358,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			);
 		$lookup               = new InMemoryPublicRepositoryLookupProfileStore();
 		$lookup->profiles     = array( 'fixture' => 'credential_existing' );
-		$_GET['view']         = str_contains( $request['action'], 'access' ) ? 'credentials' : 'secrets';
+		$_GET['view']         = str_contains( $request['action'], 'access' ) ? 'credentials' : 'signing-secrets';
 		$_POST['ran_booster'] = $request;
 		$lock                 = $this->createMock( WordPressUpdaterLock::class );
 		if ( str_contains( $request['action'], 'access' ) ) {
@@ -469,7 +469,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$dashboard   = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dashboard->expects( self::once() )->method( 'add_failure_message' );
-		$_GET['view']         = str_contains( $request['action'], 'access' ) ? 'credentials' : 'secrets';
+		$_GET['view']         = str_contains( $request['action'], 'access' ) ? 'credentials' : 'signing-secrets';
 		$_POST['ran_booster'] = $request;
 
 		$response = $interaction->dispatch(
@@ -1049,7 +1049,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'target'   => 'existing-workspace',
 			'secret'   => 'secret-canary-webhook-value-that-must-not-render',
 		);
-		$_GET['view']         = 'secrets';
+		$_GET['view']         = 'signing-secrets';
 
 		$response = $interaction->dispatch(
 			$this->dispatcher(
@@ -1086,7 +1086,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'target'   => 'new-workspace',
 			'secret'   => 'secret-canary-webhook-value-that-must-not-render',
 		);
-		$_GET['view']         = 'secrets';
+		$_GET['view']         = 'signing-secrets';
 
 		$response = $interaction->dispatch(
 			$this->dispatcher(

@@ -116,14 +116,14 @@ if ( in_array( $view, array( 'packages/create', 'packages/edit', 'packages/recov
 		),
 		array( 'label' => $package_heading ),
 	);
-} elseif ( 'index' === $view && 'provider.php' === ( $tab_view ?? '' ) && in_array( $provider_view ?? '', array( 'credentials', 'secrets' ), true ) && isset( $provider, $overview_url ) ) {
+} elseif ( 'index' === $view && 'provider.php' === ( $tab_view ?? '' ) && in_array( $provider_view ?? '', \RAN\Admin\AdminRoutes::PROVIDER_MANAGEMENT_VIEWS, true ) && isset( $provider, $overview_url ) ) {
 	$ran_admin_shell['breadcrumbs_label'] = __( 'Breadcrumbs', 'ran-booster' );
 	$ran_admin_shell['breadcrumbs']       = array(
 		array(
 			'label' => $provider['label'],
 			'url'   => $overview_url,
 		),
-		array( 'label' => 'credentials' === $provider_view ? __( 'Manage Credentials', 'ran-booster' ) : __( 'Manage Webhook Secrets', 'ran-booster' ) ),
+		array( 'label' => 'credentials' === $provider_view ? __( 'Manage Credentials', 'ran-booster' ) : __( 'Manage Signing Secrets', 'ran-booster' ) ),
 	);
 } elseif ( 'index' === $view && 'provider.php' === ( $tab_view ?? '' ) && 'overview' === ( $provider_view ?? '' ) && '' !== ( $requested_repository_id ?? '' ) && isset( $provider, $overview_url, $repository_list_url ) ) {
 	$repository_crumb                     = is_array( $selected_repository_row ?? null ) && is_string( $selected_repository_row['repository'] ?? null ) ? trim( $selected_repository_row['repository'] ) : '';

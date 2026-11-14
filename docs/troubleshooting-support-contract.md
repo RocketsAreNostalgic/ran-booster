@@ -26,9 +26,9 @@ BoosterServiceProvider changes; patches are reviewed at that boundary.
 
 ## Routes and authority
 
-Panels in order: installation, diagnostics, activity, debug-capture, support-report.
-deployment-activity remains an Activity alias. Missing/invalid panel uses
-Installation. A completed diagnostic request renders Diagnostics.
+Panels in order: installation, diagnostics, activity, logging, support-report.
+An absent panel uses Installation; an unknown panel renders the closed
+"Page not found." result with a link to Overview. A completed diagnostic request renders Diagnostics.
 Generate is POST on the fixed Troubleshooting Support route, action
 generate-support-report, nonce ran-booster-generate-support-report and
 manage_options capability. Its payload permits only action. Restricted bootstrap

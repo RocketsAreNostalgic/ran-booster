@@ -958,7 +958,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertSame( 'https://example.test/wp-admin/admin-post.php', $unavailable['form_action'] );
 		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=credentials', $unavailable['credentials_url'] );
-		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=secrets', $unavailable['secrets_url'] );
+		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=signing-secrets', $unavailable['secrets_url'] );
 		foreach ( $unavailable['operations'] as $operation ) {
 			self::assertStringStartsWith( 'https://example.test/wp-admin/admin-post.php?action=', $operation['url'] );
 		}

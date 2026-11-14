@@ -21,7 +21,7 @@ final class WebhookCleanupContextTest extends TestCase {
 			true,
 			array( 'branch/branch.php' ),
 			'https://github.com/owner/repository/settings/hooks',
-			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=secrets',
+			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=signing-secrets',
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation#ran-booster-webhook-cleanup',
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fplugin.php'
 		);

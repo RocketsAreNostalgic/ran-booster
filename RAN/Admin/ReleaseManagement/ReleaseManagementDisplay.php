@@ -196,7 +196,7 @@ final class ReleaseManagementDisplay {
 					<li class="ran-booster-readiness-item <?php echo $status_available && 'release_asset' === $source && '' === $status->failure_code() ? ( $release_unchecked ? 'is-neutral' : 'is-ok' ) : ( $status_available && 'branch' === $source && ! $repository_blocked ? 'is-neutral' : 'is-warning' ); ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 						<strong><?php esc_html_e( 'Release status', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? ( $release_unchecked ? __( 'Use Check releases to look for a newer version.', 'ran-booster' ) : $this->release_status_message( $status ) ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
+						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? ( $release_unchecked && 'disabled' !== $status->deployment_policy() ? __( 'Use Check releases to look for a newer version.', 'ran-booster' ) : $this->release_status_message( $status ) ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
 					</li>
 				</ul>
 				<?php ob_start(); ?>
@@ -1129,9 +1129,13 @@ final class ReleaseManagementDisplay {
 			);
 		}
 
+		// While updates are off the updater offers nothing, so "no newer release" would contradict a check that found one.
 		return sprintf(
-			/* translators: %s is the installed version. */
-			__( 'Version %s is installed. No newer eligible release was found.', 'ran-booster' ),
+			'disabled' === $status->deployment_policy()
+				/* translators: %s is the installed version. */
+				? __( 'Version %s is installed. Updates are off for this package.', 'ran-booster' )
+				/* translators: %s is the installed version. */
+				: __( 'Version %s is installed. No newer eligible release was found.', 'ran-booster' ),
 			'' !== $installed ? $installed : __( 'unknown', 'ran-booster' )
 		);
 	}

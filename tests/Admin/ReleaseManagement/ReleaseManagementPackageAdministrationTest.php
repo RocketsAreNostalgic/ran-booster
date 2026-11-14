@@ -1572,6 +1572,63 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'Use Check releases to look for a newer version.', $html );
 	}
 
+	/** @return array<string,array{0:string}> */
+	public static function disabled_check_states(): array {
+		return array(
+			// The status line ignores what a check found, so a last-observed-newer and a last-observed-current package read the same.
+			'checked'       => array( '2026-07-24T20:00:00+00:00' ),
+			'never checked' => array( '' ),
+		);
+	}
+
+	#[DataProvider( 'disabled_check_states' )]
+	public function test_a_disabled_package_status_makes_no_claim_about_newer_releases( string $last_checked_at ): void {
+		$html = $this->render_release_view(
+			array(
+				'deployment_policy' => 'disabled',
+				'last_checked_at'   => $last_checked_at,
+			)
+		);
+
+		self::assertStringContainsString( 'Version 1.0.0 is installed. Updates are off for this package.</span>', $html );
+		self::assertStringNotContainsString( 'ewer eligible release', $html );
+		self::assertStringNotContainsString( 'Use Check releases to look for a newer version.', $html );
+	}
+
+	public function test_a_disabled_package_status_and_its_newer_release_notice_do_not_contradict(): void {
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		$disabled                             = ReleaseManagementFixture::status( 'release_asset', deployment_policy: 'disabled' );
+		$tracking                             = new ReleaseTrackingFacadeDouble( $disabled );
+		$tracking->refresh_result             = \RAN\AddOn\ReleaseTracking\ReleaseTrackingResult::failed( 'refresh_newer_while_off', 'Published release information was not offered.', detail: '0.2.2', check_reason: 'newer_release_observed' );
+		$controls                             = ReleaseManagementFixture::controls( $tracking );
+		$url                                  = $controls->process_admin_post_request( 'refresh', $this->request( 'refresh' ) );
+		$query                                = (string) parse_url( $url, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Parsing the already signed local PRG fixture.
+		parse_str( $query, $_GET );
+		ob_start();
+		$controls->render_operation_notice();
+		$notice = (string) ob_get_clean();
+		$status = $this->readiness_panel( $this->render_release_view( array( 'deployment_policy' => 'disabled' ) ) );
+
+		self::assertStringContainsString( 'Newer release 0.2.2 available. Updates are off for this package.', $notice );
+		self::assertStringContainsString( 'Updates are off for this package.</span>', $status );
+		self::assertStringNotContainsString( 'No newer', $status );
+	}
+
+	public function test_a_disabled_package_list_row_makes_no_claim_about_newer_releases(): void {
+		$package = new PackageProjection( 'release_asset' );
+		$status  = ReleaseManagementFixture::status( 'release_asset', deployment_policy: 'disabled' );
+		$rows    = ( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->present_management( array( $package->identifier() => array() ), 'plugin', array( $package ), array( $package->identifier() => $status ) );
+
+		self::assertSame( 'Version 1.0.0 is installed. Updates are off for this package.', $rows[ $package->identifier() ]['status'] );
+	}
+
+	public function test_manual_and_automatic_packages_keep_the_up_to_date_wording(): void {
+		foreach ( array( 'manual', 'automatic' ) as $policy ) {
+			self::assertStringContainsString( 'Version 1.0.0 is installed. No newer eligible release was found.</span>', $this->render_release_view( array( 'deployment_policy' => $policy ) ) );
+		}
+	}
+
 	public function test_a_status_with_no_check_in_this_request_is_neutral_and_never_claims_it_was_never_checked(): void {
 		$html = $this->render_release_view( array( 'last_checked_at' => '' ) );
 

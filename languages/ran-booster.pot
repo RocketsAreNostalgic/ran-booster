@@ -3091,7 +3091,7 @@ msgid "The ZIP’s folder or main file (%s) does not match this package."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1034
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1167
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1171
 msgid "Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory."
 msgstr ""
 
@@ -3234,29 +3234,35 @@ msgid "Version %1$s is installed; version %2$s is available. WordPress controls 
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1127
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1135
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1139
 msgid "unknown"
 msgstr ""
 
 #. translators: %s is the installed version.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1134
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1136
+#, php-format
+msgid "Version %s is installed. Updates are off for this package."
+msgstr ""
+
+#. translators: %s is the installed version.
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1138
 #, php-format
 msgid "Version %s is installed. No newer eligible release was found."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1151
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1155
 msgid "Why this happened and how to fix it"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1153
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1157
 msgid "What Booster found:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1154
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1158
 msgid "What to do:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1155
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1159
 #: views/documentation.php:296
 #: views/documentation.php:485
 #: views/packages/index.php:141
@@ -3264,55 +3270,55 @@ msgstr ""
 msgid "Open Troubleshooting"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1156
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1160
 msgid "Technical reason:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1166
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1170
 msgid "Published releases require this plugin or theme to be at the repository root. This package can continue using its configured repository subdirectory with Branch deployments."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1168
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1172
 msgid "This package header does not declare an Update URI for its configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1169
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1173
 msgid "This package header Update URI does not match its configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1170
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1174
 msgid "The Git provider does not support published release tracking."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1171
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1175
 msgid "The configured repository is invalid."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1172
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1176
 msgid "This package already registers its own release updater. Use either that updater or Booster published-release tracking, not both."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1173
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1177
 msgid "The installed plugin or theme identity is not eligible for published release tracking."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1179
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1183
 msgid "Published releases require the repository root."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1180
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1184
 msgid "Missing from the installed package header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1181
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1185
 msgid "Does not match the configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1182
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1186
 msgid "Matches, but this package already registers its own updater."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1183
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1187
 msgid "Cannot be validated until the Git provider and repository are ready."
 msgstr ""
 

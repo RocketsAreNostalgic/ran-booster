@@ -769,7 +769,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertSame(
 			1,
 			preg_match(
-				'/<ul class="ran-booster-documentation__inline-links">.*?<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" href="[^"]+tab=gh">GitHub<\/a>.*?<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" href="[^"]+tab=bb">Bitbucket<\/a>.*?<\/ul>/s',
+				'/<ul class="ran-booster-documentation__inline-links">.*?<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" href="[^"]+tab=gh">GitHub<\/a>.*?<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" href="[^"]+tab=bb">Bitbucket<\/a>.*?<\/ul>/s',
 				$html,
 				$quick_start_links
 			)
@@ -777,8 +777,8 @@ final class DocumentationViewTest extends TestCase {
 		if ( ! isset( $quick_start_links[0] ) ) {
 			self::fail( 'Expected the quick-start links in the rendered view.' );
 		}
-		self::assertSame( 2, substr_count( $quick_start_links[0], 'class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline"' ) );
-		self::assertStringNotContainsString( 'is-brand', $quick_start_links[0] );
+		self::assertSame( 2, substr_count( $quick_start_links[0], 'class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline"' ) );
+		self::assertStringNotContainsString( 'is-solid', $quick_start_links[0] );
 		self::assertLessThan( strpos( $html, 'Add private access only if needed.' ), strpos( $html, 'Install a package.' ) );
 		self::assertStringContainsString( 'No credential is required.', $html );
 	}

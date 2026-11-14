@@ -900,7 +900,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_package_operation_actions( 'release_asset', 'release_asset' );
 		$html = trim( (string) ob_get_clean() );
 
-		self::assertMatchesRegularExpression( '/^<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline disabled ran-booster-managed-release-native-update" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update>Update now<\/a>$/', $html );
+		self::assertMatchesRegularExpression( '/^<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline disabled ran-booster-managed-release-native-update" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update>Update now<\/a>$/', $html );
 		self::assertStringNotContainsString( 'href=', $html );
 
 		foreach ( array( array( 'branch', 'branch' ), array( 'branch', 'release_asset' ), array( 'release_asset', 'branch' ) ) as $sources ) {

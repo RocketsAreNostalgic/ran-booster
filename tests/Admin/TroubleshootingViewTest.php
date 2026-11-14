@@ -3144,7 +3144,7 @@ final class TroubleshootingViewTest extends TestCase {
 					self::assertStringContainsString( 'disabled aria-disabled="true">Legacy action</button>', $html );
 				} elseif ( 'post' === $mode ) {
 					self::assertStringContainsString( 'name="_wpnonce" value="fixture-nonce"', $html );
-					self::assertStringContainsString( 'type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline">Legacy action</button>', $html );
+					self::assertStringContainsString( 'type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline">Legacy action</button>', $html );
 				}
 			}
 		}

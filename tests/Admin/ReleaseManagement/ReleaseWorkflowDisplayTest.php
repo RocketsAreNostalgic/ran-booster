@@ -426,7 +426,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 
 		self::assertStringContainsString( 'Booster verified an exact canonical release setup in this repository. No setup pull request is needed.', $html );
 		self::assertStringContainsString( 'name="booster_credential_id"', $html );
-		self::assertStringContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
 	}
 
 	public function test_existing_release_automation_conflict_is_an_informational_observation(): void {
@@ -800,7 +800,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( '<select name="booster_credential_id" disabled aria-disabled="true">', $html );
 		self::assertStringContainsString( '>Manage credentials</a>', $html );
 		self::assertStringContainsString( 'Inspect anonymously, or use a saved credential to avoid anonymous API limits.', $html );
-		self::assertStringContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
 		self::assertStringNotContainsString( 'Set up release automation', $html );
 		self::assertStringNotContainsString( 'type="password"', $html );
 	}
@@ -886,7 +886,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 				)
 			)
 		);
-		self::assertStringContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
 		self::assertStringNotContainsString( 'Set up release automation', $html );
 	}
 

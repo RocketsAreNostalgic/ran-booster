@@ -180,7 +180,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Manage webhooks</button>', $html );
+		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" disabled aria-disabled="true">Manage webhooks</button>', $html );
 		self::assertStringNotContainsString( 'href=', $html );
 		self::assertStringNotContainsString( 'panel=repositories', $html );
 	}
@@ -227,7 +227,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		}
 
 		self::assertStringNotContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
-		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Manage webhooks</button>', $html );
+		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" disabled aria-disabled="true">Manage webhooks</button>', $html );
 	}
 
 	public function test_release_managed_branch_pane_retains_cleanup_without_branch_readiness_controls(): void {
@@ -507,7 +507,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringNotContainsString( 'panel=repositories', $html );
-		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Manage webhooks</button>', $html );
+		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" disabled aria-disabled="true">Manage webhooks</button>', $html );
 	}
 
 	public function test_branch_package_does_not_use_persisted_identity_when_repository_locator_is_invalid(): void {
@@ -536,7 +536,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringNotContainsString( 'panel=repositories', $html );
-		self::assertMatchesRegularExpression( '/<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Manage webhooks<\\/button>/', $html );
+		self::assertMatchesRegularExpression( '/<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" disabled aria-disabled="true">Manage webhooks<\\/button>/', $html );
 	}
 
 	#[DataProvider( 'repository_branch_check_outcome_provider' )]
@@ -609,7 +609,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
 		self::assertStringContainsString( 'Webhook health', $html );
-		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Manage webhooks</button>', $html );
+		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" disabled aria-disabled="true">Manage webhooks</button>', $html );
 		self::assertStringNotContainsString( '<a href=', $html );
 		self::assertStringNotContainsString( 'Review Booster diagnostics', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );

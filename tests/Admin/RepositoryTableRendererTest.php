@@ -132,7 +132,7 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 		self::assertStringContainsString( 'Manage repository', $html );
 		self::assertStringContainsString( 'repository=42', html_entity_decode( $html ) );
-		self::assertSame( 1, substr_count( $html, 'class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline"' ) );
+		self::assertSame( 1, substr_count( $html, 'class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline"' ) );
 		self::assertStringNotContainsString( 'class="button', $html );
 		self::assertStringNotContainsString( 'Manage webhook', $html );
 		self::assertStringNotContainsString( 'Plugin settings', $html );

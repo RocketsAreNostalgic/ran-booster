@@ -14,6 +14,9 @@ final class NativeManagedReleaseBrowser implements ManagedReleaseBrowser {
 	public function list_candidates( string $type, string $identifier, int $revision, string $channel, string $nonce ): ?RepositoryReleaseCandidateList {
 		return $this->releases->list_candidates( $type, $identifier, $revision, $channel, $nonce );
 	}
+	public function anonymous_rate_limit_provider(): ?string {
+		return $this->releases->anonymous_rate_limit_provider();
+	}
 	public function inspect_candidate( string $type, string $identifier, int $revision, string $release_id, string $tag, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
 		return $this->releases->inspect_candidate( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce );
 	}

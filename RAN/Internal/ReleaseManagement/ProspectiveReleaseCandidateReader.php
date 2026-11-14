@@ -16,6 +16,7 @@ use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
+use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
 use Throwable;
@@ -104,7 +105,14 @@ final class ProspectiveReleaseCandidateReader {
 					'provider'  => $provider,
 				)
 			);
-			return ProspectiveReleaseResult::failure( 'unable_to_check' );
+			// Only an anonymous public lookup that was rate-limited can be helped by a lookup credential.
+			$anonymous_rate_limited = $failure instanceof RepositoryReleaseReadUnavailable
+				&& isset( $reference )
+				&& ! $reference->private
+				&& null === $reference->credential_id
+				&& in_array( $failure->failure?->reason, array( 'rate_limited', 'rate_limited_secondary' ), true );
+
+			return ProspectiveReleaseResult::failure( 'unable_to_check', $anonymous_rate_limited ? array( 'rate_limited_provider' => $provider ) : array() );
 		}
 	}
 

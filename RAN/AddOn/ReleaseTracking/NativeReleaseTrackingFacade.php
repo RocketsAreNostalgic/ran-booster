@@ -66,6 +66,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	private \Closure $public_lookup_profile;
 	private WordPressUpdaterLock $updater_lock;
 	private RepositorySourceGuard $source_guard;
+	private ?string $anonymous_rate_limit_provider = null;
 
 	/** @var \Closure(string, string): mixed */
 	private \Closure $check_without_offer;
@@ -419,7 +420,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $channel,
 		string $nonce
 	): ?\RAN\RepositoryProvider\RepositoryReleaseCandidateList {
-		$package = $this->authorized( 'list_candidates', $type, $identifier, $expected_source_revision, $nonce, $channel );
+		$this->anonymous_rate_limit_provider = null;
+		$package                             = $this->authorized( 'list_candidates', $type, $identifier, $expected_source_revision, $nonce, $channel );
 		if ( ! RuntimeSupport::current()->allows_managed_operations()
 			|| ! $this->valid_channel( $channel )
 
@@ -447,6 +449,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 							'provider'  => (string) $package->get_provider_code(),
 						)
 					);
+					if ( ! $repository->private
+						&& null === $repository->credential_id
+						&& in_array( $unavailable->failure?->reason, array( 'rate_limited', 'rate_limited_secondary' ), true ) ) {
+						$this->anonymous_rate_limit_provider = (string) $package->get_provider_code();
+					}
 					continue;
 				}
 			}
@@ -457,6 +464,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 	}
 
+
+	/** The provider whose anonymous public lookup was rate-limited in the last candidate listing, if any. */
+	public function anonymous_rate_limit_provider(): ?string {
+		return $this->anonymous_rate_limit_provider;
+	}
 
 	public function inspect_candidate(
 		string $type,

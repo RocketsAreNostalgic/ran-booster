@@ -27,6 +27,25 @@ const mountDisclosure = (host) =>
 		})
 	);
 
+// The shared anonymous rate-limit hint from the server: its sentence and a link to the lookup card.
+const appendLookupHint = (target, hint) => {
+	if (!target || !hint || !hint.text || !hint.link || !hint.url) {
+		return;
+	}
+	try {
+		const url = new URL(hint.url, window.location.href);
+		if (url.origin !== window.location.origin) {
+			return;
+		}
+		const link = document.createElement('a');
+		link.href = url.href;
+		link.textContent = hint.link;
+		target.append(` ${hint.text} `, link);
+	} catch {
+		// An unusable link leaves the notice without the hint.
+	}
+};
+
 const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const { __, sprintf } = wp.i18n;
 	if (
@@ -91,9 +110,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			errorNotice.hidden = true;
 		}
 	};
-	const showError = (text) => {
+	const showError = (text, hint = null) => {
 		if (errorMessage) {
 			errorMessage.textContent = text;
+			appendLookupHint(errorMessage, hint);
 		}
 		if (errorNotice) {
 			errorNotice.hidden = false;
@@ -378,11 +398,15 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				'ran-booster'
 			)
 		);
+		let lookupHint = null;
 		try {
 			const response = await request('list');
 			if (current !== sequence) {
 				return;
 			}
+			lookupHint = response.successful
+				? null
+				: (response.data?.lookup_hint ?? null);
 			const releases = Array.isArray(response.data?.candidates)
 				? response.data.candidates.slice(0, 8)
 				: [];
@@ -605,7 +629,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					wp.i18n.__(
 						'Booster could not load published releases. The Git provider may be temporarily unavailable or rate-limited. Try again later.',
 						'ran-booster'
-					)
+					),
+					lookupHint
 				);
 				setStatus(
 					wp.i18n.__(
@@ -1103,7 +1128,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		return response.json();
 	};
 
-	const showUnavailable = (code) => {
+	const showUnavailable = (code, hint = null) => {
 		if (code === 'unsupported_provider') {
 			forceBranchForUnsupportedProvider();
 			return;
@@ -1142,6 +1167,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			retry: !noRelease,
 			switchBranch: true,
 		});
+		if (!noRelease) {
+			appendLookupHint(message, hint);
+		}
 		setHidden(install, true);
 		setHidden(details, true);
 		setHidden(candidates, true);
@@ -1289,7 +1317,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			) {
 				showCandidates(response.data);
 			} else {
-				showUnavailable(response.code);
+				showUnavailable(response.code, response.data?.lookup_hint);
 			}
 		} catch {
 			if (sequence === requestSequence) {

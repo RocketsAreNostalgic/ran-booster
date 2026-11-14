@@ -246,6 +246,10 @@ const createHarness = (
 			}),
 		},
 		window: {
+			location: {
+				href: 'https://example.test/wp-admin/plugins.php',
+				origin: 'https://example.test',
+			},
 			ranBoosterNotice: {
 				// Records how the warning is built; the helper's own markup
 				// is covered by notice.test.mjs.
@@ -1298,6 +1302,45 @@ test('managed browser keeps provider failures visible beside Refresh releases', 
 			.classList.contains('ran-booster-update-is-active'),
 		false
 	);
+});
+
+test('managed browser adds the lookup-credential hint only when the server supplies one', async () => {
+	const hint = {
+		text: 'A dedicated lookup credential helps avoid rate limits.',
+		link: 'Choose a lookup credential',
+		url: 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-public-lookup-profile-region',
+	};
+	const hinted = createHarness([
+		{
+			successful: false,
+			code: 'unable_to_check',
+			data: { lookup_hint: hint },
+		},
+	]);
+	hinted.initialize(hinted.browser);
+	await flush();
+	await flush();
+	const message = hinted.nodes.get('error-message');
+	assert.equal(hinted.nodes.get('error').hidden, false);
+	assert.equal(message.children[0], ` ${hint.text} `);
+	assert.equal(message.children[1].tagName, 'a');
+	assert.equal(message.children[1].href, hint.url);
+	assert.equal(message.children[1].textContent, hint.link);
+
+	for (const data of [
+		{},
+		{ lookup_hint: { ...hint, url: 'https://evil.test/' } },
+		{ lookup_hint: { ...hint, url: 'javascript:alert(1)' } },
+	]) {
+		const plain = createHarness([
+			{ successful: false, code: 'unable_to_check', data },
+		]);
+		plain.initialize(plain.browser);
+		await flush();
+		await flush();
+		assert.equal(plain.nodes.get('error').hidden, false);
+		assert.deepEqual(plain.nodes.get('error-message').children, []);
+	}
 });
 
 test('managed browser keeps empty stable and preview tracks visible', async () => {

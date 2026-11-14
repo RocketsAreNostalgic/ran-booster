@@ -678,6 +678,25 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		}
 	}
 
+	public function test_candidate_reader_marks_only_an_anonymous_rate_limited_listing_for_the_lookup_hint(): void {
+		$cases = array(
+			'rate limited'    => array( new ProviderFailure( 'rate_limited', 429, 90 ), array( 'rate_limited_provider' => 'gh' ) ),
+			'throttled'       => array( new ProviderFailure( 'rate_limited_secondary', 403, 60 ), array( 'rate_limited_provider' => 'gh' ) ),
+			'unrelated'       => array( new ProviderFailure( 'http_5xx', 502 ), array() ),
+			'no typed reason' => array( null, array() ),
+		);
+
+		foreach ( $cases as $name => [ $failure, $expected ] ) {
+			$provider = new ProspectiveRepositoryProvider( candidate_list: new RepositoryReleaseReadUnavailable( 'listing-failure', 0, null, $failure ) );
+			$facade   = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor(), provider: $provider );
+			$result   = $facade->list_candidates( 'plugin', $this->repository_request(), 'stable', 'valid-nonce' );
+
+			self::assertFalse( $result->successful(), $name );
+			self::assertSame( 'unable_to_check', $result->code(), $name );
+			self::assertSame( $expected, $result->data(), $name );
+		}
+	}
+
 	public function test_invalid_channel_fails_before_any_prospective_release_work(): void {
 		$facade = $this->facade(
 			new ProspectivePluginRepository(),

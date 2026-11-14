@@ -2041,6 +2041,84 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'package-profile', $packages['branch_explicit']->get_repository()->reference->credential_id );
 	}
 
+	public function test_only_an_anonymous_rate_limited_public_listing_reports_a_lookup_hint_provider(): void {
+		$packages = array(
+			'public'   => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL ),
+			'explicit' => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, credential_id: 'package-profile' ),
+		);
+		$current  = 'public';
+		$plugins  = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturnCallback(
+			static function () use ( &$packages, &$current ): Package {
+				return $packages[ $current ];
+			}
+		);
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore(
+			array( "plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ) )
+		);
+		$lock      = new RuntimeUpdaterLock();
+		$profiles  = new InMemoryPublicRepositoryLookupProfileStore();
+		$reason    = new class() {
+			public string $value = 'rate_limited';
+		};
+		$providers = $this->release_metadata_registry(
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
+			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( $reason ): RepositoryReleaseCandidateList {
+				if ( 'none' === $reason->value ) {
+					return new RepositoryReleaseCandidateList( array() );
+				}
+
+				throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.', 0, null, new ProviderFailure( $reason->value, 'http_5xx' === $reason->value ? 502 : 429 ) );
+			}
+		);
+		$facade = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn ( string $nonce, string $action ): bool => hash_equals( $action, $nonce ),
+			metadata_eligible: static fn (): bool => true,
+			public_lookup_profile: static fn ( string $provider ): ?string => $profiles->get( $provider )
+		);
+		$list   = static function () use ( $facade ): ?RepositoryReleaseCandidateList {
+			return $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' ) );
+		};
+
+		// Anonymous public lookup that was rate-limited: the provider is reported, secondary throttling included.
+		self::assertNull( $list() );
+		self::assertSame( 'gh', $facade->anonymous_rate_limit_provider() );
+		$reason->value = 'rate_limited_secondary';
+		self::assertNull( $list() );
+		self::assertSame( 'gh', $facade->anonymous_rate_limit_provider() );
+
+		// An unrelated outage is not helped by a lookup credential.
+		$reason->value = 'http_5xx';
+		self::assertNull( $list() );
+		self::assertNull( $facade->anonymous_rate_limit_provider() );
+
+		// A selected lookup credential, or a package credential, is already in use.
+		$reason->value      = 'rate_limited';
+		$profiles->profiles = array( 'gh' => 'public-profile' );
+		self::assertNull( $list() );
+		self::assertNull( $facade->anonymous_rate_limit_provider() );
+		$profiles->profiles = array();
+		$current            = 'explicit';
+		self::assertNull( $list() );
+		self::assertNull( $facade->anonymous_rate_limit_provider() );
+
+		// A successful listing clears the previous report.
+		$current = 'public';
+		self::assertNull( $list() );
+		self::assertSame( 'gh', $facade->anonymous_rate_limit_provider() );
+		$reason->value = 'none';
+		self::assertInstanceOf( RepositoryReleaseCandidateList::class, $list() );
+		self::assertNull( $facade->anonymous_rate_limit_provider() );
+	}
+
 	public function test_private_enable_preflight_uses_only_the_saved_package_credential(): void {
 		$package = $this->package(
 			'plugin',

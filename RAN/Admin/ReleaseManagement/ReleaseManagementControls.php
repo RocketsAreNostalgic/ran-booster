@@ -10,6 +10,7 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Admin\Feedback\FeedbackFlash;
+use RAN\Admin\ProviderTabLinks;
 use RAN\PackageSource;
 use RAN\Storage\RepositorySourceGuard;
 use Throwable;
@@ -38,7 +39,8 @@ final class ReleaseManagementControls {
 		ProspectiveReleaseFacade $prospective,
 		callable $read_candidates,
 		ManagedReleaseBrowser $managed_browser,
-		?RepositorySourceGuard $source_guard = null
+		?RepositorySourceGuard $source_guard = null,
+		private readonly ?ProviderTabLinks $links = null
 	) {
 		$this->display  = new ReleaseManagementDisplay();
 		$this->tracking = new ReleaseTrackingOperations( $releases );
@@ -596,7 +598,7 @@ final class ReleaseManagementControls {
 		$release_id = is_string( $request['release_id'] ?? null ) ? wp_unslash( $request['release_id'] ) : '';
 		$tag        = is_string( $request['release_tag'] ?? null ) ? wp_unslash( $request['release_tag'] ) : '';
 
-		return $this->request_boundary(
+		$outcome = $this->request_boundary(
 			fn (): array => 'list_candidates' === $operation
 				? $this->managed_browser->list_candidates( $type, $identifier, $revision, $channel, $nonce )
 				: $this->managed_browser->inspect( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce ),
@@ -606,6 +608,10 @@ final class ReleaseManagementControls {
 				'data'       => array(),
 			)
 		);
+
+		$outcome['data'] = $this->lookup_data( $outcome['code'], $outcome['data'] );
+
+		return $outcome;
 	}
 
 	/**
@@ -655,10 +661,30 @@ final class ReleaseManagementControls {
 		$fingerprint = is_string( $request['release_fingerprint'] ?? null ) ? wp_unslash( $request['release_fingerprint'] ) : '';
 		$channel     = array_key_exists( 'release_channel', $request ) ? $this->release_channel_from( $request ) : 'stable';
 
-		return $this->request_boundary(
+		$outcome         = $this->request_boundary(
 			fn (): array => 'list_candidates' === $operation ? $this->prospective_operations->list_candidates( $type, $repository, $channel ) : $this->prospective_operations->execute( $operation, $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce, $expectation ),
 			$this->prospective_outcome( $type, 'service_unavailable' )
 		);
+		$outcome['data'] = $this->lookup_data( $outcome['code'], $outcome['data'] );
+
+		return $outcome;
+	}
+
+	/**
+	 * Replaces the internal rate-limit marker with the shared lookup-credential hint. The marker is only
+	 * set for an anonymous public lookup, so a selected lookup credential never reaches this branch.
+	 *
+	 * @param array<mixed> $data
+	 * @return array<mixed>
+	 */
+	private function lookup_data( string $code, array $data ): array {
+		$provider = $data['rate_limited_provider'] ?? null;
+		unset( $data['rate_limited_provider'] );
+		if ( 'unable_to_check' === $code && is_string( $provider ) ) {
+			$data['lookup_hint'] = ProviderTabLinks::lookup_hint( $this->links, admin_url( 'admin.php' ), $provider );
+		}
+
+		return $data;
 	}
 
 	/** @return array{type:string,identifier:string,code:string,successful:bool,data:array<mixed>} */

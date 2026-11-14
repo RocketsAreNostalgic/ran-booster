@@ -61,15 +61,21 @@
 }
 
 .ran-booster-admin .ran-booster-extensions__grid .plugin-card h3 {
-	margin-block: 0 var(--ran-booster-space-16);
+	margin-block: 0;
 	margin-inline: 0;
 }
+
+/*
+ * The Card's last-visible-block rule zeroes the title's end margin, so the
+ * stacked gap above the actions belongs to the action links. The wide layout
+ * resets it with the column's `margin: 0`.
+ */
 
 .ran-booster-admin .ran-booster-extensions__grid .plugin-card .action-links {
 	position: static;
 	inset: auto;
 	inline-size: auto;
-	margin-block: 0 var(--ran-booster-space-12);
+	margin-block: var(--ran-booster-space-16) var(--ran-booster-space-12);
 	margin-inline: 148px 0;
 }
 

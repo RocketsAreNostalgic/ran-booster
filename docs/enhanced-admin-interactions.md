@@ -151,13 +151,15 @@ Partial work, saved-before-reinstall results, warnings, errors and recovery
 details stay durable. Existing success events remain available to independent
 consumers; emitting one does not opt an operation into Snackbar presentation.
 
-Core's source-checkout guidance remains a native, non-dismissible informational
-notice with no actions. It is shown to authorized administrators when automatic
-Core discovery is disabled for a source checkout, inline below the Booster shell
-and in the native notice region on Plugins screens. General Settings responses
-refresh its fixed shell slot from fresh policy state; an unavailable read leaves
-the existing notice untouched. Global notices and other notice families retain
-their existing behavior and remain outside this scoped refresh.
+Core's source-checkout guidance is a native informational notice with one
+dismiss control and no other actions. It is shown to authorized administrators
+when automatic Core discovery is disabled for a source checkout, inline below
+the Booster shell and in the native notice region on Plugins screens. General
+Settings responses refresh its fixed shell slot from fresh policy state; an
+unavailable read leaves the existing notice untouched. Dismissing it is saved
+per user, as described in `core-self-updates.md`, and is not a Snackbar event.
+Global notices and other notice families retain their existing behavior and
+remain outside this scoped refresh.
 
 ## Required tests
 

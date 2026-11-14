@@ -44,7 +44,11 @@ function setup(kind, fetch, mounted = false) {
 		querySelectorAll() {
 			return buttons;
 		},
+		ownerDocument: {},
 		removed: false,
+		contains() {
+			return false;
+		},
 		remove() {
 			this.removed = true;
 		},
@@ -101,6 +105,7 @@ function setup(kind, fetch, mounted = false) {
 		ranBoosterCredentialExpiryNotice: config,
 		ranBoosterBackgroundFailureNotice: config,
 		ranBoosterDevelopmentSafetyNotice: config,
+		ranBoosterCoreDevelopmentNotice: config,
 	};
 	const announcements = withAnnounce(window);
 	vm.runInNewContext(source, {
@@ -149,6 +154,7 @@ for (const [kind, mode, expected] of [
 	['credential-expiry', 'snooze', 'snooze'],
 	['background-failure', undefined, 'acknowledge'],
 	['development-safety', undefined, 'acknowledge'],
+	['core-development-notice', undefined, 'acknowledge'],
 ]) {
 	test(`${kind} ${expected} waits for success and blocks duplicate clicks`, async () => {
 		let resolve;
@@ -254,7 +260,7 @@ for (const [name, fetch] of [
 	});
 }
 
-function developmentLifecycle(fetch) {
+function developmentLifecycle(fetch, onboarding = true) {
 	const handlers = {};
 	let current;
 	const heading = {
@@ -275,6 +281,10 @@ function developmentLifecycle(fetch) {
 			return current && !current.removed ? [current] : [];
 		},
 		getElementById() {
+			return onboarding ? heading : null;
+		},
+		querySelector(selector) {
+			assert.equal(selector, '#wpbody-content h1');
 			return heading;
 		},
 		createElement() {
@@ -302,9 +312,14 @@ function developmentLifecycle(fetch) {
 			errorMessage: 'Retry',
 		},
 	};
+	window.ranBoosterCoreDevelopmentNotice =
+		window.ranBoosterDevelopmentSafetyNotice;
 	withAnnounce(window);
 	const context = { window, document, URLSearchParams, WeakSet, Error };
-	function mount(version = 'local-development-v2') {
+	function mount(
+		version = 'local-development-v2',
+		kind = 'development-safety'
+	) {
 		const button = {
 			attributes: {},
 			getAttribute(name) {
@@ -357,7 +372,7 @@ function developmentLifecycle(fetch) {
 			dispatchEvent() {},
 		};
 		button.closest = (selector) =>
-			selector.includes('development-safety') ? notice : null;
+			selector.includes(kind) ? notice : null;
 		current = notice;
 		return { notice, button };
 	}
@@ -412,6 +427,30 @@ test('confirmed development acknowledgement restores focus and suppresses cached
 	state.fire('htmx:load');
 	assert.equal(newer.notice.removed, false);
 	assert.equal(newer.button.hidden, false);
+});
+
+test('source-checkout dismissal posts its own state, removes the notice and moves focus to the page heading', async () => {
+	const bodies = [];
+	const state = developmentLifecycle(async (url, options) => {
+		bodies.push(new URLSearchParams(options.body));
+		return { ok: true, json: async () => ({ success: true }) };
+	}, false);
+	const first = state.mount('source-checkout-v1', 'core-development-notice');
+	state.init();
+	assert.equal(first.button.hidden, false);
+	state.document.activeElement = first.button;
+	state.click(first.button);
+	await flush();
+	assert.equal(bodies[0].get('state'), 'source-checkout-v1');
+	assert.equal(bodies[0].get('mode'), 'acknowledge');
+	assert.equal(first.notice.removed, true);
+	assert.equal(state.document.activeElement, state.heading);
+	const restored = state.mount(
+		'source-checkout-v1',
+		'core-development-notice'
+	);
+	state.fire('htmx:historyRestore');
+	assert.equal(restored.notice.removed, true);
 });
 
 test('delayed success affects its original event and does not steal focus', async () => {

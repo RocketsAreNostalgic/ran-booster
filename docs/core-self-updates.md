@@ -170,10 +170,20 @@ shown repository names, updater error codes, private/public feed guidance, or
 manual-ZIP instructions in a global banner.
 
 On Booster and Plugins screens, a qualified administrator viewing a detected
-source checkout instead sees one persistent informational notice:
+source checkout instead sees one informational notice:
 
 > **RAN Booster development detected:** Core updates are disabled to protect
 > this source checkout.
+
+An administrator can dismiss the notice with its dismiss control. The dismissal
+is saved for that user (user meta, so network-wide on multisite) against the
+notice's state token, `source-checkout-v1`; other administrators keep their own
+state, and a future change to the notice text raises the token so it reappears.
+Dismissal changes only visibility: source-checkout detection, the disabled Core
+update path, the Troubleshooting status and the same sentence inside the
+local-development guidance are unchanged. Requests need the `manage_options`
+capability and the shared development-notice nonce, and an unknown state token
+saves nothing. Uninstall removes the stored value.
 
 The notice appears only for the positive `source_checkout` reason. An old,
 hand-copied, or otherwise unverified installation remains safely runtime-only

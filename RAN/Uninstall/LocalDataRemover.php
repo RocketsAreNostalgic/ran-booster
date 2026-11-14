@@ -9,6 +9,7 @@ namespace RAN\Uninstall;
 use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryObservationStore;
+use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\Feedback\FeedbackFlash;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
@@ -47,6 +48,7 @@ class LocalDataRemover {
 
 	private const USER_META_KEYS = array(
 		DevelopmentSafetyNoticeController::USER_META_KEY,
+		CoreSelfUpdateDevelopmentNotice::USER_META_KEY,
 		CredentialExpiryNotice::USER_META_KEY,
 		DeploymentAdminPresenter::USER_META_KEY,
 		FeedbackFlash::USER_META_KEY,

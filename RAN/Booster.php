@@ -125,6 +125,7 @@ class Booster {
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_scripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_credential_expiry_notice_script' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_background_deployment_failure_notice_script' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'load_core_development_notice_script' ) );
 		add_action(
 			'admin_enqueue_scripts',
 			function ( $hook ): void {
@@ -1227,6 +1228,25 @@ class Booster {
 			'ranBoosterBackgroundFailureNotice',
 			\RAN\Admin\DeploymentAdminController::AJAX_ACTION,
 			\RAN\Admin\DeploymentAdminController::NONCE_ACTION
+		);
+	}
+
+	/**
+	 * Load the dismissal asset only beside a visible source-checkout notice.
+	 *
+	 * @param mixed $hook Unused screen identifier supplied by WordPress.
+	 */
+	public function load_core_development_notice_script( $hook ): void {
+		unset( $hook );
+
+		if ( ! $this->service( \RAN\Admin\CoreSelfUpdateDevelopmentNotice::class )->should_show() ) {
+			return;
+		}
+
+		$this->load_notice_preference_script(
+			'ranBoosterCoreDevelopmentNotice',
+			\RAN\Admin\DevelopmentSafetyNoticeController::AJAX_ACTION,
+			\RAN\Admin\DevelopmentSafetyNoticeController::NONCE_ACTION
 		);
 	}
 

@@ -4140,7 +4140,7 @@ final class TroubleshootingViewTest extends TestCase {
 		preg_match_all( '/[?&;](?:amp;)?view=([a-z-]+)|name="view" value="([a-z-]+)"/', $html, $emitted, PREG_SET_ORDER );
 		self::assertNotEmpty( $emitted );
 		foreach ( $emitted as $match ) {
-			self::assertContains( '' !== $match[1] ? $match[1] : $match[2], \RAN\Admin\AdminRoutes::PROVIDER_VIEWS );
+			self::assertContains( ( $match[1] ?? '' ) !== '' ? $match[1] : ( $match[2] ?? '' ), \RAN\Admin\AdminRoutes::PROVIDER_VIEWS );
 		}
 		self::assertStringNotContainsString( 'Back to Bitbucket overview', $html );
 		$this->assert_flat_profile_layout( $html );

@@ -63,6 +63,15 @@ test('action items share one flex alignment instead of inline-block', () => {
 	assert.doesNotMatch(bare, /inline-block/);
 });
 
+test('stacked actions are spaced from the title and the description', () => {
+	// The Card's last-block rule zeroes the title's margin, so the actions own the gap.
+	assert.match(
+		base.match(actionLinks)[1],
+		/margin-block:\s*var\(--ran-booster-space-16\) var\(--ran-booster-space-12\);/
+	);
+	assert.match(query.match(actionLinks)[1], /margin:\s*0;/);
+});
+
 test('footer groups wrap instead of floating at narrow widths', () => {
 	assert.match(
 		base,

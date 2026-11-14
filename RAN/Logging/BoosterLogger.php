@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Logging;
 
+use RAN\RepositoryProvider\ProviderFailure;
 use RAN\UpdaterSupport\V1\FailureText;
 use Throwable;
 
@@ -28,12 +29,15 @@ final class BoosterLogger {
 		'event'           => true,
 		'exception_class' => true,
 		'exception_code'  => true,
+		'http_status'     => true,
 		'operation'       => true,
 		'outcome_code'    => true,
 		'package_slug'    => true,
 		'provider'        => true,
+		'reason'          => true,
 		'resolved_by'     => true,
 		'resolved_ref'    => true,
+		'retry_after'     => true,
 		'source'          => true,
 		'state'           => true,
 		'step'            => true,
@@ -80,6 +84,40 @@ final class BoosterLogger {
 		}
 
 		self::log( $message, $context );
+	}
+
+
+	/**
+	 * Log a failed provider operation: the exception class and code plus the closed reason and typed numbers
+	 * Core derives from it. Provider messages and any free text are never recorded.
+	 *
+	 * @param array<array-key, mixed> $context Untrusted context filtered to safe keys and scalar values.
+	 */
+	public static function log_provider_failure( string $message, Throwable $exception, array $context = array() ): void {
+		$failure = ProviderFailure::from_throwable( $exception );
+
+		self::log_exception( $message, $exception, null === $failure ? $context : self::failure_context( $failure ) + $context );
+	}
+
+	/**
+	 * Log a provider failure that arrived as a result, not an exception.
+	 *
+	 * @param array<array-key, mixed> $context Untrusted context filtered to safe keys and scalar values.
+	 */
+	public static function log_failure( string $message, ProviderFailure $failure, array $context = array() ): void {
+		self::log( $message, self::failure_context( $failure ) + $context );
+	}
+
+	/** @return array<string, string|int> */
+	private static function failure_context( ProviderFailure $failure ): array {
+		return array_filter(
+			array(
+				'reason'      => $failure->reason,
+				'http_status' => $failure->http_status,
+				'retry_after' => $failure->retry_after,
+			),
+			static fn ( string|int|null $value ): bool => null !== $value
+		);
 	}
 
 
@@ -138,6 +176,8 @@ final class BoosterLogger {
 			'resolved_ref' => FailureText::commit_id( $line ) ?? FailureText::identifier( $line ),
 			'exception_class' => self::exact( '/\A(?!.*(?:gh[pousr]_|github_pat_|glpat-))(?!.*[A-Za-z0-9]{41})[A-Za-z_][A-Za-z0-9_]*(?:\\\\[A-Za-z_][A-Za-z0-9_]*)*\z/i', $line ),
 			'exception_code' => self::exact( '/\A-?[0-9]{1,10}\z/', $line ),
+			'http_status', 'retry_after' => self::exact( '/\A[0-9]{1,6}\z/', $line ),
+			'reason' => in_array( $line, ProviderFailure::REASONS, true ) ? $line : null,
 			'transition' => self::transition( $line ),
 			'diagnostic_id', 'package_slug' => self::exact( self::STORED_ID, $line ),
 			'event', 'operation', 'outcome_code', 'provider', 'resolved_by', 'source', 'state', 'step' => FailureText::identifier( $line ),

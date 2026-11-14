@@ -13,6 +13,8 @@ use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
+use RAN\RepositoryProvider\ProviderFailure;
+use RAN\RepositoryProvider\ProviderRequestFailed;
 use RuntimeException;
 
 require_once __DIR__ . '/LoggingWordPressFunctions.php';
@@ -107,6 +109,86 @@ final class BoosterLoggerTest extends TestCase {
 		self::assertStringNotContainsString( 'sentinel-raw-exception-secret', $line );
 		self::assertStringNotContainsString( 'ignored-generic-reference', $line );
 		self::assertStringNotContainsString( __FILE__, $line );
+	}
+
+	public function test_provider_failure_logs_class_code_and_only_the_closed_reason_and_typed_numbers(): void {
+		$carrier = new ProviderRequestFailed( new ProviderFailure( 'rate_limited', 403, 120 ) );
+
+		BoosterLogger::log_provider_failure(
+			'provider request failed',
+			$carrier,
+			array(
+				'operation' => 'repository_browse',
+				'provider'  => 'gh',
+			)
+		);
+
+		self::assertSame(
+			'[ran-booster] provider request failed {"reason":"rate_limited","http_status":403,"retry_after":120,"operation":"repository_browse","provider":"gh","exception_class":"RAN\\\\RepositoryProvider\\\\ProviderRequestFailed","exception_code":"403"}',
+			$this->capture->snapshot()['entries'][0]['line']
+		);
+	}
+
+	public function test_a_legacy_code_logs_its_derived_reason_and_never_the_message(): void {
+		BoosterLogger::log_provider_failure( 'provider request failed', new RuntimeException( 'sentinel-provider-message ghp_abcdefghijklmnop1234', 404 ), array( 'step' => 'prepare_archive' ) );
+		BoosterLogger::log_provider_failure( 'provider request failed', new RuntimeException( 'sentinel-provider-message', 0 ) );
+
+		$entries = $this->capture->snapshot()['entries'];
+		self::assertSame(
+			'[ran-booster] provider request failed {"reason":"repository_not_found_or_no_access","http_status":404,"step":"prepare_archive","exception_class":"RuntimeException","exception_code":"404"}',
+			$entries[0]['line']
+		);
+		self::assertStringNotContainsString( 'reason', $entries[1]['line'] );
+		self::assertStringNotContainsString( 'http_status', $entries[1]['line'] );
+		foreach ( $entries as $entry ) {
+			self::assertStringNotContainsString( 'sentinel-provider-message', $entry['line'] );
+			self::assertStringNotContainsString( 'ghp_', $entry['line'] );
+		}
+	}
+
+	public function test_a_failure_result_logs_without_an_exception(): void {
+		BoosterLogger::log_failure( 'credential validation failed', new ProviderFailure( 'credential_expired' ), array( 'operation' => 'credential_validation' ) );
+
+		self::assertSame(
+			'[ran-booster] credential validation failed {"reason":"credential_expired","operation":"credential_validation"}',
+			$this->capture->snapshot()['entries'][0]['line']
+		);
+	}
+
+	public function test_reason_and_number_fields_outside_the_closed_shapes_are_dropped(): void {
+		foreach (
+			array(
+				array( 'reason', 'ghp_abcdefghijklmnop1234' ),
+				array( 'reason', 'made_up_reason' ),
+				array( 'reason', 'Rate limited' ),
+				array( 'http_status', '404; Authorization: x' ),
+				array( 'http_status', '1234567' ),
+				array( 'retry_after', '-1' ),
+				array( 'retry_after', 'soon' ),
+			) as $case
+		) {
+			BoosterLogger::log(
+				'shape',
+				array(
+					$case[0] => $case[1],
+					'step'   => 'ok',
+				)
+			);
+		}
+		BoosterLogger::log(
+			'shape',
+			array(
+				'reason'      => 'http_timeout',
+				'http_status' => '504',
+				'retry_after' => '30',
+			)
+		);
+
+		$entries = $this->capture->snapshot()['entries'];
+		foreach ( array_slice( $entries, 0, 7 ) as $entry ) {
+			self::assertSame( 1, preg_match( '/\{"step":"ok"\}\z/', $entry['line'] ), $entry['line'] );
+		}
+		self::assertStringEndsWith( '{"reason":"http_timeout","http_status":"504","retry_after":"30"}', $entries[7]['line'] );
 	}
 
 	public function test_context_values_shaped_like_secrets_paths_urls_digests_or_markup_are_dropped(): void {
@@ -452,7 +534,7 @@ final class BoosterLoggerTest extends TestCase {
 		$keys = ( new \ReflectionClassConstant( BoosterLogger::class, 'SAFE_CONTEXT_KEYS' ) )->getValue();
 		self::assertIsArray( $keys );
 		self::assertSame(
-			array( 'attempt_id', 'correlation_id', 'diagnostic_id', 'event', 'exception_class', 'exception_code', 'operation', 'outcome_code', 'package_slug', 'provider', 'resolved_by', 'resolved_ref', 'source', 'state', 'step', 'transition' ),
+			array( 'attempt_id', 'correlation_id', 'diagnostic_id', 'event', 'exception_class', 'exception_code', 'http_status', 'operation', 'outcome_code', 'package_slug', 'provider', 'reason', 'resolved_by', 'resolved_ref', 'retry_after', 'source', 'state', 'step', 'transition' ),
 			array_keys( $keys )
 		);
 	}

@@ -31,6 +31,7 @@ use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\ProviderFailure;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\RepositoryReference;
@@ -60,6 +61,7 @@ use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class ManagedReleaseRuntimeTest extends TestCase {
 	use \RAN\Tests\Support\GitHubSelectionFixture;
+	use \RAN\Tests\Support\CapturesBoosterLog;
 
 
 	/** @var array<string, \stdClass> Exact persistent rows represented by this test's packages. */
@@ -75,10 +77,12 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_runtime_actions'] = array();
+		$this->start_log_capture();
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
+		$this->stop_log_capture();
 		unset( $GLOBALS['ran_booster_runtime_action'], $GLOBALS['ran_booster_runtime_actions'], $GLOBALS['ran_booster_wp_pusher_active_plugins'] );
 	}
 
@@ -1964,6 +1968,17 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array( 'private-profile', 'private-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
 		self::assertSame( array( true, true ), array_map( static fn ( RepositoryReference $reference ): bool => $reference->private, $references ) );
 
+		// Every unreadable release read was logged by operation with the exception class and code only, never its message.
+		$lines = $this->captured_log_lines();
+		self::assertNotSame( array(), $lines );
+		foreach ( $lines as $line ) {
+			self::assertStringStartsWith( '[ran-booster] release read failed {"operation":"', $line );
+			self::assertStringContainsString( '"provider":"gh"', $line );
+			self::assertStringContainsString( 'RepositoryReleaseReadUnavailable', $line );
+			self::assertStringNotContainsString( 'Fixture access failure', $line );
+		}
+		self::assertSame( array( 'list_release_candidates', 'inspect_release' ), array_slice( array_map( static fn ( string $line ): string => (string) preg_replace( '/\A.*\{"operation":"([a-z_]+)".*\z/', '$1', $line ), $lines ), -2 ) );
+
 		$failure_mode->value = 'none';
 		$current             = 'explicit';
 		$references          = array();
@@ -2274,6 +2289,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 					'plus_tag'         => array( array(), array() ),
 					'detail_other'     => array( array( 'example.zip' ), array() ),
 					'detail_bad'       => array( array( 'a.zip', 'b.zip' ), array() ),
+					'failure_missing'  => array( array( 'a.zip', 'b.zip' ), array() ),
+					'failure_generic'  => array( array( 'a.zip', 'b.zip' ), array() ),
+					'failure_wins'     => array( array( 'example.zip' ), array() ),
+					'failure_other'    => array( array( 'a.zip', 'b.zip' ), array() ),
 				)[ $mode->value ] ?? array( array(), array() );
 				return new RepositoryReleaseCandidateList(
 					'none' === $mode->value
@@ -2293,7 +2312,14 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 						'detail_explained' => 'package_asset_ambiguous',
 						'detail_other'     => 'a_future_reason',
 						'detail_bad'       => 'Not-A-Reason',
-					)[ $mode->value ] ?? null
+						'failure_wins'     => 'package_asset_ambiguous',
+					)[ $mode->value ] ?? null,
+					match ( $mode->value ) {
+						'failure_missing', 'failure_wins' => new ProviderFailure( 'package_asset_missing' ),
+						'failure_generic' => new ProviderFailure( 'release_incompatible' ),
+						'failure_other' => new ProviderFailure( 'release_invalid' ),
+						default => null,
+					}
 				);
 			}
 		);
@@ -2327,6 +2353,12 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'plus_tag'         => array( 'package_asset_missing', 2, '' ),
 			'detail_other'     => array( 'release_incompatible', 2, 'v3.0.0' ),
 			'detail_bad'       => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
+			// A failure the provider carries wins over its legacy detail and over the listing's ZIP count; one Core has
+			// no wording for falls back to the listing.
+			'failure_missing'  => array( 'package_asset_missing', 2, 'v3.0.0' ),
+			'failure_generic'  => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'failure_wins'     => array( 'package_asset_missing', 2, 'v3.0.0' ),
+			'failure_other'    => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
 		) as $case => $expected ) {
 			$mode->value                                = $case;
 			[ $reason, $expected_inspections, $detail ] = $expected;

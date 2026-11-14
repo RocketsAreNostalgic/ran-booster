@@ -884,6 +884,296 @@ and richer optional capabilities, prove configured artifact-limit parity, and
 verify that Booster self-update does not depend on the GitHub provider being
 active.
 
+## Reporting failures so Core can show them
+
+Providers have no logger and never write to the administrator. A provider
+reports a failure as a closed reason plus typed facts, and Core chooses the
+copy and does all logging. This section is the contract for provider authors
+(for example a GitLab plugin) on what to report, where to put it and what Core
+does with it.
+
+### The failure value
+
+`RAN\RepositoryProvider\ProviderFailure` is a final, immutable value. It
+carries no text of its own.
+
+```php
+new \RAN\RepositoryProvider\ProviderFailure(
+	reason: 'rate_limited',          // required, one id from the vocabulary below
+	http_status: 429,                // optional int, 100 to 599
+	retry_after: 60,                 // optional int seconds, 1 to 86400
+	reset_at: 1767225600,            // optional int Unix timestamp
+	credential_expires_at: null      // optional UTC string, Y-m-d\TH:i:s\Z
+);
+```
+
+The constructor throws `InvalidArgumentException` for an unknown reason or a
+value outside its range. That is a programming error in the provider, so
+construct failures from constants and parsed integers, never from remote text.
+
+Provider API 15 is unchanged. The class exists only in hosts that implement
+this contract, so a provider feature-detects it and otherwise throws the plain
+exceptions with HTTP-like codes:
+
+```php
+if ( class_exists( \RAN\RepositoryProvider\ProviderFailure::class ) ) {
+	throw new \RAN\RepositoryProvider\ProviderRequestFailed(
+		new \RAN\RepositoryProvider\ProviderFailure( reason: 'repository_not_found_or_no_access', http_status: 404 )
+	);
+}
+throw new \RuntimeException( 'Repository not found.', 404 );
+```
+
+When no `ProviderFailure` is present, Core derives a reason from the integer
+code (see [Legacy codes](#legacy-codes)), so a provider that never adopts the
+carrier still reports every situation Core can distinguish by code. It keeps its
+existing copy: Core words a derived reason with the copy it already had for that
+code, and a carried reason with the reason copy below.
+
+### Reason vocabulary
+
+The vocabulary is closed. A provider uses only these ids; the constructor
+rejects any other. It refines the coarser
+`ReleaseFailure` codes of the release updater (see
+[Updater correspondence](#updater-correspondence)).
+
+Typed facts are listed where they apply. "Core shows" is the fixed Core copy,
+paraphrased; typed numbers are rendered by Core as text.
+
+| Reason | Use when | Typed facts | Core shows |
+| --- | --- | --- | --- |
+| `credential_missing` | The request needs a credential and none is selected or saved | None | No credential is saved for this request. |
+| `credential_store_unavailable` | The provider could not read stored credential material | None | Booster could not read the saved credential. |
+| `credential_format_invalid` | Saved material has a shape this provider never accepts; nothing was sent | None | The saved credential is not in a format the provider accepts. |
+| `credential_rejected` | The host answered that authentication failed | `http_status` 401 | The Git provider rejected the credential. |
+| `credential_expired` | The host says the credential has expired | `credential_expires_at` if known | The credential has expired, with the date when known. |
+| `permission_denied` | Authenticated, but the credential lacks scope or access for this action | `http_status` 403 | The credential lacks permission for this request. |
+| `rate_limited` | The primary rate limit is exhausted | `retry_after` or `reset_at`, `http_status` | Rate limit reached, with a retry time when given. |
+| `rate_limited_secondary` | The host applied a secondary or abuse limit | `retry_after`, `http_status` | The provider is throttling requests, with a retry time when given. |
+| `repository_not_found_or_no_access` | A 404 that cannot separate absence from missing access | `http_status` 404 | Not found, or the credential cannot access it. |
+| `repository_not_found` | The provider can prove the repository does not exist | `http_status` 404 | The repository does not exist. |
+| `ref_not_found` | The branch, tag or commit does not exist or is gone | `http_status` 404 or 410 | The requested revision is not available. |
+| `owner_not_found` | The user, organisation or workspace does not exist | `http_status` 404 | The owner could not be found. |
+| `repository_identity_changed` | The locator now resolves to a different stable repository ID than expected | None | The repository changed identity; review the package source. |
+| `repository_no_default_branch` | The repository exists but has no default branch (empty) | None | The repository has no default branch. |
+| `http_timeout` | A request timed out | None | The provider took too long. |
+| `dns_failed` | The host name did not resolve | None | The site could not look up the provider host. |
+| `tls_failed` | TLS negotiation or certificate verification failed | None | The site could not make a secure connection. |
+| `blocked_by_site` | WordPress or the site refused the request (for example `WP_HTTP_BLOCK_EXTERNAL`, an `http_request_not_executed` result) | None | This site blocks outbound requests to the provider. |
+| `redirect_blocked` | A redirect went to a disallowed host or scheme, or exceeded the redirect limit | None | The provider redirected the request somewhere not allowed. |
+| `transport_other` | Any other failure before an HTTP status existed | None | The provider could not be reached. |
+| `http_4xx_other` | Any 4xx not covered above | `http_status` | The provider refused the request. |
+| `http_5xx` | Any 5xx | `http_status` | The provider reported an error. |
+| `response_invalid` | The reply was not the expected shape | None | The provider returned an invalid response. |
+| `response_too_large` | The reply exceeded the request's size limit | None | The provider returned too much data. |
+| `site_filesystem_unsupported` | WordPress cannot use direct filesystem access for this operation | None | This site's filesystem method does not support the operation. |
+| `site_zip_unavailable` | The PHP ZIP extension is missing | None | The server cannot read ZIP packages. |
+| `operation_superseded` | A newer operation replaced this one | None | A newer operation replaced this one. |
+| `no_releases` | No eligible published release exists for the channel | None | No published release for this track. |
+| `release_invalid` | A release is malformed or does not match its listing | None | The release could not be validated. |
+| `release_changed` | The release differs from what was inspected (fingerprint changed) | None | The release changed after inspection. |
+| `release_incompatible` | The release is not a valid package for this repository | None | The release is not a compatible package. |
+
+The release group also accepts `package_asset_missing` and
+`package_asset_ambiguous`. A rejection that carries one of them keeps its
+existing wording; elsewhere they read as an incompatible package.
+
+### Typed facts
+
+`http_status` is the host's status, `retry_after` is a whole number of seconds
+the provider read from a header, and `reset_at` is a Unix timestamp. Parse them
+to integers in the provider; never pass header text. Core renders them as text,
+for example "try again in about two minutes". It renders a retry time only for
+the two rate-limit reasons, and only when the time is between one second and
+one day ahead. The failure carries no free text: do not send response bodies,
+headers, `WP_Error` messages or exception messages anywhere.
+
+### Where each signal goes
+
+Attach the `ProviderFailure` to the carrier the operation already uses.
+`ProviderRequestFailed` requires a failure and takes any reason outside the release group; it throws `InvalidArgumentException` for a release reason. The other
+carriers accept one group of reasons and treat a reason from any other group as
+absent: the release read carrier accepts every group except release, the
+release rejection carriers accept the release group, and the saved-credential
+check accepts the credential, rate, transport and http groups.
+
+| Operation | Carrier | Attach as |
+| --- | --- | --- |
+| `resolve_repository()`, repository browsing, `prepare_archive()`, `verify_current_head()` | `ProviderRequestFailed`, a final `RuntimeException` | `new ProviderRequestFailed( $failure )`; `getCode()` returns the failure's `http_status`, else the reason's default code |
+| Release listing, inspection | `RepositoryReleaseReadUnavailable` | `new RepositoryReleaseReadUnavailable( failure: $failure )`; the constructor keeps the `RuntimeException` message, code and previous arguments and adds `failure` last, so existing calls are unchanged |
+| Release inspection rejection | `RepositoryReleaseInspectionRejected` | Optional last argument of `no_releases()`, `invalid_release()` and `incompatible()` |
+| Release acquisition rejection | `RepositoryReleaseAcquisitionRejected` | Optional argument of `invalid_release()`, `cleanup_failed()` and `changed()` (reason `release_changed`) |
+| Saved credential check | `CredentialValidationResult` | Optional argument of `invalid()`, `unavailable()`, `rate_limited()` and `invalid_response()`. `valid()` accepts none |
+| Submitted credential shape | `InvalidCredentialInput` | Unchanged: closed `reason` and a fixed message |
+| Diagnostics | `ProviderDiagnosticResult` | Unchanged: stable `code`, safe `message` and `remediation`, optional `Throwable` |
+
+On the credential check, pair the factory with its reason (`invalid()` with a
+credential or permission reason, `rate_limited()` with a rate reason,
+`unavailable()` with a store, transport or http reason); Core shows the
+reason's sentence and records the factory's status.
+
+For package save, a carried failure is retried-later (an unchanged settings
+save proceeds) when its reason is a rate limit, a transport failure, `http_5xx`
+or `credential_store_unavailable`, whatever its `http_status`; a plain exception
+uses its code. A `ProviderFailure` cannot be unserialized.
+
+Other thrown types are unknown failures. `StaleDeployment` still means the
+branch head moved. `InvalidArgumentException` still means malformed caller
+input.
+
+### Situations
+
+| Situation | Reason | Facts | Carrier |
+| --- | --- | --- | --- |
+| Rate limited | `rate_limited`, or `rate_limited_secondary` for abuse limits | `retry_after` or `reset_at`, `http_status` | Request or release carrier |
+| Credential missing | `credential_missing` | None | Request, release or validation |
+| Credential invalid | `credential_rejected` | `http_status` | Same |
+| Credential expired | `credential_expired` | `credential_expires_at` | Same |
+| Credential under-scoped | `permission_denied` | `http_status` | Same |
+| Credential store failed | `credential_store_unavailable` | None | Same |
+| Repository not found or moved | `repository_not_found_or_no_access`, or `repository_not_found` when provable; `repository_identity_changed` when the stable ID differs | `http_status` | Request carrier |
+| Revision gone | `ref_not_found` | `http_status` | Request carrier |
+| No default branch | `repository_no_default_branch` | None | Request carrier |
+| Transport failure | `http_timeout`, `dns_failed`, `tls_failed`, `redirect_blocked` or `transport_other` | None | Request or release carrier |
+| Environment blocks HTTP | `blocked_by_site` | None | Request or release carrier |
+| Upstream error | `http_5xx` | `http_status` | Request or release carrier |
+| Bad or oversized reply | `response_invalid` or `response_too_large` | None | Request carrier |
+| Release listing empty | Return an empty candidate list | None | None |
+| Release inspection rejected | `no_releases`, `invalid_release` or `incompatible` through the rejection factories, with a refining failure reason | None | Inspection carrier |
+| Release changed during acquisition | `release_changed` | None | Acquisition carrier |
+| Acquisition cleanup failed | `cleanup_failed()` | None | Acquisition carrier |
+| Filesystem or ZIP unsupported | `site_filesystem_unsupported`, `site_zip_unavailable` | None | Request or release carrier |
+| Saved credential check | `CredentialValidationResult::invalid()`, `unavailable()`, `rate_limited()` or `invalid_response()` with a failure | Per reason | Validation result |
+| Submitted credential has a bad shape | `InvalidCredentialInput`: `invalid_configuration`, `credential_kind_mismatch` or `invalid_secret_shape` | None | Exception |
+
+### Release rejection
+
+`RepositoryReleaseInspectionRejected` keeps its three coarse reasons, which
+drive Core's walk: only `incompatible` lets Core inspect the next candidate, at
+most two in all. The optional failure refines what Core shows for an
+`incompatible` rejection: a failure reason of `package_asset_missing`,
+`package_asset_ambiguous` or `release_incompatible` selects that wording; any
+other reason falls back to the wording Core derives from the candidate's
+`expected_asset_names`, so a provider that returns candidates lists them
+completely. `incompatible( ?string $detail, ?ProviderFailure $failure )` keeps
+its existing lower-case `detail`; a failure, when given, takes precedence.
+
+`RepositoryReleaseAcquisitionRejected::changed()` reports that the release no
+longer matches the one that was inspected. Core shows that the release changed
+and that nothing was installed.
+
+### Where Core uses a reason
+
+| Boundary | What Core does with the reason |
+| --- | --- |
+| Repository picker and package save (resolve) | Shows the reason copy for a carried failure and keeps the status copy for a plain exception. Logs the class, code and reason |
+| Saved credential check | Shows the reason copy (expired, under-scoped, store failure and rate limit are told apart) and logs the reason |
+| Deployment archive preparation and head verification | Maps the reason onto the attempt outcome codes below and logs the class, code and reason |
+| Release read (candidate listing, inspection, preflight) | Logs the class, code and reason. The notice keeps its closed code |
+| Release inspection and acquisition rejection | Chooses the notice wording as described above |
+
+### What Core shows and logs
+
+Core owns every sentence the administrator reads. It shows the reason's copy and
+typed facts as text. Provider messages and exception messages are never shown.
+
+Core is the only logger. `BoosterLogger` records the exception class and code
+and these safe keys: `reason` (the closed vocabulary, otherwise dropped),
+`http_status`, `retry_after`, `operation`, `provider` and `step`. It never
+records exception messages or provider text. Logging happens only when
+`WP_DEBUG_LOG` or the Troubleshooting capture is on.
+
+For a deployment, Core maps the reason to its attempt outcome:
+`credential_*` to `provider_credential_rejected`, `permission_denied` to
+`provider_access_denied`, `repository_not_found*` and `owner_not_found` to
+`provider_repository_missing`, `ref_not_found` and `repository_no_default_branch`
+to `provider_reference_unavailable`, `rate_limited*` to
+`provider_rate_limited`, transport, `http_5xx` and `response_*` to
+`provider_unavailable`, `http_4xx_other` to `provider_request_invalid`, and
+anything else to `provider_failed`. `StaleDeployment` is `stale_event`. The
+attempt record, Activity and the support report carry the outcome code only.
+
+#### Legacy codes
+
+Without a `ProviderFailure`, Core reads `getCode()` of a `RuntimeException`
+thrown by the request operations:
+
+| Code | Reason Core derives |
+| --- | --- |
+| `400`, `422` | `http_4xx_other` |
+| `401` | `credential_rejected` |
+| `403` | `permission_denied` |
+| `404` | `repository_not_found_or_no_access` |
+| `410` | `ref_not_found` |
+| `413` | `response_too_large` |
+| `429` | `rate_limited` |
+| `502`, `503` | `http_5xx` |
+| `504` | `transport_other` |
+| Anything else, including `0` | No reason: generic failure |
+
+Existing providers use `504` only when the HTTP request failed before any
+response arrived (a `WP_Error`), and `502` and `503` for a bad or unavailable
+upstream reply, so `504` is a transport failure. A provider that sees a real
+upstream 504 status sends `http_5xx` with `http_status: 504` through the
+carrier.
+
+`ProviderRequestFailed::getCode()` returns the failure's `http_status`, else
+the reason's default code: `401` for credential reasons other than store
+failure, `403` for `permission_denied`, `404` for location reasons, `409` for
+`repository_identity_changed` and `operation_superseded`, `413` for
+`response_too_large`, `422` for `repository_no_default_branch`, `429` for rate
+reasons, `502` for `http_5xx` and `response_invalid`, `504` for every transport
+reason (`http_timeout`, `dns_failed`, `tls_failed`, `blocked_by_site`,
+`redirect_blocked`, `transport_other`) and `503` for the rest. A host that
+predates the carrier therefore still reads a sensible code.
+
+#### Updater correspondence
+
+The release updater reports coarse `ReleaseFailure` codes. Each provider reason
+corresponds to one of them, and the rate-limit `retry_after` range (1 to 86400)
+is the same as the updater's.
+
+| Provider reasons | `ReleaseFailure` code |
+| --- | --- |
+| `credential_missing`, `credential_store_unavailable`, `credential_format_invalid` | `credential_unavailable` |
+| `credential_rejected`, `credential_expired`, `permission_denied`, location reasons | `repository_access_unavailable` |
+| `rate_limited`, `rate_limited_secondary` | `rate_limited` |
+| Transport, `http_*` and `response_*` reasons | `provider_unavailable` |
+| `site_filesystem_unsupported` | `filesystem_unsupported` |
+| `site_zip_unavailable` | `runtime_unavailable` |
+| `operation_superseded` | `operation_failed` |
+| `no_releases` | `release_unavailable` |
+| `release_invalid` | `invalid_release` |
+| `release_incompatible` | `package_incompatible` |
+| `release_changed` | `release_changed` |
+
+The updater's `ReleaseRejection` reasons (for example `no_package_zip` and
+`multiple_package_zips`) are updater-side. Core words them as the existing
+`package_*` ids and does not accept them from a provider.
+
+### Secrets rules for providers
+
+- Never put tokens, URLs with credentials or signed query values, request or
+  response headers, response bodies, upstream exception messages or file paths
+  into an exception message, a result message or anything Core might surface.
+- Use fixed, hand-written messages. Do not interpolate remote text or
+  `WP_Error` messages.
+- Signal only closed values: a reason id, an integer code or a constant. The
+  only free text is the diagnostic and webhook remediation text and the
+  `InvalidCredentialInput` message, which Core screens as described in
+  [Failure text screening](#failure-text-screening).
+- Mark every method that receives a secret with `#[\SensitiveParameter]`, as
+  `SubmittedCredentialValidator::validate_submitted_credential()` does, so a
+  stack trace cannot print it.
+- Never log. Core supplies no logger, and a provider-side `error_log()` sits
+  outside every guarantee below.
+
+Core guarantees that it logs class, code and closed keys only, shows only its
+own copy and screened text, and drops a rejected value instead of redacting it.
+It does not guarantee that screened text is safe. The shape screen is a safety
+net against common token, header, URL and path shapes. Core cannot see inside a
+provider, its own logging or text it shows on its own screens.
+
 ## Durable activity reporting
 
 Provider API15 adds bounded activity reporting without changing the three-argument

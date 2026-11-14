@@ -10,16 +10,25 @@ use RuntimeException;
 final class RepositoryReleaseAcquisitionRejected extends RuntimeException {
 	public const INVALID_RELEASE = 'invalid_release';
 	public const CLEANUP_FAILED  = 'cleanup_failed';
+	public const CHANGED         = 'release_changed';
 
-	private function __construct( public readonly string $reason ) {
+	public readonly ?ProviderFailure $failure;
+
+	private function __construct( public readonly string $reason, ?ProviderFailure $failure = null ) {
+		$this->failure = ProviderFailure::within( $failure, ProviderFailure::RELEASE_REASONS );
 		parent::__construct( 'The exact repository release could not be acquired.' );
 	}
 
-	public static function invalid_release(): self {
-		return new self( self::INVALID_RELEASE );
+	public static function invalid_release( ?ProviderFailure $failure = null ): self {
+		return new self( self::INVALID_RELEASE, $failure );
 	}
 
-	public static function cleanup_failed(): self {
-		return new self( self::CLEANUP_FAILED );
+	public static function cleanup_failed( ?ProviderFailure $failure = null ): self {
+		return new self( self::CLEANUP_FAILED, $failure );
+	}
+
+	/** The release differs from the one that was inspected. */
+	public static function changed( ?ProviderFailure $failure = null ): self {
+		return new self( self::CHANGED, $failure );
 	}
 }

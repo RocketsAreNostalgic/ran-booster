@@ -15,7 +15,7 @@ use RAN\PackageOperation;
 use RAN\PackageOperationService;
 use RAN\PackageRepositoryChangeRejected;
 use RAN\PackageSource;
-use RAN\RepositoryProvider\{InvalidProviderCode, ProviderRegistry, UnknownProvider, UnsupportedProviderCapability};
+use RAN\RepositoryProvider\{InvalidProviderCode, ProviderFailure, ProviderRegistry, UnknownProvider, UnsupportedProviderCapability};
 use RAN\Storage\{PackageStorageFailure, PluginRepository, ThemeRepository};
 use RuntimeException;
 use Throwable;
@@ -637,7 +637,8 @@ final class PackageAdminController {
 			if ( null !== $stored_fallback ) {
 				return $stored_fallback;
 			}
-			$message = match ( $failure->getCode() ) {
+			// A provider's own reason is worded by Core; a plain exception keeps the status copy.
+			$message = ProviderFailure::carried( $failure )?->message() ?? match ( $failure->getCode() ) {
 				401 => __( 'The Git provider rejected the selected credential.', 'ran-booster' ),
 				403 => __( 'The Git provider denied access. Check credential permissions or rate limits.', 'ran-booster' ),
 				404 => __( 'The repository could not be found, or the selected credential cannot access it.', 'ran-booster' ),
@@ -651,6 +652,10 @@ final class PackageAdminController {
 			'operation' => is_string( $request['action'] ?? null ) ? sanitize_key( wp_unslash( $request['action'] ) ) : '',
 			'step'      => 'package_repository_resolve',
 		);
+		$reason  = ProviderFailure::from_throwable( $failure )?->reason;
+		if ( null !== $reason ) {
+			$context['reason'] = $reason;
+		}
 		if ( is_string( $request['provider'] ?? null ) && preg_match( '/^[a-z0-9][a-z0-9_-]{0,31}$/D', $request['provider'] ) === 1 ) {
 			$context['provider'] = $request['provider'];
 		}
@@ -674,7 +679,7 @@ final class PackageAdminController {
 			|| ! $stored_package instanceof Package
 			|| $this->enabled( $request, 'reinstall_after_save' )
 			|| $this->enabled( $request, 'check_repository_branch_after_save' )
-			|| ! in_array( $failure->getCode(), self::TRANSIENT_LOOKUP_CODES, true ) ) {
+			|| ! ( ProviderFailure::carried( $failure )?->is_transient() ?? in_array( $failure->getCode(), self::TRANSIENT_LOOKUP_CODES, true ) ) ) {
 			return null;
 		}
 		try {

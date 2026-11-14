@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
@@ -94,7 +95,15 @@ final class ProspectiveReleaseCandidateReader {
 					'channel'    => $channel,
 				)
 			);
-		} catch ( Throwable ) {
+		} catch ( Throwable $failure ) {
+			BoosterLogger::log_provider_failure(
+				'release candidate read failed',
+				$failure,
+				array(
+					'operation' => 'list_release_candidates',
+					'provider'  => $provider,
+				)
+			);
 			return ProspectiveReleaseResult::failure( 'unable_to_check' );
 		}
 	}

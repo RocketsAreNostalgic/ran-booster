@@ -491,7 +491,7 @@ final readonly class PortabilityApplicationService {
 				'installation_cleanup_failed' => __( 'Booster could not confirm cleanup after installing the reviewed release. Review the Blueprint before making another change.', 'ran-booster' ),
 				'package_already_exists' => __( 'The target package appeared during installation, so Booster refused to manage it. Review the Blueprint before making another change.', 'ran-booster' ),
 				'release_repository_conflict' => __( 'The target has a conflicting managed package source, so Booster refused installation. Review the Blueprint before making another change.', 'ran-booster' ),
-				'release_invalid', 'package_identity_mismatch' => __( 'The reviewed release candidate is no longer valid. Review the Blueprint before making another change.', 'ran-booster' ),
+				'release_invalid', 'release_changed', 'package_identity_mismatch' => __( 'The reviewed release candidate is no longer valid. Review the Blueprint before making another change.', 'ran-booster' ),
 				default => __( 'Booster could not confirm installation of the reviewed release. Review the Blueprint again before making another change.', 'ran-booster' ),
 			};
 			return $this->result( 'failed', $message, $credential_state );

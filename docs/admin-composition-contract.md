@@ -551,7 +551,7 @@ headers line up in mixed compositions and no page compensates for another.
 | Role                                                    | Inline inset                                 | Block padding                                | Type                  |
 | ------------------------------------------------------- | -------------------------------------------- | -------------------------------------------- | --------------------- |
 | Section header: Card title (`.ran-booster-settings-section__header`) | `--ran-booster-header-inset-inline` (24px; 16px at 480px and below) | 24px above, 14px below the title, then a rule | 15/600, `h2`/`h3`     |
-| Section trigger: prominent disclosure (Advanced settings, Danger zone, Settings and Installation Cards) | `--ran-booster-header-inset-inline`          | `--ran-booster-header-trigger-inset-block` (18px) around a 24px line | 15/600                |
+| Section trigger: prominent disclosure (Advanced settings, Danger zone) | `--ran-booster-header-inset-inline`          | `--ran-booster-header-trigger-inset-block` (18px) around a 24px line | 15/600                |
 | Nested panel header: readiness panel, a prominent disclosure inside another | `--ran-booster-panel-header-inset-inline` (18px) | `--ran-booster-panel-header-inset-block` (16px) | 13/600, `h3`/`h4`     |
 | Compact disclosure trigger (Documentation, webhook setup, release workflow) | 16px                                         | 8px                                          | 13/500                |
 
@@ -566,10 +566,19 @@ headers line up in mixed compositions and no page compensates for another.
   its trigger takes the panel pair and sub-heading type, so it sits beside the
   Release readiness panel header with the same inset and nearly the same height
   (56px against 57px, which holds the Not ready badge).
+- A prominent disclosure's body takes the same inline inset as its trigger (the
+  panel inset when nested), so header text, fields and a footer band share one
+  text edge, closed and open. A compact disclosure inside keeps its own 16px body.
 - Installation entries and Settings Cards keep 16px block padding because their
   headers carry a strapline or warning row, and they are never composed with
   section Cards. They take the shared inline inset, and their warning row follows
   it.
+- Provider and Repository Cards keep their own gutters: 24px, 18px at 782px and
+  below, in `30-provider-cards.css`. Their header and body share that value, and
+  they are never composed with package section Cards. They are the one documented
+  exception to the shared inset, and `header-rhythm.test.mjs` names them.
+- The native `<details>` fallback measures the same as the mounted header,
+  including a nested trigger's 13px title.
 - The compact profile keeps its slim padding and 13/500 type: Documentation
   disclosures never take the section padding or a minimum height.
 - Heading levels follow the document outline, not the size: a section title

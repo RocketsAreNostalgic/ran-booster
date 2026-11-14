@@ -1086,6 +1086,10 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/settings__card\[data-ran-booster-ui-disclosure="settings-card"\]/', $css );
 		self::assertDoesNotMatchRegularExpression( '/settings__card\s*\.ran-booster-troubleshooting__entry-row/', $css );
 		self::assertMatchesRegularExpression( '/__entry-row \{[^}]*padding: 16px var\(--ran-booster-header-inset-inline\);/', $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' ) );
+		// Settings and Installation headers (mounted button and native summary) override block padding only; their inline inset is the shared header token.
+		$activity = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="settings-card"\]\s*\)\s*> \*[^{]*\[role="button"\],[^{]*> summary \{\s*padding-block: 16px;\s*\}/', $activity );
+		self::assertDoesNotMatchRegularExpression( '/\[data-ran-booster-ui-disclosure="settings-card"\][^{]*\{[^}]*padding-inline/', $activity );
 		// Body and footer use the same token.
 		self::assertStringContainsString( 'padding: var(--ran-booster-space-16) var(--ran-booster-settings-card-inset);', $css );
 		self::assertStringContainsString( 'margin-inline: calc(-1 * var(--ran-booster-settings-card-inset));', $css );
@@ -1156,7 +1160,7 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_settings_cards_reuse_the_disclosure_header_divider_and_own_a_footer_band(): void {
 		$settings   = $this->asset( 'ran-booster/65-package-settings.css' );
 		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
-		// Header: the prominent shared Disclosure header, 16px padding closed and open (see the Installation contract above).
+		// Header: the prominent shared Disclosure header takes the shared trigger block padding and section inline inset; Installation and Settings headers override only the block padding to 16px, closed and open (see the Installation contract above).
 		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure-density="prominent"\]\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*> \[role="button"\] \{\s*padding: var\(--ran-booster-header-trigger-inset-block\)\s*var\(--ran-booster-header-inset-inline\);/', $primitives );
 		// Divider under the header only while open, from the shared rule for every Disclosure (no Settings copy).
 		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header,[^{]*> summary \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);/', $primitives );

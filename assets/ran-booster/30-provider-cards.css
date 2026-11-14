@@ -910,7 +910,8 @@
 }
 
 .ran-booster-admin .ran-booster-release-workflow__body {
-	padding: var(--ran-booster-space-16) var(--ran-booster-space-18);
+	padding: var(--ran-booster-panel-header-inset-block)
+		var(--ran-booster-panel-header-inset-inline);
 }
 
 /* Repository Cards share provider gutters without changing their block rhythm. */

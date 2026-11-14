@@ -993,15 +993,6 @@ final class ReleaseManagementDisplay {
 			'release_invalid' => __( 'The selected release does not satisfy the selected channel requirements. No package was installed.', 'ran-booster' ),
 			'release_changed' => __( 'The release changed after it was inspected. No package was installed. Use Check releases and try again.', 'ran-booster' ),
 			'unable_to_check' => __( 'Published releases could not be checked. No package was installed and no package settings were changed.', 'ran-booster' ),
-			'release_version_mismatch',
-			'release_header_missing',
-			'release_header_invalid',
-			'release_archive_unreadable',
-			'release_unavailable',
-			'invalid_release_assets',
-			'release_configuration_invalid',
-			'target_registration_failed',
-			'preflight_unavailable' => $this->diagnostic_message( $code ),
 			default => $successful
 				? __( 'The published release operation completed.', 'ran-booster' )
 				: __( 'The published release operation could not be completed.', 'ran-booster' ),
@@ -1061,12 +1052,12 @@ final class ReleaseManagementDisplay {
 	}
 
 	private function is_diagnostic_code( string $code ): bool {
-		if ( in_array( $code, array( 'release_repository_conflict', 'repository_release_owner_exists', 'release_changed' ), true ) ) {
+		if ( in_array( $code, array( 'release_repository_conflict', 'repository_release_owner_exists', 'release_changed', 'release_invalid', 'package_already_exists' ), true ) ) {
 			return false;
 		}
 		return str_starts_with( $code, 'package_' )
 			|| str_starts_with( $code, 'release_' )
-			|| in_array( $code, array( 'invalid_release_assets', 'preflight_unavailable', 'subdirectory_not_supported', 'target_registration_failed', 'repository_release_owner_exists' ), true );
+			|| in_array( $code, array( 'invalid_release_assets', 'preflight_unavailable', 'subdirectory_not_supported', 'target_registration_failed' ), true );
 	}
 
 	private function diagnostic_action( string $code, string $reason = '', string $detail = '' ): string {

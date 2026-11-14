@@ -319,14 +319,35 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Conflicting packages', $html );
 	}
 
-	public function test_a_release_that_changed_at_acquisition_says_so_and_offers_a_recheck(): void {
+	/** @return array<string,array{string,string}> */
+	public static function failures_with_their_own_message(): array {
+		return array(
+			'release changed'        => array( 'release_changed', 'The release changed after it was inspected. No package was installed. Use Check releases and try again.' ),
+			'release invalid'        => array( 'release_invalid', 'The selected release does not satisfy the selected channel requirements. No package was installed.' ),
+			'package already exists' => array( 'package_already_exists', 'That plugin or theme is already installed or managed. No package was overwritten.' ),
+		);
+	}
+
+	#[DataProvider( 'failures_with_their_own_message' )]
+	public function test_a_failed_install_shows_its_own_message_not_the_generic_status( string $code, string $message ): void {
 		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
 		ob_start();
-		$display->render_operation_notice( 'release_changed', false );
+		$display->render_operation_notice( $code, false );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'The release changed after it was inspected. No package was installed. Use Check releases and try again.', $html );
+		self::assertStringContainsString( $message, $html );
 		self::assertStringNotContainsString( 'needs attention', $html );
+		self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
+	}
+
+	public function test_a_diagnostic_failure_still_shows_its_message_and_help(): void {
+		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		ob_start();
+		$display->render_operation_notice( 'release_header_missing', false );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'The published package is missing its WordPress version header.', $html );
+		self::assertStringContainsString( 'Why this happened and how to fix it', $html );
 	}
 
 	#[DataProvider( 'installation_review_outcomes' )]

@@ -1,5 +1,43 @@
 # Changelog
 
+## [1.0.0-beta.46](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.45...v1.0.0-beta.46) (2026-11-14)
+
+
+### Features
+
+* **admin-ui:** bridge brand tokens to the admin colour ([#943](https://github.com/RocketsAreNostalgic/ran-booster/issues/943)) ([ff7c9a5](https://github.com/RocketsAreNostalgic/ran-booster/commit/ff7c9a5129ed6e58fefbda23666f2ed0ca41b772))
+* **admin-ui:** dismiss the source-checkout notice per user ([#917](https://github.com/RocketsAreNostalgic/ran-booster/issues/917)) ([e2cfa9f](https://github.com/RocketsAreNostalgic/ran-booster/commit/e2cfa9f80e5ddd886f445cff54f0c37e5b7ac841))
+* **admin:** add one snackbar host with intent styling ([#875](https://github.com/RocketsAreNostalgic/ran-booster/issues/875)) ([007bd8c](https://github.com/RocketsAreNostalgic/ran-booster/commit/007bd8c710ba9544303ecb3b59fb891da535d313))
+* **feedback:** flash Check releases results to next screen ([#876](https://github.com/RocketsAreNostalgic/ran-booster/issues/876)) ([98ba306](https://github.com/RocketsAreNostalgic/ran-booster/commit/98ba306735b8779b364033eaf7e0148355fc083b))
+* **provider:** add failure carrier and use it in Core ([#923](https://github.com/RocketsAreNostalgic/ran-booster/issues/923)) ([0321b19](https://github.com/RocketsAreNostalgic/ran-booster/commit/0321b19446c06d225e3ff4099e86a0a138d700c5))
+* **releases:** answer Check releases when updates are off ([#899](https://github.com/RocketsAreNostalgic/ran-booster/issues/899)) ([5e4e7ae](https://github.com/RocketsAreNostalgic/ran-booster/commit/5e4e7ae8246a7486588c8afe8a94516dccb928d9))
+* **releases:** recheck on enabling updates, show past release ([#884](https://github.com/RocketsAreNostalgic/ran-booster/issues/884)) ([016e4cc](https://github.com/RocketsAreNostalgic/ran-booster/commit/016e4ccffcabd51d9dc164637d99cb49f61cf689))
+
+
+### Bug Fixes
+
+* **activity:** thin background skipped checks ([#922](https://github.com/RocketsAreNostalgic/ran-booster/issues/922)) ([77d7983](https://github.com/RocketsAreNostalgic/ran-booster/commit/77d79831350d3584a82276379798cfe4b656f0fb))
+* **admin-ui:** align panel slugs with labels, close unknown ([#918](https://github.com/RocketsAreNostalgic/ran-booster/issues/918)) ([9f3500b](https://github.com/RocketsAreNostalgic/ran-booster/commit/9f3500bc042f836a9dfc24d602c3e7ef1c7f49d4))
+* **admin-ui:** centre feedback toasts like the notices ([#882](https://github.com/RocketsAreNostalgic/ran-booster/issues/882)) ([31d89b3](https://github.com/RocketsAreNostalgic/ran-booster/commit/31d89b3f0db365495a165b3930a01303858f40e1))
+* **admin-ui:** centre feedback toasts on the Booster frame ([#887](https://github.com/RocketsAreNostalgic/ran-booster/issues/887)) ([3298115](https://github.com/RocketsAreNostalgic/ran-booster/commit/3298115e532d240c076025c558073e1b67a6b99c))
+* **admin-ui:** handle an unknown top-level tab explicitly ([#921](https://github.com/RocketsAreNostalgic/ran-booster/issues/921)) ([00e2829](https://github.com/RocketsAreNostalgic/ran-booster/commit/00e2829ffbaa433c76f9d0757566d4d80ae83ca7))
+* **admin-ui:** hint at a lookup credential on rate limits ([#941](https://github.com/RocketsAreNostalgic/ran-booster/issues/941)) ([6f2225f](https://github.com/RocketsAreNostalgic/ran-booster/commit/6f2225f5594b85644966426afe46d28efc7aa4c2))
+* **admin-ui:** keep route notices below the shell ([#937](https://github.com/RocketsAreNostalgic/ran-booster/issues/937)) ([e4921ab](https://github.com/RocketsAreNostalgic/ran-booster/commit/e4921ab0aca590dd3629953dd8652f1608df3564))
+* **admin-ui:** lay out Extensions cards by card width ([#900](https://github.com/RocketsAreNostalgic/ran-booster/issues/900)) ([e137b06](https://github.com/RocketsAreNostalgic/ran-booster/commit/e137b0655f5e5447e4bdfc0063748fb1bb05c43e))
+* **admin-ui:** space package row badge from line below ([#914](https://github.com/RocketsAreNostalgic/ran-booster/issues/914)) ([51a4615](https://github.com/RocketsAreNostalgic/ran-booster/commit/51a4615b4b45096b500d28a1a655f49951634b3b))
+* **admin-ui:** space provider review disclosure from card ([#910](https://github.com/RocketsAreNostalgic/ran-booster/issues/910)) ([bd74af7](https://github.com/RocketsAreNostalgic/ran-booster/commit/bd74af7e2ed158fa298ac77f4619c1544c1f3843))
+* **admin-ui:** space stacked Extensions card actions from title ([#907](https://github.com/RocketsAreNostalgic/ran-booster/issues/907)) ([caa09ce](https://github.com/RocketsAreNostalgic/ran-booster/commit/caa09ce3773e4300edfbce499ae130706b925450))
+* **admin-ui:** stack Extensions card text when narrow ([#938](https://github.com/RocketsAreNostalgic/ran-booster/issues/938)) ([1555430](https://github.com/RocketsAreNostalgic/ran-booster/commit/15554306fdd858f73f796160f3947b2a24f6264c))
+* **deployments:** settle attempts a runner throw leaves running ([#872](https://github.com/RocketsAreNostalgic/ran-booster/issues/872)) ([30f4d7a](https://github.com/RocketsAreNostalgic/ran-booster/commit/30f4d7aa4ef802ce5cae3e77392d7bf007d62c76))
+* **provider:** explain a replacement that cannot load ([#915](https://github.com/RocketsAreNostalgic/ran-booster/issues/915)) ([7459f13](https://github.com/RocketsAreNostalgic/ran-booster/commit/7459f133347e8893d5406ef3d8bbab0dec0232f7))
+* **releases:** clear update cache when updates are turned off ([#896](https://github.com/RocketsAreNostalgic/ran-booster/issues/896)) ([4d05cc6](https://github.com/RocketsAreNostalgic/ran-booster/commit/4d05cc678f24a9c0e1293d32ecef0a26927584e7))
+* **releases:** non-success checks no longer show success ([#885](https://github.com/RocketsAreNostalgic/ran-booster/issues/885)) ([a7e2e0c](https://github.com/RocketsAreNostalgic/ran-booster/commit/a7e2e0c1b417c8fcd37591696ad5b660e6e522d8))
+* **releases:** show the specific message for an invalid release ([#929](https://github.com/RocketsAreNostalgic/ran-booster/issues/929)) ([39f2510](https://github.com/RocketsAreNostalgic/ran-booster/commit/39f2510a84e07bbe5d3119d1dcd1dce1a4aa90b8))
+* **releases:** stop disabled status denying a newer release ([#909](https://github.com/RocketsAreNostalgic/ran-booster/issues/909)) ([1c7aaaf](https://github.com/RocketsAreNostalgic/ran-booster/commit/1c7aaafc1611dd6d11f13be85b8b57fb8f415dd8))
+* **security:** adopt shared failure-text screener ([#873](https://github.com/RocketsAreNostalgic/ran-booster/issues/873)) ([28b2e42](https://github.com/RocketsAreNostalgic/ran-booster/commit/28b2e42f07b6a107b4367da45ca58c60cf94f021))
+* **ui:** align package headings with and without actions ([#940](https://github.com/RocketsAreNostalgic/ran-booster/issues/940)) ([fd0d109](https://github.com/RocketsAreNostalgic/ran-booster/commit/fd0d10950abde6c507d4abb791dd28de92c2b547))
+* **ui:** clip collection frames, align diagnostics results ([#871](https://github.com/RocketsAreNostalgic/ran-booster/issues/871)) ([ed1d1ba](https://github.com/RocketsAreNostalgic/ran-booster/commit/ed1d1ba84fa830376d33e11d36c537bf29ff7356))
+
 ## [1.0.0-beta.45](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.44...v1.0.0-beta.45) (2026-11-12)
 
 

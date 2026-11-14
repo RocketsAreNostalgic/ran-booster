@@ -145,6 +145,29 @@
 	text-align: start;
 }
 
+/*
+ * Below 360px there is no room for the text beside the 128px logo, so the
+ * text stacks under it. The logo is absolutely placed, so the title clears
+ * it with a block margin of the logo height plus a 16px gap. The logo moves
+ * to the card's 24px inset so it lines up with the stacked text.
+ */
+@container ran-booster-extension-card (max-inline-size: 360px) {
+	.ran-booster-admin .ran-booster-extensions__grid .plugin-icon {
+		inset-block-start: var(--ran-booster-card-inset-block-start);
+		inset-inline-start: var(--ran-booster-space-24);
+	}
+
+	.ran-booster-admin .ran-booster-extensions__grid .plugin-card .name {
+		margin-block-start: calc(128px + var(--ran-booster-space-16));
+	}
+
+	.ran-booster-admin .ran-booster-extensions__grid .plugin-card .name,
+	.ran-booster-admin .ran-booster-extensions__grid .plugin-card .action-links,
+	.ran-booster-admin .ran-booster-extensions__grid .plugin-card .desc > p {
+		margin-inline-start: 0;
+	}
+}
+
 @container ran-booster-extension-card (min-inline-size: 512px) {
 	.ran-booster-admin .ran-booster-extensions__grid .plugin-card .name,
 	.ran-booster-admin .ran-booster-extensions__grid .plugin-card .desc > p {

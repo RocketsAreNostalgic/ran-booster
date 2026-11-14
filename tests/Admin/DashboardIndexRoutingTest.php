@@ -681,9 +681,109 @@ final class DashboardIndexRoutingTest extends TestCase {
 		rmdir( $directory );
 	}
 
+	public function test_replacement_that_cannot_load_renders_its_notice_without_the_futile_approval(): void {
+		$root = sys_get_temp_dir() . '/replacement-load-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable fixture directory.
+		mkdir( $root, 0700 );
+		$manifest = array(
+			'plugin_basename'        => 'replacement.php',
+			'implementation_id'      => 'replacement.php',
+			'compatibility_revision' => '1',
+			'provider_api_version'   => 15,
+			'api_credential_formats' => array( 'github-classic-pat-v1' ),
+			'webhook_signing_format' => null,
+			'facets'                 => array(),
+		);
+		$declare  = static fn ( string $basename ): \RAN\RepositoryProvider\GitHubReplacementDeclaration => new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+			array_replace(
+				$manifest,
+				array(
+					'plugin_basename'   => $basename,
+					'implementation_id' => $basename,
+				)
+			)
+		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable passive fixture.
+		file_put_contents( $root . '/booster.php', '<?php // bundled host' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable passive fixture.
+		file_put_contents( $root . '/replacement.php', "<?php\n/*\nPlugin Name: Example Replacement\nVersion: 1.0\nRAN Booster GitHub Replacement: 1\n*/" );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents,WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Disposable passive fixture with exact manifest bytes.
+		file_put_contents( $root . '/replacement.gh-replacement.json', json_encode( $manifest, JSON_THROW_ON_ERROR ) );
+		$database = new \RAN\Tests\RepositoryProvider\SelectionContextDatabase();
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact WordPress option bytes.
+		$database->active_bytes = serialize( array( 'booster.php', 'replacement.php' ) );
+		$store                  = new \RAN\Storage\GitHubSelectionStore( $database, 'wp_options' );
+		$bundled                = $declare( 'booster.php' );
+		$store->initialize_bundled( $bundled );
+		$old                          = $store->read();
+		$next                         = $old;
+		$next['selection_generation'] = (int) $old['selection_generation'] + 1;
+		$next['selected']             = 'replacement';
+		$next['declaration']          = get_object_vars( $declare( 'replacement.php' ) );
+		unset( $next['declaration']['implementation_fingerprint'] );
+		$next['approved_api_formats'] = array( 'github-classic-pat-v1' );
+		self::assertTrue( $store->compare_and_swap( $old, $next ) );
+
+		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( $store, $root, $bundled );
+		$factory   = static function ( \RAN\RepositoryProvider\ProviderCredentialStore $credentials, \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $evidence, \RAN\RepositoryProvider\ProviderRegistrationContext $context ): \RAN\RepositoryProvider\RepositoryProvider {
+			unset( $credentials, $evidence, $context );
+			throw new \RuntimeException( 'private-exception-text' );
+		};
+		$registry  = new ProviderRegistry(
+			array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ),
+			credential_store_factory: fn (): \RAN\RepositoryProvider\ProviderCredentialStore => $this->createMock( \RAN\RepositoryProvider\ProviderCredentialStore::class ),
+			delivery_evidence_reader_factory: fn (): \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader => $this->createMock( \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader::class ),
+			github_selection_guard: array( $selection, 'registry_selection' ),
+			github_candidates: $selection->candidates(),
+			bundled_github_factory: $factory
+		);
+		$selection->bind_registry( $registry );
+		$registry->declare_github_replacement( $declare( 'replacement.php' ), $factory );
+		$selection->complete_collection();
+		$registry->seal();
+
+		$_GET['tab'] = 'gh';
+		$data        = $this->dashboard( new SecretsFile( $root . '/secrets', array(), ShippedSecretPolicyCatalog::create() ), providers: $registry, github_selection: $selection )->get_index()['data'];
+		self::assertNull( $data['github_selection']['review'] );
+		self::assertSame( 'replacement_load_failed', $data['github_selection']['status']['state'] );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'The selected GitHub provider could not load', $html );
+		self::assertStringContainsString( 'Install a version built for this Booster release, or deactivate the replacement plugin and review a return to bundled GitHub.', $html );
+		self::assertStringNotContainsString( 'Review and approve GitHub provider', $html );
+		self::assertStringNotContainsString( 'value="adopt-github"', $html );
+		self::assertStringNotContainsString( 'private-exception-text', $html );
+		$_GET['tab'] = 'bb';
+		self::assertSame( 'bb', $this->dashboard( new SecretsFile( $root . '/secrets', array(), ShippedSecretPolicyCatalog::create() ), providers: $registry, github_selection: $selection )->get_index()['data']['selected_provider'] );
+
+		// Deactivating the replacement reaches the existing return-to-bundled review.
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact WordPress option bytes.
+		$database->active_bytes = serialize( array( 'booster.php' ) );
+		$returned               = new \RAN\RepositoryProvider\GitHubProviderSelection( $store, $root, $bundled );
+		$secrets                = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::once() )->method( 'with_github_adoption_inventory' )->willReturnCallback( static fn ( callable $operation ): mixed => $operation( array() ) );
+		$presenter = new ProviderSettingsPresenter( new ProviderRegistry(), $secrets, new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_packages' ), github_selection: $returned );
+		$review    = $presenter->build( 'gh' )['github_selection'];
+		self::assertSame( 'missing', $review['status']['state'] );
+		self::assertSame( 'bundled', $review['review']['selected'] );
+		foreach ( array( 'booster.php', 'replacement.php', 'replacement.gh-replacement.json' ) as $file ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture file.
+			unlink( $root . '/' . $file );
+		}
+		if ( is_file( $root . '/secrets.lock' ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture lock.
+			unlink( $root . '/secrets.lock' );
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable fixture directory.
+		rmdir( $root );
+	}
+
 	/** @return iterable<string,array{string,bool,bool,bool}> */
 	public static function replacement_presentations(): iterable {
-		foreach ( array( 'available', 'decision_required', 'missing', 'conflict', 'incompatible', 'storage_unavailable' ) as $state ) {
+		foreach ( array( 'available', 'decision_required', 'missing', 'conflict', 'incompatible', 'replacement_load_failed', 'storage_unavailable' ) as $state ) {
 			yield $state => array( $state, false, true, true );
 		}
 		yield 'missing A with B enabled' => array( 'missing', true, true, true );
@@ -777,10 +877,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertMatchesRegularExpression( '/<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-provider-paused-notice><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>GitHub operations are paused\. [^<]+<\/p><\/div><svg /', $html );
 		}
 		$headings = array(
-			'conflict'            => 'Multiple GitHub providers are active',
-			'incompatible'        => 'A GitHub provider is incompatible',
-			'missing'             => 'The selected GitHub provider is missing',
-			'storage_unavailable' => 'GitHub provider selection is unavailable',
+			'conflict'                => 'Multiple GitHub providers are active',
+			'incompatible'            => 'A GitHub provider is incompatible',
+			'missing'                 => 'The selected GitHub provider is missing',
+			'replacement_load_failed' => 'The selected GitHub provider could not load',
+			'storage_unavailable'     => 'GitHub provider selection is unavailable',
 		);
 		if ( isset( $headings[ $state ] ) ) {
 			self::assertMatchesRegularExpression( '/<h3>\s*' . preg_quote( $headings[ $state ], '/' ) . '\s*<\/h3>/', $html );

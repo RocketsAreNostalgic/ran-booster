@@ -293,15 +293,99 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertFalse( $context->status()['available'] );
 	}
 
-	private function context(): GitHubProviderSelection {
+	private function context( ?\Closure $factory = null ): GitHubProviderSelection {
 		$context  = new GitHubProviderSelection( $this->store, $this->root, $this->bundled );
-		$registry = $this->registry( $context );
+		$registry = $this->registry( $context, true, $factory );
 		$context->complete_collection();
 		$registry->seal();
 		return $context;
 	}
 
-	private function registry( GitHubProviderSelection $context, bool $declare_candidates = true ): ProviderRegistry {
+	private static function throwing_factory(): \Closure {
+		return static function ( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $evidence, ProviderRegistrationContext $registration_context ): RepositoryProvider {
+			unset( $credentials, $evidence, $registration_context );
+			throw new \RuntimeException( 'private-exception-text must never reach any surface' );
+		};
+	}
+
+	public function test_selected_replacement_whose_factory_throws_reports_a_typed_load_failure(): void {
+		$candidate = $this->candidate( 'replacement.php' );
+		$this->activate( array( 'booster.php', 'replacement.php' ) );
+		$this->adopt( $candidate );
+		$context = $this->context( self::throwing_factory() );
+		$status  = $context->status();
+		self::assertSame( 'replacement_load_failed', $status['state'] );
+		self::assertFalse( $status['available'] );
+		self::assertSame( 'replacement_load_failed', $context->support_observation()['state'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Serialize closed status arrays to prove no exception text is present.
+		self::assertStringNotContainsString( 'private-exception-text', (string) json_encode( array( $status, $context->support_observation() ) ) );
+
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'with_github_adoption_inventory' );
+		$presenter = new \RAN\Admin\ProviderSettingsPresenter( new ProviderRegistry(), $secrets, new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_packages' ), github_selection: $context );
+		$data      = $presenter->build( 'gh' )['github_selection'];
+		self::assertIsArray( $data );
+		self::assertNull( $data['review'], 'A futile approval is never offered.' );
+		self::assertSame( '', $data['error'] );
+		self::assertSame( 'replacement_load_failed', $data['status']['state'] );
+		self::assertSame( 'replacement_load_failed', $presenter->overview_provider_facts()['gh']['selection'] );
+		self::assertSame( 'replacement', $this->store->read()['selected'], 'Reading status never changes the saved selection.' );
+	}
+
+	public function test_package_form_marks_the_stored_github_provider_with_the_closed_reason_only_after_a_replacement_failure(): void {
+		$usage    = new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_packages' );
+		$form     = static function ( ProviderRegistry $registry, GitHubProviderSelection $context ) use ( $usage ): array {
+			$providers = ( new \RAN\Admin\ProviderSettingsPresenter( $registry, self::createStub( SecretsFile::class ), $usage, github_selection: $context ) )->build_existing_package_form( 'gh' )['providers'];
+			return array_column( $providers, 'unavailable_reason', 'code' );
+		};
+		$context  = new GitHubProviderSelection( $this->store, $this->root, $this->bundled );
+		$registry = $this->registry( $context, true, self::throwing_factory() );
+		$context->complete_collection();
+		$registry->seal();
+		self::assertArrayNotHasKey( 'gh', $form( $registry, $context ), 'A bundled failure keeps the generic cause.' );
+
+		$candidate = $this->candidate( 'replacement.php' );
+		$this->activate( array( 'booster.php', 'replacement.php' ) );
+		$this->adopt( $candidate );
+		$context  = new GitHubProviderSelection( $this->store, $this->root, $this->bundled );
+		$registry = $this->registry( $context, true, self::throwing_factory() );
+		$context->complete_collection();
+		$registry->seal();
+		self::assertSame( array( 'gh' => 'replacement_load_failed' ), $form( $registry, $context ) );
+	}
+
+	public function test_failed_registry_records_the_closed_reason_only_for_a_selected_replacement_factory(): void {
+		$context  = new GitHubProviderSelection( $this->store, $this->root, $this->bundled );
+		$registry = $this->registry( $context, true, self::throwing_factory() );
+		$context->complete_collection();
+		$registry->seal();
+		self::assertFalse( $registry->github_replacement_load_failed(), 'A throwing bundled factory is not a replacement failure.' );
+		self::assertSame( 'decision_required', $context->status()['state'] );
+		self::assertArrayNotHasKey( 'gh', $registry->all() );
+	}
+
+	public function test_replacement_load_failure_leaves_other_providers_registered(): void {
+		$candidate = $this->candidate( 'replacement.php' );
+		$this->activate( array( 'booster.php', 'replacement.php' ) );
+		$this->adopt( $candidate );
+		$context  = new GitHubProviderSelection( $this->store, $this->root, $this->bundled );
+		$registry = new ProviderRegistry(
+			array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ),
+			credential_store_factory: fn (): ProviderCredentialStore => $this->createMock( ProviderCredentialStore::class ),
+			delivery_evidence_reader_factory: fn (): AuthenticatedWebhookDeliveryEvidenceReader => $this->createMock( AuthenticatedWebhookDeliveryEvidenceReader::class ),
+			github_selection_guard: array( $context, 'registry_selection' ),
+			github_candidates: $context->candidates(),
+			bundled_github_factory: self::throwing_factory()
+		);
+		$context->bind_registry( $registry );
+		$registry->declare_github_replacement( $this->declaration( 'replacement.php' ), self::throwing_factory() );
+		$context->complete_collection();
+		$registry->seal();
+		self::assertTrue( $registry->github_replacement_load_failed() );
+		self::assertSame( array( 'bb' ), array_keys( $registry->all() ) );
+	}
+
+	private function registry( GitHubProviderSelection $context, bool $declare_candidates = true, ?\Closure $override = null ): ProviderRegistry {
 		$provider = $this->createMock( RepositoryProvider::class );
 		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' ) );
 		$provider->method( 'get_provider_diagnostics' )->willReturn( $this->createMock( ProviderDiagnostics::class ) );
@@ -312,6 +396,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 			self::assertTrue( $registration_context->operation_allowed() );
 			return $provider;
 		};
+		$factory     = $override ?? $factory;
 		$registry    = new ProviderRegistry(
 			credential_store_factory: static fn (): ProviderCredentialStore => $credentials,
 			delivery_evidence_reader_factory: static fn (): AuthenticatedWebhookDeliveryEvidenceReader => $evidence,

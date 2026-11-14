@@ -172,7 +172,7 @@ final class SupportReport {
 			'version'          => InstallationFacts::version( $core['installed_version'] ?? null ),
 			'configuration'    => $this->facts->core_configuration(),
 			'github_selection' => array(
-				'state'                  => self::choice( $selection['state'], array( 'storage_unavailable', 'recovery_required', 'conflict', 'incompatible', 'missing', 'admitted', 'decision_required' ) ),
+				'state'                  => self::choice( $selection['state'], array( 'storage_unavailable', 'recovery_required', 'conflict', 'incompatible', 'missing', 'admitted', 'decision_required', 'replacement_load_failed' ) ),
 				'admitted'               => $selection['admitted'],
 				'selected'               => self::choice( $selection['selected'], array( 'bundled', 'external', 'unknown' ) ),
 				'version'                => InstallationFacts::version( $selection['version'] ),

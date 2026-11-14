@@ -134,6 +134,23 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'name="_ran_booster_reinstall_nonce"', $html );
 	}
 
+	public function test_edit_view_explains_a_replacement_provider_that_cannot_load(): void {
+		$package                   = $this->package();
+		$package_view              = PackagePagePresenter::plugin();
+		$package_provider_settings = array(
+			'default_provider' => 'temporarily-offline',
+			'providers'        => array( array( 'unavailable_reason' => 'replacement_load_failed' ) + $this->provider_option( 'temporarily-offline', false ) ),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+
+		self::assertSame( 1, substr_count( $html, '<strong>Git provider unavailable.</strong>' ) );
+		self::assertStringContainsString( 'The selected replacement GitHub provider could not load. This package remains linked but cannot be edited or deployed until it does.', $html );
+		self::assertStringNotContainsString( 'until its Git provider is registered again', $html );
+	}
+
 	public function test_unavailable_provider_notice_escapes_repository_identity(): void {
 		$package = $this->package();
 		$package->set_repository( new ManagedRepository( 'temporarily-offline', 'owner/<script>', 'id<unsafe>', 'release' ) );

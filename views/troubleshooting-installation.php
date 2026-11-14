@@ -159,7 +159,7 @@ if ( array() === $components ) {
 	<?php
 }
 $basic_labels          = array( 'Installed', 'Active', 'Version', 'Admission', 'Selection', 'Availability' );
-$github_problem_states = array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'storage_unavailable' );
+$github_problem_states = array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'replacement_load_failed', 'storage_unavailable' );
 foreach ( $components as $component ) {
 	$component_name          = $component['Name'] ?? __( 'Unknown', 'ran-booster' );
 	$technical_fields        = array_diff_key( $component, array_flip( array_merge( $basic_labels, array( 'Name', 'Capabilities' ) ) ) );
@@ -175,17 +175,19 @@ foreach ( $components as $component ) {
 	$source                  = null;
 	$github_problem_messages = array(
 		/* translators: %s: link to the GitHub provider settings. */
-		'missing'             => __( 'The selected GitHub provider plugin is not active or available. %s.', 'ran-booster' ),
+		'missing'                 => __( 'The selected GitHub provider plugin is not active or available. %s.', 'ran-booster' ),
 		/* translators: %s: link to the GitHub provider settings. */
-		'conflict'            => __( 'Multiple GitHub provider plugins need review. %s.', 'ran-booster' ),
+		'conflict'                => __( 'Multiple GitHub provider plugins need review. %s.', 'ran-booster' ),
 		/* translators: %s: link to the GitHub provider settings. */
-		'incompatible'        => __( 'A GitHub provider plugin is incompatible. %s.', 'ran-booster' ),
+		'incompatible'            => __( 'A GitHub provider plugin is incompatible. %s.', 'ran-booster' ),
 		/* translators: %s: link to the GitHub provider settings. */
-		'recovery_required'   => __( 'GitHub provider recovery is required. %s.', 'ran-booster' ),
+		'recovery_required'       => __( 'GitHub provider recovery is required. %s.', 'ran-booster' ),
 		/* translators: %s: link to the GitHub provider settings. */
-		'decision_required'   => __( 'The GitHub provider selection needs a decision. %s.', 'ran-booster' ),
+		'decision_required'       => __( 'The GitHub provider selection needs a decision. %s.', 'ran-booster' ),
 		/* translators: %s: link to the GitHub provider settings. */
-		'storage_unavailable' => __( 'GitHub provider selection could not be checked. %s.', 'ran-booster' ),
+		'replacement_load_failed' => __( 'The selected GitHub provider could not load. %s.', 'ran-booster' ),
+		/* translators: %s: link to the GitHub provider settings. */
+		'storage_unavailable'     => __( 'GitHub provider selection could not be checked. %s.', 'ran-booster' ),
 	);
 	if ( $is_github ) {
 		$selected_name = null;

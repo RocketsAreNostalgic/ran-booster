@@ -980,8 +980,12 @@ review; this UI does not elect a winner or change the single-candidate contract.
 To return to bundled GitHub, deactivate all replacement candidates and explicitly
 review and approve the return on the Core-owned GitHub page. A selected replacement
 that is missing or incompatible still shows actionable guidance, even when no
-candidate remains enabled. Interrupted installations retain their protected
-recovery confirmations; absence never causes silent fallback.
+candidate remains enabled. A selected active replacement whose provider factory
+throws during registration is the closed state `replacement_load_failed`: Core
+never exposes exception text, shows no approval (a new approval re-runs the same
+factory), and points to installing a build for this release or returning to
+bundled GitHub. The Installation report carries only the closed code. Interrupted installations retain their protected recovery
+confirmations; absence never causes silent fallback.
 
 Troubleshooting → Diagnostics puts explicit diagnostic checks and their current
 results first. Secondary **Installation details** contains **GitHub provider

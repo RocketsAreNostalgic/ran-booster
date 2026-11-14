@@ -8,6 +8,9 @@ use RuntimeException;
 
 final class InvalidProviderPolicy extends RuntimeException {
 
+	/** Exception code: the provider factory itself threw, as opposed to returning something unusable. */
+	public const FACTORY_THREW = 1;
+
 	public static function missing_credential_policy(): self {
 		return new self( 'Credential-bearing providers must supply a credential policy.' );
 	}
@@ -53,8 +56,8 @@ final class InvalidProviderPolicy extends RuntimeException {
 	}
 
 
-	public static function invalid_provider_factory(): self {
-		return new self( 'The provider factory returned an invalid provider.' );
+	public static function invalid_provider_factory( bool $threw = false ): self {
+		return new self( 'The provider factory returned an invalid provider.', $threw ? self::FACTORY_THREW : 0 );
 	}
 
 	public static function unavailable_metadata(): self {

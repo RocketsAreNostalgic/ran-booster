@@ -8,6 +8,7 @@
  *   default_provider: string,
  *   providers: list<array{
  *     code: string, label: string, owner_label: string, repository_url_base: string,
+ *     unavailable_reason?: 'replacement_load_failed',
  *     credentials_url: string, available: bool, browse: bool, credentialed_public_browse: bool,
  *     provider_default_public_lookup_profile: bool, deploy: bool, webhooks: bool,
  *     default_credential_id: string, credential_kind_labels?: array<string, string>,
@@ -246,7 +247,7 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 <?php if ( $provider_unavailable ) { ?>
 	<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error">
 		<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
-		<p><strong><?php esc_html_e( 'Git provider unavailable.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'This package remains linked but cannot be edited or deployed until its Git provider is registered again.', 'ran-booster' ); ?></p>
+		<p><strong><?php esc_html_e( 'Git provider unavailable.', 'ran-booster' ); ?></strong> <?php echo esc_html( 'replacement_load_failed' === ( $selected_provider_option['unavailable_reason'] ?? null ) ? __( 'The selected replacement GitHub provider could not load. This package remains linked but cannot be edited or deployed until it does.', 'ran-booster' ) : __( 'This package remains linked but cannot be edited or deployed until its Git provider is registered again.', 'ran-booster' ) ); ?></p>
 		<p>
 			<?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> <code><?php echo esc_html( $stored_provider_code ); ?></code><br>
 			<?php esc_html_e( 'Repository:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) $package->repository ); ?></code><br>

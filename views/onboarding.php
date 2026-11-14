@@ -25,13 +25,14 @@ $provider_summaries        = $onboarding['provider_summaries'] ?? array_map(
 	$onboarding['provider_links']
 );
 $provider_selection_labels = array(
-	'available'           => __( 'Selection available', 'ran-booster' ),
-	'conflict'            => __( 'Provider selection conflict', 'ran-booster' ),
-	'incompatible'        => __( 'Provider selection is incompatible', 'ran-booster' ),
-	'missing'             => __( 'Selected provider is missing', 'ran-booster' ),
-	'recovery_required'   => __( 'Provider selection needs recovery', 'ran-booster' ),
-	'decision_required'   => __( 'Provider selection needs a decision', 'ran-booster' ),
-	'storage_unavailable' => __( 'Provider selection storage is unavailable', 'ran-booster' ),
+	'available'               => __( 'Selection available', 'ran-booster' ),
+	'conflict'                => __( 'Provider selection conflict', 'ran-booster' ),
+	'incompatible'            => __( 'Provider selection is incompatible', 'ran-booster' ),
+	'missing'                 => __( 'Selected provider is missing', 'ran-booster' ),
+	'recovery_required'       => __( 'Provider selection needs recovery', 'ran-booster' ),
+	'decision_required'       => __( 'Provider selection needs a decision', 'ran-booster' ),
+	'replacement_load_failed' => __( 'Selected provider could not load', 'ran-booster' ),
+	'storage_unavailable'     => __( 'Provider selection storage is unavailable', 'ran-booster' ),
 );
 // A detected replacement awaiting approval names the remaining step; every other
 // selection problem keeps its own wording, and only an unexplained refusal is
@@ -49,7 +50,7 @@ $provider_attention_message = static function ( array $provider ) use ( $provide
 $provider_attention         = array_filter(
 	$provider_summaries,
 	static fn( array $provider ): bool => false === $provider['admitted']
-		|| ( 'gh' === $provider['code'] && in_array( $provider['selection'], array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'storage_unavailable' ), true ) )
+		|| ( 'gh' === $provider['code'] && in_array( $provider['selection'], array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'replacement_load_failed', 'storage_unavailable' ), true ) )
 );
 
 ?>

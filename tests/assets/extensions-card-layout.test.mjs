@@ -25,8 +25,15 @@ function block(source, opener) {
 	throw new Error(`unterminated ${opener}`);
 }
 
-const query = block(bare, '@container ran-booster-extension-card');
-const base = bare.replace(query, '');
+const query = block(
+	bare,
+	'@container ran-booster-extension-card (min-inline-size: 512px)'
+);
+const narrow = block(
+	bare,
+	'@container ran-booster-extension-card (max-inline-size: 360px)'
+);
+const base = bare.replace(query, '').replace(narrow, '');
 const actionLinks = /\.plugin-card\s+\.action-links\s*\{([^}]*)\}/;
 
 test('each Extensions card is a named inline-size container', () => {
@@ -100,7 +107,19 @@ test('resets keep the icon, text and action column from overlapping', () => {
 	assert.match(base, /\.plugin-card h3 \{[^}]*margin-inline: 0;/);
 	assert.match(base.match(actionLinks)[1], /inset:\s*auto;/);
 	assert.match(base, /\.plugin-action-buttons\s*\{[^}]*clear:\s*none;/);
-	assert.equal(css.match(/@container/g).length, 1);
+	assert.equal(css.match(/@container/g).length, 2);
+});
+
+test('a narrow card stacks the text under the logo', () => {
+	assert.match(
+		narrow,
+		/\.name \{\s*margin-block-start: calc\(128px \+ var\(--ran-booster-space-16\)\);/
+	);
+	assert.match(narrow, /margin-inline-start: 0;/);
+	assert.match(
+		narrow,
+		/\.plugin-icon \{[^}]*inset-inline-start: var\(--ran-booster-space-24\);/
+	);
 });
 
 test('no viewport query touches the plugin-card layout', () => {

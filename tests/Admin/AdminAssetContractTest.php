@@ -152,8 +152,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '__tabs', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card.plugin-card', $extensions );
 
-		// The card is an inline-size container; one @container rule holds the wide layout.
-		self::assertSame( 1, preg_match_all( '/@container /', $extensions ) );
+		// The card is an inline-size container; one @container rule holds the wide layout and one the narrow stack.
+		self::assertSame( 2, preg_match_all( '/@container /', $extensions ) );
+		self::assertStringContainsString( '@container ran-booster-extension-card (max-inline-size: 360px)', $extensions );
 		self::assertMatchesRegularExpression( '/__grid > \.plugin-card \{[^}]*container: ran-booster-extension-card \/ inline-size;/', $extensions );
 		self::assertStringContainsString( '@container ran-booster-extension-card (min-inline-size: 512px)', $extensions );
 
@@ -177,6 +178,7 @@ final class AdminAssetContractTest extends TestCase {
 
 		$allowed = array(
 			'.plugin-card .name',
+			'.plugin-icon',
 			'.plugin-card .desc > p',
 			'.plugin-card h3',
 			'.plugin-card .action-links',

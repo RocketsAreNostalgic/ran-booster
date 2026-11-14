@@ -300,6 +300,31 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertStringContainsString( 'adoption_token = %s AND context = %s', $this->connection->queries[0] );
 	}
 
+	public function test_repeat_skip_check_is_one_bounded_prepared_read_scoped_by_context_key(): void {
+		$this->connection->read_results = array(
+			array(
+				(object) array(
+					'status'     => 'skipped',
+					'reason'     => 'policy_disabled',
+					'started_at' => gmdate( 'Y-m-d H:i:s' ),
+				),
+			),
+		);
+		self::assertTrue( $this->store->discard_repeated_skip( 7, 'policy_disabled' ) );
+		self::assertStringContainsString( 'context_key = (SELECT context_key FROM', $this->connection->prepared[0]['sql'] );
+		self::assertStringContainsString( 'id < %d ORDER BY id DESC LIMIT 1', $this->connection->prepared[0]['sql'] );
+		self::assertSame( array( 7, 7 ), $this->connection->prepared[0]['args'] );
+		$deletion = $this->connection->queries[ count( $this->connection->queries ) - 1 ];
+		self::assertStringContainsString( 'DELETE FROM', $deletion );
+		self::assertStringContainsString( "status = 'incomplete'", $deletion );
+	}
+
+	public function test_summary_orders_skipped_rows_after_every_other_status(): void {
+		$capture = self::capture();
+		$this->store->summary( 'plugin', 'example/example.php', $capture['adoption_token'], 'access-context', 'release.check' );
+		self::assertStringContainsString( "ORDER BY status = 'skipped', id DESC LIMIT 1", $this->connection->queries[0] );
+	}
+
 	public function test_latest_for_adoption_ignores_context_while_summary_still_requires_it(): void {
 		$this->connection->read_results = array(
 			array(
@@ -468,6 +493,20 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertStringContainsString( 'AND status = %s)) AND id NOT IN', $this->connection->queries[1] );
 		self::assertStringContainsString( 'protected_activity', $this->connection->queries[1] );
 		self::assertContains( $capture['adoption_token'], $this->connection->prepared[0]['args'] );
+	}
+
+	public function test_prune_protects_the_newest_non_skipped_row_that_summary_shows(): void {
+		$this->connection->read_results = array(
+			array(
+				(object) array(
+					'id'     => '1',
+					'status' => 'skipped',
+				),
+			),
+		);
+		$this->store->prune( array( self::capture() ) );
+		self::assertStringContainsString( "AND status <> 'skipped' GROUP BY context_key", $this->connection->queries[0] );
+		self::assertStringContainsString( "AND status <> 'skipped' GROUP BY context_key", $this->connection->queries[1] );
 	}
 
 	public function test_prune_reports_actual_deletions_when_a_candidate_changes(): void {

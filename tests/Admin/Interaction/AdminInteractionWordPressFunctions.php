@@ -67,6 +67,32 @@ function wp_verify_nonce( string $nonce, string $action ): int|false {
 	return hash_equals( wp_create_nonce( $action ), $nonce ) ? 1 : false;
 }
 
+function get_current_user_id(): int {
+	return $GLOBALS['ran_booster_interaction_test_user'] ?? 1;
+}
+
+function update_user_meta( int $user_id, string $key, mixed $value ): int {
+	$GLOBALS['ran_booster_interaction_test_meta'][ $user_id ][ $key ] = $value;
+
+	return 1;
+}
+
+function get_user_meta( int $user_id, string $key, bool $single ): mixed {
+	unset( $single );
+
+	return $GLOBALS['ran_booster_interaction_test_meta'][ $user_id ][ $key ] ?? '';
+}
+
+function delete_user_meta( int $user_id, string $key, mixed $value = '' ): bool {
+	$held = $GLOBALS['ran_booster_interaction_test_meta'][ $user_id ] ?? array();
+	if ( ! array_key_exists( $key, $held ) || ( '' !== $value && $held[ $key ] !== $value ) ) {
+		return false;
+	}
+	unset( $GLOBALS['ran_booster_interaction_test_meta'][ $user_id ][ $key ] );
+
+	return true;
+}
+
 function wp_unslash( string $value ): string {
 	return $value;
 }

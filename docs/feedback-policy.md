@@ -283,9 +283,11 @@ helper is counted once. The Disposition column states where each category goes.
   multisite notice (network admin only); and the extension update warning
   (`ExtensionUpdates`). The signed-outcome fallback is registered at runtime by
   `SignedAdminInteractionFlow`.
-- **C.** `signed_outcome_url()` currently puts the message (up to 255 characters)
-  in the redirect query string. That is the one display text in a URL and is
-  removed by R16.
+- **C.** `signed_outcome_url()` used to put the message (up to 255 characters)
+  in the redirect query string, the one display text in a URL. P4 removes it
+  (R16): the text travels in a one-shot per-user row claimed after the signed
+  marker verifies. Add-on text is open, so it cannot be a closed flash code;
+  see `enhanced-admin-interactions.md`.
 - **D.** Extension install and activate (`ran_booster_extension_result`),
   package results (`ran_booster_result`), bulk results (`ran_booster_bulk_*`),
   release management and release workflow redirects, webhook management

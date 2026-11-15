@@ -19,10 +19,14 @@ final class SignedAdminInteractionFlow {
 	private const QUERY_OPERATION    = 'ran_booster_interaction_operation';
 	private const QUERY_TARGET       = 'ran_booster_interaction_target';
 	private const QUERY_OUTCOME      = 'ran_booster_interaction_outcome';
-	private const QUERY_MESSAGE      = 'ran_booster_interaction_message';
 	private const QUERY_RETURN       = 'ran_booster_interaction_return';
 	private const QUERY_ERROR_REGION = 'ran_booster_interaction_error_region';
 	private const QUERY_NONCE        = '_ran_booster_interaction_nonce';
+
+	/** The one-shot per-user row that carries an outcome's display text, so the text never enters a URL (R16). */
+	public const MESSAGE_META_KEY = '_ran_booster_interaction_outcome';
+
+	private const MESSAGE_TTL = 60;
 
 	/** @var Closure(string, string, string, string): ?SignedAdminInteractionRequest */
 	private Closure $resolve_pending_request;
@@ -223,6 +227,11 @@ final class SignedAdminInteractionFlow {
 						// Booster screens always load the static Notice CSS; elsewhere the notice keeps the mounted markup.
 						$booster = \RAN\Admin\BoosterNoticeScope::is_booster_screen();
 						$intent  = substr( $class, 14 );
+						if ( $booster && 'error' !== $intent ) {
+							// The static form of the snackbar: the host converts it, and without JavaScript it stays a notice (#755 R14).
+							echo '<div class="ran-booster-feedback" data-ran-booster-feedback><div class="ran-booster-feedback__item" data-feedback-key="interaction_' . esc_attr( $outcome['kind'] ) . '" data-intent="' . esc_attr( $intent ) . '" role="status">' . esc_html( $outcome['message'] ) . '</div></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every dynamic value is escaped here.
+							return;
+						}
 						echo '<div class="' . esc_attr( $class . ( $booster ? ' inline ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent : '' ) ) . '" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . esc_attr( $intent ) . '" data-ran-booster-ui-notice-scope="global" role="' . esc_attr( $role ) . '"><div' . ( $booster ? ' class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"' : '' ) . ' data-ran-booster-ui-notice-content><p>' . esc_html( $outcome['message'] ) . '</p></div>' . ( $booster ? NoticeIcon::markup( $intent ) : '' ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- NoticeIcon::markup() escapes its path data; every other value is escaped here.
 					}
 				);
@@ -235,14 +244,14 @@ final class SignedAdminInteractionFlow {
 		string $kind,
 		string $message
 	): string {
-		$args                      = array(
+		$args = array(
 			self::QUERY_OPERATION    => $request->operation,
 			self::QUERY_TARGET       => $request->target_key,
 			self::QUERY_OUTCOME      => $kind,
-			self::QUERY_MESSAGE      => $message,
 			self::QUERY_RETURN       => $request->canonical_url,
 			self::QUERY_ERROR_REGION => $request->error_region_id,
 		);
+		$this->hold_message( $this->nonce_action( $args ), $message );
 		$args[ self::QUERY_NONCE ] = wp_create_nonce( $this->nonce_action( $args ) );
 
 		return add_query_arg(
@@ -261,14 +270,12 @@ final class SignedAdminInteractionFlow {
 		$operation  = $this->query_string( self::QUERY_OPERATION );
 		$target     = $this->query_string( self::QUERY_TARGET );
 		$kind       = $this->query_string( self::QUERY_OUTCOME );
-		$message    = $this->query_string( self::QUERY_MESSAGE );
 		$return_url = $this->query_string( self::QUERY_RETURN );
 		$error_id   = $this->query_string( self::QUERY_ERROR_REGION );
 		$nonce      = $this->query_string( self::QUERY_NONCE );
 		if ( null === $operation
 			|| null === $target
 			|| null === $kind
-			|| null === $message
 			|| null === $return_url
 			|| null === $error_id
 			|| null === $nonce ) {
@@ -288,11 +295,14 @@ final class SignedAdminInteractionFlow {
 			self::QUERY_OPERATION    => $operation,
 			self::QUERY_TARGET       => $target,
 			self::QUERY_OUTCOME      => $kind,
-			self::QUERY_MESSAGE      => $message,
 			self::QUERY_RETURN       => $return_url,
 			self::QUERY_ERROR_REGION => $error_id,
 		);
 		if ( 1 !== wp_verify_nonce( $nonce, $this->nonce_action( $args ) ) ) {
+			return null;
+		}
+		$message = $this->claim_message( $this->nonce_action( $args ) );
+		if ( null === $message ) {
 			return null;
 		}
 
@@ -307,6 +317,41 @@ final class SignedAdminInteractionFlow {
 			'kind'    => $kind,
 			'message' => $message,
 		);
+	}
+
+	/** Hold the outcome text for this user's next render; a later outcome replaces an unread one. */
+	private function hold_message( string $action, string $message ): void {
+		$user_id = get_current_user_id();
+		if ( $user_id > 0 ) {
+			update_user_meta(
+				$user_id,
+				self::MESSAGE_META_KEY,
+				array(
+					'at'      => time(),
+					'action'  => $action,
+					'message' => $message,
+				)
+			);
+		}
+	}
+
+	/** Read the held text once, only for the signed marker it was written for. */
+	private function claim_message( string $action ): ?string {
+		$user_id = get_current_user_id();
+		$held    = $user_id > 0 ? get_user_meta( $user_id, self::MESSAGE_META_KEY, true ) : null;
+		if ( ! is_array( $held ) ) {
+			return null;
+		}
+		$at      = $held['at'] ?? null;
+		$message = $held['message'] ?? null;
+		// Deleting the exact value is the claim: the tab that loses the race shows nothing.
+		if ( ! is_int( $at ) || time() - $at > self::MESSAGE_TTL
+			|| ! is_string( $held['action'] ?? null ) || ! hash_equals( $action, $held['action'] )
+			|| ! is_string( $message ) || ! delete_user_meta( $user_id, self::MESSAGE_META_KEY, $held ) ) {
+			return null;
+		}
+
+		return $message;
 	}
 
 	/** @phpstan-assert AdminInteractionOutcome::SUCCESS|AdminInteractionOutcome::ACCEPTED|AdminInteractionOutcome::VALIDATION_FAILURE|AdminInteractionOutcome::UNEXPECTED_FAILURE $kind */

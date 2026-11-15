@@ -205,7 +205,6 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		$valid_query = $captured_query;
 		foreach ( array(
 			'ran_booster_interaction_target'       => 'tampered',
-			'ran_booster_interaction_message'      => 'Forged feedback.',
 			'ran_booster_interaction_outcome'      => 'unexpected_failure',
 			'ran_booster_interaction_return'       => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=bb',
 			'ran_booster_interaction_error_region' => 'forged-error-region',
@@ -274,7 +273,8 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The captured signed redirect is an untrusted fixture whose fixed return route is asserted.
 		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $captured_query );
 		self::assertSame( 'validation_failure', $captured_query['ran_booster_interaction_outcome'] ?? null );
-		self::assertSame( 'GitHub adoption could not be verified. Review the current selection, credential permissions and recovery status before trying again.', $captured_query['ran_booster_interaction_message'] ?? null );
+		self::assertArrayNotHasKey( 'ran_booster_interaction_message', $captured_query );
+		self::assertSame( 'GitHub adoption could not be verified. Review the current selection, credential permissions and recovery status before trying again.', $GLOBALS['ran_booster_interaction_test_meta'][1][ \RAN\Admin\Interaction\SignedAdminInteractionFlow::MESSAGE_META_KEY ]['message'] ?? null );
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $captured_query['ran_booster_interaction_return'] ?? null );
 		self::assertStringNotContainsString( $review['digest'], $redirect );
 	}

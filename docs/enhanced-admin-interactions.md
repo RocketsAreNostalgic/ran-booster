@@ -89,6 +89,38 @@ validation failure may replace only the declared local error region. Success
 refreshes the request's fixed Core-owned target. Unexpected failures remain on
 Core's normal safe error path.
 
+## Outcome text and feedback
+
+An outcome's message never appears in a URL (#755 R16). The signed redirect
+carries only the operation, target, outcome kind, return route, error region
+and a nonce over those values. `respond()` holds the message in one per-user
+row, `_ran_booster_interaction_outcome`, with a 60 second lifetime, and the
+next render claims it exactly once, only for the signed marker it was written
+for. A forged, replayed, expired or other-user marker shows nothing, and a
+second tab that loses the claim shows nothing.
+
+What an add-on gets from `respond()`, with no new API and no change to the
+exact API 3 guard:
+
+- `success()` and `accepted()` on a Booster screen are shown through the
+  feedback host (`ranBoosterFeedback`) as a snackbar, with the add-on's
+  message. Without JavaScript the same item is a visible static notice, so
+  nothing is lost and nothing is duplicated.
+- `validation_failure()` and `unexpected_failure()` are never snackbar-only.
+  They stay in the declared inline error region, or, without JavaScript, in a
+  persistent error notice.
+- Outside a Booster screen the outcome remains a native admin notice.
+
+The message is still bounded display text (at most 255 characters, no control
+characters) and is escaped by Core. The one-shot row holds that text only, never
+a secret. Callers must not put a provider response, a path or exception text in
+it.
+
+The enhanced response for a Transporter row fragment keeps its
+`HX-Trigger` event, so that path is unchanged. The `ran_booster_interaction_message`
+query argument is removed: an add-on must not read it. Nothing in the contract
+or the exact API 3 marker changes, because add-ons never read the argument.
+
 The submitted interaction metadata is transport metadata, not authority. Never
 reconstruct the operation, canonical URL, target, capability, nonce action, or
 error-region ID from it.

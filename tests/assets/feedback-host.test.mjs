@@ -637,9 +637,86 @@ test('the same id shows once and restarts the timer instead of stacking', () => 
 	env.tick(1);
 	assert.equal(env.notices.length, 0);
 	env.feedback.show('Other copy.', { id: 'same' });
-	env.feedback.show('Different copy.', { id: 'same' });
+	env.feedback.show('Other copy.', { id: 'same' });
 	assert.equal(env.notices.length, 1);
 	assert.equal(env.notices[0].content, 'Other copy.');
+});
+
+test('a different message with the same key is its own item and an identical repeat still dedupes', () => {
+	const env = boot();
+	env.feedback.show('Changed 2 plugins to Disabled.', { id: 'bulk_policy' });
+	env.tick(4000);
+	env.feedback.show('Changed 2 plugins to Automatic.', {
+		id: 'bulk_policy',
+	});
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Changed 2 plugins to Disabled.', 'Changed 2 plugins to Automatic.']
+	);
+	// An identical repeat only resets that item's timer.
+	env.tick(4000);
+	env.feedback.show('Changed 2 plugins to Disabled.', { id: 'bulk_policy' });
+	assert.equal(env.notices.length, 2);
+	env.tick(DURATION - 1);
+	assert.equal(env.notices.length, 1, 'The untouched item expired first.');
+	assert.equal(env.notices[0].content, 'Changed 2 plugins to Disabled.');
+	env.tick(1);
+	assert.equal(env.notices.length, 0);
+});
+
+test('a success then a warning with the same key are two items, the warning a persistent pointer', () => {
+	const env = boot();
+	const target = env.target('plugins-result', {
+		matches: () => true,
+		setAttribute() {},
+	});
+	env.feedback.show('Changed 2 plugins to Enabled.', {
+		id: 'bulk_plugin_state',
+	});
+	assert.equal(
+		env.feedback.show('Changed 1 plugin; skipped 1.', {
+			id: 'bulk_plugin_state',
+			intent: 'warning',
+			target,
+		}),
+		true
+	);
+	assert.equal(env.notices.length, 2);
+	assert.match(env.notices[0].className, /--success/);
+	assert.deepEqual(env.notices[0].actions, []);
+	assert.match(env.notices[1].className, /--warning/);
+	assert.equal(env.notices[1].actions[0].label, 'Show details');
+	env.tick(DURATION);
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Changed 1 plugin; skipped 1.'],
+		'Only the success dismissed itself.'
+	);
+});
+
+test('two pointers with the same key and different copy both stay until dismissed and share the one target', () => {
+	const env = boot();
+	const target = env.target('plugins-result', {
+		matches: () => true,
+		setAttribute() {},
+	});
+	env.feedback.show('First.', { id: 'bulk_error', intent: 'error', target });
+	env.feedback.show('Second.', { id: 'bulk_error', intent: 'error', target });
+	assert.equal(env.notices.length, 2);
+	assert.equal(env.pendingTimers(), 0);
+	env.tick(DURATION * 3);
+	assert.equal(env.notices.length, 2);
+});
+
+test('different messages with the same key respect the queue limit', () => {
+	const env = boot();
+	for (const text of ['A.', 'B.', 'C.', 'D.']) {
+		env.feedback.show(text, { id: 'bulk_policy' });
+	}
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['B.', 'C.', 'D.']
+	);
 });
 
 test('a success may carry one link action built by the caller', () => {
@@ -1232,4 +1309,218 @@ test('a snackbar that did not render is refused and torn down', () => {
 	assert.equal(env.feedback.show('Saved.'), false);
 	assert.equal(env.host.removed, true);
 	assert.equal(env.root.unmounted, true);
+});
+
+test('a pointer to an inline notice is hidden until the host takes it', () => {
+	const css = fs.readFileSync(
+		new URL(
+			'../../assets/ran-booster/25-admin-primitives.css',
+			import.meta.url
+		),
+		'utf8'
+	);
+	assert.match(
+		css,
+		/\.ran-booster-feedback__item\[data-feedback-target\]\[data-intent="error"\],\s*\.ran-booster-feedback__item\[data-feedback-target\]\[data-intent="warning"\]\s*\{\s*display: none;/
+	);
+});
+
+test('a taken success strips the result arguments on first render', () => {
+	const env = build();
+	const replaced = [];
+	env.window.history = {
+		state: null,
+		replaceState: (state, title, url) => replaced.push(String(url)),
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=a&ran_booster_result=install&ran_booster_package=a&_ran_booster_notice_nonce=n&ran_booster_bulk_changed=2&ran_booster_extension_result=installed';
+	env.staticContainer([
+		{ key: 'package_install', intent: 'success', text: 'Installed.' },
+	]);
+	env.run();
+	assert.equal(env.notices.length, 1);
+	assert.deepEqual(replaced, [
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=a',
+	]);
+});
+
+test('the address is kept when the host takes nothing or on a later swap', () => {
+	const env = build({ components: false });
+	const replaced = [];
+	env.window.history = {
+		state: null,
+		replaceState: (state, title, url) => replaced.push(String(url)),
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?ran_booster_result=install&_ran_booster_notice_nonce=n';
+	env.staticContainer([
+		{ key: 'package_install', intent: 'success', text: 'Installed.' },
+	]);
+	env.run();
+	assert.deepEqual(replaced, [], 'host unavailable: result stays static');
+	env.feedback.consume();
+	assert.deepEqual(replaced, [], 'a swap never strips the address');
+});
+
+test('only result arguments are stripped and foreign arguments survive', () => {
+	const env = build();
+	const replaced = [];
+	env.window.history = {
+		state: { keep: true },
+		replaceState: (state, title, url) =>
+			replaced.push([state, String(url)]),
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?page=ran-booster-extensions&s=term&ran_booster_bulk_error=stale&ran_booster_extension_id=x&ran_booster_extension_result=installed&utm=1';
+	env.staticContainer([
+		{ key: 'extension_installed', intent: 'success', text: 'Done.' },
+	]);
+	env.run();
+	assert.deepEqual(replaced, [
+		[
+			{ keep: true },
+			'https://example.test/wp-admin/admin.php?page=ran-booster-extensions&s=term&utm=1',
+		],
+	]);
+});
+
+test('a failing replaceState never throws out of the host', () => {
+	const env = build();
+	env.window.history = {
+		state: null,
+		replaceState() {
+			throw new Error('blocked');
+		},
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?ran_booster_result=install&_ran_booster_notice_nonce=n';
+	env.staticContainer([
+		{ key: 'package_install', intent: 'success', text: 'Installed.' },
+	]);
+	assert.doesNotThrow(() => env.run());
+	assert.equal(env.notices.length, 1);
+});
+
+test('a pointer whose target is missing stays unshown and the address is kept', () => {
+	const env = build();
+	const replaced = [];
+	env.window.history = {
+		state: null,
+		replaceState: (state, title, url) => replaced.push(String(url)),
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n';
+	const container = env.staticContainer([
+		{
+			key: 'bulk_error',
+			intent: 'error',
+			text: 'Stale.',
+			target: 'no-such-element',
+		},
+	]);
+	env.run();
+	assert.equal(env.notices.length, 0);
+	assert.equal(container.items.length, 1);
+	assert.deepEqual(replaced, []);
+});
+
+// The result address is stripped on first render for every consumed result,
+// so a reload or Back shows no earlier result.
+function loadEnv(href, items, { targets = [] } = {}) {
+	const env = build();
+	const replaced = [];
+	env.window.history = {
+		state: { htmx: true },
+		replaceState: (state, title, url) =>
+			replaced.push([state, String(url)]),
+	};
+	env.window.location.href = href;
+	for (const id of targets) {
+		env.target(id);
+	}
+	const container = env.staticContainer(items);
+	return { env, replaced, container };
+}
+
+const BASE = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins';
+const FAILURE_URL = `${BASE}&ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n&package=a`;
+const POINTER = {
+	key: 'bulk_error',
+	intent: 'error',
+	text: 'Stale.',
+	target: 'ran-booster-feedback-bulk-error',
+};
+
+test('a taken failure pointer strips the address on first render and is shown once', () => {
+	const { env, replaced } = loadEnv(FAILURE_URL, [POINTER], {
+		targets: ['ran-booster-feedback-bulk-error'],
+	});
+	env.run();
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Stale.']
+	);
+	assert.deepEqual(replaced, [[{ htmx: true }, `${BASE}&package=a`]]);
+});
+
+test('a mixed container strips once and the failure record stays in the page', () => {
+	const { env, replaced } = loadEnv(
+		`${FAILURE_URL}&ran_booster_result=install&_ran_booster_notice_nonce=m`,
+		[
+			{ key: 'package_install', intent: 'success', text: 'Installed.' },
+			POINTER,
+		],
+		{ targets: ['ran-booster-feedback-bulk-error'] }
+	);
+	env.run();
+	assert.equal(env.notices.length, 1);
+	assert.equal(replaced.length, 1);
+	assert.equal(replaced[0][1], `${BASE}&package=a`);
+	// The pointer is a snackbar; the inline record it points at is untouched.
+	assert.equal(
+		env.document.getElementById('ran-booster-feedback-bulk-error').removed,
+		false
+	);
+});
+
+test('a taken info item strips the address too', () => {
+	const { env, replaced } = loadEnv(
+		`${BASE}&ran_booster_result=install&_ran_booster_notice_nonce=n`,
+		[{ key: 'x_info', intent: 'info', text: 'Checked.' }]
+	);
+	env.run();
+	assert.equal(replaced.length, 1);
+});
+
+// Documentation-level check, not a pin: a stripped address has no items, so
+// the old host passed this too. The failure-pointer and mixed-container tests
+// above are the pins.
+test('a reload or Back to the stripped address shows no result and no snackbar', () => {
+	const { env, replaced } = loadEnv(`${BASE}&package=a`, []);
+	env.run();
+	assert.equal(env.notices.length, 0);
+	assert.deepEqual(replaced, []);
+});
+
+test('a page with no result argument and a flash item is unaffected', () => {
+	const { env, replaced } = loadEnv(BASE, [
+		{ key: 'release_check_current', intent: 'success', text: 'Checked.' },
+	]);
+	env.run();
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Checked.']
+	);
+	assert.deepEqual(replaced, []);
+});
+
+// A pointer with no target is not shown, so it does not count as taken and the
+// address is left as it is.
+test('an unshown pointer does not count as taken and the address is left alone', () => {
+	const { env, replaced } = loadEnv(FAILURE_URL, [
+		{ ...POINTER, target: 'no-such-element' },
+	]);
+	env.run();
+	assert.equal(env.notices.length, 0);
+	assert.deepEqual(replaced, []);
 });

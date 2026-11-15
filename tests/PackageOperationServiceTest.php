@@ -1121,8 +1121,9 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 		self::assertSame(
 			array(
-				'type'    => 'warning',
-				'message' => 'Plugin is already installed and managed by Booster. No package settings were changed.',
+				'type'     => 'warning',
+				'feedback' => 'package_already_managed',
+				'message'  => 'Plugin is already installed and managed by Booster. No package settings were changed.',
 			),
 			$dashboard->messages[0]
 		);
@@ -1355,8 +1356,9 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame(
 			array(
 				array(
-					'type'    => 'success',
-					'message' => 'Theme was successfully updated.',
+					'type'     => 'success',
+					'message'  => 'Theme was successfully updated.',
+					'feedback' => 'package_update',
 				),
 			),
 			$dashboard->messages
@@ -1382,6 +1384,10 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 		self::assertSame( 'success', $dashboard->messages[0]['type'] );
 		self::assertSame( 'Plugin was successfully saved.', $dashboard->messages[0]['message'] );
+		// A qualified save (R12) is neither a snackbar success nor the enhanced save marker.
+		self::assertArrayNotHasKey( 'feedback', $dashboard->messages[0] );
+		self::assertArrayNotHasKey( 'saved_package', $dashboard->messages[0] );
+		self::assertSame( 'package_edit_unverified', $dashboard->messages[1]['feedback'] );
 		self::assertSame( 'warning', $dashboard->messages[1]['type'] );
 		self::assertStringContainsString( 'could not re-check the repository', $dashboard->messages[1]['message'] );
 		self::assertCount( 2, $dashboard->messages );

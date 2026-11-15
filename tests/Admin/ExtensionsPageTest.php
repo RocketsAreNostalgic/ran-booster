@@ -398,7 +398,9 @@ final class ExtensionsPageTest extends TestCase {
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Version' => '0.1.0-beta.17' );
 		$output = $this->render();
 		self::assertStringContainsString( 'Extension installed.', $output );
-		self::assertStringContainsString( 'class="notice inline notice-success ran-wp-ui-notice ran-wp-ui-box-sizing is-success"', $output );
+		self::assertStringContainsString( 'data-feedback-key="extension_installed" data-intent="success" role="status">Extension installed.</div>', $output );
+		self::assertStringNotContainsString( 'notice-success', $output );
+		self::assertStringNotContainsString( 'data-feedback-target', $output );
 		$_GET['ran_booster_extension_id'] = '<script>alert(1)</script>';
 		$output                           = $this->render();
 		self::assertStringNotContainsString( 'Extension installed.', $output );
@@ -414,6 +416,10 @@ final class ExtensionsPageTest extends TestCase {
 		$output                               = $this->render();
 		self::assertStringContainsString( 'The extension could not be installed.', $output );
 		self::assertStringContainsString( 'class="notice inline notice-warning ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $output );
+		// The inline notice is the record; the pointer leads to it and the success host never shows it alone.
+		self::assertStringContainsString( 'id="ran-booster-extension-result" class="notice inline notice-warning', $output );
+		self::assertStringContainsString( 'data-feedback-key="extension_result" data-intent="warning" data-feedback-target="ran-booster-extension-result"', $output );
+		self::assertStringNotContainsString( 'data-intent="success"', $output );
 		$_GET['ran_booster_extension_result'] = '<script>alert(1)</script>';
 		$output                               = $this->render();
 		self::assertStringNotContainsString( '<script>alert(1)</script>', $output );
@@ -700,7 +706,8 @@ final class ExtensionsPageTest extends TestCase {
 		$GLOBALS['ran_booster_extensions_active_plugins'] = array( $plugin );
 		$output = $this->render();
 		self::assertStringContainsString( 'Extension activated.', $output );
-		self::assertStringContainsString( 'class="notice inline notice-success ran-wp-ui-notice ran-wp-ui-box-sizing is-success"', $output );
+		self::assertStringContainsString( 'data-feedback-key="extension_activated" data-intent="success" role="status">Extension activated.</div>', $output );
+		self::assertStringNotContainsString( 'notice-success', $output );
 	}
 
 	#[RunInSeparateProcess]

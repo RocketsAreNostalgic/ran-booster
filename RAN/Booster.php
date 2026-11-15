@@ -807,8 +807,6 @@ class Booster {
 
 		$portability_script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-portability.js';
 
-		$feedback_script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-feedback.js';
-
 		$enhanced_mutation_script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-enhanced-mutations.js';
 
 		$package_script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-packages.js';
@@ -817,7 +815,6 @@ class Booster {
 		$script_version                   = $this->asset_version( $script_path );
 		$secure_inputs_script_version     = $this->asset_version( $secure_inputs_script_path );
 		$portability_script_version       = $this->asset_version( $portability_script_path );
-		$feedback_script_version          = $this->asset_version( $feedback_script_path );
 		$enhanced_mutation_script_version = $this->asset_version( $enhanced_mutation_script_path );
 		$package_script_version           = $this->asset_version( $package_script_path );
 		$repository_picker_script_version = $this->asset_version( $repository_picker_script_path );
@@ -903,10 +900,11 @@ class Booster {
 			// More Details opens its server-rendered section in the shared Dialog.
 			$extensions_script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-extensions.js';
 			$this->register_announce_script();
+			$this->register_feedback_script();
 			wp_enqueue_script(
 				'ran-booster-extensions',
 				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-extensions.js',
-				array( 'ran-booster-dialog', 'ran-booster-announce' ),
+				array( 'ran-booster-dialog', 'ran-booster-announce', 'ran-booster-feedback' ),
 				$this->asset_version( $extensions_script_path ),
 				true
 			);
@@ -927,15 +925,7 @@ class Booster {
 		);
 
 		wp_set_script_translations( 'ran-booster-secure-inputs', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
-		wp_register_script(
-			'ran-booster-feedback',
-			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-feedback.js',
-			array( 'wp-a11y', 'wp-i18n', 'wp-element', 'wp-components' ),
-			$feedback_script_version,
-			true
-		);
-
-		wp_set_script_translations( 'ran-booster-feedback', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
+		$this->register_feedback_script();
 		wp_register_script(
 			'ran-booster-enhanced-mutations',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-enhanced-mutations.js',
@@ -1253,6 +1243,19 @@ class Booster {
 			\RAN\Admin\DevelopmentSafetyNoticeController::AJAX_ACTION,
 			\RAN\Admin\DevelopmentSafetyNoticeController::NONCE_ACTION
 		);
+	}
+
+	/** The one snackbar host, shared by the package screens and the Extensions result. */
+	private function register_feedback_script(): void {
+		$feedback_script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-feedback.js';
+		wp_register_script(
+			'ran-booster-feedback',
+			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-feedback.js',
+			array( 'wp-a11y', 'wp-i18n', 'wp-element', 'wp-components' ),
+			$this->asset_version( $feedback_script_path ),
+			true
+		);
+		wp_set_script_translations( 'ran-booster-feedback', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 	}
 
 	/** Register the one announcement path for Booster status and error messages. */

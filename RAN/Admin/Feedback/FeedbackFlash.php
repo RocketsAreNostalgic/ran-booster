@@ -80,13 +80,21 @@ final class FeedbackFlash {
 			$version    = is_string( $flash['version'] ?? null ) ? $flash['version'] : '';
 			$definition = is_string( $code ) ? self::definition( $code, $version ) : null;
 			if ( null !== $definition ) {
-				$target = isset( $definition[2] ) ? ' data-feedback-target="' . esc_attr( $definition[2] ) . '"' : '';
-				$items .= '<div class="ran-booster-feedback__item" data-feedback-key="' . esc_attr( $code ) . '" data-intent="' . esc_attr( $definition[0] ) . '"' . $target . ' role="' . ( 'error' === $definition[0] ? 'alert' : 'status' ) . '">' . esc_html( $definition[1] ) . '</div>';
+				$items .= self::item( $code, $definition[0], $definition[1], $definition[2] ?? '' );
 			}
 		}
-		if ( '' !== $items ) {
-			echo '<div class="ran-booster-feedback" data-ran-booster-feedback>' . $items . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every dynamic value above is escaped; the code is a closed vocabulary member.
-		}
+		echo self::container( $items ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- container() escapes every dynamic value; the code is a closed vocabulary member.
+	}
+
+	/** One static feedback item: a closed key and fixed Core copy, which the client host turns into a snackbar. */
+	public static function item( string $key, string $intent, string $text, string $target = '' ): string {
+		$target = '' === $target ? '' : ' data-feedback-target="' . esc_attr( $target ) . '"';
+		return '<div class="ran-booster-feedback__item" data-feedback-key="' . esc_attr( $key ) . '" data-intent="' . esc_attr( $intent ) . '"' . $target . ' role="' . ( 'error' === $intent ? 'alert' : 'status' ) . '">' . esc_html( $text ) . '</div>';
+	}
+
+	/** The container the client host consumes, or nothing when there are no items. */
+	public static function container( string $items ): string {
+		return '' === $items ? '' : '<div class="ran-booster-feedback" data-ran-booster-feedback>' . $items . '</div>';
 	}
 
 	/** The whole sentence shared by the Check releases update-available fallback and the notice. */

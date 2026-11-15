@@ -1950,7 +1950,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		ob_start();
 		$controls->render_operation_notice();
 		$inline = (string) ob_get_clean();
-		self::assertStringContainsString( 'id="ran-booster-release-check-result"', $inline );
+		self::assertStringContainsString( 'id="ran-booster-release-check-result" role="' . ( 'error' === $intent ? 'alert' : 'status' ) . '"', $inline );
 		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="' . $intent . '"', $inline );
 		self::assertStringContainsString( $text, $inline );
 		self::assertStringContainsString( $detail, $inline );

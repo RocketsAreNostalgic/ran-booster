@@ -3608,3 +3608,157 @@ test('credential transport errors update only the child Notice and retain their 
 		{ message: result.textContent, type: 'assertive' },
 	]);
 });
+
+// A minimal DOM that honours the selector: each node names the ancestors it
+// sits under, and an unknown selector part fails the test instead of matching.
+function stubDocument(nodes) {
+	const ancestors = {
+		'#wpbody-content': 'wpbody',
+		'.wrap.ran-booster-admin': 'frame',
+	};
+	// A node names its classes and attributes; `:not([attr])` chains exclude.
+	const matches = (token, node) => {
+		const [base, ...nots] = token.split(':not(');
+		const attribute = (part) => part.replace(/\)$/, '').slice(1, -1);
+		const has = (part) => {
+			const [name, value] = part.split('=');
+			return value === undefined
+				? name in (node.attributes ?? {})
+				: node.attributes?.[name] === value.replaceAll('"', '');
+		};
+		const known = base.startsWith('.')
+			? node.classes?.includes(base.slice(1))
+			: has(base.slice(1, -1));
+		return known && nots.every((part) => !has(attribute(part)));
+	};
+	return {
+		querySelectorAll: () => [],
+		querySelector(selector) {
+			const parts = selector
+				.split(/,\s*/)
+				.map((part) => part.trim().split(/ (.+)/).slice(0, 2));
+			for (const [ancestor] of parts) {
+				assert.ok(
+					ancestors[ancestor],
+					`Unexpected ancestor ${ancestor}`
+				);
+			}
+			return (
+				nodes.find((node) =>
+					parts.some(
+						([ancestor, descendant]) =>
+							node.under.includes(ancestors[ancestor]) &&
+							matches(descendant, node)
+					)
+				) ?? null
+			);
+		},
+	};
+}
+
+function runCleanPackageResultUrl({ href, nodes = [] }) {
+	const replaced = [];
+	const run = new Function(
+		'window',
+		'document',
+		`${extractFunction('cleanPackageResultUrl').replace(/^\t/gm, '')}\nreturn cleanPackageResultUrl();`
+	);
+	const result = run(
+		{
+			location: { href },
+			history: {
+				state: null,
+				replaceState: (state, title, url) => replaced.push(String(url)),
+			},
+		},
+		stubDocument(nodes)
+	);
+	return { result, replaced };
+}
+
+const signed = (operation) =>
+	`https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_result=${operation}&ran_booster_package=a%2Fb.php&_ran_booster_notice_nonce=abc123`;
+
+test('a signed confirmed package result is cleaned even after the host removed its item', () => {
+	for (const operation of [
+		'install',
+		'update',
+		'unlink',
+		'unlink-and-delete',
+	]) {
+		const { result, replaced } = runCleanPackageResultUrl({
+			href: signed(operation),
+		});
+		assert.equal(result, true, operation);
+		assert.equal(replaced.length, 1, operation);
+		assert.doesNotMatch(replaced[0], /ran_booster_result|_notice_nonce/);
+		assert.match(replaced[0], /page=ran-booster-plugins/);
+	}
+});
+
+test('an unsigned, edit or already-managed package result URL is not treated as a confirmation', () => {
+	for (const href of [
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+		'https://example.test/wp-admin/admin.php?ran_booster_result=install',
+		signed('edit'),
+		signed('already-managed'),
+	]) {
+		const { result, replaced } = runCleanPackageResultUrl({ href });
+		assert.equal(result, false, href);
+		assert.deepEqual(replaced, [], href);
+	}
+});
+
+test('an error in the Booster frame keeps a signed URL from counting as a confirmation', () => {
+	for (const node of [
+		{ under: ['wpbody', 'frame'], classes: ['notice-error'] },
+		{
+			under: ['wpbody', 'frame'],
+			attributes: { 'data-intent': 'error' },
+		},
+	]) {
+		const { result, replaced } = runCleanPackageResultUrl({
+			href: signed('install'),
+			nodes: [node],
+		});
+		assert.equal(result, false);
+		assert.deepEqual(replaced, []);
+	}
+});
+
+test('a pointer item and unrelated persistent in-frame errors do not block a genuine confirmation', () => {
+	for (const node of [
+		{
+			under: ['wpbody', 'frame'],
+			attributes: {
+				'data-intent': 'error',
+				'data-feedback-target': 'ran-booster-feedback-bulk-error',
+			},
+		},
+		{
+			under: ['wpbody', 'frame'],
+			classes: ['notice-error'],
+			attributes: { 'data-ran-booster-provider-storage-notice': '' },
+		},
+		{
+			under: ['wpbody', 'frame'],
+			classes: ['notice-error'],
+			attributes: { 'data-ran-booster-assistance-site-notice': '' },
+		},
+	]) {
+		const { result } = runCleanPackageResultUrl({
+			href: signed('install'),
+			nodes: [node],
+		});
+		assert.equal(result, true);
+	}
+});
+
+test('a third-party error outside the Booster frame does not block a genuine confirmation', () => {
+	const { result, replaced } = runCleanPackageResultUrl({
+		href: signed('install'),
+		nodes: [{ under: ['wpbody'], classes: ['notice-error'] }],
+	});
+	assert.equal(result, true);
+	assert.equal(replaced.length, 1);
+});

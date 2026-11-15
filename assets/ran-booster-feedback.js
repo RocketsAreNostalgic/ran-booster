@@ -235,7 +235,6 @@
 	function show(message, options = {}) {
 		const { intent = 'success', target = null, action = null } = options;
 		const text = typeof message === 'string' ? message.trim() : '';
-		const id = options.id || text;
 		if (
 			!text ||
 			!INTENTS.includes(intent) ||
@@ -244,6 +243,9 @@
 			return false;
 		}
 		prune();
+		// A repeat is the same result only when key, intent and copy all match;
+		// any other message is its own item.
+		const id = [options.id || '', intent, text].join('\u0000');
 		const duplicate = state?.items.find((item) => item.id === id);
 		if (duplicate) {
 			state.returnControl = options.returnControl || state.returnControl;
@@ -317,6 +319,7 @@
 	// that cannot be shown (no host, no inline target, qualified result) as
 	// the visible static result.
 	function consume() {
+		let taken = 0;
 		place();
 		prune();
 		document
@@ -364,6 +367,7 @@
 							: null;
 					const id = item.getAttribute('data-feedback-key');
 					if (show(text, { intent, id, target, action })) {
+						taken++;
 						item.remove();
 					} else if (
 						timed(intent) &&
@@ -381,6 +385,33 @@
 					container.remove();
 				}
 			});
+		return taken;
+	}
+
+	// A result reached by a full page load carries its closed marker in the
+	// address. Once the host has taken any item (success, pointer or info),
+	// strip the marker so a reload or Back never shows the earlier result
+	// again. The inline record of a failure stays in the page until the
+	// person leaves it. Swaps are left to the mutation handler.
+	const RESULT_ARGUMENT =
+		/^(ran_booster_result|ran_booster_package|_ran_booster_notice_nonce|ran_booster_extension_result|ran_booster_extension_id|_ran_booster_bulk_notice_nonce|ran_booster_bulk_.+)$/;
+
+	function consumeLoaded() {
+		if (consume() < 1) {
+			return;
+		}
+		try {
+			const url = new URL(window.location.href);
+			const keys = Array.from(url.searchParams.keys()).filter((key) =>
+				RESULT_ARGUMENT.test(key)
+			);
+			if (keys.length) {
+				keys.forEach((key) => url.searchParams.delete(key));
+				window.history.replaceState(window.history.state, '', url);
+			}
+		} catch {
+			// The address stays as it is.
+		}
 	}
 
 	Object.defineProperty(window, 'ranBoosterFeedback', {
@@ -388,9 +419,11 @@
 	});
 
 	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', consume, { once: true });
+		document.addEventListener('DOMContentLoaded', consumeLoaded, {
+			once: true,
+		});
 	} else {
-		consume();
+		consumeLoaded();
 	}
 	document.addEventListener('htmx:afterSwap', consume);
 	// Never replay a confirmation from a restored page.

@@ -135,11 +135,16 @@ final class BoosterAssetsTest extends TestCase {
 
 		self::assertSame( array( 'ran-booster-menu', 'ran-booster-admin-shell', 'ran-booster-styles', 'wp-components' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
 		self::assertSame( array( 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y', 'ran-booster-cards', 'ran-booster-extensions' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
-		self::assertSame( array( 'ran-booster-cards', 'ran-booster-dialog', 'ran-booster-announce', 'ran-booster-extensions' ), array_keys( $GLOBALS['ran_booster_asset_test_registered_scripts'] ) );
+		self::assertSame( array( 'ran-booster-cards', 'ran-booster-dialog', 'ran-booster-announce', 'ran-booster-feedback', 'ran-booster-extensions' ), array_keys( $GLOBALS['ran_booster_asset_test_registered_scripts'] ) );
 		self::assertSame( array( 'ran-booster-ui', 'ran-booster-ui-overlay' ), array_keys( $GLOBALS['ran_booster_asset_test_enqueued_modules'] ) );
 		self::assertSame(
-			array( 'ran-booster-dialog', 'ran-booster-announce' ),
+			array( 'ran-booster-dialog', 'ran-booster-announce', 'ran-booster-feedback' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extensions']['dependencies']
+		);
+		// The Extensions result is a feedback item, so the host and its component dependencies load there.
+		self::assertSame(
+			array( 'wp-a11y', 'wp-i18n', 'wp-element', 'wp-components' ),
+			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-feedback']['dependencies']
 		);
 		self::assertSame( array( 'wp-a11y' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-announce']['dependencies'] );
 		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extensions']['footer'] );

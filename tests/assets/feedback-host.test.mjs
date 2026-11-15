@@ -1247,3 +1247,40 @@ test('a pointer to an inline notice is hidden until the host takes it', () => {
 		/\.ran-booster-feedback__item\[data-feedback-target\]\[data-intent="error"\],\s*\.ran-booster-feedback__item\[data-feedback-target\]\[data-intent="warning"\]\s*\{\s*display: none;/
 	);
 });
+
+test('a full page load strips the result arguments once the host has taken an item', () => {
+	const env = build();
+	const replaced = [];
+	env.window.history = {
+		state: null,
+		replaceState: (state, title, url) => replaced.push(String(url)),
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=a&ran_booster_result=install&ran_booster_package=a&_ran_booster_notice_nonce=n&ran_booster_bulk_changed=2&ran_booster_extension_result=installed';
+	env.staticContainer([
+		{ key: 'package_install', intent: 'success', text: 'Installed.' },
+	]);
+	env.run();
+	assert.equal(env.notices.length, 1);
+	assert.deepEqual(replaced, [
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=a',
+	]);
+});
+
+test('the address is kept when the host takes nothing or on a later swap', () => {
+	const env = build({ components: false });
+	const replaced = [];
+	env.window.history = {
+		state: null,
+		replaceState: (state, title, url) => replaced.push(String(url)),
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?ran_booster_result=install&_ran_booster_notice_nonce=n';
+	env.staticContainer([
+		{ key: 'package_install', intent: 'success', text: 'Installed.' },
+	]);
+	env.run();
+	assert.deepEqual(replaced, [], 'host unavailable: result stays static');
+	env.feedback.consume();
+	assert.deepEqual(replaced, [], 'a swap never strips the address');
+});

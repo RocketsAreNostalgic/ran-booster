@@ -123,7 +123,7 @@ and delete), bulk results and extension install and activate render their item
 directly into a `div.ran-booster-feedback` container of their own (one per
 source; the flash container may also be present, and the host consumes all of
 them), in the same response as the inline notice. A warning or error pointer is
-hidden by CSS until the host takes it, so without JavaScript only the notice is visible.
+hidden by CSS by default, so only the inline notice (with its own `role`) is visible, with or without JavaScript. The host reads the hidden item and shows the snackbar.
 
 - **Dashboard messages.** A message carries an optional closed `feedback` code
   (lowercase letters, digits and underscores). `views/notices.php` renders a
@@ -140,7 +140,9 @@ hidden by CSS until the host takes it, so without JavaScript only the notice is 
   Release workflow results still carry text in the URL (R16). Package operation
   failures reach the page through region swaps that rebuild the notice, so they
   keep the inline record without a pointer until a target survives the swap.
-- **URL.** After a confirmed package result the enhanced mutation handler removes
-  the signed result arguments from the address whether the item is a notice or
-  an item the host has already removed.
+- **URL.** On a full page load the host strips the result arguments after it takes
+  an item. After a swap, the enhanced mutation handler removes the package result
+  arguments. Without JavaScript the arguments stay, so a reload repeats the result.
+- **Extensions page.** It loads the shared host (`ran-booster-feedback`, which depends on
+  `wp-components`) so its result item is taken there too.
 

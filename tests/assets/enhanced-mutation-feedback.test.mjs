@@ -3609,7 +3609,47 @@ test('credential transport errors update only the child Notice and retain their 
 	]);
 });
 
-function runCleanPackageResultUrl({ href, rendered = [], errors = false }) {
+// A minimal DOM that honours the selector: each node names the ancestors it
+// sits under, and an unknown selector part fails the test instead of matching.
+function stubDocument(nodes) {
+	const ancestors = {
+		'#wpbody-content': 'wpbody',
+		'.wrap.ran-booster-admin': 'frame',
+	};
+	const descendants = {
+		'.notice-error': (node) => node.classes?.includes('notice-error'),
+		'[data-intent="error"]': (node) => node.intent === 'error',
+	};
+	return {
+		querySelectorAll: () => [],
+		querySelector(selector) {
+			const parts = selector
+				.split(',')
+				.map((part) => part.trim().split(' '));
+			for (const [ancestor, descendant] of parts) {
+				assert.ok(
+					ancestors[ancestor],
+					`Unexpected ancestor ${ancestor}`
+				);
+				assert.ok(
+					descendants[descendant],
+					`Unexpected selector ${descendant}`
+				);
+			}
+			return (
+				nodes.find((node) =>
+					parts.some(
+						([ancestor, descendant]) =>
+							node.under.includes(ancestors[ancestor]) &&
+							descendants[descendant](node)
+					)
+				) ?? null
+			);
+		},
+	};
+}
+
+function runCleanPackageResultUrl({ href, nodes = [] }) {
 	const replaced = [];
 	const run = new Function(
 		'window',
@@ -3624,10 +3664,7 @@ function runCleanPackageResultUrl({ href, rendered = [], errors = false }) {
 				replaceState: (state, title, url) => replaced.push(String(url)),
 			},
 		},
-		{
-			querySelectorAll: () => rendered,
-			querySelector: () => (errors ? {} : null),
-		}
+		stubDocument(nodes)
 	);
 	return { result, replaced };
 }
@@ -3665,11 +3702,25 @@ test('an unsigned, edit or already-managed package result URL is not treated as 
 	}
 });
 
-test('a rendered failure keeps a tampered signed URL from counting as a confirmation', () => {
+test('an error in the Booster frame keeps a signed URL from counting as a confirmation', () => {
+	for (const node of [
+		{ under: ['wpbody', 'frame'], classes: ['notice-error'] },
+		{ under: ['wpbody', 'frame'], intent: 'error' },
+	]) {
+		const { result, replaced } = runCleanPackageResultUrl({
+			href: signed('install'),
+			nodes: [node],
+		});
+		assert.equal(result, false);
+		assert.deepEqual(replaced, []);
+	}
+});
+
+test('a third-party error outside the Booster frame does not block a genuine confirmation', () => {
 	const { result, replaced } = runCleanPackageResultUrl({
 		href: signed('install'),
-		errors: true,
+		nodes: [{ under: ['wpbody'], classes: ['notice-error'] }],
 	});
-	assert.equal(result, false);
-	assert.deepEqual(replaced, []);
+	assert.equal(result, true);
+	assert.equal(replaced.length, 1);
 });

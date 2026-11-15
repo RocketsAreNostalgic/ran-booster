@@ -132,7 +132,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 
 		self::assertStringContainsString( '<p>Plugin was successfully saved.</p>', $html );
 		self::assertStringNotContainsString( 'data-intent="success"', $html );
-		self::assertStringContainsString( 'id="ran-booster-feedback-package-edit-unverified" class="notice notice-warning inline', $html );
+		self::assertStringContainsString( 'id="ran-booster-feedback-package-edit-unverified" role="status" class="notice notice-warning inline', $html );
 		self::assertStringContainsString( 'data-feedback-key="package_edit_unverified" data-intent="warning" data-feedback-target="ran-booster-feedback-package-edit-unverified"', $html );
 
 		$qualified = $this->notices(
@@ -163,7 +163,8 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'id="ran-booster-feedback-bulk-error" class="notice notice-error inline', $html );
+		// The inline record owns the announcement; the hidden pointer is silent.
+		self::assertStringContainsString( 'id="ran-booster-feedback-bulk-error" role="alert" class="notice notice-error inline', $html );
 		self::assertStringContainsString( 'data-intent="error" data-feedback-target="ran-booster-feedback-bulk-error" role="alert">A selected package changed.</div>', $html );
 		self::assertStringNotContainsString( 'data-intent="success"', $html );
 	}

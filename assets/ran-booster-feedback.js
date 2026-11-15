@@ -367,11 +367,7 @@
 							: null;
 					const id = item.getAttribute('data-feedback-key');
 					if (show(text, { intent, id, target, action })) {
-						// Only a success is consumed with its address marker; a
-						// pointer leaves its persistent inline record replayable.
-						if (timed(intent)) {
-							taken++;
-						}
+						taken++;
 						item.remove();
 					} else if (
 						timed(intent) &&
@@ -393,83 +389,28 @@
 	}
 
 	// A result reached by a full page load carries its closed marker in the
-	// address. Once the host has taken a success, strip the marker so a reload
-	// does not show the result again. Swaps are left to the mutation handler.
+	// address. Once the host has taken any item (success, pointer or info),
+	// strip the marker so a reload or Back never shows the earlier result
+	// again. The inline record of a failure stays in the page until the
+	// person leaves it. Swaps are left to the mutation handler.
 	const RESULT_ARGUMENT =
 		/^(ran_booster_result|ran_booster_package|_ran_booster_notice_nonce|ran_booster_extension_result|ran_booster_extension_id|_ran_booster_bulk_notice_nonce|ran_booster_bulk_.+)$/;
 
-	function resultArguments(url) {
-		return Array.from(url.searchParams.keys()).filter((key) =>
-			RESULT_ARGUMENT.test(key)
-		);
-	}
-
-	function strip(url, keys) {
-		try {
-			keys.forEach((key) => url.searchParams.delete(key));
-			window.history.replaceState(window.history.state, '', url);
-		} catch {
-			// The address stays as it is.
-		}
-	}
-
-	// A reload or Back to an address that still carries a signed result shows
-	// that result again. The signature authenticates the earlier action, not the
-	// present condition, so nothing is announced as new: the items go, and the
-	// inline record a pointer led to gets its "earlier action" label.
-	function retire(url, keys) {
-		let success = false;
-		let failure = false;
-		document
-			.querySelectorAll('[data-ran-booster-feedback]')
-			.forEach((container) => {
-				container
-					.querySelectorAll('[data-feedback-key]')
-					.forEach((item) => {
-						const intent = item.getAttribute('data-intent');
-						if (intent === 'success') {
-							success = true;
-						} else if (!timed(intent)) {
-							failure = true;
-							document
-								.getElementById(
-									item.getAttribute('data-feedback-target') ||
-										''
-								)
-								?.querySelector('[data-ran-booster-earlier]')
-								?.removeAttribute('hidden');
-						}
-						item.remove();
-					});
-				container.remove();
-			});
-		// A failure record keeps its address so Back and reload still show it.
-		if (success && !failure) {
-			strip(url, keys);
-		}
-	}
-
-	function replayed() {
-		const type =
-			window.performance?.getEntriesByType?.('navigation')?.[0]?.type;
-		return type === 'reload' || type === 'back_forward';
-	}
-
 	function consumeLoaded() {
-		let url = null;
-		let keys = [];
-		try {
-			url = new URL(window.location.href);
-			keys = resultArguments(url);
-		} catch {
-			// A flash item below still shows.
-		}
-		if (url && keys.length && replayed()) {
-			retire(url, keys);
+		if (consume() < 1) {
 			return;
 		}
-		if (consume() > 0 && url && keys.length) {
-			strip(url, keys);
+		try {
+			const url = new URL(window.location.href);
+			const keys = Array.from(url.searchParams.keys()).filter((key) =>
+				RESULT_ARGUMENT.test(key)
+			);
+			if (keys.length) {
+				keys.forEach((key) => url.searchParams.delete(key));
+				window.history.replaceState(window.history.state, '', url);
+			}
+		} catch {
+			// The address stays as it is.
 		}
 	}
 

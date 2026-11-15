@@ -1325,7 +1325,7 @@ test('a pointer to an inline notice is hidden until the host takes it', () => {
 	);
 });
 
-test('a full page load strips the result arguments once the host has taken an item', () => {
+test('a taken success strips the result arguments on first render', () => {
 	const env = build();
 	const replaced = [];
 	env.window.history = {
@@ -1360,29 +1360,6 @@ test('the address is kept when the host takes nothing or on a later swap', () =>
 	assert.deepEqual(replaced, [], 'host unavailable: result stays static');
 	env.feedback.consume();
 	assert.deepEqual(replaced, [], 'a swap never strips the address');
-});
-
-test('taking only a warning or error pointer keeps the address and the inline record replayable', () => {
-	const env = build();
-	const replaced = [];
-	env.window.history = {
-		state: null,
-		replaceState: (state, title, url) => replaced.push(String(url)),
-	};
-	env.window.location.href =
-		'https://example.test/wp-admin/admin.php?ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n';
-	env.target('ran-booster-feedback-bulk-error');
-	env.staticContainer([
-		{
-			key: 'bulk_error',
-			intent: 'error',
-			text: 'Stale.',
-			target: 'ran-booster-feedback-bulk-error',
-		},
-	]);
-	env.run();
-	assert.equal(env.notices.length, 1);
-	assert.deepEqual(replaced, []);
 });
 
 test('only result arguments are stripped and foreign arguments survive', () => {
@@ -1424,37 +1401,6 @@ test('a failing replaceState never throws out of the host', () => {
 	assert.equal(env.notices.length, 1);
 });
 
-test('a success beside a failure pointer stays static, the pointer is taken and the address is kept', () => {
-	const env = build();
-	const replaced = [];
-	env.window.history = {
-		state: null,
-		replaceState: (state, title, url) => replaced.push(String(url)),
-	};
-	env.window.location.href =
-		'https://example.test/wp-admin/admin.php?ran_booster_result=edit-unverified&_ran_booster_notice_nonce=n';
-	env.target('ran-booster-feedback-package-edit-unverified');
-	const container = env.staticContainer([
-		{ key: 'package_install', intent: 'success', text: 'Installed.' },
-		{
-			key: 'package_edit_unverified',
-			intent: 'warning',
-			text: 'Check skipped.',
-			target: 'ran-booster-feedback-package-edit-unverified',
-		},
-	]);
-	env.run();
-	assert.deepEqual(
-		env.notices.map((notice) => notice.content),
-		['Check skipped.']
-	);
-	assert.deepEqual(
-		container.items.map((item) => item.getAttribute('data-feedback-key')),
-		['package_install']
-	);
-	assert.deepEqual(replaced, []);
-});
-
 test('a pointer whose target is missing stays unshown and the address is kept', () => {
 	const env = build();
 	const replaced = [];
@@ -1478,37 +1424,26 @@ test('a pointer whose target is missing stays unshown and the address is kept', 
 	assert.deepEqual(replaced, []);
 });
 
-// A replay is a reload or Back to an address that still carries a signed
-// result: it concerns the earlier action, never a new or current condition.
-function replayEnv(type, href, items) {
+// The result address is stripped on first render for every consumed result,
+// so a reload or Back shows no earlier result.
+function loadEnv(href, items, { targets = [] } = {}) {
 	const env = build();
 	const replaced = [];
 	env.window.history = {
-		state: null,
-		replaceState: (state, title, url) => replaced.push(String(url)),
-	};
-	env.window.performance = {
-		getEntriesByType: () => [{ type }],
+		state: { htmx: true },
+		replaceState: (state, title, url) =>
+			replaced.push([state, String(url)]),
 	};
 	env.window.location.href = href;
-	const label = {
-		hidden: true,
-		removeAttribute(name) {
-			if (name === 'hidden') {
-				label.hidden = false;
-			}
-		},
-	};
-	env.target('ran-booster-feedback-bulk-error', {
-		querySelector: (selector) =>
-			selector === '[data-ran-booster-earlier]' ? label : null,
-	});
+	for (const id of targets) {
+		env.target(id);
+	}
 	const container = env.staticContainer(items);
-	return { env, replaced, label, container };
+	return { env, replaced, container };
 }
 
-const FAILURE =
-	'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n';
+const BASE = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins';
+const FAILURE_URL = `${BASE}&ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n&package=a`;
 const POINTER = {
 	key: 'bulk_error',
 	intent: 'error',
@@ -1516,179 +1451,71 @@ const POINTER = {
 	target: 'ran-booster-feedback-bulk-error',
 };
 
-test('a fresh redirect to a failure still shows its pointer and keeps the label hidden', () => {
-	const { env, label, replaced } = replayEnv('navigate', FAILURE, [POINTER]);
+test('a taken failure pointer strips the address on first render and is shown once', () => {
+	const { env, replaced } = loadEnv(FAILURE_URL, [POINTER], {
+		targets: ['ran-booster-feedback-bulk-error'],
+	});
 	env.run();
 	assert.deepEqual(
 		env.notices.map((notice) => notice.content),
 		['Stale.']
 	);
-	assert.equal(label.hidden, true);
+	assert.deepEqual(replaced, [[{ htmx: true }, `${BASE}&package=a`]]);
+});
+
+test('a mixed container strips once and the failure record stays in the page', () => {
+	const { env, replaced } = loadEnv(
+		`${FAILURE_URL}&ran_booster_result=install&_ran_booster_notice_nonce=m`,
+		[
+			{ key: 'package_install', intent: 'success', text: 'Installed.' },
+			POINTER,
+		],
+		{ targets: ['ran-booster-feedback-bulk-error'] }
+	);
+	env.run();
+	assert.equal(env.notices.length, 1);
+	assert.equal(replaced.length, 1);
+	assert.equal(replaced[0][1], `${BASE}&package=a`);
+	// The pointer is a snackbar; the inline record it points at is untouched.
+	assert.equal(
+		env.document.getElementById('ran-booster-feedback-bulk-error').removed,
+		false
+	);
+});
+
+test('a taken info item strips the address too', () => {
+	const { env, replaced } = loadEnv(
+		`${BASE}&ran_booster_result=install&_ran_booster_notice_nonce=n`,
+		[{ key: 'x_info', intent: 'info', text: 'Checked.' }]
+	);
+	env.run();
+	assert.equal(replaced.length, 1);
+});
+
+test('a reload or Back to the stripped address shows no result and no snackbar', () => {
+	const { env, replaced } = loadEnv(`${BASE}&package=a`, []);
+	env.run();
+	assert.equal(env.notices.length, 0);
 	assert.deepEqual(replaced, []);
 });
 
-for (const type of ['reload', 'back_forward']) {
-	test(`a ${type} of a failure address labels the inline record and shows no fresh pointer`, () => {
-		const { env, label, replaced, container } = replayEnv(type, FAILURE, [
-			POINTER,
-		]);
-		env.run();
-		assert.equal(env.notices.length, 0);
-		assert.equal(label.hidden, false);
-		assert.equal(container.removed, true);
-		assert.deepEqual(
-			replaced,
-			[],
-			'the persistent record keeps its address'
-		);
-	});
-}
-
-test('an earlier failure, a later success, then Back and reload each read as the earlier result', () => {
-	// Back to the failure address after a later success: labelled, no snackbar.
-	const back = replayEnv('back_forward', FAILURE, [POINTER]);
-	back.env.run();
-	assert.equal(back.env.notices.length, 0);
-	assert.equal(back.label.hidden, false);
-
-	// The later success was fresh: shown once, address stripped.
-	const fresh = replayEnv(
-		'navigate',
-		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_result=install&_ran_booster_notice_nonce=n',
-		[{ key: 'package_install', intent: 'success', text: 'Installed.' }]
-	);
-	fresh.env.run();
-	assert.deepEqual(
-		fresh.env.notices.map((notice) => notice.content),
-		['Installed.']
-	);
-	assert.equal(fresh.replaced.length, 1);
-
-	// Reloading the stripped success address has no result and no item.
-	const reload = replayEnv(
-		'reload',
-		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
-		[]
-	);
-	reload.env.run();
-	assert.equal(reload.env.notices.length, 0);
-	assert.deepEqual(reload.replaced, []);
-});
-
-test('a replayed success is not announced again and its address is stripped', () => {
-	const { env, replaced, container } = replayEnv(
-		'reload',
-		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_result=install&_ran_booster_notice_nonce=n',
-		[{ key: 'package_install', intent: 'success', text: 'Installed.' }]
-	);
-	env.run();
-	assert.equal(env.notices.length, 0);
-	assert.equal(container.removed, true);
-	assert.deepEqual(replaced, [
-		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+test('a page with no result argument and a flash item is unaffected', () => {
+	const { env, replaced } = loadEnv(BASE, [
+		{ key: 'release_check_current', intent: 'success', text: 'Checked.' },
 	]);
-});
-
-test('a reload without a result address still shows a flash item', () => {
-	const { env } = replayEnv(
-		'reload',
-		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
-		[{ key: 'release_check_current', intent: 'success', text: 'Checked.' }]
-	);
 	env.run();
 	assert.deepEqual(
 		env.notices.map((notice) => notice.content),
 		['Checked.']
 	);
-});
-
-test('the earlier-result label is hidden by default and its display is not overridden', () => {
-	const css = fs.readFileSync(
-		new URL(
-			'../../assets/ran-booster/25-admin-primitives.css',
-			import.meta.url
-		),
-		'utf8'
-	);
-	assert.match(
-		css,
-		/\[data-ran-booster-earlier\]\[hidden\]\s*\{\s*display: none;/
-	);
-});
-
-test('a replay with a success and a failure pointer keeps the failure address on reload, Back and reload again', () => {
-	for (const type of ['reload', 'back_forward', 'reload']) {
-		const { env, label, replaced } = replayEnv(
-			type,
-			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n&ran_booster_result=install&_ran_booster_notice_nonce=m',
-			[
-				{
-					key: 'package_install',
-					intent: 'success',
-					text: 'Installed.',
-				},
-				POINTER,
-			]
-		);
-		env.run();
-		assert.equal(env.notices.length, 0, type);
-		assert.equal(label.hidden, false, type);
-		assert.deepEqual(replaced, [], `${type} keeps the failure address`);
-	}
-});
-
-test('a replayed info item is dropped without a label and keeps the address', () => {
-	// Info is a flash result and never carries a result argument; if one does,
-	// it is not a success to strip for, so the address is left alone.
-	const { env, label, replaced, container } = replayEnv('reload', FAILURE, [
-		{ key: 'release_check_current', intent: 'info', text: 'Checked.' },
-	]);
-	env.run();
-	assert.equal(env.notices.length, 0);
-	assert.equal(label.hidden, true);
-	assert.equal(container.removed, true);
 	assert.deepEqual(replaced, []);
 });
 
-test('a replayed pointer whose target is missing is dropped without a label', () => {
-	const { env, label, container } = replayEnv('back_forward', FAILURE, [
+test('an unshown pointer keeps its address so the unshown result is not lost', () => {
+	const { env, replaced } = loadEnv(FAILURE_URL, [
 		{ ...POINTER, target: 'no-such-element' },
 	]);
 	env.run();
 	assert.equal(env.notices.length, 0);
-	assert.equal(label.hidden, true);
-	assert.equal(container.removed, true);
-});
-
-test('a missing or empty navigation entry list is treated as a fresh load', () => {
-	for (const performance of [
-		undefined,
-		{},
-		{ getEntriesByType: () => [] },
-		{ getEntriesByType: () => [{}] },
-	]) {
-		const { env, label } = replayEnv('reload', FAILURE, [POINTER]);
-		env.window.performance = performance;
-		env.run();
-		assert.deepEqual(
-			env.notices.map((notice) => notice.content),
-			['Stale.']
-		);
-		assert.equal(label.hidden, true);
-	}
-});
-
-test('a real PerformanceNavigationTiming entry marks a reload as a replay', () => {
-	const entry = Object.assign(Object.create({ entryType: 'navigation' }), {
-		name: FAILURE,
-		type: 'reload',
-		redirectCount: 0,
-	});
-	const { env, label } = replayEnv('navigate', FAILURE, [POINTER]);
-	env.window.performance = {
-		getEntriesByType: (kind) => (kind === 'navigation' ? [entry] : []),
-	};
-	env.run();
-	assert.equal(env.notices.length, 0);
-	assert.equal(label.hidden, false);
+	assert.deepEqual(replaced, []);
 });

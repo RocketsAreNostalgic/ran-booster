@@ -420,7 +420,6 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-extension-result" class="notice inline notice-warning', $output );
 		self::assertStringContainsString( 'data-feedback-key="extension_result" data-intent="warning" data-feedback-target="ran-booster-extension-result"', $output );
 		self::assertStringNotContainsString( 'data-intent="success"', $output );
-		self::assertStringContainsString( '<p hidden data-ran-booster-earlier>Result of an earlier action.</p><p>The extension could not be installed.', $output );
 		$_GET['ran_booster_extension_result'] = '<script>alert(1)</script>';
 		$output                               = $this->render();
 		self::assertStringNotContainsString( '<script>alert(1)</script>', $output );

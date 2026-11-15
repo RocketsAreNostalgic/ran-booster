@@ -1485,10 +1485,6 @@
 	color: var(--wpds-color-foreground-content-warning);
 }
 
-[data-ran-booster-earlier][hidden] {
-	display: none;
-}
-
 /* A pointer repeats its inline notice, so the static fallback shows only the notice (R14); the host still reads the hidden item. */
 .ran-booster-feedback__item[data-feedback-target][data-intent="error"],
 .ran-booster-feedback__item[data-feedback-target][data-intent="warning"] {

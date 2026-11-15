@@ -140,22 +140,15 @@ hidden by CSS by default, so only the inline notice (with its own `role`) is vis
   Release workflow results still carry text in the URL (R16). Package operation
   failures reach the page through region swaps that rebuild the notice, so they
   keep the inline record without a pointer until a target survives the swap.
-- **URL.** On a full page load the host strips the result arguments after it
-  takes a success; a pointer leaves them so its inline record survives a
-  reload. After a swap, the enhanced mutation handler removes the package
-  result arguments. Without JavaScript the arguments stay, so a reload repeats
-  the result.
-- **Replay.** A signed address authenticates the earlier action, not the
-  present condition. On a reload or Back that still carries a result argument
-  the host shows no snackbar and reveals the hidden label "Result of an earlier
-  action." (`FeedbackFlash::earlier_result()`) in the inline record; a replayed
-  success is dropped and its address stripped. A success beside a failure
-  keeps the address. An info-only replay is dropped without a label and keeps its
-  address. These are treated as a fresh load and show unlabelled: no JavaScript
-  or a host that cannot run, a bookmarked or pasted signed address or a link to
-  one, a prerender and a missing or empty `performance.getEntriesByType`. A
-  bfcache restore has no replay handling: the old page returns as it was. The
-  signed nonce is not single-use.
+- **Result addresses.** A signed address authenticates the earlier action, not
+  the present condition. On a full page load the host strips the result
+  arguments on first render whenever it takes any item (success, pointer or
+  info), with `history.replaceState`, so a reload or Back shows no earlier
+  result. A failure's inline record stays in the page, and a pointer that
+  cannot be shown keeps its address. After a swap, the enhanced mutation
+  handler removes the package result arguments. Without JavaScript, or where the
+  host cannot show the item, the server cannot strip, so a reload repeats the
+  result unlabelled. The signed nonce is not single-use.
 - **Repeated results.** The host identifies an item by key, intent and text. An
   identical repeat resets the timer and does not stack. A different message,
   such as two bulk policy changes or the bulk plugin state as a success and then

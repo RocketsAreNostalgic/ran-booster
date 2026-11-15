@@ -244,7 +244,16 @@
 			return false;
 		}
 		prune();
-		const duplicate = state?.items.find((item) => item.id === id);
+		let duplicate = state?.items.find((item) => item.id === id);
+		if (duplicate && duplicate.intent !== intent) {
+			// The same key can arrive as a success and as a warning (a bulk
+			// result with and without skips). Intent decides the action, target
+			// and timer, so the old item goes and a fresh one is built below.
+			restoreFocus(duplicate.uid);
+			window.clearTimeout(duplicate.timer);
+			state.items = state.items.filter((item) => item !== duplicate);
+			duplicate = undefined;
+		}
 		if (duplicate) {
 			state.returnControl = options.returnControl || state.returnControl;
 			duplicate.remaining = DURATION;
@@ -254,8 +263,11 @@
 			const changed = duplicate.message !== text;
 			duplicate.message = text;
 			if (timed(intent)) {
-				// The component speaks only on mount; a repeat is spoken here.
-				window.wp?.a11y?.speak?.(text, 'polite');
+				// The component speaks on mount and when its text changes; an
+				// unchanged repeat does not re-render, so it is spoken here.
+				if (!changed) {
+					window.wp?.a11y?.speak?.(text, 'polite');
+				}
 			} else {
 				duplicate.target = target;
 			}

@@ -1658,3 +1658,76 @@ test('a static item with the same key and different copy updates the visible ite
 		['Changed 2 plugins to Automatic.']
 	);
 });
+
+function pointerTarget(env) {
+	return env.target('plugins-result', {
+		matches: () => true,
+		setAttribute() {},
+	});
+}
+
+test('a warning replaces a success with the same key: one item with the warning intent, a Show details action and no timer', () => {
+	const env = boot();
+	const target = pointerTarget(env);
+	env.feedback.show('Changed 2 plugins to Enabled.', {
+		id: 'bulk_plugin_state',
+	});
+	env.tick(3000);
+	assert.equal(
+		env.feedback.show('Changed 1 plugin; skipped 1.', {
+			id: 'bulk_plugin_state',
+			intent: 'warning',
+			target,
+		}),
+		true
+	);
+	assert.equal(env.notices.length, 1);
+	const [notice] = env.notices;
+	assert.match(notice.className, /ran-booster-snackbar--warning/);
+	assert.equal(notice.content, 'Changed 1 plugin; skipped 1.');
+	assert.equal(notice.actions.length, 1);
+	assert.equal(notice.actions[0].label, 'Show details');
+	assert.equal(env.pendingTimers(), 0);
+	env.tick(DURATION * 3);
+	assert.equal(env.notices.length, 1, 'A pointer never dismisses itself.');
+});
+
+test('a success replaces a warning with the same key: one item with the success intent, no action and a timer that dismisses it', () => {
+	const env = boot();
+	const target = pointerTarget(env);
+	env.feedback.show('Changed 1 plugin; skipped 1.', {
+		id: 'bulk_plugin_state',
+		intent: 'warning',
+		target,
+	});
+	assert.equal(env.pendingTimers(), 0);
+	assert.equal(
+		env.feedback.show('Changed 2 plugins to Enabled.', {
+			id: 'bulk_plugin_state',
+		}),
+		true
+	);
+	assert.equal(env.notices.length, 1);
+	const [notice] = env.notices;
+	assert.match(notice.className, /ran-booster-snackbar--success/);
+	assert.equal(notice.content, 'Changed 2 plugins to Enabled.');
+	assert.deepEqual(notice.actions, []);
+	assert.equal(env.pendingTimers(), 1);
+	env.tick(DURATION);
+	assert.equal(env.notices.length, 0);
+});
+
+test('a changed text is not also spoken by hand, an unchanged repeat is', () => {
+	const env = boot();
+	const spoken = [];
+	env.window.wp.a11y = { speak: (text) => spoken.push(text) };
+	env.feedback.show('Changed 2 plugins to Disabled.', { id: 'bulk_policy' });
+	env.feedback.show('Changed 2 plugins to Automatic.', {
+		id: 'bulk_policy',
+	});
+	assert.deepEqual(spoken, [], 'The component speaks a changed message.');
+	env.feedback.show('Changed 2 plugins to Automatic.', {
+		id: 'bulk_policy',
+	});
+	assert.deepEqual(spoken, ['Changed 2 plugins to Automatic.']);
+});

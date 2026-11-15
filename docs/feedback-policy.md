@@ -126,7 +126,7 @@ webhook and extension successes follow it too.
 | Aspect | Specification |
 | --- | --- |
 | Queue | At most 3 visible, newest last. When a fourth arrives, the oldest success is dropped first. A pointer to a persistent error is never dropped by the queue (activating its Show details action removes it). What happens when three pointers are visible and a new item arrives is not yet decided; until it is, a new success is announced politely and its static form is kept (R15), and a new pointer is omitted because its inline message is the record. To be revisited after use (see Open decision). |
-| Duplicates | Each item has a key (the closed code). The same key never produces two snackbars. |
+| Duplicates | Each item has a key (the closed code). The same key never produces two snackbars: a repeat resets the timer, and when its fixed copy differs (for example two bulk changes to different policies) the one item shows the latest text. |
 | Duration | Decided: one constant, 10 seconds (R5), tunable later in that one place. WordPress's own `Snackbar` hard-codes 6 seconds and cannot be configured or paused, so the host renders success items with the explicit-dismiss presentation (which also gives the dismiss control) and owns the timer that removes them. |
 | Pause | The timer pauses while the pointer is over the item or focus is inside it, and resumes with the remaining time. This is Booster-owned. |
 | Dismiss | Every item has a dismiss control reachable by keyboard. Escape while focus is inside the item dismisses it. |
@@ -412,7 +412,8 @@ use today, and the owner is told.
   redirect is unchanged. A flash item (Check releases, release settings)
   carries no result argument and is not affected.
   - These replays are treated as a fresh load, so the record shows without
-    the label and the pointer is shown as new:
+    the label and the pointer is shown as new, except a bfcache restore,
+    which has no replay handling:
     - no JavaScript, or a host that cannot run (the server cannot tell a
       reload from a first view);
     - a bookmarked or pasted signed address, or a link click to one
@@ -423,6 +424,7 @@ use today, and the owner is told.
     - a missing or empty `performance.getEntriesByType`.
     The signed nonce is not single-use, so any of these can show the same
     earlier result again.
+  - An info-only replay is dropped without a label and keeps its address.
   - Package results delivered by a swap are cleaned by the enhanced mutation
     handler.
   - Not done: tracking whether the condition still holds. That needs the

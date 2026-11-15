@@ -150,10 +150,12 @@ hidden by CSS by default, so only the inline notice (with its own `role`) is vis
   the host shows no snackbar and reveals the hidden label "Result of an earlier
   action." (`FeedbackFlash::earlier_result()`) in the inline record; a replayed
   success is dropped and its address stripped. A success beside a failure
-  keeps the address. These are treated as a fresh load and show unlabelled: no
-  JavaScript or a host that cannot run, a bookmarked or pasted signed address or
-  a link to one, a prerender, a bfcache restore and a missing or empty
-  `performance.getEntriesByType`. The signed nonce is not single-use.
+  keeps the address. An info-only replay is dropped without a label and keeps its
+  address. These are treated as a fresh load and show unlabelled: no JavaScript
+  or a host that cannot run, a bookmarked or pasted signed address or a link to
+  one, a prerender and a missing or empty `performance.getEntriesByType`. A
+  bfcache restore has no replay handling: the old page returns as it was. The
+  signed nonce is not single-use.
 - **Extensions page.** It loads the shared host (`ran-booster-feedback`, which
   depends on `wp-components`) so its result item is taken there too.
 

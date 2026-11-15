@@ -639,7 +639,8 @@ test('the same id shows once and restarts the timer instead of stacking', () => 
 	env.feedback.show('Other copy.', { id: 'same' });
 	env.feedback.show('Different copy.', { id: 'same' });
 	assert.equal(env.notices.length, 1);
-	assert.equal(env.notices[0].content, 'Other copy.');
+	// One item per key; a later result with different fixed copy replaces the text.
+	assert.equal(env.notices[0].content, 'Different copy.');
 });
 
 test('a success may carry one link action built by the caller', () => {
@@ -1614,4 +1615,46 @@ test('a real PerformanceNavigationTiming entry marks a reload as a replay', () =
 	env.run();
 	assert.equal(env.notices.length, 0);
 	assert.equal(label.hidden, false);
+});
+
+test('a later result with the same key shows its own text in the one item, and an identical repeat only resets the timer', () => {
+	const env = boot();
+	env.feedback.show('Changed 2 plugins to Disabled.', { id: 'bulk_policy' });
+	env.tick(4000);
+	assert.equal(
+		env.feedback.show('Changed 2 plugins to Automatic.', {
+			id: 'bulk_policy',
+		}),
+		true
+	);
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Changed 2 plugins to Automatic.']
+	);
+	// The timer restarted from the later result.
+	env.tick(DURATION - 1);
+	assert.equal(env.notices.length, 1);
+	env.feedback.show('Changed 2 plugins to Automatic.', { id: 'bulk_policy' });
+	assert.equal(env.notices.length, 1);
+	env.tick(DURATION - 1);
+	assert.equal(env.notices.length, 1);
+	env.tick(1);
+	assert.equal(env.notices.length, 0);
+});
+
+test('a static item with the same key and different copy updates the visible item', () => {
+	const env = boot();
+	env.feedback.show('Changed 2 plugins to Disabled.', { id: 'bulk_policy' });
+	env.staticContainer([
+		{
+			key: 'bulk_policy',
+			intent: 'success',
+			text: 'Changed 2 plugins to Automatic.',
+		},
+	]);
+	env.feedback.consume();
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Changed 2 plugins to Automatic.']
+	);
 });

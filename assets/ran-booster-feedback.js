@@ -248,11 +248,24 @@
 		if (duplicate) {
 			state.returnControl = options.returnControl || state.returnControl;
 			duplicate.remaining = DURATION;
+			// The key is a closed code, so a later result with the same key can
+			// carry different fixed copy (Disabled, then Automatic): the one
+			// item shows the latest.
+			const changed = duplicate.message !== text;
+			duplicate.message = text;
 			if (timed(intent)) {
 				// The component speaks only on mount; a repeat is spoken here.
 				window.wp?.a11y?.speak?.(text, 'polite');
 			} else {
 				duplicate.target = target;
+			}
+			if (changed) {
+				try {
+					render();
+				} catch {
+					dispose();
+					return false;
+				}
 			}
 			if (duplicate.timer) {
 				arm(duplicate);

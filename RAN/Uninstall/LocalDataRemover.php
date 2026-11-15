@@ -12,6 +12,7 @@ use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
 use RAN\Admin\DevelopmentSafetyNoticeController;
 use RAN\Admin\Feedback\FeedbackFlash;
+use RAN\Admin\Interaction\SignedAdminInteractionFlow;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
@@ -52,6 +53,7 @@ class LocalDataRemover {
 		CredentialExpiryNotice::USER_META_KEY,
 		DeploymentAdminPresenter::USER_META_KEY,
 		FeedbackFlash::USER_META_KEY,
+		SignedAdminInteractionFlow::MESSAGE_META_KEY,
 	);
 
 	private object $database;

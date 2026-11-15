@@ -1514,6 +1514,40 @@ test('a page with no result argument and a flash item is unaffected', () => {
 	assert.deepEqual(replaced, []);
 });
 
+const SIGNED_URL =
+	'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&ran_booster_interaction_operation=o&ran_booster_interaction_target=t&ran_booster_interaction_outcome=success&ran_booster_interaction_return=r&ran_booster_interaction_error_region=e&_ran_booster_interaction_nonce=n';
+
+test('a taken signed outcome shows its text and strips the interaction marker', () => {
+	const { env, replaced } = loadEnv(SIGNED_URL, [
+		{
+			key: 'interaction_success',
+			intent: 'success',
+			text: 'Add-on saved.',
+		},
+	]);
+	env.run();
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Add-on saved.']
+	);
+	assert.deepEqual(replaced, [
+		[
+			{ htmx: true },
+			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh',
+		],
+	]);
+});
+
+test('a reload on the stripped signed address shows nothing and strips nothing', () => {
+	const { env, replaced } = loadEnv(
+		'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh',
+		[]
+	);
+	env.run();
+	assert.equal(env.notices.length, 0);
+	assert.deepEqual(replaced, []);
+});
+
 // A pointer with no target is not shown, so it does not count as taken and the
 // address is left as it is.
 test('an unshown pointer does not count as taken and the address is left alone', () => {

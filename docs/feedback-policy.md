@@ -285,9 +285,9 @@ helper is counted once. The Disposition column states where each category goes.
   `SignedAdminInteractionFlow`.
 - **C.** `signed_outcome_url()` used to put the message (up to 255 characters)
   in the redirect query string, the one display text in a URL. P4 removes it
-  (R16): the text travels in a one-shot per-user row claimed after the signed
-  marker verifies. Add-on text is open, so it cannot be a closed flash code;
-  see `enhanced-admin-interactions.md`.
+  (R16): the text travels in a separate one-shot per-user row, claimed after
+  the signed marker verifies. Add-on text is open, so it cannot be a closed
+  flash code; see the exception under Server-to-page transport.
 - **D.** Extension install and activate (`ran_booster_extension_result`),
   package results (`ran_booster_result`), bulk results (`ran_booster_bulk_*`),
   release management and release workflow redirects, webhook management
@@ -360,6 +360,23 @@ URL. No secret, provider response, path or exception text may enter it, and
 unknown codes are dropped on write and on read. A later `FeedbackFlash::enqueue`
 replaces an unread flash, and `render()` requires `manage_options`.
 
+**Owner-approved exception: signed-outcome display text.** An add-on's
+`respond()` message is open, bounded display text that no closed code can
+represent. The owner approved one narrow, bounded exception: a separate
+user-meta row, `_ran_booster_interaction_outcome`, holding `{at, site, action,
+message}`. It lives 60 seconds, belongs to one user and one site, and is claimed
+once (deleting the exact value) only after the signed marker verifies, so a
+forged, replayed, cross-user, cross-site, expired or tampered marker never reads
+it. It has no event id: the marker's operation, target and destination binding
+is enough, because the row is presentation only and has no operational consumer.
+It is never an Activity, incident or recovery source, and it does not widen
+`FeedbackFlash`, which stays closed-code only. No new catalogue and no API 4 are
+introduced. Expired rows are deleted on the next administration load, and
+uninstall removes the key. If the marker verifies but the row is missing,
+expired, replaced or was never written, the page shows one fixed neutral
+persistent notice: "The result details are not available. Check the page or
+Activity for the current state." It does not advise a retry and does not say the
+operation failed.
 ### Interface contract between the flash (P1) and the host (P2)
 
 This section is the single source for the contract.
@@ -408,6 +425,13 @@ use today, and the owner is told.
   Activity row. Only a diagnostic log line persists, and none for extensions.
   A failure that needs a durable record belongs in Activity, through the
   current-state work tracked in #951 and #948.
+- **Signed-outcome text does not replay.** The text row is claimed on first
+  view, and the host strips the interaction marker (`ran_booster_interaction_*`
+  and its nonce) from the address with the package result arguments, so a reload
+  or Back shows nothing. Without JavaScript the server cannot strip, so a
+  no-JavaScript reload of the signed address finds the row claimed and shows the
+  neutral fallback instead of the original text. The fallback itself is a notice,
+  not a host item, so it does not strip the address either.
 - **Edit saves.** They still reach the host through the enhanced save path
   (`data-ran-booster-package-saved`) until P7 retires that bridge.
 - **Result addresses (earlier results never replay).** A signed request result

@@ -1505,6 +1505,10 @@ msgstr ""
 msgid "We could not complete that request. Please try again."
 msgstr ""
 
+#: RAN/Admin/Interaction/SignedAdminInteractionFlow.php:309
+msgid "The result details are not available. Check the page or Activity for the current state."
+msgstr ""
+
 #: RAN/Admin/ManagedPackageWebhookAuthorityResolver.php:45
 msgid "This managed package does not have a stable repository identity. Re-save its repository settings before creating a repository-scoped webhook secret."
 msgstr ""

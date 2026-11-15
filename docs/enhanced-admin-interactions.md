@@ -95,9 +95,23 @@ An outcome's message never appears in a URL (#755 R16). The signed redirect
 carries only the operation, target, outcome kind, return route, error region
 and a nonce over those values. `respond()` holds the message in one per-user
 row, `_ran_booster_interaction_outcome`, with a 60 second lifetime, and the
-next render claims it exactly once, only for the signed marker it was written
-for. A forged, replayed, expired or other-user marker shows nothing, and a
-second tab that loses the claim shows nothing.
+next render claims it exactly once, only for the signed marker, user and
+site it was written for. This is the owner-approved exception recorded in
+`feedback-policy.md`: the row is presentation only, never an Activity, incident
+or recovery source, and it has no event id because the signed marker's
+operation, target and destination binding is enough.
+
+If the marker verifies but the row is missing, expired, replaced, lost to a
+second tab or never written, Core shows one fixed neutral persistent notice
+instead: "The result details are not available. Check the page or Activity for
+the current state." It never advises a retry and never says the operation
+failed. A marker that does not verify shows nothing. Expired rows are deleted on
+the user's next administration load, and uninstall removes the row.
+
+On first view the feedback host also strips the marker arguments
+(`ran_booster_interaction_*` and its nonce) from the address, so a reload or
+Back shows nothing. Without JavaScript the server cannot strip them, so a
+no-JavaScript reload shows the neutral fallback.
 
 What an add-on gets from `respond()`, with no new API and no change to the
 exact API 3 guard:

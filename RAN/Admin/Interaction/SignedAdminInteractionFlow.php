@@ -7,6 +7,7 @@ namespace RAN\Admin\Interaction;
 use Closure;
 use InvalidArgumentException;
 use RAN\Admin\Component\NoticeIcon;
+use RAN\Admin\Feedback\FeedbackFlash;
 use Throwable;
 
 /**
@@ -187,6 +188,7 @@ final class SignedAdminInteractionFlow {
 		return $trigger;
 	}
 	public function prepare_pending_feedback(): void {
+		$this->reap_expired_message();
 		$outcome = $this->pending_outcome();
 		if ( null === $outcome ) {
 			return;
@@ -194,7 +196,8 @@ final class SignedAdminInteractionFlow {
 
 		$request = $outcome['request'];
 		if ( $this->is_htmx_target( $request ) ) {
-			if ( $this->has_success_feedback( $outcome['kind'] ) ) {
+			// The neutral fallback is a persistent notice, never a timed success event.
+			if ( ! $outcome['fallback'] && $this->has_success_feedback( $outcome['kind'] ) ) {
 				$trigger = wp_json_encode(
 					array(
 						'ran-booster:admin-mutation-success' => array(
@@ -215,21 +218,21 @@ final class SignedAdminInteractionFlow {
 		add_action(
 			'admin_notices',
 			function () use ( $outcome ): void {
-				$class = match ( $outcome['kind'] ) {
+				$class = $outcome['fallback'] ? 'notice notice-info' : match ( $outcome['kind'] ) {
 					AdminInteractionOutcome::SUCCESS            => 'notice notice-success',
 					AdminInteractionOutcome::ACCEPTED           => 'notice notice-info',
 					AdminInteractionOutcome::VALIDATION_FAILURE,
 					AdminInteractionOutcome::UNEXPECTED_FAILURE => 'notice notice-error',
 				};
-				$role = $this->has_success_feedback( $outcome['kind'] ) ? 'status' : 'alert';
+				$role = $outcome['fallback'] || $this->has_success_feedback( $outcome['kind'] ) ? 'status' : 'alert';
 				\RAN\Admin\BoosterNoticeScope::render(
 					static function () use ( $class, $role, $outcome ): void {
 						// Booster screens always load the static Notice CSS; elsewhere the notice keeps the mounted markup.
 						$booster = \RAN\Admin\BoosterNoticeScope::is_booster_screen();
 						$intent  = substr( $class, 14 );
-						if ( $booster && 'error' !== $intent ) {
+						if ( $booster && ! $outcome['fallback'] && 'error' !== $intent ) {
 							// The static form of the snackbar: the host converts it, and without JavaScript it stays a notice (#755 R14).
-							echo '<div class="ran-booster-feedback" data-ran-booster-feedback><div class="ran-booster-feedback__item" data-feedback-key="interaction_' . esc_attr( $outcome['kind'] ) . '" data-intent="' . esc_attr( $intent ) . '" role="status">' . esc_html( $outcome['message'] ) . '</div></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every dynamic value is escaped here.
+							echo FeedbackFlash::container( FeedbackFlash::item( 'interaction_' . $outcome['kind'], $intent, $outcome['message'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- item() escapes every value.
 							return;
 						}
 						echo '<div class="' . esc_attr( $class . ( $booster ? ' inline ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent : '' ) ) . '" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . esc_attr( $intent ) . '" data-ran-booster-ui-notice-scope="global" role="' . esc_attr( $role ) . '"><div' . ( $booster ? ' class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"' : '' ) . ' data-ran-booster-ui-notice-content><p>' . esc_html( $outcome['message'] ) . '</p></div>' . ( $booster ? NoticeIcon::markup( $intent ) : '' ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- NoticeIcon::markup() escapes its path data; every other value is escaped here.
@@ -264,7 +267,7 @@ final class SignedAdminInteractionFlow {
 	}
 
 	/**
-	 * @return array{request: SignedAdminInteractionRequest, kind: AdminInteractionOutcome::SUCCESS|AdminInteractionOutcome::ACCEPTED|AdminInteractionOutcome::VALIDATION_FAILURE|AdminInteractionOutcome::UNEXPECTED_FAILURE, message: string}|null
+	 * @return array{request: SignedAdminInteractionRequest, kind: AdminInteractionOutcome::SUCCESS|AdminInteractionOutcome::ACCEPTED|AdminInteractionOutcome::VALIDATION_FAILURE|AdminInteractionOutcome::UNEXPECTED_FAILURE, message: string, fallback: bool}|null
 	 */
 	private function pending_outcome(): ?array {
 		$operation  = $this->query_string( self::QUERY_OPERATION );
@@ -301,10 +304,9 @@ final class SignedAdminInteractionFlow {
 		if ( 1 !== wp_verify_nonce( $nonce, $this->nonce_action( $args ) ) ) {
 			return null;
 		}
-		$message = $this->claim_message( $this->nonce_action( $args ) );
-		if ( null === $message ) {
-			return null;
-		}
+		$held     = $this->claim_message( $this->nonce_action( $args ) );
+		$fallback = null === $held;
+		$message  = $held ?? __( 'The result details are not available. Check the page or Activity for the current state.', 'ran-booster' );
 
 		try {
 			$this->assert_outcome( $kind, $message );
@@ -313,45 +315,68 @@ final class SignedAdminInteractionFlow {
 		}
 
 		return array(
-			'request' => $request,
-			'kind'    => $kind,
-			'message' => $message,
+			'request'  => $request,
+			'kind'     => $kind,
+			'message'  => $message,
+			'fallback' => $fallback,
 		);
 	}
 
-	/** Hold the outcome text for this user's next render; a later outcome replaces an unread one. */
+	/**
+	 * Hold the outcome text for this user's next render on this site. A later outcome replaces an unread one.
+	 * The row is presentation only: it is never an Activity, incident or recovery record.
+	 */
 	private function hold_message( string $action, string $message ): void {
 		$user_id = get_current_user_id();
 		if ( $user_id > 0 ) {
+			// WordPress unslashes meta values on write, so the row is slashed to round-trip backslashes.
 			update_user_meta(
 				$user_id,
 				self::MESSAGE_META_KEY,
-				array(
-					'at'      => time(),
-					'action'  => $action,
-					'message' => $message,
+				wp_slash(
+					array(
+						'at'      => time(),
+						'site'    => get_current_blog_id(),
+						'action'  => $action,
+						'message' => $message,
+					)
 				)
 			);
 		}
 	}
 
-	/** Read the held text once, only for the signed marker it was written for. */
+	/** Delete this user's expired or malformed row; an unexpired row waits for its own signed marker. */
+	private function reap_expired_message(): void {
+		$user_id = get_current_user_id();
+		$held    = $user_id > 0 ? get_user_meta( $user_id, self::MESSAGE_META_KEY, true ) : '';
+		if ( '' !== $held && ! $this->is_live_row( $held ) ) {
+			delete_user_meta( $user_id, self::MESSAGE_META_KEY );
+		}
+	}
+
+	private function is_live_row( mixed $held ): bool {
+		return is_array( $held )
+			&& is_int( $held['at'] ?? null ) && time() - $held['at'] <= self::MESSAGE_TTL
+			&& is_int( $held['site'] ?? null ) && is_string( $held['action'] ?? null ) && is_string( $held['message'] ?? null );
+	}
+
+	/** Read the held text once, only for the signed marker and site it was written for. */
 	private function claim_message( string $action ): ?string {
 		$user_id = get_current_user_id();
-		$held    = $user_id > 0 ? get_user_meta( $user_id, self::MESSAGE_META_KEY, true ) : null;
-		if ( ! is_array( $held ) ) {
+		$held    = $user_id > 0 ? get_user_meta( $user_id, self::MESSAGE_META_KEY, true ) : '';
+		if ( '' === $held ) {
 			return null;
 		}
-		$at      = $held['at'] ?? null;
-		$message = $held['message'] ?? null;
-		// Deleting the exact value is the claim: the tab that loses the race shows nothing.
-		if ( ! is_int( $at ) || time() - $at > self::MESSAGE_TTL
-			|| ! is_string( $held['action'] ?? null ) || ! hash_equals( $action, $held['action'] )
-			|| ! is_string( $message ) || ! delete_user_meta( $user_id, self::MESSAGE_META_KEY, $held ) ) {
+		if ( ! $this->is_live_row( $held ) ) {
+			delete_user_meta( $user_id, self::MESSAGE_META_KEY );
 			return null;
 		}
-
-		return $message;
+		// Another site's screen leaves the row for its own site, and it expires.
+		if ( get_current_blog_id() !== $held['site'] || ! hash_equals( $action, $held['action'] ) ) {
+			return null;
+		}
+		// Deleting the exact value is the claim: the tab that loses the race shows the neutral fallback.
+		return delete_user_meta( $user_id, self::MESSAGE_META_KEY, wp_slash( $held ) ) ? $held['message'] : null;
 	}
 
 	/** @phpstan-assert AdminInteractionOutcome::SUCCESS|AdminInteractionOutcome::ACCEPTED|AdminInteractionOutcome::VALIDATION_FAILURE|AdminInteractionOutcome::UNEXPECTED_FAILURE $kind */

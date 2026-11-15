@@ -394,7 +394,7 @@
 	// again. The inline record of a failure stays in the page until the
 	// person leaves it. Swaps are left to the mutation handler.
 	const RESULT_ARGUMENT =
-		/^(ran_booster_result|ran_booster_package|_ran_booster_notice_nonce|ran_booster_extension_result|ran_booster_extension_id|_ran_booster_bulk_notice_nonce|ran_booster_bulk_.+)$/;
+		/^(ran_booster_result|ran_booster_package|_ran_booster_notice_nonce|ran_booster_extension_result|ran_booster_extension_id|_ran_booster_bulk_notice_nonce|ran_booster_bulk_.+|ran_booster_interaction_(?:operation|target|outcome|return|error_region)|_ran_booster_interaction_nonce)$/;
 
 	function consumeLoaded() {
 		if (consume() < 1) {

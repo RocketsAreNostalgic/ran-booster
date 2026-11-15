@@ -90,6 +90,116 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringContainsString( '<p>Save failed.</p>', $html );
 	}
 
+	/** @param list<array<string, mixed>> $queued */
+	private function notices( array $queued ): string {
+		$messages = $queued;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/notices.php';
+		return (string) ob_get_clean();
+	}
+
+	public function test_a_confirmed_package_success_goes_to_the_host_as_its_only_static_result(): void {
+		$html = $this->notices(
+			array(
+				array(
+					'type'     => 'success',
+					'message'  => 'Plugin was successfully installed.',
+					'feedback' => 'package_install',
+				),
+			)
+		);
+
+		self::assertStringContainsString( '<div class="ran-booster-feedback" data-ran-booster-feedback>', $html );
+		self::assertStringContainsString( 'data-feedback-key="package_install" data-intent="success" role="status">Plugin was successfully installed.</div>', $html );
+		self::assertStringNotContainsString( 'class="notice', $html );
+		self::assertSame( 1, substr_count( $html, 'Plugin was successfully installed.' ) );
+	}
+
+	public function test_a_warning_suppresses_the_success_snackbar_and_points_to_its_inline_record(): void {
+		$html = $this->notices(
+			array(
+				array(
+					'type'    => 'success',
+					'message' => 'Plugin was successfully saved.',
+				),
+				array(
+					'type'     => 'warning',
+					'message'  => 'The provider is rate-limited or unavailable.',
+					'feedback' => 'package_edit_unverified',
+				),
+			)
+		);
+
+		self::assertStringContainsString( '<p>Plugin was successfully saved.</p>', $html );
+		self::assertStringNotContainsString( 'data-intent="success"', $html );
+		self::assertStringContainsString( 'id="ran-booster-feedback-package-edit-unverified" class="notice notice-warning inline', $html );
+		self::assertStringContainsString( 'data-feedback-key="package_edit_unverified" data-intent="warning" data-feedback-target="ran-booster-feedback-package-edit-unverified"', $html );
+
+		$qualified = $this->notices(
+			array(
+				array(
+					'type'     => 'success',
+					'message'  => 'Changed 2 plugins to Enabled in WordPress.',
+					'feedback' => 'bulk_plugin_state',
+				),
+				array(
+					'type'    => 'error',
+					'message' => 'Another failure.',
+				),
+			)
+		);
+		self::assertStringContainsString( 'notice notice-success inline', $qualified );
+		self::assertStringNotContainsString( 'data-ran-booster-feedback', $qualified );
+	}
+
+	public function test_a_failure_stays_inline_and_never_becomes_a_success_item(): void {
+		$html = $this->notices(
+			array(
+				array(
+					'type'     => 'error',
+					'message'  => 'A selected <b>package</b> changed.',
+					'feedback' => 'bulk_error',
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'id="ran-booster-feedback-bulk-error" class="notice notice-error inline', $html );
+		self::assertStringContainsString( 'data-intent="error" data-feedback-target="ran-booster-feedback-bulk-error" role="alert">A selected package changed.</div>', $html );
+		self::assertStringNotContainsString( 'data-intent="success"', $html );
+	}
+
+	public function test_a_message_without_a_closed_feedback_code_keeps_its_notice_and_adds_no_item(): void {
+		$html = $this->notices(
+			array(
+				array(
+					'type'     => 'success',
+					'message'  => 'Plain result.',
+					'feedback' => 'Not a closed code!',
+				),
+				array(
+					'type'    => 'success',
+					'message' => 'Another plain result.',
+				),
+			)
+		);
+
+		self::assertStringContainsString( '<p>Plain result.</p>', $html );
+		self::assertStringContainsString( '<p>Another plain result.</p>', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-feedback', $html );
+	}
+
+	public function test_background_conditions_and_local_results_never_call_the_feedback_host(): void {
+		$root = dirname( __DIR__, 2 );
+		// R10: the stay-notice registrations never reach the host.
+		foreach ( array( 'RAN/Booster.php', 'RAN/Admin/CoreSelfUpdateDevelopmentNotice.php', 'RAN/WordPress/ExtensionUpdates.php' ) as $file ) {
+			self::assertStringNotContainsString( 'FeedbackFlash', (string) file_get_contents( $root . '/' . $file ), $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+		}
+		// R9: Portability results and the package update progress region stay local.
+		foreach ( array( 'assets/ran-booster-portability.js', 'assets/ran-booster-packages.js' ) as $file ) {
+			self::assertStringNotContainsString( 'ranBoosterFeedback', (string) file_get_contents( $root . '/' . $file ), $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+		}
+	}
+
 	public function test_package_index_can_reorder_the_complete_managed_package_heading_without_changing_package_identity(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Managed %s'] = '%s administrés';
 		$package_view              = PackagePagePresenter::plugin();

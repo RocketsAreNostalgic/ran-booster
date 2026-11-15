@@ -3608,6 +3608,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'deployment disabled: 1', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'could not schedule the deployment runner', $dashboard->messages[0]['message'] );
 		self::assertSame( 'bulk_update_queue', $dashboard->messages[0]['code'] );
+		self::assertArrayNotHasKey( 'feedback', $dashboard->messages[0] );
 		self::assertSame( 2, $dashboard->messages[0]['queued_updates'] );
 		self::assertSame( 2, $dashboard->messages[0]['skipped_updates'] );
 	}
@@ -3662,6 +3663,20 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'Changed 2 themes to Manual. Already in that state: 1.',
 			$dashboard->messages[0]['message']
 		);
+		self::assertSame( 'bulk_policy', $dashboard->messages[0]['feedback'] );
+	}
+
+	public function test_signed_bulk_error_is_an_inline_record_with_a_feedback_pointer_code(): void {
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
+		$url       = $dashboard->bulk_package_redirect( 'plugin', BulkPackageResult::error( BulkPackageAction::QUEUE_UPDATE, 2, 'stale' ) );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test reconstructs the signed redirect query.
+		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
+
+		$dashboard->get_plugins();
+
+		self::assertSame( 'error', $dashboard->messages[0]['type'] );
+		self::assertSame( 'bulk_error', $dashboard->messages[0]['feedback'] );
 	}
 
 	public function test_signed_bulk_activation_notice_reports_partial_word_press_state_change(): void {
@@ -3691,6 +3706,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'Already in that state: 1', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'deactivation failed: 1', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'Booster cannot disable itself: 1', $dashboard->messages[0]['message'] );
+		self::assertSame( 'bulk_plugin_state', $dashboard->messages[0]['feedback'] );
 	}
 
 	public function test_tampered_bulk_notice_is_ignored(): void {

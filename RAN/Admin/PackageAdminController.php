@@ -362,8 +362,9 @@ final class PackageAdminController {
 		if ( 'already-managed' === $operation ) {
 			$dashboard->add_message(
 				array(
-					'type'    => 'warning',
-					'message' => sprintf(
+					'type'     => 'warning',
+					'feedback' => 'package_already_managed',
+					'message'  => sprintf(
 						/* translators: %s: package type, such as Plugin or Theme. */
 						__( '%s is already installed and managed by Booster. No package settings were changed.', 'ran-booster' ),
 						'plugin' === $type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' )
@@ -390,15 +391,21 @@ final class PackageAdminController {
 			),
 		);
 		if ( 'edit' === $operation ) {
-			$message['saved_package'] = $identifier;
-			$message['saved_type']    = $type;
+			// Saves already reach the snackbar through the enhanced save path, except a qualified one (R12).
+			if ( ! $repository_check_skipped ) {
+				$message['saved_package'] = $identifier;
+				$message['saved_type']    = $type;
+			}
+		} else {
+			$message['feedback'] = 'package_' . str_replace( '-', '_', $operation );
 		}
 		$dashboard->add_message( $message );
 		if ( $repository_check_skipped ) {
 			$dashboard->add_message(
 				array(
-					'type'    => 'warning',
-					'message' => __( 'The Git provider is rate-limited or unavailable, so Booster could not re-check the repository. Your settings were saved with the repository details already stored.', 'ran-booster' ),
+					'type'     => 'warning',
+					'feedback' => 'package_edit_unverified',
+					'message'  => __( 'The Git provider is rate-limited or unavailable, so Booster could not re-check the repository. Your settings were saved with the repository details already stored.', 'ran-booster' ),
 				)
 			);
 		}
@@ -468,9 +475,10 @@ final class PackageAdminController {
 
 			$add_context_message(
 				array(
-					'type'    => 'error',
-					'message' => $errors[ $result->error_code ] ?? $errors['unavailable'],
-					'code'    => 'ran_booster_bulk_' . $result->error_code,
+					'type'     => 'error',
+					'feedback' => 'bulk_error',
+					'message'  => $errors[ $result->error_code ] ?? $errors['unavailable'],
+					'code'     => 'ran_booster_bulk_' . $result->error_code,
 				),
 				array(
 					'operation'    => $result->operation,
@@ -545,9 +553,10 @@ final class PackageAdminController {
 
 			$add_context_message(
 				array(
-					'type'    => $result->skipped() > 0 ? 'warning' : 'success',
-					'message' => $message,
-					'code'    => 'bulk_plugin_state',
+					'type'     => $result->skipped() > 0 ? 'warning' : 'success',
+					'feedback' => 'bulk_plugin_state',
+					'message'  => $message,
+					'code'     => 'bulk_plugin_state',
 				),
 				array(
 					'operation' => $result->operation,
@@ -564,8 +573,9 @@ final class PackageAdminController {
 		};
 		$dashboard->add_message(
 			array(
-				'type'    => 'success',
-				'message' => sprintf(
+				'type'     => 'success',
+				'feedback' => 'bulk_policy',
+				'message'  => sprintf(
 					/* translators: 1: changed count, 2: package type, 3: policy label, 4: unchanged count. */
 					__( 'Changed %1$d %2$s to %3$s. Already in that state: %4$d.', 'ran-booster' ),
 					$result->changed,

@@ -370,7 +370,8 @@ This section is the single source for the contract.
   fixed Core copy.
 - `data-feedback-target`: the id of the inline notice a pointer leads to. An
   error or warning item without a present target stays static. Check releases
-  emits it; the other producers adopt it in P3.
+  emits it; package, bulk and extension warnings adopt it in P3
+  (see [Request-scoped feedback items](notice-placement.md#request-scoped-feedback-items-755-p3)).
 - Optional: a `.ran-booster-feedback__activity` link to Activity for queued or
   accepted results (P3).
 - Without JavaScript the items are the visible static fallback, styled as a

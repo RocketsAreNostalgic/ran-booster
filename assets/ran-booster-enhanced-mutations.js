@@ -900,20 +900,26 @@
 		}
 
 		function cleanPackageResultUrl() {
+			const canonicalUrl = new URL(window.location.href);
+			// A confirmed result is a static notice or, for the snackbar host,
+			// a feedback item it removes once shown; the signed URL marks both.
+			const confirmed =
+				/^(install|update|unlink|unlink-and-delete)$/.test(
+					canonicalUrl.searchParams.get('ran_booster_result') || ''
+				) && canonicalUrl.searchParams.has('_ran_booster_notice_nonce');
 			const notices = Array.from(
 				document.querySelectorAll(
 					'#wpbody-content [data-ran-booster-package-success]:not([data-ran-booster-update-summary])'
 				)
 			);
-			if (notices.length > 0) {
-				const canonicalUrl = new URL(window.location.href);
+			if (notices.length > 0 || confirmed) {
 				'ran_booster_result ran_booster_package _ran_booster_notice_nonce'
 					.split(' ')
 					.forEach((key) => canonicalUrl.searchParams.delete(key));
 				const history = window.history;
 				history.replaceState(history.state, '', canonicalUrl);
 			}
-			return notices.length > 0;
+			return notices.length > 0 || confirmed;
 		}
 
 		function consumeReleaseWorkflowResult() {

@@ -114,3 +114,31 @@ the signed inline result.
 - **Limits.** With the settings-return hash anchor the static flash prints at the
   top of the page, above the viewport, as the old top notice did. A failed
   `update_user_meta()` silently skips the flash; the inline status remains.
+
+## Request-scoped feedback items (#755 P3)
+
+A producer whose result is already known in the same response, from a verified
+closed token, needs no flash. Package results (install, update, unlink, unlink
+and delete), bulk results and extension install and activate render their item
+directly into the same `div.ran-booster-feedback` container, in the same
+response as the inline notice.
+
+- **Dashboard messages.** A message carries an optional closed `feedback` code
+  (lowercase letters, digits and underscores). `views/notices.php` renders a
+  confirmed `success` with a code as a feedback item instead of a notice. A
+  `warning` or `error` with a code stays a notice with the id
+  `ran-booster-feedback-<code>` and gets a pointer item whose
+  `data-feedback-target` is that id. Pointer text is the notice text without markup.
+- **Qualified success (R12).** If any warning or error shares the response, a
+  coded success stays a static notice, and the host never shows it.
+- **Left alone.** Edit saves keep the enhanced save path, which already shows
+  through the host and still marks `data-ran-booster-package-saved`. The bulk
+  update queue summary is the live update progress region (R9) and keeps its
+  notice. Webhook results and add-on outcomes use the signed outcome flow (P4).
+  Release workflow results still carry text in the URL (R16). Package operation
+  failures reach the page through region swaps that rebuild the notice, so they
+  keep the inline record without a pointer until a target survives the swap.
+- **URL.** After a confirmed package result the enhanced mutation handler removes
+  the signed result arguments from the address whether the item is a notice or
+  an item the host has already removed.
+

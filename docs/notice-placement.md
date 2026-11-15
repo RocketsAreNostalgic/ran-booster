@@ -141,7 +141,7 @@ hidden by CSS by default, so only the inline notice (with its own `role`) is vis
   failures reach the page through region swaps that rebuild the notice, so they
   keep the inline record without a pointer until a target survives the swap.
 - **URL.** On a full page load the host strips the result arguments after it takes
-  an item. After a swap, the enhanced mutation handler removes the package result
+  a success; a pointer leaves them so its inline record survives a reload. After a swap, the enhanced mutation handler removes the package result
   arguments. Without JavaScript the arguments stay, so a reload repeats the result.
 - **Extensions page.** It loads the shared host (`ran-booster-feedback`, which depends on
   `wp-components`) so its result item is taken there too.

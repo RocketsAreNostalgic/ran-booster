@@ -1284,3 +1284,65 @@ test('the address is kept when the host takes nothing or on a later swap', () =>
 	env.feedback.consume();
 	assert.deepEqual(replaced, [], 'a swap never strips the address');
 });
+
+test('taking only a warning or error pointer keeps the address and the inline record replayable', () => {
+	const env = build();
+	const replaced = [];
+	env.window.history = {
+		state: null,
+		replaceState: (state, title, url) => replaced.push(String(url)),
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n';
+	env.target('ran-booster-feedback-bulk-error');
+	env.staticContainer([
+		{
+			key: 'bulk_error',
+			intent: 'error',
+			text: 'Stale.',
+			target: 'ran-booster-feedback-bulk-error',
+		},
+	]);
+	env.run();
+	assert.equal(env.notices.length, 1);
+	assert.deepEqual(replaced, []);
+});
+
+test('only result arguments are stripped and foreign arguments survive', () => {
+	const env = build();
+	const replaced = [];
+	env.window.history = {
+		state: { keep: true },
+		replaceState: (state, title, url) =>
+			replaced.push([state, String(url)]),
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?page=ran-booster-extensions&s=term&ran_booster_bulk_error=stale&ran_booster_extension_id=x&ran_booster_extension_result=installed&utm=1';
+	env.staticContainer([
+		{ key: 'extension_installed', intent: 'success', text: 'Done.' },
+	]);
+	env.run();
+	assert.deepEqual(replaced, [
+		[
+			{ keep: true },
+			'https://example.test/wp-admin/admin.php?page=ran-booster-extensions&s=term&utm=1',
+		],
+	]);
+});
+
+test('a failing replaceState never throws out of the host', () => {
+	const env = build();
+	env.window.history = {
+		state: null,
+		replaceState() {
+			throw new Error('blocked');
+		},
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?ran_booster_result=install&_ran_booster_notice_nonce=n';
+	env.staticContainer([
+		{ key: 'package_install', intent: 'success', text: 'Installed.' },
+	]);
+	assert.doesNotThrow(() => env.run());
+	assert.equal(env.notices.length, 1);
+});

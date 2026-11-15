@@ -912,7 +912,7 @@
 				) &&
 				canonicalUrl.searchParams.has('_ran_booster_notice_nonce') &&
 				!document.querySelector(
-					'.wrap.ran-booster-admin .notice-error, .wrap.ran-booster-admin [data-intent="error"]'
+					'.wrap.ran-booster-admin .notice-error:not([data-ran-booster-provider-storage-notice]):not([data-ran-booster-assistance-site-notice]), .wrap.ran-booster-admin [data-intent="error"]:not([data-feedback-target])'
 				);
 			const notices = Array.from(
 				document.querySelectorAll(

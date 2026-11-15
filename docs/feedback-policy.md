@@ -400,8 +400,9 @@ use today, and the owner is told.
   (`data-ran-booster-package-saved`) until P7 retires that bridge.
 - **Replay.** A request-scoped result is read from the signed address, so a
   reload shows it again until the address is cleaned. On a full page load the
-  host strips the result arguments once it has taken an item (success or
-  pointer). Package results delivered by a swap are cleaned by the enhanced
+  host strips the result arguments once it has taken a success. A pointer
+  to an inline warning or error does not strip them, so reload and Back keep
+  that persistent record, and the same pointer shows again on reload. Package results delivered by a swap are cleaned by the enhanced
   mutation handler. Paths that still replay: a full page load with no
   JavaScript, and a load where the host cannot show the item (the static result
   stays by design, R15). Check releases and release settings use the one-shot

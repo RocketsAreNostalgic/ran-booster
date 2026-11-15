@@ -1245,7 +1245,6 @@ class Booster {
 		);
 	}
 
-	/** Register the one announcement path for Booster status and error messages. */
 	/** The one snackbar host, shared by the package screens and the Extensions result. */
 	private function register_feedback_script(): void {
 		$feedback_script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-feedback.js';
@@ -1259,6 +1258,7 @@ class Booster {
 		wp_set_script_translations( 'ran-booster-feedback', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 	}
 
+	/** Register the one announcement path for Booster status and error messages. */
 	private function register_announce_script(): void {
 		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-announce.js';
 		wp_register_script( 'ran-booster-announce', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-announce.js', array( 'wp-a11y' ), $this->asset_version( $path ), true );

@@ -365,7 +365,11 @@
 							: null;
 					const id = item.getAttribute('data-feedback-key');
 					if (show(text, { intent, id, target, action })) {
-						taken++;
+						// Only a success is consumed with its address marker; a
+						// pointer leaves its persistent inline record replayable.
+						if (timed(intent)) {
+							taken++;
+						}
 						item.remove();
 					} else if (
 						timed(intent) &&
@@ -387,7 +391,7 @@
 	}
 
 	// A result reached by a full page load carries its closed marker in the
-	// address. Once the host has taken an item, strip the marker so a reload
+	// address. Once the host has taken a success, strip the marker so a reload
 	// does not show the result again. Swaps are left to the mutation handler.
 	const RESULT_ARGUMENT =
 		/^(ran_booster_result|ran_booster_package|_ran_booster_notice_nonce|ran_booster_extension_result|ran_booster_extension_id|_ran_booster_bulk_notice_nonce|ran_booster_bulk_.+)$/;

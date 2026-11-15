@@ -3616,24 +3616,31 @@ function stubDocument(nodes) {
 		'#wpbody-content': 'wpbody',
 		'.wrap.ran-booster-admin': 'frame',
 	};
-	const descendants = {
-		'.notice-error': (node) => node.classes?.includes('notice-error'),
-		'[data-intent="error"]': (node) => node.intent === 'error',
+	// A node names its classes and attributes; `:not([attr])` chains exclude.
+	const matches = (token, node) => {
+		const [base, ...nots] = token.split(':not(');
+		const attribute = (part) => part.replace(/\)$/, '').slice(1, -1);
+		const has = (part) => {
+			const [name, value] = part.split('=');
+			return value === undefined
+				? name in (node.attributes ?? {})
+				: node.attributes?.[name] === value.replaceAll('"', '');
+		};
+		const known = base.startsWith('.')
+			? node.classes?.includes(base.slice(1))
+			: has(base.slice(1, -1));
+		return known && nots.every((part) => !has(attribute(part)));
 	};
 	return {
 		querySelectorAll: () => [],
 		querySelector(selector) {
 			const parts = selector
-				.split(',')
-				.map((part) => part.trim().split(' '));
-			for (const [ancestor, descendant] of parts) {
+				.split(/,\s*/)
+				.map((part) => part.trim().split(/ (.+)/).slice(0, 2));
+			for (const [ancestor] of parts) {
 				assert.ok(
 					ancestors[ancestor],
 					`Unexpected ancestor ${ancestor}`
-				);
-				assert.ok(
-					descendants[descendant],
-					`Unexpected selector ${descendant}`
 				);
 			}
 			return (
@@ -3641,7 +3648,7 @@ function stubDocument(nodes) {
 					parts.some(
 						([ancestor, descendant]) =>
 							node.under.includes(ancestors[ancestor]) &&
-							descendants[descendant](node)
+							matches(descendant, node)
 					)
 				) ?? null
 			);
@@ -3705,7 +3712,10 @@ test('an unsigned, edit or already-managed package result URL is not treated as 
 test('an error in the Booster frame keeps a signed URL from counting as a confirmation', () => {
 	for (const node of [
 		{ under: ['wpbody', 'frame'], classes: ['notice-error'] },
-		{ under: ['wpbody', 'frame'], intent: 'error' },
+		{
+			under: ['wpbody', 'frame'],
+			attributes: { 'data-intent': 'error' },
+		},
 	]) {
 		const { result, replaced } = runCleanPackageResultUrl({
 			href: signed('install'),
@@ -3713,6 +3723,34 @@ test('an error in the Booster frame keeps a signed URL from counting as a confir
 		});
 		assert.equal(result, false);
 		assert.deepEqual(replaced, []);
+	}
+});
+
+test('a pointer item and unrelated persistent in-frame errors do not block a genuine confirmation', () => {
+	for (const node of [
+		{
+			under: ['wpbody', 'frame'],
+			attributes: {
+				'data-intent': 'error',
+				'data-feedback-target': 'ran-booster-feedback-bulk-error',
+			},
+		},
+		{
+			under: ['wpbody', 'frame'],
+			classes: ['notice-error'],
+			attributes: { 'data-ran-booster-provider-storage-notice': '' },
+		},
+		{
+			under: ['wpbody', 'frame'],
+			classes: ['notice-error'],
+			attributes: { 'data-ran-booster-assistance-site-notice': '' },
+		},
+	]) {
+		const { result } = runCleanPackageResultUrl({
+			href: signed('install'),
+			nodes: [node],
+		});
+		assert.equal(result, true);
 	}
 });
 

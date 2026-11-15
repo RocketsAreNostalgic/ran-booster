@@ -146,6 +146,14 @@ final class BoosterAssetsTest extends TestCase {
 			array( 'wp-a11y', 'wp-i18n', 'wp-element', 'wp-components' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-feedback']['dependencies']
 		);
+		self::assertContains(
+			array(
+				'handle' => 'ran-booster-feedback',
+				'domain' => 'ran-booster',
+				'path'   => dirname( __DIR__, 2 ) . '/languages',
+			),
+			$GLOBALS['ran_booster_asset_test_script_translations']
+		);
 		self::assertSame( array( 'wp-a11y' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-announce']['dependencies'] );
 		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extensions']['footer'] );
 		self::assertSame(

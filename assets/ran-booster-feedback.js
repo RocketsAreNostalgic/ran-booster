@@ -235,7 +235,6 @@
 	function show(message, options = {}) {
 		const { intent = 'success', target = null, action = null } = options;
 		const text = typeof message === 'string' ? message.trim() : '';
-		const id = options.id || text;
 		if (
 			!text ||
 			!INTENTS.includes(intent) ||
@@ -244,40 +243,18 @@
 			return false;
 		}
 		prune();
-		let duplicate = state?.items.find((item) => item.id === id);
-		if (duplicate && duplicate.intent !== intent) {
-			// The same key can arrive as a success and as a warning (a bulk
-			// result with and without skips). Intent decides the action, target
-			// and timer, so the old item goes and a fresh one is built below.
-			restoreFocus(duplicate.uid);
-			window.clearTimeout(duplicate.timer);
-			state.items = state.items.filter((item) => item !== duplicate);
-			duplicate = undefined;
-		}
+		// A repeat is the same result only when key, intent and copy all match;
+		// any other message is its own item.
+		const id = [options.id || '', intent, text].join('\u0000');
+		const duplicate = state?.items.find((item) => item.id === id);
 		if (duplicate) {
 			state.returnControl = options.returnControl || state.returnControl;
 			duplicate.remaining = DURATION;
-			// The key is a closed code, so a later result with the same key can
-			// carry different fixed copy (Disabled, then Automatic): the one
-			// item shows the latest.
-			const changed = duplicate.message !== text;
-			duplicate.message = text;
 			if (timed(intent)) {
-				// The component speaks on mount and when its text changes; an
-				// unchanged repeat does not re-render, so it is spoken here.
-				if (!changed) {
-					window.wp?.a11y?.speak?.(text, 'polite');
-				}
+				// The component speaks only on mount; a repeat is spoken here.
+				window.wp?.a11y?.speak?.(text, 'polite');
 			} else {
 				duplicate.target = target;
-			}
-			if (changed) {
-				try {
-					render();
-				} catch {
-					dispose();
-					return false;
-				}
 			}
 			if (duplicate.timer) {
 				arm(duplicate);

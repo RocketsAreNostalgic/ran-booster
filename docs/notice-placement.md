@@ -156,11 +156,10 @@ hidden by CSS by default, so only the inline notice (with its own `role`) is vis
   one, a prerender and a missing or empty `performance.getEntriesByType`. A
   bfcache restore has no replay handling: the old page returns as it was. The
   signed nonce is not single-use.
-- **Repeated keys.** The host keeps one snackbar per key. A repeat with the same
-  intent resets the timer and shows the latest copy (the component announces a
-  changed message itself). A repeat with a different intent, such as the bulk
-  plugin state as a success and then as a warning, replaces the item so its
-  action, target and timer are fresh.
+- **Repeated results.** The host identifies an item by key, intent and text. An
+  identical repeat resets the timer and does not stack. A different message,
+  such as two bulk policy changes or the bulk plugin state as a success and then
+  as a warning, is its own item, bounded by the queue limit of three.
 - **Extensions page.** It loads the shared host (`ran-booster-feedback`, which
   depends on `wp-components`) so its result item is taken there too.
 

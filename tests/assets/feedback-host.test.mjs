@@ -637,10 +637,86 @@ test('the same id shows once and restarts the timer instead of stacking', () => 
 	env.tick(1);
 	assert.equal(env.notices.length, 0);
 	env.feedback.show('Other copy.', { id: 'same' });
-	env.feedback.show('Different copy.', { id: 'same' });
+	env.feedback.show('Other copy.', { id: 'same' });
 	assert.equal(env.notices.length, 1);
-	// One item per key; a later result with different fixed copy replaces the text.
-	assert.equal(env.notices[0].content, 'Different copy.');
+	assert.equal(env.notices[0].content, 'Other copy.');
+});
+
+test('a different message with the same key is its own item and an identical repeat still dedupes', () => {
+	const env = boot();
+	env.feedback.show('Changed 2 plugins to Disabled.', { id: 'bulk_policy' });
+	env.tick(4000);
+	env.feedback.show('Changed 2 plugins to Automatic.', {
+		id: 'bulk_policy',
+	});
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Changed 2 plugins to Disabled.', 'Changed 2 plugins to Automatic.']
+	);
+	// An identical repeat only resets that item's timer.
+	env.tick(4000);
+	env.feedback.show('Changed 2 plugins to Disabled.', { id: 'bulk_policy' });
+	assert.equal(env.notices.length, 2);
+	env.tick(DURATION - 1);
+	assert.equal(env.notices.length, 1, 'The untouched item expired first.');
+	assert.equal(env.notices[0].content, 'Changed 2 plugins to Disabled.');
+	env.tick(1);
+	assert.equal(env.notices.length, 0);
+});
+
+test('a success then a warning with the same key are two items, the warning a persistent pointer', () => {
+	const env = boot();
+	const target = env.target('plugins-result', {
+		matches: () => true,
+		setAttribute() {},
+	});
+	env.feedback.show('Changed 2 plugins to Enabled.', {
+		id: 'bulk_plugin_state',
+	});
+	assert.equal(
+		env.feedback.show('Changed 1 plugin; skipped 1.', {
+			id: 'bulk_plugin_state',
+			intent: 'warning',
+			target,
+		}),
+		true
+	);
+	assert.equal(env.notices.length, 2);
+	assert.match(env.notices[0].className, /--success/);
+	assert.deepEqual(env.notices[0].actions, []);
+	assert.match(env.notices[1].className, /--warning/);
+	assert.equal(env.notices[1].actions[0].label, 'Show details');
+	env.tick(DURATION);
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Changed 1 plugin; skipped 1.'],
+		'Only the success dismissed itself.'
+	);
+});
+
+test('two pointers with the same key and different copy both stay until dismissed and share the one target', () => {
+	const env = boot();
+	const target = env.target('plugins-result', {
+		matches: () => true,
+		setAttribute() {},
+	});
+	env.feedback.show('First.', { id: 'bulk_error', intent: 'error', target });
+	env.feedback.show('Second.', { id: 'bulk_error', intent: 'error', target });
+	assert.equal(env.notices.length, 2);
+	assert.equal(env.pendingTimers(), 0);
+	env.tick(DURATION * 3);
+	assert.equal(env.notices.length, 2);
+});
+
+test('different messages with the same key respect the queue limit', () => {
+	const env = boot();
+	for (const text of ['A.', 'B.', 'C.', 'D.']) {
+		env.feedback.show(text, { id: 'bulk_policy' });
+	}
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['B.', 'C.', 'D.']
+	);
 });
 
 test('a success may carry one link action built by the caller', () => {
@@ -1615,119 +1691,4 @@ test('a real PerformanceNavigationTiming entry marks a reload as a replay', () =
 	env.run();
 	assert.equal(env.notices.length, 0);
 	assert.equal(label.hidden, false);
-});
-
-test('a later result with the same key shows its own text in the one item, and an identical repeat only resets the timer', () => {
-	const env = boot();
-	env.feedback.show('Changed 2 plugins to Disabled.', { id: 'bulk_policy' });
-	env.tick(4000);
-	assert.equal(
-		env.feedback.show('Changed 2 plugins to Automatic.', {
-			id: 'bulk_policy',
-		}),
-		true
-	);
-	assert.deepEqual(
-		env.notices.map((notice) => notice.content),
-		['Changed 2 plugins to Automatic.']
-	);
-	// The timer restarted from the later result.
-	env.tick(DURATION - 1);
-	assert.equal(env.notices.length, 1);
-	env.feedback.show('Changed 2 plugins to Automatic.', { id: 'bulk_policy' });
-	assert.equal(env.notices.length, 1);
-	env.tick(DURATION - 1);
-	assert.equal(env.notices.length, 1);
-	env.tick(1);
-	assert.equal(env.notices.length, 0);
-});
-
-test('a static item with the same key and different copy updates the visible item', () => {
-	const env = boot();
-	env.feedback.show('Changed 2 plugins to Disabled.', { id: 'bulk_policy' });
-	env.staticContainer([
-		{
-			key: 'bulk_policy',
-			intent: 'success',
-			text: 'Changed 2 plugins to Automatic.',
-		},
-	]);
-	env.feedback.consume();
-	assert.deepEqual(
-		env.notices.map((notice) => notice.content),
-		['Changed 2 plugins to Automatic.']
-	);
-});
-
-function pointerTarget(env) {
-	return env.target('plugins-result', {
-		matches: () => true,
-		setAttribute() {},
-	});
-}
-
-test('a warning replaces a success with the same key: one item with the warning intent, a Show details action and no timer', () => {
-	const env = boot();
-	const target = pointerTarget(env);
-	env.feedback.show('Changed 2 plugins to Enabled.', {
-		id: 'bulk_plugin_state',
-	});
-	env.tick(3000);
-	assert.equal(
-		env.feedback.show('Changed 1 plugin; skipped 1.', {
-			id: 'bulk_plugin_state',
-			intent: 'warning',
-			target,
-		}),
-		true
-	);
-	assert.equal(env.notices.length, 1);
-	const [notice] = env.notices;
-	assert.match(notice.className, /ran-booster-snackbar--warning/);
-	assert.equal(notice.content, 'Changed 1 plugin; skipped 1.');
-	assert.equal(notice.actions.length, 1);
-	assert.equal(notice.actions[0].label, 'Show details');
-	assert.equal(env.pendingTimers(), 0);
-	env.tick(DURATION * 3);
-	assert.equal(env.notices.length, 1, 'A pointer never dismisses itself.');
-});
-
-test('a success replaces a warning with the same key: one item with the success intent, no action and a timer that dismisses it', () => {
-	const env = boot();
-	const target = pointerTarget(env);
-	env.feedback.show('Changed 1 plugin; skipped 1.', {
-		id: 'bulk_plugin_state',
-		intent: 'warning',
-		target,
-	});
-	assert.equal(env.pendingTimers(), 0);
-	assert.equal(
-		env.feedback.show('Changed 2 plugins to Enabled.', {
-			id: 'bulk_plugin_state',
-		}),
-		true
-	);
-	assert.equal(env.notices.length, 1);
-	const [notice] = env.notices;
-	assert.match(notice.className, /ran-booster-snackbar--success/);
-	assert.equal(notice.content, 'Changed 2 plugins to Enabled.');
-	assert.deepEqual(notice.actions, []);
-	assert.equal(env.pendingTimers(), 1);
-	env.tick(DURATION);
-	assert.equal(env.notices.length, 0);
-});
-
-test('a changed text is not also spoken by hand, an unchanged repeat is', () => {
-	const env = boot();
-	const spoken = [];
-	env.window.wp.a11y = { speak: (text) => spoken.push(text) };
-	env.feedback.show('Changed 2 plugins to Disabled.', { id: 'bulk_policy' });
-	env.feedback.show('Changed 2 plugins to Automatic.', {
-		id: 'bulk_policy',
-	});
-	assert.deepEqual(spoken, [], 'The component speaks a changed message.');
-	env.feedback.show('Changed 2 plugins to Automatic.', {
-		id: 'bulk_policy',
-	});
-	assert.deepEqual(spoken, ['Changed 2 plugins to Automatic.']);
 });

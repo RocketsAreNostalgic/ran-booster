@@ -1346,3 +1346,57 @@ test('a failing replaceState never throws out of the host', () => {
 	assert.doesNotThrow(() => env.run());
 	assert.equal(env.notices.length, 1);
 });
+
+test('a success beside a failure pointer stays static, the pointer is taken and the address is kept', () => {
+	const env = build();
+	const replaced = [];
+	env.window.history = {
+		state: null,
+		replaceState: (state, title, url) => replaced.push(String(url)),
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?ran_booster_result=edit-unverified&_ran_booster_notice_nonce=n';
+	env.target('ran-booster-feedback-package-edit-unverified');
+	const container = env.staticContainer([
+		{ key: 'package_install', intent: 'success', text: 'Installed.' },
+		{
+			key: 'package_edit_unverified',
+			intent: 'warning',
+			text: 'Check skipped.',
+			target: 'ran-booster-feedback-package-edit-unverified',
+		},
+	]);
+	env.run();
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Check skipped.']
+	);
+	assert.deepEqual(
+		container.items.map((item) => item.getAttribute('data-feedback-key')),
+		['package_install']
+	);
+	assert.deepEqual(replaced, []);
+});
+
+test('a pointer whose target is missing stays unshown and the address is kept', () => {
+	const env = build();
+	const replaced = [];
+	env.window.history = {
+		state: null,
+		replaceState: (state, title, url) => replaced.push(String(url)),
+	};
+	env.window.location.href =
+		'https://example.test/wp-admin/admin.php?ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n';
+	const container = env.staticContainer([
+		{
+			key: 'bulk_error',
+			intent: 'error',
+			text: 'Stale.',
+			target: 'no-such-element',
+		},
+	]);
+	env.run();
+	assert.equal(env.notices.length, 0);
+	assert.equal(container.items.length, 1);
+	assert.deepEqual(replaced, []);
+});

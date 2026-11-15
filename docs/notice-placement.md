@@ -114,3 +114,48 @@ the signed inline result.
 - **Limits.** With the settings-return hash anchor the static flash prints at the
   top of the page, above the viewport, as the old top notice did. A failed
   `update_user_meta()` silently skips the flash; the inline status remains.
+
+## Request-scoped feedback items (#755 P3)
+
+A producer whose result is already known in the same response, from a verified
+closed token, needs no flash. Package results (install, update, unlink, unlink
+and delete), bulk results and extension install and activate render their item
+directly into a `div.ran-booster-feedback` container of their own (one per
+source; the flash container may also be present, and the host consumes all of
+them), in the same response as the inline notice. A warning or error pointer is
+hidden by CSS by default, so only the inline notice (with its own `role`) is
+visible, with or without JavaScript. The host reads the hidden item and shows
+the snackbar.
+
+- **Dashboard messages.** A message carries an optional closed `feedback` code
+  (lowercase letters, digits and underscores). `views/notices.php` renders a
+  confirmed `success` with a code as a feedback item instead of a notice. A
+  `warning` or `error` with a code stays a notice with the id
+  `ran-booster-feedback-<code>` and gets a pointer item whose
+  `data-feedback-target` is that id. Pointer text is the notice text without markup.
+- **Qualified success (R12).** If any warning or error shares the response, a
+  coded success stays a static notice, and the host never shows it.
+- **Left alone.** Edit saves keep the enhanced save path, which already shows
+  through the host and still marks `data-ran-booster-package-saved`. The bulk
+  update queue summary is the live update progress region (R9) and keeps its
+  notice. Webhook results and add-on outcomes use the signed outcome flow (P4).
+  Release workflow results still carry text in the URL (R16). Package operation
+  failures reach the page through region swaps that rebuild the notice, so they
+  keep the inline record without a pointer until a target survives the swap.
+- **Result addresses.** A signed address authenticates the earlier action, not
+  the present condition. On a full page load the host strips the result
+  arguments on first render whenever it takes any item (success, pointer or
+  info), with `history.replaceState`, so a reload or Back shows no earlier
+  result. A failure's inline record stays in the page until the next load, and
+  a pointer that is not shown does not count as taken, so the address is left
+  as it is. After a swap, the enhanced mutation
+  handler removes the package result arguments. Without JavaScript, or where the
+  host cannot show the item, the server cannot strip, so a reload repeats the
+  result unlabelled. The signed nonce is not single-use.
+- **Repeated results.** The host identifies an item by key, intent and text. An
+  identical repeat resets the timer and does not stack. A different message,
+  such as two bulk policy changes or the bulk plugin state as a success and then
+  as a warning, is its own item, bounded by the queue limit of three.
+- **Extensions page.** It loads the shared host (`ran-booster-feedback`, which
+  depends on `wp-components`) so its result item is taken there too.
+

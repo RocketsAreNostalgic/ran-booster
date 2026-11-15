@@ -123,7 +123,9 @@ and delete), bulk results and extension install and activate render their item
 directly into a `div.ran-booster-feedback` container of their own (one per
 source; the flash container may also be present, and the host consumes all of
 them), in the same response as the inline notice. A warning or error pointer is
-hidden by CSS by default, so only the inline notice (with its own `role`) is visible, with or without JavaScript. The host reads the hidden item and shows the snackbar.
+hidden by CSS by default, so only the inline notice (with its own `role`) is
+visible, with or without JavaScript. The host reads the hidden item and shows
+the snackbar.
 
 - **Dashboard messages.** A message carries an optional closed `feedback` code
   (lowercase letters, digits and underscores). `views/notices.php` renders a
@@ -144,8 +146,9 @@ hidden by CSS by default, so only the inline notice (with its own `role`) is vis
   the present condition. On a full page load the host strips the result
   arguments on first render whenever it takes any item (success, pointer or
   info), with `history.replaceState`, so a reload or Back shows no earlier
-  result. A failure's inline record stays in the page, and a pointer that
-  cannot be shown keeps its address. After a swap, the enhanced mutation
+  result. A failure's inline record stays in the page until the next load, and
+  a pointer that is not shown does not count as taken, so the address is left
+  as it is. After a swap, the enhanced mutation
   handler removes the package result arguments. Without JavaScript, or where the
   host cannot show the item, the server cannot strip, so a reload repeats the
   result unlabelled. The signed nonce is not single-use.

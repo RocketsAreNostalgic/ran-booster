@@ -1492,6 +1492,9 @@ test('a taken info item strips the address too', () => {
 	assert.equal(replaced.length, 1);
 });
 
+// Documentation-level check, not a pin: a stripped address has no items, so
+// the old host passed this too. The failure-pointer and mixed-container tests
+// above are the pins.
 test('a reload or Back to the stripped address shows no result and no snackbar', () => {
 	const { env, replaced } = loadEnv(`${BASE}&package=a`, []);
 	env.run();
@@ -1511,7 +1514,9 @@ test('a page with no result argument and a flash item is unaffected', () => {
 	assert.deepEqual(replaced, []);
 });
 
-test('an unshown pointer keeps its address so the unshown result is not lost', () => {
+// A pointer with no target is not shown, so it does not count as taken and the
+// address is left as it is.
+test('an unshown pointer does not count as taken and the address is left alone', () => {
 	const { env, replaced } = loadEnv(FAILURE_URL, [
 		{ ...POINTER, target: 'no-such-element' },
 	]);

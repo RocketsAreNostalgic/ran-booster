@@ -396,6 +396,16 @@ use today, and the owner is told.
   finished bulk update does not produce a snackbar and no Activity link is
   emitted. This deviates from R8 and R9 and is a named follow-up awaiting an
   owner decision; P3 does not change the behaviour.
+- **Failure records last until the next load (narrows R3 and R4).** Because the
+  result address is stripped on first render, the inline failure or warning
+  record lasts only until the next reload or navigation, not until the person
+  resolves or dismisses it. The reason is that an old signed result must never
+  read as the current condition. None of the coded failures P3 touches
+  (`bulk_error`, the `bulk_plugin_state` warning, `package_already_managed`,
+  `package_edit_unverified`, the extension result warning) is backed by an
+  Activity row. Only a diagnostic log line persists, and none for extensions.
+  A failure that needs a durable record belongs in Activity, through the
+  current-state work tracked in #951 and #948.
 - **Edit saves.** They still reach the host through the enhanced save path
   (`data-ran-booster-package-saved`) until P7 retires that bridge.
 - **Result addresses (earlier results never replay).** A signed request result
@@ -405,8 +415,9 @@ use today, and the owner is told.
   using `history.replaceState` so the history state and the other arguments are
   kept. A reload or Back to that entry shows no earlier result and no
   snackbar. A failure's inline record stays in the page until the person
-  leaves it (R4) and its pointer is shown once. A pointer that cannot be shown
-  keeps its address, because its result would otherwise be lost.
+  leaves it (R4) and its pointer is shown once. A pointer that is not shown
+  (no host, no inline target, no room) does not count as taken, so the address
+  is left as it is.
   - Still replays, unlabelled, because the server cannot strip: no JavaScript,
     or a host that cannot run or show the item. A bookmarked, pasted or
     followed signed address is a new load and shows its result. The signed

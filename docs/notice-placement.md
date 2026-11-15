@@ -120,8 +120,10 @@ the signed inline result.
 A producer whose result is already known in the same response, from a verified
 closed token, needs no flash. Package results (install, update, unlink, unlink
 and delete), bulk results and extension install and activate render their item
-directly into the same `div.ran-booster-feedback` container, in the same
-response as the inline notice.
+directly into a `div.ran-booster-feedback` container of their own (one per
+source; the flash container may also be present, and the host consumes all of
+them), in the same response as the inline notice. A warning or error pointer is
+hidden by CSS until the host takes it, so without JavaScript only the notice is visible.
 
 - **Dashboard messages.** A message carries an optional closed `feedback` code
   (lowercase letters, digits and underscores). `views/notices.php` renders a

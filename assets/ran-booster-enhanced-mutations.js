@@ -903,10 +903,16 @@
 			const canonicalUrl = new URL(window.location.href);
 			// A confirmed result is a static notice or, for the snackbar host,
 			// a feedback item it removes once shown; the signed URL marks both.
+			// A rendered failure means the server rejected the marker, so it
+			// cannot count as a confirmation.
 			const confirmed =
 				/^(install|update|unlink|unlink-and-delete)$/.test(
 					canonicalUrl.searchParams.get('ran_booster_result') || ''
-				) && canonicalUrl.searchParams.has('_ran_booster_notice_nonce');
+				) &&
+				canonicalUrl.searchParams.has('_ran_booster_notice_nonce') &&
+				!document.querySelector(
+					'#wpbody-content .notice-error, #wpbody-content [data-intent="error"]'
+				);
 			const notices = Array.from(
 				document.querySelectorAll(
 					'#wpbody-content [data-ran-booster-package-success]:not([data-ran-booster-update-summary])'

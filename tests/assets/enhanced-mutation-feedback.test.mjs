@@ -3608,3 +3608,68 @@ test('credential transport errors update only the child Notice and retain their 
 		{ message: result.textContent, type: 'assertive' },
 	]);
 });
+
+function runCleanPackageResultUrl({ href, rendered = [], errors = false }) {
+	const replaced = [];
+	const run = new Function(
+		'window',
+		'document',
+		`${extractFunction('cleanPackageResultUrl').replace(/^\t/gm, '')}\nreturn cleanPackageResultUrl();`
+	);
+	const result = run(
+		{
+			location: { href },
+			history: {
+				state: null,
+				replaceState: (state, title, url) => replaced.push(String(url)),
+			},
+		},
+		{
+			querySelectorAll: () => rendered,
+			querySelector: () => (errors ? {} : null),
+		}
+	);
+	return { result, replaced };
+}
+
+const signed = (operation) =>
+	`https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_result=${operation}&ran_booster_package=a%2Fb.php&_ran_booster_notice_nonce=abc123`;
+
+test('a signed confirmed package result is cleaned even after the host removed its item', () => {
+	for (const operation of [
+		'install',
+		'update',
+		'unlink',
+		'unlink-and-delete',
+	]) {
+		const { result, replaced } = runCleanPackageResultUrl({
+			href: signed(operation),
+		});
+		assert.equal(result, true, operation);
+		assert.equal(replaced.length, 1, operation);
+		assert.doesNotMatch(replaced[0], /ran_booster_result|_notice_nonce/);
+		assert.match(replaced[0], /page=ran-booster-plugins/);
+	}
+});
+
+test('an unsigned, edit or already-managed package result URL is not treated as a confirmation', () => {
+	for (const href of [
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+		'https://example.test/wp-admin/admin.php?ran_booster_result=install',
+		signed('edit'),
+		signed('already-managed'),
+	]) {
+		const { result, replaced } = runCleanPackageResultUrl({ href });
+		assert.equal(result, false, href);
+		assert.deepEqual(replaced, [], href);
+	}
+});
+
+test('a rendered failure keeps a tampered signed URL from counting as a confirmation', () => {
+	const { result, replaced } = runCleanPackageResultUrl({
+		href: signed('install'),
+		errors: true,
+	});
+	assert.equal(result, false);
+	assert.deepEqual(replaced, []);
+});

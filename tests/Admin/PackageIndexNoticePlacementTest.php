@@ -168,6 +168,22 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringNotContainsString( 'data-intent="success"', $html );
 	}
 
+	public function test_an_info_message_with_a_code_stands_alone_without_id_or_pointer(): void {
+		$html = $this->notices(
+			array(
+				array(
+					'type'     => 'info',
+					'message'  => 'Nothing changed.',
+					'feedback' => 'bulk_plugin_state',
+				),
+			)
+		);
+
+		self::assertStringContainsString( 'notice notice-info inline', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-feedback', $html );
+		self::assertStringNotContainsString( ' id="ran-booster-feedback-', $html );
+	}
+
 	public function test_a_message_without_a_closed_feedback_code_keeps_its_notice_and_adds_no_item(): void {
 		$html = $this->notices(
 			array(

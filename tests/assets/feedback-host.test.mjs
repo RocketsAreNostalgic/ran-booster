@@ -1233,3 +1233,17 @@ test('a snackbar that did not render is refused and torn down', () => {
 	assert.equal(env.host.removed, true);
 	assert.equal(env.root.unmounted, true);
 });
+
+test('a pointer to an inline notice is hidden until the host takes it', () => {
+	const css = fs.readFileSync(
+		new URL(
+			'../../assets/ran-booster/25-admin-primitives.css',
+			import.meta.url
+		),
+		'utf8'
+	);
+	assert.match(
+		css,
+		/\.ran-booster-feedback__item\[data-feedback-target\]\[data-intent="error"\],\s*\.ran-booster-feedback__item\[data-feedback-target\]\[data-intent="warning"\]\s*\{\s*display: none;/
+	);
+});

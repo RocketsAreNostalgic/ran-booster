@@ -26,7 +26,7 @@ foreach ( $notice_messages as $message ) {
 			$feedback_items .= \RAN\Admin\Feedback\FeedbackFlash::item( $feedback_key, 'success', wp_strip_all_tags( $message['message'] ) );
 			continue;
 		}
-		$notice_id = '' !== $feedback_key && 'success' !== $message['type'] ? 'ran-booster-feedback-' . str_replace( '_', '-', $feedback_key ) : '';
+		$notice_id = '' !== $feedback_key && in_array( $message['type'], array( 'warning', 'error' ), true ) ? 'ran-booster-feedback-' . str_replace( '_', '-', $feedback_key ) : '';
 		if ( '' !== $notice_id ) {
 			$feedback_items .= \RAN\Admin\Feedback\FeedbackFlash::item( $feedback_key, $message['type'], wp_strip_all_tags( $message['message'] ), $notice_id );
 		}

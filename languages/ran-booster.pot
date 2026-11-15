@@ -1421,81 +1421,85 @@ msgstr ""
 msgid "An add-on guide is temporarily unavailable. Check plugin compatibility and the error log."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:102
+#: RAN/Admin/Feedback/FeedbackFlash.php:94
+msgid "Result of an earlier action."
+msgstr ""
+
+#: RAN/Admin/Feedback/FeedbackFlash.php:110
 msgid "Release check complete."
 msgstr ""
 
 #. translators: %s: release version.
-#: RAN/Admin/Feedback/FeedbackFlash.php:120
+#: RAN/Admin/Feedback/FeedbackFlash.php:128
 #, php-format
 msgid "Newer release %s available. Updates are off for this package."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:121
+#: RAN/Admin/Feedback/FeedbackFlash.php:129
 msgid "Newer release available. Updates are off for this package."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:124
+#: RAN/Admin/Feedback/FeedbackFlash.php:132
 msgid "Checked a moment ago."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:125
+#: RAN/Admin/Feedback/FeedbackFlash.php:133
 msgid "Checked: no newer release. Updates are off for this package."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:126
+#: RAN/Admin/Feedback/FeedbackFlash.php:134
 msgid "Check not run. Updates are off for this package."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:126
+#: RAN/Admin/Feedback/FeedbackFlash.php:134
 msgid "Nothing is wrong. Turn updates on in the package settings to check for releases."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:127
+#: RAN/Admin/Feedback/FeedbackFlash.php:135
 msgid "Check not run. Site configuration turns updates off."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:127
+#: RAN/Admin/Feedback/FeedbackFlash.php:135
 msgid "Nothing is wrong. Site configuration blocks updates for every package; change it there to allow checks."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:128
+#: RAN/Admin/Feedback/FeedbackFlash.php:136
 msgid "Releases were not checked. Use Check releases to retry."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:129
+#: RAN/Admin/Feedback/FeedbackFlash.php:137
 msgid "The newest release cannot be used."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:129
+#: RAN/Admin/Feedback/FeedbackFlash.php:137
 msgid "It did not pass Booster's eligibility checks. Activity records the reason."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:130
+#: RAN/Admin/Feedback/FeedbackFlash.php:138
 msgid "The release check failed."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:130
+#: RAN/Admin/Feedback/FeedbackFlash.php:138
 msgid "Booster could not finish the check. Try again; if it repeats, see Activity."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:131
+#: RAN/Admin/Feedback/FeedbackFlash.php:139
 msgid "The release check could not start. Review this package’s published release settings, then retry."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:143
+#: RAN/Admin/Feedback/FeedbackFlash.php:151
 msgid "Release tracking enabled."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:144
+#: RAN/Admin/Feedback/FeedbackFlash.php:152
 msgid "Release track changed. The installed package was not changed and Automatic was reset to Manual."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:145
+#: RAN/Admin/Feedback/FeedbackFlash.php:153
 msgid "Branch-based package management is restored."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:158
+#: RAN/Admin/Feedback/FeedbackFlash.php:166
 msgid "Release check complete. No newer eligible release was found."
 msgstr ""
 

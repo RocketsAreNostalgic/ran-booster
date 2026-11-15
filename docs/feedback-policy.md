@@ -311,7 +311,7 @@ coding, per `AGENTS.md`.
 | P0 | This policy and the exception record | 0 | 0 | this document | none |
 | P1 | Transport: the per-user one-shot flash, one consume point on Booster screens, the static notice fallback, Check releases wired end to end as the first producer. It leaves message text in the signed-outcome URL (R16 is P3 and P4) and emits no Activity link (P3 adds it with the queued producers). Check releases emits `data-feedback-target` and a pointer for every warning and error result (an info result stands alone) | about +110 PHP, +27 CSS | about +310 | about +26 (`notice-placement.md`) | P0 |
 | P2 | One client host (`ranBoosterFeedback.show()`): generalise `presentGeneralSnackbar`, queue of 3, Booster-owned timer and pause, CSS-only logical positioning, mobile gutters, dedupe against the static element, remove the JS centre measurement, and the intent styling in Visual treatment (success, info, error pointer, warning; Notice and Badge tokens, CSS over the host, no new component, visual check per intent) | about +80 / -110 JS, +30 CSS | about +180 | about +20 | P0 and the interface contract (parallel with P1) |
-| P3 | Move existing producers on current strings: package install, update, edit, unlink, delete, reinstall, update and remove operations, bulk with Activity link, other release results, extension install and activate, webhook results (webhook results moved to P4 with the signed outcome flow). Each adopts `data-feedback-target` and a pointer for its non-success results, and the Activity link where results are queued. Failures stay inline | about +60 / -120 | about +150 | about +10 | P1, P2 |
+| P3 | Move existing producers on current strings: package install, update, edit, unlink, delete, reinstall, update and remove operations, bulk with Activity link, other release results, extension install and activate, webhook results (webhook results moved to P4 with the signed outcome flow). Each adopts `data-feedback-target` and a pointer for its non-success results, and the Activity link where results are queued. Failures stay inline. A replayed result (reload or Back to a signed address) is presented as the earlier action's result, never as a new snackbar | about +60 / -120 | about +150 | about +10 | P1, P2 |
 | P4 | Signed outcome and add-on path: SUCCESS and ACCEPTED use the transport, and message text leaves the signed-outcome URL (R16); document that add-ons get the snackbar through `respond()` | about +30 / -90 | about +80 | about +60 (`enhanced-admin-interactions.md`) | P1 |
 | P5 | Copy integration: success titles from the one code to copy function; failure copy through it; `FailureText` display mode for Activity detail only | about +60 | about +120 | about +30 | #859 landed and the `ran/updater-support` bump |
 | P6 | Evidence only: installed-ZIP acceptance on desktop and mobile, RTL, JavaScript on and off, reduced motion, keyboard, screen reader, single site and multisite | 0 | 0 | about +80 (`docs/evidence/`) | P1 to P5 |
@@ -398,16 +398,27 @@ use today, and the owner is told.
   owner decision; P3 does not change the behaviour.
 - **Edit saves.** They still reach the host through the enhanced save path
   (`data-ran-booster-package-saved`) until P7 retires that bridge.
-- **Replay.** A request-scoped result is read from the signed address, so a
-  reload shows it again until the address is cleaned. On a full page load the
-  host strips the result arguments once it has taken a success. A pointer
-  to an inline warning or error does not strip them, so reload and Back keep
-  that persistent record, and the same pointer shows again on reload. Package
-  results delivered by a swap are cleaned by the enhanced mutation handler.
-  Paths that still replay: a full page load with no JavaScript, and a load
-  where the host cannot show the item (the static result stays by design,
-  R15). Check releases and release settings use the one-shot flash and do
-  not replay.
+- **Replay (historical result).** A signed request result authenticates the
+  earlier action, not the present condition: a later action may have resolved
+  or superseded it. A request-scoped result is read from the address, so a
+  reload or Back can show it again. The host tells a replay from a fresh
+  redirect by the navigation type (`reload` or `back_forward`) together with a
+  result argument still in the address. On a replay it shows no snackbar, so
+  nothing reads as new, and it reveals the fixed Core label "Result of an
+  earlier action." inside the inline record the pointer led to
+  (`FeedbackFlash::earlier_result()`, the one copy source). A replayed success
+  is dropped and its address stripped. The inline failure or warning record
+  keeps its address, so Back and reload keep showing it, now labelled. A fresh
+  redirect is unchanged. A flash item (Check releases, release settings)
+  carries no result argument and is not affected.
+  - Without JavaScript the server cannot tell a reload from a first view, so
+    the inline record shows without the label and the address keeps its
+    arguments. This is the one replay that stays unlabelled; so does a load
+    where the host cannot run.
+  - Package results delivered by a swap are cleaned by the enhanced mutation
+    handler.
+  - Not done: tracking whether the condition still holds. That needs the
+    current-state projection and is outside P3.
 
 ## Open decision
 

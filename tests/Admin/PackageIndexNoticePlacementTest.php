@@ -185,6 +185,36 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringNotContainsString( ' id="ran-booster-feedback-', $html );
 	}
 
+	public function test_only_a_coded_failure_record_carries_the_hidden_earlier_result_label(): void {
+		$label = '<p hidden data-ran-booster-earlier>Result of an earlier action.</p>';
+		$html  = $this->notices(
+			array(
+				array(
+					'type'     => 'warning',
+					'message'  => 'Skipped.',
+					'feedback' => 'bulk_plugin_state',
+				),
+			)
+		);
+		self::assertSame( 1, substr_count( $html, $label ) );
+		self::assertStringContainsString( $label . '<p>Skipped.</p>', $html );
+
+		$other = $this->notices(
+			array(
+				array(
+					'type'    => 'warning',
+					'message' => 'Uncoded.',
+				),
+				array(
+					'type'     => 'info',
+					'message'  => 'Info.',
+					'feedback' => 'bulk_plugin_state',
+				),
+			)
+		);
+		self::assertStringNotContainsString( 'data-ran-booster-earlier', $other );
+	}
+
 	public function test_a_message_without_a_closed_feedback_code_keeps_its_notice_and_adds_no_item(): void {
 		$html = $this->notices(
 			array(

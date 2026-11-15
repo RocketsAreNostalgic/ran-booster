@@ -396,21 +396,74 @@
 	const RESULT_ARGUMENT =
 		/^(ran_booster_result|ran_booster_package|_ran_booster_notice_nonce|ran_booster_extension_result|ran_booster_extension_id|_ran_booster_bulk_notice_nonce|ran_booster_bulk_.+)$/;
 
-	function consumeLoaded() {
-		if (consume() < 1) {
-			return;
-		}
+	function resultArguments(url) {
+		return Array.from(url.searchParams.keys()).filter((key) =>
+			RESULT_ARGUMENT.test(key)
+		);
+	}
+
+	function strip(url, keys) {
 		try {
-			const url = new URL(window.location.href);
-			const keys = Array.from(url.searchParams.keys()).filter((key) =>
-				RESULT_ARGUMENT.test(key)
-			);
-			if (keys.length) {
-				keys.forEach((key) => url.searchParams.delete(key));
-				window.history.replaceState(window.history.state, '', url);
-			}
+			keys.forEach((key) => url.searchParams.delete(key));
+			window.history.replaceState(window.history.state, '', url);
 		} catch {
 			// The address stays as it is.
+		}
+	}
+
+	// A reload or Back to an address that still carries a signed result shows
+	// that result again. The signature authenticates the earlier action, not the
+	// present condition, so nothing is announced as new: the items go, and the
+	// inline record a pointer led to gets its "earlier action" label.
+	function retire(url, keys) {
+		let success = false;
+		document
+			.querySelectorAll('[data-ran-booster-feedback]')
+			.forEach((container) => {
+				container
+					.querySelectorAll('[data-feedback-key]')
+					.forEach((item) => {
+						if (timed(item.getAttribute('data-intent'))) {
+							success = true;
+						} else {
+							document
+								.getElementById(
+									item.getAttribute('data-feedback-target') ||
+										''
+								)
+								?.querySelector('[data-ran-booster-earlier]')
+								?.removeAttribute('hidden');
+						}
+						item.remove();
+					});
+				container.remove();
+			});
+		if (success) {
+			strip(url, keys);
+		}
+	}
+
+	function replayed() {
+		const type =
+			window.performance?.getEntriesByType?.('navigation')?.[0]?.type;
+		return type === 'reload' || type === 'back_forward';
+	}
+
+	function consumeLoaded() {
+		let url = null;
+		let keys = [];
+		try {
+			url = new URL(window.location.href);
+			keys = resultArguments(url);
+		} catch {
+			// A flash item below still shows.
+		}
+		if (url && keys.length && replayed()) {
+			retire(url, keys);
+			return;
+		}
+		if (consume() > 0 && url && keys.length) {
+			strip(url, keys);
 		}
 	}
 

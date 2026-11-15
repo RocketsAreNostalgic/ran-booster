@@ -86,6 +86,14 @@ final class FeedbackFlash {
 		echo self::container( $items ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- container() escapes every dynamic value; the code is a closed vocabulary member.
 	}
 
+	/**
+	 * The hidden label inside a pointed-to inline notice. The host reveals it when a reload or Back shows the
+	 * address of an earlier signed result again, so the record reads as that action's result, not the present state.
+	 */
+	public static function earlier_result(): string {
+		return '<p hidden data-ran-booster-earlier>' . esc_html__( 'Result of an earlier action.', 'ran-booster' ) . '</p>';
+	}
+
 	/** One static feedback item: a closed key and fixed Core copy, which the client host turns into a snackbar. */
 	public static function item( string $key, string $intent, string $text, string $target = '' ): string {
 		$target = '' === $target ? '' : ' data-feedback-target="' . esc_attr( $target ) . '"';

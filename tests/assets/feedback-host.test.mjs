@@ -1400,3 +1400,141 @@ test('a pointer whose target is missing stays unshown and the address is kept', 
 	assert.equal(container.items.length, 1);
 	assert.deepEqual(replaced, []);
 });
+
+// A replay is a reload or Back to an address that still carries a signed
+// result: it concerns the earlier action, never a new or current condition.
+function replayEnv(type, href, items) {
+	const env = build();
+	const replaced = [];
+	env.window.history = {
+		state: null,
+		replaceState: (state, title, url) => replaced.push(String(url)),
+	};
+	env.window.performance = {
+		getEntriesByType: () => [{ type }],
+	};
+	env.window.location.href = href;
+	const label = {
+		hidden: true,
+		removeAttribute(name) {
+			if (name === 'hidden') {
+				label.hidden = false;
+			}
+		},
+	};
+	env.target('ran-booster-feedback-bulk-error', {
+		querySelector: (selector) =>
+			selector === '[data-ran-booster-earlier]' ? label : null,
+	});
+	const container = env.staticContainer(items);
+	return { env, replaced, label, container };
+}
+
+const FAILURE =
+	'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n';
+const POINTER = {
+	key: 'bulk_error',
+	intent: 'error',
+	text: 'Stale.',
+	target: 'ran-booster-feedback-bulk-error',
+};
+
+test('a fresh redirect to a failure still shows its pointer and keeps the label hidden', () => {
+	const { env, label, replaced } = replayEnv('navigate', FAILURE, [POINTER]);
+	env.run();
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Stale.']
+	);
+	assert.equal(label.hidden, true);
+	assert.deepEqual(replaced, []);
+});
+
+for (const type of ['reload', 'back_forward']) {
+	test(`a ${type} of a failure address labels the inline record and shows no fresh pointer`, () => {
+		const { env, label, replaced, container } = replayEnv(type, FAILURE, [
+			POINTER,
+		]);
+		env.run();
+		assert.equal(env.notices.length, 0);
+		assert.equal(label.hidden, false);
+		assert.equal(container.removed, true);
+		assert.deepEqual(
+			replaced,
+			[],
+			'the persistent record keeps its address'
+		);
+	});
+}
+
+test('an earlier failure, a later success, then Back and reload each read as the earlier result', () => {
+	// Back to the failure address after a later success: labelled, no snackbar.
+	const back = replayEnv('back_forward', FAILURE, [POINTER]);
+	back.env.run();
+	assert.equal(back.env.notices.length, 0);
+	assert.equal(back.label.hidden, false);
+
+	// The later success was fresh: shown once, address stripped.
+	const fresh = replayEnv(
+		'navigate',
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_result=install&_ran_booster_notice_nonce=n',
+		[{ key: 'package_install', intent: 'success', text: 'Installed.' }]
+	);
+	fresh.env.run();
+	assert.deepEqual(
+		fresh.env.notices.map((notice) => notice.content),
+		['Installed.']
+	);
+	assert.equal(fresh.replaced.length, 1);
+
+	// Reloading the stripped success address has no result and no item.
+	const reload = replayEnv(
+		'reload',
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+		[]
+	);
+	reload.env.run();
+	assert.equal(reload.env.notices.length, 0);
+	assert.deepEqual(reload.replaced, []);
+});
+
+test('a replayed success is not announced again and its address is stripped', () => {
+	const { env, replaced, container } = replayEnv(
+		'reload',
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_result=install&_ran_booster_notice_nonce=n',
+		[{ key: 'package_install', intent: 'success', text: 'Installed.' }]
+	);
+	env.run();
+	assert.equal(env.notices.length, 0);
+	assert.equal(container.removed, true);
+	assert.deepEqual(replaced, [
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+	]);
+});
+
+test('a reload without a result address still shows a flash item', () => {
+	const { env } = replayEnv(
+		'reload',
+		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+		[{ key: 'release_check_current', intent: 'success', text: 'Checked.' }]
+	);
+	env.run();
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Checked.']
+	);
+});
+
+test('the earlier-result label is hidden by default and its display is not overridden', () => {
+	const css = fs.readFileSync(
+		new URL(
+			'../../assets/ran-booster/25-admin-primitives.css',
+			import.meta.url
+		),
+		'utf8'
+	);
+	assert.match(
+		css,
+		/\[data-ran-booster-earlier\]\[hidden\]\s*\{\s*display: none;/
+	);
+});

@@ -145,6 +145,12 @@ hidden by CSS by default, so only the inline notice (with its own `role`) is vis
   reload. After a swap, the enhanced mutation handler removes the package
   result arguments. Without JavaScript the arguments stay, so a reload repeats
   the result.
+- **Replay.** A signed address authenticates the earlier action, not the
+  present condition. On a reload or Back that still carries a result argument
+  the host shows no snackbar and reveals the hidden label "Result of an earlier
+  action." (`FeedbackFlash::earlier_result()`) in the inline record; a replayed
+  success is dropped and its address stripped. Without JavaScript the record
+  shows unlabelled, because the server cannot tell a reload from a first view.
 - **Extensions page.** It loads the shared host (`ran-booster-feedback`, which
   depends on `wp-components`) so its result item is taken there too.
 

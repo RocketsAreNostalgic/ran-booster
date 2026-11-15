@@ -417,15 +417,18 @@
 	// inline record a pointer led to gets its "earlier action" label.
 	function retire(url, keys) {
 		let success = false;
+		let failure = false;
 		document
 			.querySelectorAll('[data-ran-booster-feedback]')
 			.forEach((container) => {
 				container
 					.querySelectorAll('[data-feedback-key]')
 					.forEach((item) => {
-						if (timed(item.getAttribute('data-intent'))) {
+						const intent = item.getAttribute('data-intent');
+						if (intent === 'success') {
 							success = true;
-						} else {
+						} else if (!timed(intent)) {
+							failure = true;
 							document
 								.getElementById(
 									item.getAttribute('data-feedback-target') ||
@@ -438,7 +441,8 @@
 					});
 				container.remove();
 			});
-		if (success) {
+		// A failure record keeps its address so Back and reload still show it.
+		if (success && !failure) {
 			strip(url, keys);
 		}
 	}

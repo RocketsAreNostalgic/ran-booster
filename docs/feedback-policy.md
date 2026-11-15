@@ -411,10 +411,18 @@ use today, and the owner is told.
   keeps its address, so Back and reload keep showing it, now labelled. A fresh
   redirect is unchanged. A flash item (Check releases, release settings)
   carries no result argument and is not affected.
-  - Without JavaScript the server cannot tell a reload from a first view, so
-    the inline record shows without the label and the address keeps its
-    arguments. This is the one replay that stays unlabelled; so does a load
-    where the host cannot run.
+  - These replays are treated as a fresh load, so the record shows without
+    the label and the pointer is shown as new:
+    - no JavaScript, or a host that cannot run (the server cannot tell a
+      reload from a first view);
+    - a bookmarked or pasted signed address, or a link click to one
+      (navigation type `navigate`);
+    - a prerender;
+    - a bfcache restore (the restored page is the old one; there is no
+      `pageshow` handling);
+    - a missing or empty `performance.getEntriesByType`.
+    The signed nonce is not single-use, so any of these can show the same
+    earlier result again.
   - Package results delivered by a swap are cleaned by the enhanced mutation
     handler.
   - Not done: tracking whether the condition still holds. That needs the

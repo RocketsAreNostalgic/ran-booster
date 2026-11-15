@@ -149,8 +149,11 @@ hidden by CSS by default, so only the inline notice (with its own `role`) is vis
   present condition. On a reload or Back that still carries a result argument
   the host shows no snackbar and reveals the hidden label "Result of an earlier
   action." (`FeedbackFlash::earlier_result()`) in the inline record; a replayed
-  success is dropped and its address stripped. Without JavaScript the record
-  shows unlabelled, because the server cannot tell a reload from a first view.
+  success is dropped and its address stripped. A success beside a failure
+  keeps the address. These are treated as a fresh load and show unlabelled: no
+  JavaScript or a host that cannot run, a bookmarked or pasted signed address or
+  a link to one, a prerender, a bfcache restore and a missing or empty
+  `performance.getEntriesByType`. The signed nonce is not single-use.
 - **Extensions page.** It loads the shared host (`ran-booster-feedback`, which
   depends on `wp-components`) so its result item is taken there too.
 

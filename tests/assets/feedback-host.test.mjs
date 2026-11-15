@@ -1538,3 +1538,80 @@ test('the earlier-result label is hidden by default and its display is not overr
 		/\[data-ran-booster-earlier\]\[hidden\]\s*\{\s*display: none;/
 	);
 });
+
+test('a replay with a success and a failure pointer keeps the failure address on reload, Back and reload again', () => {
+	for (const type of ['reload', 'back_forward', 'reload']) {
+		const { env, label, replaced } = replayEnv(
+			type,
+			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n&ran_booster_result=install&_ran_booster_notice_nonce=m',
+			[
+				{
+					key: 'package_install',
+					intent: 'success',
+					text: 'Installed.',
+				},
+				POINTER,
+			]
+		);
+		env.run();
+		assert.equal(env.notices.length, 0, type);
+		assert.equal(label.hidden, false, type);
+		assert.deepEqual(replaced, [], `${type} keeps the failure address`);
+	}
+});
+
+test('a replayed info item is dropped without a label and keeps the address', () => {
+	// Info is a flash result and never carries a result argument; if one does,
+	// it is not a success to strip for, so the address is left alone.
+	const { env, label, replaced, container } = replayEnv('reload', FAILURE, [
+		{ key: 'release_check_current', intent: 'info', text: 'Checked.' },
+	]);
+	env.run();
+	assert.equal(env.notices.length, 0);
+	assert.equal(label.hidden, true);
+	assert.equal(container.removed, true);
+	assert.deepEqual(replaced, []);
+});
+
+test('a replayed pointer whose target is missing is dropped without a label', () => {
+	const { env, label, container } = replayEnv('back_forward', FAILURE, [
+		{ ...POINTER, target: 'no-such-element' },
+	]);
+	env.run();
+	assert.equal(env.notices.length, 0);
+	assert.equal(label.hidden, true);
+	assert.equal(container.removed, true);
+});
+
+test('a missing or empty navigation entry list is treated as a fresh load', () => {
+	for (const performance of [
+		undefined,
+		{},
+		{ getEntriesByType: () => [] },
+		{ getEntriesByType: () => [{}] },
+	]) {
+		const { env, label } = replayEnv('reload', FAILURE, [POINTER]);
+		env.window.performance = performance;
+		env.run();
+		assert.deepEqual(
+			env.notices.map((notice) => notice.content),
+			['Stale.']
+		);
+		assert.equal(label.hidden, true);
+	}
+});
+
+test('a real PerformanceNavigationTiming entry marks a reload as a replay', () => {
+	const entry = Object.assign(Object.create({ entryType: 'navigation' }), {
+		name: FAILURE,
+		type: 'reload',
+		redirectCount: 0,
+	});
+	const { env, label } = replayEnv('navigate', FAILURE, [POINTER]);
+	env.window.performance = {
+		getEntriesByType: (kind) => (kind === 'navigation' ? [entry] : []),
+	};
+	env.run();
+	assert.equal(env.notices.length, 0);
+	assert.equal(label.hidden, false);
+});

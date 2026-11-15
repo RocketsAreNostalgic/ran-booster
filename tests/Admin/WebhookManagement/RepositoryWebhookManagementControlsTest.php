@@ -9,7 +9,6 @@ use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\AssistanceReadiness;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
-use RAN\Admin\AdminPackageProjection;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Package;
@@ -84,7 +83,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_filters'] )
 		);
 		self::assertSame(
-			array( 'admin_post_ran_booster_repository_webhook_management_operation', 'admin_enqueue_scripts', 'ran_booster_admin_package_advanced_source_sections' ),
+			array( 'admin_post_ran_booster_repository_webhook_management_operation', 'admin_enqueue_scripts' ),
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_actions'] )
 		);
 		foreach ( array_merge( $GLOBALS['ran_booster_repository_webhook_management_actions'], $GLOBALS['ran_booster_repository_webhook_management_filters'] ) as $registrations ) {
@@ -1179,17 +1178,6 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/<form[^>]*ran-booster-repository-webhook-management__form[^>]*aria-disabled="true"/', $html );
 		self::assertStringNotContainsString( 'Manage credentials</a> disabled', $html );
 		self::assertStringNotContainsString( 'Manage signing secrets</a> disabled', $html );
-	}
-
-	public function test_package_webhook_setup_hook_is_an_intentional_no_op(): void {
-		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
-		$controls = $this->controls();
-		$controls->register();
-		$projection = new AdminPackageProjection( 'plugin', 'example/example.php', 'Example', 'fixture-provider', 'branch', 1, 'manual', 'https://example.test/settings' );
-
-		ob_start();
-		$controls->render_package_webhook_setup( 'edit', 'plugin', 'branch', $projection, 'https://example.test/settings' );
-		self::assertSame( '', ob_get_clean() );
 	}
 
 	public function test_partial_provider_keeps_release_row_history_local_and_inert(): void {

@@ -327,8 +327,8 @@ msgid "None"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:204
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:361
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:435
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:349
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:423
 msgid "Branch demand"
 msgstr ""
 
@@ -379,7 +379,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:246
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:260
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:275
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:284
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:272
 #: views/documentation.php:123
 #: views/documentation.php:470
 msgid "Push-to-deploy"
@@ -403,8 +403,8 @@ msgid "Assisted webhook management is unavailable in this view. Receiver readine
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:271
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:364
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:437
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:352
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:425
 msgid "Published-release packages ignore pushes; no Branch package currently uses this repository webhook."
 msgstr ""
 
@@ -413,7 +413,7 @@ msgid "Local readiness and the last recorded remote state."
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:279
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:307
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:295
 #: views/provider.php:632
 msgid "Webhook setup"
 msgstr ""
@@ -565,7 +565,7 @@ msgstr ""
 #: RAN/Admin/PackagePagePresenter.php:462
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:549
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:560
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:341
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:329
 #: views/extensions.php:16
 #: views/extensions.php:91
 #: views/troubleshooting-installation.php:173
@@ -574,7 +574,7 @@ msgid "Active"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryPublishing.php:48
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:331
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:319
 msgid "Not in use"
 msgstr ""
 
@@ -2427,7 +2427,7 @@ msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1792
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:188
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:344
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:332
 msgid "Ready"
 msgstr ""
 
@@ -2682,7 +2682,7 @@ msgid "Release readiness"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:188
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:338
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:326
 msgid "Not ready"
 msgstr ""
 
@@ -4629,172 +4629,172 @@ msgid "Previously used saved credential profile %s is unavailable."
 msgstr ""
 
 #. translators: %s: provider name.
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:148
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:136
 #, php-format
 msgid "%s webhook configuration is incomplete. Webhook setup is unavailable until the Git provider supplies its complete management capability."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:164
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:152
 msgid "Webhook operations are unavailable while no eligible Branch package uses this repository."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:221
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:461
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:209
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:449
 msgid "This site needs a public HTTPS URL to receive webhooks."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:228
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:216
 msgid "Webhook setup is unavailable because Booster database storage is unavailable."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:229
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:217
 msgid "Webhook setup is unavailable because encrypted signing-secret storage is unavailable."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:230
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:218
 msgid "Webhook setup is unavailable because Booster could not read managed packages."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:231
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:219
 msgid "Webhook setup is unavailable because this repository has no stable Git provider identity."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:232
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:220
 msgid "Webhook setup is unavailable because managed packages disagree about this repository identity."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:233
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:221
 msgid "Webhook setup is unavailable because the saved repository address is invalid."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:252
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:255
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:240
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:243
 msgid "Webhook setup is unavailable until Booster can confirm this managed repository."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:281
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:269
 msgid "Branch publishing"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:281
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:269
 msgid "Manual updates work without setting up Push-to-deploy."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:285
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:273
 msgid "Automatic updates remain configured separately for each package."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:363
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:351
 msgid "Branch packages can still be updated manually while webhook setup is unavailable."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:368
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:448
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:356
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:436
 msgid "Signing profile"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:369
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:357
 msgid "Git provider configuration is incomplete, so Booster did not inspect signing-secret availability."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:373
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:458
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:361
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:446
 msgid "Git provider receiver"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:374
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:362
 msgid "Git provider configuration is incomplete, so Booster did not inspect receiver readiness."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:378
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:465
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:366
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:453
 msgid "Remote hook"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:379
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:367
 msgid "Git provider configuration is incomplete, so Booster did not inspect remote webhook state."
 msgstr ""
 
 #. translators: %d: number of Automatic Branch packages using the repository webhook.
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:441
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:429
 #, php-format
 msgid "%d Automatic Branch package uses this repository webhook."
 msgid_plural "%d Automatic Branch packages use this repository webhook."
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:444
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:432
 msgid "No package uses this webhook yet. You can set it up before turning on Automatic updates."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:450
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:438
 msgid "A signing secret is ready for this repository."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:451
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:439
 msgid "A signing secret was available when Booster last checked."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:452
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:440
 msgid "This repository needs a signing secret."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:453
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:441
 msgid "Booster could not confirm the signing secret."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:460
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:448
 msgid "This site can receive webhook deliveries."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:468
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:456
 msgid "Booster has not set up a webhook for this repository."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:469
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:457
 msgid "Not recorded by Booster; a signed delivery was received."
 msgstr ""
 
 #. translators: %s: UTC timestamp of the last recorded webhook check.
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:473
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:461
 #, php-format
 msgid "Configured at the last recorded check on %s. Run Check to confirm current Git provider state."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:476
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:464
 msgid "The recorded remote webhook needs review. Run Check or inspect it at the Git provider."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:486
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:474
 msgid "Site receiver"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:490
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:478
 #: RAN/Admin/WebhookManagement/views/panel.php:111
 #: views/packages/branch-readiness.php:229
 msgid "Signing secret"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:494
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:482
 #: views/attempts/detail.php:57
 #: views/attempts/index.php:66
 msgid "Repository webhook"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:498
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:486
 msgid "Automatic packages"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:503
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:491
 msgid "Repository webhook lifecycle"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:512
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:500
 msgid "Booster could not confirm this step."
 msgstr ""
 
 #. translators: %s: repository provider name.
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:528
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:516
 #, php-format
 msgid "%s webhook management"
 msgstr ""

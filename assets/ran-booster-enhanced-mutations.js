@@ -900,33 +900,13 @@
 		}
 
 		function cleanPackageResultUrl() {
-			const canonicalUrl = new URL(window.location.href);
-			// A confirmed result is a static notice or, for the snackbar host,
-			// a feedback item it removes once shown; the signed URL marks both.
-			// An error rendered in the Booster frame makes this response a
-			// failure result, not a confirmation. WordPress and other
-			// plugins' notices sit outside the frame and do not count.
-			const confirmed =
-				/^(install|update|unlink|unlink-and-delete)$/.test(
-					canonicalUrl.searchParams.get('ran_booster_result') || ''
-				) &&
-				canonicalUrl.searchParams.has('_ran_booster_notice_nonce') &&
-				!document.querySelector(
-					'.wrap.ran-booster-admin .notice-error:not([data-ran-booster-provider-storage-notice]):not([data-ran-booster-assistance-site-notice]), .wrap.ran-booster-admin [data-intent="error"]:not([data-feedback-target])'
-				);
-			const notices = Array.from(
-				document.querySelectorAll(
-					'#wpbody-content [data-ran-booster-package-success]:not([data-ran-booster-update-summary])'
-				)
+			const confirmed = document.querySelector(
+				'#wpbody-content [data-ran-booster-confirmed-package-result]'
 			);
-			if (notices.length > 0 || confirmed) {
-				'ran_booster_result ran_booster_package _ran_booster_notice_nonce'
-					.split(' ')
-					.forEach((key) => canonicalUrl.searchParams.delete(key));
-				const history = window.history;
-				history.replaceState(history.state, '', canonicalUrl);
+			if (confirmed) {
+				window.ranBoosterFeedback?.cleanResultUrl();
 			}
-			return notices.length > 0 || confirmed;
+			return !!confirmed;
 		}
 
 		function consumeReleaseWorkflowResult() {
@@ -938,12 +918,7 @@
 				return;
 			}
 
-			const canonicalUrl = new URL(window.location.href);
-			'ran_booster_release_workflow_result ran_booster_release_workflow_success ran_booster_release_workflow_type ran_booster_release_workflow_package ran_booster_release_workflow_failure_stage ran_booster_release_workflow_diagnostic ran_booster_release_workflow_diagnostic_available ran_booster_release_workflow_reference ran_booster_release_workflow_channel ran_booster_release_workflow_preview ran_booster_release_workflow_result_nonce ran_booster_release_workflow_source_revision ran_booster_release_workflow_provider ran_booster_release_workflow_repository ran_booster_release_workflow_message ran_booster_release_workflow_remediation'
-				.split(' ')
-				.forEach((key) => canonicalUrl.searchParams.delete(key));
-			const history = window.history;
-			history.replaceState(history.state, '', canonicalUrl);
+			window.ranBoosterFeedback?.cleanResultUrl();
 		}
 
 		document.addEventListener(

@@ -394,12 +394,9 @@
 	// again. The inline record of a failure stays in the page until the
 	// person leaves it. Swaps are left to the mutation handler.
 	const RESULT_ARGUMENT =
-		/^(ran_booster_result|ran_booster_package|_ran_booster_notice_nonce|ran_booster_extension_result|ran_booster_extension_id|_ran_booster_bulk_notice_nonce|ran_booster_bulk_.+|ran_booster_interaction_(?:operation|target|outcome|return|error_region)|_ran_booster_interaction_nonce)$/;
+		/^(ran_booster_result|ran_booster_package|_ran_booster_notice_nonce|ran_booster_extension_result|ran_booster_extension_id|_ran_booster_bulk_notice_nonce|ran_booster_bulk_.+|ran_booster_interaction_(?:operation|target|outcome|return|error_region)|_ran_booster_interaction_nonce|ran_booster_release_(?:result|success|type|package|result_nonce|channel|reason|detail|workflow_.+))$/;
 
-	function consumeLoaded() {
-		if (consume() < 1) {
-			return;
-		}
+	function cleanResultUrl() {
 		try {
 			const url = new URL(window.location.href);
 			const keys = Array.from(url.searchParams.keys()).filter((key) =>
@@ -414,8 +411,14 @@
 		}
 	}
 
+	function consumeLoaded() {
+		if (consume() > 0) {
+			cleanResultUrl();
+		}
+	}
+
 	Object.defineProperty(window, 'ranBoosterFeedback', {
-		value: Object.freeze({ show, consume }),
+		value: Object.freeze({ show, consume, cleanResultUrl }),
 	});
 
 	if (document.readyState === 'loading') {

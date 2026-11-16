@@ -2512,7 +2512,8 @@ final class AdminAssetContractTest extends TestCase {
 
 		self::assertStringContainsString( 'data-ran-booster-package-success', $notices );
 		self::assertStringContainsString( 'cleanPackageResultUrl()', $feedback );
-		self::assertStringContainsString( 'history.replaceState', $feedback );
+		self::assertStringContainsString( 'cleanResultUrl()', $feedback );
+		self::assertStringContainsString( 'history.replaceState', $this->asset( 'ran-booster-feedback.js' ) );
 		self::assertStringNotContainsString( "header( 'HX-Replace-Url:", $this->source( 'RAN/Dashboard.php' ) );
 		self::assertStringContainsString( 'captureInteractionState(form, event.detail.xhr)', $feedback );
 		self::assertStringContainsString( 'restoreInteractionState()', $feedback );

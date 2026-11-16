@@ -1412,8 +1412,30 @@ test('a settings scope timeout releases busy and leaves the unconfirmed message 
 	assert.equal(state.error.hidden, true);
 });
 
+function attachCleanup(state) {
+	state.window.ranBoosterFeedback = {
+		cleanResultUrl() {
+			const url = new URL(state.window.location.href);
+			for (const key of [...url.searchParams.keys()]) {
+				if (
+					/^(ran_booster_(result|package|release_)|_ran_booster_notice_nonce)/.test(
+						key
+					)
+				) {
+					url.searchParams.delete(key);
+				}
+			}
+			state.window.history.replaceState(
+				state.window.history.state,
+				'',
+				url
+			);
+		},
+	};
+}
 test('a package mutation retains its success notice and cleans its result URL', () => {
 	const state = fixture();
+	attachCleanup(state);
 	state.window.location.href =
 		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_result=edit&ran_booster_package=example%2Fexample.php&_ran_booster_notice_nonce=signed&package=example%2Fexample.php';
 	const init = loadFunction('initEnhancedMutationFeedback', {
@@ -1429,6 +1451,10 @@ test('a package mutation retains its success notice and cleans its result URL', 
 	};
 	state.form.hasAttribute = (name) =>
 		name === 'data-ran-booster-package-mutation';
+	state.document.querySelector = (selector) =>
+		selector.includes('data-ran-booster-confirmed-package-result')
+			? {}
+			: null;
 	state.document.querySelectorAll = (selector) =>
 		selector ===
 		'#wpbody-content [data-ran-booster-package-success]:not([data-ran-booster-update-summary])'
@@ -1469,6 +1495,7 @@ test('a package mutation retains its success notice and cleans its result URL', 
 
 test('a rendered provider release workflow result consumes only its signed PRG query values', () => {
 	const state = fixture();
+	attachCleanup(state);
 	state.window.location.href =
 		'https://example.test/wp-admin/admin.php?page=ran-booster&keep=present&ran_booster_release_workflow_result=workflow_preflight_unavailable&ran_booster_release_workflow_success=0&ran_booster_release_workflow_type=plugin&ran_booster_release_workflow_package=example%2Fexample.php&ran_booster_release_workflow_failure_stage=release_preflight&ran_booster_release_workflow_diagnostic=provider_unavailable&ran_booster_release_workflow_diagnostic_available=1&ran_booster_release_workflow_reference=abc&ran_booster_release_workflow_channel=github&ran_booster_release_workflow_preview=none&ran_booster_release_workflow_source_revision=3&ran_booster_release_workflow_provider=fixture&ran_booster_release_workflow_repository=repo123&ran_booster_release_workflow_message=Provider%20unavailable&ran_booster_release_workflow_remediation=Reconnect%20the%20provider&ran_booster_release_workflow_result_nonce=signed&unrelated=retained';
 	state.document.querySelector = (selector) =>
@@ -2131,6 +2158,7 @@ test('a retained non-save result is announced once after its own settled respons
 	]) {
 		const hasHeader = scenario === 'header';
 		const state = fixture();
+		attachCleanup(state);
 		const handlers = new Map();
 		const target = {
 			id: 'wpbody-content',
@@ -2167,6 +2195,10 @@ test('a retained non-save result is announced once after its own settled respons
 		state.form.removeEventListener = () => {};
 		state.document.getElementById = (id) =>
 			id === 'wpbody-content' ? current : state.error;
+		state.document.querySelector = (selector) =>
+			selector.includes('data-ran-booster-confirmed-package-result')
+				? {}
+				: null;
 		state.document.querySelectorAll = (selector) =>
 			selector.includes('data-ran-booster-package-success')
 				? [notice]
@@ -3666,6 +3698,9 @@ function runCleanPackageResultUrl({ href, nodes = [] }) {
 	const result = run(
 		{
 			location: { href },
+			ranBoosterFeedback: {
+				cleanResultUrl: () => replaced.push('cleaned'),
+			},
 			history: {
 				state: null,
 				replaceState: (state, title, url) => replaced.push(String(url)),
@@ -3679,86 +3714,41 @@ function runCleanPackageResultUrl({ href, nodes = [] }) {
 const signed = (operation) =>
 	`https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_result=${operation}&ran_booster_package=a%2Fb.php&_ran_booster_notice_nonce=abc123`;
 
-test('a signed confirmed package result is cleaned even after the host removed its item', () => {
-	for (const operation of [
-		'install',
-		'update',
-		'unlink',
-		'unlink-and-delete',
-	]) {
-		const { result, replaced } = runCleanPackageResultUrl({
-			href: signed(operation),
-		});
-		assert.equal(result, true, operation);
-		assert.equal(replaced.length, 1, operation);
-		assert.doesNotMatch(replaced[0], /ran_booster_result|_notice_nonce/);
-		assert.match(replaced[0], /page=ran-booster-plugins/);
-	}
-});
-
-test('an unsigned, edit or already-managed package result URL is not treated as a confirmation', () => {
-	for (const href of [
-		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
-		'https://example.test/wp-admin/admin.php?ran_booster_result=install',
-		signed('edit'),
-		signed('already-managed'),
-	]) {
-		const { result, replaced } = runCleanPackageResultUrl({ href });
-		assert.equal(result, false, href);
-		assert.deepEqual(replaced, [], href);
-	}
-});
-
-test('an error in the Booster frame keeps a signed URL from counting as a confirmation', () => {
-	for (const node of [
-		{ under: ['wpbody', 'frame'], classes: ['notice-error'] },
-		{
-			under: ['wpbody', 'frame'],
-			attributes: { 'data-intent': 'error' },
-		},
-	]) {
-		const { result, replaced } = runCleanPackageResultUrl({
-			href: signed('install'),
-			nodes: [node],
-		});
-		assert.equal(result, false);
-		assert.deepEqual(replaced, []);
-	}
-});
-
-test('a pointer item and unrelated persistent in-frame errors do not block a genuine confirmation', () => {
-	for (const node of [
-		{
-			under: ['wpbody', 'frame'],
-			attributes: {
-				'data-intent': 'error',
-				'data-feedback-target': 'ran-booster-feedback-bulk-error',
-			},
-		},
-		{
-			under: ['wpbody', 'frame'],
-			classes: ['notice-error'],
-			attributes: { 'data-ran-booster-provider-storage-notice': '' },
-		},
-		{
-			under: ['wpbody', 'frame'],
-			classes: ['notice-error'],
-			attributes: { 'data-ran-booster-assistance-site-notice': '' },
-		},
-	]) {
-		const { result } = runCleanPackageResultUrl({
-			href: signed('install'),
-			nodes: [node],
-		});
-		assert.equal(result, true);
-	}
-});
-
-test('a third-party error outside the Booster frame does not block a genuine confirmation', () => {
+test('the persistent server marker confirms a result after its feedback item is consumed', () => {
+	const marker = {
+		under: ['wpbody'],
+		attributes: { 'data-ran-booster-confirmed-package-result': '' },
+	};
 	const { result, replaced } = runCleanPackageResultUrl({
 		href: signed('install'),
-		nodes: [{ under: ['wpbody'], classes: ['notice-error'] }],
+		nodes: [marker],
 	});
 	assert.equal(result, true);
 	assert.equal(replaced.length, 1);
+});
+
+test('a signed address without the server marker cannot confirm a result', () => {
+	const { result, replaced } = runCleanPackageResultUrl({
+		href: signed('install'),
+	});
+	assert.equal(result, false);
+	assert.deepEqual(replaced, []);
+});
+
+test('a pointer or excluded notice does not override a server confirmation', () => {
+	const marker = {
+		under: ['wpbody'],
+		attributes: { 'data-ran-booster-confirmed-package-result': '' },
+	};
+	for (const attributes of [
+		{ 'data-intent': 'error', 'data-feedback-target': 'failure' },
+		{ 'data-ran-booster-provider-storage-notice': '' },
+		{ 'data-ran-booster-assistance-site-notice': '' },
+	]) {
+		const { result } = runCleanPackageResultUrl({
+			href: signed('install'),
+			nodes: [marker, { under: ['wpbody', 'frame'], attributes }],
+		});
+		assert.equal(result, true);
+	}
 });

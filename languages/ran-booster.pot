@@ -1500,8 +1500,8 @@ msgid "Release check complete. No newer eligible release was found."
 msgstr ""
 
 #: RAN/Admin/Interaction/AdminInteractionOutcome.php:49
-#: assets/ran-booster-enhanced-mutations.js:1172
-#: assets/ran-booster-enhanced-mutations.js:1358
+#: assets/ran-booster-enhanced-mutations.js:1147
+#: assets/ran-booster-enhanced-mutations.js:1333
 msgid "We could not complete that request. Please try again."
 msgstr ""
 

@@ -115,6 +115,27 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'Plugin was successfully installed.' ) );
 	}
 
+	public function test_package_confirmation_marker_survives_feedback_consumption_and_rejects_errors(): void {
+		$success = array(
+			'type'     => 'success',
+			'message'  => 'Installed.',
+			'feedback' => 'package_install',
+		);
+		$html    = $this->notices( array( $success ) );
+		self::assertStringContainsString( '<span hidden data-ran-booster-confirmed-package-result></span>', $html );
+		self::assertLessThan( strpos( $html, 'data-ran-booster-feedback>' ), strpos( $html, 'data-ran-booster-confirmed-package-result' ) );
+		$html = $this->notices(
+			array(
+				$success,
+				array(
+					'type'    => 'error',
+					'message' => 'Failed.',
+				),
+			)
+		);
+		self::assertStringNotContainsString( 'data-ran-booster-confirmed-package-result', $html );
+	}
+
 	public function test_a_warning_suppresses_the_success_snackbar_and_points_to_its_inline_record(): void {
 		$html = $this->notices(
 			array(

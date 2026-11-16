@@ -1054,11 +1054,13 @@ input.
 drive Core's walk: only `incompatible` lets Core inspect the next candidate, at
 most two in all. The optional failure refines what Core shows for an
 `incompatible` rejection: a failure reason of `package_asset_missing`,
-`package_asset_ambiguous` or `release_incompatible` selects that wording; any
-other reason falls back to the wording Core derives from the candidate's
-`expected_asset_names`, so a provider that returns candidates lists them
+`package_asset_ambiguous` or `release_incompatible` selects that wording. If the
+carried reason is not one of those three, Core uses the legacy `detail` when it
+names one of them. Otherwise Core derives the wording from the candidate's
+`expected_asset_names` count, so a provider that returns candidates lists them
 completely. `incompatible( ?string $detail, ?ProviderFailure $failure )` keeps
-its existing lower-case `detail`; a failure, when given, takes precedence.
+its existing lower-case `detail`; only a recognized carried reason takes
+precedence over it.
 
 `RepositoryReleaseAcquisitionRejected::changed()` reports that the release no
 longer matches the one that was inspected. The receiving workflow maps that rejection to its own closed result; it does

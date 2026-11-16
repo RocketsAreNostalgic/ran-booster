@@ -13,8 +13,10 @@ if ( ! function_exists( 'apply_filters' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function apply_filters( string $hook, mixed $value, mixed ...$arguments ): mixed {
 		$GLOBALS['ran_booster_read_only_check']['calls'][] = array( $hook, $value, ...$arguments );
+		$answer = $GLOBALS['ran_booster_read_only_check']['answer'];
 
-		return $GLOBALS['ran_booster_read_only_check']['answer'];
+		// A closure answers as the updater does, emitting its check observation during the filter.
+		return $answer instanceof \Closure ? $answer() : $answer;
 	}
 }
 

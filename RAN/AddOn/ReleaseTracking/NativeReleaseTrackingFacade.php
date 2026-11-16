@@ -71,6 +71,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** @var \Closure(string, string): mixed */
 	private \Closure $check_without_offer;
 
+	/** The default read-only check is throttled; an injected one is not. */
+	private bool $check_cooldown;
+
 	/**
 	 * @param callable(string): bool|null         $can_manage
 	 * @param callable(string, string): bool|null $verify_nonce
@@ -99,11 +102,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 		$this->updater_lock = $updater_lock;
 
-		// One read-only check per package a minute: each call does full discovery and keeps no cache.
+		// One completed read-only check per package a minute: each call does full discovery and keeps no cache.
+		$this->check_cooldown      = null === $check_without_offer;
 		$this->check_without_offer = null === $check_without_offer
 			? static function ( string $type, string $identifier ): mixed {
-				$key = 'ran_booster_check_off_' . md5( $type . "\0" . $identifier );
-				if ( false !== get_transient( $key ) ) {
+				if ( false !== get_transient( self::check_cooldown_key( $type, $identifier ) ) ) {
 					return array(
 						'status'  => 'skipped',
 						'reason'  => 'cooldown_active',
@@ -111,13 +114,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					);
 				}
 				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented read-only check filter.
-				$report = apply_filters( 'ran_wp_release_updater_check_releases_v1', null, $type, $identifier );
-				// A failed check leaves no cooldown, so the next click retries it.
-				if ( is_array( $report ) && 'failed' !== ( $report['status'] ?? null ) ) {
-					set_transient( $key, 1, MINUTE_IN_SECONDS );
-				}
-
-				return $report;
+				return apply_filters( 'ran_wp_release_updater_check_releases_v1', null, $type, $identifier );
 			}
 
 			: \Closure::fromCallable( $check_without_offer );
@@ -920,6 +917,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			'failed' === $status => 'refresh_check_failed',
 			default => 'refresh_unchecked',
 		};
+		// Only a completed check starts the cooldown; any other answer can be retried at once.
+		if ( $this->check_cooldown && in_array( $code, array( 'refresh_newer_while_off', 'refresh_current_while_off', 'refresh_rejected' ), true ) ) {
+			set_transient( self::check_cooldown_key( $type, $identifier ), 1, MINUTE_IN_SECONDS );
+		}
 
 		return ReleaseTrackingResult::failed(
 			$code,
@@ -927,6 +928,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			detail: 'refresh_newer_while_off' === $code ? $version : '',
 			check_reason: $reason
 		);
+	}
+
+	private static function check_cooldown_key( string $type, string $identifier ): string {
+		return 'ran_booster_check_off_' . md5( $type . "\0" . $identifier );
 	}
 
 	public function return_to_branch(

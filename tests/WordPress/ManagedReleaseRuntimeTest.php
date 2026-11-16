@@ -3101,10 +3101,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		[$registrar, , $target]                      = $this->native_plugin_registrar( $package, activity: $activity );
 		$plugins                                     = $this->createStub( PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
-		$store    = new RuntimeReleaseStore( array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
-		$asked    = 0;
-		$native   = 0;
-		$identity = array(
+		$store       = new RuntimeReleaseStore( array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
+		$asked       = 0;
+		$native      = 0;
+		$invalidated = 0;
+		$identity    = array(
 			'network_id'          => 1,
 			'blog_id'             => 1,
 			'target_type'         => 'plugin',
@@ -3114,7 +3115,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'channel'             => 'stable',
 			'binding_hash'        => str_repeat( 'b', 64 ),
 		);
-		$facade   = $this->facade(
+		$facade      = $this->facade(
 			$plugins,
 			$this->createStub( ThemeRepository::class ),
 			$store,
@@ -3127,7 +3128,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				++$native;
 			},
 			null,
-			static fn (): bool => true,
+			static function () use ( &$invalidated ): void {
+				++$invalidated;
+			},
 			check_without_offer: static function () use ( &$asked, $registrar, $report, $identity ): ?array {
 				++$asked;
 				// The updater emits the same observation actions as a native check.
@@ -3158,8 +3161,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( DeploymentPolicy::DISABLED === $policy ? 1 : 0, $asked );
 		// An answered check never also runs the native check, so Activity records it once.
 		self::assertSame( $answered ? 0 : 1, $native );
-		// Nor refreshes the target, whose refresh clears WordPress's cached update check.
+		// Nor refreshes the target, whose refresh clears WordPress's cached update check. Check
+		// releases never uses the facade's own cache invalidation on any path.
 		self::assertSame( $answered ? 0 : 1, $target->refreshes() );
+		self::assertSame( 0, $invalidated );
 		if ( 'release_refreshed' === $code ) {
 			// Nothing answered, or updates are on: today's native path, never an up-to-date claim.
 			self::assertTrue( $result->successful() );
@@ -3213,36 +3218,87 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$facade = $this->facade( $plugins, $this->createStub( ThemeRepository::class ), $store, $registrar, new RuntimeUpdaterLock(), $this->release_metadata_registry(), static fn (): bool => true, static fn (): bool => true, static function (): void {}, null, static fn (): bool => true );
 		$state  = &$GLOBALS['ran_booster_read_only_check'];
 
-		// An updater that does not answer is not throttled, and falls back to the native path.
-		self::assertSame( 'release_refreshed', $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code() );
+		// An updater that does not answer, or answers with something that is not a report, is not
+		// throttled, and falls back to the native path.
+		$unanswered = array(
+			null,
+			'yes',
+			true,
+			array(
+				'reason'  => 'no_newer_candidate',
+				'offered' => false,
+			),
+		);
+		foreach ( $unanswered as $answer ) {
+			$state['answer'] = $answer;
+			self::assertSame( 'release_refreshed', $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code() );
+		}
+		self::assertCount( 4, $state['calls'] );
 		self::assertSame( array(), $state['transients'] );
 		self::assertSame( array( 'ran_wp_release_updater_check_releases_v1', null, 'plugin', self::NATIVE_PLUGIN ), $state['calls'][0] );
 
-		// A failed check leaves no cooldown, so a retry reaches the updater again.
-		$state['answer'] = array_replace(
-			$report,
-			array(
-				'status' => 'failed',
-				'reason' => 'release_list_failed',
-			)
+		// A failed, unadmitted or unobserved check starts no cooldown, so each retry reaches the updater again.
+		$retried = array(
+			array( 'failed', 'release_list_failed', 'refresh_check_failed' ),
+			array( 'skipped', 'discovery_not_admitted', 'refresh_unchecked' ),
+			array( 'succeeded', 'no_newer_candidate', 'refresh_unchecked' ),
 		);
+		foreach ( $retried as [$status, $reason, $code] ) {
+			$state['answer'] = array_replace(
+				$report,
+				array(
+					'status' => $status,
+					'reason' => $reason,
+				)
+			);
 
-		$failed = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
-		$retry  = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
-		self::assertSame( 'refresh_check_failed', $failed->code() );
-		self::assertSame( 'refresh_check_failed', $retry->code() );
-		self::assertCount( 3, $state['calls'] );
+			$failed = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+			$retry  = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+			self::assertSame( $code, $failed->code() );
+			self::assertSame( $code, $retry->code() );
+		}
+		self::assertCount( 10, $state['calls'] );
 		self::assertSame( array(), $state['transients'] );
 
-		$state['answer'] = $report;
-		$first           = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
-		$second          = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+		// A completed check, observed as the updater observes it, starts the cooldown.
+		$state['answer'] = static function () use ( $registrar, $report ): array {
+			$check_id = str_repeat( 'e', 32 );
+			$registrar->activity_check_started(
+				array(
+					'check_id'            => $check_id,
+					'network_id'          => 1,
+					'blog_id'             => 1,
+					'target_type'         => 'plugin',
+					'installed_identity'  => self::NATIVE_PLUGIN,
+					'provider_code'       => 'github',
+					'repository_identity' => '123456789',
+					'channel'             => 'stable',
+					'binding_hash'        => str_repeat( 'b', 64 ),
+				)
+			);
+			$registrar->activity_check_completed(
+				array(
+					'check_id'                  => $check_id,
+					'status'                    => $report['status'],
+					'reason'                    => $report['reason'],
+					'relationship'              => null,
+					'installed_version'         => '1.0.0',
+					'candidate_version'         => null,
+					'offered_version'           => null,
+					'candidate_validation_code' => null,
+				)
+			);
 
-		self::assertCount( 4, $state['calls'], 'The second click inside the minute never reaches the updater.' );
+			return $report;
+		};
+
+		$first  = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+		$second = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+
+		self::assertSame( 'refresh_current_while_off', $first->code() );
+		self::assertCount( 11, $state['calls'], 'The second click inside the minute never reaches the updater.' );
 		self::assertCount( 1, $state['transients'] );
 		self::assertSame( 60, current( $state['transients'] ) );
-		// No observation was emitted by this double, so the first answer is not trusted as up to date.
-		self::assertSame( 'refresh_unchecked', $first->code() );
 		self::assertSame( 'refresh_recent', $second->code() );
 		self::assertSame( 'cooldown_active', $second->check_reason() );
 	}
@@ -3259,6 +3315,13 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		foreach ( array( 'newer_release_observed', 'runtime_busy', 'policy_forced_off' ) as $reason ) {
 			self::assertStringContainsString( "'$reason'", $source );
 		}
+		// Only the target refresh clears WordPress's cached update check, so a Check releases that
+		// never refreshes the target leaves that cache alone.
+		if ( 1 !== preg_match( '/public function refresh\(\): bool \{.*?\n\t\}/s', $source, $refresh ) ) {
+			self::fail( 'The vendored updater no longer declares refresh().' );
+		}
+		self::assertSame( 1, substr_count( $refresh[0], 'delete_site_transient(' ) );
+		self::assertSame( 1, substr_count( $source, 'delete_site_transient(' ) );
 	}
 
 	public function test_facade_projects_neutral_target_offers_and_validation_failures(): void {

@@ -428,5 +428,14 @@
 	document.addEventListener('htmx:afterSwap', consume);
 	// Never replay a confirmation from a restored page.
 	window.addEventListener('pagehide', dispose);
-	document.addEventListener('htmx:beforeHistorySave', dispose);
+	document.addEventListener('htmx:historyRestore', dispose);
+	document.addEventListener('htmx:historyItemCreated', (event) => {
+		const item = event.detail.item;
+		const snapshot = document.createElement('template');
+		snapshot.innerHTML = item.content;
+		snapshot.content
+			.querySelectorAll('.ran-booster-snackbar-host')
+			.forEach((host) => host.remove());
+		item.content = snapshot.innerHTML;
+	});
 })();

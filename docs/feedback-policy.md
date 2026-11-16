@@ -333,7 +333,7 @@ Every pull request runs `composer check` and `pnpm check`.
 - P2: Node tests for queue limit and eviction order, dedupe by
   `data-feedback-key`, timer
   and pause, dismiss and Escape, focus return, `pagehide` and
-  `htmx:beforeHistorySave` teardown, no double `wp.a11y.speak`, and the
+  `htmx:historyRestore` teardown and snapshot exclusion, no double `wp.a11y.speak`, and the
   host-unavailable fallback. CSS contract tests for logical properties and
   reduced motion.
 - P3 and P4: a test per moved producer that success calls the host, failure

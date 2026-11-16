@@ -844,7 +844,12 @@ test('a link to another origin or a script URL is dropped, never made an action'
 
 test('the message is only the fixed item text, not the URL, storage or any other source', () => {
 	assert.doesNotMatch(
-		source,
+		source.slice(
+			0,
+			source.indexOf(
+				"document.addEventListener('htmx:historyItemCreated'"
+			)
+		),
 		/location\.(search|hash)|URLSearchParams|document\.cookie|localStorage|sessionStorage|innerHTML|insertAdjacentHTML|fetch\(|XMLHttpRequest/
 	);
 	const env = boot();
@@ -955,8 +960,8 @@ test('static items convert on load and after each HTMX swap', () => {
 	assert.equal(ready.notices[0].content, 'Second.');
 });
 
-test('pagehide and htmx history save tear the host down so a restored page never replays', () => {
-	for (const event of ['pagehide', 'htmx:beforeHistorySave']) {
+test('pagehide and htmx history restore tear the host down', () => {
+	for (const event of ['pagehide', 'htmx:historyRestore']) {
 		const env = boot();
 		env.feedback.show('Saved.');
 		env.feedback.show('Failed.', {

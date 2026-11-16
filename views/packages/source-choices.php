@@ -28,7 +28,7 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 <legend class="screen-reader-text"><?php esc_html_e( 'Update source', 'ran-booster' ); ?></legend>
 <div class="ran-booster-package-source<?php echo 'edit' === $source_choice_mode ? ' ran-booster-package-source--navigation' : ''; ?>">
 	<div class="ran-booster-package-source__header">
-		<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title"><?php esc_html_e( 'Update source', 'ran-booster' ); ?></h3>
+		<h4 id="ran-booster-package-source-heading" class="ran-booster-section__title ran-booster-section__title--sub"><?php esc_html_e( 'Update source', 'ran-booster' ); ?></h4>
 		<?php if ( 'edit' !== $source_choice_mode ) { ?>
 		<p class="ran-booster-section__description"><?php esc_html_e( 'Selecting it does not install the package.', 'ran-booster' ); ?></p>
 		<?php } ?>

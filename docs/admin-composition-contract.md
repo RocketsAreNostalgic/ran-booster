@@ -479,6 +479,10 @@ pill is static markup from `RAN\Admin\Component\StatusBadge` (`print_tone()`,
 `ran-booster-wp-ui-static.css`. A script that changes one in place calls
 `window.ranBoosterBadge.update()`.
 
+`StatusBadge::INTENTS` is the single list of status tones (`neutral`, `pending`,
+`info`, `ok`, `success`, `warning`, `error`) and maps each to its Badge intent.
+Validators, presenters and renderers derive from it; none keeps its own list.
+
 - Intents: `none` for neutral or off, `stable` for ready or on, `medium` for
   needs attention, `high` for failed, `informational` for a deliberate choice
   that is neither, such as manual updates.
@@ -527,7 +531,7 @@ change to how the styles load must keep a source on WordPress 7.0.x.
 | ------------------------------------------------- | ------------------------------ | ------------- |
 | Page title, count numerals                        | `--ran-booster-font-size-xl`   | 20px / 600    |
 | Card title, prominent disclosure header, `h2`/`h3` | `--ran-booster-font-size-lg`   | 15px / 600    |
-| Sub-heading (`h4`-`h6`), table header             | `--ran-booster-font-size-md`   | 13px / 600    |
+| Sub-heading (`h4`-`h6`), nested panel header, table header | `--ran-booster-font-size-md`   | 13px / 600    |
 | Compact disclosure header, labels                 | `--ran-booster-font-size-md`   | 13px / 500    |
 | Body and help text                                | `--ran-booster-font-size-md`   | 13px / 400    |
 | Caption                                           | `--ran-booster-font-size-sm`   | 12px / 400    |
@@ -541,6 +545,59 @@ anchor of its row; `test_package_row_disclosure_header_never_outranks_the_packag
 asserts that relationship through the tokens. Icon glyph sizes and the dialog
 close icon are the only raw-size exceptions, plus the notice compatibility
 sheet, which loads only where the design-system tokens are absent.
+
+### Header rhythm
+
+Every standard header in a Card or disclosure takes its inset and block padding
+from four tokens in `assets/ran-booster/00-foundations.css`, so equivalent
+headers line up in mixed compositions and no page compensates for another.
+
+| Role                                                    | Inline inset                                 | Block padding                                | Type                  |
+| ------------------------------------------------------- | -------------------------------------------- | -------------------------------------------- | --------------------- |
+| Section header: Card title (`.ran-booster-settings-section__header`) | `--ran-booster-header-inset-inline` (24px; 16px at 480px and below) | 24px above, 14px below the title, then a rule | 15/600, `h2`/`h3`     |
+| Section trigger: prominent disclosure (Advanced settings, Danger zone) | `--ran-booster-header-inset-inline`          | `--ran-booster-header-trigger-inset-block` (18px) around a 24px line | 15/600                |
+| Nested panel header: readiness panel, a prominent disclosure inside another | `--ran-booster-panel-header-inset-inline` (18px) | `--ran-booster-panel-header-inset-block` (16px) | 13/600, `h3`/`h4`     |
+| Compact disclosure trigger (Documentation, webhook setup, release workflow) | 16px                                         | 8px                                          | 13/500                |
+
+- A section trigger is as tall as a section header (60px against 60.5px for the
+  title block) without a fixed height, so a chevron, a status badge or a wrapped
+  label grows the header instead of being clipped. Its open-state divider is a
+  shadow, so opening adds no height.
+- The Card title block and the body below it share the section inset, so a Card
+  header, its fields, a footer band and a section trigger above or below it share
+  one text edge. The Package operation footer band bleeds through the same token.
+- A prominent disclosure inside another prominent disclosure is a nested panel:
+  its trigger takes the panel pair and sub-heading type, so it sits beside the
+  Release readiness panel header with the same inset and nearly the same height
+  (56px against 57px, which holds the Not ready badge).
+- A prominent disclosure's body takes the same inline inset as its trigger (the
+  panel inset when nested), so header text, fields and a footer band share one
+  text edge, closed and open. A compact disclosure inside keeps its own 16px body.
+- Installation entries and Settings Cards keep 16px block padding because their
+  headers carry a strapline or warning row, and they are never composed with
+  section Cards. They take the shared inline inset, and their warning row follows
+  it.
+- Provider and Repository Cards take the same inset: provider sections, Card
+  content, repository-page sections and the receiver strip all read
+  `--ran-booster-header-inset-inline`, so every Card on a provider page shares one
+  text edge at every width. There is no separate 782px step.
+- The native `<details>` fallback measures the same as the mounted header,
+  including a nested trigger's 13px title.
+- The compact profile keeps its slim padding and 13/500 type: Documentation
+  disclosures never take the section padding or a minimum height.
+- A sub-heading inside a section is 13/600 through the shared
+  `.ran-booster-section__title--sub` modifier or the bare `h4`-`h6` rule, in the
+  mounted and the native fallback state alike. Update source (`h4`), Branch
+  readiness (`h4`) and the nested Release track trigger are sub-headings in
+  Advanced settings; Release readiness is a panel title that is an `h3` and takes
+  the same 13/600 from the readiness panel rule. A section title (Repository
+  configuration, Package operation) is 15/600 as an `h2` or `h3`.
+- A page does not set its own header inset or block padding. `tests/assets/header-rhythm.test.mjs`
+  asserts the tokens, their one narrow override, the shared rules and that no
+  stylesheet gives a header, body, entry row, trigger or summary its own inline
+  padding (any property spelling or unit) outside a short named list: the page
+  frame, the modal dialog header, and the compact disclosure and Documentation
+  baselines.
 
 ### Corner radius
 
@@ -1241,8 +1298,9 @@ $rows = apply_filters(
 
 `$surface` is `plugin` or `theme`, and `$package_projections` is keyed by package
 identifier. Returned rows may address only those identifiers. Each row accepts
-a bounded `status` string and a `badges` list whose tones are `neutral`, `ok`,
-`pending`, `warning` or `error`.
+a bounded `status` string and a `badges` list whose tones are the keys of
+`StatusBadge::INTENTS`: `neutral`, `pending`, `info`, `ok`, `success`, `warning`
+or `error`. Any other tone is rejected.
 
 Core obtains structured actions separately for each package:
 

@@ -454,17 +454,8 @@ final class RepositoryDetailRenderer {
 		$tone     = is_string( $detail['tone'] ?? null ) ? $detail['tone'] : '';
 		$datetime = is_string( $detail['datetime'] ?? null ) ? $detail['datetime'] : '';
 		if ( '' !== $tone ) {
-			$intent = array(
-				'neutral' => 'none',
-				'pending' => 'none',
-				'ok'      => 'stable',
-				'success' => 'stable',
-				'warning' => 'medium',
-				'error'   => 'high',
-				'info'    => 'informational',
-			)[ $tone ] ?? '';
 			?>
-			<?php echo StatusBadge::for_intent( (string) $value, (string) $intent ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
+			<?php echo StatusBadge::for_intent( $value, StatusBadge::detail_intent( $tone ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 			<?php
 			return;
 		}

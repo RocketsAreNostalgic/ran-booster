@@ -89,6 +89,63 @@ validation failure may replace only the declared local error region. Success
 refreshes the request's fixed Core-owned target. Unexpected failures remain on
 Core's normal safe error path.
 
+## Outcome text and feedback
+
+An outcome's message never appears in a URL (#755 R16). The signed redirect
+carries only the operation, target, outcome kind, return route, error region
+and a nonce over those values. `respond()` holds the message in one per-user
+row, `_ran_booster_interaction_outcome`, with a 60 second lifetime, and the
+next render claims it exactly once, only for the signed marker, user and
+site it was written for. This is the owner-approved exception recorded in
+`feedback-policy.md`: the row is presentation only, never an Activity, incident
+or recovery source, and it has no event id because the signed marker's
+operation, target and destination binding is enough.
+
+If the marker verifies but the row is missing, expired, replaced, lost to a
+second tab or never written, a full-page or no-JavaScript landing shows one
+fixed neutral persistent info notice instead: "The result details are not
+available. Check the page or Activity for the current state." It never advises
+a retry and never says the operation failed. On an enhanced (HTMX) landing a
+lost row shows nothing extra: the success is still visible through the swapped
+region. A marker that does not verify shows nothing. Expired rows are deleted on
+the user's next administration load, and uninstall removes the row.
+
+On first view the feedback host also strips the marker arguments
+(`ran_booster_interaction_*` and its nonce) from the address, so a reload or
+Back shows nothing. Without JavaScript the server cannot strip them, so a
+no-JavaScript reload shows the neutral fallback.
+
+Known deviation: a validation or unexpected failure that arrives by redirect
+(no JavaScript, or a form that is not HTMX-enhanced) renders as an inline
+notice, not a host item, so the host does not strip the marker. On reload the
+row is gone and the neutral fallback replaces the failure text, and it shows
+again on each reload while the nonce is valid. Enhanced failures render inline
+from the response body and never use the row. The cleaner fix, a pointer item
+or a host-item fallback so the host strips the address, is a follow-up for the
+pointer and notice collapse in #953 and the feedback work in #755 P7.
+
+What an add-on gets from `respond()`, with no new API and no change to the
+exact API 3 guard:
+
+- `success()` and `accepted()` on a Booster screen are shown through the
+  feedback host (`ranBoosterFeedback`) as a snackbar, with the add-on's
+  message. Without JavaScript the same item is a visible static notice, so
+  nothing is lost and nothing is duplicated.
+- `validation_failure()` and `unexpected_failure()` are never snackbar-only.
+  They stay in the declared inline error region, or, without JavaScript, in a
+  persistent error notice.
+- Outside a Booster screen the outcome remains a native admin notice.
+
+The message is still bounded display text (at most 255 characters, no control
+characters) and is escaped by Core. The one-shot row holds that text only, never
+a secret. Callers must not put a provider response, a path or exception text in
+it.
+
+The enhanced response for a Transporter row fragment keeps its
+`HX-Trigger` event, so that path is unchanged. The `ran_booster_interaction_message`
+query argument is removed: an add-on must not read it. Nothing in the contract
+or the exact API 3 marker changes, because add-ons never read the argument.
+
 The submitted interaction metadata is transport metadata, not authority. Never
 reconstruct the operation, canonical URL, target, capability, nonce action, or
 error-region ID from it.

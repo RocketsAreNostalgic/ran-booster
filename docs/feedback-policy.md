@@ -62,7 +62,7 @@ Each rule is written to be implemented and tested.
 | R11 Dialogs | Destructive or irreversible confirmations stay in dialogs (#782). The snackbar shows only the result afterwards. | Not applicable; routed by #782. |
 | R12 Qualified success | Owner decision: a warning suppresses the success snackbar. A result that carries a warning or partial outcome (saved-before-reinstall, repository check skipped) is therefore not reduced to a success snackbar; it gets a warning pointer and stays durable and inline. An `info` item does not qualify a success. | Producer test: a result with a warning produces no success snackbar. |
 | R13 One copy source | The snackbar text comes from the same Core copy source as the inline text for that outcome. It is never a second string. Provider and add-on text reaches the snackbar only through the existing bounded-message screener. | Test: the snackbar message equals the string from the shared source for the same code. |
-| R14 Static fallback | Without JavaScript the same result renders server-side as a Core notice. With JavaScript the host converts that element into the snackbar without leaving a duplicate. | No-JS and JS-on browser checks; exactly one visible result per event. |
+| R14 Static fallback | Without JavaScript the same result renders server-side as a Core notice. With JavaScript the host converts that element into the snackbar without leaving a duplicate. A warning or error pointer repeats its inline notice, so CSS hides the pointer item by default and the inline notice, which carries `role` (`alert` for an error, `status` for a warning), is the one visible and announced result. If the host never mounts or `show()` fails, the notice is still there; the host's pointer is silent, so nothing is announced twice. A success or info item is the visible static result. | No-JS and JS-on browser checks; exactly one visible result per event. |
 | R15 Never lose a confirmed result | If the host cannot render (component or its styles missing), the confirmed result stays visible in its static form. | Test: with the host unavailable, the static result remains. |
 | R16 No data in URLs | Redirect URLs carry no display text. Closed codes and identifiers only. | Test: no redirect query value contains message text. |
 
@@ -84,7 +84,7 @@ the notice shows the summary and a detail line.
 | `refresh_skipped_forced_off` | skipped, `policy_forced_off` (site configuration) | info | Check not run. Site configuration turns updates off. |
 | `refresh_newer_while_off` | succeeded, `newer_release_observed`, read-only check while updates are off | info | Newer release X available. Updates are off for this package. |
 | `refresh_current_while_off` | succeeded, `no_newer_candidate` or `no_candidates`, read-only check while updates are off | info | Checked: no newer release. Updates are off for this package. |
-| `refresh_recent` | read-only check skipped because the package was checked within the last minute | info | Checked a moment ago. |
+| `refresh_recent` | read-only check skipped because a check of the package completed within the last minute (newer, current or rejected); any other result starts no cooldown | info | Checked a moment ago. |
 | `refresh_unchecked` | skipped for any other reason, or no check observed (for example a filter or another plugin blocked it) | warning | Releases were not checked. Use Check releases to retry. |
 | `refresh_rejected` | rejected | warning | The newest release cannot be used. |
 | `refresh_check_failed` | failed | error | The release check failed. |
@@ -113,6 +113,11 @@ skipped row only when the package has no other result.
 The result also carries the updater's closed reason (`check_reason`, for
 example `policy_disabled`) so a caller other than the page can read it.
 
+Use releases, Change release track and Use branch confirm through the same
+flash (`release_enabled`, `release_channel_changed`, `branch_restored`), with
+the sentence taken from `FeedbackFlash::release_operation_success()`, which the
+inline notice also uses. Their failures keep the signed inline result.
+
 Reinstall, update and remove follow the same pattern as saves. Release,
 webhook and extension successes follow it too.
 
@@ -121,7 +126,7 @@ webhook and extension successes follow it too.
 | Aspect | Specification |
 | --- | --- |
 | Queue | At most 3 visible, newest last. When a fourth arrives, the oldest success is dropped first. A pointer to a persistent error is never dropped by the queue (activating its Show details action removes it). What happens when three pointers are visible and a new item arrives is not yet decided; until it is, a new success is announced politely and its static form is kept (R15), and a new pointer is omitted because its inline message is the record. To be revisited after use (see Open decision). |
-| Duplicates | Each item has a key (the closed code). The same key never produces two snackbars. |
+| Duplicates | Each item has a key (the closed code). An item's identity is its key, intent and text. An identical repeat never produces a second snackbar: it resets the timer. Any other message, including the same key with different copy or intent (two bulk policy changes, or the bulk plugin state as a success and then as a warning), is its own item, bounded by the queue limit. |
 | Duration | Decided: one constant, 10 seconds (R5), tunable later in that one place. WordPress's own `Snackbar` hard-codes 6 seconds and cannot be configured or paused, so the host renders success items with the explicit-dismiss presentation (which also gives the dismiss control) and owns the timer that removes them. |
 | Pause | The timer pauses while the pointer is over the item or focus is inside it, and resumes with the remaining time. This is Booster-owned. |
 | Dismiss | Every item has a dismiss control reachable by keyboard. Escape while focus is inside the item dismisses it. |
@@ -278,9 +283,11 @@ helper is counted once. The Disposition column states where each category goes.
   multisite notice (network admin only); and the extension update warning
   (`ExtensionUpdates`). The signed-outcome fallback is registered at runtime by
   `SignedAdminInteractionFlow`.
-- **C.** `signed_outcome_url()` currently puts the message (up to 255 characters)
-  in the redirect query string. That is the one display text in a URL and is
-  removed by R16.
+- **C.** `signed_outcome_url()` used to put the message (up to 255 characters)
+  in the redirect query string, the one display text in a URL. P4 removes it
+  (R16): the text travels in a separate one-shot per-user row, claimed after
+  the signed marker verifies. Add-on text is open, so it cannot be a closed
+  flash code; see the exception under Server-to-page transport.
 - **D.** Extension install and activate (`ran_booster_extension_result`),
   package results (`ran_booster_result`), bulk results (`ran_booster_bulk_*`),
   release management and release workflow redirects, webhook management
@@ -304,9 +311,9 @@ coding, per `AGENTS.md`.
 | PR | Content | Production | Tests | Docs | Depends on |
 | --- | --- | --- | --- | --- | --- |
 | P0 | This policy and the exception record | 0 | 0 | this document | none |
-| P1 | Transport: the per-user one-shot flash, one consume point on Booster screens, the static notice fallback, Check releases wired end to end as the first producer. It leaves message text in the signed-outcome URL (R16 is P3 and P4) and emits no Activity link (P3 adds it with the queued producers). Check releases emits `data-feedback-target` and a pointer for every non-success result | about +110 PHP, +27 CSS | about +310 | about +26 (`notice-placement.md`) | P0 |
+| P1 | Transport: the per-user one-shot flash, one consume point on Booster screens, the static notice fallback, Check releases wired end to end as the first producer. It leaves message text in the signed-outcome URL (R16 is P3 and P4) and emits no Activity link (P3 adds it with the queued producers). Check releases emits `data-feedback-target` and a pointer for every warning and error result (an info result stands alone) | about +110 PHP, +27 CSS | about +310 | about +26 (`notice-placement.md`) | P0 |
 | P2 | One client host (`ranBoosterFeedback.show()`): generalise `presentGeneralSnackbar`, queue of 3, Booster-owned timer and pause, CSS-only logical positioning, mobile gutters, dedupe against the static element, remove the JS centre measurement, and the intent styling in Visual treatment (success, info, error pointer, warning; Notice and Badge tokens, CSS over the host, no new component, visual check per intent) | about +80 / -110 JS, +30 CSS | about +180 | about +20 | P0 and the interface contract (parallel with P1) |
-| P3 | Move existing producers on current strings: package install, update, edit, unlink, delete, reinstall, update and remove operations, bulk with Activity link, other release results, extension install and activate, webhook results. Each adopts `data-feedback-target` and a pointer for its non-success results, and the Activity link where results are queued. Failures stay inline | about +60 / -120 | about +150 | about +10 | P1, P2 |
+| P3 | Move existing producers on current strings: package install, update, edit, unlink, delete, reinstall, update and remove operations, bulk with Activity link, other release results, extension install and activate, webhook results (webhook results moved to P4 with the signed outcome flow). Each adopts `data-feedback-target` and a pointer for its non-success results, and the Activity link where results are queued. Failures stay inline. The signed result address is stripped on first render, so a reload or Back never shows an earlier result | about +60 / -120 | about +150 | about +10 | P1, P2 |
 | P4 | Signed outcome and add-on path: SUCCESS and ACCEPTED use the transport, and message text leaves the signed-outcome URL (R16); document that add-ons get the snackbar through `respond()` | about +30 / -90 | about +80 | about +60 (`enhanced-admin-interactions.md`) | P1 |
 | P5 | Copy integration: success titles from the one code to copy function; failure copy through it; `FailureText` display mode for Activity detail only | about +60 | about +120 | about +30 | #859 landed and the `ran/updater-support` bump |
 | P6 | Evidence only: installed-ZIP acceptance on desktop and mobile, RTL, JavaScript on and off, reduced motion, keyboard, screen reader, single site and multisite | 0 | 0 | about +80 (`docs/evidence/`) | P1 to P5 |
@@ -353,19 +360,42 @@ URL. No secret, provider response, path or exception text may enter it, and
 unknown codes are dropped on write and on read. A later `FeedbackFlash::enqueue`
 replaces an unread flash, and `render()` requires `manage_options`.
 
+**Owner-approved exception: signed-outcome display text.** An add-on's
+`respond()` message is open, bounded display text that no closed code can
+represent. The owner approved one narrow, bounded exception: a separate
+user-meta row, `_ran_booster_interaction_outcome`, holding `{at, site, action,
+message}`. It lives 60 seconds, belongs to one user and one site, and is claimed
+once (deleting the exact value) only after the signed marker verifies, so a
+forged, replayed, cross-user, cross-site, expired or tampered marker never reads
+it. It has no event id: the marker's operation, target and destination binding
+is enough, because the row is presentation only and has no operational consumer.
+It is never an Activity, incident or recovery source, and it does not widen
+`FeedbackFlash`, which stays closed-code only. No new catalogue and no API 4 are
+introduced. Expired rows are deleted on the next administration load, and
+uninstall removes the key. If the marker verifies but the row is missing,
+expired, replaced or was never written, a full-page or no-JavaScript landing
+shows one fixed neutral persistent info notice (an enhanced landing shows
+nothing extra, because its success is visible in the swapped region): "The
+result details are not available. Check the page or Activity for the current
+state." It does not advise a retry and does not say the operation failed.
+
 ### Interface contract between the flash (P1) and the host (P2)
 
 This section is the single source for the contract.
 
-- The server emits at most one container,
-  `.ran-booster-feedback[data-ran-booster-feedback]`, on a Booster admin screen.
+- The server emits one container,
+  `.ran-booster-feedback[data-ran-booster-feedback]`, per source on a Booster
+  admin screen: the flash, the Dashboard messages and the extension result.
+  One response can hold the flash container and one of the others; the host
+  consumes every container it finds.
 - Each result is an item, `.ran-booster-feedback__item`, with
   `data-feedback-key` (the closed code), `data-intent` (`success`, `info`, `error`
   or `warning`) and `role` (`alert` for error, `status` otherwise). Its text is
   fixed Core copy.
 - `data-feedback-target`: the id of the inline notice a pointer leads to. An
   error or warning item without a present target stays static. Check releases
-  emits it; the other producers adopt it in P3.
+  emits it; package, bulk and extension warnings adopt it in P3
+  (see [Request-scoped feedback items](notice-placement.md#request-scoped-feedback-items-755-p3)).
 - Optional: a `.ran-booster-feedback__activity` link to Activity for queued or
   accepted results (P3).
 - Without JavaScript the items are the visible static fallback, styled as a
@@ -377,6 +407,62 @@ This section is the single source for the contract.
 If this proves arduous or becomes another subsystem to maintain, P1 falls back
 to signed data-free tokens without message text, as package and bulk results
 use today, and the owner is told.
+
+## Known deviations
+
+- **Bulk update queue summary and Activity link (R8, R9).** The queue summary
+  stays the live update progress notice (`ran-booster-packages.js`). Its final
+  result is announced through the existing `ran-booster:admin-mutation-success`
+  event, which reaches the host only for General and provider saves, so a
+  finished bulk update does not produce a snackbar and no Activity link is
+  emitted. This deviates from R8 and R9 and is a named follow-up awaiting an
+  owner decision; P3 does not change the behaviour.
+- **Failure records last until the next load (narrows R3 and R4).** Because the
+  result address is stripped on first render, the inline failure or warning
+  record lasts only until the next reload or navigation, not until the person
+  resolves or dismisses it. The reason is that an old signed result must never
+  read as the current condition. None of the coded failures P3 touches
+  (`bulk_error`, the `bulk_plugin_state` warning, `package_already_managed`,
+  `package_edit_unverified`, the extension result warning) is backed by an
+  Activity row. Only a diagnostic log line persists, and none for extensions.
+  A failure that needs a durable record belongs in Activity, through the
+  current-state work tracked in #951 and #948.
+- **Signed-outcome text does not replay.** The text row is claimed on first
+  view, and the host strips the interaction marker (`ran_booster_interaction_*`
+  and its nonce) from the address with the package result arguments, so a reload
+  or Back shows nothing. Without JavaScript the server cannot strip, so a
+  no-JavaScript reload of the signed address finds the row claimed and shows the
+  neutral fallback instead of the original text. The fallback itself is a notice,
+  not a host item, so it does not strip the address either.
+  - Failures by redirect: a validation or unexpected failure that arrives by
+    redirect (no JavaScript, or a form that is not HTMX-enhanced) renders as an
+    inline notice, so the host does not strip the marker. On reload the row is
+    gone and the neutral fallback replaces the failure text, and it re-shows on
+    each reload while the nonce is valid. Enhanced failures render inline from
+    the response body and never use the row. The cleaner fix, a pointer item or
+    a host-item fallback so the host strips the address, is a follow-up for the
+    pointer and notice collapse in #953 and #755 P7.
+- **Edit saves.** They still reach the host through the enhanced save path
+  (`data-ran-booster-package-saved`) until P7 retires that bridge.
+- **Result addresses (earlier results never replay).** A signed request result
+  authenticates the earlier action, not the present condition. The host
+  therefore strips the result arguments from the address on first render
+  whenever it takes any item (success, failure or warning pointer, or info),
+  using `history.replaceState` so the history state and the other arguments are
+  kept. A reload or Back to that entry shows no earlier result and no
+  snackbar. A failure's inline record stays in the page until the person
+  leaves it (R4) and its pointer is shown once. A pointer that is not shown
+  (no host, no inline target, no room) does not count as taken, so the address
+  is left as it is.
+  - Still replays, unlabelled, because the server cannot strip: no JavaScript,
+    or a host that cannot run or show the item. A bookmarked, pasted or
+    followed signed address is a new load and shows its result. The signed
+    nonce is not single-use.
+  - A flash item (Check releases, release settings) carries no result argument
+    and is not affected. Package results delivered by a swap are cleaned by the
+    enhanced mutation handler.
+  - Not done: tracking whether the condition still holds. That needs the
+    current-state projection and is outside P3.
 
 ## Open decision
 

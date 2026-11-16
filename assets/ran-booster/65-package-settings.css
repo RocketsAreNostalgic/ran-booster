@@ -45,14 +45,14 @@
 .ran-booster-admin .ran-booster-settings-section__header {
 	padding-block: var(--ran-booster-card-inset-block-start)
 		var(--ran-booster-space-14);
-	padding-inline: var(--ran-booster-space-24);
+	padding-inline: var(--ran-booster-header-inset-inline);
 	border-block-end: 1px solid var(--ran-booster-border);
 }
 
 .ran-booster-admin .ran-booster-settings-section__body {
 	padding-block: var(--ran-booster-space-20)
 		var(--ran-booster-card-inset-block-end);
-	padding-inline: var(--ran-booster-space-24);
+	padding-inline: var(--ran-booster-header-inset-inline);
 }
 
 .ran-booster-admin .ran-booster-advanced-source-settings {
@@ -535,10 +535,11 @@
 	border-block-start: 1px solid var(--ran-booster-border);
 }
 
+/* The footer band bleeds through the same inset the section body uses. */
 .ran-booster-admin
 	.ran-booster-package-operation-settings
 	.ran-booster-settings-section__body {
-	--ran-booster-card-inset-inline: var(--ran-booster-space-24);
+	--ran-booster-card-inset-inline: var(--ran-booster-header-inset-inline);
 
 	container-type: inline-size;
 }
@@ -587,23 +588,6 @@
 	/* The chevron keeps its core room at the end; the start gap is trimmed so the longest selected label fits a phone. */
 	padding-inline-start: var(--ran-booster-space-8);
 	text-overflow: ellipsis;
-}
-
-@media screen and (max-width: 480px) {
-	.ran-booster-admin
-		.ran-booster-package-operation-settings
-		:is(
-			.ran-booster-settings-section__header,
-			.ran-booster-settings-section__body
-		) {
-		padding-inline: var(--ran-booster-space-16);
-	}
-
-	.ran-booster-admin
-		.ran-booster-package-operation-settings
-		.ran-booster-settings-section__body {
-		--ran-booster-card-inset-inline: var(--ran-booster-space-16);
-	}
 }
 
 .ran-booster-admin .ran-booster-package-operation-settings__actions {
@@ -711,8 +695,8 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--ran-booster-space-18);
-	padding-block: var(--ran-booster-space-16);
-	padding-inline: var(--ran-booster-space-18);
+	padding-block: var(--ran-booster-panel-header-inset-block);
+	padding-inline: var(--ran-booster-panel-header-inset-inline);
 	border-block-end: 1px solid var(--ran-booster-border);
 }
 
@@ -1074,25 +1058,9 @@
  */
 
 .ran-booster-admin .ran-booster-settings__card {
-	--ran-booster-settings-card-inset: var(--ran-booster-space-24);
+	--ran-booster-settings-card-inset: var(--ran-booster-header-inset-inline);
 
 	margin-block: 0 var(--ran-booster-card-gap);
-}
-
-.ran-booster-admin
-	.ran-booster-settings__card[data-ran-booster-ui-disclosure="settings-card"]
-	> *
-	> .ran-booster-ui-disclosure
-	> .ran-booster-ui-disclosure__header
-	> [role="button"],
-.ran-booster-admin
-	.ran-booster-settings__card[data-ran-booster-ui-disclosure="settings-card"]
-	> details[data-ran-booster-ui-disclosure-fallback]
-	> summary,
-.ran-booster-admin
-	.ran-booster-settings__card
-	.ran-booster-troubleshooting__entry-row {
-	padding-inline: var(--ran-booster-settings-card-inset);
 }
 
 .ran-booster-admin

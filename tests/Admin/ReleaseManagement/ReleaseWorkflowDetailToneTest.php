@@ -8,9 +8,9 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\Component\StatusBadge;
 
 /**
- * The repository detail normaliser rejects any tone outside its vocabulary with
- * a fatal error, so every tone the release workflow projection can assign must
- * belong to it, and every accepted tone must be one the badge can draw.
+ * The repository detail normaliser rejects any tone outside the status badge
+ * vocabulary with a fatal error, so every tone a detail producer can assign must
+ * belong to StatusBadge::INTENTS, the single source of tones.
  */
 final class ReleaseWorkflowDetailToneTest extends TestCase {
 
@@ -22,7 +22,7 @@ final class ReleaseWorkflowDetailToneTest extends TestCase {
 		}
 		self::assertGreaterThan( 0, preg_match_all( '/\$tone\s*=\s*\'([a-z]+)\';/', $method[0], $assigned ) );
 		foreach ( $assigned[1] as $tone ) {
-			self::assertContains( $tone, $accepted, 'The detail tone "' . $tone . '" is not accepted by the repository details normaliser.' );
+			self::assertContains( $tone, $accepted, 'The detail tone "' . $tone . '" is not in the status badge vocabulary.' );
 		}
 	}
 
@@ -32,16 +32,11 @@ final class ReleaseWorkflowDetailToneTest extends TestCase {
 		self::assertStringContainsString( 'is-informational-intent', StatusBadge::markup( 'Existing workflow found', 'info' ) );
 	}
 
-	public function test_every_accepted_detail_tone_is_one_the_badge_can_draw(): void {
-		foreach ( $this->accepted_tones() as $tone ) {
-			self::assertArrayHasKey( $tone, StatusBadge::INTENTS, 'The accepted detail tone "' . $tone . '" has no badge intent.' );
-		}
-	}
-
 	public function test_every_literal_tone_in_the_detail_producers_is_accepted(): void {
 		$accepted  = $this->accepted_tones();
 		$producers = array(
 			'RAN/Admin/ProviderRepositoryRowsNormalizer.php',
+			'RAN/Admin/Component/RepositoryDetailRenderer.php',
 			'RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php',
 			'RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php',
 			'RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php',
@@ -61,7 +56,7 @@ final class ReleaseWorkflowDetailToneTest extends TestCase {
 				self::assertIsInt( $found );
 				foreach ( $literals[1] as $tone ) {
 					++$checked;
-					self::assertContains( $tone, $accepted, 'The tone "' . $tone . '" in ' . $path . ' is not accepted by the repository details normaliser.' );
+					self::assertContains( $tone, $accepted, 'The tone "' . $tone . '" in ' . $path . ' is not in the status badge vocabulary.' );
 				}
 			}
 		}
@@ -70,13 +65,7 @@ final class ReleaseWorkflowDetailToneTest extends TestCase {
 
 	/** @return list<string> */
 	private function accepted_tones(): array {
-		$source = $this->source( 'RAN/Admin/ProviderRepositoryRowsNormalizer.php' );
-		if ( 1 !== preg_match( '/function tones\(\): array \{\s*return array\(([^)]*)\);/', $source, $m ) ) {
-			self::fail( 'The accepted tone list was not found.' );
-		}
-		self::assertGreaterThan( 0, preg_match_all( '/\'([a-z]+)\'/', $m[1], $tones ) );
-
-		return $tones[1];
+		return array_keys( StatusBadge::INTENTS );
 	}
 
 	private function source( string $path ): string {

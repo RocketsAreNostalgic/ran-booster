@@ -323,53 +323,53 @@ final class ReleaseWorkflowPresenter {
 	private function repository_release_automation_state( string $workflow_owner, bool $workflow_ready_to_assess, bool $published_releases_working, bool $record_occupied, string $observation_kind, bool $unavailable = false ): array {
 		// Never configured is not a fault: the optional workflow stays neutral until a record blocks it.
 		$state   = __( 'Not assessed', 'ran-booster' );
-		$tone    = 'ran-booster-badge--neutral';
+		$tone    = 'neutral';
 		$message = __( 'Release workflow status is unavailable.', 'ran-booster' );
 		$notice  = 'notice-info';
 		$origin  = __( 'Booster setup: Not recorded.', 'ran-booster' );
 		if ( $unavailable ) {
 			$state   = __( 'Unavailable', 'ran-booster' );
-			$tone    = 'ran-booster-badge--info';
+			$tone    = 'info';
 			$message = __( 'Release workflow is unavailable for this repository.', 'ran-booster' );
 			$notice  = 'notice-info';
 		} elseif ( '' !== $workflow_owner ) {
 			$state   = __( 'Setup recorded', 'ran-booster' );
-			$tone    = 'ran-booster-badge--warning';
+			$tone    = 'warning';
 			$message = sprintf( /* translators: %s: exact package type and name. */ __( 'A setup pull request is recorded for %s. Check its outcome before relying on the workflow.', 'ran-booster' ), $workflow_owner );
 			$origin  = __( 'Booster setup: Draft pull request recorded.', 'ran-booster' );
 		} elseif ( 'existing_automation_detected' === $observation_kind ) {
 			$state   = __( 'Existing workflow found', 'ran-booster' );
-			$tone    = 'ran-booster-badge--info';
+			$tone    = 'info';
 			$message = __( 'An existing release workflow was found in this repository. Booster will not overwrite it.', 'ran-booster' );
 			$notice  = 'notice-info';
 		} elseif ( 'booster_setup_verified' === $observation_kind ) {
 			$state   = __( 'Compatible workflow verified', 'ran-booster' );
-			$tone    = 'ran-booster-badge--success';
+			$tone    = 'ok';
 			$message = __( 'A Booster-compatible workflow configuration was verified. Execution has not been checked.', 'ran-booster' );
 			$notice  = 'notice-success';
 			$origin  = __( 'Booster setup: No local setup pull-request record.', 'ran-booster' );
 		} elseif ( 'mixed_observations' === $observation_kind ) {
 			$state   = __( 'Multiple assessments', 'ran-booster' );
-			$tone    = 'ran-booster-badge--info';
+			$tone    = 'info';
 			$message = __( 'Workflow assessments differ. Review each package below.', 'ran-booster' );
 			$notice  = 'notice-info';
 		} elseif ( 'no_recognisable_automation' === $observation_kind ) {
 			$state   = __( 'No workflow found', 'ran-booster' );
-			$tone    = 'ran-booster-badge--info';
+			$tone    = 'info';
 			$message = __( 'No recognizable release workflow was found. Booster can prepare a setup pull request.', 'ran-booster' );
 			$notice  = 'notice-info';
 		} elseif ( $workflow_ready_to_assess ) {
 			$state   = __( 'Ready to assess', 'ran-booster' );
-			$tone    = 'ran-booster-badge--success';
+			$tone    = 'ok';
 			$message = __( 'Assess this repository before preparing a setup pull request.', 'ran-booster' );
 		} elseif ( $record_occupied ) {
 			$state   = __( 'Blocked', 'ran-booster' );
-			$tone    = 'ran-booster-badge--error';
+			$tone    = 'error';
 			$notice  = 'notice-warning';
 			$message = __( 'A local workflow record is occupied by a different package or revision. Review it before setup.', 'ran-booster' );
 		} elseif ( $published_releases_working ) {
 			$state   = __( 'Not assessed', 'ran-booster' );
-			$tone    = 'ran-booster-badge--info';
+			$tone    = 'info';
 			$message = __( 'Releases are available; their publishing method has not been assessed.', 'ran-booster' );
 			$notice  = 'notice-info';
 		}

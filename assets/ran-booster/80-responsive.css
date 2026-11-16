@@ -158,11 +158,6 @@
 }
 
 @media screen and (max-width: 782px) {
-	.ran-booster-admin .ran-booster-provider-section__header,
-	.ran-booster-admin .ran-booster-provider-section__body {
-		padding-inline: var(--ran-booster-space-18);
-	}
-
 	.ran-booster-admin .ran-booster-status-summary,
 	.ran-booster-admin .ran-booster-status-summary__actions,
 	.ran-booster-admin .ran-booster-provider-management__header,

@@ -140,7 +140,7 @@
 .ran-booster-admin .ran-booster-provider-section__header {
 	padding-block: var(--ran-booster-card-inset-block-start)
 		var(--ran-booster-space-14);
-	padding-inline: var(--ran-booster-space-24);
+	padding-inline: var(--ran-booster-header-inset-inline);
 }
 
 .ran-booster-admin .ran-booster-provider-section__header p,
@@ -150,7 +150,7 @@
 
 .ran-booster-admin .ran-booster-provider-section__body {
 	padding-block: 0 var(--ran-booster-card-inset-block-end);
-	padding-inline: var(--ran-booster-space-24);
+	padding-inline: var(--ran-booster-header-inset-inline);
 }
 
 .ran-booster-admin .ran-booster-status-summary {
@@ -849,15 +849,8 @@
 	[data-ran-booster-card="provider"].ran-booster-card
 	.ran-booster-card__content {
 	padding: var(--ran-booster-card-inset-block-start)
-		var(--ran-booster-space-24) var(--ran-booster-card-inset-block-end);
-}
-
-@media screen and (max-width: 782px) {
-	.ran-booster-admin
-		[data-ran-booster-card="provider"].ran-booster-card
-		.ran-booster-card__content {
-		padding-inline: var(--ran-booster-space-18);
-	}
+		var(--ran-booster-header-inset-inline)
+		var(--ran-booster-card-inset-block-end);
 }
 
 /* Core detail sections already own their header and body insets. */
@@ -910,35 +903,13 @@
 }
 
 .ran-booster-admin .ran-booster-release-workflow__body {
-	padding: var(--ran-booster-space-16) var(--ran-booster-space-18);
-}
-
-/* Repository Cards share provider gutters without changing their block rhythm. */
-.ran-booster-admin
-	.ran-booster-repository-page
-	.ran-booster-settings-section[data-ran-booster-card="provider"]
-	:is(
-		.ran-booster-settings-section__header,
-		.ran-booster-settings-section__body
-	) {
-	padding-inline: var(--ran-booster-space-24);
-}
-
-@media screen and (max-width: 782px) {
-	.ran-booster-admin
-		.ran-booster-repository-page
-		.ran-booster-settings-section[data-ran-booster-card="provider"]
-		:is(
-			.ran-booster-settings-section__header,
-			.ran-booster-settings-section__body
-		) {
-		padding-inline: var(--ran-booster-space-18);
-	}
+	padding: var(--ran-booster-panel-header-inset-block)
+		var(--ran-booster-panel-header-inset-inline);
 }
 
 /* The receiver Card's tab strip is full-bleed: its rule meets both borders and the labels keep the content inset. */
 .ran-booster-admin .ran-booster-provider-receiver {
-	--ran-booster-receiver-inset: var(--ran-booster-space-24);
+	--ran-booster-receiver-inset: var(--ran-booster-header-inset-inline);
 }
 
 .ran-booster-admin
@@ -995,10 +966,4 @@
 	flex: 0 1 28rem;
 	min-inline-size: 0;
 	max-inline-size: 100%;
-}
-
-@media screen and (max-width: 782px) {
-	.ran-booster-admin .ran-booster-provider-receiver {
-		--ran-booster-receiver-inset: var(--ran-booster-space-18);
-	}
 }

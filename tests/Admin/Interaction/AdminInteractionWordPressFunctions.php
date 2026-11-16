@@ -67,8 +67,57 @@ function wp_verify_nonce( string $nonce, string $action ): int|false {
 	return hash_equals( wp_create_nonce( $action ), $nonce ) ? 1 : false;
 }
 
-function wp_unslash( string $value ): string {
-	return $value;
+function get_current_user_id(): int {
+	return $GLOBALS['ran_booster_interaction_test_user'] ?? 1;
+}
+
+function get_current_blog_id(): int {
+	return $GLOBALS['ran_booster_interaction_test_blog'] ?? 1;
+}
+
+/** Models stripslashes_deep(): WordPress strips one level of slashes from strings, recursively. */
+function wp_unslash( mixed $value ): mixed {
+	if ( is_array( $value ) ) {
+		return array_map( wp_unslash( ... ), $value );
+	}
+
+	return is_string( $value ) ? stripslashes( $value ) : $value;
+}
+
+/** Models add_magic_quotes(): slashes strings, recursively. */
+function wp_slash( mixed $value ): mixed {
+	if ( is_array( $value ) ) {
+		return array_map( wp_slash( ... ), $value );
+	}
+
+	return is_string( $value ) ? addslashes( $value ) : $value;
+}
+
+/** Models update_metadata(): unslashes on write; a failing store returns false. */
+function update_user_meta( int $user_id, string $key, mixed $value ): int|bool {
+	if ( true === ( $GLOBALS['ran_booster_interaction_test_write_fails'] ?? false ) ) {
+		return false;
+	}
+	$GLOBALS['ran_booster_interaction_test_meta'][ $user_id ][ $key ] = wp_unslash( $value );
+
+	return 1;
+}
+
+function get_user_meta( int $user_id, string $key, bool $single ): mixed {
+	unset( $single );
+
+	return $GLOBALS['ran_booster_interaction_test_meta'][ $user_id ][ $key ] ?? '';
+}
+
+/** Models delete_metadata(): the value to match is unslashed before the comparison. */
+function delete_user_meta( int $user_id, string $key, mixed $value = '' ): bool {
+	$held = $GLOBALS['ran_booster_interaction_test_meta'][ $user_id ] ?? array();
+	if ( ! array_key_exists( $key, $held ) || ( '' !== $value && wp_unslash( $value ) !== $held[ $key ] ) ) {
+		return false;
+	}
+	unset( $GLOBALS['ran_booster_interaction_test_meta'][ $user_id ][ $key ] );
+
+	return true;
 }
 
 if ( ! function_exists( 'sanitize_key' ) ) {

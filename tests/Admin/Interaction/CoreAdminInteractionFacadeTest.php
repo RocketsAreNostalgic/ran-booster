@@ -10,6 +10,9 @@ require_once __DIR__ . '/AdminInteractionWordPressFunctions.php';
 
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\AdminInteractionOutcome;
@@ -47,6 +50,8 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 
 		$GLOBALS['ran_booster_interaction_test_actions']      = array();
 		$GLOBALS['ran_booster_interaction_test_translations'] = array();
+		$GLOBALS['ran_booster_interaction_test_meta']         = array();
+		unset( $GLOBALS['ran_booster_notice_scope_screen'], $GLOBALS['ran_booster_interaction_test_user'], $GLOBALS['ran_booster_interaction_test_blog'], $GLOBALS['ran_booster_interaction_test_write_fails'] );
 		$_GET  = array();
 		$_POST = array();
 		unset( $_SERVER['HTTP_HX_REQUEST'], $_SERVER['HTTP_HX_TARGET'] );
@@ -293,7 +298,8 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		self::assertSame( '#ran-booster-provider-task-panel', $decoded['target'] );
 		self::assertStringStartsWith( '/wp-admin/', $decoded['path'] );
 		self::assertStringNotContainsString( 'https://example.test', $decoded['path'] );
-		self::assertStringContainsString( 'ran_booster_interaction_message=GitHub%20webhook%20configured.', $decoded['path'] );
+		self::assertStringNotContainsString( 'message', $decoded['path'] );
+		self::assertStringNotContainsString( 'configured', rawurldecode( $decoded['path'] ) );
 
 		$this->load_query_from_url( $decoded['path'] );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
@@ -319,7 +325,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$location = json_decode( (string) $this->header( 'HX-Location' ), true );
 		self::assertIsArray( $location );
 		$this->load_query_from_url( $location['path'] );
-		$_GET['ran_booster_interaction_message'] = 'Forged success.';
+		$_GET['ran_booster_interaction_outcome'] = 'validation_failure';
 		$_SERVER['HTTP_HX_REQUEST']              = 'true';
 		$_SERVER['HTTP_HX_TARGET']               = 'ran-booster-provider-task-panel';
 		$this->headers                           = array();
@@ -405,6 +411,252 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			self::assertStringContainsString( 'data-ran-booster-ui-notice-scope="global" role="' . $role . '"', $html );
 			self::assertStringContainsString( '<div data-ran-booster-ui-notice-content><p>' . $message . '</p></div></div>', $html );
 		}
+	}
+
+	private const FALLBACK = 'The result details are not available. Check the page or Activity for the current state.';
+
+	private function redirect_for( AdminInteractionOutcome $outcome ): string {
+		$this->redirects = array();
+		$facade          = $this->facade();
+		$this->capture_termination( fn () => $facade->respond( $outcome ) );
+
+		return $this->redirects[0];
+	}
+
+	/** Runs the pending-feedback hook against a redirect URL and returns what the notices print. */
+	private function pending_html( string $url ): string {
+		$GLOBALS['ran_booster_interaction_test_actions'] = array();
+		$this->load_query_from_url( $url );
+		$this->facade()->prepare_pending_feedback();
+		ob_start();
+		foreach ( $GLOBALS['ran_booster_interaction_test_actions']['admin_notices'] ?? array() as $notice ) {
+			$notice['callback']();
+		}
+
+		return (string) ob_get_clean();
+	}
+
+	private function held_row(): mixed {
+		return $GLOBALS['ran_booster_interaction_test_meta'][1][ SignedAdminInteractionFlow::MESSAGE_META_KEY ] ?? null;
+	}
+
+	public function test_no_outcome_redirect_carries_display_text(): void {
+		$request = $this->request();
+		foreach ( array(
+			AdminInteractionOutcome::success( $request, 'Secret-looking success text.' ),
+			AdminInteractionOutcome::accepted( $request, 'Accepted text.' ),
+			AdminInteractionOutcome::validation_failure( $request, 'Failure text.' ),
+		) as $outcome ) {
+			$url = $this->redirect_for( $outcome );
+
+			self::assertStringNotContainsString( 'message', $url );
+			self::assertStringNotContainsString( rawurlencode( $outcome->message() ), $url );
+			self::assertStringNotContainsString( 'text', $url );
+			// Negative control: the text is held server-side, so the check above could fail.
+			self::assertSame( $outcome->message(), $this->held_row()['message'] );
+		}
+	}
+
+	/** @return array<string, array{0: string}> */
+	public static function round_trip_messages(): array {
+		return array(
+			'plain'            => array( 'Add-on saved.' ),
+			'single backslash' => array( 'Path C:\\Temp saved.' ),
+			'double backslash' => array( 'UNC \\\\server\\share saved.' ),
+		);
+	}
+
+	#[DataProvider( 'round_trip_messages' )]
+	public function test_outcome_text_round_trips_through_the_one_shot_row( string $message ): void {
+		$url  = $this->redirect_for( AdminInteractionOutcome::success( $this->request(), $message ) );
+		$html = $this->pending_html( $url );
+
+		self::assertStringContainsString( '<p>' . htmlspecialchars( $message, ENT_QUOTES ) . '</p>', $html );
+		self::assertStringNotContainsString( self::FALLBACK, $html );
+		self::assertNull( $this->held_row(), 'The claim must delete the row.' );
+	}
+
+	public function test_outcome_text_is_one_shot_and_a_no_javascript_reload_shows_the_neutral_fallback(): void {
+		$url = $this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Saved once.' ) );
+
+		self::assertStringContainsString( 'Saved once.', $this->pending_html( $url ) );
+		$reload = $this->pending_html( $url );
+		self::assertStringContainsString( self::FALLBACK, $reload );
+		self::assertStringContainsString( 'notice notice-info', $reload );
+		self::assertStringContainsString( 'role="status"', $reload );
+		self::assertStringNotContainsString( 'Saved once.', $reload );
+	}
+
+	public function test_another_user_never_receives_the_text_and_sees_only_the_fallback(): void {
+		$url = $this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Private.' ) );
+		$GLOBALS['ran_booster_interaction_test_user'] = 2;
+		$html = $this->pending_html( $url );
+		unset( $GLOBALS['ran_booster_interaction_test_user'] );
+
+		self::assertStringNotContainsString( 'Private.', $html );
+		self::assertStringContainsString( self::FALLBACK, $html );
+		self::assertNotNull( $this->held_row(), 'The owner keeps their own row.' );
+	}
+
+	public function test_text_is_scoped_to_the_site_that_wrote_it(): void {
+		$url = $this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Site one.' ) );
+		$GLOBALS['ran_booster_interaction_test_blog'] = 2;
+		$html = $this->pending_html( $url );
+		unset( $GLOBALS['ran_booster_interaction_test_blog'] );
+
+		self::assertStringNotContainsString( 'Site one.', $html );
+		self::assertStringContainsString( self::FALLBACK, $html );
+		self::assertSame( 1, $this->held_row()['site'] );
+		self::assertStringContainsString( 'Site one.', $this->pending_html( $url ) );
+	}
+
+	public function test_expired_text_shows_the_fallback_and_is_deleted(): void {
+		$url        = $this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Old.' ) );
+		$held       = $this->held_row();
+		$held['at'] = time() - 120;
+		$GLOBALS['ran_booster_interaction_test_meta'][1][ SignedAdminInteractionFlow::MESSAGE_META_KEY ] = $held;
+		$html = $this->pending_html( $url );
+
+		self::assertStringContainsString( self::FALLBACK, $html );
+		self::assertStringNotContainsString( 'Old.', $html );
+		self::assertNull( $this->held_row() );
+	}
+
+	public function test_an_expired_row_is_reaped_on_admin_init_without_any_marker(): void {
+		$this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Abandoned.' ) );
+		$_GET       = array();
+		$held       = $this->held_row();
+		$held['at'] = time() - 120;
+		$GLOBALS['ran_booster_interaction_test_meta'][1][ SignedAdminInteractionFlow::MESSAGE_META_KEY ] = $held;
+		$this->facade()->prepare_pending_feedback();
+
+		self::assertNull( $this->held_row() );
+	}
+
+	public function test_an_unexpired_row_survives_admin_init_without_its_marker(): void {
+		$this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Pending.' ) );
+		$_GET = array();
+		$this->facade()->prepare_pending_feedback();
+
+		self::assertNotNull( $this->held_row() );
+	}
+
+	public function test_a_failed_write_falls_back_to_the_neutral_notice(): void {
+		$GLOBALS['ran_booster_interaction_test_write_fails'] = true;
+		$url = $this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Lost.' ) );
+		unset( $GLOBALS['ran_booster_interaction_test_write_fails'] );
+		$html = $this->pending_html( $url );
+
+		self::assertStringContainsString( self::FALLBACK, $html );
+		self::assertStringNotContainsString( 'Lost.', $html );
+		self::assertStringNotContainsStringIgnoringCase( 'retry', self::FALLBACK );
+		self::assertStringNotContainsStringIgnoringCase( 'failed', self::FALLBACK );
+	}
+
+	public function test_the_fallback_is_neutral_for_every_kind_and_never_a_timed_success_event(): void {
+		foreach ( array(
+			AdminInteractionOutcome::success( $this->request(), 'S.' ),
+			AdminInteractionOutcome::accepted( $this->request(), 'A.' ),
+			AdminInteractionOutcome::validation_failure( $this->request(), 'V.' ),
+		) as $outcome ) {
+			$GLOBALS['ran_booster_interaction_test_meta'] = array();
+			$url = $this->redirect_for( $outcome );
+			$GLOBALS['ran_booster_interaction_test_meta'] = array();
+			$html = $this->pending_html( $url );
+			self::assertStringContainsString( 'notice notice-info', $html );
+			self::assertStringContainsString( self::FALLBACK, $html );
+		}
+
+		$url = $this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Gone.' ) );
+		$GLOBALS['ran_booster_interaction_test_meta'] = array();
+		$this->load_query_from_url( $url );
+		$_SERVER['HTTP_HX_REQUEST'] = 'true';
+		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-task-panel';
+		$this->headers              = array();
+		$this->facade()->prepare_pending_feedback();
+
+		self::assertNull( $this->header( 'HX-Trigger-After-Swap' ) );
+		self::assertNotNull( $this->header( 'HX-Replace-Url' ) );
+	}
+
+	public function test_a_wrong_kind_or_wrong_nonce_shows_nothing_even_with_a_held_row(): void {
+		$url = $this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Real.' ) );
+		foreach ( array(
+			'wrong kind'  => array( 'ran_booster_interaction_outcome', 'validation_failure' ),
+			'wrong nonce' => array( '_ran_booster_interaction_nonce', 'forged' ),
+		) as [ $field, $value ] ) {
+			$GLOBALS['ran_booster_interaction_test_actions'] = array();
+			$this->load_query_from_url( $url );
+			$_GET[ $field ] = $value;
+			$this->facade()->prepare_pending_feedback();
+
+			self::assertArrayNotHasKey( 'admin_notices', $GLOBALS['ran_booster_interaction_test_actions'] );
+			self::assertNotNull( $this->held_row(), 'A rejected marker must not consume the row.' );
+		}
+	}
+
+	public function test_no_outcome_row_carries_a_secret_shaped_event_id(): void {
+		$this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Bounded.' ) );
+
+		self::assertSame( array( 'at', 'site', 'action', 'message' ), array_keys( (array) $this->held_row() ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_success_and_accepted_use_the_feedback_host_and_failures_and_fallback_stay_notices_on_booster_screens(): void {
+		require_once dirname( __DIR__, 2 ) . '/Support/BoosterNoticeScopeWordPressFunctions.php';
+		require_once dirname( __DIR__, 2 ) . '/Support/FeedbackWordPressFunctions.php';
+		require_once dirname( __DIR__, 2 ) . '/Support/NoticeIconGlobalWordPressFunctions.php';
+		$GLOBALS['ran_booster_notice_scope_screen'] = (object) array( 'id' => 'toplevel_page_ran-booster' );
+		$request                                    = $this->request();
+		$render                                     = function ( AdminInteractionOutcome $outcome, bool $lose_row = false ): string {
+			$GLOBALS['ran_booster_interaction_test_meta'] = array();
+			$url = $this->redirect_for( $outcome );
+			if ( $lose_row ) {
+				$GLOBALS['ran_booster_interaction_test_meta'] = array();
+			}
+			$this->pending_html( $url );
+			ob_start();
+			\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+
+			return (string) ob_get_clean();
+		};
+
+		foreach ( array(
+			array( AdminInteractionOutcome::success( $request, 'Add-on saved <it>.' ), 'interaction_success', 'success', 'Add-on saved &lt;it&gt;.' ),
+			array( AdminInteractionOutcome::accepted( $request, 'Queued.' ), 'interaction_accepted', 'info', 'Queued.' ),
+		) as [ $outcome, $key, $intent, $text ] ) {
+			$html = $render( $outcome );
+
+			self::assertStringContainsString( '<div class="ran-booster-feedback" data-ran-booster-feedback>', $html );
+			self::assertStringContainsString( 'data-feedback-key="' . $key . '" data-intent="' . $intent . '" role="status">' . $text . '</div>', $html );
+			self::assertStringNotContainsString( 'notice notice-', $html );
+		}
+
+		foreach ( array(
+			AdminInteractionOutcome::validation_failure( $request, 'Could not <verify>.' ),
+			AdminInteractionOutcome::unexpected_failure( $request ),
+		) as $failure ) {
+			$html = $render( $failure );
+			self::assertStringContainsString( 'notice notice-error', $html );
+			self::assertStringContainsString( 'role="alert"', $html );
+			self::assertStringNotContainsString( 'data-ran-booster-feedback', $html );
+		}
+
+		$html = $render( AdminInteractionOutcome::success( $request, 'Gone.' ), true );
+		self::assertStringContainsString( 'notice notice-info', $html );
+		self::assertStringContainsString( self::FALLBACK, $html );
+		self::assertStringNotContainsString( 'data-ran-booster-feedback', $html, 'The fallback is persistent, not a timed snackbar.' );
+	}
+
+	public function test_capability_and_nonce_markers_are_unchanged_by_text_removal(): void {
+		$url = $this->redirect_for( AdminInteractionOutcome::success( $this->request(), 'Saved.' ) );
+		$this->load_query_from_url( $url );
+		$GLOBALS['ran_booster_interaction_test_actions'] = array();
+		$_GET['_ran_booster_interaction_nonce']          = 'forged';
+		$this->facade()->prepare_pending_feedback();
+
+		self::assertArrayNotHasKey( 'admin_notices', $GLOBALS['ran_booster_interaction_test_actions'] );
 	}
 
 	public function test_register_owns_only_the_pending_feedback_hook(): void {

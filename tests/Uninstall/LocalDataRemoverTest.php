@@ -101,6 +101,7 @@ final class LocalDataRemoverTest extends TestCase {
 			CredentialExpiryNotice::USER_META_KEY   => array( 2 ),
 			DeploymentAdminPresenter::USER_META_KEY => array( 3 ),
 			\RAN\Admin\Feedback\FeedbackFlash::USER_META_KEY => array( 5 ),
+			\RAN\Admin\Interaction\SignedAdminInteractionFlow::MESSAGE_META_KEY => array( 7 ),
 			'unrelated_meta'                        => array( 4 ),
 		);
 	}

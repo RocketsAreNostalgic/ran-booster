@@ -384,7 +384,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Leave blank to use the repository', $html );
 		self::assertMatchesRegularExpression( '/class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" aria-describedby="ran-booster-link-installed-help"/', $html );
 		self::assertSame(
-			array( 'Repository configuration', 'Advanced settings', 'Update source', 'Package operation' ),
+			array( 'Repository configuration', 'Advanced settings', 'Package operation' ),
 			$this->h3_headings( $html ),
 			$package_view->get_type()
 		);
@@ -799,7 +799,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString( 'id="ran-booster-advanced-source-settings"', $edit_form );
 			self::assertStringNotContainsString( 'id="ran-booster-package-operation-heading"', $edit_form );
 			self::assertSame(
-				array( 'Repository configuration', 'Advanced settings', 'Update source', 'Package operation', 'Danger zone' ),
+				array( 'Repository configuration', 'Advanced settings', 'Package operation', 'Danger zone' ),
 				$this->h3_headings( $html ),
 				$package_view->get_type()
 			);
@@ -1119,7 +1119,7 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertStringContainsString( '>Branch</strong>', $html, $package_view->get_type() );
 				self::assertStringContainsString( '>Releases</strong>', $html, $package_view->get_type() );
 				self::assertStringContainsString( '<legend class="screen-reader-text">Update source</legend>', $html, $package_view->get_type() );
-				self::assertStringContainsString( '<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title">Update source</h3>', $html, $package_view->get_type() );
+				self::assertStringContainsString( '<h4 id="ran-booster-package-source-heading" class="ran-booster-section__title ran-booster-section__title--sub">Update source</h4>', $html, $package_view->get_type() );
 				self::assertStringContainsString( '<div class="ran-booster-package-source__header">', $html, $package_view->get_type() );
 				self::assertStringNotContainsString( '<header', $html, $package_view->get_type() );
 				self::assertStringNotContainsString( 'aria-labelledby="ran-booster-package-source-heading"', $html, $package_view->get_type() );
@@ -1873,6 +1873,8 @@ final class RepeatPackageViewTest extends TestCase {
 			'pending' => 'informational',
 			'warning' => 'medium',
 			'error'   => 'high',
+			'success' => 'stable',
+			'info'    => 'informational',
 		) as $tone => $intent ) {
 			$html = $render(
 				null,

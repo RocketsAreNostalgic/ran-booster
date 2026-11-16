@@ -55,8 +55,17 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 	</header>
 	<div class="ran-booster-page-shell__body ran-booster-extensions__body">
 		<?php if ( null !== $result_extension && isset( $result_messages[ $result ] ) ) : ?>
-			<?php $result_intent = in_array( $result, array( 'installed', 'activated' ), true ) ? 'success' : 'warning'; ?>
-			<div class="notice inline notice-<?php echo esc_attr( $result_intent ); ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $result_intent ); ?>" role="status" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( $result_intent ); ?>"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $result_messages[ $result ] ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( $result_intent ); ?></div>
+			<?php
+			$result_intent = in_array( $result, array( 'installed', 'activated' ), true ) ? 'success' : 'warning';
+			if ( 'success' === $result_intent ) {
+				// A confirmed success goes to the snackbar host; without JavaScript it is this static notice.
+				echo \RAN\Admin\Feedback\FeedbackFlash::container( \RAN\Admin\Feedback\FeedbackFlash::item( 'extension_' . $result, 'success', $result_messages[ $result ] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by item(); the key is a closed code.
+			} else {
+				// A result that is not a success stays inline as the record, with a pointer to it.
+				echo \RAN\Admin\Feedback\FeedbackFlash::container( \RAN\Admin\Feedback\FeedbackFlash::item( 'extension_result', 'warning', $result_messages[ $result ], 'ran-booster-extension-result' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Escaped by item(); the key is a closed code.
+				?>
+			<div id="ran-booster-extension-result" class="notice inline notice-warning ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" role="status" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $result_messages[ $result ] ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
+			<?php } ?>
 		<?php endif; ?>
 		<div id="the-list" class="plugin-group ran-booster-extensions__grid">
 		<?php foreach ( $extensions as $extension ) : ?>

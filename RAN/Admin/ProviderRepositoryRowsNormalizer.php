@@ -6,6 +6,7 @@ namespace RAN\Admin;
 
 use LogicException;
 use RAN\Admin\Component\AdminActionNormalizer;
+use RAN\Admin\Component\StatusBadge;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Logging\BoosterLogger;
@@ -641,7 +642,7 @@ final class ProviderRepositoryRowsNormalizer {
 			$this->bounded_string( $detail['label'] ?? null, 96, false );
 			$this->bounded_string( $detail['value'] ?? null, 255, true );
 			$tone = $this->bounded_string( $detail['tone'] ?? '', 16, true );
-			if ( '' !== $tone && ! in_array( $tone, $this->tones(), true ) ) {
+			if ( '' !== $tone && ! isset( StatusBadge::INTENTS[ $tone ] ) ) {
 				throw new LogicException( 'Repository detail tones are invalid.' );
 			}
 			$category = $this->bounded_string( $detail['category'] ?? '', 32, true );
@@ -801,7 +802,7 @@ final class ProviderRepositoryRowsNormalizer {
 				throw new LogicException( 'Repository badges must be display maps.' );
 			}
 			$tone = $this->bounded_string( $badge['tone'] ?? 'neutral', 16, false );
-			if ( ! in_array( $tone, $this->tones(), true ) ) {
+			if ( ! isset( StatusBadge::INTENTS[ $tone ] ) ) {
 				throw new LogicException( 'Repository badge tones are invalid.' );
 			}
 			$item = array(
@@ -934,11 +935,6 @@ final class ProviderRepositoryRowsNormalizer {
 		}
 
 		return $value;
-	}
-
-	/** @return list<string> */
-	private function tones(): array {
-		return array( 'neutral', 'ok', 'pending', 'warning', 'error', 'info' );
 	}
 
 	/** @return array{available:bool,owners:list<mixed>,repositories:list<mixed>} */

@@ -68,18 +68,6 @@ final class RepositoryWebhookManagementControls {
 		}
 		add_action( 'admin_post_' . WebhookManagementController::ADMIN_POST_ACTION, array( $this, 'handle_admin_post' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
-		add_action( 'ran_booster_admin_package_advanced_source_sections', array( $this, 'render_package_webhook_setup' ), 30, 5 );
-	}
-
-	/**
-	 * Intentional no-op on `ran_booster_admin_package_advanced_source_sections`.
-	 *
-	 * The Edit-page Webhook setup disclosure was removed in beta.44; webhook management lives on the repository page.
-	 *
-	 * @todo beta.45: review this hook (kept after the Edit-page Webhook setup disclosure was removed in beta.44) and either remove it or resolve it, see #772
-	 */
-	public function render_package_webhook_setup( string $mode, string $type, string $selected_source, ?\RAN\Admin\AdminPackageProjection $package, string $return_url ): void {
-		unset( $mode, $type, $selected_source, $package, $return_url );
 	}
 
 	public function supports_provider( string $provider_code ): bool {

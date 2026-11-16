@@ -264,8 +264,6 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			'ran_booster_release_workflow_diagnostic'      => 'unexpected_runtime_failure',
 			'ran_booster_release_workflow_diagnostic_available' => '1',
 			'ran_booster_release_workflow_reference'       => str_repeat( 'a', 32 ),
-			'ran_booster_release_workflow_message'         => 'Different message.',
-			'ran_booster_release_workflow_remediation'     => 'Different remediation.',
 			'ran_booster_release_workflow_result_nonce'    => 'wrong',
 		) as $field => $value ) {
 			$mutated           = $query;

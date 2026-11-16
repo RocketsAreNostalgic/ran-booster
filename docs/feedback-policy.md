@@ -371,7 +371,11 @@ it. It has no event id: the marker's operation, target and destination binding
 is enough, because the row is presentation only and has no operational consumer.
 It is never an Activity, incident or recovery source, and it does not widen
 `FeedbackFlash`, which stays closed-code only. No new catalogue and no API 4 are
-introduced. Expired rows are deleted on the next administration load, and
+introduced. Release workflow results share this row: their nonce-bound action holds a
+JSON pair of bounded message and remediation text. A verified result claims it
+once; missing or replaced text falls back to the existing Core result copy.
+The newest interaction or workflow result replaces the previous unread row.
+Expired rows are deleted on the next administration load, and
 uninstall removes the key. If the marker verifies but the row is missing,
 expired, replaced or was never written, a full-page or no-JavaScript landing
 shows one fixed neutral persistent info notice (an enhanced landing shows

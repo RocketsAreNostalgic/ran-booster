@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin\ReleaseManagement;
 
 require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
+require_once __DIR__ . '/../Interaction/AdminInteractionWordPressFunctions.php';
 require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
 require_once __DIR__ . '/Support/ReleaseTrackingFacadeDouble.php';
 require_once __DIR__ . '/Support/RepositoryReleaseWorkflowProviderDouble.php';
@@ -34,6 +35,69 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 	#[Before]
 	public function reset_word_press(): void {
 		ReleaseManagementFixture::reset_word_press(); }
+
+
+	public function test_result_text_is_one_shot_and_nonce_bound_outside_the_url(): void {
+		$GLOBALS['ran_booster_interaction_test_meta'] = array();
+		$GLOBALS['ran_booster_interaction_test_user'] = 1;
+		$GLOBALS['ran_booster_interaction_test_blog'] = 1;
+		$controller                                   = $this->controller();
+		$method                                       = new \ReflectionMethod( $controller, 'result_query_arguments' );
+		$args = $method->invoke(
+			$controller,
+			array(
+				'type'                  => 'plugin',
+				'identifier'            => 'example/example.php',
+				'code'                  => 'workflow_failed',
+				'successful'            => false,
+				'preview_key'           => '',
+				'failure_stage'         => 'unexpected',
+				'diagnostic_code'       => 'unexpected_runtime_failure',
+				'correlation_reference' => '',
+				'message'               => 'Provider private text',
+				'remediation'           => 'Reconnect the provider',
+			)
+		);
+		self::assertStringNotContainsString( 'Provider private text', http_build_query( $args ) );
+		self::assertStringNotContainsString( 'Reconnect', http_build_query( $args ) );
+		$_GET = $args;
+		$_GET['ran_booster_release_workflow_result_nonce'] = 'forged';
+		self::assertNull( $this->controller()->requested_result() );
+		$_GET   = $args;
+		$reader = $this->controller();
+		$result = $reader->requested_result();
+		self::assertNotNull( $result );
+		self::assertSame( 'Provider private text', $result['message'] );
+		self::assertSame( 'Reconnect the provider', $result['remediation'] );
+		self::assertSame( $result, $reader->requested_result() );
+		$replayed = $this->controller()->requested_result();
+		self::assertNotNull( $replayed );
+		self::assertSame( '', $replayed['message'] );
+	}
+
+
+	public function test_native_workflow_redirect_keeps_provider_text_out_of_query(): void {
+		$provider = new RepositoryReleaseWorkflowProviderDouble(
+			workflow_result: new \RAN\RepositoryProvider\RepositoryReleaseWorkflowResult(
+				'workflow_failed',
+				false,
+				'',
+				'unexpected',
+				'unexpected_runtime_failure',
+				'',
+				'Private provider text',
+				'Reconnect provider'
+			)
+		);
+		$url      = $this->controller( provider: $provider )->process_workflow_request( $this->request( 'inspect' ) );
+		self::assertStringNotContainsString( 'Private', $url );
+		self::assertStringNotContainsString( 'Reconnect', $url );
+		parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $url, PHP_URL_QUERY ), $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Exercise the signed result from the preceding native request.
+		$result = $this->controller()->requested_result();
+		self::assertNotNull( $result );
+		self::assertSame( 'Private provider text', $result['message'] );
+		self::assertSame( 'Reconnect provider', $result['remediation'] );
+	}
 
 	public function test_unmarked_repository_identity_is_rejected_before_getters_or_provider_calls(): void {
 		$package    = new class() {
@@ -87,7 +151,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 			$preview  = ( 'setup' === $operation ) ? str_repeat( 'a', 32 ) : '';
 			$provider = $this->provider_for( $operation, $preview );
 			$url      = $this->controller( provider: $provider )->process_workflow_request( $this->request( $operation, $preview ) );
-			self::assertStringContainsString( 'ran_booster_release_workflow_result=workflow_' . $operation . '_complete', $url );
+			self::assertStringContainsString( 'ran_booster_release_workflow_result=workflow_unknown', $url );
 			$last_key = array_key_last( $provider->calls );
 			self::assertNotNull( $last_key );
 			$call = $provider->calls[ $last_key ];

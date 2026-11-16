@@ -254,7 +254,7 @@ final class SignedAdminInteractionFlow {
 			self::QUERY_RETURN       => $request->canonical_url,
 			self::QUERY_ERROR_REGION => $request->error_region_id,
 		);
-		$this->hold_message( $this->nonce_action( $args ), $message );
+		self::hold_message( $this->nonce_action( $args ), $message );
 		$args[ self::QUERY_NONCE ] = wp_create_nonce( $this->nonce_action( $args ) );
 
 		return add_query_arg(
@@ -304,7 +304,7 @@ final class SignedAdminInteractionFlow {
 		if ( 1 !== wp_verify_nonce( $nonce, $this->nonce_action( $args ) ) ) {
 			return null;
 		}
-		$held     = $this->claim_message( $this->nonce_action( $args ) );
+		$held     = self::claim_message( $this->nonce_action( $args ) );
 		$fallback = null === $held;
 		$message  = $held ?? __( 'The result details are not available. Check the page or Activity for the current state.', 'ran-booster' );
 
@@ -326,7 +326,7 @@ final class SignedAdminInteractionFlow {
 	 * Hold the outcome text for this user's next render on this site. A later outcome replaces an unread one.
 	 * The row is presentation only: it is never an Activity, incident or recovery record.
 	 */
-	private function hold_message( string $action, string $message ): void {
+	public static function hold_message( string $action, string $message ): void {
 		$user_id = get_current_user_id();
 		if ( $user_id > 0 ) {
 			// WordPress unslashes meta values on write, so the row is slashed to round-trip backslashes.
@@ -349,25 +349,25 @@ final class SignedAdminInteractionFlow {
 	private function reap_expired_message(): void {
 		$user_id = get_current_user_id();
 		$held    = $user_id > 0 ? get_user_meta( $user_id, self::MESSAGE_META_KEY, true ) : '';
-		if ( '' !== $held && ! $this->is_live_row( $held ) ) {
+		if ( '' !== $held && ! self::is_live_row( $held ) ) {
 			delete_user_meta( $user_id, self::MESSAGE_META_KEY );
 		}
 	}
 
-	private function is_live_row( mixed $held ): bool {
+	private static function is_live_row( mixed $held ): bool {
 		return is_array( $held )
 			&& is_int( $held['at'] ?? null ) && time() - $held['at'] <= self::MESSAGE_TTL
 			&& is_int( $held['site'] ?? null ) && is_string( $held['action'] ?? null ) && is_string( $held['message'] ?? null );
 	}
 
 	/** Read the held text once, only for the signed marker and site it was written for. */
-	private function claim_message( string $action ): ?string {
+	public static function claim_message( string $action ): ?string {
 		$user_id = get_current_user_id();
 		$held    = $user_id > 0 ? get_user_meta( $user_id, self::MESSAGE_META_KEY, true ) : '';
 		if ( '' === $held ) {
 			return null;
 		}
-		if ( ! $this->is_live_row( $held ) ) {
+		if ( ! self::is_live_row( $held ) ) {
 			delete_user_meta( $user_id, self::MESSAGE_META_KEY );
 			return null;
 		}

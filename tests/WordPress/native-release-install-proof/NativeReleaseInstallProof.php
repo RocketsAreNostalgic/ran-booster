@@ -122,6 +122,7 @@ final class RAN_Booster_NativeReleaseInstallProof {
 		if ( 1 !== $inserted ) {
 			throw new RuntimeException( 'Synthetic managed row was not inserted.' );
 		}
+		$this->assert_activation();
 	}
 
 	/** @return array<string,mixed> */
@@ -194,6 +195,8 @@ final class RAN_Booster_NativeReleaseInstallProof {
 
 	public function run(): void {
 		global $wpdb;
+		$this->assert_files( '1.0.0', $this->directory );
+		$this->assert_activation();
 		add_filter( 'pre_http_request', $this->http( ... ), PHP_INT_MIN, 3 );
 		WP_Filesystem();
 		$headers = array(
@@ -206,6 +209,8 @@ final class RAN_Booster_NativeReleaseInstallProof {
 			if ( false !== $offer || 0 !== $this->download_count() ) {
 				throw new RuntimeException( 'Disabled target was offered or acquired.' );
 			}
+			$this->assert_files( '1.0.0', $this->directory );
+			$this->assert_activation();
 			$this->report( 'discovery_refused', '1.0.0' );
 			return;
 		}
@@ -263,9 +268,11 @@ final class RAN_Booster_NativeReleaseInstallProof {
 		if ( str_starts_with( $this->scenario, 'kill-' ) ) {
 			add_filter(
 				'upgrader_install_package_result',
-				static function ( mixed $result ): mixed {
-					if ( ! is_array( $result ) ) {
+				function ( mixed $result ): mixed {
+					if ( ! is_array( $result ) || 1 !== $this->download_count() ) {
 						throw new RuntimeException( 'Kill point did not follow installation.' ); }
+					$this->assert_files( $this->expected_version(), $this->directory );
+					$this->assert_activation();
 					$pid = getmypid();
 					if ( ! is_int( $pid ) || ! posix_kill( $pid, 9 ) ) {
 						throw new RuntimeException( 'SIGKILL failed.' ); }
@@ -281,7 +288,8 @@ final class RAN_Booster_NativeReleaseInstallProof {
 			$upgrader = 'plugin' === $this->kind ? new Plugin_Upgrader( new WP_Upgrader_Skin() ) : new Theme_Upgrader( new WP_Upgrader_Skin() );
 			ob_start();
 			try {
-				$result        = 'active' === $this->scenario && $upgrader instanceof Plugin_Upgrader ? $upgrader->bulk_upgrade( array( $this->identity ), array( 'clear_update_cache' => false ) ) : $upgrader->upgrade( $this->identity, array( 'clear_update_cache' => false ) );
+				// Keep native clear_update_cache=true on both paths; cleanup differs by path and outcome.
+				$result        = 'active' === $this->scenario && $upgrader instanceof Plugin_Upgrader ? $upgrader->bulk_upgrade( array( $this->identity ) ) : $upgrader->upgrade( $this->identity );
 				$native_return = get_debug_type( $result );
 				if ( 'active' === $this->scenario && is_array( $result ) ) {
 					$result = $result[ $this->identity ] ?? null; }
@@ -296,26 +304,41 @@ final class RAN_Booster_NativeReleaseInstallProof {
 		}
 		if ( $this->download_failure instanceof WP_Error ) {
 			$result = $this->download_failure; }
-		$expected = in_array( $this->scenario, array( 'current', 'automatic', 'newer', 'prerelease', 'active', 'restore' ), true ) ? (string) $offer['version'] : '1.0.0';
+		$expected = $this->expected_version();
 		$this->assert_files( $expected, $this->directory );
+		$this->assert_activation();
 		if ( 'restore' === $this->scenario ) {
-			if ( ! is_wp_error( $result ) || 'ran_wp_release_updater_unverified_install_result' !== $result->get_error_code() ) {
+			$restore_scheduled = false !== has_action( 'shutdown', array( $upgrader, 'restore_temp_backup' ) );
+			if ( ! is_wp_error( $result ) || array( 'ran_wp_release_updater_unverified_install_result' ) !== $result->get_error_codes()
+				|| 'WP_Error' !== $native_return || null !== $result->get_error_data() || ! $restore_scheduled || 1 !== $this->download_count() ) {
 				throw new RuntimeException( 'Unexpected restoration trigger.' ); }
 			$this->report( (string) $result->get_error_code(), $expected );
 			echo wp_json_encode(
 				array(
 					'native_return_type' => $native_return,
 					'native_error_data'  => $result->get_error_data(),
-					'restore_scheduled'  => false !== has_action( 'shutdown', array( $upgrader, 'restore_temp_backup' ) ),
+					'restore_scheduled'  => $restore_scheduled,
 				)
 			) . "\n";
 			return;
 		}
-		if ( ( '1.0.0' === $expected && ( ! is_wp_error( $result ) || 0 !== $this->download_count() ) ) || ( '1.0.0' !== $expected && ( ( true !== $result && ! is_array( $result ) ) || 1 !== $this->download_count() ) ) ) {
-			throw new RuntimeException( 'Unexpected native outcome or fresh-acquisition count.' );
+		$refusal = match ( $this->scenario ) {
+			'equal', 'older', 'older-override-off' => 'ran_wp_release_updater_unverified_pre_download',
+			'repository-race', 'revision-race' => 'ran_booster_native_update_authority_changed',
+			'mutable' => 'ran_wp_release_updater_remote_release_changed',
+			'assurance' => 'ran_wp_release_updater_acquisition_failed',
+			default => null,
+		};
+		if ( null !== $refusal ) {
+			if ( ! is_wp_error( $result ) || array( $refusal ) !== $result->get_error_codes() || 'null' !== $native_return || 0 !== $this->download_count() ) {
+				throw new RuntimeException( 'Unexpected scenario-specific refusal or acquisition.' ); }
+		} else {
+			$bulk = 'plugin' === $this->kind && 'active' === $this->scenario;
+			if ( ( $bulk ? ! is_array( $result ) || 'array' !== $native_return : true !== $result || 'bool' !== $native_return ) || 1 !== $this->download_count() ) {
+				throw new RuntimeException( 'Unexpected native success or fresh-acquisition count.' ); }
 		}
 		if ( 'active' === $this->scenario ) {
-			$this->report( ( 'plugin' === $this->kind ? is_plugin_active( $this->identity ) : get_stylesheet() === $this->slug ) ? 'activation_preserved' : 'activation_lost', $expected );
+			$this->report( 'activation_preserved', $expected );
 		}
 		$this->report( is_wp_error( $result ) ? (string) $result->get_error_code() : 'installed', $expected );
 		echo wp_json_encode( array( 'native_return_type' => $native_return ) ) . "\n";
@@ -326,19 +349,38 @@ final class RAN_Booster_NativeReleaseInstallProof {
 		$offer  = get_site_transient( 'update_' . ( 'plugin' === $this->kind ? 'plugins' : 'themes' ) );
 		$entry  = is_object( $offer ) ? ( $offer->response[ $this->identity ] ?? null ) : null;
 		$marker = is_object( $entry ) ? ( $entry->native_release_install_proof ?? null ) : ( is_array( $entry ) ? ( $entry['native_release_install_proof'] ?? null ) : null );
-		$this->report( $marker === $this->slug ? 'request_offer_persisted' : ( null === $entry ? 'fresh_request_offer_absent' : 'unmarked_native_offer_present' ), 'not_inspected' );
-		if ( 'restore' === $this->scenario || str_starts_with( $this->scenario, 'kill-' ) ) {
-			$expected = 'restore' === $this->scenario ? '1.0.0' : ( 'kill-newer' === $this->scenario ? '2.0.0' : '3.0.0' );
-			$this->assert_files( $expected, $this->directory );
-			if ( str_starts_with( $this->scenario, 'kill-' ) ) {
-				$this->assert_files( '1.0.0', WP_CONTENT_DIR . '/upgrade-temp-backup/' . ( 'plugin' === $this->kind ? 'plugins/' : 'themes/' ) . $this->slug );
-				$this->report( 'old_backup_bytes_remain', '1.0.0' );
-			}
-			$this->report( 'restore' === $this->scenario ? 'filesystem_restored' : 'killed_request_replaced_bytes_no_completion', $expected );
+		// Characterize the observed failure as well as the passing lifetime cases.
+		$persists = 'restore' === $this->scenario || ( 'plugin' === $this->kind && 'active' === $this->scenario );
+		if ( $persists ? $marker !== $this->slug : null !== $entry ) {
+			throw new RuntimeException( 'Unexpected fresh-request offer lifetime.' ); }
+		$expected = 'restore' === $this->scenario ? '1.0.0' : $this->expected_version();
+		$this->assert_files( $expected, $this->directory );
+		$this->assert_activation();
+		$this->report( $persists ? 'request_offer_persisted' : 'fresh_request_offer_absent', $expected );
+		$this->report( 'active' === $this->scenario ? 'activation_preserved' : 'activation_remained_inactive', $expected );
+		if ( str_starts_with( $this->scenario, 'kill-' ) ) {
+			$this->assert_files( '1.0.0', WP_CONTENT_DIR . '/upgrade-temp-backup/' . ( 'plugin' === $this->kind ? 'plugins/' : 'themes/' ) . $this->slug );
+			$this->report( 'old_backup_bytes_remain', '1.0.0' );
 		}
+		$this->report( 'restore' === $this->scenario ? 'filesystem_restored' : ( str_starts_with( $this->scenario, 'kill-' ) ? 'killed_request_replaced_bytes_no_completion' : 'filesystem_verified' ), $expected );
 		// Retire only this exact fixture row after observation; preserve files for inspection.
 		if ( 1 !== $wpdb->delete( ran_booster_table_name(), array( 'package' => $this->identity ) ) ) {
 			throw new RuntimeException( 'Fixture row cleanup failed.' ); }
+	}
+
+	private function expected_version(): string {
+		return match ( $this->scenario ) {
+			'current', 'automatic', 'active', 'restore', 'kill-current' => '3.0.0',
+			'newer', 'kill-newer' => '2.0.0',
+			'prerelease' => '2.1.0-rc.1',
+			default => '1.0.0',
+		};
+	}
+
+	private function assert_activation(): void {
+		$active = 'plugin' === $this->kind ? is_plugin_active( $this->identity ) : get_stylesheet() === $this->slug;
+		if ( ( 'active' === $this->scenario ) !== $active ) {
+			throw new RuntimeException( 'Unexpected fixture activation state.' ); }
 	}
 
 	private function assert_files( string $version, string $directory ): void {
@@ -370,6 +412,7 @@ final class RAN_Booster_NativeReleaseInstallProof {
 				'source_override_declared' => defined( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' ) ? constant( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' ) : null,
 				'type'                     => $this->kind,
 				'case'                     => $this->scenario,
+				'phase'                    => getenv( 'RAN_NATIVE_RELEASE_INSTALL_PROOF_PHASE' ),
 				'outcome'                  => $outcome,
 				'installed'                => $version,
 				'fresh_downloads'          => $this->downloads,

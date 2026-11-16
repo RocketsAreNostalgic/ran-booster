@@ -215,10 +215,11 @@ For each source-affecting slice, run the focused PHP view/contract tests and
 asset tests, then `composer check`, `pnpm check`, PHP lint and `git diff --check`.
 Report existing warnings/skips separately from new failures.
 
-Inspect the live development site's package and repository views without saving package
-settings: Branch active, Releases active, blocked eligibility, missing
-capability, and tab navigation. Check the existing source-action row, disabled
-buttons, active indicators, same-origin HTMX swaps and no-JavaScript URLs.
+Inspect the live development site's package and repository views without
+saving package settings: Branch active, Releases active, blocked eligibility,
+missing capability, and tab navigation. Check the existing source-action row,
+disabled buttons, active indicators, same-origin HTMX swaps and no-JavaScript
+URLs.
 Use render tests for states unavailable on the live site. Do not mutate the
 live site's database or remote repositories to manufacture a visual test case.
 
@@ -237,8 +238,9 @@ disposable activation check as passed.
 - The first full PHP run found four old-label expectations outside the
   focused set. They were updated to the new labels; no assertion was removed
   and no production behavior was changed to satisfy them.
-- Live development site: a Branch package viewed in Releases retains its Branch active
-  indicator and disabled Use releases action when its Update URI is missing.
+- Live development site: a Branch package viewed in Releases retains its
+  Branch active indicator and disabled Use releases action when its Update
+  URI is missing.
   A Releases package viewed in Branch retains its Releases/Stable active
   summary and offers Use branch. Viewing the active Releases pane has no
   unnecessary source-switch action.
@@ -298,9 +300,10 @@ disposable activation check as passed.
 - A separate read-only review of the package/client diff found no issues.
   It confirmed that the changes preserve source-switch actions, routes,
   nonces, disabled states, channel persistence and saved-versus-checked facts.
-- Live development site verification covered Releases active, its inactive Branch pane,
-  missing Update URI, disabled repository workflow setup, retained webhook
-  controls, package-to-repository navigation and the documentation deep link.
+- Live development site verification covered Releases active, its inactive
+  Branch pane, missing Update URI, disabled repository workflow setup,
+  retained webhook controls, package-to-repository navigation and the
+  documentation deep link.
   HTMX navigation retained one page container and the saved source indicator.
 - The blocked workflow keeps its credential selector, assessment action,
   provenance line and documentation links. The Update URI remedy now points
@@ -316,7 +319,8 @@ disposable activation check as passed.
   self-referential commit hash here. The proof must name the final head and
   archive checksum, verify the embedded `source_commit`, and read back the
   active version and `RAN\Booster` runtime class from the marked disposable
-  WordPress site. No live-site package or database mutation is used for that proof.
+  WordPress site. No live-site package or database mutation is used for that
+  proof.
 - No live save, source switch, workflow assessment, push, PR, merge, release or
   Dex/workbench operation was performed.
 - Desktop views were inspected at 1,422 pixels with no horizontal overflow.

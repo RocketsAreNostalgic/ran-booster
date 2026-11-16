@@ -3237,11 +3237,12 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array(), $state['transients'] );
 		self::assertSame( array( 'ran_wp_release_updater_check_releases_v1', null, 'plugin', self::NATIVE_PLUGIN ), $state['calls'][0] );
 
-		// A failed, unadmitted or unobserved check starts no cooldown, so each retry reaches the updater again.
+		// A failed, unadmitted, unobserved or forced-off check starts no cooldown, so each retry reaches the updater again.
 		$retried = array(
 			array( 'failed', 'release_list_failed', 'refresh_check_failed' ),
 			array( 'skipped', 'discovery_not_admitted', 'refresh_unchecked' ),
 			array( 'succeeded', 'no_newer_candidate', 'refresh_unchecked' ),
+			array( 'skipped', 'policy_forced_off', 'refresh_skipped_forced_off' ),
 		);
 		foreach ( $retried as [$status, $reason, $code] ) {
 			$state['answer'] = array_replace(
@@ -3257,50 +3258,65 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			self::assertSame( $code, $failed->code() );
 			self::assertSame( $code, $retry->code() );
 		}
-		self::assertCount( 10, $state['calls'] );
+		self::assertCount( 12, $state['calls'] );
 		self::assertSame( array(), $state['transients'] );
 
-		// A completed check, observed as the updater observes it, starts the cooldown.
-		$state['answer'] = static function () use ( $registrar, $report ): array {
-			$check_id = str_repeat( 'e', 32 );
-			$registrar->activity_check_started(
-				array(
-					'check_id'            => $check_id,
-					'network_id'          => 1,
-					'blog_id'             => 1,
-					'target_type'         => 'plugin',
-					'installed_identity'  => self::NATIVE_PLUGIN,
-					'provider_code'       => 'github',
-					'repository_identity' => '123456789',
-					'channel'             => 'stable',
-					'binding_hash'        => str_repeat( 'b', 64 ),
-				)
-			);
-			$registrar->activity_check_completed(
-				array(
-					'check_id'                  => $check_id,
-					'status'                    => $report['status'],
-					'reason'                    => $report['reason'],
-					'relationship'              => null,
-					'installed_version'         => '1.0.0',
-					'candidate_version'         => null,
-					'offered_version'           => null,
-					'candidate_validation_code' => null,
-				)
-			);
+		// Each completed check, observed as the updater observes it, starts the cooldown.
+		$completed = array(
+			array( 'succeeded', 'newer_release_observed', 'newer', '2.0.0', 'refresh_newer_while_off' ),
+			array( 'succeeded', 'no_newer_candidate', null, null, 'refresh_current_while_off' ),
+			array( 'rejected', 'candidate_rejected', null, null, 'refresh_rejected' ),
+		);
+		foreach ( $completed as $index => [$status, $reason, $relationship, $candidate, $code] ) {
+			$state['transients'] = array();
+			$state['answer']     = static function () use ( $registrar, $report, $status, $reason, $relationship, $candidate ): array {
+				$check_id = str_repeat( 'e', 32 );
+				$registrar->activity_check_started(
+					array(
+						'check_id'            => $check_id,
+						'network_id'          => 1,
+						'blog_id'             => 1,
+						'target_type'         => 'plugin',
+						'installed_identity'  => self::NATIVE_PLUGIN,
+						'provider_code'       => 'github',
+						'repository_identity' => '123456789',
+						'channel'             => 'stable',
+						'binding_hash'        => str_repeat( 'b', 64 ),
+					)
+				);
+				$registrar->activity_check_completed(
+					array(
+						'check_id'                  => $check_id,
+						'status'                    => $status,
+						'reason'                    => $reason,
+						'relationship'              => $relationship,
+						'installed_version'         => '1.0.0',
+						'candidate_version'         => $candidate,
+						'offered_version'           => null,
+						'candidate_validation_code' => null,
+					)
+				);
 
-			return $report;
-		};
+				return array_replace(
+					$report,
+					array(
+						'status'            => $status,
+						'reason'            => $reason,
+						'candidate_version' => $candidate,
+					)
+				);
+			};
 
-		$first  = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
-		$second = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+			$first  = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+			$second = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
 
-		self::assertSame( 'refresh_current_while_off', $first->code() );
-		self::assertCount( 11, $state['calls'], 'The second click inside the minute never reaches the updater.' );
-		self::assertCount( 1, $state['transients'] );
-		self::assertSame( 60, current( $state['transients'] ) );
-		self::assertSame( 'refresh_recent', $second->code() );
-		self::assertSame( 'cooldown_active', $second->check_reason() );
+			self::assertSame( $code, $first->code() );
+			self::assertCount( 13 + $index, $state['calls'], 'The second click inside the minute never reaches the updater.' );
+			self::assertCount( 1, $state['transients'] );
+			self::assertSame( 60, current( $state['transients'] ) );
+			self::assertSame( 'refresh_recent', $second->code() );
+			self::assertSame( 'cooldown_active', $second->check_reason() );
+		}
 	}
 
 	public function test_the_vendored_updater_still_registers_the_read_only_check_this_adoption_consumes(): void {

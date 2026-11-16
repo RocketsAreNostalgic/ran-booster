@@ -112,7 +112,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				}
 				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented read-only check filter.
 				$report = apply_filters( 'ran_wp_release_updater_check_releases_v1', null, $type, $identifier );
-				if ( null !== $report ) {
+				// A failed check leaves no cooldown, so the next click retries it.
+				if ( is_array( $report ) && 'failed' !== ( $report['status'] ?? null ) ) {
 					set_transient( $key, 1, MINUTE_IN_SECONDS );
 				}
 
@@ -852,16 +853,17 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			if ( null === $target ) {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
 			}
-			if ( ! $target->refresh() ) {
-				return ReleaseTrackingResult::failed( 'refresh_failed', 'Published release information could not be refreshed.' );
-			}
 			$this->registrar->forget_check_outcome( $type, $identifier );
 			$this->registrar->mark_manual_check( $type, $identifier );
+			// Answered before the target refresh: that refresh clears WordPress's whole cached update check.
 			if ( DeploymentPolicy::DISABLED === $package->get_deployment_policy() ) {
 				$answer = $this->answer_without_offer( $type, $identifier );
 				if ( null !== $answer ) {
 					return $answer;
 				}
+			}
+			if ( ! $target->refresh() ) {
+				return ReleaseTrackingResult::failed( 'refresh_failed', 'Published release information could not be refreshed.' );
 			}
 			( $this->refresh_native )( $type );
 			$check = $this->registrar->check_outcome( $type, $identifier );

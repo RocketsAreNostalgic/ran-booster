@@ -3098,7 +3098,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$activity                                    = new \RAN\Activity\ActivityStore( $connection );
 		$GLOBALS['ran_booster_storage_test_options'] = array();
 		$GLOBALS['ran_booster_activity_options']     = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
-		[$registrar]                                 = $this->native_plugin_registrar( $package, activity: $activity );
+		[$registrar, , $target]                      = $this->native_plugin_registrar( $package, activity: $activity );
 		$plugins                                     = $this->createStub( PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$store    = new RuntimeReleaseStore( array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
@@ -3158,6 +3158,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( DeploymentPolicy::DISABLED === $policy ? 1 : 0, $asked );
 		// An answered check never also runs the native check, so Activity records it once.
 		self::assertSame( $answered ? 0 : 1, $native );
+		// Nor refreshes the target, whose refresh clears WordPress's cached update check.
+		self::assertSame( $answered ? 0 : 1, $target->refreshes() );
 		if ( 'release_refreshed' === $code ) {
 			// Nothing answered, or updates are on: today's native path, never an up-to-date claim.
 			self::assertTrue( $result->successful() );
@@ -3216,11 +3218,27 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array(), $state['transients'] );
 		self::assertSame( array( 'ran_wp_release_updater_check_releases_v1', null, 'plugin', self::NATIVE_PLUGIN ), $state['calls'][0] );
 
+		// A failed check leaves no cooldown, so a retry reaches the updater again.
+		$state['answer'] = array_replace(
+			$report,
+			array(
+				'status' => 'failed',
+				'reason' => 'release_list_failed',
+			)
+		);
+
+		$failed = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+		$retry  = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+		self::assertSame( 'refresh_check_failed', $failed->code() );
+		self::assertSame( 'refresh_check_failed', $retry->code() );
+		self::assertCount( 3, $state['calls'] );
+		self::assertSame( array(), $state['transients'] );
+
 		$state['answer'] = $report;
 		$first           = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
 		$second          = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
 
-		self::assertCount( 2, $state['calls'], 'The second click inside the minute never reaches the updater.' );
+		self::assertCount( 4, $state['calls'], 'The second click inside the minute never reaches the updater.' );
 		self::assertCount( 1, $state['transients'] );
 		self::assertSame( 60, current( $state['transients'] ) );
 		// No observation was emitted by this double, so the first answer is not trusted as up to date.

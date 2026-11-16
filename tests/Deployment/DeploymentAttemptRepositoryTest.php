@@ -22,6 +22,7 @@ use RAN\Storage\DatabaseLifecycleFailure;
 
 require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+require_once __DIR__ . '/../Logging/LoggingWordPressFunctions.php';
 
 final class DeploymentAttemptRepositoryTest extends TestCase {
 	use \RAN\Tests\Support\QueuedSelectionFixture;
@@ -466,6 +467,36 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertNotContains( 1, array_column( $this->database->rows, 'id' ) );
 		self::assertContains( 2, array_column( $this->database->rows, 'id' ) );
 		self::assertSame( 'available', $result['admitted'][0]->get_request()->package_slug );
+	}
+
+	public function test_webhook_admission_log_and_return_do_not_expose_delivery_digest(): void {
+		$directory = sys_get_temp_dir() . '/ran-webhook-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/secrets.json', static fn (): int => time() );
+		$capture->start();
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
+		try {
+			$digest   = hash( 'sha256', 'synthetic webhook body for logging' );
+			$attempts = $this->repository->admit_webhook_batch( 'gh', 'delivery-log', $digest, array( $this->target( 'alpha' ) ) );
+			self::assertCount( 1, $attempts );
+			self::assertNotContains( $digest, $attempts[0]->safe_data() );
+			$entries = $capture->snapshot()['entries'];
+			self::assertNotEmpty( $entries );
+			foreach ( $entries as $entry ) {
+				self::assertStringNotContainsString( $digest, $entry['line'] );
+			}
+		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			foreach ( array( '/ran-booster-debug.php', '/ran-booster-debug.php.lock' ) as $file ) {
+				if ( is_file( $directory . $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+					unlink( $directory . $file );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+			rmdir( $directory );
+		}
 	}
 
 	public function test_webhook_batch_and_zero_target_acknowledgement_reserve_their_exact_rows(): void {

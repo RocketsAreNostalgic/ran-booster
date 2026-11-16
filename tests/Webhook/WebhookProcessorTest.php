@@ -26,6 +26,8 @@ use RuntimeException;
 use RAN\Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
 use Throwable;
 
+require_once __DIR__ . '/../Logging/LoggingWordPressFunctions.php';
+
 final class WebhookProcessorTest extends TestCase {
 	use \RAN\Tests\Support\QueuedSelectionFixture;
 
@@ -201,6 +203,150 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertSame( 'Webhook authentication failed.', $response->get_data()['message'] );
 		self::assertStringNotContainsString( 'secret-canary', $data );
 		self::assertStringNotContainsString( 'token-canary', $data );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'rejection_status_provider' )]
+	public function test_provider_rejections_return_only_fixed_data( int $status, int $expected, string $message ): void {
+		$body      = 'synthetic-profile-text https://fake-user:fake-password@example.invalid/';
+		$digest    = hash( 'sha256', $body );
+		$provider  = new WebhookProcessorProvider(
+			static function () use ( $status, $body, $digest ): WebhookEnvelope {
+				throw new WebhookRejected( $status, self::WEBHOOK_SECRET . $body . $digest );
+			}
+		);
+		$processor = $this->processor( new ProviderRegistry( array( $provider ) ), new WebhookProcessorCoordinator() );
+		$directory = sys_get_temp_dir() . '/ran-webhook-rejection-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/secrets.json', static fn (): int => time() );
+		$capture->start();
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
+		try {
+			self::assertTrue( \RAN\Logging\BoosterLogger::log( 'capture control' ) );
+			$response = $processor->handle( 'gh', $this->request( $body, $this->signed_headers( $body ) ) );
+			self::assertSame( $expected, $response->get_status() );
+			self::assertSame( array( 'message' => $message ), $response->get_data() );
+			$entries = $capture->snapshot()['entries'];
+			self::assertNotEmpty( $entries );
+			foreach ( $entries as $entry ) {
+				foreach ( array( self::WEBHOOK_SECRET, $body, $digest, 'fake-password', 'synthetic-profile-text' ) as $sentinel ) {
+					self::assertStringNotContainsString( $sentinel, $entry['line'] );
+				}
+			}
+		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			foreach ( array( '/ran-booster-debug.php', '/ran-booster-debug.php.lock' ) as $file ) {
+				if ( is_file( $directory . $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+					unlink( $directory . $file );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+			rmdir( $directory );
+		}
+	}
+
+	/** @return iterable<string, array{int, int, string}> */
+	public static function rejection_status_provider(): iterable {
+		yield 'bad request' => array( 400, 400, 'Invalid webhook request.' );
+		yield 'authentication' => array( 401, 401, 'Webhook authentication failed.' );
+		yield 'forbidden' => array( 403, 401, 'Webhook authentication failed.' );
+		yield 'too large' => array( 413, 413, 'Webhook request is too large.' );
+		yield 'unavailable' => array( 503, 401, 'Webhook authentication failed.' );
+		yield 'other' => array( 418, 500, 'Webhook request rejected.' );
+	}
+
+	public function test_rejection_boundaries_keep_fixed_responses_and_safe_logs(): void {
+		$body                        = 'synthetic-profile-text https://fake-user:fake-password@example.invalid/';
+		$digest                      = hash( 'sha256', $body );
+		$details                     = self::WEBHOOK_SECRET . ' ' . $body . ' ' . $digest;
+		$registry                    = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
+		$processor                   = $this->processor(
+			$registry,
+			new WebhookProcessorCoordinator(),
+			array(
+				'synthetic-profile-text' => array(
+					'scope'        => 'owner',
+					'target'       => 'synthetic-profile-text',
+					'authority_id' => '',
+					'secret'       => self::WEBHOOK_SECRET,
+				),
+			)
+		);
+		$request                     = $this->request( $body, $this->signed_headers( $body ) );
+		$db                          = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$paused_registry             = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
+		$selection                   = $this->queued_selection( $db, $paused_registry );
+		$paused                      = new WebhookProcessor( $paused_registry, new WebhookProcessorCoordinator(), new SignedWebhookVerifier( $this->createStub( SecretsFile::class ) ), $selection );
+		$db->selection->active_bytes = 'a:0:{}';
+		$cases                       = array(
+			'paused provider'   => array( static fn () => $paused->handle( 'gh', $request ), 503, 'Webhook processing is temporarily unavailable.' ),
+			'unknown provider'  => array( static fn () => $processor->handle( 'bb', $request ), 404, 'Webhook provider not found.' ),
+			'invalid input'     => array(
+				static fn () => $processor->handle(
+					'gh',
+					static function () use ( $details ): array {
+						throw new \InvalidArgumentException( $details );
+					}
+				),
+				400,
+				'Invalid webhook request.',
+			),
+			'provider failure'  => array(
+				static fn () => $processor->handle(
+					'gh',
+					static function () use ( $details ): array {
+						throw new RuntimeException( $details );
+					}
+				),
+				500,
+				'Webhook processing failed.',
+			),
+			'bad signature'     => array( fn () => $processor->handle( 'gh', $this->request( $body, array( 'X-Hub-Signature-256' => 'sha256=' . str_repeat( '0', 64 ) ) ) ), 401, 'Webhook authentication failed.' ),
+			'oversized body'    => array( fn () => $processor->handle( 'gh', $this->request( $body . str_repeat( 'x', 262145 ), array() ) ), 413, 'Webhook request is too large.' ),
+			'ambiguous headers' => array( fn () => $processor->handle( 'gh', $this->request( $body, array( 'X-GitHub-Event' => array( 'push', 'ping' ) ) ) ), 400, 'Invalid webhook request.' ),
+		);
+		foreach ( array(
+			array( DeploymentStorageFailure::delivery_conflict(), 409, 'Webhook delivery conflict.' ),
+			array( DeploymentStorageFailure::unsupported_database(), 503, 'Webhook processing is temporarily unavailable.' ),
+			array( DeploymentStorageFailure::capacity_exhausted(), 503, 'Webhook processing is temporarily unavailable.' ),
+			array( DeploymentStorageFailure::unavailable(), 500, 'Webhook processing failed.' ),
+			array( new RuntimeException( $details ), 500, 'Webhook processing failed.' ),
+		) as $index => $failure_case ) {
+			$event_processor              = $this->event_processor( new WebhookProcessorCoordinator( null, null, $failure_case[0] ) );
+			$cases[ 'storage ' . $index ] = array( static fn () => $event_processor->handle( 'gh', $request ), $failure_case[1], $failure_case[2] );
+		}
+		$directory = sys_get_temp_dir() . '/ran-webhook-boundaries-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/secrets.json', static fn (): int => time() );
+		$capture->start();
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
+		try {
+			self::assertTrue( \RAN\Logging\BoosterLogger::log( 'capture control' ) );
+			foreach ( $cases as $label => [ $invoke, $status, $message ] ) {
+				$response = $invoke();
+				self::assertSame( $status, $response->get_status(), $label );
+				self::assertSame( array( 'message' => $message ), $response->get_data(), $label );
+			}
+			$entries = $capture->snapshot()['entries'];
+			self::assertNotEmpty( $entries );
+			foreach ( $entries as $entry ) {
+				foreach ( array( self::WEBHOOK_SECRET, $body, $digest, 'fake-password', 'synthetic-profile-text' ) as $sentinel ) {
+					self::assertStringNotContainsString( $sentinel, $entry['line'] );
+				}
+			}
+		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			foreach ( array( '/ran-booster-debug.php', '/ran-booster-debug.php.lock' ) as $file ) {
+				if ( is_file( $directory . $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+					unlink( $directory . $file );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+			rmdir( $directory );
+		}
 	}
 
 	public function test_probe_and_ignored_envelopes_do_not_invoke_the_intake(): void {

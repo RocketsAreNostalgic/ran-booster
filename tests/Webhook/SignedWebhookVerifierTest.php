@@ -38,6 +38,20 @@ final class SignedWebhookVerifierTest extends TestCase {
 		}
 	}
 
+	public function test_verifier_and_result_do_not_retain_signing_secret_directly(): void {
+		$verifier = $this->verifier();
+		$result   = $verifier->verify( $this->request( '{}' ), new GitHubWebhookPolicy() );
+		foreach ( array( $verifier, $result ) as $object ) {
+			foreach ( ( new \ReflectionObject( $object ) )->getProperties() as $property ) {
+				self::assertNotSame( self::SECRET, $property->getValue( $object ) );
+				self::assertNotSame( 'secret', $property->getName() );
+			}
+		}
+		foreach ( $result->get_profiles() as $profile ) {
+			self::assertNotContains( self::SECRET, $profile );
+		}
+	}
+
 	public function test_matching_profiles_are_ordered_repository_then_owner_and_by_stable_id(): void {
 		$materials = array(
 			'owner-profile'    => $this->profile( 'owner', 'owner', '' ),

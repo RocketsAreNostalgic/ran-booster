@@ -98,8 +98,12 @@ independent.
 
 Hide GitHub UI requires another locally admitted provider, no managed GitHub
 packages (including Disabled/release/branch records), no active custom replacement
-and no recovery/unknown condition. It hides ordinary navigation/setup suggestions;
-GitHub deep links, credentials, package choices/import and operations remain.
+and no recovery/unknown condition. It removes the GitHub tab from navigation and
+points notices that would link to it at Overview instead. A direct link to the
+GitHub provider page shows the not-found page, so the GitHub credential profiles
+managed on that page cannot be reached while it is hidden; saved credentials are
+kept. GitHub stays available as a package source, and provider behaviour is
+unchanged.
 Confirmed management clears an existing saved hide request, even under a code
 override; it never creates a preference for a constant-only installation.
 Removing the last package restores eligibility, not a prior saved hide request.

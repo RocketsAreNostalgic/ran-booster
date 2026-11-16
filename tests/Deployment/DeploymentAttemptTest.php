@@ -67,7 +67,10 @@ final class DeploymentAttemptTest extends TestCase {
 		$row['delivery_id']     = 'delivery-1';
 		$row['delivery_digest'] = str_repeat( 'b', 64 );
 		self::assertSame( 'delivery-1', DeploymentAttempt::from_database( $row )->safe_data()['delivery_id'] );
-		self::assertArrayNotHasKey( 'delivery_digest', DeploymentAttempt::from_database( $row )->safe_data() );
+		$attempt = DeploymentAttempt::from_database( $row );
+		self::assertArrayNotHasKey( 'delivery_digest', $attempt->safe_data() );
+		self::assertNotContains( $row['delivery_digest'], $attempt->safe_data() );
+		self::assertNotContains( $row['delivery_digest'], $attempt->log_context() );
 		foreach ( array( null, 'invalid-digest', str_repeat( 'b', 63 ) ) as $digest ) {
 			$row['delivery_digest'] = $digest;
 			try {

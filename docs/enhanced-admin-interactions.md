@@ -102,16 +102,27 @@ or recovery source, and it has no event id because the signed marker's
 operation, target and destination binding is enough.
 
 If the marker verifies but the row is missing, expired, replaced, lost to a
-second tab or never written, Core shows one fixed neutral persistent notice
-instead: "The result details are not available. Check the page or Activity for
-the current state." It never advises a retry and never says the operation
-failed. A marker that does not verify shows nothing. Expired rows are deleted on
+second tab or never written, a full-page or no-JavaScript landing shows one
+fixed neutral persistent info notice instead: "The result details are not
+available. Check the page or Activity for the current state." It never advises
+a retry and never says the operation failed. On an enhanced (HTMX) landing a
+lost row shows nothing extra: the success is still visible through the swapped
+region. A marker that does not verify shows nothing. Expired rows are deleted on
 the user's next administration load, and uninstall removes the row.
 
 On first view the feedback host also strips the marker arguments
 (`ran_booster_interaction_*` and its nonce) from the address, so a reload or
 Back shows nothing. Without JavaScript the server cannot strip them, so a
 no-JavaScript reload shows the neutral fallback.
+
+Known deviation: a validation or unexpected failure that arrives by redirect
+(no JavaScript, or a form that is not HTMX-enhanced) renders as an inline
+notice, not a host item, so the host does not strip the marker. On reload the
+row is gone and the neutral fallback replaces the failure text, and it shows
+again on each reload while the nonce is valid. Enhanced failures render inline
+from the response body and never use the row. The cleaner fix, a pointer item
+or a host-item fallback so the host strips the address, is a follow-up for the
+pointer and notice collapse in #953 and the feedback work in #755 P7.
 
 What an add-on gets from `respond()`, with no new API and no change to the
 exact API 3 guard:

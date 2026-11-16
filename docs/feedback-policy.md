@@ -373,10 +373,12 @@ It is never an Activity, incident or recovery source, and it does not widen
 `FeedbackFlash`, which stays closed-code only. No new catalogue and no API 4 are
 introduced. Expired rows are deleted on the next administration load, and
 uninstall removes the key. If the marker verifies but the row is missing,
-expired, replaced or was never written, the page shows one fixed neutral
-persistent notice: "The result details are not available. Check the page or
-Activity for the current state." It does not advise a retry and does not say the
-operation failed.
+expired, replaced or was never written, a full-page or no-JavaScript landing
+shows one fixed neutral persistent info notice (an enhanced landing shows
+nothing extra, because its success is visible in the swapped region): "The
+result details are not available. Check the page or Activity for the current
+state." It does not advise a retry and does not say the operation failed.
+
 ### Interface contract between the flash (P1) and the host (P2)
 
 This section is the single source for the contract.
@@ -432,6 +434,14 @@ use today, and the owner is told.
   no-JavaScript reload of the signed address finds the row claimed and shows the
   neutral fallback instead of the original text. The fallback itself is a notice,
   not a host item, so it does not strip the address either.
+  - Failures by redirect: a validation or unexpected failure that arrives by
+    redirect (no JavaScript, or a form that is not HTMX-enhanced) renders as an
+    inline notice, so the host does not strip the marker. On reload the row is
+    gone and the neutral fallback replaces the failure text, and it re-shows on
+    each reload while the nonce is valid. Enhanced failures render inline from
+    the response body and never use the row. The cleaner fix, a pointer item or
+    a host-item fallback so the host strips the address, is a follow-up for the
+    pointer and notice collapse in #953 and #755 P7.
 - **Edit saves.** They still reach the host through the enhanced save path
   (`data-ran-booster-package-saved`) until P7 retires that bridge.
 - **Result addresses (earlier results never replay).** A signed request result

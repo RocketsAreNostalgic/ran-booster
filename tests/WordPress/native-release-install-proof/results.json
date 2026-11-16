@@ -1,0 +1,725 @@
+{
+  "source_head": "416353943d2251b56c0cd8921b7b2b03e64ffe45",
+  "wordpress": "7.0.3",
+  "php": "8.2.30",
+  "mysql": "8.4.0",
+  "verdict": "not_equivalent_on_locked_runtime",
+  "scenario_runs": 32,
+  "files": {
+    "NativeReleaseInstallProof.php": "8af0a9df70599f9eac3570c041ddca2574498c82f5fe27af367c25538c746c97",
+    "run.sh": "c01e55b7e51e2c2cf953405ba9ede8264de224c9427e21b29e33fe363fbbbb0a"
+  },
+  "sigkill_process_exit": 137,
+  "observations": [
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "current",
+      "outcome": "installed",
+      "installed": "3.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "plugin",
+      "case": "current",
+      "native_return_type": "bool"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "current",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "automatic",
+      "outcome": "installed",
+      "installed": "3.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "plugin",
+      "case": "automatic",
+      "native_return_type": "bool"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "automatic",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "equal",
+      "outcome": "ran_wp_release_updater_unverified_pre_download",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "plugin",
+      "case": "equal",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "equal",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "older",
+      "outcome": "ran_wp_release_updater_unverified_pre_download",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "plugin",
+      "case": "older",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "older",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": false,
+      "type": "plugin",
+      "case": "older-override-off",
+      "outcome": "ran_wp_release_updater_unverified_pre_download",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "plugin",
+      "case": "older-override-off",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": false,
+      "type": "plugin",
+      "case": "older-override-off",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "newer",
+      "outcome": "installed",
+      "installed": "2.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "plugin",
+      "case": "newer",
+      "native_return_type": "bool"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "newer",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "prerelease",
+      "outcome": "installed",
+      "installed": "2.1.0-rc.1",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "plugin",
+      "case": "prerelease",
+      "native_return_type": "bool"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "prerelease",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "repository-race",
+      "outcome": "ran_booster_native_update_authority_changed",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "plugin",
+      "case": "repository-race",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "repository-race",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "revision-race",
+      "outcome": "ran_booster_native_update_authority_changed",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "plugin",
+      "case": "revision-race",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "revision-race",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "mutable",
+      "outcome": "ran_wp_release_updater_remote_release_changed",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "plugin",
+      "case": "mutable",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "mutable",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "assurance",
+      "outcome": "ran_wp_release_updater_acquisition_failed",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "plugin",
+      "case": "assurance",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "assurance",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "disabled",
+      "outcome": "discovery_refused",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "disabled",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "active",
+      "outcome": "activation_preserved",
+      "installed": "3.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "active",
+      "outcome": "installed",
+      "installed": "3.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "plugin",
+      "case": "active",
+      "native_return_type": "array"
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "active",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "current",
+      "outcome": "installed",
+      "installed": "3.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "theme",
+      "case": "current",
+      "native_return_type": "bool"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "current",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "automatic",
+      "outcome": "installed",
+      "installed": "3.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "theme",
+      "case": "automatic",
+      "native_return_type": "bool"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "automatic",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "equal",
+      "outcome": "ran_wp_release_updater_unverified_pre_download",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "theme",
+      "case": "equal",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "equal",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "older",
+      "outcome": "ran_wp_release_updater_unverified_pre_download",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "theme",
+      "case": "older",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "older",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": false,
+      "type": "theme",
+      "case": "older-override-off",
+      "outcome": "ran_wp_release_updater_unverified_pre_download",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "theme",
+      "case": "older-override-off",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": false,
+      "type": "theme",
+      "case": "older-override-off",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "newer",
+      "outcome": "installed",
+      "installed": "2.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "theme",
+      "case": "newer",
+      "native_return_type": "bool"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "newer",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "prerelease",
+      "outcome": "installed",
+      "installed": "2.1.0-rc.1",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "theme",
+      "case": "prerelease",
+      "native_return_type": "bool"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "prerelease",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "repository-race",
+      "outcome": "ran_booster_native_update_authority_changed",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "theme",
+      "case": "repository-race",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "repository-race",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "revision-race",
+      "outcome": "ran_booster_native_update_authority_changed",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "theme",
+      "case": "revision-race",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "revision-race",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "mutable",
+      "outcome": "ran_wp_release_updater_remote_release_changed",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "theme",
+      "case": "mutable",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "mutable",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "assurance",
+      "outcome": "ran_wp_release_updater_acquisition_failed",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "type": "theme",
+      "case": "assurance",
+      "native_return_type": "null"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "assurance",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "disabled",
+      "outcome": "discovery_refused",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "disabled",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "active",
+      "outcome": "activation_preserved",
+      "installed": "3.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "active",
+      "outcome": "installed",
+      "installed": "3.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "theme",
+      "case": "active",
+      "native_return_type": "bool"
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "active",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore",
+      "outcome": "ran_wp_release_updater_unverified_install_result",
+      "installed": "3.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "plugin",
+      "case": "restore",
+      "native_return_type": "WP_Error",
+      "native_error_data": null,
+      "restore_scheduled": true
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore",
+      "outcome": "filesystem_restored",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "kill-current",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "kill-current",
+      "outcome": "old_backup_bytes_remain",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "kill-current",
+      "outcome": "killed_request_replaced_bytes_no_completion",
+      "installed": "3.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "kill-newer",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "kill-newer",
+      "outcome": "old_backup_bytes_remain",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "kill-newer",
+      "outcome": "killed_request_replaced_bytes_no_completion",
+      "installed": "2.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore",
+      "outcome": "ran_wp_release_updater_unverified_install_result",
+      "installed": "3.0.0",
+      "fresh_downloads": 1
+    },
+    {
+      "type": "theme",
+      "case": "restore",
+      "native_return_type": "WP_Error",
+      "native_error_data": null,
+      "restore_scheduled": true
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore",
+      "outcome": "request_offer_persisted",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore",
+      "outcome": "filesystem_restored",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "kill-current",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "kill-current",
+      "outcome": "old_backup_bytes_remain",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "kill-current",
+      "outcome": "killed_request_replaced_bytes_no_completion",
+      "installed": "3.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "kill-newer",
+      "outcome": "fresh_request_offer_absent",
+      "installed": "not_inspected",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "kill-newer",
+      "outcome": "old_backup_bytes_remain",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "kill-newer",
+      "outcome": "killed_request_replaced_bytes_no_completion",
+      "installed": "2.0.0",
+      "fresh_downloads": 0
+    }
+  ]
+}

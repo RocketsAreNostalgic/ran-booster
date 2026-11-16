@@ -13,6 +13,7 @@ require_once __DIR__ . '/Interaction/AdminInteractionWordPressFunctions.php';
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\Interaction\CoreAdminInteractionFacade;
+use RAN\Admin\Interaction\SignedAdminInteractionFlow;
 use RAN\Admin\Interaction\SignedAdminInteractionRequest;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\PackageAdminController;
@@ -1277,8 +1278,11 @@ final class CapturingProviderProfileInteraction {
 		\PHPUnit\Framework\Assert::assertIsString( $error_region );
 		$outcome = $args['ran_booster_interaction_outcome'] ?? '';
 		\PHPUnit\Framework\Assert::assertIsString( $outcome );
-		$message = $args['ran_booster_interaction_message'] ?? '';
-		\PHPUnit\Framework\Assert::assertIsString( $message );
+		\PHPUnit\Framework\Assert::assertArrayNotHasKey( 'ran_booster_interaction_message', $args );
+		// The text travels in the one-shot per-user row, never in the URL.
+		$held    = $GLOBALS['ran_booster_interaction_test_meta'][1][ SignedAdminInteractionFlow::MESSAGE_META_KEY ]['message'] ?? '';
+		$message = is_string( $held ) ? $held : '';
+		unset( $GLOBALS['ran_booster_interaction_test_meta'][1][ SignedAdminInteractionFlow::MESSAGE_META_KEY ] );
 		$request        = new SignedAdminInteractionRequest(
 			$operation,
 			$target,

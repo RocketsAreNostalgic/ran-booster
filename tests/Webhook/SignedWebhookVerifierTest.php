@@ -43,12 +43,26 @@ final class SignedWebhookVerifierTest extends TestCase {
 		$result   = $verifier->verify( $this->request( '{}' ), new GitHubWebhookPolicy() );
 		foreach ( array( $verifier, $result ) as $object ) {
 			foreach ( ( new \ReflectionObject( $object ) )->getProperties() as $property ) {
-				self::assertNotSame( self::SECRET, $property->getValue( $object ) );
+				$value = $property->getValue( $object );
+				if ( $value instanceof SecretsFile ) {
+					continue;
+				}
+				$this->assert_no_secret_in_owned_value( $value );
 				self::assertNotSame( 'secret', $property->getName() );
 			}
 		}
 		foreach ( $result->get_profiles() as $profile ) {
 			self::assertNotContains( self::SECRET, $profile );
+		}
+	}
+
+	private function assert_no_secret_in_owned_value( mixed $value ): void {
+		if ( is_array( $value ) ) {
+			foreach ( $value as $item ) {
+				$this->assert_no_secret_in_owned_value( $item );
+			}
+		} elseif ( is_string( $value ) ) {
+			self::assertStringNotContainsString( self::SECRET, $value );
 		}
 	}
 

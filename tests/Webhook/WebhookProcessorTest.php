@@ -207,14 +207,27 @@ final class WebhookProcessorTest extends TestCase {
 
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'rejection_status_provider' )]
 	public function test_provider_rejections_return_only_fixed_data( int $status, int $expected, string $message ): void {
-		$body      = 'synthetic-profile-text https://fake-user:fake-password@example.invalid/';
-		$digest    = hash( 'sha256', $body );
+		$body      = 'synthetic body for webhook';
+		$profile   = 'synthetic-matched-profile';
+		$failure   = 'synthetic-failure-alpha';
 		$provider  = new WebhookProcessorProvider(
-			static function () use ( $status, $body, $digest ): WebhookEnvelope {
-				throw new WebhookRejected( $status, self::WEBHOOK_SECRET . $body . $digest );
+			static function ( WebhookRequest $request ) use ( $status, &$failure, $profile ): WebhookEnvelope {
+				self::assertSame( $profile, $request->require_verification()->get_profiles()[0]['id'] );
+				throw new WebhookRejected( $status, $failure );
 			}
 		);
-		$processor = $this->processor( new ProviderRegistry( array( $provider ) ), new WebhookProcessorCoordinator() );
+		$processor = $this->processor(
+			new ProviderRegistry( array( $provider ) ),
+			new WebhookProcessorCoordinator(),
+			array(
+				$profile => array(
+					'scope'        => 'owner',
+					'target'       => 'synthetic-target',
+					'authority_id' => '',
+					'secret'       => self::WEBHOOK_SECRET,
+				),
+			)
+		);
 		$directory = sys_get_temp_dir() . '/ran-webhook-rejection-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -223,15 +236,11 @@ final class WebhookProcessorTest extends TestCase {
 		\RAN\Logging\BoosterLogger::configure_capture( $capture );
 		try {
 			self::assertTrue( \RAN\Logging\BoosterLogger::log( 'capture control' ) );
-			$response = $processor->handle( 'gh', $this->request( $body, $this->signed_headers( $body ) ) );
-			self::assertSame( $expected, $response->get_status() );
-			self::assertSame( array( 'message' => $message ), $response->get_data() );
-			$entries = $capture->snapshot()['entries'];
-			self::assertNotEmpty( $entries );
-			foreach ( $entries as $entry ) {
-				foreach ( array( self::WEBHOOK_SECRET, $body, $digest, 'fake-password', 'synthetic-profile-text' ) as $sentinel ) {
-					self::assertStringNotContainsString( $sentinel, $entry['line'] );
-				}
+			foreach ( array( 'synthetic-failure-alpha', 'synthetic-failure-beta ' . self::WEBHOOK_SECRET . ' ' . hash( 'sha256', $body ) . ' https://fake:password@example.invalid/' ) as $failure ) {
+				$response = $processor->handle( 'gh', $this->request( $body, $this->signed_headers( $body ) ) );
+				self::assertSame( $expected, $response->get_status() );
+				self::assertSame( array( 'message' => $message ), $response->get_data() );
+				self::assertSame( array( '[ran-booster] capture control []' ), array_column( $capture->snapshot()['entries'], 'line' ) );
 			}
 		} finally {
 			\RAN\Logging\BoosterLogger::configure_capture( null );
@@ -306,6 +315,29 @@ final class WebhookProcessorTest extends TestCase {
 			'oversized body'    => array( fn () => $processor->handle( 'gh', $this->request( $body . str_repeat( 'x', 262145 ), array() ) ), 413, 'Webhook request is too large.' ),
 			'ambiguous headers' => array( fn () => $processor->handle( 'gh', $this->request( $body, array( 'X-GitHub-Event' => array( 'push', 'ping' ) ) ) ), 400, 'Invalid webhook request.' ),
 		);
+		foreach ( array( new WebhookRejected( 401, $details ), DeploymentStorageFailure::delivery_conflict() ) as $index => $failure ) {
+			$revoked_db                   = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+			$revoked_registry             = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
+			$revoked_selection            = $this->queued_selection( $revoked_db, $revoked_registry );
+			$revoked                      = new WebhookProcessor( $revoked_registry, new WebhookProcessorCoordinator(), new SignedWebhookVerifier( $this->createStub( SecretsFile::class ) ), $revoked_selection );
+			$cases[ 'revoked ' . $index ] = array(
+				static fn () => $revoked->handle(
+					'gh',
+					static function () use ( $revoked_db, $failure ): array {
+					$revoked_db->selection->active_bytes = 'a:0:{}';
+					throw $failure;
+					}
+				),
+				503,
+				'Webhook processing is temporarily unavailable.',
+			);
+		}
+		$event                         = new PushEvent( ProviderCode::parse( 'gh' ), 'other/repository', 'other-id', 'main', str_repeat( 'a', 40 ), 'delivery-one' );
+		$denied                        = $this->processor( new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ) ) ) ), new WebhookProcessorCoordinator() );
+		$cases['authorization denied'] = array( static fn () => $denied->handle( 'gh', $request ), 401, 'Webhook authentication failed.' );
+		$events                        = array_fill( 0, 33, $event );
+		$fanout                        = $this->processor( new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( ...$events ) ) ) ), new WebhookProcessorCoordinator() );
+		$cases['excess fan-out']       = array( static fn () => $fanout->handle( 'gh', $request ), 400, 'Invalid webhook request.' );
 		foreach ( array(
 			array( DeploymentStorageFailure::delivery_conflict(), 409, 'Webhook delivery conflict.' ),
 			array( DeploymentStorageFailure::unsupported_database(), 503, 'Webhook processing is temporarily unavailable.' ),
@@ -321,6 +353,15 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/secrets.json', static fn (): int => time() );
 		$capture->start();
+		$previous_error_log = ini_get( 'error_log' );
+		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Route direct PHP logs to the isolated fixture and restore the setting.
+		self::assertNotFalse( ini_set( 'error_log', $directory . '/php.log' ) );
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Positive control for the isolated direct PHP log.
+		error_log( 'synthetic-direct-log-control' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the isolated direct PHP log.
+		$direct_baseline = file_get_contents( $directory . '/php.log' );
+		self::assertIsString( $direct_baseline );
+		self::assertStringContainsString( 'synthetic-direct-log-control', $direct_baseline );
 		\RAN\Logging\BoosterLogger::configure_capture( $capture );
 		try {
 			self::assertTrue( \RAN\Logging\BoosterLogger::log( 'capture control' ) );
@@ -328,17 +369,18 @@ final class WebhookProcessorTest extends TestCase {
 				$response = $invoke();
 				self::assertSame( $status, $response->get_status(), $label );
 				self::assertSame( array( 'message' => $message ), $response->get_data(), $label );
+				self::assertSame( array( '[ran-booster] capture control []' ), array_column( $capture->snapshot()['entries'], 'line' ), $label );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the isolated direct PHP log.
+				self::assertSame( $direct_baseline, file_get_contents( $directory . '/php.log' ), $label );
 			}
-			$entries = $capture->snapshot()['entries'];
-			self::assertNotEmpty( $entries );
-			foreach ( $entries as $entry ) {
-				foreach ( array( self::WEBHOOK_SECRET, $body, $digest, 'fake-password', 'synthetic-profile-text' ) as $sentinel ) {
-					self::assertStringNotContainsString( $sentinel, $entry['line'] );
-				}
-			}
+			self::assertSame( array( '[ran-booster] capture control []' ), array_column( $capture->snapshot()['entries'], 'line' ) );
 		} finally {
+			if ( is_string( $previous_error_log ) ) {
+				// phpcs:ignore WordPress.PHP.IniSet.Risky -- Restore the original PHP log destination after the fixture.
+				ini_set( 'error_log', $previous_error_log );
+			}
 			\RAN\Logging\BoosterLogger::configure_capture( null );
-			foreach ( array( '/ran-booster-debug.php', '/ran-booster-debug.php.lock' ) as $file ) {
+			foreach ( array( '/ran-booster-debug.php', '/ran-booster-debug.php.lock', '/php.log' ) as $file ) {
 				if ( is_file( $directory . $file ) ) {
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
 					unlink( $directory . $file );

@@ -477,15 +477,36 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$capture->start();
 		\RAN\Logging\BoosterLogger::configure_capture( $capture );
 		try {
-			$digest   = hash( 'sha256', 'synthetic webhook body for logging' );
-			$attempts = $this->repository->admit_webhook_batch( 'gh', 'delivery-log', $digest, array( $this->target( 'alpha' ) ) );
+			$zero_digest    = hash( 'sha256', 'synthetic zero target delivery' );
+			$matched_digest = hash( 'sha256', 'synthetic matched delivery' );
+			$provider       = ProviderCode::parse( 'gh' );
+			$reader         = new \RAN\RepositoryProvider\ProviderBoundWebhookDeliveryEvidenceReader( $provider, fn ( ProviderCode $code ) => $this->repository->latest_authenticated_delivery( $code ) );
+			$this->repository->admit_webhook_batch( 'gh', 'delivery-empty-log', $zero_digest, array() );
+			$zero = $reader->latest_authenticated_delivery();
+			self::assertNotNull( $zero );
+			self::assertSame(
+				array(
+					'provider'                => $provider,
+					'received_at'             => '2026-07-19 00:00:00',
+					'matched_managed_package' => false,
+				),
+				get_object_vars( $zero )
+			);
+			self::assertSame( array(), $capture->snapshot()['entries'] );
+			$attempts = $this->repository->admit_webhook_batch( 'gh', 'delivery-log', $matched_digest, array( $this->target( 'alpha' ) ) );
 			self::assertCount( 1, $attempts );
-			self::assertNotContains( $digest, $attempts[0]->safe_data() );
-			$entries = $capture->snapshot()['entries'];
-			self::assertNotEmpty( $entries );
-			foreach ( $entries as $entry ) {
-				self::assertStringNotContainsString( $digest, $entry['line'] );
-			}
+			self::assertNotContains( $matched_digest, $attempts[0]->safe_data() );
+			$matched = $reader->latest_authenticated_delivery();
+			self::assertNotNull( $matched );
+			self::assertSame(
+				array(
+					'provider'                => $provider,
+					'received_at'             => '2026-07-19 00:00:00',
+					'matched_managed_package' => true,
+				),
+				get_object_vars( $matched )
+			);
+			self::assertSame( array( '[ran-booster] attempt queued (webhook) {"attempt_id":2,"operation":"update","package_slug":"alpha","provider":"gh","source":"webhook","state":"queued","transition":"new->queued"}' ), array_column( $capture->snapshot()['entries'], 'line' ) );
 		} finally {
 			\RAN\Logging\BoosterLogger::configure_capture( null );
 			foreach ( array( '/ran-booster-debug.php', '/ran-booster-debug.php.lock' ) as $file ) {

@@ -1468,6 +1468,27 @@ test('a taken failure pointer strips the address on first render and is shown on
 	assert.deepEqual(replaced, [[{ htmx: true }, `${BASE}&package=a`]]);
 });
 
+test('a consumed release check failure strips its result before reload', () => {
+	const url = `${BASE}&ran_booster_release_result=refresh_check_failed&ran_booster_release_success=0&ran_booster_release_result_nonce=n&ran_booster_release_recheck=1`;
+	const { env, replaced } = loadEnv(
+		url,
+		[
+			{
+				key: 'refresh_check_failed',
+				intent: 'error',
+				text: 'Failed.',
+				target: 'release-result',
+			},
+		],
+		{ targets: ['release-result'] }
+	);
+	env.run();
+	assert.equal(replaced[0][1], `${BASE}&ran_booster_release_recheck=1`);
+	const reload = loadEnv(replaced[0][1], []);
+	reload.env.run();
+	assert.equal(reload.env.notices.length, 0);
+});
+
 test('a mixed container strips once and the failure record stays in the page', () => {
 	const { env, replaced } = loadEnv(
 		`${FAILURE_URL}&ran_booster_result=install&_ran_booster_notice_nonce=m`,

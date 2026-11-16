@@ -458,9 +458,9 @@ use today, and the owner is told.
     or a host that cannot run or show the item. A bookmarked, pasted or
     followed signed address is a new load and shows its result. The signed
     nonce is not single-use.
-  - A flash item (Check releases, release settings) carries no result argument
-    and is not affected. Package results delivered by a swap are cleaned by the
-    enhanced mutation handler.
+  - Check releases can carry signed result arguments alongside its flash. The
+    same cleanup removes those arguments after consumption. Package results
+    delivered by a swap are cleaned by the enhanced mutation handler.
   - Not done: tracking whether the condition still holds. That needs the
     current-state projection and is outside P3.
 

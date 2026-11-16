@@ -9,8 +9,10 @@ $notice_messages = isset( $messages ) && is_array( $messages ) ? $messages : arr
 
 // A warning or error in the same response qualifies a success (#755 R12): it stays a static notice.
 $notice_qualified = false;
+$notice_has_error = false;
 foreach ( $notice_messages as $message ) {
 	$notice_qualified = $notice_qualified || ( is_array( $message ) && in_array( $message['type'] ?? null, array( 'warning', 'error' ), true ) );
+	$notice_has_error = $notice_has_error || ( is_array( $message ) && 'error' === ( $message['type'] ?? null ) );
 }
 $feedback_items = '';
 
@@ -22,6 +24,9 @@ foreach ( $notice_messages as $message ) {
 		// A producer names its result with a closed `feedback` code. A confirmed success then goes to the snackbar host;
 		// a warning or error stays here as the record, with a pointer to it.
 		$feedback_key = is_string( $message['feedback'] ?? null ) && 1 === preg_match( '/\A[a-z0-9_]{1,64}\z/', $message['feedback'] ) ? $message['feedback'] : '';
+		if ( ! $notice_has_error && 'success' === $message['type'] && ( str_starts_with( $feedback_key, 'package_' ) || ( '' === $feedback_key && 'bulk_update_queue' !== ( $message['code'] ?? null ) ) ) ) {
+			echo '<span hidden data-ran-booster-confirmed-package-result></span>';
+		}
 		if ( '' !== $feedback_key && 'success' === $message['type'] && ! $notice_qualified ) {
 			$feedback_items .= \RAN\Admin\Feedback\FeedbackFlash::item( $feedback_key, 'success', wp_strip_all_tags( $message['message'] ) );
 			continue;

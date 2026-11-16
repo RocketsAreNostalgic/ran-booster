@@ -3,19 +3,22 @@
 This directory is an independent nested Git repository. Run commands from this
 directory and preserve unrelated work.
 
-## Working model: one checkout, short branches
+## Working model: one primary checkout, owner-named lanes
 
-This checkout is the only development checkout. It lives inside the
-`pns-stageing` Local site, so PHP and CSS edits are visible there immediately;
+This checkout is the primary development checkout. It runs inside a local
+WordPress development site, so PHP and CSS edits are visible there immediately;
 JS asset changes need `pnpm ui:build`. Keep delivery overhead low: every extra
 branch, worktree and CI round costs reconciliation work the maintainers pay for.
+
+By default there is one lane, this checkout:
 
 - Work on one short-lived branch off the latest `origin/main` at a time, named
   `<type>/<issue>-<slug>`. Merge or abandon it before starting another. Prefer
   one open pull request at a time unless the owner directs otherwise.
 - Do not create linked worktrees, extra clones, accumulator or integration
   branches, or stacked pull requests, and do not use tooling modes that create
-  worktrees on your behalf. If a task seems to need one, stop and ask the owner.
+  worktrees on your behalf, except for a lane the owner has named as set out
+  below. If a task seems to need one, stop and ask the owner.
 - If you find local worktrees or unexpected local branches you did not create,
   report them. Do not reuse, switch to or delete them.
 - Run `composer check` and `pnpm check` locally before opening a pull request.
@@ -24,10 +27,46 @@ branch, worktree and CI round costs reconciliation work the maintainers pay for.
   PHPCS, PHPStan and the quality tests and floods them with unrelated errors;
   move it aside while you run the gates and restore it afterwards, and never
   delete it without the owner's say-so.
-- Test published artifacts on the `booster-test` Local site, which runs release
-  ZIPs only. Never check out source there.
+- Test published artifacts on the separate release-only test site, which runs
+  release ZIPs only. Never check out source there.
 - The Workbench nested in this directory is `main`-only with exactly one
   working tree. Follow its own `AGENTS.md` before touching it.
+
+### Parallel lanes
+
+The owner may name additional lanes so independent work can proceed at the same
+time. A lane exists only when the owner has named it, with its issues and the
+files or area it owns. An agent never starts one on its own judgment.
+
+- At most one additional lane in this repository at a time, unless the owner
+  names more. Work in sibling repositories (providers, updater libraries) is
+  not a lane here; it follows that repository's own rules.
+- One lane is one linked worktree and one short-lived branch at a time, off the
+  latest `origin/main`, with the usual branch name. Create it with
+  `git worktree add` from this repository. No extra clones.
+- The worktree lives outside this plugin directory and outside any WordPress
+  site tree. A checkout nested in this tree is scanned by PHPCS, PHPStan and
+  the quality tests and breaks the gates for every lane.
+- A lane touches only the files it was given. Two lanes never edit the same
+  file. If a lane needs a file another lane owns, stop and ask the owner.
+- `languages/ran-booster.pot` belongs to no lane. Regenerate it as the last
+  step, after updating the branch onto the latest `origin/main` and before
+  asking for a merge. Resolve a conflict in it by regenerating, never by hand.
+- No stacked pull requests and no integration branch between lanes. Each lane
+  opens its own pull request against `main`.
+- Merging stays serial, as set out under Pull requests: one pull request at a
+  time, with `main`'s Quality run green before the next. A lane whose base has
+  moved updates onto `main` and reruns the gates before it is merged.
+- A lane worktree does not run in a local site. Its evidence is the local
+  gates and CI; runtime checks use a release ZIP on the release-only test
+  site.
+- Every lane uses the one Workbench at its canonical path. Never create a
+  second Workbench checkout.
+- When the lane's work is merged or abandoned, remove its worktree and branch
+  (`git worktree remove`, then `git worktree prune`) and say so.
+
+A reviewer may also use a temporary detached worktree, outside this tree, to
+run the gates on the exact head under review. Remove it when the review ends.
 
 ## Administration component package
 

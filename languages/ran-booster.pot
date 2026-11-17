@@ -1230,7 +1230,7 @@ msgid "WordPress could not complete the package update; the earlier package shou
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:126
-msgid "WordPress could not restore the plugin activation state. Check the plugin's current activation state and its error log, then retry."
+msgid "WordPress reported a plugin deployment failure. Check the plugin's current activation state and its error log, then retry."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:127
@@ -1242,7 +1242,7 @@ msgid "The deployment may have changed package files before it stopped. Inspect 
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:129
-msgid "WordPress completed the update, but Booster could not prove the final package state. Inspect the package and Activity recovery evidence before allowing another deployment."
+msgid "Booster could not verify the final package state after the deployment. Inspect the package and Activity recovery evidence before allowing another deployment."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:130
@@ -1342,7 +1342,7 @@ msgid "WordPress could not create a temporary archive file. Check the server tem
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:154
-msgid "The downloaded ZIP could not pass its integrity check. Check the download and local temporary-file storage, then retry."
+msgid "The package archive could not be verified. Check its contents, the download and local temporary-file storage, then retry."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:155
@@ -1410,7 +1410,7 @@ msgid "Branch deployment is unavailable for this release-managed package. Use Pu
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:171
-msgid "WordPress is already in maintenance mode. Wait for the current update to finish, inspect Activity, then retry."
+msgid "A maintenance file is present. Check whether an update is still running and inspect the maintenance state and Activity before retrying."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:172

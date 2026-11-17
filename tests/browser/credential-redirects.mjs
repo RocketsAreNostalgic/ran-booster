@@ -1,7 +1,8 @@
 // Run in a synthetic browser page with the production credential form, assets,
 // and real HTMX 2.0.10. saveUrl returns the Core HX-Redirect success contract;
-// failureUrl returns a 422. This does not qualify installed WordPress behavior.
-export async function verifyCredentialRedirects(saveUrl, failureUrl) {
+// failureUrl returns a scoped 422; loginUrl returns login HTML with status 200.
+// This does not qualify installed WordPress behavior.
+export async function verifyCredentialRedirects(saveUrl, failureUrl, loginUrl) {
 	const form = document.querySelector('#ran-booster-credential-editor form');
 	const evidence = [];
 	const location = htmx.location;
@@ -67,6 +68,32 @@ export async function verifyCredentialRedirects(saveUrl, failureUrl) {
 		check(
 			warned(),
 			'navigation grant expires when fixture intercepts redirect'
+		);
+		const editor = document.querySelector('#ran-booster-credential-editor');
+		form.elements['ran_booster[label]'].value = 'Retained synthetic draft';
+		form.dispatchEvent(new Event('input', { bubbles: true }));
+		await submit(loginUrl);
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		check(
+			editor.isConnected &&
+				form.isConnected &&
+				form.elements['ran_booster[label]'].value ===
+					'Retained synthetic draft',
+			'login 200 without credential region cannot remove editor or draft'
+		);
+		document.querySelector('#open').click();
+		await new Promise((resolve) => setTimeout(resolve, 100));
+		const portal = form.closest('.ran-booster-ui-dialog-portal');
+		check(!!portal, 'same draft form opens in the real Dialog');
+		await submit(loginUrl);
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		check(
+			editor.isConnected &&
+				portal.isConnected &&
+				portal.contains(form) &&
+				form.elements['ran_booster[label]'].value ===
+					'Retained synthetic draft',
+			'login 200 retains the moved form and portal too'
 		);
 		return evidence;
 	} finally {

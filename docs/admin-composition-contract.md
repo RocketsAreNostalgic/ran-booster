@@ -72,7 +72,9 @@ configuration fields remain usable in that fallback; the existing handler
 validates only the selected kind. Failed native saves restore allowlisted
 non-secret fields by continuing the authorized POST render instead of redirecting.
 Only a matching successful credential `HX-Redirect` temporarily bypasses the
-dirty-form leave warning; failed or vetoed responses retain it. Portal styling
+dirty-form leave warning; failed or vetoed responses retain it. Unconfirmed
+form responses cannot replace the editor, including expired-authentication login
+HTML. Native-submit bypass resets on fresh edits and page restoration. Portal styling
 uses the same credential rules as the inline fallback. Secrets and submitted nonces are
 never restored. Blank-secret edits retain the stored credential. Drafts are
 excluded from HTMX history; no URL, flash or persistent draft store is added.

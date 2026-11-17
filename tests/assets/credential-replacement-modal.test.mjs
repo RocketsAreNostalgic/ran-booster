@@ -151,7 +151,7 @@ test('missing or failing Dialog and modified clicks retain native link behavior'
 	assert.equal(modified.defaultPrevented, false);
 });
 
-test('dirty interlocks preserve refused navigation and permit the original mutation response', async () => {
+test('dirty interlocks reject unconfirmed form replacement and preserve scoped errors', async () => {
 	const state = fixture();
 	state.form.dispatchEvent(event('input'));
 	const leave = event('beforeunload');
@@ -169,9 +169,24 @@ test('dirty interlocks preserve refused navigation and permit the original mutat
 	state.document.dispatchEvent(event('htmx:beforeSwap', response));
 	assert.equal(
 		response.shouldSwap,
-		true,
-		'shared signed-response guards retain authority'
+		false,
+		'form origin alone never confirms a destructive response'
 	);
+	const formReplacement = event('htmx:beforeSwap', {
+		shouldSwap: true,
+		target: { contains: (node) => node === state.form },
+		requestConfig: { elt: state.form },
+	});
+	state.document.dispatchEvent(formReplacement);
+	assert.equal(formReplacement.defaultPrevented, true);
+	assert.equal(formReplacement.detail.shouldSwap, false);
+	const scopedError = {
+		shouldSwap: true,
+		target: { contains: () => false },
+		requestConfig: { elt: state.form },
+	};
+	state.document.dispatchEvent(event('htmx:beforeSwap', scopedError));
+	assert.equal(scopedError.shouldSwap, true);
 	const submit = event('submit');
 	submit.submitter = { name: 'original-submitter' };
 	state.form.dispatchEvent(submit);
@@ -305,6 +320,47 @@ for (const [query, id, secret] of [
 			state.form.elements[
 				secret ? 'ran_booster[secret]' : 'ran_booster[label]'
 			]
+		);
+	});
+}
+
+for (const reset of ['input', 'change', 'pageshow']) {
+	test(`native submit bypass expires on ${reset}`, async () => {
+		const state = fixture();
+		state.form.dispatchEvent(event('input'));
+		const original = event('submit');
+		original.submitter = { name: 'original' };
+		state.form.dispatchEvent(original);
+		await Promise.resolve();
+		assert.equal(
+			warnsOnLeave(state),
+			false,
+			'uncancelled native navigation is allowed'
+		);
+		(reset === 'pageshow' ? state.window : state.form).dispatchEvent(
+			event(reset)
+		);
+		assert.equal(
+			warnsOnLeave(state),
+			true,
+			'restored document or fresh editing must be guarded'
+		);
+		state.form.dispatchEvent(event('submit'));
+		state.form.dispatchEvent(event('input'));
+		await Promise.resolve();
+		assert.equal(
+			warnsOnLeave(state),
+			true,
+			'a queued observation cannot rearm bypass after an edit'
+		);
+		const cancelled = event('submit');
+		state.form.dispatchEvent(cancelled);
+		cancelled.preventDefault();
+		await Promise.resolve();
+		assert.equal(
+			warnsOnLeave(state),
+			true,
+			'cancelled native submit never permits leaving'
 		);
 	});
 }

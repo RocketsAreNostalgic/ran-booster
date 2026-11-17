@@ -880,7 +880,7 @@
 		const options = { signal: listeners.signal };
 		let dialog = null;
 		let dirty = editor.dataset.credentialDraft === 'true';
-		let submitting = false;
+		let nativeSubmit = null;
 		let savedResponse = null;
 		const confirmDiscard = () => {
 			return (
@@ -892,25 +892,33 @@
 			);
 		};
 		form.addEventListener('input', () => {
+			nativeSubmit = null;
 			savedResponse = null;
 			dirty = true;
 		});
 		form.addEventListener('change', () => {
+			nativeSubmit = null;
 			savedResponse = null;
 			dirty = true;
 		});
 		form.addEventListener('submit', (event) => {
-			// Observe the original event; never resubmit or lose its submitter.
-			queueMicrotask(() => {
-				submitting = !event.defaultPrevented;
-			});
+			// Read final cancellation from the original event; never resubmit.
+			nativeSubmit = event;
 		});
+		window.addEventListener(
+			'pageshow',
+			() => {
+				nativeSubmit = null;
+				savedResponse = null;
+			},
+			options
+		);
 		window.addEventListener(
 			'beforeunload',
 			(event) => {
 				if (
 					dirty &&
-					!submitting &&
+					(!nativeSubmit || nativeSubmit.defaultPrevented) &&
 					form.isConnected &&
 					(!savedResponse || savedResponse.defaultPrevented)
 				) {
@@ -971,10 +979,14 @@
 			(event) => {
 				if (
 					event.detail?.shouldSwap &&
-					event.detail.target?.contains(editor) &&
-					event.detail.requestConfig?.elt !== form &&
-					!confirmDiscard()
+					(event.detail.target?.contains(editor) ||
+						event.detail.target?.contains(form)) &&
+					(event.detail.requestConfig?.elt === form ||
+						!confirmDiscard())
 				) {
+					// Credential saves confirm success by redirect, never by replacing
+					// the editor. Reject login HTML and other unconfirmed responses.
+					event.preventDefault();
 					event.detail.shouldSwap = false;
 				}
 			},

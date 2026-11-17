@@ -6,6 +6,7 @@ declare(strict_types=1);
 namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/AttemptRepositoryDatabase.php';
+require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
 require_once __DIR__ . '/AdmittedBranchHostAdapterWordPressFunctions.php';
 require_once __DIR__ . '/PackageMutationGuardWordPressFunctions.php';
 require_once __DIR__ . '/DeploymentWorkerPhpFunctions.php';
@@ -714,6 +715,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	public function test_lock_release_storage_failure_is_settled_as_interrupted_and_logged_by_class_and_code(): void {
+		$this->enable_activity();
 		$outcome = null;
 		$this->download_fixture( 'example' );
 		$this->database->fail_query_contains = 'DELETE FROM `wp_options`';
@@ -727,12 +729,14 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( DeploymentOutcome::CODE_INTERRUPTED, $outcome->get_code() );
 		self::assertSame( DeploymentState::NEEDS_ATTENTION->value, $this->database->rows[0]['state'] );
 		self::assertSame( DeploymentOutcome::CODE_INTERRUPTED, $this->database->rows[0]['outcome_code'] );
+		self::assertSame( 'runner_throw', $this->activity_facts()['deployment_settled_by'] ?? null );
 		self::assertStringContainsString( 'deployment execution threw', $lines );
 		self::assertStringContainsString( '"exception_class":"RAN\\\\WPBranchUpdater\\\\V1\\\\Runtime\\\\BranchDeploymentLockStorageFailure"', $lines );
 		self::assertStringNotContainsString( 'database details must not escape', $lines );
 	}
 
 	public function test_mutation_start_record_failure_is_settled_as_worker_stopped_without_message_text(): void {
+		$this->enable_activity();
 		$outcome = null;
 		$this->download_fixture( 'example' );
 		$this->database->fail_query_contains = 'SET mutation_started_at';
@@ -746,11 +750,13 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $outcome->get_code() );
 		self::assertSame( DeploymentState::FAILED->value, $this->database->rows[0]['state'] );
 		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		self::assertSame( 'runner_throw', $this->activity_facts()['deployment_settled_by'] ?? null );
 		self::assertStringContainsString( 'deployment execution threw', $lines );
 		self::assertStringNotContainsString( 'database details must not escape', $lines );
 	}
 
 	public function test_webhook_attempt_settled_after_a_throw_is_notified_once(): void {
+		$this->enable_activity();
 		$this->download_fixture( 'example' );
 		$this->database->fail_query_contains = 'DELETE FROM `wp_options`';
 		$notifier                            = new ParityFailureNotifier( $this->database );
@@ -758,9 +764,116 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$outcome = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ), $notifier )->execute_claimed( $this->running_webhook_update( str_repeat( 'a', 40 ) ) );
 
 		self::assertSame( DeploymentOutcome::CODE_INTERRUPTED, $outcome->get_code(), (string) $this->database->rows[0]['outcome_code'] );
+		self::assertSame( 'runner_throw', $this->activity_facts()['deployment_settled_by'] ?? null );
 		self::assertCount( 1, $notifier->attempts );
 		self::assertSame( 'needs_attention', $notifier->stored_states[0] );
 	}
+
+	public function test_reconcile_review_and_activity_failure_share_transaction(): void {
+		$this->enable_activity();
+		$attempt = $this->running_update();
+		$this->attempts->mark_mutation_started( $attempt->get_id() );
+		$attention = $this->attempts->reconcile_confirmed_stopped( $attempt->get_id(), runner_throw: true );
+		self::assertSame( 'runner_throw', $this->activity_facts()['deployment_settled_by'] ?? null );
+		try {
+			$this->running_update();
+			self::fail( 'Unresolved automatic settlement must block another attempt.' );
+		} catch ( DeploymentStorageFailure $failure ) {
+			self::assertSame( $attention->get_id(), $failure->get_active_attempt()['id'] ?? null );
+		}
+		$this->attempts->resolve_needs_attention( $attention->get_id(), $attention->get_correlation_id(), 7 );
+		self::assertArrayNotHasKey( 'deployment_settled_by', $this->activity_facts() );
+	}
+
+	public function test_activity_write_failure_rolls_back_automatic_settlement(): void {
+		$this->enable_activity();
+		$attempt                             = $this->running_update();
+		$this->database->fail_query_contains = "SET status = 'failed'";
+		try {
+			$this->attempts->reconcile_confirmed_stopped( $attempt->get_id(), runner_throw: true );
+			self::fail( 'Activity failure must roll back the attempt.' );
+		} catch ( DeploymentStorageFailure ) {
+			self::assertSame( 'running', $this->database->rows[0]['state'] );
+			self::assertSame( 'running', $this->activity_facts()['deployment_state'] ?? null );
+			self::assertArrayNotHasKey( 'deployment_settled_by', $this->activity_facts() );
+		}
+	}
+
+	public function test_manual_execution_records_throw_settlement_without_message(): void {
+		require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
+		$this->enable_activity();
+		$this->download_fixture( 'example' );
+		$this->database->fail_query_contains = "SET state = 'failed'";
+		$this->database->query_failure       = new ParityRunnerException( 'token=secret-shaped-private-value', 42 );
+		$command                             = \RAN\PackageOperation::from_input(
+			'install-plugin',
+			array(
+				'provider'               => 'gh',
+				'provider_repository_id' => 'repo-id',
+				'repository'             => 'owner/example',
+				'branch'                 => 'main',
+				'package_slug'           => 'example',
+				'expected_identifier'    => 'example/Main.php',
+			)
+		);
+		$result                              = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) )->execute_manual( $command );
+		self::assertSame( 'worker_stopped', $result['outcome_code'] );
+		self::assertSame( 'runner_throw', $this->activity_facts()['deployment_settled_by'] ?? null );
+		self::assertStringNotContainsString( 'secret-shaped-private-value', implode( ' ', $result ) );
+	}
+
+	public function test_cron_worker_records_throw_settlement_for_queued_manual_attempt(): void {
+		require_once __DIR__ . '/../Portability/WpPusherCoexistenceWordPressFunctions.php';
+		$this->enable_activity();
+		$this->download_fixture( 'example' );
+		$this->running_update();
+		$this->database->rows[0]['state']    = 'queued';
+		$this->database->fail_query_contains = 'SET mutation_started_at';
+		$coordinator                         = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) );
+		$worker                              = new \RAN\Deployment\DeploymentWorker( $this->attempts, $coordinator, new WordPressWorkerWakeup( $this->attempts ) );
+		$result                              = $worker->run_once();
+		self::assertSame( 'processed', $result['status'] );
+		self::assertSame( 'worker_stopped', $this->database->rows[0]['outcome_code'] );
+		self::assertSame( 'runner_throw', $this->activity_facts()['deployment_settled_by'] ?? null );
+	}
+
+	/** @return array<string,array{\Throwable,bool}> */
+	public static function thrown_classes(): array {
+		return array(
+			'namespaced' => array( new ParityRunnerException( 'token=secret-shaped-private-value', 42 ), true ),
+			'anonymous'  => array( new class( 'token=secret-shaped-private-value', 42 ) extends \RuntimeException {}, false ),
+			'overlong'   => array( new LongExceptionXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX( 'token=secret-shaped-private-value', 42 ), false ),
+		);
+	}
+
+	#[DataProvider( 'thrown_classes' )]
+	public function test_throwing_runner_does_not_expose_message_or_prevent_settlement( \Throwable $failure, bool $class_is_safe ): void {
+		$this->enable_activity();
+		$this->download_fixture( 'example' );
+		$this->database->fail_query_contains = "SET state = 'succeeded'";
+		$this->database->query_failure       = $failure;
+		$executor                            = new ParityCoreExecutor();
+		$executor->after_execution           = function (): void {
+			$this->plugins->installed = $this->plugin( version: '2.0.0' );
+		};
+		$outcome                             = null;
+		$attempt                             = $this->running_update();
+		$lines                               = $this->captured_logs(
+			function () use ( $attempt, $executor, &$outcome ): void {
+				$outcome = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ), executor: $executor )->execute_claimed( $attempt );
+			}
+		);
+		self::assertInstanceOf( DeploymentOutcome::class, $outcome );
+		self::assertSame( DeploymentOutcome::CODE_INTERRUPTED, $outcome->get_code() );
+		self::assertSame( 'runner_throw', $this->activity_facts()['deployment_settled_by'] ?? null, $lines );
+		self::assertStringNotContainsString( 'secret-shaped-private-value', $lines . (string) \RAN\Activity\wp_json_encode( $this->database->activity_rows ) );
+		self::assertStringContainsString( $attempt->get_correlation_id(), $lines );
+		self::assertStringContainsString( '"exception_code":"42"', $lines );
+		if ( $class_is_safe ) {
+			self::assertStringContainsString( '"exception_class":"RAN\\\\Tests\\\\Deployment\\\\ParityRunnerException"', $lines );
+		}
+	}
+
 
 	public function test_row_already_settled_by_someone_else_keeps_the_original_failure(): void {
 		$this->download_fixture( 'example' );
@@ -976,6 +1089,26 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 
 		return $deployment->deploy();
+	}
+
+	private function enable_activity(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$this->attempts                          = new DeploymentAttemptRepository(
+			$this->database,
+			'wp_ran_booster_deployment_attempts',
+			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-09-14 00:00:00 UTC' ),
+			fn ( int $length ): string => str_repeat( chr( $this->random_byte++ ), $length ),
+			$this->createStub( Database::class ),
+			activity: new \RAN\Activity\ActivityStore( $this->database, 'wp_ran_booster_activity' ),
+			selection: $this->queued_selection( $this->database )
+		);
+	}
+
+	/** @return array<string,mixed> */
+	private function activity_facts(): array {
+		$facts = json_decode( (string) $this->database->activity_rows[0]['facts'], true );
+		self::assertIsArray( $facts );
+		return $facts;
 	}
 
 	private function coordinator( ParityRepositoryProvider $provider, ?DeploymentFailureNotifier $notifier = null, ?WordPressCorePackageExecutor $executor = null ): DeploymentCoordinator {
@@ -1418,3 +1551,9 @@ final class ParityFailureNotifier implements DeploymentFailureNotifier {
 		return true;
 	}
 }
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Exercises logger screening of an overlong exception class.
+final class LongExceptionXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX extends \RuntimeException {}
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Exercises namespaced exception logging.
+final class ParityRunnerException extends \RuntimeException {}

@@ -248,10 +248,8 @@ jobs:
                 restore-keys: |
                     phpstan-production-v1-${{ runner.os }}-php8.2-${{ github.ref }}-${{ hashFiles('composer.lock') }}-
 
-          - name: Run the complete PHP quality contract
-            env:
-                PHPSTAN_DEVELOPMENT_PROCESSES: '4'
-            run: composer check
+          - name: Run repository PHP quality checks and production analysis
+            run: composer check:repository
 
           - name: Save production PHPStan cache
             if: ${{ !cancelled() && steps.phpstan-cache-restore.outcome == 'success' }}
@@ -264,6 +262,45 @@ jobs:
           - name: Run asset quality checks
             run: pnpm check
 
+
+  development-analysis:
+    name: Development analysis
+    needs: runtime-archive
+    if: ${{ needs.runtime-archive.outputs.lane == 'full' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Check out exact analysis revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          ref: ${{ needs.runtime-archive.outputs.source-commit }}
+
+      - name: Verify exact source checkout
+        env:
+          RAN_SOURCE_COMMIT: ${{ needs.runtime-archive.outputs.source-commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RAN_SOURCE_COMMIT"
+
+      - name: Set up PHP for development analysis
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.2'
+          coverage: none
+          extensions: sodium, zip
+          tools: composer:v2
+
+      - name: Install locked Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run complete development analysis
+        env:
+          PHPSTAN_DEVELOPMENT_PROCESSES: '4'
+        run: composer analyze:development
 
   wordpress-release-candidate:
       name: Release candidate install readback
@@ -1023,6 +1060,7 @@ jobs:
     needs:
       - runtime-archive
       - repository-quality
+      - development-analysis
       - wordpress-release-candidate
       - wordpress
     runs-on: ubuntu-24.04
@@ -1034,18 +1072,21 @@ jobs:
           LANE: ${{ needs.runtime-archive.outputs.lane }}
           RUNTIME_ARCHIVE_RESULT: ${{ needs.runtime-archive.result }}
           REPOSITORY_QUALITY_RESULT: ${{ needs.repository-quality.result }}
+          DEVELOPMENT_ANALYSIS_RESULT: ${{ needs.development-analysis.result }}
           RELEASE_CANDIDATE_RESULT: ${{ needs.wordpress-release-candidate.result }}
           WORDPRESS_RESULT: ${{ needs.wordpress.result }}
         run: |
           set -euo pipefail
-          printf 'archive=%s repository=%s candidate=%s wordpress=%s lane=%s\n' "$RUNTIME_ARCHIVE_RESULT" "$REPOSITORY_QUALITY_RESULT" "$RELEASE_CANDIDATE_RESULT" "$WORDPRESS_RESULT" "$LANE"
+          printf 'archive=%s repository=%s development=%s candidate=%s wordpress=%s lane=%s\n' "$RUNTIME_ARCHIVE_RESULT" "$REPOSITORY_QUALITY_RESULT" "$DEVELOPMENT_ANALYSIS_RESULT" "$RELEASE_CANDIDATE_RESULT" "$WORDPRESS_RESULT" "$LANE"
           test "$RUNTIME_ARCHIVE_RESULT" = success
           if [[ "$LANE" == full ]]; then
             test "$REPOSITORY_QUALITY_RESULT" = success
+            test "$DEVELOPMENT_ANALYSIS_RESULT" = success
             test "$WORDPRESS_RESULT" = success
             test "$RELEASE_CANDIDATE_RESULT" = skipped
           elif [[ "$LANE" == release-candidate ]]; then
             test "$REPOSITORY_QUALITY_RESULT" = skipped
+            test "$DEVELOPMENT_ANALYSIS_RESULT" = skipped
             test "$WORDPRESS_RESULT" = skipped
             test "$RELEASE_CANDIDATE_RESULT" = success
           else

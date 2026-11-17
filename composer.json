@@ -66,7 +66,11 @@
         "test:unit": "@php -d memory_limit=-1 vendor/bin/phpunit --configuration phpunit.xml --fail-on-phpunit-deprecation",
         "test:published-template-pack": "bash tests/published-template-pack.sh",
         "analyze": [
-            "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=2G -vv",
+            "@analyze:production",
+            "@analyze:development"
+        ],
+        "analyze:production": "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=2G -vv",
+        "analyze:development": [
             "Composer\\Config::disableProcessTimeout",
             "@php scripts/analyze-development.php"
         ],
@@ -93,13 +97,21 @@
         "verify:release": "bash scripts/verify-release.sh",
         "check": [
             "@i18n:check",
+            "@check:common",
+            "@analyze"
+        ],
+        "check:repository": [
+            "@i18n:check",
+            "@check:common",
+            "@analyze:production"
+        ],
+        "check:common": [
             "@i18n:fixture:check",
             "@test:localisation-installed-safety",
             "@test",
             "@admin-shell:check",
             "@lint:syntax",
-            "@standards",
-            "@analyze"
+            "@standards"
         ],
         "standards": "phpcs --standard=.phpcs.xml --report=summary",
         "standards:fix": "phpcbf --standard=.phpcs.xml --report=summary",

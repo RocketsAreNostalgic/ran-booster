@@ -71,9 +71,6 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			self::assertSame( $expected, array_values( array_diff( $this->development_files( $root ), $files ) ), $profile );
 			$actual = $files;
 		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Verify canonical analysis actually invokes the broad development runner.
-		$composer = json_decode( (string) file_get_contents( $root . '/composer.json' ), true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( array( 'phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=2G -vv', 'Composer\\Config::disableProcessTimeout', '@php scripts/analyze-development.php' ), $composer['scripts']['analyze'] );
 		list( $status, $output ) = $this->run_development_runner( $root, array( '--list' ) );
 		self::assertSame( 0, $status, $output );
 		$profiles = json_decode( $output, true, 512, JSON_THROW_ON_ERROR );
@@ -94,6 +91,47 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 		$all     = array_merge( $production, $actual, $expected );
 		$tracked = $this->root_php_files();
 		self::assertSame( array(), array_values( array_diff( $tracked, $all ) ), 'New first-party roots must enter production or development analysis automatically.' );
+	}
+
+	public function test_local_and_ci_composer_graphs_preserve_complete_analysis_once(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect the actual canonical command graph.
+		$composer = json_decode( (string) file_get_contents( $this->root() . '/composer.json' ), true, 512, JSON_THROW_ON_ERROR );
+		$scripts  = $composer['scripts'];
+		$expand   = static function ( string $name ) use ( $scripts ): array {
+			$pending  = array( '@' . $name );
+			$expanded = array();
+			$steps    = 0;
+			while ( array() !== $pending ) {
+				self::assertLessThan( 100, ++$steps, 'Composer aliases must terminate without cycles.' );
+				$command = array_shift( $pending );
+				$alias   = substr( $command, 1 );
+				if ( str_starts_with( $command, '@' ) && isset( $scripts[ $alias ] ) ) {
+					$pending = array_merge( (array) $scripts[ $alias ], $pending );
+				} else {
+					$expanded[] = $command;
+				}
+			}
+			return $expanded;
+		};
+		self::assertSame(
+			array( '@i18n:fixture:check', '@test:localisation-installed-safety', '@test', '@admin-shell:check', '@lint:syntax', '@standards' ),
+			$scripts['check:common']
+		);
+		self::assertSame( '@i18n:check', $scripts['check'][0] );
+		self::assertSame( '@i18n:check', $scripts['check:repository'][0] );
+		$analysis = array( 'phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=2G -vv', 'Composer\\Config::disableProcessTimeout', '@php scripts/analyze-development.php' );
+		self::assertSame( array_slice( $analysis, 0, 1 ), $expand( 'analyze:production' ) );
+		self::assertSame( array_slice( $analysis, 1 ), $expand( 'analyze:development' ) );
+		self::assertSame( $analysis, $expand( 'analyze' ), 'Keep production first, timeout disabled before the complete development runner.' );
+		self::assertSame( array_merge( $expand( 'i18n:check' ), $expand( 'check:common' ), $analysis ), $expand( 'check' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Bind command equivalence to the real CI entrypoints.
+		$workflow = (string) file_get_contents( $this->root() . '/.github/workflows/quality.yml' );
+		self::assertSame( 2, preg_match_all( '/^\s+run: composer (check:repository|analyze:development)$/m', $workflow, $matches ) );
+		$ci = array();
+		foreach ( $matches[1] as $command ) {
+			$ci = array_merge( $ci, $expand( $command ) );
+		}
+		self::assertSame( $expand( 'check' ), $ci, 'The CI split must neither omit nor duplicate any local PHP command.' );
 	}
 
 	public function test_new_development_files_and_body_errors_enter_analysis_automatically(): void {

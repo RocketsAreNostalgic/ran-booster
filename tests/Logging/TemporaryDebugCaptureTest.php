@@ -55,6 +55,93 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		}
 	}
 
+	public function test_sampling_shares_latest_timestamp_with_ordinary_writes_and_survives_eviction_and_rollback(): void {
+		$capture = $this->capture();
+		self::assertFalse( $capture->append( 'no active capture', 5 ) );
+		$capture->start();
+		self::assertTrue( $capture->append( 'sample', 5 ) );
+		$this->now += 4;
+		self::assertFalse( $this->capture()->append( 'early', 5 ) );
+		self::assertTrue( $capture->append( 'ordinary' ) );
+		$this->now += 4;
+		self::assertFalse( $capture->append( 'ordinary suppresses sample', 5 ) );
+		++$this->now;
+		self::assertTrue( $capture->append( 'exact threshold', 5 ) );
+		$future     = $this->now;
+		$this->now -= 10;
+		self::assertFalse( $capture->append( 'rollback sample with future entry', 5 ) );
+		self::assertTrue( $capture->append( 'ordinary rollback remains writable' ) );
+		self::assertSame( gmdate( 'Y-m-d\TH:i:s\Z', $future ), $capture->snapshot()['entries'][2]['at'] );
+		self::assertFalse( $capture->append( 'ordinary append does not hide future entry', 5 ) );
+		for ( $index = 0; $index < 401; ++$index ) {
+			self::assertTrue( $this->capture()->append( 'rollback ordinary' ) );
+			self::assertFalse( $capture->append( 'rollback sample', 5 ) );
+		}
+		self::assertSame( 400, count( $capture->snapshot()['entries'] ) );
+		self::assertNotContains( gmdate( 'Y-m-d\TH:i:s\Z', $future ), array_column( $capture->snapshot()['entries'], 'at' ) );
+		$this->now += 5;
+		self::assertTrue( $capture->append( 'accepted early sample after rollback eviction', 5 ) );
+		self::assertLessThan( $future, $this->now );
+		$this->now = $future;
+		for ( $index = 0; $index < 401; ++$index ) {
+			self::assertTrue( $capture->append( 'ordinary eviction' ) );
+		}
+		self::assertSame( 400, count( $capture->snapshot()['entries'] ) );
+		self::assertFalse( $capture->append( 'evicted marker cannot bypass interval', 5 ) );
+		$this->now += 5;
+		self::assertTrue( $capture->append( 'after eviction threshold', 5 ) );
+		$capture->stop();
+		self::assertFalse( $capture->append( 'stopped', 5 ) );
+		$capture->start();
+		self::assertTrue( $capture->append( 'fresh window', 5 ) );
+		$this->now += 3600;
+		self::assertFalse( $capture->append( 'expired window', 5 ) );
+	}
+
+	public function test_newest_timestamp_need_not_be_the_last_record(): void {
+		$capture = $this->capture();
+		$capture->start();
+		self::assertTrue( $capture->append( 'first' ) );
+		$this->now += 10;
+		self::assertTrue( $capture->append( 'newest' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reorder actual owned records to exercise the public append boundary against a historical out-of-order file.
+		$bytes = file_get_contents( $this->capture_path );
+		self::assertIsString( $bytes );
+		$lines                   = explode( "\n", $bytes );
+		[ $lines[2], $lines[3] ] = array( $lines[3], $lines[2] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Preserve each original timestamp while reordering the isolated capture fixture.
+		file_put_contents( $this->capture_path, implode( "\n", $lines ) );
+		$this->now -= 5;
+		self::assertTrue( $capture->append( 'ordinary rollback' ) );
+		self::assertFalse( $capture->append( 'sample rollback', 5 ) );
+		$this->now += 9;
+		self::assertFalse( $capture->append( 'four seconds after newest', 5 ) );
+		++$this->now;
+		self::assertTrue( $capture->append( 'five seconds after newest', 5 ) );
+	}
+
+	public function test_shared_file_lock_admits_one_concurrent_sample(): void {
+		$capture = $this->capture();
+		$capture->start();
+		$code      = 'require $argv[1]; require dirname($argv[1], 2) . "/tests/Logging/LoggingWordPressFunctions.php"; $capture = new \RAN\Logging\TemporaryDebugCapture($argv[2], static fn(): int => (int) $argv[3]); exit($capture->append("concurrent sample", 5) ? 0 : 1);';
+		$processes = array();
+		foreach ( range( 1, 4 ) as $unused ) {
+			$pipes = array();
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Independent PHP workers prove the real cross-process capture lock.
+			$process = proc_open( array( PHP_BINARY, '-r', $code, dirname( __DIR__, 2 ) . '/vendor/autoload.php', $this->secrets_path, (string) $this->now ), array(), $pipes );
+			self::assertIsResource( $process );
+			$processes[] = $process;
+		}
+		$winners = 0;
+		foreach ( $processes as $process ) {
+			$exit = proc_close( $process );
+			self::assertContains( $exit, array( 0, 1 ) );
+			$winners += 0 === $exit ? 1 : 0;
+		}
+		self::assertSame( 1, $winners );
+		self::assertSame( 1, count( $capture->snapshot()['entries'] ) );
+	}
+
 	public function test_capture_uses_fixed_sibling_and_supports_its_complete_lifecycle(): void {
 		$capture = $this->capture();
 
@@ -223,6 +310,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 
 		$capture = $this->capture();
 		self::assertSame( 'malformed', $capture->snapshot()['state'] );
+		self::assertFalse( $capture->append( 'sample refused', 5 ) );
 		self::assertFalse( $capture->append( '[ran-booster] refused' ) );
 		$this->assert_mutation_refused( static fn(): array => $capture->start() );
 		$this->assert_mutation_refused( static fn(): array => $capture->stop() );
@@ -289,6 +377,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->capture_path, 0600 );
 		self::assertSame( 'malformed', $capture->snapshot()['state'] );
+		self::assertFalse( $capture->append( 'sample refused', 5 ) );
 		$this->assert_mutation_refused( static fn(): array => $capture->start() );
 		$this->assert_mutation_refused( static fn(): bool => $capture->delete() );
 		self::assertFileExists( $this->capture_path );
@@ -300,14 +389,15 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->capture_path, 0600 );
 		self::assertSame( 'malformed', $capture->snapshot()['state'] );
+		self::assertFalse( $capture->append( 'sample refused', 5 ) );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		unlink( $this->capture_path );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		file_put_contents( $this->directory . '/link-target', 'foreign' );
 		symlink( $this->directory . '/link-target', $this->capture_path );
-		// @phpstan-ignore staticMethod.alreadyNarrowedType (Repeat the assertion after external database filesystem or scheduler state changes; earlier narrowing must not replace the runtime check.)
 		self::assertSame( 'malformed', $capture->snapshot()['state'] );
+		self::assertFalse( $capture->append( 'sample refused', 5 ) );
 		$this->assert_mutation_refused( static fn(): array => $capture->start() );
 		self::assertTrue( is_link( $this->capture_path ) );
 	}
@@ -342,6 +432,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertTrue( symlink( $this->directory . '/link-target', $this->capture_path . '.lock' ) );
 
 		self::assertSame( 'unavailable', $capture->snapshot()['state'] );
+		self::assertFalse( $capture->append( 'sample unavailable', 5 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		self::assertSame( 'foreign', file_get_contents( $this->directory . '/link-target' ) );
 	}
@@ -350,6 +441,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		$capture = new TemporaryDebugCapture( $this->directory . '/missing/secrets.json' );
 
 		self::assertSame( 'unavailable', $capture->snapshot()['state'] );
+		self::assertFalse( $capture->append( 'sample unavailable', 5 ) );
 		self::assertFalse( $capture->append( '[ran-booster] ignored' ) );
 		$this->assert_mutation_refused( static fn(): array => $capture->start() );
 
@@ -365,6 +457,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		chmod( $this->directory, 0755 );
 		self::assertSame( 'unavailable', $available->snapshot()['state'] );
+		self::assertFalse( $available->append( 'sample unavailable', 5 ) );
 		$this->assert_mutation_refused( static fn(): array => $available->start() );
 	}
 

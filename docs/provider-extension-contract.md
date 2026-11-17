@@ -375,6 +375,30 @@ its signing secret is unreadable. The result is recovery-required and omits the
 hook ID so it cannot seed a later assisted removal; only explicit reconfigure
 may replace that secret.
 
+### Optional webhook intake reasons
+
+`WebhookRejected( $status_code, $safe_message, ?string $reason = null )` and
+`WebhookEnvelope::ignored( ?string $reason = null )` accept only exact members of
+`WebhookRejected::REASONS`; `get_reason()` returns that closed value or null.
+Existing reasonless providers keep generic `rejected` / `ignored` diagnostics.
+Unknown values are dropped whole, before any normalization or truncation. No
+Provider API version changes. Providers supply observed classifications only;
+Core does not infer payload or ignored-event causes from messages.
+
+Core verification supplies `signature_missing`, `signature_malformed`,
+`signature_mismatch`, `secret_store_unavailable`, `profiles_missing`,
+`profile_invalid`, `secret_invalid`, `scope_mismatch` and `request_too_large`.
+Normalizers may carry `payload_invalid`, `ignored_type`, `ignored_ref`,
+`ignored_deletion` or `ignored_zero_commits` when actually observed.
+`probe_verified` describes successful probe verification. These Core webhook
+codes are separate from the frozen `ProviderFailure` vocabulary.
+
+Only the processor's final response boundary emits the diagnostic, after current
+selection checks. Revocation suppresses any pending verification/normalization
+cause. HTTP status/body, signing, scope and admission authority are unchanged.
+Admission/database-specific diagnostics and durable store-failure diagnostics
+remain separate work; this carrier does not implement them.
+
 ## Required provider surface
 
 Every provider implements `RepositoryProvider`. That contract directly requires

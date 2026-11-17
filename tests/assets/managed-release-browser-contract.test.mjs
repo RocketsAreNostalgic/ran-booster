@@ -1345,14 +1345,8 @@ test('managed browser adds the lookup-credential hint only when the server suppl
 
 test('managed browser keeps empty stable and preview tracks visible', async () => {
 	for (const [channel, copy] of [
-		[
-			'stable',
-			'No Stable releases have been published for this package yet.',
-		],
-		[
-			'prerelease',
-			'No Preview releases have been published for this package yet.',
-		],
+		['stable', 'No eligible releases were found in this search.'],
+		['prerelease', 'No eligible releases were found in this search.'],
 	]) {
 		const harness = createHarness([
 			{
@@ -1400,7 +1394,7 @@ test('managed browser initializes a swapped panel once without duplicate listene
 	assert.equal(harness.nodes.get('candidates').hidden, false);
 	assert.equal(
 		harness.nodes.get('candidate-list').children[0].textContent,
-		'No Preview releases have been published for this package yet.'
+		'No eligible releases were found in this search.'
 	);
 });
 

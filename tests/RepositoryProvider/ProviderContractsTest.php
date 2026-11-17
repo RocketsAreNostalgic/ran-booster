@@ -151,6 +151,287 @@ final class ProviderContractsTest extends TestCase {
 		self::assertSame( array( 'example-1.2.3+build.zip', $long_asset_name ), $candidate->expected_asset_names );
 	}
 
+	public function test_release_listing_metadata_is_optional_and_preserves_unknown_search_state(): void {
+		foreach ( array( new RepositoryReleaseCandidateList( array() ), new RepositoryReleaseCandidateList( candidates: array() ) ) as $legacy ) {
+			self::assertNull( $legacy->search_exhausted );
+			self::assertNull( $legacy->diagnostics );
+		}
+		foreach ( array( null, false, true, 0, 1, 'false', array(), new \stdClass() ) as $search ) {
+			$list = new RepositoryReleaseCandidateList( candidates: array(), search_exhausted: $search );
+			self::assertSame( is_bool( $search ) ? $search : null, $list->search_exhausted );
+			self::assertNull( $list->diagnostics );
+		}
+	}
+
+	public function test_release_listing_observations_project_identity_away_and_survive_repeated_boundaries(): void {
+		$report   = array(
+			'scanned_count' => 40,
+			'dropped_count' => 9,
+			'drops'         => array_fill(
+				0,
+				8,
+				array(
+					'release_identity' => '42',
+					'tag'              => 'V1.2+RC.1',
+					'reason'           => 'release_draft',
+				)
+			),
+			'truncated'     => true,
+		);
+		$expected = array(
+			'scanned_count' => 40,
+			'dropped_count' => 9,
+			'drops'         => array_fill(
+				0,
+				8,
+				array(
+					'reason' => 'release_draft',
+					'tag'    => 'V1.2+RC.1',
+				)
+			),
+			'truncated'     => true,
+		);
+		foreach ( array( false, true ) as $search ) {
+			$list = new RepositoryReleaseCandidateList( array(), $search, $report );
+			self::assertSame( $search, $list->search_exhausted );
+			self::assertSame( $expected, $list->diagnostics );
+			self::assertSame( $expected, RepositoryReleaseCandidateList::normalize_diagnostics( $list->diagnostics, projected: true ) );
+		}
+		foreach ( array( array( 8, false ), array( 40, true ) ) as list( $count, $truncated ) ) {
+			$report['dropped_count']   = $count;
+			$expected['dropped_count'] = $count;
+			$report['truncated']       = $truncated;
+			$expected['truncated']     = $truncated;
+			self::assertSame( $expected, RepositoryReleaseCandidateList::normalize_diagnostics( $report ) );
+		}
+		$empty = array(
+			'scanned_count' => 0,
+			'dropped_count' => 0,
+			'drops'         => array(),
+			'truncated'     => false,
+		);
+		self::assertSame( $empty, ( new RepositoryReleaseCandidateList( array(), true, $empty ) )->diagnostics );
+	}
+
+	public function test_release_listing_preserves_every_closed_reason_and_omits_unknown_samples(): void {
+		foreach ( array( 'release_metadata_invalid', 'release_immutable_invalid', 'release_publication_invalid', 'release_page_invalid', 'release_draft', 'tag_not_version', 'prerelease_not_allowed' ) as $reason ) {
+			$report = self::listing_report(
+				array(
+					'release_identity' => null,
+					'tag'              => 'v1.2',
+					'reason'           => $reason,
+				)
+			);
+			self::assertSame(
+				array(
+					array(
+						'reason' => $reason,
+						'tag'    => 'v1.2',
+					),
+				),
+				( new RepositoryReleaseCandidateList( array(), null, $report ) )->diagnostics['drops'] ?? null
+			);
+		}
+		foreach ( array( 'future_reason', 'digest_missing', '<script>remote sentence</script>' ) as $unknown ) {
+			$report                  = self::listing_report(
+				array(
+					'release_identity' => '42',
+					'tag'              => 'v1.2',
+					'reason'           => $unknown,
+				)
+			);
+			$report['drops'][]       = array(
+				'release_identity' => null,
+				'tag'              => null,
+				'reason'           => 'release_draft',
+			);
+			$report['scanned_count'] = 3;
+			$report['dropped_count'] = 2;
+			$expected                = array(
+				'scanned_count' => 3,
+				'dropped_count' => 2,
+				'drops'         => array(
+					array(
+						'reason' => 'release_draft',
+						'tag'    => null,
+					),
+				),
+				'truncated'     => true,
+			);
+			self::assertSame( $expected, RepositoryReleaseCandidateList::normalize_diagnostics( $report ) );
+			self::assertSame( $expected, RepositoryReleaseCandidateList::normalize_diagnostics( $expected, projected: true ) );
+			$report['drops']           = array( $report['drops'][0] );
+			$report['dropped_count']   = 1;
+			$expected['dropped_count'] = 1;
+			$expected['drops']         = array();
+			self::assertSame( $expected, RepositoryReleaseCandidateList::normalize_diagnostics( $report ) );
+			self::assertSame( $expected, RepositoryReleaseCandidateList::normalize_diagnostics( $expected, projected: true ) );
+		}
+	}
+
+	public function test_display_projection_validation_requires_consistent_incomplete_samples(): void {
+		$projection = array(
+			'scanned_count' => 3,
+			'dropped_count' => 2,
+			'drops'         => array(),
+			'truncated'     => true,
+		);
+		self::assertSame( $projection, RepositoryReleaseCandidateList::normalize_diagnostics( $projection, projected: true ) );
+		self::assertNull( RepositoryReleaseCandidateList::normalize_diagnostics( $projection ) );
+		foreach ( array( array( 'truncated' => false ), array( 'scanned_count' => 41 ), array( 'dropped_count' => 0 ), array( 'message' => 'remote prose' ) ) as $invalid ) {
+			self::assertNull( RepositoryReleaseCandidateList::normalize_diagnostics( array_replace( $projection, $invalid ), projected: true ) );
+		}
+	}
+
+	#[DataProvider( 'listing_tags' )]
+	public function test_release_listing_screens_the_original_whole_tag_without_changing_its_reason( mixed $tag, ?string $expected ): void {
+		$report = self::listing_report(
+			array(
+				'release_identity' => '42',
+				'tag'              => $tag,
+				'reason'           => 'tag_not_version',
+			)
+		);
+		$list   = new RepositoryReleaseCandidateList( array(), null, $report );
+		self::assertSame(
+			array(
+				array(
+					'reason' => 'tag_not_version',
+					'tag'    => $expected,
+				),
+			),
+			$list->diagnostics['drops'] ?? null
+		);
+	}
+
+	/** @return iterable<string,array{mixed,?string}> */
+	public static function listing_tags(): iterable {
+		foreach ( array( '123', 'v1.2', 'v1.2.3', '1.2.3.4', 'release-1.2.3', '01.2.3', 'V1.2+RC.1', str_repeat( 'v.', 60 ) ) as $tag ) {
+			yield 'original ' . $tag => array( $tag, $tag );
+		}
+		foreach ( array( null, false, 123, array(), new \stdClass(), '', ' v1.2', 'v1.2 ', "v1.2\n", "v1.2\0", "v1.2\x7f", 'v1.é', 'v1.2/path', 'C:\\private', 'v1.2%2Fpath', '<b>v1.2</b>', 'https://user:pass@example.test/?token=abc', 'ghp_example', 'client_secret', 'token_expired', 'sha256_abc', str_repeat( 'a', 64 ), 'ZXYabcdefghijklmnopqrstuvw', str_repeat( 'v.', 60 ) . 'x', str_repeat( 'v.', 60 ) . 'ghp_example', str_repeat( 'v.', 58 ) . 'vsecret_value' ) as $index => $tag ) {
+			yield 'withheld ' . $index => array( $tag, null );
+		}
+	}
+
+	#[DataProvider( 'malformed_listing_reports' )]
+	public function test_invalid_optional_diagnostics_never_change_valid_candidate_order( mixed $report ): void {
+		$newer = new RepositoryReleaseCandidate( '42', 'v1.2.3', '1.2.3', false, '2026-08-17T12:00:00Z', array( 'example.zip' ) );
+		$older = new RepositoryReleaseCandidate( '41', 'v1.2.2', '1.2.2', false, '2026-08-16T12:00:00Z', array( 'example.zip' ) );
+		$list  = new RepositoryReleaseCandidateList( array( $newer, $older ), true, $report );
+		self::assertSame( array( $newer, $older ), $list->candidates );
+		self::assertTrue( $list->search_exhausted );
+		self::assertNull( $list->diagnostics );
+	}
+
+	/** @return iterable<string,array{mixed}> */
+	public static function malformed_listing_reports(): iterable {
+		$drop   = array(
+			'release_identity' => '42',
+			'tag'              => 'v1.2',
+			'reason'           => 'release_draft',
+		);
+		$report = self::listing_report( $drop );
+		foreach ( array( null, false, 1, 'remote prose', new \stdClass(), array() ) as $index => $value ) {
+			yield 'report type ' . $index => array( $value );
+		}
+		foreach ( array(
+			'scanned_count' => array( null, true, '1', 1.0, -1, 0, 41 ),
+			'dropped_count' => array( null, false, '1', 1.0, -1, 0, 2 ),
+			'drops'         => array( null, false, 'rows', new \stdClass(), array( 1 => $drop ), array( null ), array_fill( 0, 9, $drop ) ),
+			'truncated'     => array( null, 0, 'false', true ),
+		) as $key => $values ) {
+			$missing = $report;
+			unset( $missing[ $key ] );
+			yield 'missing ' . $key => array( $missing );
+			foreach ( $values as $index => $value ) {
+				yield $key . ' invalid ' . $index => array( array_replace( $report, array( $key => $value ) ) );
+			}
+		}
+		yield 'extra report field' => array( $report + array( 'message' => 'remote prose' ) );
+		foreach ( array( 42, '0', '01', '-1', str_repeat( '9', 20 ), 'private-id' ) as $identity ) {
+			yield 'identity ' . $identity => array( self::listing_report( array_replace( $drop, array( 'release_identity' => $identity ) ) ) );
+		}
+		foreach ( array( 'tag', 'reason' ) as $key ) {
+			$missing = $drop;
+			unset( $missing[ $key ] );
+			yield 'missing row ' . $key => array( self::listing_report( $missing ) );
+		}
+		yield 'nonstring reason' => array( self::listing_report( array_replace( $drop, array( 'reason' => array() ) ) ) );
+		yield 'extra row field' => array( self::listing_report( $drop + array( 'message' => 'remote prose' ) ) );
+		yield 'undersampled wire' => array(
+			array_replace(
+				$report,
+				array(
+					'scanned_count' => 3,
+					'dropped_count' => 2,
+					'truncated'     => true,
+				)
+			),
+		);
+		yield 'empty undersampled wire' => array(
+			array_replace(
+				$report,
+				array(
+					'drops'     => array(),
+					'truncated' => true,
+				)
+			),
+		);
+		yield 'projection supplied as wire' => array(
+			self::listing_report(
+				array(
+					'reason' => 'release_draft',
+					'tag'    => null,
+				)
+			),
+		);
+		yield 'contradictory projection' => array(
+			array_replace(
+				$report,
+				array(
+					'drops'         => array(
+						array(
+							'reason' => 'release_draft',
+							'tag'    => null,
+						),
+					),
+					'scanned_count' => 3,
+					'dropped_count' => 2,
+				)
+			),
+		);
+		yield 'mixed wire and projection' => array(
+			array_replace(
+				$report,
+				array(
+					'scanned_count' => 3,
+					'dropped_count' => 2,
+					'drops'         => array(
+						$drop,
+						array(
+							'reason' => 'release_draft',
+							'tag'    => null,
+						),
+					),
+				)
+			),
+		);
+	}
+
+	/**
+	 * @param array<string,mixed> $drop
+	 * @return array{scanned_count:int,dropped_count:int,drops:list<array<string,mixed>>,truncated:bool}
+	 */
+	private static function listing_report( array $drop ): array {
+		return array(
+			'scanned_count' => 1,
+			'dropped_count' => 1,
+			'drops'         => array( $drop ),
+			'truncated'     => false,
+		);
+	}
+
 	public function test_release_candidate_list_rejects_unbounded_lists(): void {
 		$candidate = new RepositoryReleaseCandidate(
 			'42',

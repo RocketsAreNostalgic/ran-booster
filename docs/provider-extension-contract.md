@@ -619,7 +619,8 @@ facet is absent or returns no canonical Update URI.
 `RepositoryReleaseCandidateListing` is the independent, read-only remote facet
 for listing at most eight published releases for one resolved repository,
 package type and exact `stable` or `prerelease` channel. It returns only typed,
-bounded candidate values; an empty list means that no eligible release exists,
+bounded candidate values; an empty list means no eligible release was found in
+this bounded search,
 while an exception means listing was unavailable. The provider owns its remote
 calls, credential use and response normalization. The facet downloads no
 archive and grants no inspection, acquisition, installation or mutation
@@ -637,6 +638,69 @@ the same registered provider aggregate. Listing alone grants no later-operation
 authority and does not qualify a provider for that facade. The facade preserves
 bounded opaque provider release identities as strings; identities need not be
 positive integers.
+
+### Optional listing observations (Core #828)
+
+`RepositoryReleaseCandidateList` retains its original `array $candidates`
+parameter and adds trailing `mixed $search_exhausted = null` and
+`mixed $diagnostics = null`. The readonly fields are `?bool` and `?array`.
+An absent, old or invalid search flag becomes null, not false. True means the
+bounded search stopped at its limit; it can return zero or fewer than eight
+candidates. It does not mean that every release was examined.
+
+This is an additive source contract under Provider API 15. A future provider
+must feature-detect **both** `search_exhausted` and `diagnostics` with
+`property_exists(RepositoryReleaseCandidateList::class, ...)` before passing
+either new named argument. If either property is absent, use the original
+candidates-only constructor. API 15 alone does not establish this capability.
+Existing providers remain valid and supply unknown metadata on newer Core.
+
+The constructor accepts the updater wire report, null or exactly:
+
+```text
+{scanned_count: int 0..40, dropped_count: int 0..scanned_count,
+ drops: list<{release_identity: ?string, tag: ?string, reason: string}>,
+ truncated: bool}
+```
+
+The wire sample contains exactly `min(8, dropped_count)` rows; `truncated` is
+true exactly when dropped count exceeds eight. A wire identity is null or a
+positive decimal string of at most 19 digits. Core projects it away; the
+operational candidate identity remains unchanged. Counts are observed listing
+rejections, not repository totals; duplicates and return-cap omissions are not
+rejections. A 304 supplies no fresh report.
+
+Listing reasons are `release_metadata_invalid`, `release_immutable_invalid`,
+`release_publication_invalid`, `release_page_invalid`, `release_draft`,
+`tag_not_version` and `prerelease_not_allowed`. Unknown reasons are omitted,
+while valid counts survive and the projected sample is marked incomplete.
+`digest_missing` is an inspection refinement, never a listing reason.
+Malformed optional metadata becomes null without changing valid candidates.
+
+A tag survives only if its whole original string matches
+`\A[A-Za-z0-9][A-Za-z0-9._+-]{0,119}\z` and
+`FailureText::strict($original, 120) === $original`. Never trim, decode,
+truncate, lowercase or redact first. Numeric-leading tags, case and `+` can
+survive; `identifier()` is not this screen. A rejected tag becomes null while
+its known reason survives. Providers supply the actual tag, never a sentence,
+asset name, digest, path, URL, message or arbitrary context map.
+
+The public `normalize_diagnostics($value, projected: true)` revalidates Core's
+identity-free display shape at callback boundaries. That shape has only
+`reason` and nullable `tag` per row, can contain fewer samples after filtering,
+and sets `truncated` exactly when counts exceed the retained sample. Default
+wire mode remains strict, including empty undersampled reports. Callers must
+select the mode explicitly; missing wire fields never imply a projection.
+Both pickers preserve observations on empty and nonempty outcomes, with fixed
+Core wording and DOM text nodes. Without a report, unavailable-details guidance
+appears only on an empty candidate list. A stopped-search warning remains
+visible with or without candidates; a region with no observations stays hidden.
+Search termination and sample truncation are
+independent. No listing observation enters storage, Activity or support export.
+
+Producer publication and provider forwarding are separate prerequisites. The
+four-package dependency adoption follows all four published releases in one
+reviewed change; this Core source contract changes no dependency pin.
 
 When a release listing or inspection read cannot be completed with the supplied
 repository access profile because of credential/access denial, rate limiting, or
@@ -663,7 +727,8 @@ other exceptions mean the inspection operation was unavailable. Only
 `[a-z][a-z0-9_]{0,63}`; anything else becomes `null`) naming why the newest
 release was rejected. It is an additive optional field, not a new reason, so
 Core's candidate walk is unchanged. Core shows it only when Core has specific copy for that
-reason (today `package_asset_missing` and `package_asset_ambiguous`), and otherwise
+reason (`package_asset_missing`, `package_asset_ambiguous`, `release_incompatible`
+and the inspection-only `digest_missing` refinement), and otherwise
 falls back to the reason it can derive from the release listing, or the generic
 one. Each `RepositoryReleaseCandidate` lists its package ZIP assets in
 `expected_asset_names` (at most 8, ZIP names only); a provider that returns
@@ -1085,6 +1150,15 @@ names one of them. Otherwise Core derives the wording from the candidate's
 completely. `incompatible( ?string $detail, ?ProviderFailure $failure )` keeps
 its existing lower-case `detail`; only a recognized carried reason takes
 precedence over it.
+
+The exact legacy refinement `incompatible('digest_missing')` additionally
+selects fixed missing-digest copy after inspection. Managed exact inspection
+returns a non-ready preflight with that reason; prospective exact inspection
+keeps `release_invalid` and adds only `rejection_reason: digest_missing` to its
+result data. Unknown or malformed refinements remain generic. Existing carried
+reason precedence and the two-candidate incompatibility fallback are unchanged;
+an older success does not acquire a retained history of newer rejections.
+The 33 `ProviderFailure` reasons and Provider API 15 remain unchanged.
 
 `RepositoryReleaseAcquisitionRejected::changed()` reports that the release no
 longer matches the one that was inspected. The receiving workflow maps that rejection to its own closed result; it does

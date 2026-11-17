@@ -1929,7 +1929,14 @@ final class TroubleshootingViewTest extends TestCase {
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
-		$html     = (string) ob_get_clean();
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Why published releases may be skipped', $html );
+		self::assertStringContainsString( 'at most two candidates', $html );
+		self::assertStringContainsString( 'Troubleshooting does not fetch or retain that list.', $html );
+		self::assertStringContainsString( '?page=ran-booster-plugins', $html );
+		self::assertStringContainsString( '?page=ran-booster-themes', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-release-observations', $html );
+		self::assertStringNotContainsString( 'ran_booster_release_list_candidates', $html );
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );

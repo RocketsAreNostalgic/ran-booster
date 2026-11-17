@@ -227,6 +227,22 @@ them:
   use; the facet grants no download, inspection, installation or mutation
   authority.
 
+    Core #828 adds optional `search_exhausted` and `diagnostics` fields to
+    `RepositoryReleaseCandidateList`. Detect both class properties before
+    passing either new named constructor argument; older hosts receive only
+    candidates. The Provider API number remains 15. Older providers supply
+    unknown observations, not an exhaustive search or a measured zero skips.
+
+    Forward actual updater observations. The wire report has bounded counts,
+    exactly up to eight samples and the seven closed listing reasons in the
+    [provider contract](provider-extension-contract.md#optional-listing-observations-core-828).
+    Core screens original tags and omits diagnostic identities. Invalid
+    optional metadata must not discard valid candidates. Search-limit and
+    sample-limit flags describe different facts, including on an empty list.
+    No listing call downloads a ZIP. A missing digest is reported only after
+    exact inspection through `incompatible('digest_missing')`; do not infer it
+    from expected asset names or add a `ProviderFailure` reason.
+
     When an otherwise eligible release read cannot complete with the supplied
     access profile because of credential/access denial, rate limiting, or a
     transport failure, throw

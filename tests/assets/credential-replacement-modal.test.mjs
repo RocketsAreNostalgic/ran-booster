@@ -23,7 +23,9 @@ test('confirmation adapter resolves once and returns focus on cancellation', asy
 	let accepted = 0;
 	let cancelled = 0;
 	const host = { remove() {} };
-	const document = { body: { append() {} }, createElement: () => host };
+	const document = new EventTarget();
+	document.body = { append() {} };
+	document.createElement = () => host;
 	const trigger = {
 		ownerDocument: document,
 		isConnected: true,
@@ -51,11 +53,15 @@ test('confirmation adapter resolves once and returns focus on cancellation', asy
 	const open = () =>
 		window.ranBoosterOpenDialog.confirm(
 			trigger,
+			'Unsaved changes',
 			'Discard?',
 			() => accepted++,
 			() => cancelled++
 		);
 	assert.equal(open(), true);
+	assert.equal(rendered.child.props['aria-modal'], true);
+	assert.equal(rendered.child.props.title, 'Unsaved changes');
+	assert.equal(rendered.child.props.description, 'Discard?');
 	rendered.props.onOpenChange(false);
 	rendered.props.onOpenChange(false);
 	await Promise.resolve();
@@ -68,6 +74,58 @@ test('confirmation adapter resolves once and returns focus on cancellation', asy
 	await Promise.resolve();
 	assert.equal(accepted, 1);
 	assert.equal(cancelled, 1);
+});
+
+test('committed HTMX cleanup cancels the old prompt and settles overlapping callers', async () => {
+	const document = new EventTarget();
+	document.body = { append() {} };
+	document.createElement = () => ({ remove() {} });
+	const trigger = { ownerDocument: document, isConnected: false };
+	let cancelCount = 0;
+	let failRoot = true;
+	const window = {
+		ranBoosterUI: {
+			version: '0.26.0',
+			AlertDialog: { Root: 'root', Popup: 'popup' },
+		},
+		wp: {
+			element: {
+				createElement: (type, props, child) => ({ type, props, child }),
+				createRoot: () => {
+					if (failRoot) {
+						throw new Error('unavailable');
+					}
+					return { render() {}, unmount() {} };
+				},
+				flushSync: (callback) => callback(),
+			},
+		},
+	};
+	vm.runInNewContext(dialogSource, { window, queueMicrotask });
+	const open = () =>
+		window.ranBoosterOpenDialog.confirm(
+			trigger,
+			'Title',
+			'Question',
+			() => {},
+			() => cancelCount++
+		);
+	assert.equal(open(), false, 'construction failure allows native fallback');
+	failRoot = false;
+	assert.equal(open(), true, 'construction failure releases the guard');
+	assert.equal(open(), true);
+	assert.equal(cancelCount, 1, 'busy caller receives cancellation');
+	const refused = event('htmx:beforeSwap', { elt: { contains: () => true } });
+	document.dispatchEvent(refused);
+	assert.equal(cancelCount, 1, 'a refused swap does not cancel');
+	document.dispatchEvent(
+		event('htmx:beforeCleanupElement', {
+			elt: { contains: (node) => node === trigger },
+		})
+	);
+	await Promise.resolve();
+	assert.equal(cancelCount, 2, 'committed cleanup cancels the original');
+	assert.equal(open(), true, 'later prompt is not stuck');
 });
 function event(type, detail) {
 	const value = new Event(type, { cancelable: true });
@@ -209,6 +267,19 @@ test('missing or failing Dialog and modified clicks retain native link behavior'
 	assert.equal(modified.defaultPrevented, false);
 });
 
+test('missing dialog helper still confirms a dirty identity switch', () => {
+	const state = fixture(false);
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'different';
+	const declined = event('click');
+	state.button.dispatchEvent(declined);
+	assert.equal(declined.defaultPrevented, true);
+	state.accept = true;
+	const accepted = event('click');
+	state.button.dispatchEvent(accepted);
+	assert.equal(accepted.defaultPrevented, false);
+});
+
 test('switching credential identity cannot silently erase a dirty draft', () => {
 	const state = fixture();
 	state.form.dispatchEvent(event('input'));
@@ -243,8 +314,15 @@ test('asynchronous confirmation resumes the original switch once and cancel reta
 	let accept;
 	let cancel;
 	let prompts = 0;
-	state.window.ranBoosterOpenDialog.confirm = (button, message, yes, no) => {
+	state.window.ranBoosterOpenDialog.confirm = (
+		button,
+		title,
+		message,
+		yes,
+		no
+	) => {
 		assert.equal(button, state.button);
+		assert.equal(title, 'Unsaved credential changes');
 		assert.equal(message, 'Discard unsaved credential changes?');
 		prompts++;
 		accept = yes;
@@ -269,7 +347,12 @@ test('a stale identity switch does not replace the draft', () => {
 	state.form.dispatchEvent(event('input'));
 	state.button.getAttribute = () => 'different';
 	let accept;
-	state.window.ranBoosterOpenDialog.confirm = (button, message, yes) => {
+	state.window.ranBoosterOpenDialog.confirm = (
+		button,
+		title,
+		message,
+		yes
+	) => {
 		accept = yes;
 		return true;
 	};

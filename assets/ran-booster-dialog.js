@@ -30,7 +30,7 @@
 	let confirming = false;
 
 	// Return false when the public confirmation runtime is unavailable.
-	function confirmAction(trigger, title, onConfirm, onCancel) {
+	function confirmAction(trigger, title, description, onConfirm, onCancel) {
 		const ui = window.ranBoosterUI;
 		const alert = ui?.AlertDialog;
 		const element = window.wp?.element;
@@ -46,19 +46,27 @@
 			return false;
 		}
 		if (confirming) {
+			onCancel();
 			return true;
 		}
 		confirming = true;
-		const host = trigger.ownerDocument.createElement('div');
-		trigger.ownerDocument.body.append(host);
-		const root = element.createRoot(host);
+		const doc = trigger.ownerDocument;
+		let host;
+		let root;
 		let accepted = false;
 		let finished = false;
+		const cleanup = (event) => {
+			if (event.detail?.elt?.contains(trigger)) {
+				accepted = false;
+				finish();
+			}
+		};
 		function finish() {
 			if (finished) {
 				return;
 			}
 			finished = true;
+			doc.removeEventListener('htmx:beforeCleanupElement', cleanup);
 			queueMicrotask(() => {
 				root.unmount();
 				host.remove();
@@ -74,6 +82,10 @@
 			});
 		}
 		try {
+			host = doc.createElement('div');
+			doc.body.append(host);
+			root = element.createRoot(host);
+			doc.addEventListener('htmx:beforeCleanupElement', cleanup);
 			element.flushSync(() => {
 				root.render(
 					element.createElement(
@@ -89,13 +101,18 @@
 								}
 							},
 						},
-						element.createElement(alert.Popup, { title })
+						element.createElement(alert.Popup, {
+							title,
+							description,
+							'aria-modal': true,
+						})
 					)
 				);
 			});
 		} catch {
-			root.unmount();
-			host.remove();
+			doc.removeEventListener('htmx:beforeCleanupElement', cleanup);
+			root?.unmount();
+			host?.remove();
 			confirming = false;
 			return false;
 		}

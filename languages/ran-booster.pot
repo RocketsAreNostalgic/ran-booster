@@ -8402,7 +8402,7 @@ msgstr ""
 
 #. translators: %s is the item being edited.
 #: views/packages/edit.php:245
-#: assets/ran-booster-secure-inputs.js:1306
+#: assets/ran-booster-secure-inputs.js:1309
 #, php-format,js-format
 msgid "Edit %s"
 msgstr ""
@@ -10285,7 +10285,7 @@ msgid "Enter the Git provider expiry date, or choose an earlier one. If automati
 msgstr ""
 
 #: views/provider/modals.php:91
-#: assets/ran-booster-secure-inputs.js:1460
+#: assets/ran-booster-secure-inputs.js:1463
 msgid "Credential secret"
 msgstr ""
 
@@ -10351,7 +10351,7 @@ msgid "e.g. Organisation webhooks"
 msgstr ""
 
 #: views/provider/modals.php:165
-#: assets/ran-booster-secure-inputs.js:1530
+#: assets/ran-booster-secure-inputs.js:1533
 msgid "Target"
 msgstr ""
 
@@ -11917,22 +11917,26 @@ msgstr ""
 msgid "Clipboard access failed. Select the value and use your browser copy command."
 msgstr ""
 
-#: assets/ran-booster-secure-inputs.js:966
+#: assets/ran-booster-secure-inputs.js:968
 msgid "Discard unsaved credential changes?"
 msgstr ""
 
-#: assets/ran-booster-secure-inputs.js:1214
+#: assets/ran-booster-secure-inputs.js:975
+msgid "Unsaved credential changes"
+msgstr ""
+
+#: assets/ran-booster-secure-inputs.js:1217
 msgid "this credential"
 msgstr ""
 
 #. translators: %s: credential label.
-#: assets/ran-booster-secure-inputs.js:1254
+#: assets/ran-booster-secure-inputs.js:1257
 #, js-format
 msgid "“%s”"
 msgstr ""
 
 #. translators: %d: number of managed packages using this credential.
-#: assets/ran-booster-secure-inputs.js:1263
+#: assets/ran-booster-secure-inputs.js:1266
 #, js-format
 msgid "This credential is still used by %d managed package. Assign another credential, or public access where appropriate, to every package listed under Usage and save those settings before deleting it."
 msgid_plural "This credential is still used by %d managed packages. Assign another credential, or public access where appropriate, to every package listed under Usage and save those settings before deleting it."
@@ -11940,23 +11944,23 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: provider label.
-#: assets/ran-booster-secure-inputs.js:1299
+#: assets/ran-booster-secure-inputs.js:1302
 #, js-format
 msgid "%s repository credential"
 msgstr ""
 
-#: assets/ran-booster-secure-inputs.js:1302
+#: assets/ran-booster-secure-inputs.js:1305
 msgid "Push-to-Deploy secret"
 msgstr ""
 
 #. translators: %s: credential type.
-#: assets/ran-booster-secure-inputs.js:1311
+#: assets/ran-booster-secure-inputs.js:1314
 #, js-format
 msgid "Add %s"
 msgstr ""
 
 #. translators: %s: webhook target.
-#: assets/ran-booster-secure-inputs.js:1431
+#: assets/ran-booster-secure-inputs.js:1434
 #, js-format
 msgid "%s — already configured"
 msgstr ""

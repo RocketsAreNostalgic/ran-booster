@@ -918,13 +918,15 @@
 						event.metaKey ||
 						event.shiftKey ||
 						event.altKey ||
-						event.button > 0 ||
-						typeof window.ranBoosterOpenDialog !== 'function'
+						event.button > 0
 					) {
 						return;
 					}
 					const id = button.getAttribute('data-id') || '';
 					const switchIdentity = (deferred = false) => {
+						if (typeof window.ranBoosterOpenDialog !== 'function') {
+							return;
+						}
 						if (
 							form.elements['ran_booster[id]'].value !== id ||
 							(!dirty && editor.hidden)
@@ -968,8 +970,9 @@
 							'ran-booster'
 						);
 						confirmationPending = true;
-						const opened = window.ranBoosterOpenDialog.confirm?.(
+						const opened = window.ranBoosterOpenDialog?.confirm?.(
 							button,
+							__('Unsaved credential changes', 'ran-booster'),
 							message,
 							() => {
 								if (!confirmationPending) {

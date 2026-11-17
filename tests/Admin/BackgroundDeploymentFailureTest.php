@@ -260,14 +260,35 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 	}
 
 	public function test_email_filter_receives_no_source_code_even_from_an_extended_row(): void {
-		$row                = $this->row( 1, 'affected', 'example', 'webhook', DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID );
-		$row['source_code'] = 'abuse_detected';
-		self::assertTrue( ( new BackgroundDeploymentFailureEmail() )->notify( DeploymentAttempt::from_database( $row ) ) );
-		$export = \RAN\Admin\wp_json_encode( array( $GLOBALS['ran_booster_background_failure_mail'], $GLOBALS['ran_booster_background_failure_filter_context'] ) );
-		self::assertIsString( $export );
-		self::assertStringContainsString( 'example', $export );
-		self::assertStringNotContainsString( 'source_code', $export );
-		self::assertStringNotContainsString( 'abuse_detected', $export );
+		$previous = $GLOBALS['ran_booster_background_failure_email_filter'] ?? null;
+		try {
+			foreach ( array( 'api.abuse_detected', 'secret_orchid' ) as $sentinel ) {
+				$inputs = null;
+				$GLOBALS['ran_booster_background_failure_email_filter'] = static function ( mixed $email, mixed $context ) use ( &$inputs ): mixed {
+					$inputs = array( $email, $context );
+					return $email;
+				};
+				$row                = $this->row( 1, 'affected', 'example', 'webhook', DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID );
+				$row['source_code'] = $sentinel;
+				self::assertTrue( ( new BackgroundDeploymentFailureEmail() )->notify( DeploymentAttempt::from_database( $row ) ) );
+				self::assertIsArray( $inputs );
+				self::assertStringContainsString( 'example', $inputs[0]['message'] );
+				self::assertSame( 'example', $inputs[1]['package_slug'] );
+				self::assertSame( 'provider_request_invalid', $inputs[1]['outcome_code'] );
+				foreach ( array( $inputs[0], $inputs[1], $GLOBALS['ran_booster_background_failure_mail'] ) as $sink ) {
+					$export = \RAN\Admin\wp_json_encode( $sink );
+					self::assertIsString( $export );
+					self::assertStringNotContainsString( 'source_code', $export );
+					self::assertStringNotContainsString( $sentinel, $export );
+				}
+			}
+		} finally {
+			if ( null === $previous ) {
+				unset( $GLOBALS['ran_booster_background_failure_email_filter'] );
+			} else {
+				$GLOBALS['ran_booster_background_failure_email_filter'] = $previous;
+			}
+		}
 	}
 
 	public function test_background_notice_uses_exact_retained_fact_but_email_and_filter_do_not(): void {

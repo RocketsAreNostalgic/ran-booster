@@ -1372,7 +1372,7 @@ final class TroubleshootingViewTest extends TestCase {
 			'state'                   => 'failed',
 			'mutation_started_at'     => null,
 			'outcome_code'            => 'provider_request_invalid',
-			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
+			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800,"installed_identifier":"example/main.php","adoption_token":"gh:R_example:00000000-0000-4000-8000-000000000001"}',
 			'created_at'              => '2026-11-17 00:00:00',
 			'finished_at'             => '2026-11-17 00:00:01',
 		);
@@ -1394,7 +1394,8 @@ final class TroubleshootingViewTest extends TestCase {
 			'provenance'       => 'core',
 			'operation'        => 'update',
 			'subject_type'     => 'plugin',
-			'subject_identity' => '<script>canary</script>',
+			'subject_identity' => 'example/main.php',
+			'adoption_token'   => 'gh:R_example:00000000-0000-4000-8000-000000000001',
 			'status'           => 'failed',
 			'reason'           => 'provider_request_invalid',
 			'sort_at'          => '2026-11-17 00:00:00',
@@ -1432,29 +1433,191 @@ final class TroubleshootingViewTest extends TestCase {
 				}
 			}
 			$record['provenance'] = 'core';
-			$record['provider']   = 'bb';
-			$db->read_results     = array( array( $record ) );
+			$valid_record         = $record;
+			foreach ( array(
+				array( 'status' => 'rejected' ),
+				array( 'subject_identity' => 'foreign/main.php' ),
+				array( 'adoption_token' => 'gh:R_example:00000000-0000-4000-8000-000000000002' ),
+				array(
+					'reason' => 'worker_stopped',
+					'facts'  => wp_json_encode( array_replace( $facts, array( 'deployment_outcome' => 'worker_stopped' ) ) ),
+				),
+				array(
+					'reason' => 'provider_selection_changed',
+					'facts'  => wp_json_encode( array_replace( $facts, array( 'deployment_outcome' => 'provider_selection_changed' ) ) ),
+				),
+				array( 'facts' => wp_json_encode( array_replace( $facts, array( 'deployment_mutation_started_at' => '2026-11-17 00:00:00' ) ) ) ),
+				array( 'facts' => wp_json_encode( array_replace( $facts, array( 'deployment_settled_by' => 'runner_throw' ) ) ) ),
+				array( 'facts' => wp_json_encode( array_replace( $facts, array( 'deployment_resolved_by' => 1 ) ) ) ),
+			) as $change ) {
+				$record           = array_replace( $valid_record, $change );
+				$_GET             = array(
+					'attempt'   => '17',
+					'reference' => str_repeat( 'a', 32 ),
+				);
+				$db->read_results = array( array( $record ) );
+				self::assertNull( $presenter->activity()['source_reference'] ?? null, implode( ', ', array_keys( $change ) ) );
+				if ( ! isset( $change['adoption_token'] ) && ! isset( $change['subject_identity'] ) ) {
+					$_GET             = array();
+					$db->read_results = array( array(), array(), array( $record ) );
+					$listing          = $presenter->activity();
+					self::assertNull( $listing['items'][0]['source_reference'] ?? null, implode( ', ', array_keys( $change ) ) );
+				}
+			}
+			$record              = $valid_record;
+			$_GET                = array(
+				'attempt'   => '17',
+				'reference' => str_repeat( 'a', 32 ),
+			);
+			$db->read_results    = array( array( $record, $record ) );
+			$deployment_activity = $presenter->activity();
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+			self::assertStringNotContainsString( 'api.abuse_detected', (string) ob_get_clean() );
+			$record['provider'] = 'bb';
+			$db->read_results   = array( array( $record ) );
 			self::assertNull( $presenter->activity()['source_reference'] );
-			$db->read_results = array( false );
-			self::assertTrue( $presenter->activity()['unavailable'] );
-			$record['operation']    = 'credential.validate';
-			$record['subject_type'] = 'provider';
-			$record['status']       = 'rejected';
-			$record['facts']        = wp_json_encode( array( 'source_code' => 'api.abuse_detected' ) );
-			$_GET                   = array();
-			$db->read_results       = array( array(), array(), array( $record ) );
-			$deployment_activity    = $presenter->activity( array( 'bb' => '<provider>' ) );
+			$db->read_results    = array( false );
+			$deployment_activity = $presenter->activity();
+			self::assertFalse( $deployment_activity['unavailable'] );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+			self::assertStringContainsString( 'repository or credential configuration is invalid', (string) ob_get_clean() );
+			foreach ( array(
+				'running'         => null,
+				'needs_attention' => 'restoration_uncertain',
+			) as $state => $outcome ) {
+				$journal->rows = array(
+					array_replace(
+						$row,
+						array(
+							'state'        => $state,
+							'outcome_code' => $outcome,
+							'finished_at'  => null === $outcome ? null : $row['finished_at'],
+						)
+					),
+				);
+				if ( 'needs_attention' === $state ) {
+					$journal->rows[] = array_replace(
+						$row,
+						array(
+							'id'             => 18,
+							'correlation_id' => str_repeat( 'b', 32 ),
+							'state'          => 'succeeded',
+							'outcome_code'   => 'deployed',
+						)
+					);
+				}
+				$db->read_results    = array( false );
+				$deployment_activity = $presenter->activity();
+				self::assertFalse( $deployment_activity['unavailable'] );
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+				$html = (string) ob_get_clean();
+				self::assertStringContainsString( 'running' === $state ? 'Reconcile stopped worker' : 'Booster verified a later deployment', $html );
+			}
+			$journal->rows    = array( $row );
+			$without_activity = new \RAN\Admin\DeploymentAdminPresenter( attempts: $attempts );
+			self::assertFalse( $without_activity->activity()['unavailable'] );
+			$journal->fail_reads = true;
+			$deployment_activity = $presenter->activity();
+			self::assertTrue( $deployment_activity['unavailable'] );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+			self::assertStringContainsString( 'Deployment activity is temporarily unavailable.', (string) ob_get_clean() );
+			$journal->fail_reads        = false;
+			$record['operation']        = 'credential.validate';
+			$record['subject_type']     = 'provider';
+			$record['status']           = 'rejected';
+			$record['subject_identity'] = 'bb';
+			$record['reason']           = 'credential.invalid';
+			$record['facts']            = wp_json_encode( array( 'source_code' => 'api.abuse_detected' ) );
+			$_GET                       = array();
+			$db->read_results           = array( array(), array(), array( $record ) );
+			$deployment_activity        = $presenter->activity( array( 'bb' => '<provider>' ) );
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 			$html = (string) ob_get_clean();
 			self::assertStringContainsString( '&lt;provider&gt;: <code>api.abuse_detected</code>', $html );
 			self::assertStringNotContainsString( '<provider>', $html );
-			$record['provider']  = 'missing_provider';
-			$db->read_results    = array( array(), array(), array( $record ) );
-			$deployment_activity = $presenter->activity();
+			$credential_record = $record;
+			foreach ( array(
+				'credential.invalid'          => 'rejected',
+				'credential.unavailable'      => 'failed',
+				'credential.rate_limited'     => 'failed',
+				'credential.invalid_response' => 'failed',
+			) as $reason => $status ) {
+				$record           = array_replace(
+					$credential_record,
+					array(
+						'reason' => $reason,
+						'status' => $status,
+					)
+				);
+				$db->read_results = array( array(), array(), array( $record ) );
+				$listing          = $presenter->activity();
+				self::assertSame( 'api.abuse_detected', $listing['items'][0]['source_reference'] );
+				foreach ( array( array( 'status' => 'succeeded' ), array( 'reason' => 'provider_request_invalid' ), array( 'subject_identity' => 'gh' ), array( 'correlation' => 'invalid' ) ) as $change ) {
+					$db->read_results = array( array(), array(), array( array_replace( $record, $change ) ) );
+					$listing          = $presenter->activity();
+					self::assertNull( $listing['items'][0]['source_reference'] ?? null );
+				}
+			}
+			$record                     = $credential_record;
+			$record['provider']         = 'missing-provider';
+			$record['subject_identity'] = 'missing-provider';
+			$db->read_results           = array( array(), array(), array( $record ) );
+			$deployment_activity        = $presenter->activity();
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 			self::assertStringContainsString( 'Unknown: <code>api.abuse_detected</code>', (string) ob_get_clean() );
+			$translations = $GLOBALS['ran_booster_admin_test_translations'];
+			try {
+				$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Source code']       = 'Same label';
+				$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Credential expiry'] = 'Same label';
+				foreach ( array( null, 'secret_orchid', "api.error\n", 'api%2eerror', 123, array( 'api.error' ), 'api.abuse_detected' ) as $value ) {
+					$record['facts']     = wp_json_encode(
+						array(
+							'expiry_state' => 'not_reported',
+							'source_code'  => $value,
+						)
+					);
+					$db->read_results    = array( array(), array(), array( $record ) );
+					$deployment_activity = $presenter->activity();
+					ob_start();
+					require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+					$html = (string) ob_get_clean();
+					self::assertStringContainsString( 'Not reported', $html );
+					self::assertSame( 'api.abuse_detected' === $value, str_contains( $html, 'Unknown: <code>' ) );
+					$_GET                = array(
+						'attempt'   => '17',
+						'reference' => str_repeat( 'a', 32 ),
+					);
+					$detail_record       = array_replace(
+						$valid_record,
+						array(
+							'facts' => wp_json_encode(
+								array_replace(
+									$facts,
+									array(
+										'source_code'  => $value,
+										'expiry_state' => 'not_reported',
+									)
+								)
+							),
+						)
+					);
+					$db->read_results    = array( array( $detail_record ) );
+					$deployment_activity = $presenter->activity();
+					ob_start();
+					require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+					self::assertSame( 'api.abuse_detected' === $value, str_contains( (string) ob_get_clean(), 'GitHub: <code>' ) );
+					$_GET = array();
+
+				}
+			} finally {
+				$GLOBALS['ran_booster_admin_test_translations'] = $translations;
+			}
 		} finally {
 			$_GET = $previous_get;
 			if ( $had_options ) {

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use RAN\Admin\Component\NoticeIcon;
-use RAN\Deployment\{DeploymentAttemptRepository, DeploymentStorageFailure};
+use RAN\Deployment\{DeploymentAttempt, DeploymentAttemptRepository, DeploymentOutcome, DeploymentStorageFailure};
+use RAN\RepositoryProvider\{CredentialValidationResult, ProviderCode, InvalidProviderCode, ProviderFailure};
 use RAN\Logging\BoosterLogger;
 use RAN\Activity\ActivityStore;
 use RAN\{Package, PackageSource};
@@ -121,30 +122,72 @@ final class DeploymentAdminPresenter {
 			&& ( null === $attempt_id || $facts['deployment_attempt_id'] === $attempt_id ) ? $encoded : null;
 	}
 
-	/** @param array<string,mixed> $record Activity row.
-	 * @param array<string,mixed>|null $attempt Exact attempt when rendering detail. */
-	private function source_reference( array $record, ?array $attempt = null ): ?string {
+	/** @param array<string,mixed> $record Activity row. */
+	private function source_reference( array $record, ?DeploymentAttempt $attempt = null ): ?string {
 		$facts = is_string( $record['facts'] ?? null ) && strlen( $record['facts'] ) <= 4096 ? json_decode( $record['facts'], true ) : null;
-		if ( ! is_array( $facts ) || 'core' !== ( $record['provenance'] ?? null ) || ! in_array( $record['status'] ?? null, array( 'failed', 'rejected' ), true ) ) {
+		if ( ! is_array( $facts ) || 'core' !== ( $record['provenance'] ?? null ) || ! is_string( $record['provider'] ?? null )
+			|| ! is_string( $record['correlation'] ?? null ) || 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $record['correlation'] ) ) {
 			return null;
 		}
-		if ( null !== $attempt && ( 'branch' !== $attempt['package_source'] || 'failed' !== $attempt['state']
-			|| ( $record['correlation'] ?? null ) !== $attempt['correlation_id'] || ( $record['provider'] ?? null ) !== $attempt['provider']
-			|| ( $record['operation'] ?? null ) !== $attempt['operation'] || ( $record['subject_type'] ?? null ) !== $attempt['package_type']
-			|| ( $record['reason'] ?? null ) !== $attempt['outcome_code'] || ( $facts['deployment_attempt_id'] ?? null ) !== $attempt['id']
-			|| ( $facts['deployment_source'] ?? null ) !== $attempt['source'] || ( $facts['deployment_outcome'] ?? null ) !== $attempt['outcome_code']
-			|| ( $facts['deployment_package_slug'] ?? null ) !== $attempt['package_slug'] || 'failed' !== ( $facts['deployment_state'] ?? null )
-			|| null !== $attempt['mutation_started_at'] || null !== ( $facts['deployment_settled_by'] ?? null ) ) ) {
+		try {
+			ProviderCode::parse( $record['provider'] );
+		} catch ( InvalidProviderCode ) {
 			return null;
 		}
-		if ( null === $attempt && ! ( ( 'credential.validate' === ( $record['operation'] ?? null ) && 'provider' === ( $record['subject_type'] ?? null ) )
-			|| ( in_array( $record['operation'] ?? null, array( 'install', 'update' ), true ) && 'failed' === ( $record['status'] ?? null )
-			&& in_array( $record['subject_type'] ?? null, array( 'plugin', 'theme' ), true ) && is_int( $facts['deployment_attempt_id'] ?? null )
-			&& $facts['deployment_attempt_id'] > 0 && 'failed' === ( $facts['deployment_state'] ?? null )
-			&& ( $record['reason'] ?? null ) === ( $facts['deployment_outcome'] ?? null ) && ! isset( $facts['deployment_settled_by'] ) ) ) ) {
-			return null;
+		if ( 'credential.validate' === ( $record['operation'] ?? null ) ) {
+			$reason = $record['reason'] ?? null;
+			if ( null !== $attempt || 'provider' !== ( $record['subject_type'] ?? null ) || ( $record['subject_identity'] ?? null ) !== $record['provider']
+				|| ! in_array(
+					$reason,
+					array(
+						'credential.' . CredentialValidationResult::INVALID,
+						'credential.' . CredentialValidationResult::UNAVAILABLE,
+						'credential.' . CredentialValidationResult::RATE_LIMITED,
+						'credential.' . CredentialValidationResult::INVALID_RESPONSE,
+					),
+					true
+				)
+				|| ( $record['status'] ?? null ) !== ( 'credential.' . CredentialValidationResult::INVALID === $reason ? 'rejected' : 'failed' ) ) {
+				return null;
+			}
+		} else {
+			if ( ! in_array( $record['operation'] ?? null, array( 'install', 'update' ), true ) || 'failed' !== ( $record['status'] ?? null )
+				|| ! in_array( $record['subject_type'] ?? null, array( 'plugin', 'theme' ), true ) || ! is_string( $record['subject_identity'] ?? null )
+				|| 1 !== preg_match( '#\A[a-zA-Z0-9][a-zA-Z0-9._/-]*\z#', $record['subject_identity'] )
+				|| ! is_string( $facts['deployment_package_slug'] ?? null ) || '' === $facts['deployment_package_slug']
+				|| ! is_int( $facts['deployment_attempt_id'] ?? null ) || $facts['deployment_attempt_id'] <= 0 || 'failed' !== ( $facts['deployment_state'] ?? null )
+				|| ! in_array( $facts['deployment_source'] ?? null, array( 'manual', 'webhook' ), true ) || ( $record['reason'] ?? null ) !== ( $facts['deployment_outcome'] ?? null )
+				|| ! in_array(
+					$record['reason'],
+					array(
+						DeploymentOutcome::CODE_PROVIDER_FAILED,
+						DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID,
+						DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED,
+						DeploymentOutcome::CODE_PROVIDER_ACCESS_DENIED,
+						DeploymentOutcome::CODE_PROVIDER_REPOSITORY_MISSING,
+						DeploymentOutcome::CODE_PROVIDER_REFERENCE_UNAVAILABLE,
+						DeploymentOutcome::CODE_PROVIDER_RATE_LIMITED,
+						DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE,
+					),
+					true
+				)
+				|| ! array_key_exists( 'deployment_mutation_started_at', $facts ) || null !== $facts['deployment_mutation_started_at']
+				|| isset( $facts['deployment_settled_by'] ) || isset( $facts['deployment_resolved_by'] ) || isset( $facts['deployment_resolved_at'] ) ) {
+				return null;
+			}
+			if ( null !== $attempt ) {
+				$data    = $attempt->safe_data();
+				$request = $attempt->get_request();
+				if ( 'branch' !== $data['package_source'] || 'failed' !== $data['state'] || null !== $data['mutation_started_at']
+					|| $record['correlation'] !== $data['correlation_id'] || $record['provider'] !== $data['provider']
+					|| $record['operation'] !== $data['operation'] || $record['subject_type'] !== $data['package_type'] || $record['reason'] !== $data['outcome_code']
+					|| $facts['deployment_attempt_id'] !== $data['id'] || $facts['deployment_source'] !== $data['source'] || ( $facts['deployment_package_slug'] ?? null ) !== $data['package_slug']
+					|| ( $request->installed_identifier ?? $request->package_slug ) !== $record['subject_identity'] || ( $record['adoption_token'] ?? null ) !== $request->adoption_token ) {
+					return null;
+				}
+			}
 		}
-		return DeploymentOutcomeMessage::activity_facts( $record['facts'], true )[ __( 'Source code', 'ran-booster' ) ] ?? null;
+		return ProviderFailure::normalize_source_code( $facts['source_code'] ?? null );
 	}
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
@@ -223,13 +266,10 @@ final class DeploymentAdminPresenter {
 				$detail         = $this->attempts->find_exact( $attempt_id );
 				$base['detail'] = null !== $detail && hash_equals( $detail->get_correlation_id(), $reference ) ? $detail : null;
 				if ( null !== $base['detail'] ) {
-					$page = $this->activity_store?->activity_history( array( 'correlation' => $reference ), limit: 2 );
-					if ( null === $page || ! $page['available'] ) {
-						throw new \RuntimeException( 'Activity storage is unavailable.' );
-					}
+					$page                     = $this->activity_store?->activity_history( array( 'correlation' => $reference ), limit: 2 );
 					$data                     = $base['detail']->safe_data();
-					$base['outcome_facts']    = 1 === count( $page['records'] ) && 'policy_blocked' === $data['outcome_code'] ? $this->retained_branch_facts( $reference, $attempt_id, record: $page['records'][0], attempt_data: $data ) : null;
-					$base['source_reference'] = 1 === count( $page['records'] ) ? $this->source_reference( $page['records'][0], $data ) : null;
+					$base['outcome_facts']    = null !== $page && $page['available'] && 1 === count( $page['records'] ) && 'policy_blocked' === $data['outcome_code'] ? $this->retained_branch_facts( $reference, $attempt_id, record: $page['records'][0], attempt_data: $data ) : null;
+					$base['source_reference'] = null !== $page && $page['available'] && 1 === count( $page['records'] ) ? $this->source_reference( $page['records'][0], $base['detail'] ) : null;
 					$base['source_label']     = $provider_labels[ $data['provider'] ] ?? ( 'gh' === $data['provider'] ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $data['provider'] ? __( 'Bitbucket', 'ran-booster' ) : __( 'Unknown', 'ran-booster' ) ) );
 				}
 				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->get_outcome()?->get_code() ) {

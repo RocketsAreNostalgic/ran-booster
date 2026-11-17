@@ -13,29 +13,6 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class DeploymentOutcomeMessageTest extends TestCase {
 
-	public function test_optional_source_reference_is_revalidated_without_changing_outcome_copy(): void {
-		$copy = DeploymentOutcomeMessage::for_activity( 'rejected', 'credential.invalid' );
-		foreach ( array( 'secret_orchid', "api.error\n", 'api%2eerror', str_repeat( 'a', 64 ) . '_secret', 123, array( 'abuse_detected' ), null ) as $unsafe ) {
-			$encoded = wp_json_encode(
-				array(
-					'source_code' => $unsafe,
-					'future_fact' => 'ignored',
-				)
-			);
-			self::assertSame( array(), DeploymentOutcomeMessage::activity_facts( $encoded, true ) );
-			self::assertSame( $copy, DeploymentOutcomeMessage::for_activity( 'rejected', 'credential.invalid' ) );
-		}
-		$encoded = wp_json_encode(
-			array(
-				'source_code' => 'api.abuse_detected',
-				'future_fact' => 'ignored',
-			)
-		);
-		self::assertSame( array(), DeploymentOutcomeMessage::activity_facts( $encoded ) );
-		self::assertSame( array( 'Source code' => 'api.abuse_detected' ), DeploymentOutcomeMessage::activity_facts( $encoded, true ) );
-		self::assertSame( array(), DeploymentOutcomeMessage::activity_facts( '{"future_fact":"value"}', true ) );
-	}
-
 	public function test_only_a_terminal_pre_fence_working_copy_fact_refines_policy_copy(): void {
 		$facts = array(
 			'branch_refusal'                 => 'target_is_working_copy',

@@ -1037,7 +1037,8 @@ from a status or exception.
 The property is newer than API 15. Before passing the new named argument, check
 `property_exists( \RAN\RepositoryProvider\ProviderFailure::class, 'source_code' )`
 in addition to the existing class checks; older API 15 hosts do not accept it.
-Activity and support reports do not include this reference in this slice.
+Activity can retain the screened reference for failed credential validation and
+matching pre-mutation branch provider failures; support reports exclude it.
 
 When no `ProviderFailure` is present, some Core consumers derive a reason from
 the integer code (see [Legacy codes](#legacy-codes)). This loses distinctions that share a

@@ -1208,6 +1208,79 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
+	public function test_native_credential_failure_is_rendered_once_with_the_open_form(): void {
+		$_GET                      = array(
+			'tab'  => 'bb',
+			'view' => 'credentials',
+		);
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_POST['ran_booster']      = array(
+			'action'   => 'save-access-profile',
+			'provider' => 'bb',
+			'id'       => '',
+			'label'    => 'Draft label',
+			'kind'     => 'api-key',
+			'secret'   => 'NEVER-REDISPLAY',
+		);
+		$dashboard                 = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), provider_credentials: true );
+		$dashboard->messages       = array(
+			array(
+				'type'    => 'error',
+				'code'    => 'ran_booster_credentials_error',
+				'message' => 'Enter a label & try again.',
+			),
+			array(
+				'type'    => 'warning',
+				'message' => 'Unrelated warning.',
+			),
+			array(
+				'type'     => 'success',
+				'feedback' => 'credential_test',
+				'message'  => 'Unrelated success.',
+			),
+		);
+		try {
+			foreach ( array( 'native', 'missing', 'htmx', 'no-error' ) as $scenario ) {
+				$_POST['ran_booster']['id'] = 'missing' === $scenario ? 'missing' : '';
+				if ( 'htmx' === $scenario ) {
+					$_SERVER['HTTP_HX_REQUEST'] = 'true';
+				} else {
+					unset( $_SERVER['HTTP_HX_REQUEST'] );
+				}
+				$messages = $dashboard->messages;
+				if ( 'no-error' === $scenario ) {
+					array_shift( $dashboard->messages );
+				}
+				$data = $dashboard->get_index()['data'];
+				ob_start();
+				( new ReflectionMethod( Dashboard::class, 'render' ) )->invoke( $dashboard, 'index', $data );
+				$html                = (string) ob_get_clean();
+				$dashboard->messages = $messages;
+				$document            = new \DOMDocument();
+				$previous            = libxml_use_internal_errors( true );
+				$document->loadHTML( $html );
+				libxml_clear_errors();
+				libxml_use_internal_errors( $previous );
+				$xpath = new \DOMXPath( $document );
+				$error = '//*[@id="ran-booster-access-profile-error"]';
+				self::assertSame( 'native' === $scenario ? 1.0 : 0.0, $xpath->evaluate( 'count(' . $error . '[not(@hidden)])' ), $scenario );
+				self::assertSame( 'native' === $scenario ? 'Enter a label & try again.' : '', trim( (string) $xpath->evaluate( 'string(' . $error . ')' ) ), $scenario );
+				self::assertSame( 'native' === $scenario ? 1.0 : 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form[@aria-describedby="ran-booster-access-profile-error"])' ), $scenario );
+				self::assertSame( 'no-error' === $scenario ? 0.0 : 1.0, $xpath->evaluate( 'count(//p[text()="Enter a label & try again."])' ), $scenario );
+				self::assertStringContainsString( 'Unrelated warning.', $html );
+				self::assertStringContainsString( 'Unrelated success.', $html );
+				self::assertStringNotContainsString( 'NEVER-REDISPLAY', $html );
+				if ( 'native' === $scenario ) {
+					self::assertSame( 'Draft label', $xpath->evaluate( 'string(//input[@name="ran_booster[label]"]/@value)' ) );
+					self::assertSame( '', $xpath->evaluate( 'string(//input[@name="ran_booster[secret]"]/@value)' ) );
+				}
+			}
+		} finally {
+			$_POST = array();
+			unset( $_SERVER['REQUEST_METHOD'], $_SERVER['HTTP_HX_REQUEST'] );
+		}
+	}
+
 	public function test_provider_route_renders_the_prepared_accessible_filtered_and_paginated_outcome(): void {
 		$_GET     = array(
 			'tab'      => 'bb',

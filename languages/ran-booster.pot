@@ -6719,13 +6719,13 @@ msgid "Learn about local development"
 msgstr ""
 
 #. translators: %s: current year.
-#: views/base.php:187
+#: views/base.php:200
 #, php-format
 msgid "Copyright © %s"
 msgstr ""
 
 #. translators: %s: installed Booster version.
-#: views/base.php:196
+#: views/base.php:209
 #, php-format
 msgid "Booster %s"
 msgstr ""

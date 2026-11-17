@@ -182,6 +182,7 @@ test('dirty interlocks reject unconfirmed form replacement and preserve scoped e
 	assert.equal(formReplacement.detail.shouldSwap, false);
 	const serverError = event('htmx:beforeSwap', {
 		shouldSwap: false,
+		xhr: { status: 500 },
 		target: { contains: (node) => node === state.form },
 		requestConfig: { elt: state.form },
 	});
@@ -193,6 +194,7 @@ test('dirty interlocks reject unconfirmed form replacement and preserve scoped e
 	);
 	const siblingError = event('htmx:beforeSwap', {
 		shouldSwap: false,
+		xhr: { status: 500 },
 		target: { contains: (node) => node === state.form },
 		requestConfig: { elt: {} },
 	});
@@ -230,6 +232,33 @@ test('dirty interlocks reject unconfirmed form replacement and preserve scoped e
 	const afterRemoval = event('beforeunload');
 	state.window.dispatchEvent(afterRemoval);
 	assert.equal(afterRemoval.defaultPrevented, false);
+});
+
+test('dirty editor does not prompt for responses that cannot replace it', () => {
+	const state = fixture();
+	let prompts = 0;
+	state.window.confirm = () => {
+		prompts++;
+		return false;
+	};
+	state.form.dispatchEvent(event('input'));
+	for (const [status, swapOverride] of [
+		[204, undefined],
+		[200, 'none'],
+		[200, 'beforeend'],
+	]) {
+		const response = event('htmx:beforeSwap', {
+			shouldSwap: status !== 204,
+			xhr: { status },
+			swapOverride,
+			target: { contains: (node) => node === state.form },
+			requestConfig: { elt: {} },
+			serverResponse: '<p>safe</p>',
+		});
+		state.document.dispatchEvent(response);
+		assert.equal(response.defaultPrevented, false);
+	}
+	assert.equal(prompts, 0);
 });
 
 test('switching credential identity cannot silently erase a dirty draft', () => {

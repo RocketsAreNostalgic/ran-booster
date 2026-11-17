@@ -977,11 +977,41 @@
 		document.addEventListener(
 			'htmx:beforeSwap',
 			(event) => {
+				const detail = event.detail;
+				const origin = detail?.requestConfig?.elt;
+				const status = detail?.xhr?.status;
+				// Enhanced mutations may enable these responses after this handler.
+				const maySwap =
+					detail?.shouldSwap || [400, 409, 422, 500].includes(status);
+				const inheritedSwap = origin?.closest?.(
+					'[hx-swap], [data-hx-swap]'
+				);
+				const swap =
+					detail?.swapOverride ||
+					inheritedSwap?.getAttribute('hx-swap') ||
+					inheritedSwap?.getAttribute('data-hx-swap') ||
+					window.htmx?.config?.defaultSwapStyle ||
+					'innerHTML';
+				const style = swap.trim().split(/\s+/)[0];
+				const hasOutOfBand =
+					/\b(?:data-)?hx-swap-oob(?:\s|=|\/|>)/i.test(
+						String(detail?.serverResponse || '')
+					) ||
+					origin?.closest?.('[hx-select-oob], [data-hx-select-oob]');
+				const harmlessSwap =
+					[
+						'none',
+						'beforebegin',
+						'afterbegin',
+						'beforeend',
+						'afterend',
+					].includes(style) && !hasOutOfBand;
 				if (
-					(event.detail?.target?.contains(editor) ||
-						event.detail?.target?.contains(form)) &&
-					(event.detail.requestConfig?.elt === form ||
-						!confirmDiscard())
+					maySwap &&
+					!harmlessSwap &&
+					(detail.target?.contains(editor) ||
+						detail.target?.contains(form)) &&
+					(origin === form || !confirmDiscard())
 				) {
 					// Credential saves confirm success by redirect, never by replacing
 					// the editor. Reject login HTML and other unconfirmed responses.

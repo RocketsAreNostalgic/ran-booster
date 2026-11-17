@@ -20,13 +20,12 @@ final class PackageSlugTest extends TestCase {
 		self::assertSame( 'installed-theme', $this->theme( 'installed-theme' )->get_slug() );
 	}
 
-	public function test_installed_folder_overrides_repository_subdirectory_and_transient_slug(): void {
+	public function test_installed_folder_overrides_repository_subdirectory(): void {
 		foreach ( array(
 			$this->plugin( 'myplugin/plugin.php' ),
 			$this->theme( 'mytheme' ),
 		) as $package ) {
 			$installed = $package instanceof Plugin ? 'myplugin' : 'mytheme';
-			$package->set_installation_slug( 'provider-package' );
 			foreach ( array( 'packages/' . ucfirst( $installed ), 'packages/different-name' ) as $subdirectory ) {
 				$package->set_subdirectory( $subdirectory );
 				self::assertSame( $installed, $package->get_slug() );
@@ -40,19 +39,6 @@ final class PackageSlugTest extends TestCase {
 	public function test_mixed_case_installed_identity_is_preserved_without_admitting_deployment(): void {
 		self::assertSame( 'MixedCasePlugin', $this->plugin( 'MixedCasePlugin/plugin.php' )->get_slug() );
 		self::assertSame( 'MixedCaseTheme', $this->theme( 'MixedCaseTheme' )->get_slug() );
-	}
-
-	public function test_generic_package_without_runtime_identity_retains_transient_slug_fallback(): void {
-		$package = new class() extends \RAN\AbstractPackage {
-			public function get_identifier(): mixed {
-				return null;
-			}
-		};
-		$package->set_installation_slug( 'provider-package' );
-		self::assertSame( 'provider-package', $package->get_slug() );
-		$package->set_installation_slug( null );
-		$this->expectException( \LogicException::class );
-		$package->get_slug();
 	}
 
 	private function plugin( string $file ): Plugin {

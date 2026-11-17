@@ -21,8 +21,7 @@ abstract class AbstractPackage implements Package {
 	private ?string $adoption_token               = null;
 	/** @var string|null Normalized relative path, or no subdirectory. */
 	protected $subdirectory;
-	protected ?string $deployment_ref    = null;
-	protected ?string $installation_slug = null;
+	protected ?string $deployment_ref = null;
 
 	public function get_adoption_token(): ?string {
 		return $this->adoption_token;
@@ -51,10 +50,6 @@ abstract class AbstractPackage implements Package {
 			$this->runtime_slug(),
 			null
 		);
-	}
-
-	public function set_installation_slug( ?string $slug ): void {
-		$this->installation_slug = null === $slug ? null : PackageSubdirectory::normalize_slug( $slug );
 	}
 
 	public function get_subdirectory(): mixed {
@@ -172,6 +167,6 @@ abstract class AbstractPackage implements Package {
 	}
 
 	protected function runtime_slug(): string {
-		return $this->installation_slug ?? throw new \LogicException( 'The package type does not define an installed package slug.' );
+		throw new \LogicException( 'The package type does not define an installed package slug.' );
 	}
 }

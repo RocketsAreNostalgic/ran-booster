@@ -291,7 +291,6 @@ final readonly class PackageOperationService {
 			&& hash_equals( (string) $existing->get_provider_repository_id(), (string) $operation->provider_repository_id )
 			&& hash_equals( (string) $existing->get_repository(), (string) $operation->repository )
 			&& hash_equals( (string) $existing->get_subdirectory(), (string) $operation->subdirectory )
-			&& hash_equals( (string) $existing->get_slug(), (string) $requested->get_slug() )
 			? $existing
 			: null;
 	}

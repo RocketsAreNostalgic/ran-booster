@@ -951,7 +951,6 @@ final class BulkActionPackage extends AbstractPackage {
 		?string $credential_id = null
 	): self {
 		$package = new self( $identifier );
-		$package->set_installation_slug( dirname( $identifier ) );
 		$package->set_repository(
 			new ManagedRepository(
 				$provider,
@@ -967,6 +966,10 @@ final class BulkActionPackage extends AbstractPackage {
 		$package->set_adoption_token( $token );
 		self::$tokens[ $identifier ] = $token;
 		return $package;
+	}
+
+	protected function runtime_slug(): string {
+		return dirname( $this->identifier );
 	}
 
 	public function get_identifier(): mixed {

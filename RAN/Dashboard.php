@@ -7,7 +7,6 @@ use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminRoutes;
 use RAN\Admin\AdminTab;
 use RAN\Admin\AdminTabRegistry;
-use RAN\Admin\GitHubVisibility;
 use RAN\Admin\ProviderTabLinks;
 use RAN\Admin\BulkPackageResult;
 use RAN\Admin\CoreSelfUpdateDevelopmentNotice;
@@ -221,9 +220,6 @@ class Dashboard {
 		if ( null === $selected_add_on ) {
 			// No tab selects Overview. A present tab must name an available tab, or the not-found result is rendered.
 			$selected_tab = $tab_present ? $this->admin_tabs->find( $requested_add_on_key ) : $this->admin_tabs->resolve( null );
-			if ( null !== $selected_tab && $selected_tab->get_key() === $this->hidden_provider_tab_key() ) {
-				$selected_tab = null;
-			}
 		}
 		$selected_key = $selected_add_on?->key() ?? $selected_tab?->get_key() ?? '';
 		$tabs         = $this->tab_navigation( $selected_key );
@@ -1500,7 +1496,7 @@ class Dashboard {
 		);
 	}
 
-	/** Return target after a provider management action; a hidden provider tab sends the user to Overview instead of not-found. */
+	/** Return target after a provider management action. */
 	public function provider_tab_url( string $provider_code ): string {
 		return $this->tab_links()->url( admin_url( 'admin.php' ), $provider_code );
 	}
@@ -1511,8 +1507,7 @@ class Dashboard {
 
 	private function tab_links(): ProviderTabLinks {
 		return $this->tab_links ??= new ProviderTabLinks(
-			fn (): AdminTabRegistry => $this->admin_tabs ?? throw new LogicException( 'Booster admin tabs are not configured.' ),
-			fn (): ?GitHubVisibility => $this->github_visibility
+			fn (): AdminTabRegistry => $this->admin_tabs ?? throw new LogicException( 'Booster admin tabs are not configured.' )
 		);
 	}
 

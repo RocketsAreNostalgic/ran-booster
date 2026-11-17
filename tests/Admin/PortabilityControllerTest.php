@@ -741,7 +741,7 @@ final class PortabilityControllerTest extends TestCase {
 		);
 		self::assertSame( array( 'saved_one' ), array_column( $rows[0]['target_choices'], 'id' ) );
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=fixture&view=credentials', $rows[0]['settings_url'] );
-		$unregistered = new \RAN\Admin\ProviderTabLinks( static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new ProviderRegistry() ), static fn (): ?\RAN\Admin\GitHubVisibility => null );
+		$unregistered = new \RAN\Admin\ProviderTabLinks( static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new ProviderRegistry() ) );
 		$second       = $this->controller();
 		$reflection->getProperty( 'provider_settings' )->setValue( $second, $settings );
 		$reflection->getProperty( 'links' )->setValue( $second, $unregistered );

@@ -177,11 +177,11 @@ final class CredentialExpiryReminderTest extends TestCase {
 			return (string) ob_get_clean() . (string) wp_json_encode( $notice->overview_summary() );
 		};
 
-		$available = ( new \RAN\Admin\ProviderTabLinks( static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'gh' ) ) ) ), static fn (): ?\RAN\Admin\GitHubVisibility => null ) );
+		$available = ( new \RAN\Admin\ProviderTabLinks( static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'gh' ) ) ) ) ) );
 		$html      = $render( new CredentialExpiryNotice( $this->reminders(), $available ) );
 		self::assertStringContainsString( 'tab=gh&amp;view=credentials&amp;replace_credential=overview_expiry', $html );
 
-		$without_gh = new \RAN\Admin\ProviderTabLinks( static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) ) ), static fn (): ?\RAN\Admin\GitHubVisibility => null );
+		$without_gh = new \RAN\Admin\ProviderTabLinks( static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) ) ) );
 		$html       = $render( new CredentialExpiryNotice( $this->reminders(), $without_gh ) );
 		self::assertStringNotContainsString( 'tab=gh', $html );
 		self::assertStringNotContainsString( 'tab=gh', str_replace( '\\/', '/', $html ) );

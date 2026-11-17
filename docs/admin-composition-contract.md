@@ -56,6 +56,29 @@ unsupported public API or runtime constraint needs an explicit owner exception
 or revised scope. Source, build, installed evidence and owner acceptance remain
 separate, and all merge/publication holds continue.
 
+### Credential editor Dialog
+
+Repository credential add/edit uses the public `Dialog` export from
+`@wordpress/ui` 0.26.0 through the existing `ranBoosterOpenDialog` bridge.
+The overlay moves the protected native form and preserves its submit event,
+fields and draft across close/reopen. Initial focus is Label for Add/Edit, or
+Secret only when the clicked credential ID exactly matches the current
+`replace_credential` URL value. Native add/replacement URL selections stay inline
+with JavaScript too. Actual HTMX origin cleanup tears it down;
+a refused swap leaves it intact. Delete and webhook dialogs remain separate.
+
+Native add/edit links select the same inline form without JavaScript. All
+configuration fields remain usable in that fallback; the existing handler
+validates only the selected kind. Failed native saves restore allowlisted
+non-secret fields by continuing the authorized POST render instead of redirecting.
+Portal styling uses the same credential rules as the inline fallback. Secrets
+and submitted nonces are never restored. Blank-secret edits retain the stored
+credential. An unsaved draft is not protected against navigation, inline Cancel,
+an expired session or another page update. Drafts are excluded from HTMX history;
+no URL, flash or persistent draft store is added.
+Installed WordPress, assistive-technology and native-zoom acceptance are separate
+from synthetic browser fixtures and source gates.
+
 ### Approved exception: snackbar host
 
 The owner approved one exception to the `@wordpress/ui` rule (#755):

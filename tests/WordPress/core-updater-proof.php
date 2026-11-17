@@ -60,6 +60,18 @@ final class RAN_Booster_CoreUpdaterProof {
 	}
 
 	public function run(): void {
+		// New native declarations deliberately defer after any operation of that type.
+		// Seed and finish these installed-file fixtures before the updater exercises.
+		try {
+			foreach ( array( 'plugin', 'theme' ) as $type ) {
+				$slug = $this->slug( 'native-' . $type );
+				$this->native_guard_fixture( $type, $slug );
+				$this->native_working_copy_refusal( $type, $slug );
+			}
+		} finally {
+			$this->cleanup();
+		}
+
 		$unrelated_slug       = $this->slug( 'unrelated-plugin' );
 		$unrelated_identifier = $this->plugin_identifier( $unrelated_slug );
 		$unrelated_archive    = $this->archive( 'plugin', $unrelated_slug, '9.0.0', 'unrelated-original' );
@@ -130,8 +142,6 @@ final class RAN_Booster_CoreUpdaterProof {
 		$this->update_theme( $theme_slug, $this->archive( 'theme', $theme_slug, '3.0.0', 'theme-active-update' ), '3.0.0' );
 		$this->assert_theme( $theme_slug, '3.0.0', 'theme-active-update', true );
 
-		$this->native_working_copy_refusal( 'plugin', $plugin_slug );
-		$this->native_working_copy_refusal( 'theme', $theme_slug );
 		$this->assert_maintenance_absent();
 	}
 
@@ -168,6 +178,37 @@ final class RAN_Booster_CoreUpdaterProof {
 			if ( is_file( $archive ) && ! unlink( $archive ) ) {
 				throw new RuntimeException( 'A disposable proof archive could not be removed.' );
 			}
+		}
+	}
+
+	/** Seed valid installed files without starting a WordPress updater operation. */
+	private function native_guard_fixture( string $type, string $slug ): void {
+		$directory = ( 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root() ) . '/' . $slug;
+		$this->assert_destination_absent( $directory );
+		$archive = $this->archive( $type, $slug, '1.0.0', 'native-guard' );
+		$zip     = new ZipArchive();
+		if ( true !== $zip->open( $archive ) ) {
+			throw new RuntimeException( 'The native guard fixture archive is unavailable.' );
+		}
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Seed only the exact disposable native guard target before updater discovery starts.
+			if ( ! mkdir( $directory, 0700 ) ) {
+				throw new RuntimeException( 'The native guard fixture directory could not be created.' );
+			}
+			if ( 'plugin' === $type ) {
+				$this->plugins[] = $this->plugin_identifier( $slug );
+			} else {
+				$this->themes[] = $slug;
+			}
+			foreach ( 'plugin' === $type ? array( $slug . '.php' ) : array( 'style.css', 'index.php' ) as $file ) {
+				$bytes = $zip->getFromName( 'repository-native-guard/' . $file );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Copy exact archive-owned headers into this isolated installed-file fixture.
+				if ( ! is_string( $bytes ) || strlen( $bytes ) !== file_put_contents( $directory . '/' . $file, $bytes ) ) {
+					throw new RuntimeException( 'The native guard fixture file could not be created.' );
+				}
+			}
+		} finally {
+			$zip->close();
 		}
 	}
 

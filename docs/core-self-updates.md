@@ -144,8 +144,11 @@ Example v0.2.2 has its own beta.15/Protocol 7 copy; standalone updater Example
 v0.2.0 has beta.13/Protocol 6. Matching published example releases, including
 GitHub Example's qualified provider composition, are required wherever those
 examples are used before Protocol 8 composition qualification. Older example
-compositions remain held. Inspected Bitbucket, Migrator and both retired add-on
-archives carry no updater copy; adoption does not restore retired runtimes.
+compositions remain held. Matching releases are tracked in
+[GitHub Example #17](https://github.com/RocketsAreNostalgic/ran-booster-github-example/issues/17)
+and [standalone Example #7](https://github.com/RocketsAreNostalgic/ran-wp-release-updater-example/issues/7).
+Inspected Bitbucket, Migrator and both retired add-on archives carry no updater
+copy; adoption does not restore retired runtimes.
 
 Branch working-copy refusal remains `policy_blocked`, with misleading generic
 Updates/file-modification advice. Native release refusal uses

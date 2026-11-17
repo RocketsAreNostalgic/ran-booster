@@ -381,11 +381,14 @@ which uses the unavailable-details message. The newest
 interaction or workflow result replaces the previous unread row. Expired rows
 are reaped on an administration load, and uninstall removes the key.
 
-WordPress metadata deletion first selects matching IDs and then deletes by ID;
-it is not an atomic compare-and-delete. Concurrent claims or replacement can
-therefore race, including deleting a newer row. The in-memory test double does
-not establish atomicity. This inherited transport limitation applies to signed
-interactions as well and needs a separately scoped concurrency fix.
+Claims and stale-row cleanup use one conditional database delete scoped to the
+user, metadata key and exact serialized value, followed by user metadata cache
+invalidation even when no row is deleted. A failed or zero-row delete never
+claims text. Identical duplicate rows are removed together; case-distinct values
+remain distinct. This bypasses the standard metadata deletion filters and hooks,
+which do not offer an atomic value-bound delete. A disposable WordPress/MySQL
+barrier proof exercises replacement, cleanup, competing claims and database
+failure; the in-memory test double is not evidence of database atomicity.
 
 For signed interactions, a missing, expired, replaced or unwritten row shows a
 fixed neutral persistent info notice on full-page and no-JavaScript landings;

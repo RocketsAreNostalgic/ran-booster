@@ -135,7 +135,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		$controller                                   = $this->controller();
 		$method                                       = new \ReflectionMethod( $controller, 'result_query_arguments' );
 		foreach ( array( true, false ) as $successful ) {
-			foreach ( array( 'missing', 'expired', 'replaced', 'consumed', 'failed_write', 'empty' ) as $condition ) {
+			foreach ( array( 'missing', 'expired', 'replaced', 'consumed', 'failed_write', 'empty', 'malformed_json', 'delete_failure' ) as $condition ) {
 				$GLOBALS['ran_booster_interaction_test_meta'] = array();
 				$outcome                                      = array(
 					'type'                  => 'plugin',
@@ -165,14 +165,20 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 					$GLOBALS['ran_booster_interaction_test_meta'] = array();
 				} elseif ( 'expired' === $condition ) {
 					$GLOBALS['ran_booster_interaction_test_meta'][1][ $key ]['at'] = time() - 61;
+				} elseif ( 'malformed_json' === $condition ) {
+					$GLOBALS['ran_booster_interaction_test_meta'][1][ $key ]['message'] = '{';
 				} elseif ( 'replaced' === $condition ) {
 					$method->invoke( $controller, $outcome );
 				} elseif ( 'consumed' === $condition ) {
 					$_GET = $args;
 					self::assertNotNull( $this->controller()->requested_result() );
 				}
-				$_GET   = $args;
+				$_GET = $args;
+				if ( 'delete_failure' === $condition ) {
+					$GLOBALS['ran_booster_interaction_test_delete_fails'] = true;
+				}
 				$result = $this->controller()->requested_result();
+				unset( $GLOBALS['ran_booster_interaction_test_delete_fails'] );
 				self::assertNotNull( $result );
 				$html = ( new \RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay() )->result_notice(
 					array(
@@ -191,6 +197,39 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 				}
 			}
 		}
+	}
+
+
+	public function test_invalid_result_markers_do_not_consume_the_held_message(): void {
+		$GLOBALS['ran_booster_interaction_test_meta'] = array();
+		$controller                                   = $this->controller();
+		$method                                       = new \ReflectionMethod( $controller, 'result_query_arguments' );
+		$args = $method->invoke(
+			$controller,
+			array(
+				'type'                  => 'plugin',
+				'identifier'            => 'example/example.php',
+				'code'                  => 'workflow_unknown',
+				'successful'            => true,
+				'preview_key'           => '',
+				'failure_stage'         => '',
+				'diagnostic_code'       => '',
+				'correlation_reference' => '',
+				'message'               => 'Bound message',
+				'remediation'           => '',
+			)
+		);
+		foreach ( array( array(), 'not-a-uuid', '00000000-0000-4000-8000-000000000000' ) as $marker ) {
+			$_GET                                        = $args;
+			$_GET['ran_booster_release_workflow_marker'] = $marker;
+			$invalid_controller                          = $this->controller();
+			self::assertNull( $invalid_controller->requested_result() );
+		}
+		$_GET             = $args;
+		$valid_controller = $this->controller();
+		$result           = $valid_controller->requested_result();
+		self::assertNotNull( $result );
+		self::assertSame( 'Bound message', $result['message'] );
 	}
 
 	public function test_native_workflow_redirect_keeps_provider_text_out_of_query(): void {

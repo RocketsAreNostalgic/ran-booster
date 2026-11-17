@@ -349,8 +349,8 @@ final class SignedAdminInteractionFlow {
 	private function reap_expired_message(): void {
 		$user_id = get_current_user_id();
 		$held    = $user_id > 0 ? get_user_meta( $user_id, self::MESSAGE_META_KEY, true ) : '';
-		if ( '' !== $held && ! self::is_live_row( $held ) ) {
-			delete_user_meta( $user_id, self::MESSAGE_META_KEY );
+		if ( $user_id > 0 && ! self::is_live_row( $held ) && ( '' !== $held || metadata_exists( 'user', $user_id, self::MESSAGE_META_KEY ) ) ) {
+			self::delete_observed_message( $user_id, $held );
 		}
 	}
 
@@ -368,15 +368,25 @@ final class SignedAdminInteractionFlow {
 			return null;
 		}
 		if ( ! self::is_live_row( $held ) ) {
-			delete_user_meta( $user_id, self::MESSAGE_META_KEY );
+			self::delete_observed_message( $user_id, $held );
 			return null;
 		}
 		// Another site's screen leaves the row for its own site, and it expires.
 		if ( get_current_blog_id() !== $held['site'] || ! hash_equals( $action, $held['action'] ) ) {
 			return null;
 		}
-		// WordPress selects matching metadata IDs before deleting them; replacement can race this claim.
-		return delete_user_meta( $user_id, self::MESSAGE_META_KEY, wp_slash( $held ) ) ? $held['message'] : null;
+		return self::delete_observed_message( $user_id, $held ) ? $held['message'] : null;
+	}
+
+	/** Delete only the exact observed value, including malformed rows. */
+	private static function delete_observed_message( int $user_id, mixed $held ): bool {
+		global $wpdb;
+		$serialized = maybe_serialize( $held );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- One conditional delete makes the observed-value claim atomic; invalidate the user metadata cache below.
+		$deleted = $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE user_id = %d AND BINARY meta_key = BINARY %s AND BINARY meta_value = BINARY %s', $wpdb->usermeta, $user_id, self::MESSAGE_META_KEY, $serialized ) );
+		wp_cache_delete( $user_id, 'user_meta' );
+
+		return is_int( $deleted ) && $deleted > 0;
 	}
 
 	/** @phpstan-assert AdminInteractionOutcome::SUCCESS|AdminInteractionOutcome::ACCEPTED|AdminInteractionOutcome::VALIDATION_FAILURE|AdminInteractionOutcome::UNEXPECTED_FAILURE $kind */

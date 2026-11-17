@@ -140,3 +140,34 @@ cache refresh, so updates to different entries cannot overwrite one another.
 Credential retries apply only the requested fields, preserving concurrent manual
 and provider observations. Exhausted retries retain the existing explicit save
 failure. Branch verification already uses fresh reads under its mutation lock.
+
+## Branch working-copy refusal
+
+The published branch reason journal refines only `policy_blocked` with the typed
+`TARGET_IS_WORKING_COPY` reason. Core ignores foreign detail and all other reasons.
+Cleanup supersession and post-fence observations cannot create this explanation.
+
+Core passes the existing observed attempt to the terminal transaction. Selection,
+adoption, attempt ID, correlation, request and pre-fence state must still match.
+A changed observation omits the fact; failed storage still aborts the transaction.
+The terminal refinement opts into strict selection reads, including nested reads.
+One-shot SQL failures and malformed authority escape to the transaction owner;
+confirmed unavailable providers remain ordinary mismatches. Other callers stay tolerant.
+The failed refinement transaction writes no terminal outcome, Activity completion
+or refusal fact. Under #842, the coordinator then settles the stopped runner in a
+fresh transaction: `worker_stopped` before the fence, or `interrupted` after it,
+with `deployment_settled_by: runner_throw`. Its finished log follows commit.
+If that settlement also fails, the attempt remains running without a finished log.
+A healthy retry through the coordinator is a new attempt, not replay of a settled row.
+The completion and optional Activity fact `branch_refusal: target_is_working_copy`
+commit together. The existing repository completion log receives that singleton
+only after commit. The coordinator's separate completion log remains generic.
+
+Manual failure feedback, the background notice and Activity list/detail use one
+fixed Core sentence from exact retained, correlated Core install/update evidence.
+Missing, pruned, unavailable or contradictory evidence keeps generic policy copy.
+HTTP status, outcome, correlation and signed feedback transport remain unchanged.
+Attempt JSON, email/filter data and support exports omit the optional reason.
+
+Native release message replacement remains held pending a suitable producer
+boundary. Other branch reasons and any future source-code field need separate work.

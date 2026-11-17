@@ -14,6 +14,8 @@ require_once __DIR__ . '/../Storage/StorageTestEnvironment.php';
 require_once __DIR__ . '/../RepositoryProvider/Support/RepositoryResolverWordPressFunctions.php';
 require_once __DIR__ . '/../RepositoryProvider/AuthenticatedPreparedArchiveWordPressFunctions.php';
 require_once __DIR__ . '/../Logging/LoggingWordPressFunctions.php';
+require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
+require_once __DIR__ . '/DeploymentCoordinatorWordPressFunctions.php';
 
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -210,9 +212,12 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 	#[DataProvider( 'working_copy_markers' )]
 	public function test_working_copy_refuses_before_durable_mutation( string $marker, string $shape ): void {
+		$this->enable_activity();
 		$target = WP_PLUGIN_DIR . '/example';
 		$this->ensure_directory( $target );
 		$path = $target . '/' . $marker;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable target canary proves the real refusal leaves installed bytes alone.
+		file_put_contents( $target . '/canary.txt', 'installed bytes remain' );
 		try {
 			if ( 'directory' === $shape ) {
 				$this->ensure_directory( $path );
@@ -229,9 +234,252 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			$this->download_fixture( 'example' );
 			self::assertSame( DeploymentOutcome::CODE_POLICY_BLOCKED, $this->deploy( $adapter ) );
 			self::assertSame( 0, $executor->calls );
+			self::assertStringEqualsFile( $target . '/canary.txt', 'installed bytes remain' );
 			self::assertSame( 1, $archive->cleanup_calls );
 			self::assertNull( $adapter->terminal_attempt()->safe_data()['mutation_started_at'] );
 			self::assertSame( DeploymentState::FAILED, $adapter->terminal_attempt()->get_state() );
+			self::assertSame( 'target_is_working_copy', $this->activity_facts()['branch_refusal'] ?? null );
+			self::assertStringNotContainsString( 'branch_refusal', $adapter->terminal_attempt()->get_request()->to_json() );
+		} finally {
+			$this->remove_tree( $target );
+		}
+	}
+
+	public function test_theme_working_copy_refusal_retains_the_same_closed_fact(): void {
+		$this->enable_activity();
+		$this->running_update();
+		$theme = new \RAN\Theme();
+		( new \ReflectionProperty( \RAN\Theme::class, 'stylesheet' ) )->setValue( $theme, 'example' );
+		( new \ReflectionProperty( \RAN\Theme::class, 'version' ) )->setValue( $theme, '1.0.0' );
+		$theme->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$theme->set_adoption_token( 'gh:R_example:11111111-1111-4111-8111-111111111111' );
+		$theme->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
+		$theme->set_source( PackageSource::BRANCH, 1 );
+		$this->themes->managed                      = $theme;
+		$this->database->management['example']      = (string) $theme->get_adoption_token();
+		$this->database->management_rows['example'] = $this->database->management_rows['example/example.php'];
+		$request                                    = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::AUTOMATIC, 7, self::MAXIMUM_ARTIFACT_BYTES, 'example', $theme->get_adoption_token() );
+		$attempt                                    = $this->attempts->admit_and_claim_manual( 'update', 'theme', 'gh', 'R_example', $request, 'main', 'branch', 1 );
+		$target                                     = \get_theme_root() . '/example';
+		$this->ensure_directory( $target . '/.git' );
+		$fixture = $this->download_fixture( 'example' );
+		$zip     = new ZipArchive();
+		self::assertTrue( $zip->open( $fixture ) );
+		$zip->deleteName( 'example/example.php' );
+		$zip->addFromString( 'example/style.css', "/*\nTheme Name: Example\nVersion: 2.0.0\n*/\n" );
+		$zip->close();
+		$adapter = $this->adapter( $attempt, new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) );
+		try {
+			$declaration = $adapter->declaration();
+			$updater     = BranchUpdater::for_admitted_attempt( $declaration, $adapter, $adapter, $adapter, $adapter, $adapter );
+			self::assertSame( 'policy_blocked', $updater->theme( 'owner/example', 'R_example', 'main', 'example' )->deploy() );
+			$facts = json_decode( (string) $this->database->activity_rows[1]['facts'], true );
+			self::assertSame( 'target_is_working_copy', $facts['branch_refusal'] ?? null );
+			self::assertNull( $adapter->terminal_attempt()->safe_data()['mutation_started_at'] );
+			self::assertDirectoryExists( $target . '/.git' );
+		} finally {
+			$this->remove_tree( $target );
+		}
+	}
+
+	#[\PHPUnit\Framework\Attributes\TestWith( array( true ) )]
+	#[\PHPUnit\Framework\Attributes\TestWith( array( false ) )]
+	public function test_working_copy_observation_does_not_survive_ambiguous_lock_release( bool $storage ): void {
+		$this->enable_activity();
+		$target = WP_PLUGIN_DIR . '/example';
+		$this->ensure_directory( $target . '/.git' );
+		$adapter = $this->adapter( $this->running_update(), new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) );
+		$this->download_fixture( 'example' );
+		$this->database->fail_query_contains = $storage ? 'DELETE FROM `wp_options`' : null;
+		$this->database->zero_query_contains = $storage ? null : 'DELETE FROM `wp_options`';
+		try {
+			$this->deploy( $adapter );
+			self::fail( 'Ambiguous ownership cannot commit a working-copy refusal.' );
+		} catch ( BranchDeploymentLockStorageFailure | BranchDeploymentLockReleaseFailure ) {
+			self::assertSame( 'running', $this->database->rows[0]['state'] );
+			self::assertArrayNotHasKey( 'branch_refusal', $this->activity_facts() );
+			self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		} finally {
+			$this->remove_tree( $target );
+		}
+	}
+
+	public function test_reason_journal_omits_superseded_other_and_post_fence_reasons(): void {
+		$this->enable_activity();
+		foreach ( array( 'valid', 'cleanup', 'primary', 'other', 'success', 'fenced' ) as $case ) {
+			$attempt = $this->running_update();
+			if ( 'fenced' === $case ) {
+				$attempt = $this->attempts->mark_mutation_started( $attempt->get_id() );
+				self::assertInstanceOf( DeploymentAttempt::class, $attempt );
+			}
+			$adapter = $this->adapter( $attempt, new ParityRepositoryProvider( null ) );
+			$reason  = new \RAN\WPBranchUpdater\V1\Runtime\AdmittedFailureReason(
+				'other' === $case ? \RAN\WPBranchUpdater\V1\Runtime\FailureReason::LOCK_HELD : \RAN\WPBranchUpdater\V1\Runtime\FailureReason::TARGET_IS_WORKING_COPY,
+				'ignored detail',
+				'primary' === $case ? 'policy_blocked' : null,
+				'cleanup' === $case
+			);
+			$lines   = $this->captured_logs( static fn () => $adapter->finish_with_reason( 'success' === $case ? 'deployed' : 'policy_blocked', $reason ) );
+			$facts   = json_decode( (string) $this->database->activity_rows[ count( $this->database->activity_rows ) - 1 ]['facts'], true );
+			self::assertSame( 'valid' === $case ? 'target_is_working_copy' : null, $facts['branch_refusal'] ?? null );
+			self::assertSame( 'valid' === $case ? 1 : 0, substr_count( $lines, '"branch_refusal":"target_is_working_copy"' ) );
+			self::assertStringNotContainsString( 'ignored detail', $lines );
+		}
+	}
+
+	public function test_reasoned_finish_commit_failure_leaves_no_fact_or_finished_log(): void {
+		$this->enable_activity();
+		$adapter                     = $this->adapter( $this->running_update(), new ParityRepositoryProvider( null ) );
+		$this->database->fail_commit = true;
+		$caught                      = null;
+		$lines                       = $this->captured_logs(
+			static function () use ( $adapter, &$caught ): void {
+				try {
+					$adapter->finish_with_reason( 'policy_blocked', new \RAN\WPBranchUpdater\V1\Runtime\AdmittedFailureReason( \RAN\WPBranchUpdater\V1\Runtime\FailureReason::TARGET_IS_WORKING_COPY ) );
+				} catch ( \RAN\WPBranchUpdater\V1\Runtime\AdmittedBranchDurabilityFailure $failure ) {
+					$caught = $failure;
+				}
+			}
+		);
+		self::assertNotNull( $caught );
+		self::assertSame( 'running', $this->database->rows[0]['state'] );
+		self::assertArrayNotHasKey( 'branch_refusal', $this->activity_facts() );
+		self::assertStringNotContainsString( 'attempt finished', $lines );
+	}
+
+	#[\PHPUnit\Framework\Attributes\TestWith( array( false ) )]
+	#[\PHPUnit\Framework\Attributes\TestWith( array( true ) )]
+	public function test_manual_refinement_failure_uses_fresh_settlement_transaction( bool $settlement_fails ): void {
+		$this->enable_activity();
+		$target = WP_PLUGIN_DIR . '/example';
+		$this->ensure_directory( $target . '/.git' );
+		$this->download_fixture( 'example' );
+		$archive                         = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$this->database->on_lock_release = function () use ( $settlement_fails, $archive ): void {
+			self::assertSame( 1, $archive->cleanup_calls );
+			self::assertSame( array(), glob( (string) $GLOBALS['ran_booster_admitted_temp_root'] . '/ran-booster-branch-updater/*' ) );
+			$this->database->queries              = array();
+			$this->database->abort_authority_read = $this->database->authority_reads + 1;
+			$this->database->fail_commit          = $settlement_fails;
+		};
+		$executor                        = new ParityCoreExecutor();
+		$coordinator                     = $this->coordinator( new ParityRepositoryProvider( $archive ), executor: $executor );
+		$token                           = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$this->database->management['example/example.php']      = $token;
+		$this->database->management_rows['example/example.php'] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_example',
+			'repository'             => 'owner/example',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
+		$command = \RAN\PackageOperation::from_input(
+			'update-plugin',
+			array(
+				'file'                            => 'example/example.php',
+				'repository'                      => 'owner/example',
+				'expected_provider'               => 'gh',
+				'expected_provider_repository_id' => 'R_example',
+				'expected_repository'             => 'owner/example',
+				'expected_branch'                 => 'main',
+				'expected_credential_id'          => '',
+				'expected_subdirectory'           => '',
+				'expected_private'                => false,
+				'expected_package_slug'           => 'example',
+				'expected_deployment_policy'      => 'automatic',
+				'expected_source'                 => 'branch',
+				'expected_source_revision'        => '1',
+				'expected_adoption_token'         => $token,
+			)
+		);
+		$result  = null;
+		$caught  = null;
+		try {
+			$lines = $this->captured_logs(
+				static function () use ( $coordinator, $command, &$result, &$caught ): void {
+					try {
+						$result = $coordinator->execute_manual( $command );
+					} catch ( DeploymentStorageFailure $failure ) {
+						$caught = $failure;
+					}
+				}
+			);
+			self::assertSame( 1, $this->database->automatic_rollbacks, $lines );
+			$queries  = $this->database->queries;
+			$rollback = array_search( 'ROLLBACK', $queries, true );
+			self::assertIsInt( $rollback, implode( '\n', $queries ) . '\n' . $lines );
+			self::assertSame( array( 'START TRANSACTION', 'ROLLBACK' ), array_values( array_filter( array_slice( $queries, 0, $rollback + 1 ), static fn ( string $query ): bool => in_array( $query, array( 'START TRANSACTION', 'ROLLBACK', 'COMMIT' ), true ) ) ) );
+			self::assertSame( array(), preg_grep( '/^UPDATE .*SET (?:state|status) =/', array_slice( $queries, 0, $rollback ) ) );
+			$settlement = array_slice( $queries, $rollback + 1 );
+			self::assertContains( 'START TRANSACTION', $settlement );
+			self::assertContains( 'COMMIT', $settlement );
+			self::assertSame( 1, preg_match_all( "/^UPDATE .*SET state = 'failed'/m", implode( "\n", $settlement ) ) );
+			self::assertSame( 1, preg_match_all( "/^UPDATE .*SET status = 'failed'/m", implode( "\n", $settlement ) ) );
+			self::assertArrayNotHasKey( 'branch_refusal', $this->activity_facts() );
+			self::assertStringNotContainsString( 'target_is_working_copy', $lines );
+			self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+			self::assertSame( 0, $executor->calls );
+			self::assertSame( 1, $archive->cleanup_calls );
+			self::assertSame( array(), $this->database->option_rows );
+			self::assertDirectoryExists( $target . '/.git' );
+			self::assertStringNotContainsString( 'Deadlock', $lines );
+			self::assertStringContainsString( '"exception_class":"RAN\\\\Storage\\\\DatabaseLifecycleFailure"', $lines );
+			self::assertStringContainsString( '"exception_code":"0"', $lines );
+			self::assertStringContainsString( $this->database->rows[0]['correlation_id'], $lines );
+			if ( $settlement_fails ) {
+				self::assertInstanceOf( DeploymentStorageFailure::class, $caught );
+				self::assertTrue( $caught->is_left_running() );
+				self::assertNull( $result );
+				self::assertSame( 'running', $this->database->rows[0]['state'] );
+				self::assertSame( 'running', $this->activity_facts()['deployment_state'] );
+				self::assertArrayNotHasKey( 'deployment_settled_by', $this->activity_facts() );
+				self::assertStringNotContainsString( '"step":"attempt_finished"', $lines );
+			} else {
+				self::assertNull( $caught );
+				self::assertIsArray( $result );
+				self::assertSame( 'worker_stopped', $result['outcome_code'] );
+				self::assertSame( 'failed', $this->database->rows[0]['state'] );
+				self::assertSame( 'runner_throw', $this->activity_facts()['deployment_settled_by'] );
+				self::assertSame( 1, substr_count( $lines, '"step":"attempt_finished"' ) );
+				$this->database->on_lock_release = null;
+				$healthy                         = $coordinator->execute_manual( $command );
+				self::assertSame( 'policy_blocked', $healthy['outcome_code'] );
+				self::assertNotSame( $result['correlation_id'], $healthy['correlation_id'] );
+				$facts = json_decode( (string) $this->database->activity_rows[1]['facts'], true );
+				self::assertSame( 'target_is_working_copy', $facts['branch_refusal'] ?? null );
+			}
+		} finally {
+			$this->remove_tree( $target );
+		}
+	}
+
+	public function test_cron_working_copy_refusal_keeps_one_fact_and_one_repository_log(): void {
+		require_once __DIR__ . '/../Portability/WpPusherCoexistenceWordPressFunctions.php';
+		$this->enable_activity();
+		$target = WP_PLUGIN_DIR . '/example';
+		$this->ensure_directory( $target . '/.git' );
+		try {
+			$this->download_fixture( 'example' );
+			$attempt                          = $this->running_webhook_update( str_repeat( 'a', 40 ) );
+			$this->database->rows[0]['state'] = 'queued';
+			$executor                         = new ParityCoreExecutor();
+			$coordinator                      = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ), executor: $executor );
+			$worker                           = new \RAN\Deployment\DeploymentWorker( $this->attempts, $coordinator, new WordPressWorkerWakeup( $this->attempts ) );
+			$lines                            = $this->captured_logs(
+				static function () use ( $worker ): void {
+					self::assertSame( 'processed', $worker->run_once()['status'] );
+				}
+			);
+			self::assertSame( 'target_is_working_copy', $this->activity_facts()['branch_refusal'] ?? null );
+			self::assertSame( $attempt->get_id(), $this->activity_facts()['deployment_attempt_id'] ?? null );
+			self::assertSame( 1, substr_count( $lines, '"branch_refusal":"target_is_working_copy"' ) );
+			self::assertSame( 0, $executor->calls );
+			self::assertDirectoryExists( $target . '/.git' );
 		} finally {
 			$this->remove_tree( $target );
 		}
@@ -376,10 +624,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_initial_identity_refuses_old_branch_api_before_provider_or_admission(): void {
-		require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
-		$old_runtime = new class() {
-			public const ADMITTED_API_VERSION = 2;
-		};
+				$old_runtime = new class() {
+					public const ADMITTED_API_VERSION = 2;
+				};
 		class_alias( $old_runtime::class, BranchUpdater::class );
 		$provider = new ParityRepositoryProvider( null );
 		$command  = \RAN\PackageOperation::from_input(
@@ -411,9 +658,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	public function test_coordinator_preserves_initial_identity_and_refuses_wrong_archive_main(): void {
-		require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
-		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
-		$provider = new ParityRepositoryProvider( $archive );
+				$archive = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider        = new ParityRepositoryProvider( $archive );
 		$this->download_fixture( 'example' );
 		$command = \RAN\PackageOperation::from_input(
 			'install-plugin',
@@ -929,8 +1175,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	}
 
 	public function test_manual_execution_records_throw_settlement_without_message(): void {
-		require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
-		$this->enable_activity();
+				$this->enable_activity();
 		$this->download_fixture( 'example' );
 		$this->database->fail_query_contains = "SET state = 'failed'";
 		$this->database->query_failure       = new ParityRunnerException( 'token=secret-shaped-private-value', 42 );
@@ -1575,6 +1820,10 @@ final class ParityPluginRepository extends PluginRepository {
 final class ParityThemeRepository extends ThemeRepository {
 	public ?\RAN\Theme $managed = null;
 	public function __construct() {}
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The SQL boundary fixture returns its one managed theme.
+	public function all_deployment_themes( ?PackageSource $source = null ): array {
+		return null === $this->managed ? array() : array( 'fixture' => $this->managed );
+	}
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		return $this->managed ?? throw new RuntimeException( 'Missing managed theme: ' . $stylesheet );
 	}

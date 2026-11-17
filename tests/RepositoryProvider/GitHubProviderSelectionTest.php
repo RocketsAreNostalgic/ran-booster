@@ -27,6 +27,8 @@ require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 
 final class GitHubProviderSelectionTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
+
 	private string $root;
 	private SelectionContextDatabase $db;
 	private GitHubSelectionStore $store;
@@ -413,6 +415,53 @@ final class GitHubProviderSelectionTest extends TestCase {
 			}
 		}
 		return $registry;
+	}
+
+	public function test_strict_deployment_refusal_preserves_confirmed_unavailability(): void {
+		$context = $this->context();
+		self::assertNull( $context->deployment_refusal( 0, 'plugin', 'example/main.php', strict_storage: true ) );
+		self::assertSame( 'provider_selection_changed', $context->deployment_refusal( 1, 'plugin', 'example/main.php', strict_storage: true ) );
+		$this->activate( array() );
+		self::assertSame( 'provider_unavailable', $context->deployment_refusal( 0, 'plugin', 'example/main.php', strict_storage: true ) );
+		$this->activate( array( 'booster.php' ) );
+		$missing  = new GitHubProviderSelection( $this->store, $this->root, $this->bundled );
+		$registry = new ProviderRegistry();
+		$missing->bind_registry( $registry );
+		$missing->complete_collection();
+		$registry->seal();
+		self::assertSame( 'provider_unavailable', $missing->deployment_refusal( 0, 'plugin', 'example/main.php', strict_storage: true ) );
+	}
+
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'active' ) )]
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'selection' ) )]
+	public function test_strict_deployment_refusal_rejects_malformed_storage_but_default_stays_tolerant( string $field ): void {
+		$context = $this->context();
+		if ( 'active' === $field ) {
+			$this->db->active_bytes = '';
+		} else {
+			$this->db->selection->rows[0]->option_value = '{invalid';
+		}
+		self::assertSame( 'provider_unavailable', $context->deployment_refusal( 0, 'plugin', 'example/main.php' ) );
+		$this->expectException( DatabaseLifecycleFailure::class );
+		$context->deployment_refusal( 0, 'plugin', 'example/main.php', strict_storage: true );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'authority_read_boundaries' )]
+	public function test_default_refusal_still_maps_one_shot_storage_failure_to_unavailable( int $read ): void {
+		$db                       = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$context                  = $this->queued_selection( $db );
+		$db->authority_reads      = 0;
+		$db->abort_authority_read = $read;
+		self::assertSame( 'provider_unavailable', $context->deployment_refusal( 0, 'plugin', 'example/main.php' ) );
+		self::assertSame( 1, $db->automatic_rollbacks );
+		self::assertNull( $context->deployment_refusal( 0, 'plugin', 'example/main.php' ) );
+	}
+
+	/** @return iterable<string,array{int}> */
+	public static function authority_read_boundaries(): iterable {
+		foreach ( array( 'initial selection', 'nested selection', 'active plugins', 'selection recheck', 'active plugins recheck' ) as $index => $name ) {
+			yield $name => array( $index + 1 );
+		}
 	}
 
 	public function test_collection_and_authoritative_active_set_fence_captured_requests(): void {

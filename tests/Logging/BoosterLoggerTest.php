@@ -332,6 +332,17 @@ final class BoosterLoggerTest extends TestCase {
 		);
 	}
 
+	public function test_branch_refusal_accepts_only_the_original_closed_string(): void {
+		BoosterLogger::log( 'attempt finished', array( 'branch_refusal' => 'target_is_working_copy' ) );
+		self::assertStringContainsString( '"branch_refusal":"target_is_working_copy"', $this->last_line() );
+		foreach ( array( null, true, 1, 1.0, array(), new \stdClass(), '', 'future_reason', "target_is_working_copy\n", 'target_is_working_copy' . str_repeat( ' ', 300 ) . 'password=canary' ) as $value ) {
+			BoosterLogger::log( 'attempt finished', array( 'branch_refusal' => $value ) );
+			self::assertStringNotContainsString( 'branch_refusal', $this->last_line() );
+			self::assertStringNotContainsString( 'canary', $this->last_line() );
+		}
+		self::assertCount( 33, ProviderFailure::REASONS );
+	}
+
 	private function last_line(): string {
 		$entries = $this->capture->snapshot()['entries'];
 		$entry   = end( $entries );
@@ -534,7 +545,7 @@ final class BoosterLoggerTest extends TestCase {
 		$keys = ( new \ReflectionClassConstant( BoosterLogger::class, 'SAFE_CONTEXT_KEYS' ) )->getValue();
 		self::assertIsArray( $keys );
 		self::assertSame(
-			array( 'attempt_id', 'correlation_id', 'diagnostic_id', 'event', 'exception_class', 'exception_code', 'http_status', 'operation', 'outcome_code', 'package_slug', 'provider', 'reason', 'resolved_by', 'resolved_ref', 'retry_after', 'source', 'state', 'step', 'transition' ),
+			array( 'attempt_id', 'branch_refusal', 'correlation_id', 'diagnostic_id', 'event', 'exception_class', 'exception_code', 'http_status', 'operation', 'outcome_code', 'package_slug', 'provider', 'reason', 'resolved_by', 'resolved_ref', 'retry_after', 'source', 'state', 'step', 'transition' ),
 			array_keys( $keys )
 		);
 	}

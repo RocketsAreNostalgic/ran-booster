@@ -808,40 +808,40 @@ msgid "%1$s Reference: <code>%2$s</code>. <a href=\"%3$s\">View deployment activ
 msgstr ""
 
 #. translators: 1: random support reference, 2: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:96
+#: RAN/Admin/DeploymentAdminPresenter.php:134
 #, php-format
 msgid "Deployment attempt left running. Reference: <code>%1$s</code>. <a href=\"%2$s\">Reconcile it in Recent Activity</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:103
+#: RAN/Admin/DeploymentAdminPresenter.php:141
 #, php-format
 msgid "Booster could not confirm how an earlier deployment of the %1$s %2$s ended, so it has paused retries. No deployment is currently running. <a href=\"%3$s\">Check the package and allow another attempt</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: deployment state, 4: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:106
+#: RAN/Admin/DeploymentAdminPresenter.php:144
 #, php-format
 msgid "Booster is already tracking the %1$s %2$s in state %3$s. <a href=\"%4$s\">Review this deployment activity record</a> before trying again."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:255
-#: RAN/Admin/DeploymentAdminPresenter.php:291
-#: RAN/Admin/DeploymentAdminPresenter.php:305
+#: RAN/Admin/DeploymentAdminPresenter.php:295
+#: RAN/Admin/DeploymentAdminPresenter.php:331
+#: RAN/Admin/DeploymentAdminPresenter.php:345
 msgid "GitHub"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:255
-#: RAN/Admin/DeploymentAdminPresenter.php:291
-#: RAN/Admin/DeploymentAdminPresenter.php:305
+#: RAN/Admin/DeploymentAdminPresenter.php:295
+#: RAN/Admin/DeploymentAdminPresenter.php:331
+#: RAN/Admin/DeploymentAdminPresenter.php:345
 msgid "Bitbucket"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:283
+#: RAN/Admin/DeploymentAdminPresenter.php:323
 msgid "Older activity filters were cleared. Use Git provider and Activity subject to filter activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:305
+#: RAN/Admin/DeploymentAdminPresenter.php:345
 #: RAN/Admin/PackageAdminController.php:370
 #: RAN/Admin/PackageAdminController.php:389
 #: RAN/Admin/PortabilityController.php:632
@@ -855,7 +855,7 @@ msgstr ""
 msgid "Theme"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:305
+#: RAN/Admin/DeploymentAdminPresenter.php:345
 #: RAN/Admin/PackageAdminController.php:370
 #: RAN/Admin/PackageAdminController.php:389
 #: RAN/Admin/PortabilityController.php:632
@@ -869,28 +869,28 @@ msgstr ""
 msgid "Plugin"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:310
+#: RAN/Admin/DeploymentAdminPresenter.php:350
 msgid "That Git provider filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:313
+#: RAN/Admin/DeploymentAdminPresenter.php:353
 msgid "That Git provider is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:329
+#: RAN/Admin/DeploymentAdminPresenter.php:369
 msgid "Non-package events"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:337
+#: RAN/Admin/DeploymentAdminPresenter.php:377
 msgid "That Activity subject filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:340
-#: RAN/Admin/DeploymentAdminPresenter.php:353
+#: RAN/Admin/DeploymentAdminPresenter.php:380
+#: RAN/Admin/DeploymentAdminPresenter.php:393
 msgid "That Activity subject is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:356
+#: RAN/Admin/DeploymentAdminPresenter.php:396
 msgid "The Activity subject filter was cleared because it does not match the selected Git provider."
 msgstr ""
 
@@ -1132,284 +1132,288 @@ msgstr ""
 msgid "Not confirmed"
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:93
-msgid "WordPress completed and Booster verified the package deployment."
-msgstr ""
-
-#: RAN/Admin/DeploymentOutcomeMessage.php:94
-msgid "The requested package bytes were already installed."
-msgstr ""
-
-#: RAN/Admin/DeploymentOutcomeMessage.php:95
-msgid "Booster already manages the installed package. Its existing package settings were left unchanged."
-msgstr ""
-
-#: RAN/Admin/DeploymentOutcomeMessage.php:96
-msgid "The Git provider could not prepare the deployment, but no exact cause was recorded. Check the repository and credential settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats."
-msgstr ""
-
-#: RAN/Admin/DeploymentOutcomeMessage.php:97
-msgid "The repository or credential configuration is invalid. Review the managed package settings."
-msgstr ""
-
-#: RAN/Admin/DeploymentOutcomeMessage.php:98
-msgid "The Git provider rejected the selected credential. Replace or update it."
-msgstr ""
-
-#: RAN/Admin/DeploymentOutcomeMessage.php:99
-msgid "The Git provider denied access. Check the credential permissions and repository access."
-msgstr ""
-
 #: RAN/Admin/DeploymentOutcomeMessage.php:100
-msgid "The Git provider could not find the repository or revision. Check that it exists and that the selected credential can access it."
-msgstr ""
-
-#: RAN/Admin/DeploymentOutcomeMessage.php:101
-msgid "The requested repository revision is no longer available. Review the configured branch or reference."
-msgstr ""
-
-#: RAN/Admin/DeploymentOutcomeMessage.php:102
-msgid "The Git provider rate limit was reached. Wait for its quota to reset or use an authenticated credential."
+msgid "This package is a version-controlled working copy, so the update was blocked; update it through its version-control workflow."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:103
-msgid "The GitHub implementation changed after this deployment was requested. Review the current Git provider and submit a new deployment."
+msgid "WordPress completed and Booster verified the package deployment."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:104
-msgid "The Git provider could not be reached or returned an invalid response. Try again later."
+msgid "The requested package bytes were already installed."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:105
-msgid "The repository ZIP exceeds this site's configured archive download limit. Reduce the repository size or review Download limits in Booster Settings; configuration overrides may lock the value."
+msgid "Booster already manages the installed package. Its existing package settings were left unchanged."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:106
-msgid "The repository ZIP expands beyond this site's configured archive safety limit. Reduce the repository contents or review Download limits in Booster Settings; stricter extraction safeguards still apply."
+msgid "The Git provider could not prepare the deployment, but no exact cause was recorded. Check the repository and credential settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:107
-msgid "RAN_BOOSTER_MAX_DOWNLOAD_BYTES is invalid. Set the configured constant to an integer between 1 MiB and 536,870,911 bytes (just under 512 MiB)."
+msgid "The repository or credential configuration is invalid. Review the managed package settings."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:108
-msgid "Booster stopped the package before changing files, but no exact failed check was recorded. Check the package and settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats."
+msgid "The Git provider rejected the selected credential. Replace or update it."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:109
-msgid "Booster blocked an older branch package before changing files. Restore a full-site backup or use a publisher-provided down-migration for intentional recovery."
+msgid "The Git provider denied access. Check the credential permissions and repository access."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:110
-msgid "Another deployment is using the WordPress package lock. Wait for it to finish, check Activity for a pending recovery, then retry."
+msgid "The Git provider could not find the repository or revision. Check that it exists and that the selected credential can access it."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:111
-msgid "A package update policy blocked this deployment. Review the package Updates settings and WordPress file modification configuration, then retry."
+msgid "The requested repository revision is no longer available. Review the configured branch or reference."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:112
-msgid "This repository conflicts with another managed package source. Review the repository package settings before retrying."
+msgid "The Git provider rate limit was reached. Wait for its quota to reset or use an authenticated credential."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:113
+msgid "The GitHub implementation changed after this deployment was requested. Review the current Git provider and submit a new deployment."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:114
+msgid "The Git provider could not be reached or returned an invalid response. Try again later."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:115
+msgid "The repository ZIP exceeds this site's configured archive download limit. Reduce the repository size or review Download limits in Booster Settings; configuration overrides may lock the value."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:116
+msgid "The repository ZIP expands beyond this site's configured archive safety limit. Reduce the repository contents or review Download limits in Booster Settings; stricter extraction safeguards still apply."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:117
+msgid "RAN_BOOSTER_MAX_DOWNLOAD_BYTES is invalid. Set the configured constant to an integer between 1 MiB and 536,870,911 bytes (just under 512 MiB)."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:118
+msgid "Booster stopped the package before changing files, but no exact failed check was recorded. Check the package and settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:119
+msgid "Booster blocked an older branch package before changing files. Restore a full-site backup or use a publisher-provided down-migration for intentional recovery."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:120
+msgid "Another deployment is using the WordPress package lock. Wait for it to finish, check Activity for a pending recovery, then retry."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:121
+msgid "A package update policy blocked this deployment. Review the package Updates settings and WordPress file modification configuration, then retry."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:122
+msgid "This repository conflicts with another managed package source. Review the repository package settings before retrying."
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:123
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:437
 msgid "Booster could not safely read the repository source relationship. Check package storage and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:114
+#: RAN/Admin/DeploymentOutcomeMessage.php:124
 msgid "The requested repository reference is no longer current. Refresh the package source or start a new deployment from the current reference."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:115
+#: RAN/Admin/DeploymentOutcomeMessage.php:125
 msgid "WordPress could not complete the package update; the earlier package should remain intact. Check Activity and WordPress update health, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:116
+#: RAN/Admin/DeploymentOutcomeMessage.php:126
 msgid "WordPress could not restore the plugin activation state. Check the plugin's current activation state and its error log, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:117
+#: RAN/Admin/DeploymentOutcomeMessage.php:127
 msgid "The deployment stopped before WordPress changed the package. Check Activity for a pending recovery, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:118
+#: RAN/Admin/DeploymentOutcomeMessage.php:128
 msgid "The deployment may have changed package files before it stopped. Inspect the package and Activity recovery evidence before allowing another deployment."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:119
+#: RAN/Admin/DeploymentOutcomeMessage.php:129
 msgid "WordPress completed the update, but Booster could not prove the final package state. Inspect the package and Activity recovery evidence before allowing another deployment."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:120
+#: RAN/Admin/DeploymentOutcomeMessage.php:130
 msgid "WordPress left maintenance mode active after the deployment. Inspect the package and maintenance state before trying again."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:121
+#: RAN/Admin/DeploymentOutcomeMessage.php:131
 msgid "WordPress completed the deployment, but the installed package version does not match the verified archive. Inspect the installed package header and Activity before retrying."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:122
+#: RAN/Admin/DeploymentOutcomeMessage.php:132
 msgid "WordPress completed the deployment, but the package activation state changed. Check its current activation state before retrying."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:123
+#: RAN/Admin/DeploymentOutcomeMessage.php:133
 msgid "The package changed, but Booster could not verify its management record. Review the deployment activity and any existing package settings before retrying."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:124
+#: RAN/Admin/DeploymentOutcomeMessage.php:134
 msgid "The package header has no Version value. Add a value such as Version: 0.1.0 to the main plugin header or theme style.css, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:125
+#: RAN/Admin/DeploymentOutcomeMessage.php:135
 msgid "The package Version value is invalid. Set a valid value such as Version: 0.1.0 in the main plugin header or theme style.css, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:126
+#: RAN/Admin/DeploymentOutcomeMessage.php:136
 msgid "Booster could not safely read the package header. Check that the main plugin header or theme style.css is readable text, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:127
+#: RAN/Admin/DeploymentOutcomeMessage.php:137
 msgid "The expected package header was not found. Add the main plugin header or theme style.css, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:128
+#: RAN/Admin/DeploymentOutcomeMessage.php:138
 msgid "The package compatibility header is invalid. Correct its Requires PHP or Requires at least value, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:129
+#: RAN/Admin/DeploymentOutcomeMessage.php:139
 msgid "The package requires a newer PHP version than this site uses. Update the site PHP version or use a compatible package, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:130
+#: RAN/Admin/DeploymentOutcomeMessage.php:140
 msgid "The package requires a newer WordPress version than this site uses. Update WordPress or use a compatible package, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:131
+#: RAN/Admin/DeploymentOutcomeMessage.php:141
 msgid "The configured package subdirectory is missing from the archive. Correct the package source or subdirectory setting, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:132
+#: RAN/Admin/DeploymentOutcomeMessage.php:142
 msgid "No plugin package was found in the archive. Include the intended main plugin file, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:133
+#: RAN/Admin/DeploymentOutcomeMessage.php:143
 msgid "No theme package was found in the archive. Include the intended theme style.css, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:134
+#: RAN/Admin/DeploymentOutcomeMessage.php:144
 msgid "The selected package directory contains more than one main plugin header. Leave exactly one main plugin header in that directory, rebuild the archive, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:135
+#: RAN/Admin/DeploymentOutcomeMessage.php:145
 msgid "The archive package does not match the managed package identity. Check the selected repository and package settings, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:136
+#: RAN/Admin/DeploymentOutcomeMessage.php:146
 msgid "The installed plugin is a root-level single file, which Booster cannot update safely. Install or manage a directory-based plugin package instead."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:137
+#: RAN/Admin/DeploymentOutcomeMessage.php:147
 msgid "Booster cannot inspect deployment archives because the PHP ZIP extension is unavailable. Enable the ZIP extension on this site, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:138
+#: RAN/Admin/DeploymentOutcomeMessage.php:148
 msgid "Archive deployment is supported only on a single-site WordPress installation. Use a supported single-site installation for this deployment."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:139
+#: RAN/Admin/DeploymentOutcomeMessage.php:149
 msgid "WordPress file modifications are disabled. Allow WordPress file modifications in the site configuration, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:140
+#: RAN/Admin/DeploymentOutcomeMessage.php:150
 msgid "Booster requires the direct WordPress filesystem method. Configure the direct filesystem method, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:141
+#: RAN/Admin/DeploymentOutcomeMessage.php:151
 msgid "WordPress cannot write to a deployment temporary, upgrade, or destination directory. Correct the directory ownership or permissions, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:142
+#: RAN/Admin/DeploymentOutcomeMessage.php:152
 msgid "The site does not have enough disk space for the deployment. Free sufficient space safely, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:143
+#: RAN/Admin/DeploymentOutcomeMessage.php:153
 msgid "WordPress could not create a temporary archive file. Check the server temporary directory and available disk space, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:144
+#: RAN/Admin/DeploymentOutcomeMessage.php:154
 msgid "The downloaded ZIP could not pass its integrity check. Check the download and local temporary-file storage, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:145
+#: RAN/Admin/DeploymentOutcomeMessage.php:155
 msgid "Booster could not download the package archive. Check the repository source, local temporary-file storage permissions, available disk space, and server network access, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:146
+#: RAN/Admin/DeploymentOutcomeMessage.php:156
 msgid "The package archive URL is invalid. Correct the release source or repository configuration, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:147
+#: RAN/Admin/DeploymentOutcomeMessage.php:157
 msgid "The requested archive revision is invalid. Choose an available repository revision, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:148
+#: RAN/Admin/DeploymentOutcomeMessage.php:158
 msgid "The downloaded package is not a valid ZIP archive. Publish a valid ZIP archive, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:149
+#: RAN/Admin/DeploymentOutcomeMessage.php:159
 msgid "The package archive layout is not supported. Publish a package with the expected plugin or theme layout, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:150
+#: RAN/Admin/DeploymentOutcomeMessage.php:160
 msgid "The package archive contains an unsafe path, such as ../, an absolute path, or a symlink. Rebuild the archive without unsafe paths, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:151
+#: RAN/Admin/DeploymentOutcomeMessage.php:161
 msgid "The package archive contains conflicting paths. Rebuild the archive with unique paths, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:152
+#: RAN/Admin/DeploymentOutcomeMessage.php:162
 msgid "The package archive contains invalid ZIP entry metadata. Rebuild the ZIP with valid file and directory entries, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:153
+#: RAN/Admin/DeploymentOutcomeMessage.php:163
 msgid "The package archive contains too many entries. Reduce the archive contents, rebuild it, and retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:154
+#: RAN/Admin/DeploymentOutcomeMessage.php:164
 msgid "The package archive is encrypted and cannot be installed. Publish an unencrypted ZIP archive, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:155
+#: RAN/Admin/DeploymentOutcomeMessage.php:165
 msgid "The package archive contains a link or device entry. Rebuild the archive with only regular files and directories, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:156
+#: RAN/Admin/DeploymentOutcomeMessage.php:166
 msgid "Booster could not safely clean up a temporary archive or Git provider authentication. Check server temporary-file access and the Git provider integration, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:157
+#: RAN/Admin/DeploymentOutcomeMessage.php:167
 msgid "The package changed while Booster prepared the deployment. Review the current package source, then start a new deployment."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:158
+#: RAN/Admin/DeploymentOutcomeMessage.php:168
 msgid "The package destination already exists and cannot be replaced safely. Link the installed plugin or theme in Booster if it is correct; otherwise inspect it and Activity before retrying."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:159
+#: RAN/Admin/DeploymentOutcomeMessage.php:169
 msgid "Booster cannot update itself during this deployment. Update Booster separately before retrying the managed package."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:160
+#: RAN/Admin/DeploymentOutcomeMessage.php:170
 msgid "Branch deployment is unavailable for this release-managed package. Use Published releases or WordPress Updates for the release source, or explicitly switch the package source back to Branch."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:161
+#: RAN/Admin/DeploymentOutcomeMessage.php:171
 msgid "WordPress is already in maintenance mode. Wait for the current update to finish, inspect Activity, then retry."
 msgstr ""
 
-#: RAN/Admin/DeploymentOutcomeMessage.php:162
+#: RAN/Admin/DeploymentOutcomeMessage.php:172
 msgid "Booster recorded an unavailable deployment outcome. Open Troubleshooting, verify the package state before retrying, and submit a redacted report if it repeats."
 msgstr ""
 

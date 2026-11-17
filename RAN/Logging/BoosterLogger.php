@@ -25,6 +25,7 @@ final class BoosterLogger {
 	/** @var array<string, true> */
 	private const SAFE_CONTEXT_KEYS = array(
 		'attempt_id'      => true,
+		'branch_refusal'  => true,
 		'correlation_id'  => true,
 		'diagnostic_id'   => true,
 		'event'           => true,
@@ -158,6 +159,10 @@ final class BoosterLogger {
 
 		foreach ( $context as $key => $value ) {
 			if ( ! is_string( $key ) || ! isset( self::SAFE_CONTEXT_KEYS[ $key ] ) ) {
+				continue;
+			}
+
+			if ( 'branch_refusal' === $key && 'target_is_working_copy' !== $value ) {
 				continue;
 			}
 

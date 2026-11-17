@@ -37,6 +37,32 @@ final class ProviderFailureTest extends TestCase {
 		return $cases;
 	}
 
+	public function test_source_code_is_screened_without_changing_failure_behavior(): void {
+		$baseline = new ProviderFailure( 'http_4xx_other', 422 );
+		foreach ( array( 'abuse_detected', 'api.abuse_detected', str_repeat( 'abuse_detected_', 4 ) . 'code' ) as $code ) {
+			$failure = new ProviderFailure( 'http_4xx_other', 422, source_code: $code );
+			self::assertSame( $code, $failure->source_code );
+			self::assertSame( $baseline->message(), $failure->message() );
+			self::assertSame( $baseline->deployment_outcome_code(), $failure->deployment_outcome_code() );
+			self::assertSame( $failure, ProviderFailure::carried( new ProviderRequestFailed( $failure ) ) );
+		}
+		self::assertNull( $baseline->source_code );
+	}
+
+	public function test_unsafe_source_codes_are_omitted_without_conversion(): void {
+		$stringable = new class() {
+			public function __toString(): string {
+				throw new RuntimeException( 'Must not convert diagnostic input.' );
+			}
+		};
+		foreach ( array( null, false, 42, 1.2, array(), $stringable, '', 'A_code', 'a..b', 'a%2eb', 'secret_orchid', 'token_expired', 'https://example.test/a', '<b>code</b>', str_repeat( 'a', 65 ), str_repeat( 'a', 64 ) . '_secret' ) as $code ) {
+			$failure = new ProviderFailure( 'http_4xx_other', 422, source_code: $code );
+			self::assertNull( $failure->source_code );
+			self::assertSame( 'http_4xx_other', $failure->reason );
+			self::assertSame( 422, $failure->legacy_code() );
+		}
+	}
+
 	public function test_the_vocabulary_is_the_contract_set(): void {
 		self::assertCount( 33, ProviderFailure::REASONS );
 		self::assertCount( 33, array_unique( ProviderFailure::REASONS ) );

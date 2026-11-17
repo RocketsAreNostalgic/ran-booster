@@ -332,6 +332,17 @@ final class BoosterLoggerTest extends TestCase {
 		);
 	}
 
+	public function test_branch_refusal_accepts_only_the_original_closed_string(): void {
+		BoosterLogger::log( 'attempt finished', array( 'branch_refusal' => 'target_is_working_copy' ) );
+		self::assertStringContainsString( '"branch_refusal":"target_is_working_copy"', $this->last_line() );
+		foreach ( array( null, true, 1, 1.0, array(), new \stdClass(), '', 'future_reason', "target_is_working_copy\n", 'target_is_working_copy' . str_repeat( ' ', 300 ) . 'password=canary' ) as $value ) {
+			BoosterLogger::log( 'attempt finished', array( 'branch_refusal' => $value ) );
+			self::assertStringNotContainsString( 'branch_refusal', $this->last_line() );
+			self::assertStringNotContainsString( 'canary', $this->last_line() );
+		}
+		self::assertCount( 33, ProviderFailure::REASONS );
+	}
+
 	private function last_line(): string {
 		$entries = $this->capture->snapshot()['entries'];
 		$entry   = end( $entries );
@@ -534,7 +545,7 @@ final class BoosterLoggerTest extends TestCase {
 		$keys = ( new \ReflectionClassConstant( BoosterLogger::class, 'SAFE_CONTEXT_KEYS' ) )->getValue();
 		self::assertIsArray( $keys );
 		self::assertSame(
-			array( 'attempt_id', 'correlation_id', 'diagnostic_id', 'event', 'exception_class', 'exception_code', 'http_status', 'operation', 'outcome_code', 'package_slug', 'provider', 'reason', 'resolved_by', 'resolved_ref', 'retry_after', 'source', 'state', 'step', 'transition' ),
+			array( 'attempt_id', 'branch_refusal', 'correlation_id', 'diagnostic_id', 'event', 'exception_class', 'exception_code', 'http_status', 'operation', 'outcome_code', 'package_slug', 'provider', 'reason', 'resolved_by', 'resolved_ref', 'retry_after', 'source', 'state', 'step', 'transition' ),
 			array_keys( $keys )
 		);
 	}
@@ -548,6 +559,49 @@ final class BoosterLoggerTest extends TestCase {
 		chmod( $this->directory . '/ran-booster-debug.php', 0644 );
 		self::assertFalse( BoosterLogger::log( 'unsafe file', array( 'step' => 'ignored' ) ) );
 		self::assertSame( 'malformed', $this->capture->snapshot()['state'] );
+	}
+
+	/** @return iterable<string, array{bool}> */
+	public static function webhook_logging_modes(): iterable {
+		yield 'WordPress log enabled' => array( true );
+		yield 'WordPress log disabled' => array( false );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	#[DataProvider( 'webhook_logging_modes' )]
+	public function test_webhook_capture_never_reaches_direct_php_logging( bool $enabled ): void {
+		define( 'WP_DEBUG_LOG', $enabled );
+		$path = $this->directory . '/wordpress-debug.log';
+		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Isolated subprocess owns this direct PHP log destination.
+		self::assertNotFalse( ini_set( 'error_log', $path ) );
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Positive control proves the real direct log is reachable.
+		error_log( 'direct log control' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read only the isolated direct log fixture.
+		$baseline = file_get_contents( $path );
+		self::assertIsString( $baseline );
+		self::assertStringContainsString( 'direct log control', $baseline );
+		foreach ( \RAN\RepositoryProvider\WebhookRejected::REASONS as $reason ) {
+			$this->capture->start();
+			self::assertTrue( BoosterLogger::capture_webhook( $reason ) );
+			self::assertSame( array( '[ran-booster] Webhook intake {"step":"webhook","event":"intake","reason":"' . $reason . '"}' ), array_column( $this->capture->snapshot()['entries'], 'line' ) );
+			self::assertFalse( BoosterLogger::capture_webhook( $reason ) );
+		}
+		foreach ( array( 'unknown', "signature_missing\n", str_repeat( 'a', 160 ) . 'signature_missing' ) as $hostile ) {
+			$this->capture->start();
+			self::assertFalse( BoosterLogger::capture_webhook( $hostile ) );
+			self::assertSame( array(), $this->capture->snapshot()['entries'] );
+		}
+		$this->capture->stop();
+		self::assertFalse( BoosterLogger::capture_webhook( 'signature_missing' ) );
+		$this->capture->delete();
+		self::assertFalse( BoosterLogger::capture_webhook( 'signature_missing' ) );
+		BoosterLogger::configure_capture( new TemporaryDebugCapture( null ) );
+		self::assertFalse( BoosterLogger::capture_webhook( 'signature_missing' ) );
+		BoosterLogger::configure_capture( null );
+		self::assertFalse( BoosterLogger::capture_webhook( 'signature_missing' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Exact bytes prove every webhook path left the direct log untouched.
+		self::assertSame( $baseline, file_get_contents( $path ) );
 	}
 
 	#[RunInSeparateProcess]

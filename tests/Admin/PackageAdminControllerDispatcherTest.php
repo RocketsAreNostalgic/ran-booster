@@ -13,6 +13,9 @@ require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunc
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Activity/ActivityConnection.php';
+require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -47,6 +50,51 @@ use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 use WP_Error;
 
 final class PackageAdminControllerDispatcherTest extends TestCase {
+
+	public function test_manual_working_copy_copy_requires_one_exact_core_activity_record(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
+		$correlation                             = str_repeat( 'a', 32 );
+		$facts                                   = wp_json_encode(
+			array(
+				'branch_refusal'                 => 'target_is_working_copy',
+				'deployment_attempt_id'          => 17,
+				'deployment_source'              => 'manual',
+				'deployment_state'               => 'failed',
+				'deployment_outcome'             => 'policy_blocked',
+				'deployment_mutation_started_at' => null,
+			)
+		);
+		$row                                     = array(
+			'correlation'  => $correlation,
+			'provenance'   => 'core',
+			'operation'    => 'update',
+			'subject_type' => 'plugin',
+			'status'       => 'failed',
+			'reason'       => 'policy_blocked',
+			'facts'        => $facts,
+		);
+		$presenter                               = new \RAN\Admin\DeploymentAdminPresenter( activity_store: new \RAN\Activity\ActivityStore( $db ) );
+		$db->read_results                        = array( array( $row ) );
+		$result                                  = $presenter->deployment_failure( 'policy_blocked', $correlation, 'update-plugin' );
+		self::assertNotNull( $result );
+		self::assertSame( 400, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertStringContainsString( 'version-controlled working copy', $result['message']['message'] );
+		self::assertSame(
+			array(
+				'correlation_id' => $correlation,
+				'operation'      => 'update-plugin',
+				'step'           => 'manual_package_operation',
+				'outcome_code'   => 'policy_blocked',
+			),
+			$result['context']
+		);
+		foreach ( array( array(), array( $row, $row ), array( array_replace( $row, array( 'provenance' => 'provider' ) ) ), array( array_replace( $row, array( 'operation' => 'install' ) ) ), array( array_replace( $row, array( 'status' => 'succeeded' ) ) ), array( array_replace( $row, array( 'correlation' => str_repeat( 'b', 32 ) ) ) ), array( array_replace( $row, array( 'facts' => '{}' ) ) ) ) as $rows ) {
+			$db->read_results = array( $rows );
+			$fallback         = $presenter->deployment_failure( 'policy_blocked', $correlation, 'update-plugin' );
+			self::assertStringContainsString( 'A package update policy blocked', $fallback['message']['message'] ?? '' );
+		}
+	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {

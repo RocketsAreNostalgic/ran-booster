@@ -286,11 +286,13 @@ final class SupportReportTest extends TestCase {
 	}
 
 	public function test_safe_log_templates_omit_raw_text_and_unreviewed_context(): void {
-		$line = '[ran-booster] attempt finished {"attempt_id":17,"correlation_id":"' . str_repeat( 'a', 32 ) . '","outcome_code":"archive_download_failed","package_slug":"private-package-canary","resolved_by":"private-actor-canary","exception_class":"private-exception-canary","resolved_ref":"private-ref-canary"}';
+		$line = '[ran-booster] attempt finished {"attempt_id":17,"correlation_id":"' . str_repeat( 'a', 32 ) . '","outcome_code":"archive_download_failed","package_slug":"private-package-canary","resolved_by":"private-actor-canary","exception_class":"private-exception-canary","resolved_ref":"private-ref-canary","branch_refusal":"target_is_working_copy"}';
 		$safe = SupportReport::safe_log( $line );
 		self::assertIsString( $safe );
 		self::assertStringContainsString( 'attempt finished; attempt=17; correlation=' . str_repeat( 'a', 32 ), $safe );
 		self::assertStringNotContainsString( 'canary', $safe );
+		self::assertStringNotContainsString( 'branch_refusal', $safe );
+		self::assertStringNotContainsString( 'target_is_working_copy', $safe );
 		foreach ( array( '[ran-booster] private-prose-canary', '[ran-booster] attempt finished suffix-canary', '[ran-booster] attempt finished {"attempt_id":"private-canary"', "[ran-booster] attempt finished\xff", '[ran-booster] attempt finished {"nested":{"a":{"b":{"c":1}}}}', str_repeat( 'x', 4097 ) ) as $unrecognized ) {
 			self::assertNull( SupportReport::safe_log( $unrecognized ) );
 		}

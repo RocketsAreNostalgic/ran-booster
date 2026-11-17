@@ -421,7 +421,7 @@ test('repeated opens reuse the same node and never duplicate portals', () => {
 	assert.equal(page.host.childNodes.length, 3);
 });
 
-test('teardown is idempotent and runs on page hide or a page body swap', () => {
+test('teardown is idempotent and runs on page hide or removal of its origin', () => {
 	const page = install();
 	const handle = page.open(page.trigger, page.content, { title: 'Details' });
 	page.listeners.window.get('pagehide').forEach((fn) => fn());
@@ -433,19 +433,39 @@ test('teardown is idempotent and runs on page hide or a page body swap', () => {
 
 	page.open(page.trigger, page.content, { title: 'Details' });
 	page.listeners.document
-		.get('htmx:beforeSwap')
-		.forEach((fn) =>
-			fn({ detail: { target: { id: 'other' }, shouldSwap: true } })
-		);
+		.get('htmx:beforeCleanupElement')
+		.forEach((fn) => fn({ detail: { elt: page.trigger } }));
 	assert.equal(page.portals().length, 1, 'unrelated swaps are ignored');
-	page.listeners.document.get('htmx:beforeSwap').forEach((fn) =>
-		fn({
-			detail: { target: { id: 'wpbody-content' }, shouldSwap: true },
-		})
-	);
+	page.listeners.document
+		.get('htmx:beforeCleanupElement')
+		.forEach((fn) => fn({ detail: { elt: page.host } }));
 	assert.equal(page.portals().length, 0);
 	assert.equal(page.content.parentNode, page.host);
 });
+
+for (const id of ['wpbody-content', 'ran-booster-provider-profile-region']) {
+	test(`a refused ${id} swap preserves the form until actual cleanup`, () => {
+		const page = install();
+		page.host.id = id;
+		page.content.value = 'unsaved synthetic draft';
+		page.open(page.trigger, page.content, { title: 'Edit credential' });
+		const event = { detail: { target: page.host, shouldSwap: true } };
+		(page.listeners.document.get('htmx:beforeSwap') || []).forEach((fn) =>
+			fn(event)
+		);
+		// A later listener refuses the originally permitted swap.
+		event.detail.shouldSwap = false;
+		assert.equal(page.portals().length, 1);
+		assert.equal(page.content.value, 'unsaved synthetic draft');
+		assert.equal(page.unmounts(), 0);
+		page.listeners.document
+			.get('htmx:beforeCleanupElement')
+			.forEach((fn) => fn({ detail: { elt: page.host } }));
+		assert.equal(page.portals().length, 0);
+		assert.equal(page.content.parentNode, page.host);
+		assert.equal(page.unmounts(), 1);
+	});
+}
 
 test('a removed origin leaves the content detached instead of misplaced', () => {
 	const page = install();

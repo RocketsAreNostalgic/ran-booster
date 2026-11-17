@@ -15,6 +15,9 @@ use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Deployment\DeploymentAttempt;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
+require_once dirname( __DIR__ ) . '/Activity/ActivityConnection.php';
+require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionNormalizer.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/ProviderRepositoryRowsNormalizer.php';
 
@@ -1263,6 +1266,86 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 	}
 
+	public function test_working_copy_list_and_detail_copy_requires_core_provenance_and_exact_tuple(): void {
+		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
+		$journal                                 = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$row                                     = array(
+			'id'                      => 17,
+			'correlation_id'          => str_repeat( 'a', 32 ),
+			'source'                  => 'manual',
+			'operation'               => 'update',
+			'package_type'            => 'plugin',
+			'package_slug'            => 'example',
+			'package_source'          => 'branch',
+			'package_source_revision' => 1,
+			'release_identity'        => null,
+			'provider'                => 'gh',
+			'provider_repository_id'  => 'R_example',
+			'requested_ref'           => 'main',
+			'resolved_ref'            => null,
+			'delivery_id'             => null,
+			'delivery_digest'         => null,
+			'state'                   => 'failed',
+			'mutation_started_at'     => null,
+			'outcome_code'            => 'policy_blocked',
+			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
+			'created_at'              => '2026-11-17 00:00:00',
+			'finished_at'             => '2026-11-17 00:00:01',
+		);
+		$journal->rows                           = array( $row );
+		$attempts                                = new \RAN\Deployment\DeploymentAttemptRepository( $journal, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->createStub( \RAN\Storage\Database::class ) );
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$facts                                   = array(
+			'branch_refusal'                 => 'target_is_working_copy',
+			'deployment_attempt_id'          => 17,
+			'deployment_source'              => 'manual',
+			'deployment_state'               => 'failed',
+			'deployment_outcome'             => 'policy_blocked',
+			'deployment_mutation_started_at' => null,
+		);
+		$record                                  = array(
+			'id'               => 1,
+			'correlation'      => str_repeat( 'a', 32 ),
+			'provenance'       => 'core',
+			'operation'        => 'update',
+			'subject_type'     => 'plugin',
+			'subject_identity' => '<script>canary</script>',
+			'status'           => 'failed',
+			'reason'           => 'policy_blocked',
+			'sort_at'          => '2026-11-17 00:00:00',
+			'provider'         => 'gh',
+			'facts'            => wp_json_encode( $facts ),
+		);
+		$presenter                               = new \RAN\Admin\DeploymentAdminPresenter( attempts: $attempts, activity_store: new \RAN\Activity\ActivityStore( $db ) );
+		$troubleshooting_base                    = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+		try {
+			foreach ( array( 'core', 'provider' ) as $provenance ) {
+				$record['provenance'] = $provenance;
+				$_GET                 = array();
+				$db->read_results     = array( array(), array(), array( $record ) );
+				$deployment_activity  = $presenter->activity();
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+				$index               = (string) ob_get_clean();
+				$_GET                = array(
+					'attempt'   => '17',
+					'reference' => str_repeat( 'a', 32 ),
+				);
+				$db->read_results    = array( array( $record ) );
+				$deployment_activity = $presenter->activity();
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+				$detail = (string) ob_get_clean();
+				foreach ( array( $index, $detail ) as $html ) {
+					self::assertStringContainsString( 'core' === $provenance ? 'version-controlled working copy' : 'A package update policy blocked', $html );
+					self::assertStringNotContainsString( '<script>canary</script>', $html );
+				}
+			}
+		} finally {
+			$_GET = array();
+		}
+	}
+
 	public function test_deployment_activity_shows_the_recorded_failure_reason(): void {
 		$attempt             = DeploymentAttempt::from_database(
 			array(
@@ -2300,7 +2383,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Saved credentials are used for repository access.', $html );
 		self::assertStringNotContainsString( 'Saved credentials can be used for repository access.', $html );
 		self::assertStringNotContainsString( 'Open credential management to review saved credentials and their usage.', $html );
-		self::assertStringContainsString( '>Add credential</button>', $html );
+		self::assertStringContainsString( '>Add credential</a>', $html );
 		self::assertStringContainsString( 'data-credential-modal="access"', $html );
 		self::assertStringNotContainsString( 'ran-booster-provider-management-table--access', $html );
 		self::assertStringContainsString( 'id="ran-booster-webhook-secrets-heading" class="ran-booster-section__title">Signing secrets</h3>', $html );
@@ -4194,7 +4277,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 			$this->assert_flat_profile_layout( $html );
 			self::assertStringContainsString( 'credentials' === $provider_view ? 'No credentials match the current filters.' : 'No webhook secrets match the current filters.', $html );
-			self::assertStringContainsString( 'credentials' === $provider_view ? '>Add credential</button>' : '>Add webhook secret</button>', $html );
+			self::assertStringContainsString( 'credentials' === $provider_view ? '>Add credential</a>' : '>Add webhook secret</button>', $html );
 		}
 	}
 
@@ -4214,7 +4297,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '[contains(@class,"ran-booster-panel")])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header[contains(@class,"ran-booster-action-row")]/div/h2[@id="ran-booster-provider-heading"][@tabindex="-1"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//h2[@id="ran-booster-provider-heading"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header/button[@data-modal])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header/*[(self::a and @data-modal="access" and contains(@href,"add_credential=1")) or (self::button and @data-modal="webhook")])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/div[@class="ran-booster-collection"]/div[@class="ran-booster-collection__toolbar"]/form[@class="ran-booster-provider-list-controls"]/ancestor::div[@class="ran-booster-collection"]/div[@class="ran-booster-data-table-wrap"]/table[contains(concat(" ", @class, " ")," ran-booster-provider-management-table ")][not(contains(@class,"--rows"))])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//table[contains(@class,"widefat") or contains(@class,"striped")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/footer)' ) );

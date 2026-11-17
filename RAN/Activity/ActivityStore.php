@@ -335,9 +335,12 @@ final class ActivityStore {
 				$where[] = "NOT (BINARY subject_type IN ('plugin','theme') AND BINARY subject_identity <> '')";
 				continue;
 			}
+			if ( 'correlation' === $key && 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $value ) ) {
+				return $unavailable;
+			}
 			$outcome_filter = 'outcome' === $key;
 			$key            = $outcome_filter ? 'status' : $key;
-			if ( ! in_array( $key, array( 'subject_type', 'subject_identity', 'provider', 'operation', 'status', 'adoption_token', 'context', 'purpose' ), true ) || strlen( $value ) > 2048 ) {
+			if ( ! in_array( $key, array( 'subject_type', 'subject_identity', 'provider', 'operation', 'status', 'adoption_token', 'context', 'purpose', 'correlation' ), true ) || strlen( $value ) > 2048 ) {
 				return $unavailable;
 			}
 			$where[] = $outcome_filter
@@ -615,6 +618,7 @@ final class ActivityStore {
 				'deployment_resolved_at' => null === $value || ( is_string( $value ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $value ) ),
 				'deployment_resolved_by' => null === $value || ( is_int( $value ) && $value > 0 ),
 				'deployment_settled_by' => 'runner_throw' === $value,
+				'branch_refusal' => 'target_is_working_copy' === $value,
 				'deployment_outcome' => null === $value || ( is_string( $value ) && 1 === preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/', $value ) ),
 				default => null,
 			};

@@ -31,7 +31,11 @@
  * block label (field, lookup profile, import fields).
  */
 
-:is(.ran-booster-admin, .ran-booster-repository-picker-portal)
+:is(
+		.ran-booster-admin,
+		.ran-booster-repository-picker-portal,
+		.ran-booster-ui-dialog-portal
+	)
 	:is(
 		label:not(
 			.screen-reader-text,

@@ -1066,6 +1066,122 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertSame( 'deployed', $finished->get_outcome()?->get_code() );
 	}
 
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'authority_read_boundaries' )]
+	public function test_one_shot_selection_abort_cannot_finish_outside_its_transaction( int $read ): void {
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$this->repository                        = new DeploymentAttemptRepository(
+			$this->database,
+			'wp_ran_booster_deployment_attempts',
+			clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-17 00:00:00 UTC' ),
+			database_lifecycle: $this->database_lifecycle,
+			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ),
+			selection: $this->queued_selection( $this->database )
+		);
+		$this->webhook( 'example' );
+		$running = $this->repository->claim_next();
+		self::assertNotNull( $running );
+		$this->database->authority_reads      = 0;
+		$this->database->abort_authority_read = $read;
+		$this->database->queries              = array();
+		$directory                            = sys_get_temp_dir() . '/ran-889-abort-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Private logger boundary for this transaction proof.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/secrets.json' );
+		$capture->start();
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
+		$caught = false;
+		try {
+			try {
+				$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( 'policy_blocked' ), working_copy_observation: $running );
+			} catch ( DatabaseLifecycleFailure ) {
+				$caught = true;
+			}
+			$terminal_writes = count( array_filter( $this->database->queries, static fn ( string $sql ): bool => str_contains( $sql, "SET state = 'failed'" ) ) );
+			$activity_writes = count( array_filter( $this->database->queries, static fn ( string $sql ): bool => str_contains( $sql, "SET status = 'failed'" ) ) );
+			$logs            = implode( "\n", array_column( $capture->snapshot()['entries'], 'line' ) );
+			self::assertTrue( $caught, sprintf( 'state=%s; terminal writes=%d; Activity completions=%d; finished logs=%d; automatic rollbacks=%d', $this->database->rows[0]['state'], $terminal_writes, $activity_writes, substr_count( $logs, 'attempt finished' ), $this->database->automatic_rollbacks ) );
+			self::assertSame( 1, $this->database->automatic_rollbacks );
+			self::assertSame( 0, $terminal_writes );
+			self::assertSame( 0, $activity_writes );
+			self::assertSame( 'running', $this->repository->find_exact( $running->get_id() )?->get_state()->value );
+			self::assertStringNotContainsString( 'attempt finished', $logs );
+			self::assertNull( $this->repository->provider_refusal( $running ) );
+		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			$files = glob( $directory . '/*' );
+			foreach ( false === $files ? array() : $files as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Only this private capture's files.
+				unlink( $file );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Only this private capture directory.
+			rmdir( $directory );
+		}
+	}
+
+	/** @return iterable<string,array{int}> */
+	public static function authority_read_boundaries(): iterable {
+		foreach ( array( 'initial selection', 'nested selection', 'active plugins', 'selection recheck', 'active plugins recheck' ) as $index => $name ) {
+			yield $name => array( $index + 1 );
+		}
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'working_copy_terminal_cases' )]
+	public function test_working_copy_fact_requires_the_same_running_snapshot_and_authority( string $change ): void {
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$this->repository                        = new DeploymentAttemptRepository(
+			$this->database,
+			'wp_ran_booster_deployment_attempts',
+			clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-17 00:00:00 UTC' ),
+			database_lifecycle: $this->database_lifecycle,
+			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ),
+			selection: $this->queued_selection( $this->database )
+		);
+		$this->webhook( 'example' );
+		$running = $this->repository->claim_next();
+		self::assertNotNull( $running );
+		$observation = $running;
+		if ( 'adoption' === $change ) {
+			$this->database->management_rows['example']['repository'] = 'org/changed';
+		} elseif ( 'selection' === $change ) {
+			$this->database->selection->active_bytes = 'a:0:{}';
+		} elseif ( 'generation' === $change ) {
+			$this->database->selection->selection->rows[0]->option_value = str_replace( '"selection_generation":0', '"selection_generation":1', $this->database->selection->selection->rows[0]->option_value );
+		} elseif ( 'correlation' === $change ) {
+			$this->database->rows[0]['correlation_id'] = str_repeat( 'f', 32 );
+		} elseif ( 'request' === $change ) {
+			$request                      = json_decode( $this->database->rows[0]['request_json'], true );
+			$request['configured_branch'] = 'changed';
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact persisted snapshot bytes at the SQL boundary, without requiring WordPress.
+			$this->database->rows[0]['request_json'] = json_encode( $request, JSON_UNESCAPED_SLASHES );
+		} elseif ( 'fence' === $change ) {
+			$this->repository->mark_mutation_started( $running->get_id() );
+		} elseif ( 'observation' === $change ) {
+			$observation = $this->manual( 'other' );
+		} elseif ( 'owner' === $change ) {
+			$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( 'preflight_failed' ) );
+		}
+		$this->database->fail_commit         = 'commit' === $change;
+		$this->database->fail_query_contains = 'activity' === $change ? "SET status = 'failed'" : ( 'write' === $change ? "SET state = 'failed'" : null );
+		$this->database->fail_reads          = 'read' === $change;
+		try {
+			$terminal = $this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( 'success' === $change ? 'deployed' : 'policy_blocked' ), working_copy_observation: $observation );
+			self::assertFalse( in_array( $change, array( 'commit', 'activity', 'write', 'owner', 'read', 'correlation' ), true ) );
+			self::assertSame( 'success' === $change ? 'deployed' : 'policy_blocked', $terminal->get_outcome()?->get_code() );
+		} catch ( DeploymentStorageFailure ) {
+			self::assertContains( $change, array( 'commit', 'activity', 'write', 'owner', 'read', 'correlation' ) );
+			self::assertSame( 'owner' === $change ? 'failed' : 'running', $this->database->rows[0]['state'] );
+		}
+		$facts = json_decode( (string) $this->database->activity_rows[0]['facts'], true );
+		self::assertSame( 'valid' === $change ? 'target_is_working_copy' : null, $facts['branch_refusal'] ?? null );
+	}
+
+	/** @return iterable<string,array{string}> */
+	public static function working_copy_terminal_cases(): iterable {
+		foreach ( array( 'valid', 'adoption', 'selection', 'generation', 'correlation', 'request', 'fence', 'observation', 'owner', 'success', 'commit', 'activity', 'write', 'read' ) as $case ) {
+			yield $case => array( $case );
+		}
+	}
+
 	public function test_valid_but_different_terminal_timestamp_fails_readback(): void {
 		$running                              = $this->manual( 'example' );
 		$this->database->tamper_update_column = 'finished_at';

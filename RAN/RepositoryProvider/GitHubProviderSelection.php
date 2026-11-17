@@ -368,7 +368,7 @@ final class GitHubProviderSelection {
 	}
 
 	/** Current authority, also acquiring the first admission lock in caller's transaction. */
-	public function deployment_refusal( ?int $generation, string $type, string $identity ): ?string {
+	public function deployment_refusal( ?int $generation, string $type, string $identity, bool $strict_storage = false ): ?string {
 		try {
 			$state = $this->store->read( true );
 			if ( null === $generation || $generation !== $state['selection_generation'] ) {
@@ -379,11 +379,19 @@ final class GitHubProviderSelection {
 				$marker['installed_identity'] = explode( '/', $marker['installed_identity'] )[0];
 				$identity                     = explode( '/', $identity )[0];
 			}
-			if ( ! $this->operation_allowed() || ( is_array( $marker ) && $marker['target_type'] === $type && $marker['installed_identity'] === $identity ) ) {
+			// Registry lookup is pure; avoid the tolerant expectation wrappers here.
+			$allowed = $strict_storage
+				? null !== $this->registry && $this->registry->is_sealed() && null !== $this->current_selection( true, strict_storage: true )
+				: $this->operation_allowed();
+			if ( ! $allowed || ( is_array( $marker ) && $marker['target_type'] === $type && $marker['installed_identity'] === $identity ) ) {
 				return 'provider_unavailable';
 			}
 			return null;
-		} catch ( \Throwable ) {
+		} catch ( \Throwable $exception ) {
+			// The caller owns the transaction; storage uncertainty must escape.
+			if ( $strict_storage ) {
+				throw $exception;
+			}
 			return 'provider_unavailable';
 		}
 	}
@@ -403,7 +411,7 @@ final class GitHubProviderSelection {
 	}
 
 	/** @return array{provider_code:string,selection_generation:int,implementation_fingerprint:string,plugin_basename:?string}|null */
-	private function current_selection( bool $check_registry ): ?array {
+	private function current_selection( bool $check_registry, bool $strict_storage = false ): ?array {
 		if ( ! $this->collection_complete || null === $this->state || null === $this->registry ) {
 			return null;
 		}
@@ -440,7 +448,13 @@ final class GitHubProviderSelection {
 				'implementation_fingerprint' => $approved->implementation_fingerprint,
 				'plugin_basename'            => $basename,
 			);
-		} catch ( \Throwable ) {
+		} catch ( UnknownProvider ) {
+			// A confirmed missing provider remains ordinary unavailability.
+			return null;
+		} catch ( \Throwable $exception ) {
+			if ( $strict_storage ) {
+				throw $exception;
+			}
 			return null;
 		}
 	}

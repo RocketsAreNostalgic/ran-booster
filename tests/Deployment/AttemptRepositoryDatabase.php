@@ -36,7 +36,9 @@ namespace RAN\Tests\Deployment {
 
 		/** @var \Closure():void|null */
 		public ?\Closure $on_management_read = null;
-		public string $options               = 'wp_options';
+		/** @var \Closure():void|null */
+		public ?\Closure $on_lock_release = null;
+		public string $options            = 'wp_options';
 		public \RAN\Tests\RepositoryProvider\SelectionContextDatabase $selection;
 		/** @var array<string, array<string, mixed>> */
 		public array $management_rows = array();
@@ -72,6 +74,9 @@ namespace RAN\Tests\Deployment {
 		public bool $fail_insert             = false;
 		public ?int $fail_insert_number      = null;
 		public bool $fail_reads              = false;
+		public ?int $abort_authority_read    = null;
+		public int $authority_reads          = 0;
+		public int $automatic_rollbacks      = 0;
 		public bool $fail_commit             = false;
 		public ?string $tamper_insert_column = null;
 		public mixed $tamper_insert_value    = null;
@@ -186,13 +191,7 @@ namespace RAN\Tests\Deployment {
 				return 1;
 			}
 			if ( 'ROLLBACK' === $query ) {
-				$this->selection->query( $query );
-				if ( null !== $this->snapshot ) {
-					$this->rows          = $this->snapshot['rows'];
-					$this->option_rows   = $this->snapshot['options'];
-					$this->activity_rows = $this->snapshot['activity'];
-				}
-				$this->snapshot = null;
+				$this->rollback_snapshot();
 
 				return 1;
 			}
@@ -226,6 +225,9 @@ namespace RAN\Tests\Deployment {
 					return 0;
 				}
 				unset( $this->option_rows[ $name ] );
+				if ( null !== $this->on_lock_release ) {
+					( $this->on_lock_release )();
+				}
 
 				return 1;
 			}
@@ -293,6 +295,16 @@ namespace RAN\Tests\Deployment {
 			return 0;
 		}
 
+		private function rollback_snapshot(): void {
+			$this->selection->query( 'ROLLBACK' );
+			if ( null !== $this->snapshot ) {
+				$this->rows          = $this->snapshot['rows'];
+				$this->option_rows   = $this->snapshot['options'];
+				$this->activity_rows = $this->snapshot['activity'];
+			}
+			$this->snapshot = null;
+		}
+
 		public function get_var( string $query ): mixed {
 			$this->queries[] = $query;
 			if ( $this->fail_reads ) {
@@ -310,6 +322,15 @@ namespace RAN\Tests\Deployment {
 		/** @return list<object>|null */
 		public function get_results( string $query ): ?array {
 			if ( str_starts_with( $query, '[' ) ) {
+				$data = json_decode( $query, true, 8, JSON_THROW_ON_ERROR );
+				if ( in_array( $data[1][1] ?? null, array( \RAN\Storage\GitHubSelectionStore::OPTION, 'active_plugins' ), true )
+					&& ++$this->authority_reads === $this->abort_authority_read ) {
+					$this->abort_authority_read = null; // All later reads work again.
+					$this->rollback_snapshot(); // InnoDB deadlock victims lose the whole transaction.
+					++$this->automatic_rollbacks;
+					$this->last_error = 'Deadlock found when trying to get lock; try restarting transaction';
+					return null;
+				}
 				$result           = $this->selection->get_results( $query );
 				$this->last_error = $this->selection->last_error;
 				return $result;

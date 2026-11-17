@@ -7,6 +7,8 @@
  * @var array<string,mixed>|null $github_selection
  * @var string $activity_url
  * @var string $credential_management_description
+ * @var string $add_credential_url
+ * @var array<string, mixed> $credential_form
  * @var string $credentials_url
  * @var string $delete_webhook_interaction_values
  * @var string $empty_repository_description
@@ -93,7 +95,7 @@ $credential_result_visibility   = static function ( array $profile ) use ( $prov
 
 	return null !== $feedback['message'] || null !== $feedback['error'];
 };
-$render_credential_cell         = static function ( array $profile, string $column ) use ( $package_type_labels, $provider, $provider_mutation_fields, $credential_feedback_for ): void {
+$render_credential_cell         = static function ( array $profile, string $column ) use ( $package_type_labels, $provider, $credentials_url, $provider_mutation_fields, $credential_feedback_for ): void {
 	if ( 'name' === $column ) {
 		?>
 		<strong><?php echo esc_html( $profile['label'] ); ?></strong>
@@ -157,7 +159,7 @@ $render_credential_cell         = static function ( array $profile, string $colu
 		return;
 	}
 	?>
-	<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="access" data-id="<?php echo esc_attr( $profile['id'] ); ?>" data-label="<?php echo esc_attr( $profile['label'] ); ?>" data-kind="<?php echo esc_attr( $profile['kind'] ); ?>" data-configuration="<?php echo esc_attr( $profile['configuration_json'] ); ?>" data-expires-on="<?php echo esc_attr( $profile['expiry']['manual_expires_on'] ?? '' ); ?>" data-provider-expires-on="<?php echo esc_attr( $profile['provider_expires_on'] ); ?>" data-self-destruct="<?php echo ! empty( $profile['self_destruct'] ) ? '1' : '0'; ?>" data-destroy-on="<?php echo esc_attr( $profile['destroy_on'] ?? '' ); ?>"><?php esc_html_e( 'Edit', 'ran-booster' ); ?></button><button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'solid' ) . ' ran-booster-open-delete-credential-modal' ); ?>" data-id="<?php echo esc_attr( $profile['id'] ); ?>" data-label="<?php echo esc_attr( $profile['label'] ); ?>" data-usage-total="<?php echo esc_attr( $usage['available'] ? (string) $usage['total'] : '' ); ?>" data-usage-listed="<?php echo esc_attr( (string) $profile['usage_listed'] ); ?>" data-usage-template="<?php echo esc_attr( $usage_template_id ); ?>" data-public-lookup-default="<?php echo ! empty( $profile['public_lookup_default'] ) ? '1' : '0'; ?>" aria-haspopup="dialog" aria-controls="ran-booster-delete-access-modal" <?php disabled( ! $usage['available'] ); ?>><?php esc_html_e( 'Delete', 'ran-booster' ); ?></button>
+	<a href="<?php echo esc_url( add_query_arg( 'replace_credential', $profile['id'], $credentials_url ) . '#ran-booster-credential-editor' ); ?>" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="access" data-id="<?php echo esc_attr( $profile['id'] ); ?>" data-label="<?php echo esc_attr( $profile['label'] ); ?>" data-kind="<?php echo esc_attr( $profile['kind'] ); ?>" data-configuration="<?php echo esc_attr( $profile['configuration_json'] ); ?>" data-expires-on="<?php echo esc_attr( $profile['expiry']['manual_expires_on'] ?? '' ); ?>" data-provider-expires-on="<?php echo esc_attr( $profile['provider_expires_on'] ); ?>" data-self-destruct="<?php echo ! empty( $profile['self_destruct'] ) ? '1' : '0'; ?>" data-destroy-on="<?php echo esc_attr( $profile['destroy_on'] ?? '' ); ?>"><?php esc_html_e( 'Edit', 'ran-booster' ); ?></a><button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'solid' ) . ' ran-booster-open-delete-credential-modal' ); ?>" data-id="<?php echo esc_attr( $profile['id'] ); ?>" data-label="<?php echo esc_attr( $profile['label'] ); ?>" data-usage-total="<?php echo esc_attr( $usage['available'] ? (string) $usage['total'] : '' ); ?>" data-usage-listed="<?php echo esc_attr( (string) $profile['usage_listed'] ); ?>" data-usage-template="<?php echo esc_attr( $usage_template_id ); ?>" data-public-lookup-default="<?php echo ! empty( $profile['public_lookup_default'] ) ? '1' : '0'; ?>" aria-haspopup="dialog" aria-controls="ran-booster-delete-access-modal" <?php disabled( ! $usage['available'] ); ?>><?php esc_html_e( 'Delete', 'ran-booster' ); ?></button>
 	<template id="<?php echo esc_attr( $usage_template_id ); ?>">
 		<ul class="ran-booster-delete-credential-package-list">
 			<?php foreach ( $usage['packages'] as $package_usage ) { ?>
@@ -258,7 +260,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 			</p>
 		</div>
 		<?php if ( 'credentials' === $provider_view && $has_credential_settings ) { ?>
-			<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></button>
+			<a href="<?php echo esc_url( $add_credential_url ); ?>" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></a>
 		<?php } elseif ( 'signing-secrets' === $provider_view && $has_webhook_settings ) { ?>
 			<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="webhook"><?php esc_html_e( 'Add webhook secret', 'ran-booster' ); ?></button>
 		<?php } ?>
@@ -468,10 +470,10 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 					$credential_summary['tone'],
 					$credential_summary['heading'],
 					$credential_summary['description'],
-					static function () use ( $credential_row_count, $credentials_url, $has_credential_settings, $storage_unavailable ): void {
+					static function () use ( $credential_row_count, $credentials_url, $add_credential_url, $has_credential_settings, $storage_unavailable ): void {
 						if ( 0 === $credential_row_count && $has_credential_settings ) {
 							?>
-							<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></button>
+							<a href="<?php echo esc_url( $add_credential_url ); ?>" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></a>
 							<?php
 						} elseif ( ! $storage_unavailable ) {
 							?>

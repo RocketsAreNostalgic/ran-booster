@@ -60,7 +60,7 @@ final class DeploymentAdminPresenter {
 		echo '<div class="notice notice-error is-dismissible ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-background-failure-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global" data-ran-booster-notice-preference="failure" data-ran-booster-notice-state="' . esc_attr( $state ) . '"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><strong>'
 			. esc_html( __( 'RAN Booster automatic deployment failed:', 'ran-booster' ) ) . '</strong> '
 			. esc_html( $summary ) . ' '
-			. esc_html( (string) $primary['package_slug'] . ' (' . (string) $primary['provider_label'] . '): ' . DeploymentOutcomeMessage::for_code( (string) $primary['outcome_code'] ) )
+			. esc_html( (string) $primary['package_slug'] . ' (' . (string) $primary['provider_label'] . '): ' . DeploymentOutcomeMessage::for_code( (string) $primary['outcome_code'], $this->retained_branch_facts( (string) $primary['correlation_id'], (int) $primary['attempt_id'] ) ) )
 			. '</p><p><a class="button button-primary" href="' . esc_url( $this->activity_url( $primary ) ) . '">' . esc_html( __( 'Review deployment', 'ran-booster' ) ) . '</a>'
 			. $credential_link . ' <button type="button" class="button" data-ran-booster-notice-preference-mode="acknowledge">' . esc_html( __( 'Acknowledge this incident', 'ran-booster' ) ) . '</button></p></div>' . NoticeIcon::markup( 'error' ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every dynamic value is escaped above; NoticeIcon::markup() escapes its path data.
 	}
@@ -74,9 +74,47 @@ final class DeploymentAdminPresenter {
 		}
 		status_header( 400 );
 		/* translators: 1: safe deployment result, 2: random support reference, 3: activity page URL. */
-		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::for_code( $outcome_code ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) );
+		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::for_code( $outcome_code, $this->retained_branch_facts( $reference, operation: $operation ) ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) );
 
 		return $this->outcome( 'error', 'ran_booster_deployment_failed', $message, $reference, $operation, $outcome_code );
+	}
+
+	private function retained_branch_facts( string $correlation, ?int $attempt_id = null, ?string $operation = null ): ?string {
+		try {
+			$page = $this->activity_store?->activity_history( array( 'correlation' => $correlation ), limit: 2 );
+			if ( null === $page || ! $page['available'] || 1 !== count( $page['records'] ) ) {
+				return null;
+			}
+			$record  = $page['records'][0];
+			$encoded = $this->branch_facts( $record, $correlation, $attempt_id );
+			$facts   = null === $encoded ? null : json_decode( $encoded, true );
+			if ( ! is_array( $facts ) || ( null !== $operation && ( ( $record['operation'] ?? '' ) . '-' . ( $record['subject_type'] ?? '' ) !== $operation || 'manual' !== ( $facts['deployment_source'] ?? null ) ) ) ) {
+				return null;
+			}
+			if ( null !== $attempt_id ) {
+				$data = $this->attempts?->find_exact( $attempt_id )?->safe_data();
+				if ( null === $data || $data['correlation_id'] !== $correlation || 'failed' !== $data['state'] || 'policy_blocked' !== $data['outcome_code']
+					|| null !== $data['mutation_started_at'] || 'branch' !== $data['package_source'] || ( $record['operation'] ?? null ) !== $data['operation']
+					|| ( $record['subject_type'] ?? null ) !== $data['package_type'] || ( $facts['deployment_source'] ?? null ) !== $data['source'] ) {
+					return null;
+				}
+			}
+			return $encoded;
+		} catch ( Throwable ) {
+			return null; // Missing or unreadable retained evidence keeps the generic explanation.
+		}
+	}
+
+	/** @param array<string,int|string|null> $record */
+	private function branch_facts( array $record, string $correlation, ?int $attempt_id = null ): ?string {
+		$encoded = $record['facts'] ?? null;
+		$facts   = is_string( $encoded ) && strlen( $encoded ) <= 4096 ? json_decode( $encoded, true ) : null;
+		return 'core' === ( $record['provenance'] ?? null ) && in_array( $record['operation'] ?? null, array( 'install', 'update' ), true )
+			&& in_array( $record['subject_type'] ?? null, array( 'plugin', 'theme' ), true )
+			&& 'failed' === ( $record['status'] ?? null ) && 'policy_blocked' === ( $record['reason'] ?? null )
+			&& 1 === preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) && ( $record['correlation'] ?? null ) === $correlation
+			&& is_array( $facts ) && is_int( $facts['deployment_attempt_id'] ?? null ) && $facts['deployment_attempt_id'] > 0
+			&& ( null === $attempt_id || $facts['deployment_attempt_id'] === $attempt_id ) ? $encoded : null;
 	}
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
@@ -152,8 +190,9 @@ final class DeploymentAdminPresenter {
 				return $base;
 			}
 			try {
-				$detail         = $this->attempts->find_exact( $attempt_id );
-				$base['detail'] = null !== $detail && hash_equals( $detail->get_correlation_id(), $reference ) ? $detail : null;
+				$detail                = $this->attempts->find_exact( $attempt_id );
+				$base['detail']        = null !== $detail && hash_equals( $detail->get_correlation_id(), $reference ) ? $detail : null;
+				$base['outcome_facts'] = null !== $base['detail'] ? $this->retained_branch_facts( $reference, $attempt_id ) : null;
 				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->get_outcome()?->get_code() ) {
 					$data    = $base['detail']->safe_data();
 					$summary = $this->attempts->package_activity_summary( (string) $data['package_type'], (string) $data['package_slug'], $base['detail']->get_request()->adoption_token );
@@ -250,6 +289,7 @@ final class DeploymentAdminPresenter {
 						'mutation_started_at' => $mutation,
 						'finished_at'         => $finished,
 						'outcome_code'        => $outcome,
+						'outcome_facts'       => $this->branch_facts( $record, (string) $record['correlation'], $attempt_id ),
 						'resolved_at'         => $resolved_at,
 						'resolved_by'         => $resolved_by,
 						'provider_label'      => $provider_labels[ (string) ( $record['provider'] ?? '' ) ] ?? ( 'gh' === ( $record['provider'] ?? '' ) ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === ( $record['provider'] ?? '' ) ? __( 'Bitbucket', 'ran-booster' ) : (string) ( $record['provider'] ?? '' ) ) ),

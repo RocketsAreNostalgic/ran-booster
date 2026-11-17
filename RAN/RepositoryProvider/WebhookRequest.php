@@ -42,7 +42,7 @@ final class WebhookRequest {
 		array $retained_headers
 	) {
 		if ( strlen( $body ) > self::MAX_BODY_BYTES ) {
-			throw new WebhookRejected( 413, 'Webhook request is too large.' );
+			throw new WebhookRejected( 413, 'Webhook request is too large.', 'request_too_large' );
 		}
 		$retained_headers = $this->validate_retained_headers( $retained_headers );
 		$normalized       = array();

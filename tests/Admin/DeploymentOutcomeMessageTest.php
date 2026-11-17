@@ -13,6 +13,39 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class DeploymentOutcomeMessageTest extends TestCase {
 
+	public function test_only_a_terminal_pre_fence_working_copy_fact_refines_policy_copy(): void {
+		$facts = array(
+			'branch_refusal'                 => 'target_is_working_copy',
+			'deployment_attempt_id'          => 17,
+			'deployment_source'              => 'manual',
+			'deployment_state'               => 'failed',
+			'deployment_outcome'             => 'policy_blocked',
+			'deployment_mutation_started_at' => null,
+		);
+		$copy  = 'This package is a version-controlled working copy, so the update was blocked; update it through its version-control workflow.';
+		self::assertSame( $copy, DeploymentOutcomeMessage::for_code( 'policy_blocked', wp_json_encode( $facts ) ) );
+		$generic = DeploymentOutcomeMessage::for_code( 'policy_blocked' );
+		foreach ( array(
+			array( 'branch_refusal' => 'future_reason' ),
+			array( 'branch_refusal' => true ),
+			array( 'branch_refusal' => 'target_is_working_copy password=canary' ),
+			array( 'deployment_state' => 'succeeded' ),
+			array( 'deployment_outcome' => 'deployed' ),
+			array( 'deployment_mutation_started_at' => '2026-11-17 00:00:00' ),
+			array( 'deployment_attempt_id' => '17' ),
+			array( 'deployment_source' => 'unknown' ),
+			array( 'deployment_settled_by' => 'runner_throw' ),
+			array( 'deployment_resolved_by' => 7 ),
+		) as $invalid ) {
+			self::assertSame( $generic, DeploymentOutcomeMessage::for_code( 'policy_blocked', wp_json_encode( array_replace( $facts, $invalid ) ) ) );
+		}
+		unset( $facts['deployment_mutation_started_at'] );
+		foreach ( array( wp_json_encode( $facts ), null, false, array(), '{invalid', '[]', str_repeat( 'x', 4097 ) ) as $invalid ) {
+			self::assertSame( $generic, DeploymentOutcomeMessage::for_code( 'policy_blocked', $invalid ) );
+		}
+		self::assertSame( DeploymentOutcomeMessage::for_code( 'deployed' ), DeploymentOutcomeMessage::for_code( 'deployed', wp_json_encode( $facts ) ) );
+	}
+
 	public function test_rate_limit_message_is_actionable_and_contains_no_provider_evidence(): void {
 		$message = DeploymentOutcomeMessage::for_code( 'provider_rate_limited' );
 

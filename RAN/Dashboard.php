@@ -292,6 +292,7 @@ class Dashboard {
 			$data['repository_view']                = $repository_view;
 			$data['provider_list_state']            = $this->requested_provider_list_state();
 			$data['replace_credential']             = $this->requested_provider_repository_id( 'replace_credential' );
+			$data['credential_form_request']        = $this->requested_credential_form( $data['provider'] );
 
 			$data['requested_repository_id']            = $this->requested_provider_repository_id();
 			$data                                       = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );
@@ -1158,6 +1159,50 @@ class Dashboard {
 				)
 			)
 		);
+	}
+
+	/**
+	 * Keep only presentation-safe fields from a failed, authorized native save.
+	 *
+	 * @param array<string, mixed> $provider Current provider metadata.
+	 * @return array<string, mixed>
+	 */
+	private function requested_credential_form( array $provider ): array {
+		$form = array(
+			'id'   => $this->requested_provider_repository_id( 'replace_credential' ),
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only form selection; saving still requires the existing capability and nonce checks.
+			'open' => '1' === ( $_GET['add_credential'] ?? null ),
+		);
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Only project a failed native save already authorized by ProviderProfileAdminController; never carry its secret or nonce.
+		$request = $_POST['ran_booster'] ?? null;
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || 'true' === ( $_SERVER['HTTP_HX_REQUEST'] ?? '' ) || ! is_array( $request )
+			|| 'save-access-profile' !== ( $request['action'] ?? null ) || ( $provider['code'] ?? '' ) !== ( $request['provider'] ?? null )
+			|| ! in_array( 'ran_booster_credentials_error', array_column( $this->messages, 'code' ), true ) ) {
+			return $form;
+		}
+		if ( ! is_string( $request['id'] ?? null ) || ( '' !== $request['id'] && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $request['id'] ) ) ) {
+			return $form;
+		}
+		$form = array(
+			'open'          => true,
+			'draft'         => true,
+			'configuration' => array(),
+			'self_destruct' => '1' === ( $request['self_destruct'] ?? null ),
+		);
+		foreach ( array( 'id', 'label', 'kind', 'expires_on' ) as $key ) {
+			$form[ $key ] = is_string( $request[ $key ] ?? null ) ? sanitize_text_field( wp_unslash( $request[ $key ] ) ) : '';
+		}
+		$configuration = is_array( $request['configuration'] ?? null ) ? $request['configuration'] : array();
+		foreach ( $provider['credential_kinds'] ?? array() as $kind ) {
+			if ( $kind['code'] !== $form['kind'] ) {
+				continue;
+			}
+			foreach ( $kind['fields'] as $field ) {
+				$value                                  = $configuration[ $field['key'] ] ?? '';
+				$form['configuration'][ $field['key'] ] = is_string( $value ) ? sanitize_text_field( wp_unslash( $value ) ) : '';
+			}
+		}
+		return $form;
 	}
 
 	/** Keep validation feedback only for this response, never in site storage. */

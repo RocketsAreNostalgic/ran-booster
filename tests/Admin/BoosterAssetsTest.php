@@ -200,7 +200,9 @@ final class BoosterAssetsTest extends TestCase {
 			array( 'toplevel_page_ran-booster', null, true, false ),
 			array( 'toplevel_page_ran-booster', 'overview', true, false ),
 			array( 'toplevel_page_ran-booster', 'troubleshooting', true, false ),
-			array( 'toplevel_page_ran-booster', 'gh', true, false ),
+			array( 'toplevel_page_ran-booster', 'gh', true, true ),
+			array( 'toplevel_page_ran-booster', 'bb', true, true ),
+			array( 'toplevel_page_ran-booster', 'unknown', true, false ),
 			array( 'toplevel_page_ran-booster', 'documentation', true, false ),
 			array( 'ran-booster_page_ran-booster-extensions', null, true, true ),
 			array( 'ran-booster_page_ran-booster-settings', null, true, false ),
@@ -871,7 +873,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_enqueued_styles']
 		);
 		self::assertSame(
-			array( 'ran-booster-htmx', 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y', 'ran-booster-cards', 'ran-booster-notice-preference', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ),
+			array( 'ran-booster-htmx', 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y', 'ran-booster-cards', 'ran-booster-dialog', 'ran-booster-notice-preference', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(

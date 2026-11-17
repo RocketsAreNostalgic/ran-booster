@@ -113,6 +113,29 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertStringContainsString( 'WHERE correlation = %s AND status = \'incomplete\'', $query );
 	}
 
+	public function test_exact_correlation_lookup_is_bounded_and_validated(): void {
+		$correlation = str_repeat( 'a', 32 );
+		self::assertTrue( $this->store->activity_history( array( 'correlation' => $correlation ), limit: 2 )['available'] );
+		$query = end( $this->connection->prepared );
+		self::assertIsArray( $query );
+		self::assertStringContainsString( 'BINARY correlation = %s', $query['sql'] );
+		self::assertStringContainsString( 'LIMIT 2', (string) end( $this->connection->queries ) );
+		self::assertContains( $correlation, $query['args'] );
+		foreach ( array( '', str_repeat( 'a', 31 ), str_repeat( 'A', 32 ), $correlation . "\n", $correlation . 'password=canary' ) as $invalid ) {
+			self::assertFalse( $this->store->activity_history( array( 'correlation' => $invalid ), limit: 2 )['available'] );
+		}
+	}
+
+	public function test_branch_refusal_fact_accepts_only_the_closed_value(): void {
+		self::assertTrue( $this->store->complete( 1, 'failed', 'policy_blocked', facts: array( 'branch_refusal' => 'target_is_working_copy' ) ) );
+		$complete = end( $this->connection->prepared );
+		self::assertIsArray( $complete );
+		self::assertContains( '{"branch_refusal":"target_is_working_copy"}', $complete['args'] );
+		foreach ( array( null, false, 1, 'future_reason', "target_is_working_copy\n", 'target_is_working_copy' . str_repeat( ' ', 300 ) . 'secret=canary' ) as $invalid ) {
+			self::assertFalse( $this->store->complete( 1, 'failed', 'policy_blocked', facts: array( 'branch_refusal' => $invalid ) ) );
+		}
+	}
+
 	public function test_runner_throw_fact_accepts_only_the_closed_value(): void {
 		$correlation = str_repeat( 'a', 32 );
 		self::assertTrue(

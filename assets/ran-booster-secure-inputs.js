@@ -981,7 +981,7 @@
 					(event.detail?.target?.contains(editor) ||
 						event.detail?.target?.contains(form)) &&
 					(event.detail.requestConfig?.elt === form ||
-						(event.detail?.shouldSwap && !confirmDiscard()))
+						!confirmDiscard())
 				) {
 					// Credential saves confirm success by redirect, never by replacing
 					// the editor. Reject login HTML and other unconfirmed responses.

@@ -151,8 +151,9 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$themes   = $this->createStub( ThemeRepository::class );
 		$provider = $this->createMock( RepositoryProvider::class );
 		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( $provider_code ), 'Provider', 'https://provider.example.test/', 'Owner', archive_api_version: 2 ) );
+		self::assertSame( 4, \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::ADMITTED_API_VERSION );
 		$capable = defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' )
-			&& 3 === constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' )
+			&& in_array( constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 3, 4 ), true )
 			&& ( 'gh' !== $provider_code || 40 === $commit_length );
 		$provider->expects( $capable ? self::exactly( 2 ) : self::never() )->method( 'resolve_repository' )->willReturn(
 			new RepositoryDescriptor( ProviderCode::parse( $provider_code ), 'owner/repository', 'example', 'repository-id', false, 'main', null )

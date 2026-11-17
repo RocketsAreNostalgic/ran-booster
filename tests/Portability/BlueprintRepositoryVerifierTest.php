@@ -53,6 +53,23 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		}
 	}
 
+	public function test_api_four_selected_install_is_verified_in_preview_and_apply(): void {
+		self::assertSame( 4, \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::ADMITTED_API_VERSION );
+		$provider = $this->createMock( \RAN\RepositoryProvider\RepositoryProvider::class );
+		$provider->method( 'get_metadata' )->willReturn( new \RAN\RepositoryProvider\ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner', archive_api_version: 2 ) );
+		$provider->expects( self::exactly( 2 ) )->method( 'resolve_repository' )->willReturn( new \RAN\RepositoryProvider\RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'owner/repository', 'example', 'repository-id', false, 'main', null ) );
+		$provider->expects( self::never() )->method( 'prepare_archive' );
+		$registry = new ProviderRegistry( array( $provider ) );
+		$verifier = new BlueprintRepositoryVerifier( $registry, $this->createStub( SecretsFile::class ), GitHubSelectionTestFixture::bind( $registry ) );
+		$package  = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', 40 ) ) );
+		$item     = new BlueprintPlanItem( $package, TargetPackageAction::INSTALL, TargetPackageReason::NONE );
+		foreach ( array( $verifier->for_preview(), $verifier ) as $verification ) {
+			$result = $verification->verify( $item, null );
+			self::assertSame( TargetPackageAction::INSTALL, $result->action );
+			self::assertSame( $package->selection, $result->package->selection );
+		}
+	}
+
 	#[DataProvider( 'unsupported_selected_installs' )]
 	public function test_selected_install_capability_refuses_before_credential_or_provider_access( int $archive_api, int $commit_length ): void {
 		$provider = $this->createMock( \RAN\RepositoryProvider\RepositoryProvider::class );

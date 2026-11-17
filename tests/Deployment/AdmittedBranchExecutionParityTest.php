@@ -21,6 +21,33 @@ use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult;
 use RuntimeException;
 
 final class AdmittedBranchExecutionParityTest extends TestCase {
+	public function test_marker_appearing_at_final_preflight_refuses_under_lock_before_mutation(): void {
+		$host               = new ParityAdmittedHost();
+		$root               = sys_get_temp_dir() . '/ran-booster-final-preflight-' . bin2hex( random_bytes( 8 ) );
+		$host->target_root  = $root;
+		$host->on_preflight = static function () use ( $host, $root ): void {
+			if ( $host->locked ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable final-preflight race target.
+				self::assertTrue( mkdir( $root . '/example', 0700, true ) );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Marker appears only in final preflight under the mutation lock.
+				file_put_contents( $root . '/example/.git', 'gitdir: absent' );
+			}
+		};
+		try {
+			self::assertSame( DeploymentOutcome::CODE_POLICY_BLOCKED, $this->deploy( $host, 'update' ) );
+			self::assertNotContains( 'mutation', $host->events );
+			self::assertNotContains( 'execute', $host->events );
+			self::assertSame( array( 'preflight', 'target', 'cleanup', 'lock:end', 'finish:policy_blocked' ), array_slice( $host->events, -5 ) );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the race marker owned by this test.
+			unlink( $root . '/example/.git' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the disposable package and root.
+			rmdir( $root . '/example' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the disposable root.
+			rmdir( $root );
+		}
+	}
+
 	public function test_downgrade_is_blocked_before_mutation(): void {
 		$host                   = new ParityAdmittedHost();
 		$host->artifact_version = '0.9.0';
@@ -137,6 +164,10 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 	public ?string $policy_failure      = null;
 	public bool $mutation_start_failure = false;
 	public bool $cleanup_failure        = false;
+	public ?string $target_root         = null;
+	public bool $locked                 = false;
+	/** @var null|\Closure():void */
+	public ?\Closure $on_preflight = null;
 	private ParityAdmittedArtifact $artifact;
 
 	public function __construct() {
@@ -167,6 +198,11 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 
 	public function verify_current_head(): void {
 		$this->events[] = 'verify';
+	}
+
+	public function target_directory( BranchDeploymentDeclaration $deployment ): string {
+		$this->events[] = 'target';
+		return ( $this->target_root ?? sys_get_temp_dir() . '/ran-booster-absent-target' ) . '/' . $deployment->slug;
 	}
 
 	public function assert_mutation_allowed(): void {
@@ -218,6 +254,9 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The fixture implementation of preflight retains the production method contract; these inputs do not affect this controlled result.
 	public function preflight( BranchDeploymentDeclaration $deployment, AdmittedBranchArtifact $artifact ): void {
 		$this->events[] = 'preflight';
+		if ( null !== $this->on_preflight ) {
+			( $this->on_preflight )();
+		}
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- The fixture implementation of execute retains the production method contract; these inputs do not affect this controlled result.
@@ -228,9 +267,11 @@ final class ParityAdmittedHost implements AdmittedAttemptJournal, AdmittedArchiv
 
 	public function run( callable $operation ): mixed {
 		$this->events[] = 'lock:start';
+		$this->locked   = true;
 		try {
 			return $operation();
 		} finally {
+			$this->locked   = false;
 			$this->events[] = 'lock:end';
 		}
 	}

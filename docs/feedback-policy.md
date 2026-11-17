@@ -364,24 +364,35 @@ replaces an unread flash, and `render()` requires `manage_options`.
 `respond()` message is open, bounded display text that no closed code can
 represent. The owner approved one narrow, bounded exception: a separate
 user-meta row, `_ran_booster_interaction_outcome`, holding `{at, site, action,
-message}`. It lives 60 seconds, belongs to one user and one site, and is claimed
-once (deleting the exact value) only after the signed marker verifies, so a
-forged, replayed, cross-user, cross-site, expired or tampered marker never reads
-it. It has no event id: the marker's operation, target and destination binding
-is enough, because the row is presentation only and has no operational consumer.
-It is never an Activity, incident or recovery source, and it does not widen
-`FeedbackFlash`, which stays closed-code only. No new catalogue and no API 4 are
-introduced. Release workflow results share this row: their nonce-bound action holds a
-JSON pair of bounded message and remediation text. A verified result claims it
-once; missing or replaced text falls back to the existing Core result copy.
-The newest interaction or workflow result replaces the previous unread row.
-Expired rows are deleted on the next administration load, and
-uninstall removes the key. If the marker verifies but the row is missing,
-expired, replaced or was never written, a full-page or no-JavaScript landing
-shows one fixed neutral persistent info notice (an enhanced landing shows
-nothing extra, because its success is visible in the swapped region): "The
-result details are not available. Check the page or Activity for the current
-state." It does not advise a retry and does not say the operation failed.
+message}`. It lives 60 seconds and belongs to one user and one site. A marker
+must verify before a matching row is read. The signed interaction marker binds
+operation, target and destination. The row is presentation only: it is never
+an Activity, incident or recovery source, and it does not widen `FeedbackFlash`,
+which stays closed-code only. No new catalogue or API 4 is introduced.
+
+Release workflow results share this row. Each redirect carries a fresh random
+identifier bound into its nonce action; the row holds that action and a JSON
+pair of bounded message and remediation text. Identical results therefore do
+not share a marker, and a failed write cannot make the new marker read an older
+row. Missing, expired, replaced, malformed or consumed text produces the fixed
+unavailable-details message, without inferring a failed operation. A valid row
+with empty text uses the existing Core result copy, except an unknown success,
+which uses the unavailable-details message. The newest
+interaction or workflow result replaces the previous unread row. Expired rows
+are reaped on an administration load, and uninstall removes the key.
+
+WordPress metadata deletion first selects matching IDs and then deletes by ID;
+it is not an atomic compare-and-delete. Concurrent claims or replacement can
+therefore race, including deleting a newer row. The in-memory test double does
+not establish atomicity. This inherited transport limitation applies to signed
+interactions as well and needs a separately scoped concurrency fix.
+
+For signed interactions, a missing, expired, replaced or unwritten row shows a
+fixed neutral persistent info notice on full-page and no-JavaScript landings;
+an enhanced landing shows nothing extra because success is visible in the
+swapped region. The notice says: "The result details are not available. Check
+the page or Activity for the current state." It does not advise a retry or say
+the operation failed.
 
 ### Interface contract between the flash (P1) and the host (P2)
 

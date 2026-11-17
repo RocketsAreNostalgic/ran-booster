@@ -287,3 +287,8 @@ function wp_send_json( mixed $response, ?int $status_code = null, int $flags = 0
 	);
 	throw new RuntimeException( 'json-response' );
 }
+
+function wp_generate_uuid4(): string {
+	$hex = bin2hex( random_bytes( 16 ) );
+	return substr( $hex, 0, 8 ) . '-' . substr( $hex, 8, 4 ) . '-4' . substr( $hex, 13, 3 ) . '-8' . substr( $hex, 17, 3 ) . '-' . substr( $hex, 20, 12 );
+}

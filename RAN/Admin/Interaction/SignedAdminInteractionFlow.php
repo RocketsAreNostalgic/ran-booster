@@ -375,7 +375,7 @@ final class SignedAdminInteractionFlow {
 		if ( get_current_blog_id() !== $held['site'] || ! hash_equals( $action, $held['action'] ) ) {
 			return null;
 		}
-		// Deleting the exact value is the claim: the tab that loses the race shows the neutral fallback.
+		// WordPress selects matching metadata IDs before deleting them; replacement can race this claim.
 		return delete_user_meta( $user_id, self::MESSAGE_META_KEY, wp_slash( $held ) ) ? $held['message'] : null;
 	}
 

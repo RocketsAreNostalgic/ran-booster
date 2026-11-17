@@ -186,17 +186,19 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 				self::assertSame( 'hx-redirect', $exception->getMessage() );
 			}
 			$header = (string) $GLOBALS['ran_booster_release_management_test_header'];
-			self::assertSame(
-				'HX-Location: ' . (string) \RAN\Admin\ReleaseManagement\wp_json_encode(
-					array(
-						'path'   => \RAN\Admin\ReleaseManagement\wp_make_link_relative( $native ),
-						'target' => '#wpbody-content',
-						'select' => '#wpbody-content',
-						'swap'   => 'outerHTML show:none',
-					)
-				),
-				$header
-			);
+			self::assertStringStartsWith( 'HX-Location: ', $header );
+			$location = json_decode( substr( $header, strlen( 'HX-Location: ' ) ), true );
+			self::assertIsArray( $location );
+			self::assertSame( '#wpbody-content', $location['target'] );
+			self::assertSame( '#wpbody-content', $location['select'] );
+			self::assertSame( 'outerHTML show:none', $location['swap'] );
+			self::assertIsString( $location['path'] );
+			parse_str( (string) \RAN\Admin\ReleaseManagement\wp_parse_url( $location['path'], PHP_URL_QUERY ), $enhanced_query );
+			self::assertNotSame( $native_query['ran_booster_release_workflow_marker'], $enhanced_query['ran_booster_release_workflow_marker'] );
+			self::assertNotSame( $native_query['ran_booster_release_workflow_result_nonce'], $enhanced_query['ran_booster_release_workflow_result_nonce'] );
+			unset( $native_query['ran_booster_release_workflow_marker'], $native_query['ran_booster_release_workflow_result_nonce'], $enhanced_query['ran_booster_release_workflow_marker'], $enhanced_query['ran_booster_release_workflow_result_nonce'] );
+			self::assertSame( $native_query, $enhanced_query );
+			self::assertSame( \RAN\Admin\ReleaseManagement\wp_parse_url( $native, PHP_URL_FRAGMENT ), \RAN\Admin\ReleaseManagement\wp_parse_url( $location['path'], PHP_URL_FRAGMENT ) );
 		} finally {
 			unset( $_SERVER['HTTP_HX_REQUEST'] );
 			$_POST = array();

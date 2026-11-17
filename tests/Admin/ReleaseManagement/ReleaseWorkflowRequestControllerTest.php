@@ -6,6 +6,7 @@ namespace RAN\Tests\Admin\ReleaseManagement;
 
 require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
 require_once __DIR__ . '/../Interaction/AdminInteractionWordPressFunctions.php';
+require_once __DIR__ . '/../../Support/NoticeIconGlobalWordPressFunctions.php';
 require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
 require_once __DIR__ . '/Support/ReleaseTrackingFacadeDouble.php';
 require_once __DIR__ . '/Support/RepositoryReleaseWorkflowProviderDouble.php';
@@ -72,9 +73,125 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		self::assertSame( $result, $reader->requested_result() );
 		$replayed = $this->controller()->requested_result();
 		self::assertNotNull( $replayed );
-		self::assertSame( '', $replayed['message'] );
+		self::assertSame( 'The result details are not available. Check the page or Activity for the current state.', $replayed['message'] );
 	}
 
+
+
+	public function test_replayed_marker_cannot_consume_a_newer_result_and_failed_write_cannot_read_older_text(): void {
+		$GLOBALS['ran_booster_interaction_test_meta'] = array();
+		$GLOBALS['ran_booster_interaction_test_user'] = 1;
+		$GLOBALS['ran_booster_interaction_test_blog'] = 1;
+		$controller                                   = $this->controller();
+		$method                                       = new \ReflectionMethod( $controller, 'result_query_arguments' );
+		$outcome                                      = array(
+			'type'                  => 'plugin',
+			'identifier'            => 'example/example.php',
+			'code'                  => 'workflow_unknown',
+			'successful'            => true,
+			'preview_key'           => '',
+			'failure_stage'         => '',
+			'diagnostic_code'       => '',
+			'correlation_reference' => '',
+			'message'               => 'First result',
+			'remediation'           => '',
+		);
+		$first                                        = $method->invoke( $controller, $outcome );
+		$_GET     = $first;
+		$original = $this->controller()->requested_result();
+		self::assertNotNull( $original );
+		self::assertSame( 'First result', $original['message'] );
+		$outcome['message'] = 'Second result';
+		$second             = $method->invoke( $controller, $outcome );
+		self::assertNotSame( $first['ran_booster_release_workflow_marker'], $second['ran_booster_release_workflow_marker'] );
+		$_GET = $first;
+		$old  = $this->controller()->requested_result();
+		self::assertNotNull( $old );
+		self::assertStringContainsString( 'details are not available', $old['message'] );
+		$_GET = $second;
+		$new  = $this->controller()->requested_result();
+		self::assertNotNull( $new );
+		self::assertSame( 'Second result', $new['message'] );
+
+		$outcome['message'] = 'Retained older result';
+		$first              = $method->invoke( $controller, $outcome );
+		$GLOBALS['ran_booster_interaction_test_write_fails'] = true;
+		$outcome['message']                                  = 'Failed newer result';
+		$second = $method->invoke( $controller, $outcome );
+		unset( $GLOBALS['ran_booster_interaction_test_write_fails'] );
+		$_GET    = $second;
+		$missing = $this->controller()->requested_result();
+		self::assertNotNull( $missing );
+		self::assertStringContainsString( 'details are not available', $missing['message'] );
+		$_GET     = $first;
+		$retained = $this->controller()->requested_result();
+		self::assertNotNull( $retained );
+		self::assertSame( 'Retained older result', $retained['message'] );
+	}
+
+	public function test_missing_result_details_render_truthfully_for_success_and_failure(): void {
+		$GLOBALS['ran_booster_interaction_test_user'] = 1;
+		$GLOBALS['ran_booster_interaction_test_blog'] = 1;
+		$controller                                   = $this->controller();
+		$method                                       = new \ReflectionMethod( $controller, 'result_query_arguments' );
+		foreach ( array( true, false ) as $successful ) {
+			foreach ( array( 'missing', 'expired', 'replaced', 'consumed', 'failed_write', 'empty' ) as $condition ) {
+				$GLOBALS['ran_booster_interaction_test_meta'] = array();
+				$outcome                                      = array(
+					'type'                  => 'plugin',
+					'identifier'            => 'example/example.php',
+					'code'                  => 'workflow_unknown',
+					'successful'            => $successful,
+					'preview_key'           => '',
+					'failure_stage'         => $successful ? '' : 'unexpected',
+					'diagnostic_code'       => $successful ? '' : 'unexpected_runtime_failure',
+					'correlation_reference' => '',
+					'message'               => 'Provider result',
+					'remediation'           => '',
+				);
+				if ( 'empty' === $condition ) {
+					if ( ! $successful ) {
+						continue;
+					}
+					$outcome['message'] = '';
+				}
+				if ( 'failed_write' === $condition ) {
+					$GLOBALS['ran_booster_interaction_test_write_fails'] = true;
+				}
+				$args = $method->invoke( $controller, $outcome );
+				unset( $GLOBALS['ran_booster_interaction_test_write_fails'] );
+				$key = \RAN\Admin\Interaction\SignedAdminInteractionFlow::MESSAGE_META_KEY;
+				if ( 'missing' === $condition ) {
+					$GLOBALS['ran_booster_interaction_test_meta'] = array();
+				} elseif ( 'expired' === $condition ) {
+					$GLOBALS['ran_booster_interaction_test_meta'][1][ $key ]['at'] = time() - 61;
+				} elseif ( 'replaced' === $condition ) {
+					$method->invoke( $controller, $outcome );
+				} elseif ( 'consumed' === $condition ) {
+					$_GET = $args;
+					self::assertNotNull( $this->controller()->requested_result() );
+				}
+				$_GET   = $args;
+				$result = $this->controller()->requested_result();
+				self::assertNotNull( $result );
+				$html = ( new \RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay() )->result_notice(
+					array(
+						'result_code'        => $result['code'],
+						'result_successful'  => $result['successful'],
+						'failure_stage'      => $result['failure_stage'],
+						'diagnostic_code'    => $result['diagnostic_code'],
+						'result_message'     => $result['message'],
+						'result_remediation' => $result['remediation'],
+					)
+				);
+				self::assertStringContainsString( 'The result details are not available.', $html, $condition );
+				if ( $successful ) {
+					self::assertStringNotContainsString( 'refused', $html, $condition );
+					self::assertStringNotContainsString( 'retry', strtolower( $html ), $condition );
+				}
+			}
+		}
+	}
 
 	public function test_native_workflow_redirect_keeps_provider_text_out_of_query(): void {
 		$provider = new RepositoryReleaseWorkflowProviderDouble(

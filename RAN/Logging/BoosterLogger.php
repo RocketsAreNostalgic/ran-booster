@@ -128,8 +128,8 @@ final class BoosterLogger {
 			return false;
 		}
 
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Capture-only storage warnings must not disclose paths in webhook responses or direct logs.
-		set_error_handler( static fn(): bool => true, E_WARNING );
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Capture-only native storage warnings and fallback notices must not disclose paths in webhook responses or direct logs.
+		set_error_handler( static fn(): bool => true, E_WARNING | E_NOTICE );
 		try {
 			return self::$capture?->append(
 				self::PREFIX . ' Webhook intake {"step":"webhook","event":"intake","reason":"' . $reason . '"}',

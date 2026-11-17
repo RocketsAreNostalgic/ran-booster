@@ -845,6 +845,16 @@ final class PackageAdminController {
 	/** @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $add_context_message */
 	private function manual_failure( Dashboard $dashboard, \Closure $add_context_message, ?Throwable $failure, string $action ): bool {
 		status_header( 400 );
+		if ( $failure instanceof \RAN\Deployment\CredentialShapedRef ) {
+			$add_context_message(
+				new WP_Error( 'ran_booster_credential_shaped_ref', __( 'Deployment refused because the configured branch name resembles a credential. Rename the branch in the repository and configure Booster to use the new name.', 'ran-booster' ) ),
+				array(
+					'operation' => $action,
+					'step'      => 'manual_package_operation',
+				)
+			);
+			return false;
+		}
 		$message = new WP_Error( 'ran_booster_manual_action_failed', __( 'RAN Booster could not complete this action. Reference: ran_booster_manual_action_failed.', 'ran-booster' ) );
 		$context = array(
 			'operation' => $action,

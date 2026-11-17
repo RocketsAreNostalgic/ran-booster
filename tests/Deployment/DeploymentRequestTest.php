@@ -7,6 +7,7 @@ namespace RAN\Tests\Deployment;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Deployment\CredentialShapedRef;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 
@@ -90,6 +91,57 @@ final class DeploymentRequestTest extends TestCase {
 		yield 'blank subdirectory' => array( static fn (): DeploymentRequest => self::make( subdirectory: '   ' ) );
 		yield 'secret assignment' => array( static fn (): DeploymentRequest => self::make( configured_branch: 'token=abcdef' ) );
 		yield 'oversized' => array( static fn (): DeploymentRequest => self::make( repository: str_repeat( 'a', 513 ) ) );
+	}
+
+	/** @return iterable<string, array{string}> */
+	public static function credential_shaped_refs(): iterable {
+		foreach ( array( 'token=ref-canary-840', 'feature/BEARER:ref-canary-840', 'authorization=ref-canary-840', 'secret:ref-canary-840', 'password=ref-canary-840', 'signature:ref-canary-840', 'https://ref-canary-840@example.test/repo', 'ssh://ref-canary-840@example.test/repo' ) as $ref ) {
+			yield $ref => array( $ref );
+		}
+	}
+
+	#[DataProvider( 'credential_shaped_refs' )]
+	public function test_only_credential_shaped_refs_have_a_fixed_typed_refusal( string $ref ): void {
+		foreach ( array( false, true ) as $stored ) {
+			try {
+				if ( $stored ) {
+					DeploymentRequest::from_json( str_replace( '"configured_branch":"main"', '"configured_branch":"' . $ref . '"', $this->request()->to_json() ) );
+				} else {
+					self::make( configured_branch: $ref );
+				}
+				self::fail( 'Credential-shaped refs must remain refused.' );
+			} catch ( CredentialShapedRef $failure ) {
+				self::assertSame( 'The configured ref resembles a credential.', $failure->getMessage() );
+				self::assertNull( $failure->getPrevious() );
+				self::assertStringNotContainsString( 'ref-canary-840', $failure->getMessage() );
+			}
+		}
+	}
+
+	public function test_other_unsafe_fields_and_malformed_refs_keep_generic_validation(): void {
+		foreach ( array(
+			static fn (): DeploymentRequest => self::make( repository: 'token=ref-canary-840' ),
+			static fn (): DeploymentRequest => self::make( subdirectory: 'secret=ref-canary-840' ),
+			static fn (): DeploymentRequest => self::make( configured_branch: '' ),
+			static fn (): DeploymentRequest => self::make( configured_branch: str_repeat( 'a', 256 ) ),
+			static fn (): DeploymentRequest => self::make( configured_branch: "main\n" ),
+			static fn (): DeploymentRequest => self::make( configured_branch: "\xff" ),
+		) as $factory ) {
+			try {
+				$factory();
+				self::fail( 'Unsafe fields must remain refused.' );
+			} catch ( InvalidArgumentException $failure ) {
+				self::assertSame( InvalidArgumentException::class, $failure::class );
+				self::assertSame( 'A deployment request field is unsafe.', $failure->getMessage() );
+			}
+		}
+	}
+
+	public function test_ordinary_refs_retain_the_exact_name_and_canonical_storage(): void {
+		foreach ( array( 'main', 'release/v2.0', 'feature/token-cleanup', 'secret-fix', 'feature/é' ) as $ref ) {
+			$request = self::make( configured_branch: $ref );
+			self::assertSame( $ref, DeploymentRequest::from_json( $request->to_json() )->configured_branch );
+		}
 	}
 
 	public function test_shared_decode_boundary_remains_durable(): void {

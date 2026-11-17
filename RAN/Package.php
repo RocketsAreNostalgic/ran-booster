@@ -15,8 +15,6 @@ interface Package extends RepositoryPackageIdentity {
 
 	public function get_slug(): mixed;
 
-	public function set_installation_slug( ?string $slug ): void;
-
 	public function get_subdirectory(): mixed;
 
 	public function has_subdirectory(): bool;

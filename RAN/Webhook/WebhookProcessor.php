@@ -6,6 +6,7 @@ namespace RAN\Webhook;
 
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentCoordinator;
+use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RuntimeException;
 use RAN\Deployment\DeploymentStorageFailure;
@@ -58,10 +59,14 @@ final readonly class WebhookProcessor {
 			}
 
 			if ( $envelope->is_probe() ) {
+				BoosterLogger::capture_webhook( 'probe_verified' );
+
 				return $this->response( 200, 'Webhook verified.' );
 			}
 
 			if ( $envelope->is_ignored() ) {
+				BoosterLogger::capture_webhook( $envelope->get_reason() ?? 'ignored' );
+
 				return $this->response( 202, 'Webhook event ignored.' );
 			}
 
@@ -70,7 +75,7 @@ final readonly class WebhookProcessor {
 				$authorized = $policy->authorize_webhook( $verification, $event->provider_repository_id, $event->repository );
 				$guard();
 				if ( ! $authorized ) {
-					throw new WebhookRejected( 401, 'Webhook authentication failed.' );
+					throw new WebhookRejected( 401, 'Webhook authentication failed.', 'scope_mismatch' );
 				}
 			}
 			$result = $this->coordinator->accept_webhook(
@@ -84,6 +89,7 @@ final readonly class WebhookProcessor {
 				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
 			}
 			$status = $this->rejection_status( $exception->get_status_code() );
+			BoosterLogger::capture_webhook( $exception->get_reason() ?? 'rejected' );
 
 			return $this->response(
 				$status,

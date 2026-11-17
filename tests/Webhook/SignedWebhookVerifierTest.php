@@ -81,7 +81,7 @@ final class SignedWebhookVerifierTest extends TestCase {
 	}
 
 	#[DataProvider( 'invalid_signature_provider' )]
-	public function test_missing_malformed_uppercase_and_wrong_signatures_fail_uniformly( ?string $signature, int $expected_secret_reads ): void {
+	public function test_missing_malformed_uppercase_and_wrong_signatures_fail_uniformly( ?string $signature, int $expected_secret_reads, string $reason ): void {
 		$headers = array();
 		if ( null !== $signature ) {
 			$headers['X-Hub-Signature-256'] = $signature;
@@ -107,17 +107,18 @@ final class SignedWebhookVerifierTest extends TestCase {
 			fn () => $verifier->verify(
 				new WebhookRequest( ProviderCode::parse( 'gh' ), '{}', $headers, ( new GitHubWebhookPolicy() )->get_retained_headers() ),
 				new GitHubWebhookPolicy()
-			)
+			),
+			$reason
 		);
 		self::assertSame( $expected_secret_reads, $secrets->calls );
 	}
 
-	/** @return iterable<string, array{?string, int}> */
+	/** @return iterable<string, array{?string, int, string}> */
 	public static function invalid_signature_provider(): iterable {
-		yield 'missing' => array( null, 0 );
-		yield 'wrong' => array( 'sha256=' . str_repeat( '0', 64 ), 1 );
-		yield 'uppercase digest' => array( 'sha256=' . str_repeat( 'A', 64 ), 0 );
-		yield 'uppercase algorithm' => array( 'SHA256=' . str_repeat( 'a', 64 ), 0 );
+		yield 'missing' => array( null, 0, 'signature_missing' );
+		yield 'wrong' => array( 'sha256=' . str_repeat( '0', 64 ), 1, 'signature_mismatch' );
+		yield 'uppercase digest' => array( 'sha256=' . str_repeat( 'A', 64 ), 0, 'signature_malformed' );
+		yield 'uppercase algorithm' => array( 'SHA256=' . str_repeat( 'a', 64 ), 0, 'signature_malformed' );
 	}
 
 	public function test_oversized_and_malformed_profile_sets_fail_closed(): void {
@@ -135,6 +136,25 @@ final class SignedWebhookVerifierTest extends TestCase {
 		$this->assert_authentication_failed(
 			fn () => $this->verifier( array( 'invalid' => $invalid ) )->verify( $this->request( '{}' ), new GitHubWebhookPolicy() )
 		);
+	}
+
+	public function test_observed_store_profile_and_secret_failures_keep_uniform_authentication_response(): void {
+		$invalid_secret                  = $this->profile();
+		$invalid_secret['secret']        = 'short';
+		$invalid_profile                 = $this->profile();
+		$invalid_profile['authority_id'] = 7;
+		foreach ( array(
+			array( array(), 'profiles_missing' ),
+			array( array_fill( 0, 17, $this->profile() ), 'profile_invalid' ),
+			array( array( $this->profile() ), 'profile_invalid' ),
+			array( array( 'invalid' => $invalid_profile ), 'profile_invalid' ),
+			array( array( 'invalid' => $invalid_secret ), 'secret_invalid' ),
+		) as [ $materials, $reason ] ) {
+			$this->assert_authentication_failed( fn () => $this->verifier( $materials )->verify( $this->request( '{}' ), new GitHubWebhookPolicy() ), $reason );
+		}
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->method( 'webhook_materials' )->willThrowException( new \RuntimeException( 'private store path and message' ) );
+		$this->assert_authentication_failed( fn () => ( new SignedWebhookVerifier( $secrets ) )->verify( $this->request( '{}' ), new GitHubWebhookPolicy() ), 'secret_store_unavailable' );
 	}
 
 	public function test_sixteen_profiles_can_match_the_last_bounded_secret(): void {
@@ -235,12 +255,15 @@ final class SignedWebhookVerifierTest extends TestCase {
 		);
 	}
 
-	private function assert_authentication_failed( callable $callback ): void {
+	private function assert_authentication_failed( callable $callback, ?string $reason = null ): void {
 		try {
 			$callback();
 			self::fail( 'Webhook verification should fail closed.' );
 		} catch ( WebhookRejected $exception ) {
 			self::assertSame( 401, $exception->get_status_code() );
+			if ( null !== $reason ) {
+				self::assertSame( $reason, $exception->get_reason() );
+			}
 			self::assertSame( 'Webhook authentication failed.', $exception->getMessage() );
 		}
 	}

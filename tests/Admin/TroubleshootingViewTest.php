@@ -15,6 +15,9 @@ use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Deployment\DeploymentAttempt;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
+require_once dirname( __DIR__ ) . '/Activity/ActivityConnection.php';
+require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/Component/AdminActionNormalizer.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Admin/ProviderRepositoryRowsNormalizer.php';
 
@@ -1260,6 +1263,86 @@ final class TroubleshootingViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 			self::assertStringContainsString( '<dt>Reported by</dt><dd>' . $expected_label . '</dd>', $html );
 			self::assertStringNotContainsString( 'Reconcile stopped worker', $html );
+		}
+	}
+
+	public function test_working_copy_list_and_detail_copy_requires_core_provenance_and_exact_tuple(): void {
+		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
+		$journal                                 = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$row                                     = array(
+			'id'                      => 17,
+			'correlation_id'          => str_repeat( 'a', 32 ),
+			'source'                  => 'manual',
+			'operation'               => 'update',
+			'package_type'            => 'plugin',
+			'package_slug'            => 'example',
+			'package_source'          => 'branch',
+			'package_source_revision' => 1,
+			'release_identity'        => null,
+			'provider'                => 'gh',
+			'provider_repository_id'  => 'R_example',
+			'requested_ref'           => 'main',
+			'resolved_ref'            => null,
+			'delivery_id'             => null,
+			'delivery_digest'         => null,
+			'state'                   => 'failed',
+			'mutation_started_at'     => null,
+			'outcome_code'            => 'policy_blocked',
+			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
+			'created_at'              => '2026-11-17 00:00:00',
+			'finished_at'             => '2026-11-17 00:00:01',
+		);
+		$journal->rows                           = array( $row );
+		$attempts                                = new \RAN\Deployment\DeploymentAttemptRepository( $journal, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->createStub( \RAN\Storage\Database::class ) );
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$facts                                   = array(
+			'branch_refusal'                 => 'target_is_working_copy',
+			'deployment_attempt_id'          => 17,
+			'deployment_source'              => 'manual',
+			'deployment_state'               => 'failed',
+			'deployment_outcome'             => 'policy_blocked',
+			'deployment_mutation_started_at' => null,
+		);
+		$record                                  = array(
+			'id'               => 1,
+			'correlation'      => str_repeat( 'a', 32 ),
+			'provenance'       => 'core',
+			'operation'        => 'update',
+			'subject_type'     => 'plugin',
+			'subject_identity' => '<script>canary</script>',
+			'status'           => 'failed',
+			'reason'           => 'policy_blocked',
+			'sort_at'          => '2026-11-17 00:00:00',
+			'provider'         => 'gh',
+			'facts'            => wp_json_encode( $facts ),
+		);
+		$presenter                               = new \RAN\Admin\DeploymentAdminPresenter( attempts: $attempts, activity_store: new \RAN\Activity\ActivityStore( $db ) );
+		$troubleshooting_base                    = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+		try {
+			foreach ( array( 'core', 'provider' ) as $provenance ) {
+				$record['provenance'] = $provenance;
+				$_GET                 = array();
+				$db->read_results     = array( array(), array(), array( $record ) );
+				$deployment_activity  = $presenter->activity();
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+				$index               = (string) ob_get_clean();
+				$_GET                = array(
+					'attempt'   => '17',
+					'reference' => str_repeat( 'a', 32 ),
+				);
+				$db->read_results    = array( array( $record ) );
+				$deployment_activity = $presenter->activity();
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+				$detail = (string) ob_get_clean();
+				foreach ( array( $index, $detail ) as $html ) {
+					self::assertStringContainsString( 'core' === $provenance ? 'version-controlled working copy' : 'A package update policy blocked', $html );
+					self::assertStringNotContainsString( '<script>canary</script>', $html );
+				}
+			}
+		} finally {
+			$_GET = array();
 		}
 	}
 

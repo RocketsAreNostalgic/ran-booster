@@ -228,7 +228,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					RepositoryReleaseInspectionRejected::INVALID_RELEASE,
 					RepositoryReleaseInspectionRejected::INCOMPATIBLE => 'release_invalid',
 					default => 'unable_to_check',
-				}
+				},
+				RepositoryReleaseInspectionRejected::INCOMPATIBLE === $rejection->reason && 'digest_missing' === $rejection->detail
+					? array( 'rejection_reason' => 'digest_missing' ) : array()
 			);
 		} catch ( Throwable $failure ) {
 			BoosterLogger::log_provider_failure(

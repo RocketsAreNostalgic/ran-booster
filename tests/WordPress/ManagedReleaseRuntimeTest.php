@@ -1925,6 +1925,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
 			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ) use ( &$references, &$failure_mode ): RepositoryReleaseInspection {
 				$references[] = $repository;
+				if ( in_array( $failure_mode->value, array( 'digest_missing', 'future_reason' ), true ) ) {
+					throw RepositoryReleaseInspectionRejected::incompatible( $failure_mode->value );
+				}
 				if ( in_array( $repository->credential_id, array( 'package-profile', 'private-profile' ), true ) ) {
 					if ( 'typed' === $failure_mode->value ) {
 						throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.' );
@@ -1959,6 +1962,19 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		self::assertSame( array( 'public-profile', 'public-profile', 'package-profile', 'public-profile', 'package-profile', 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
 		self::assertSame( array( false, false, false, false, false, false ), array_map( static fn ( RepositoryReference $reference ): bool => $reference->private, $references ) );
+
+		foreach ( array( 'digest_missing', 'future_reason' ) as $mode ) {
+			$failure_mode->value = $mode;
+			$inspection          = $facade->inspect_candidate( 'plugin', 'example/example.php', 1, '102', 'v2.0.0', 'stable', $nonce );
+			if ( 'digest_missing' === $mode ) {
+				self::assertInstanceOf( ReleaseTrackingPreflight::class, $inspection );
+				self::assertSame( 'digest_missing', $inspection->reason_code() );
+				self::assertFalse( $inspection->ready() );
+			} else {
+				self::assertNull( $inspection );
+			}
+		}
+		$failure_mode->value = 'typed';
 
 		$current    = 'private';
 		$references = array();
@@ -2387,15 +2403,17 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				++$inspections;
 				throw RepositoryReleaseInspectionRejected::incompatible(
 					array(
-						'detail_known'     => 'package_header_missing',
-						'detail_explained' => 'package_asset_ambiguous',
-						'detail_other'     => 'a_future_reason',
-						'detail_bad'       => 'Not-A-Reason',
-						'failure_wins'     => 'package_asset_ambiguous',
+						'detail_known'        => 'package_header_missing',
+						'detail_explained'    => 'package_asset_ambiguous',
+						'digest_missing'      => 'digest_missing',
+						'digest_failure_wins' => 'digest_missing',
+						'detail_other'        => 'a_future_reason',
+						'detail_bad'          => 'Not-A-Reason',
+						'failure_wins'        => 'package_asset_ambiguous',
 					)[ $mode->value ] ?? null,
 					match ( $mode->value ) {
 						'failure_missing', 'failure_wins' => new ProviderFailure( 'package_asset_missing' ),
-						'failure_generic' => new ProviderFailure( 'release_incompatible' ),
+						'failure_generic', 'digest_failure_wins' => new ProviderFailure( 'release_incompatible' ),
 						'failure_other' => new ProviderFailure( 'release_invalid' ),
 						default => null,
 					}
@@ -2415,29 +2433,31 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 
 		foreach ( array(
-			'none'             => array( 'no_releases', 0, '' ),
+			'none'                => array( 'no_releases', 0, '' ),
 			// The listing's asset names are not trusted to be complete, so a release listed without a ZIP is still inspected.
 			// They only choose the wording after inspection has rejected the release.
-			'no_zip'           => array( 'package_asset_missing', 2, 'v3.0.0' ),
-			'two_zips'         => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
-			'incompatible'     => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'no_zip'              => array( 'package_asset_missing', 2, 'v3.0.0' ),
+			'two_zips'            => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
+			'incompatible'        => array( 'release_incompatible', 2, 'v3.0.0' ),
 			// The newest release names the reason even when the one before it was rejected differently.
-			'newest_one'       => array( 'release_incompatible', 2, 'v3.0.0' ),
-			'newest_none'      => array( 'package_asset_missing', 2, 'v3.0.0' ),
+			'newest_one'          => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'newest_none'         => array( 'package_asset_missing', 2, 'v3.0.0' ),
 			// A provider's own reason wins only when Core has copy for it; a known code without copy, an unknown
 			// one and a malformed one fall back to the reason the listing shows.
-			'detail_explained' => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
-			'detail_known'     => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'detail_explained'    => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
+			'digest_missing'      => array( 'digest_missing', 2, 'v3.0.0' ),
+			'digest_failure_wins' => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'detail_known'        => array( 'release_incompatible', 2, 'v3.0.0' ),
 			// A tag with a character a redirect cannot carry gives no detail, so the generic copy is used.
-			'plus_tag'         => array( 'package_asset_missing', 2, '' ),
-			'detail_other'     => array( 'release_incompatible', 2, 'v3.0.0' ),
-			'detail_bad'       => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
+			'plus_tag'            => array( 'package_asset_missing', 2, '' ),
+			'detail_other'        => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'detail_bad'          => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
 			// A failure the provider carries wins over its legacy detail and over the listing's ZIP count; one Core has
 			// no wording for falls back to the listing.
-			'failure_missing'  => array( 'package_asset_missing', 2, 'v3.0.0' ),
-			'failure_generic'  => array( 'release_incompatible', 2, 'v3.0.0' ),
-			'failure_wins'     => array( 'package_asset_missing', 2, 'v3.0.0' ),
-			'failure_other'    => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
+			'failure_missing'     => array( 'package_asset_missing', 2, 'v3.0.0' ),
+			'failure_generic'     => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'failure_wins'        => array( 'package_asset_missing', 2, 'v3.0.0' ),
+			'failure_other'       => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
 		) as $case => $expected ) {
 			$mode->value                                = $case;
 			[ $reason, $expected_inspections, $detail ] = $expected;

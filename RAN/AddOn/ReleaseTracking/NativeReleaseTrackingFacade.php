@@ -518,6 +518,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 						)
 					);
 					continue;
+				} catch ( RepositoryReleaseInspectionRejected $rejection ) {
+					return RepositoryReleaseInspectionRejected::INCOMPATIBLE === $rejection->reason && 'digest_missing' === $rejection->detail
+						? new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $configuration->package_root(), reason_code: 'digest_missing' ) : null;
 				}
 			}
 			if ( null === $inspection || null === $repository ) {
@@ -1355,6 +1358,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			ReleaseTrackingPreflight::RELEASE_UNAVAILABLE,
 			$package_root,
 			reason_code: match ( true ) {
+				'digest_missing' === $provider_reason => 'digest_missing',
 				null !== $provider_reason && in_array( $provider_reason, self::EXPLAINED_PROVIDER_REASONS, true ) => $provider_reason,
 				0 === $zips => 'package_asset_missing',
 				$zips > 1 => 'package_asset_ambiguous',

@@ -52,6 +52,210 @@ async function flush() {
 	await new Promise((resolve) => setImmediate(resolve));
 }
 
+function observationNode() {
+	return {
+		hidden: true,
+		children: [],
+		dataset: {},
+		textContent: '',
+		addEventListener() {},
+		append(...rows) {
+			this.children.push(...rows);
+		},
+		replaceChildren() {
+			this.children = [];
+		},
+		set innerHTML(value) {
+			throw new Error(`Unexpected HTML sink: ${value}`);
+		},
+	};
+}
+
+const observationI18n = {
+	i18n: {
+		__: (text) => text,
+		_n: (singular, plural, count) => (count === 1 ? singular : plural),
+		sprintf: (text, ...values) =>
+			text.replace(/%(\d+)\$[ds]/g, (_, index) =>
+				String(values[Number(index) - 1])
+			),
+	},
+};
+
+test('listing observation renderer uses fixed reasons and text nodes, bounds samples and resets', () => {
+	const render = Function(
+		'document',
+		'wp',
+		`${earlierDisclosureHelpers}; return renderListingObservations;`
+	)({ createElement: observationNode }, observationI18n);
+	const target = observationNode();
+	render(target, {
+		search_exhausted: true,
+		diagnostics: {
+			scanned_count: 40,
+			dropped_count: 40,
+			truncated: true,
+			drops: [
+				{
+					reason: 'release_metadata_invalid',
+					tag: '<img onerror=evil()>',
+				},
+				{ reason: 'release_immutable_invalid', tag: null },
+				{ reason: 'release_publication_invalid', tag: null },
+				{ reason: 'release_page_invalid', tag: null },
+				{ reason: 'release_draft', tag: null },
+				{ reason: 'tag_not_version', tag: 'V1.2+RC.1' },
+				{ reason: 'prerelease_not_allowed', tag: null },
+				{ reason: 'constructor', tag: 'withheld_unknown' },
+				{ reason: 'release_draft', tag: 'withheld_ninth' },
+			],
+		},
+	});
+	const text = target.children.map((row) => row.textContent).join('\n');
+	assert.equal(target.hidden, false);
+	assert.match(text, /search stopped at its limit/);
+	assert.match(text, /40 release records checked; 40 skipped/);
+	assert.match(text, /<img onerror=evil\(\)>: Release metadata is invalid/);
+	assert.match(
+		text,
+		/V1.2\+RC.1: The release tag is not an accepted version/
+	);
+	assert.match(text, /sample is incomplete/);
+	assert.doesNotMatch(
+		text,
+		/withheld_unknown|withheld_ninth|8 newest|Enter a tag/
+	);
+	render(target, {
+		candidates: [],
+		search_exhausted: false,
+		diagnostics: null,
+	});
+	assert.equal(target.children.length, 1);
+	assert.match(target.children[0].textContent, /details are unavailable/);
+	render(target);
+	assert.equal(target.hidden, true);
+	assert.equal(target.children.length, 0);
+});
+
+for (const picker of ['managed', 'prospective']) {
+	test(`${picker} empty-list loader preserves current observations and ignores stale responses`, async () => {
+		const observations = observationNode();
+		const pending = [];
+		const load = Function(
+			'document',
+			'wp',
+			'observations',
+			'request',
+			`
+			${earlierDisclosureHelpers}
+			let sequence=0, requestSequence=0, selected=null; const window={};
+			const candidateList=document.createElement('div'), candidates={hidden:true};
+			const form={querySelector:()=>({value:'example'})};
+			const hasSubdirectory=()=>false, providerSupported=()=>true;
+			const forceBranchForSubdirectory=()=>{}, forceBranchForUnsupportedProvider=()=>{};
+			const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{};
+			const showPlaceholder=()=>{}, setStatus=()=>{}, setChecking=()=>{}, showUnavailable=()=>{}, showError=()=>{};
+			const showCandidates=()=>{}, isNativeUpdateOffer=()=>false, inspect=()=>{};
+			const candidateElements=new Map(); let selectedOutcome=null;
+			${declaration(picker === 'managed' ? 'list' : 'listCandidates')}
+			return ${picker === 'managed' ? 'list' : 'listCandidates'};
+		`
+		)(
+			{
+				createElement: observationNode,
+				createTextNode: (textContent) => ({ textContent }),
+			},
+			observationI18n,
+			observations,
+			() => {
+				const next = deferred();
+				pending.push(next);
+				return next.promise;
+			}
+		);
+		const response = (count) => ({
+			successful: picker === 'managed',
+			code: 'no_releases',
+			data: {
+				candidates: [],
+				search_exhausted: true,
+				diagnostics: {
+					scanned_count: count,
+					dropped_count: count,
+					drops: [],
+					truncated: true,
+				},
+			},
+		});
+		const first = load();
+		pending[0].resolve(response(3));
+		await first;
+		assert.equal(observations.hidden, false);
+		assert.match(
+			observations.children[1].textContent,
+			/3 release records checked/
+		);
+		const old = load();
+		assert.equal(observations.hidden, true);
+		assert.equal(observations.children.length, 0);
+		const fresh = load();
+		pending[2].resolve(response(4));
+		await fresh;
+		pending[1].resolve(response(2));
+		await old;
+		assert.match(
+			observations.children[1].textContent,
+			/4 release records checked/
+		);
+		const failed = load();
+		pending[3].resolve({
+			successful: false,
+			code: 'unable_to_check',
+			data: {},
+		});
+		await failed;
+		assert.equal(observations.hidden, true);
+		assert.equal(observations.children.length, 0);
+		for (const count of [0, 1]) {
+			for (const stopped of [false, true]) {
+				const next = load();
+				pending.at(-1).resolve({
+					successful: true,
+					code: count
+						? 'release_candidates_available'
+						: 'no_releases',
+					data: {
+						candidates: count
+							? [
+									{
+										release_id: '1',
+										version: '1.0.0',
+										tag: 'v1.0.0',
+										prerelease: false,
+										version_relationship: 'newer',
+									},
+								]
+							: [],
+						search_exhausted: stopped,
+						diagnostics: null,
+					},
+				});
+				await next;
+				const text = observations.children
+					.map((row) => row.textContent)
+					.join('\n');
+				assert.equal(/details are unavailable/.test(text), count === 0);
+				assert.equal(/search stopped at its limit/.test(text), stopped);
+				assert.equal(observations.hidden, count === 1 && !stopped);
+				assert.equal(
+					observations.children.length,
+					Number(count === 0) + Number(stopped)
+				);
+			}
+		}
+	});
+}
+
 test('client hydration normalizes the release source label', () => {
 	// The card keeps its server-rendered heading, description and meta-free layout.
 	assert.doesNotMatch(source, /choiceHeading|choiceMeta|source-meta/);
@@ -332,7 +536,7 @@ test('loading candidates preserves provider order and uses the shared disclosure
 test('a failed selected release preserves earlier candidates', () => {
 	assert.match(
 		declaration('inspectRelease'),
-		/showCandidateUnavailable\(response\.code\)/
+		/showCandidateUnavailable\(response\.code, response\.data\)/
 	);
 	assert.match(
 		declaration('showCandidateUnavailable'),
@@ -532,6 +736,7 @@ test('changing channel invalidates the exact candidate and ignores a stale candi
 		'providerSupported',
 		'forceBranchForUnsupportedProvider',
 		`"use strict";
+		const observations = null, renderListingObservations = () => {};
 		let requestSequence = 0;
 		let selectedRelease = {
 			id: 7,
@@ -652,6 +857,7 @@ test('unsupported providers do not schedule discovery and supported providers re
 		'setChecking',
 		'listCandidates',
 		`"use strict";
+		const observations = null, renderListingObservations = () => {};
 		let requestSequence = 0;
 		let selectedRelease = { id: 7 };
 		let releaseSelected = false;
@@ -782,6 +988,7 @@ test('the Add Releases failure adds the lookup-credential hint only for a retrya
 			const install = {}, details = {}, candidates = {};
 			let selectedRelease = null;
 			const setStatus = noop;
+			const observations = null;
 			${earlierDisclosureHelpers.slice(earlierDisclosureHelpers.indexOf('const appendLookupHint ='))}
 			${declaration('showUnavailable')}
 			return showUnavailable;
@@ -893,6 +1100,7 @@ test('a stale in-flight inspection cannot restore install authority after source
 		'showReady',
 		`
 		let selectedRelease = { id: '42', tag: 'v1.0.0' };
+		const observations = null, renderListingObservations = () => {};
 		let requestSequence = 0, discoveryTimer = null;
 		const setup = {}, install = {}, details = {};
 		const window = { clearTimeout() {} };
@@ -968,7 +1176,7 @@ for (const enhanced of [true, false]) {
 			'window',
 			'wp',
 			'request',
-			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{}, setStatus=()=>{}, showError=()=>{}, showPlaceholder=()=>{}; const candidates=null; ${declaration('list')} return list;`
+			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{}, setStatus=()=>{}, showError=()=>{}, showPlaceholder=()=>{}; const candidates=null, observations=null; const renderListingObservations=()=>{}; ${declaration('list')} return list;`
 		)(
 			candidateList,
 			window,

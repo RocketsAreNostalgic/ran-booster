@@ -42,6 +42,8 @@ final class ManagedReleaseBrowserOperations {
 					'channel'           => $channel,
 					'installed_version' => $status->installed_version(),
 					'candidates'        => array(),
+					'search_exhausted'  => $candidates->search_exhausted,
+					'diagnostics'       => $candidates->diagnostics,
 				)
 			);
 		}
@@ -53,6 +55,8 @@ final class ManagedReleaseBrowserOperations {
 				'channel'           => $channel,
 				'installed_version' => $status->installed_version(),
 				'candidates'        => array_map( $this->candidate_projection( $status->installed_version() ), array_slice( $eligible_candidates, 0, 8 ) ),
+				'search_exhausted'  => $candidates->search_exhausted,
+				'diagnostics'       => $candidates->diagnostics,
 			)
 		);
 	}
@@ -68,6 +72,13 @@ final class ManagedReleaseBrowserOperations {
 		}
 
 		$inspection = $this->browser->inspect_candidate( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce );
+		if ( null !== $inspection && ! $inspection->ready() && 'digest_missing' === $inspection->reason_code() ) {
+			$status = $this->releases->status( $type, $identifier );
+			if ( $revision !== $status->source_revision() || 'release_asset' !== $status->source() ) {
+				return $this->outcome( 'source_changed' );
+			}
+			return $this->outcome( 'unable_to_check', false, array( 'rejection_reason' => 'digest_missing' ) );
+		}
 		if ( null === $inspection || ! $inspection->ready()
 			|| ! hash_equals( $tag, $inspection->release_tag() ) ) {
 			return $this->outcome( 'unable_to_check' );

@@ -311,6 +311,57 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		self::assertSame( array(), $outcome['data'] );
 	}
 
+	public function test_prospective_callbacks_keep_empty_and_mixed_listing_metadata_and_only_exact_digest_refinement(): void {
+		$report = array(
+			'scanned_count' => 4,
+			'dropped_count' => 2,
+			'drops'         => array(
+				array(
+					'reason' => 'tag_not_version',
+					'tag'    => 'V1.2+RC.1',
+				),
+			),
+			'truncated'     => true,
+		);
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( 'stable', 'prerelease' ) as $channel ) {
+				foreach ( array( array(), array( self::candidate() ) ) as $candidates ) {
+					$prospective                             = new ProspectiveReleaseFacadeDouble();
+					$data                                    = array(
+						'candidates'       => $candidates,
+						'channel'          => $channel,
+						'search_exhausted' => true,
+						'diagnostics'      => $report,
+					);
+					$prospective->results['list_candidates'] = array() === $candidates ? ProspectiveReleaseResult::failure( 'no_releases', $data ) : ProspectiveReleaseResult::success( 'release_candidates_available', $data );
+					$controls                                = ReleaseManagementFixture::controls( prospective: $prospective );
+					$result                                  = $controls->process_prospective_request( 'list_candidates', $this->request( 'list_candidates', $type, channel: $channel ) );
+					self::assertSame( array() !== $candidates, $result['successful'] );
+					self::assertSame( $report, $result['data']['diagnostics'] );
+					self::assertTrue( $result['data']['search_exhausted'] );
+					self::assertSame( $channel, $result['data']['channel'] );
+					$data['diagnostics']['context']          = 'remote sentence';
+					$data['search_exhausted']                = 'true';
+					$prospective->results['list_candidates'] = array() === $candidates ? ProspectiveReleaseResult::failure( 'no_releases', $data ) : ProspectiveReleaseResult::success( 'release_candidates_available', $data );
+					$result                                  = $controls->process_prospective_request( 'list_candidates', $this->request( 'list_candidates', $type, channel: $channel ) );
+					self::assertSame( array() !== $candidates, $result['successful'] );
+					self::assertSame( $candidates, $result['data']['candidates'] );
+					self::assertNull( $result['data']['diagnostics'] );
+					self::assertNull( $result['data']['search_exhausted'] );
+				}
+			}
+		}
+		foreach ( array( 'digest_missing', 'digest_missing_suffix', '<script>digest_missing</script>', null ) as $detail ) {
+			$prospective->results['inspect'] = ProspectiveReleaseResult::failure( 'release_invalid', array( 'rejection_reason' => $detail ) );
+			$request                         = $this->request( 'inspect' );
+			$request['release_id']           = '42';
+			$request['release_tag']          = 'v1.2.3';
+			$result                          = $controls->process_prospective_request( 'inspect', $request );
+			self::assertFalse( $result['successful'] );
+			self::assertSame( 'digest_missing' === $detail ? array( 'rejection_reason' => 'digest_missing' ) : array(), $result['data'] );
+		}
+	}
+
 	public function test_list_reader_callable_runs_once_and_rejects_thrown_or_unknown_results(): void {
 		$prospective = new ProspectiveReleaseFacadeDouble();
 		$calls       = 0;

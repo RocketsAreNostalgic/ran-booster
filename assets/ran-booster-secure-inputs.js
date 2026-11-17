@@ -868,7 +868,107 @@
 		);
 	}
 
+	function initCredentialEditor() {
+		const editor = document.querySelector('#ran-booster-credential-editor');
+		if (!editor || editor.dataset.bound === 'true') {
+			return;
+		}
+		editor.dataset.bound = 'true';
+		const form = editor.querySelector('form');
+		const cancel = form.querySelector('[data-credential-cancel]');
+		let dialog = null;
+		let dirty = editor.dataset.credentialDraft === 'true';
+		const confirmDiscard = () => {
+			return (
+				!dirty ||
+				// eslint-disable-next-line no-alert -- Preserve native dirty-form confirmation in this Dialog-only slice.
+				window.confirm(
+					__('Discard unsaved credential changes?', 'ran-booster')
+				)
+			);
+		};
+		form.addEventListener('input', () => {
+			dirty = true;
+		});
+		form.addEventListener('change', () => {
+			dirty = true;
+		});
+		cancel.addEventListener('click', (event) => {
+			if (dialog && !editor.contains(form)) {
+				event.preventDefault();
+				dialog.close();
+			}
+		});
+		editor
+			.querySelector('.ran-booster-credential-kind')
+			.addEventListener('change', () => updateCredentialFields(form));
+		editor
+			.querySelector('.ran-booster-credential-self-destruct')
+			.addEventListener('change', () =>
+				updateCredentialSelfDestructFields(form)
+			);
+		const expiry = form.elements['ran_booster[expires_on]'];
+		expiry.dataset.originalValue = expiry.value;
+		expiry.max = expiry.dataset.providerMax || '';
+		updateCredentialFields(editor);
+		updateCredentialSelfDestructFields(editor);
+		// Native fallback validates the chosen kind on the server; enhanced fields are now scoped.
+		form.noValidate = false;
+		editor.querySelector('[data-credential-native-help]').hidden = true;
+		document
+			.querySelectorAll(
+				'.ran-booster-open-credential-modal[data-modal="access"]'
+			)
+			.forEach((button) => {
+				button.addEventListener('click', (event) => {
+					if (
+						event.ctrlKey ||
+						event.metaKey ||
+						event.shiftKey ||
+						event.altKey ||
+						event.button > 0 ||
+						typeof window.ranBoosterOpenDialog !== 'function'
+					) {
+						return;
+					}
+					const id = button.getAttribute('data-id') || '';
+					if (
+						form.elements['ran_booster[id]'].value !== id ||
+						(!dirty && editor.hidden)
+					) {
+						if (!confirmDiscard()) {
+							event.preventDefault();
+							return;
+						}
+						populateCredentialModal(editor, button);
+						dirty = false;
+					}
+					const replacing =
+						id !== '' &&
+						new URL(window.location.href).searchParams.get(
+							'replace_credential'
+						) === id;
+					dialog = window.ranBoosterOpenDialog(button, form, {
+						title: editor.querySelector(
+							'.ran-booster-dialog__title'
+						).textContent,
+						initialFocus: () =>
+							form.elements[
+								replacing
+									? 'ran_booster[secret]'
+									: 'ran_booster[label]'
+							],
+						disablePointerDismissal: true,
+					});
+					if (dialog) {
+						event.preventDefault();
+					}
+				});
+			});
+	}
+
 	function initCredentialSettings() {
+		initCredentialEditor();
 		const openButtons = document.querySelectorAll(
 			'.ran-booster-open-credential-modal'
 		);
@@ -881,6 +981,9 @@
 		}
 
 		openButtons.forEach(function (button) {
+			if (button.getAttribute('data-modal') === 'access') {
+				return;
+			}
 			if (button.dataset.ranBoosterCredentialOpenBound === 'true') {
 				return;
 			}
@@ -911,31 +1014,7 @@
 
 		if (!credentialRequestHandled) {
 			credentialRequestHandled = true;
-			const requestedReplacement = new URLSearchParams(
-				window.location.search
-			).get('replace_credential');
-			if (requestedReplacement) {
-				const replacementButton = Array.from(openButtons).find(
-					function (button) {
-						return (
-							button.getAttribute('data-modal') === 'access' &&
-							button.getAttribute('data-id') ===
-								requestedReplacement
-						);
-					}
-				);
-				if (replacementButton) {
-					replacementButton.click();
-					const replacementModal = document.querySelector(
-						'[data-credential-modal="access"]'
-					);
-					replacementModal
-						?.querySelector('.ran-booster-secret-input')
-						?.focus();
-				}
-			} else {
-				openRequestedWebhookSecretModal(openButtons);
-			}
+			openRequestedWebhookSecretModal(openButtons);
 		}
 
 		deleteButtons.forEach(function (button) {
@@ -1319,7 +1398,9 @@
 	}
 
 	function updateCredentialSelfDestructFields(modal) {
-		const form = modal.querySelector('form');
+		const form = modal.matches('form')
+			? modal
+			: modal.querySelector('form');
 		const checkbox = form.elements['ran_booster[self_destruct]'];
 		const input = form.elements['ran_booster[expires_on]'];
 		if (!checkbox || !input) {

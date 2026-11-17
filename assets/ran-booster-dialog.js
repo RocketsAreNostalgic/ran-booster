@@ -417,12 +417,12 @@
 			signal: listeners.signal,
 		});
 		doc.addEventListener(
-			'htmx:beforeSwap',
+			'htmx:beforeCleanupElement',
 			function (event) {
-				if (
-					event.detail?.target?.id === 'wpbody-content' &&
-					event.detail.shouldSwap
-				) {
+				// Wait until removal is committed: a later beforeSwap listener
+				// can still refuse a swap. Track origins, including provider regions.
+				const removed = event.detail?.elt;
+				if (markers.some(({ marker }) => removed?.contains(marker))) {
 					handle.teardown();
 				}
 			},

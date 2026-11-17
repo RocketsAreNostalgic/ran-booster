@@ -284,8 +284,7 @@ final class BoosterServiceProvider {
 		);
 		$container->bind( CredentialExpiryReminder::class, $expiry_reminders );
 		$provider_tab_links = new \RAN\Admin\ProviderTabLinks(
-			static fn (): \RAN\Admin\AdminTabRegistry => $container->make( \RAN\Admin\AdminTabRegistry::class ),
-			static fn (): ?\RAN\Admin\GitHubVisibility => $container->make( \RAN\Admin\GitHubVisibility::class )
+			static fn (): \RAN\Admin\AdminTabRegistry => $container->make( \RAN\Admin\AdminTabRegistry::class )
 		);
 		$container->bind( \RAN\Admin\ProviderTabLinks::class, $provider_tab_links );
 		$container->bind( CredentialExpiryNotice::class, new CredentialExpiryNotice( $expiry_reminders, $provider_tab_links ) );

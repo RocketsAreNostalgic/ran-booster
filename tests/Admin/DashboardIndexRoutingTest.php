@@ -1947,7 +1947,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
-	public function test_a_hidden_provider_tab_request_renders_not_found(): void {
+	public function test_a_hidden_provider_tab_remains_accessible(): void {
 		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', true );
 		require_once __DIR__ . '/GitHubVisibilityConnection.php';
 		$providers  = $this->providers( true );
@@ -1955,10 +1955,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$visibility = new \RAN\Admin\GitHubVisibility( new \RAN\Settings\GeneralPreferenceStore(), $providers, $selection, new GitHubVisibilityConnection() );
 		$providers->seal();
 		self::assertSame( 'gh', $visibility->hidden_navigation_key() );
-		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->provider_tab_url( 'gh' ), 'Post-action redirects must not target the hidden tab.' );
-		$links = new \RAN\Admin\ProviderTabLinks( static fn (): AdminTabRegistry => new AdminTabRegistry( $providers, $selection ), static fn (): \RAN\Admin\GitHubVisibility => $visibility );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->provider_tab_url( 'gh' ), 'Post-action redirects target the provider.' );
+		$links = new \RAN\Admin\ProviderTabLinks( static fn (): AdminTabRegistry => new AdminTabRegistry( $providers, $selection ) );
 		$base  = 'https://example.test/wp-admin/admin.php';
-		self::assertSame( $base . '?page=ran-booster&tab=overview', $links->url( $base, 'gh', '&view=credentials' ) );
+		self::assertSame( $base . '?page=ran-booster&tab=gh&view=credentials', $links->url( $base, 'gh', '&view=credentials' ) );
 		self::assertSame( $base . '?page=ran-booster&tab=overview', $links->url( $base, 'ghost', '&view=credentials' ) );
 		self::assertSame( $base . '?page=ran-booster&tab=bb&view=credentials', $links->url( $base, 'bb', '&view=credentials' ) );
 		$failure = array(
@@ -1970,7 +1970,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$instance   = $reflection->newInstanceWithoutConstructor();
 			$reflection->getProperty( 'links' )->setValue( $instance, $links );
 			$credential_url = $reflection->getMethod( 'credential_url' );
-			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $credential_url->invoke( $instance, $failure ), $emitter );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=credentials&replace_credential=saved', $credential_url->invoke( $instance, $failure ), $emitter );
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=bb&view=credentials&replace_credential=saved', $credential_url->invoke( $instance, array( 'provider' => 'bb' ) + $failure ), $emitter );
 		}
 		$hidden_dashboard = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility );
@@ -1978,17 +1978,33 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'tab'   => 'troubleshooting',
 			'panel' => 'installation',
 		);
-		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $hidden_dashboard->get_index()['data']['selection_provider_tab_url'] );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $hidden_dashboard->get_index()['data']['selection_provider_tab_url'] );
 		$_GET = array( 'tab' => 'gh' );
 		foreach ( array( 'recover-github-native', 'adopt-github' ) as $action ) {
-			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $this->redirect_for( $hidden_dashboard, $action ), $action );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->redirect_for( $hidden_dashboard, $action ), $action );
 		}
 
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->method( 'credential_profiles' )->willReturn(
+			array(
+				'saved' => array(
+					'id'            => 'saved',
+					'label'         => 'Saved credential',
+					'kind'          => 'api-key',
+					'configuration' => array(),
+					'source'        => 'file',
+					'configured'    => true,
+				),
+			)
+		);
+		$secrets->method( 'webhook_profiles' )->willReturn( array() );
 		foreach ( array( 'gh', ' GH ' ) as $tab ) {
 			$_GET['tab'] = $tab;
-			$data        = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
+			$data        = $this->dashboard( $secrets, providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
 
-			$this->assert_closed_tab_not_found( $data );
+			self::assertSame( 'gh', $data['selected_provider'] );
+			self::assertSame( 'provider.php', $data['tab_view'] );
+			self::assertNotEmpty( $data['credential_profiles'] );
 			self::assertNotContains( 'gh', array_column( $data['tabs'], 'key' ) );
 		}
 	}

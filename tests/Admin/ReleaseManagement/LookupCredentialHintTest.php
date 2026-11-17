@@ -12,7 +12,6 @@ use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
 use RAN\Admin\AdminTabRegistry;
-use RAN\Admin\GitHubVisibility;
 use RAN\Admin\ProviderTabLinks;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
@@ -32,8 +31,7 @@ final class LookupCredentialHintTest extends TestCase {
 
 	private function links( string $registered = 'gh' ): ProviderTabLinks {
 		return new ProviderTabLinks(
-			static fn (): AdminTabRegistry => new AdminTabRegistry( new ProviderRegistry( array( new ExternalFixtureProvider( $registered ) ) ) ),
-			static fn (): ?GitHubVisibility => null
+			static fn (): AdminTabRegistry => new AdminTabRegistry( new ProviderRegistry( array( new ExternalFixtureProvider( $registered ) ) ) )
 		);
 	}
 

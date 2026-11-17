@@ -46,7 +46,7 @@ final class GitHubVisibility {
 		);
 	}
 
-	/** Core-only navigation decision: a hidden tab also resolves as not found. Provider authority stays intact. */
+	/** Core-only navigation decision: a hidden tab remains directly accessible. Provider authority stays intact. */
 	public function hidden_navigation_key(): ?string {
 		return $this->projection()['hidden'] ? 'gh' : null;
 	}

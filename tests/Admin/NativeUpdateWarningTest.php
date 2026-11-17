@@ -240,8 +240,7 @@ final class NativeUpdateWarningTest extends TestCase {
 		$container->bind(
 			'RAN\\Admin\\ProviderTabLinks',
 			new \RAN\Admin\ProviderTabLinks(
-				static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new \RAN\RepositoryProvider\ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( $tab_provider ) ) ) ),
-				static fn (): ?\RAN\Admin\GitHubVisibility => null
+				static fn (): \RAN\Admin\AdminTabRegistry => new \RAN\Admin\AdminTabRegistry( new \RAN\RepositoryProvider\ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( $tab_provider ) ) ) )
 			)
 		);
 		$container->bind(

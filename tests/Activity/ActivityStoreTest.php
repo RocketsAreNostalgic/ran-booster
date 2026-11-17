@@ -113,6 +113,42 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertStringContainsString( 'WHERE correlation = %s AND status = \'incomplete\'', $query );
 	}
 
+	public function test_runner_throw_fact_accepts_only_the_closed_value(): void {
+		$correlation = str_repeat( 'a', 32 );
+		self::assertTrue(
+			$this->store->progress_by_correlation(
+				$correlation,
+				'deployment.needs_attention',
+				facts: array(
+					'deployment_state'      => 'needs_attention',
+					'deployment_settled_by' => 'runner_throw',
+				)
+			)
+		);
+		$progress = end( $this->connection->prepared );
+		self::assertIsArray( $progress );
+		self::assertContains( '{"deployment_settled_by":"runner_throw","deployment_state":"needs_attention"}', $progress['args'] );
+		self::assertTrue(
+			$this->store->complete_by_correlation(
+				$correlation,
+				'failed',
+				'worker_stopped',
+				facts: array(
+					'deployment_state'      => 'failed',
+					'deployment_settled_by' => 'runner_throw',
+				)
+			)
+		);
+		$complete = end( $this->connection->prepared );
+		self::assertIsArray( $complete );
+		self::assertContains( '{"deployment_settled_by":"runner_throw","deployment_state":"failed"}', $complete['args'] );
+		self::assertFalse( $this->store->progress_by_correlation( $correlation, 'deployment.running', facts: array( 'deployment_settled_by' => 'operator' ) ) );
+		self::assertTrue( $this->store->progress_by_correlation( $correlation, 'deployment.operator_reviewed', facts: array( 'deployment_state' => 'needs_attention' ) ) );
+		$review = end( $this->connection->prepared );
+		self::assertIsArray( $review );
+		self::assertContains( '{"deployment_state":"needs_attention"}', $review['args'] );
+	}
+
 	public function test_coupled_writes_reject_nontransactional_or_unknown_engines_before_mutation(): void {
 		foreach ( array( 'MyISAM', 'MEMORY', null ) as $engine ) {
 			$this->connection->engine = $engine;

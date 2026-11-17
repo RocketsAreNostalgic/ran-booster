@@ -22,6 +22,7 @@ use RAN\Storage\DatabaseLifecycleFailure;
 
 require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+require_once __DIR__ . '/../Activity/ActivityConnection.php';
 require_once __DIR__ . '/../Logging/LoggingWordPressFunctions.php';
 
 final class DeploymentAttemptRepositoryTest extends TestCase {
@@ -1080,6 +1081,42 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 		$this->expectException( DeploymentStorageFailure::class );
 		$this->repository->recent_history();
+	}
+
+	public function test_settlement_fact_tracks_automatic_reconciliation_and_review_rewrites_it(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$activity_connection                     = new \RAN\Tests\Activity\ActivityConnection();
+		$this->repository                        = new DeploymentAttemptRepository(
+			$this->database,
+			'wp_ran_booster_deployment_attempts',
+			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
+			fn ( int $length ): string => str_repeat( chr( $this->random_byte++ ), $length ),
+			$this->database_lifecycle,
+			activity: new ActivityStore( $activity_connection ),
+			selection: $this->queued_selection( $this->database )
+		);
+		$running                                 = $this->manual( 'auto-before' );
+		$this->repository->reconcile_confirmed_stopped( $running->get_id(), runner_throw: true );
+		$write = end( $activity_connection->prepared );
+		self::assertIsArray( $write );
+		self::assertStringContainsString( '"deployment_settled_by":"runner_throw"', implode( ' ', array_map( 'strval', $write['args'] ) ) );
+
+		$running = $this->manual( 'auto-after' );
+		$this->repository->mark_mutation_started( $running->get_id() );
+		$attention = $this->repository->reconcile_confirmed_stopped( $running->get_id(), runner_throw: true );
+		$write     = end( $activity_connection->prepared );
+		self::assertIsArray( $write );
+		self::assertStringContainsString( '"deployment_settled_by":"runner_throw"', implode( ' ', array_map( 'strval', $write['args'] ) ) );
+		$this->repository->resolve_needs_attention( $attention->get_id(), $attention->get_correlation_id(), 1 );
+		$write = end( $activity_connection->prepared );
+		self::assertIsArray( $write );
+		self::assertStringNotContainsString( 'deployment_settled_by', implode( ' ', array_map( 'strval', $write['args'] ) ) );
+
+		$running = $this->manual( 'operator' );
+		$this->repository->reconcile_confirmed_stopped( $running->get_id() );
+		$write = end( $activity_connection->prepared );
+		self::assertIsArray( $write );
+		self::assertStringNotContainsString( 'deployment_settled_by', implode( ' ', array_map( 'strval', $write['args'] ) ) );
 	}
 
 	public function test_pre_fence_reconciliation_fails_the_running_attempt(): void {

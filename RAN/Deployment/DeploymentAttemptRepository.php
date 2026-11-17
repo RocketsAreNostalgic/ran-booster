@@ -765,14 +765,14 @@ final class DeploymentAttemptRepository {
 	}
 
 	/**
-	 * Reconcile only after an administrator confirms the worker stopped.
+	 * Reconcile after an administrator confirms the stop or the owning runner throws.
 	 */
-	public function reconcile_confirmed_stopped( int $attempt_id, ?DateTimeInterface $at = null ): DeploymentAttempt {
+	public function reconcile_confirmed_stopped( int $attempt_id, ?DateTimeInterface $at = null, bool $runner_throw = false ): DeploymentAttempt {
 		RuntimeSupport::assert_managed_operations_allowed();
 		$id = $this->positive_id( $attempt_id );
 
 		return $this->transaction(
-			function () use ( $id, $at ): DeploymentAttempt {
+			function () use ( $id, $at, $runner_throw ): DeploymentAttempt {
 				$row    = $this->locked_attempt_row( $id );
 				$stored = DeploymentAttempt::from_database( $row );
 				$safe   = $stored->safe_data();
@@ -792,7 +792,7 @@ final class DeploymentAttemptRepository {
 				}
 				$attempt = $this->require_exact( $id );
 				$this->assert_attempt_data( $attempt, $data );
-				$this->record_activity_outcome( $attempt, $outcome );
+				$this->record_activity_outcome( $attempt, $outcome, $runner_throw );
 				BoosterLogger::log(
 					'attempt reconciled as stopped',
 					$attempt->log_context() + array(
@@ -915,33 +915,33 @@ final class DeploymentAttemptRepository {
 		}
 	}
 
-	private function require_activity_progress( DeploymentAttempt $attempt, string $stage ): void {
+	private function require_activity_progress( DeploymentAttempt $attempt, string $stage, bool $runner_throw = false ): void {
 		if ( null !== $this->activity ) {
 			$correlation = $attempt->get_correlation_id();
-			if ( ! $this->activity->progress_by_correlation( $correlation, $stage, '', $this->activity_facts( $attempt ) ) ) {
+			if ( ! $this->activity->progress_by_correlation( $correlation, $stage, '', $this->activity_facts( $attempt, $runner_throw ) ) ) {
 				throw DeploymentStorageFailure::unavailable();
 			}
 		}
 	}
 
-	private function record_activity_outcome( DeploymentAttempt $attempt, DeploymentOutcome $outcome ): void {
+	private function record_activity_outcome( DeploymentAttempt $attempt, DeploymentOutcome $outcome, bool $runner_throw = false ): void {
 		if ( null === $this->activity ) {
 			return;
 		}
 		if ( DeploymentState::NEEDS_ATTENTION === $outcome->get_state() ) {
-			$this->require_activity_progress( $attempt, 'deployment.needs_attention' );
+			$this->require_activity_progress( $attempt, 'deployment.needs_attention', $runner_throw );
 			return;
 		}
 		$status = DeploymentState::SUCCEEDED === $outcome->get_state() ? 'succeeded' : 'failed';
-		if ( ! $this->activity->complete_by_correlation( $attempt->get_correlation_id(), $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt ) ) ) {
+		if ( ! $this->activity->complete_by_correlation( $attempt->get_correlation_id(), $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt, $runner_throw ) ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 	}
 
-	/** @return array{deployment_attempt_id:int, deployment_package_slug:string, deployment_source:'manual'|'webhook', deployment_state:string, deployment_requested_ref:string, deployment_resolved_ref:?string, deployment_mutation_started_at:?string, deployment_finished_at:?string, deployment_outcome:?string, deployment_resolved_at:?string, deployment_resolved_by:?int} */
-	private function activity_facts( DeploymentAttempt $attempt ): array {
-		$data = $attempt->safe_data();
-		return array(
+	/** @return array{deployment_attempt_id:int, deployment_package_slug:string, deployment_source:'manual'|'webhook', deployment_state:string, deployment_requested_ref:string, deployment_resolved_ref:?string, deployment_mutation_started_at:?string, deployment_finished_at:?string, deployment_outcome:?string, deployment_resolved_at:?string, deployment_resolved_by:?int, deployment_settled_by?:'runner_throw'} */
+	private function activity_facts( DeploymentAttempt $attempt, bool $runner_throw = false ): array {
+		$data  = $attempt->safe_data();
+		$facts = array(
 			'deployment_attempt_id'          => $data['id'],
 			'deployment_package_slug'        => $data['package_slug'],
 			'deployment_source'              => $data['source'],
@@ -954,6 +954,10 @@ final class DeploymentAttemptRepository {
 			'deployment_resolved_at'         => $data['resolved_at'],
 			'deployment_resolved_by'         => $data['resolved_by'],
 		);
+		if ( $runner_throw ) {
+			$facts['deployment_settled_by'] = 'runner_throw';
+		}
+		return $facts;
 	}
 
 	/** @param array<string, string|null> $data */

@@ -370,7 +370,10 @@ normal background failure notification. If the row cannot be written, the
 attempt stays `running`, nothing is recorded in Activity, and a manual action
 shows a fixed "left running" notice (HTTP 409) with the random reference and a
 link to the Reconcile stopped worker form. A row already settled by someone
-else, for example an operator reconcile, keeps the original failure.
+else, for example an operator reconcile, keeps the original failure. Activity records
+`deployment_settled_by = runner_throw` only for automatic settlement after a
+throw. Operator reconciliation does not add it. When an interrupted attempt is
+reviewed, Activity facts are rebuilt from the attempt, so this fact is removed.
 
 On cron, the worker reports that left-running case as `contended` with the
 attempt reference; nothing consumes the status.

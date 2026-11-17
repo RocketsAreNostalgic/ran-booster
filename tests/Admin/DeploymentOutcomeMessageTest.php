@@ -46,6 +46,12 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertSame( DeploymentOutcomeMessage::for_code( 'deployed' ), DeploymentOutcomeMessage::for_code( 'deployed', wp_json_encode( $facts ) ) );
 	}
 
+	public function test_uncertain_outcomes_do_not_claim_unrecorded_results(): void {
+		self::assertStringNotContainsString( 'completed the update', DeploymentOutcomeMessage::for_code( 'restoration_uncertain' ) );
+		self::assertStringNotContainsString( 'restore the plugin activation state', DeploymentOutcomeMessage::for_code( 'activation_failed' ) );
+		self::assertStringContainsString( 'maintenance file', DeploymentOutcomeMessage::for_code( 'deployment_maintenance_active' ) );
+	}
+
 	public function test_rate_limit_message_is_actionable_and_contains_no_provider_evidence(): void {
 		$message = DeploymentOutcomeMessage::for_code( 'provider_rate_limited' );
 
@@ -128,7 +134,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'deployment_destination_exists'     => 'Link the installed plugin or theme',
 			'deployment_self_update_blocked'    => 'Update Booster separately',
 			'deployment_release_source_blocked' => 'Use Published releases or WordPress Updates',
-			'deployment_maintenance_active'     => 'Wait for the current update to finish',
+			'deployment_maintenance_active'     => 'Check whether an update is still running',
 		);
 		$defined_failed_codes = array_filter(
 			( new \ReflectionClass( DeploymentOutcome::class ) )->getConstants(),
@@ -160,7 +166,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertStringContainsString( 'Version: 0.1.0', DeploymentOutcomeMessage::for_code( 'package_version_missing' ) );
 		self::assertStringContainsString( 'subdirectory is missing', DeploymentOutcomeMessage::for_code( 'package_subdirectory_missing' ) );
 		self::assertStringContainsString( 'newer PHP version', DeploymentOutcomeMessage::for_code( 'package_requires_newer_php' ) );
-		self::assertStringContainsString( 'integrity check', DeploymentOutcomeMessage::for_code( 'archive_integrity_failed' ) );
+		self::assertStringContainsString( 'contents', DeploymentOutcomeMessage::for_code( 'archive_integrity_failed' ) );
 	}
 
 	public function test_generic_failures_escalate_without_leaking_input(): void {

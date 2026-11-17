@@ -204,9 +204,12 @@ final class PackageMutationGuardDispatcherTest extends TestCase {
 		);
 		$package              = new class( $identifier ) extends AbstractPackage {
 			public function __construct( private readonly string $identifier = '' ) {
-				$this->set_installation_slug( str_contains( $identifier, '/' ) ? dirname( $identifier ) : $identifier );
 				$this->set_repository( new ManagedRepository( 'fixture', 'owner/repository', 'R_fixture', 'main' ) );
 				$this->set_adoption_token( 'fixture:R_fixture:11111111-1111-4111-8111-111111111111' );
+			}
+
+			protected function runtime_slug(): string {
+				return str_contains( $this->identifier, '/' ) ? dirname( $this->identifier ) : $this->identifier;
 			}
 
 			public function get_identifier(): mixed {

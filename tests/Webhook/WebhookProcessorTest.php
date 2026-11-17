@@ -301,6 +301,7 @@ final class WebhookProcessorTest extends TestCase {
 		$cases                       = array(
 			'paused provider'   => array( static fn () => $paused->handle( 'gh', $request ), 503, 'Webhook processing is temporarily unavailable.' ),
 			'unknown provider'  => array( static fn () => $processor->handle( 'bb', $request ), 404, 'Webhook provider not found.' ),
+			'invalid provider'  => array( static fn () => $processor->handle( 'INVALID!', $request ), 404, 'Webhook provider not found.' ),
 			'invalid input'     => array(
 				static fn () => $processor->handle(
 					'gh',
@@ -321,11 +322,21 @@ final class WebhookProcessorTest extends TestCase {
 				500,
 				'Webhook processing failed.',
 			),
+			'configured ref'    => array(
+				static fn () => $processor->handle(
+					'gh',
+					static function (): array {
+						throw new \RAN\Deployment\CredentialShapedRef();
+					}
+				),
+				400,
+				'Invalid webhook request.',
+			),
 			'bad signature'     => array( fn () => $processor->handle( 'gh', $this->request( $body, array( 'X-Hub-Signature-256' => 'sha256=' . str_repeat( '0', 64 ) ) ) ), 401, 'Webhook authentication failed.' ),
 			'oversized body'    => array( fn () => $processor->handle( 'gh', $this->request( $body . str_repeat( 'x', 262145 ), array() ) ), 413, 'Webhook request is too large.' ),
 			'ambiguous headers' => array( fn () => $processor->handle( 'gh', $this->request( $body, array( 'X-GitHub-Event' => array( 'push', 'ping' ) ) ) ), 400, 'Invalid webhook request.' ),
 		);
-		foreach ( array( new WebhookRejected( 401, $details ), DeploymentStorageFailure::delivery_conflict() ) as $index => $failure ) {
+		foreach ( array( new WebhookRejected( 401, $details ), DeploymentStorageFailure::delivery_conflict(), new \RAN\Deployment\CredentialShapedRef(), new \InvalidArgumentException( $details ), new RuntimeException( $details ), \RAN\RepositoryProvider\UnknownProvider::for_code(), \RAN\RepositoryProvider\UnsupportedProviderCapability::for_provider() ) as $index => $failure ) {
 			$revoked_db                   = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
 			$revoked_registry             = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
 			$revoked_selection            = $this->queued_selection( $revoked_db, $revoked_registry );
@@ -490,11 +501,33 @@ final class WebhookProcessorTest extends TestCase {
 				self::assertSame( $status, $response->get_status(), $label );
 				self::assertSame( array( 'message' => $message ), $response->get_data(), $label );
 				$reason = array(
-					'bad signature'        => 'signature_mismatch',
-					'oversized body'       => 'request_too_large',
-					'authorization denied' => 'scope_mismatch',
-					'excess fan-out'       => 'rejected',
-					'verified probe'       => 'probe_verified',
+					'bad signature'                => 'signature_mismatch',
+					'oversized body'               => 'request_too_large',
+					'authorization denied'         => 'scope_mismatch',
+					'excess fan-out'               => 'event_fanout_exceeded',
+					'paused provider'              => 'selection_unavailable',
+					'unknown provider'             => 'provider_not_found',
+					'invalid provider'             => 'provider_not_found',
+					'invalid input'                => 'invalid_request',
+					'configured ref'               => 'configured_ref_refused',
+					'ambiguous headers'            => 'invalid_request',
+					'provider failure'             => 'processing_failure',
+					'storage 0'                    => 'delivery_conflict',
+					'storage 1'                    => 'database_unsupported',
+					'storage 2'                    => 'capacity_exhausted',
+					'storage 3'                    => 'storage_failure',
+					'storage 4'                    => 'processing_failure',
+					'revoked 0'                    => 'selection_unavailable',
+					'revoked 1'                    => 'selection_unavailable',
+					'revoked 2'                    => 'selection_unavailable',
+					'revoked 3'                    => 'selection_unavailable',
+					'revoked 4'                    => 'selection_unavailable',
+					'revoked 5'                    => 'selection_unavailable',
+					'revoked 6'                    => 'selection_unavailable',
+					'revoked during verification'  => 'selection_unavailable',
+					'revoked during normalization' => 'selection_unavailable',
+					'revoked during admission'     => 'selection_unavailable',
+					'verified probe'               => 'probe_verified',
 				)[ $label ] ?? null;
 				if ( in_array( $label, WebhookRejected::REASONS, true ) ) {
 					$reason = $label;
@@ -666,6 +699,81 @@ final class WebhookProcessorTest extends TestCase {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the empty owned capture directory after restoring its original path.
 			rmdir( $capture_directory );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- All fixture files have been removed.
+			rmdir( $directory );
+		}
+	}
+
+	/** @return iterable<string, array{bool}> */
+	public static function wordpress_debug_modes(): iterable {
+		yield 'enabled' => array( true );
+		yield 'disabled' => array( false );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'wordpress_debug_modes' )]
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_intake_capture_is_private_with_wordpress_debug_log_in_either_mode( bool $enabled ): void {
+		define( 'WP_DEBUG_LOG', $enabled );
+		$directory = sys_get_temp_dir() . '/ran-webhook-private-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- This subprocess owns its private fixture directory.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$now     = time();
+		$capture = new \RAN\Logging\TemporaryDebugCapture(
+			$directory . '/secrets.php',
+			static function () use ( &$now ): int {
+				$now += 5;
+				return $now;
+			}
+		);
+		$capture->start();
+		$previous_log = ini_get( 'error_log' );
+		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Isolate and restore the native log for this subprocess.
+		self::assertNotFalse( ini_set( 'error_log', $directory . '/php.log' ) );
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Prove the native log destination works.
+		error_log( 'native-positive-control' );
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
+		try {
+			self::assertTrue( \RAN\Logging\BoosterLogger::log( 'ordinary-positive-control' ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read only this subprocess's native log.
+			$baseline = file_get_contents( $directory . '/php.log' );
+			self::assertIsString( $baseline );
+			self::assertStringContainsString( 'native-positive-control', $baseline );
+			self::assertSame( $enabled, str_contains( $baseline, 'ordinary-positive-control' ) );
+			self::assertCount( 1, $capture->snapshot()['entries'] );
+			$capture->start();
+			$processor = $this->event_processor( new WebhookProcessorCoordinator( null, null, DeploymentStorageFailure::delivery_conflict() ) );
+			$body      = '{"private":"body-canary"}';
+			$headers   = headers_list();
+			ob_start();
+			$response = $processor->handle( 'gh', $this->request( $body, $this->signed_headers( $body ) ) );
+			$output   = ob_get_clean();
+			self::assertSame( '', $output );
+			self::assertSame( $headers, headers_list() );
+			self::assertSame( 409, $response->get_status() );
+			self::assertSame( array( 'message' => 'Webhook delivery conflict.' ), $response->get_data() );
+			$entries = $capture->snapshot()['entries'];
+			self::assertCount( 1, $entries );
+			self::assertSame( '[ran-booster] Webhook intake {"step":"webhook","event":"intake","reason":"delivery_conflict"}', $entries[0]['line'] );
+			self::assertMatchesRegularExpression( '/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/', $entries[0]['at'] );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Verify no intake line reached the native log.
+			self::assertSame( $baseline, file_get_contents( $directory . '/php.log' ) );
+			$capture->start();
+			$accepted = $this->event_processor( new WebhookProcessorCoordinator() )->handle( 'gh', $this->request( $body, $this->signed_headers( $body ) ) );
+			self::assertSame( 202, $accepted->get_status() );
+			self::assertSame( array(), $capture->snapshot()['entries'] );
+		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			if ( is_string( $previous_log ) ) {
+				// phpcs:ignore WordPress.PHP.IniSet.Risky -- Restore the native log destination.
+				ini_set( 'error_log', $previous_log );
+			}
+			foreach ( array( '/ran-booster-debug.php', '/ran-booster-debug.php.lock', '/php.log' ) as $file ) {
+				if ( is_file( $directory . $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the owned fixture files.
+					unlink( $directory . $file );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the empty owned directory.
 			rmdir( $directory );
 		}
 	}
@@ -954,6 +1062,15 @@ final class WebhookProcessorTest extends TestCase {
 
 		self::assertSame( 400, $response->get_status() );
 		self::assertSame( 0, $spy->calls );
+		$within_limit = array_slice( $events, 0, 32 );
+		$processor    = $this->processor(
+			new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( ...$within_limit ) ) ) ),
+			$coordinator
+		);
+		$response     = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
+		self::assertSame( 202, $response->get_status() );
+		self::assertSame( 1, $spy->calls );
+		self::assertCount( 32, $spy->events );
 	}
 
 	public function test_intake_receives_only_events_and_body_digest(): void {

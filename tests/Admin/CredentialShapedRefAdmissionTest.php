@@ -84,7 +84,14 @@ final class CredentialShapedRefAdmissionTest extends TestCase {
 		$this->directory = sys_get_temp_dir() . '/ran-booster-ref-refusal-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- The debug sink belongs exclusively to this isolated test.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
-		$this->capture = new TemporaryDebugCapture( $this->directory . '/secrets.php' );
+		$clock         = 1_800_000_000;
+		$this->capture = new TemporaryDebugCapture(
+			$this->directory . '/secrets.php',
+			static function () use ( &$clock ): int {
+				$clock += 5;
+				return $clock;
+			}
+		);
 		$this->capture->start();
 		BoosterLogger::configure_capture( $this->capture );
 	}
@@ -140,6 +147,7 @@ final class CredentialShapedRefAdmissionTest extends TestCase {
 			$notice
 		);
 
+		self::assertSame( array(), $this->capture->snapshot()['entries'] );
 		$response = $this->webhook();
 		self::assertSame( 400, $response->get_status() );
 		self::assertSame( array( 'message' => 'Invalid webhook request.' ), $response->get_data() );
@@ -147,7 +155,12 @@ final class CredentialShapedRefAdmissionTest extends TestCase {
 		self::assertSame( array(), $this->database->queries );
 		self::assertSame( array(), $this->database->management );
 		self::assertEquals( $before, $this->package );
-		self::assertSame( array(), $this->capture->snapshot()['entries'] );
+		$entries = $this->capture->snapshot()['entries'];
+		self::assertCount( 1, $entries );
+		self::assertSame(
+			'[ran-booster] Webhook intake {"step":"webhook","event":"intake","reason":"configured_ref_refused"}',
+			$entries[0]['line']
+		);
 		$sinks = wp_json_encode( array( $notice, $response->get_data(), $this->database->rows, $this->database->queries, $this->capture->snapshot() ), JSON_UNESCAPED_SLASHES );
 		self::assertIsString( $sinks );
 		self::assertStringNotContainsString( $ref, $sinks );

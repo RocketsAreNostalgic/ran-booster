@@ -233,26 +233,30 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		self::assertSame( $subdirectory, $request->subdirectory );
 	}
 
-	/** @return iterable<string, array{string, bool}> */
+	/** @return iterable<string, array{string, bool, bool}> */
 	public static function link_targets(): iterable {
 		foreach ( array( 'plugin', 'theme' ) as $type ) {
 			foreach ( array( false, true ) as $exact ) {
-				yield $type . ( $exact ? ' identifier' : ' slug' ) => array( $type, $exact );
+				foreach ( array( false, true ) as $managed ) {
+					yield $type . ( $exact ? ' identifier' : ' slug' ) . ( $managed ? ' repeat' : ' fresh' ) => array( $type, $exact, $managed );
+				}
 			}
 		}
 	}
 
 	#[DataProvider( 'link_targets' )]
-	public function test_link_only_uses_installed_identity_by_slug_or_exact_identifier( string $type, bool $exact ): void {
+	public function test_link_only_uses_installed_identity_by_slug_or_exact_identifier( string $type, bool $exact, bool $managed ): void {
 		$package = $this->package( $type, 'mypackage', 'packages/MyPackage' );
 		$this->inventory( $type, $package );
 		$repository = 'plugin' === $type ? $this->plugins : $this->themes;
 		$repository->expects( self::once() )->method( $exact ? ( 'plugin' === $type ? 'installed_plugin_from_file' : 'installed_theme_from_stylesheet' ) : 'from_slug' )
 			->with( $exact ? $package->get_identifier() : 'mypackage' )->willReturn( $package );
-		$repository->expects( self::once() )->method( 'adopt' )->with( $package )->willReturn( PackageMutationResult::changed( PackageStorageOperation::INSERT ) );
-		$coordinator = $this->createMock( DeploymentCoordinator::class );
-		$coordinator->expects( self::never() )->method( 'execute_manual' );
-		$service               = new PackageOperationService( $this->plugins, $this->themes, $coordinator, new PackageRemovalService( $this->plugins, $this->themes, $this->createStub( \RAN\PackageRemoval\PackageRemovalGateway::class ), $this->attempts, new WordPressUpdaterLock() ), new WordPressUpdaterLock(), $this->source_guard );
+		$repository->expects( self::once() )->method( 'adopt' )->with( $package )->willReturn(
+			$managed
+				? PackageMutationResult::conflict( PackageStorageOperation::INSERT, 'ran_booster_storage_adoption_conflict', 'Existing package management data was found.' )
+				: PackageMutationResult::changed( PackageStorageOperation::INSERT )
+		);
+		$service               = $this->link_service();
 		$input                 = $this->install_input() + array( 'dry-run' => '1' );
 		$input['subdirectory'] = $exact ? 'packages/MyPackage' : 'packages/mypackage';
 		if ( $exact ) {
@@ -260,11 +264,81 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 			$input[ 'plugin' === $type ? 'file' : 'stylesheet' ] = (string) $package->get_identifier();
 		}
 		$result = $service->execute( PackageOperation::from_input( 'install-' . $type, $input ) );
-		self::assertSame( 'linked', $result['status'] );
+		self::assertSame( $managed ? 'already-managed' : 'linked', $result['status'] );
 		self::assertArrayHasKey( 'package', $result );
 		self::assertSame( $package, $result['package'] ?? null );
 		self::assertSame( 'mypackage', $package->get_slug() );
 		self::assertSame( $input['subdirectory'], $package->get_subdirectory() );
+	}
+
+	/** @return iterable<string, array{string, string}> */
+	public static function conflicting_management(): iterable {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( 'identifier', 'provider', 'repository-id', 'repository', 'subdirectory' ) as $mismatch ) {
+				yield "$type $mismatch" => array( $type, $mismatch );
+			}
+		}
+	}
+
+	#[DataProvider( 'conflicting_management' )]
+	public function test_repeat_link_refuses_conflicting_management( string $type, string $mismatch ): void {
+		$requested = $this->package( $type, 'mypackage', 'packages/MyPackage' );
+		$existing  = $this->package( $type, 'mypackage', 'packages/MyPackage' );
+		if ( 'identifier' === $mismatch ) {
+			( new ReflectionClass( $existing ) )->getProperty( 'plugin' === $type ? 'file' : 'stylesheet' )->setValue(
+				$existing,
+				'plugin' === $type ? 'mypackage/foreign.php' : 'foreign-theme'
+			);
+		} elseif ( 'subdirectory' === $mismatch ) {
+			$existing->set_subdirectory( 'packages/foreign-source' );
+		} else {
+			$existing->set_repository(
+				new ManagedRepository(
+					'provider' === $mismatch ? 'fixture' : 'gh',
+					'repository' === $mismatch ? 'owner/other' : 'owner/example',
+					'repository-id' === $mismatch ? 'R_other' : 'R_example',
+					'main'
+				)
+			);
+		}
+		$this->inventory( $type, $requested, $existing );
+		$repository = 'plugin' === $type ? $this->plugins : $this->themes;
+		$repository->method( 'plugin' === $type ? 'installed_plugin_from_file' : 'installed_theme_from_stylesheet' )->willReturn( $requested );
+		$repository->method( 'adopt' )->willReturn(
+			PackageMutationResult::conflict(
+				PackageStorageOperation::INSERT,
+				'ran_booster_storage_adoption_conflict',
+				'Existing package management data was found.'
+			)
+		);
+		$input   = $this->install_input() + array(
+			'dry-run'                                  => '1',
+			'exact_identifier'                         => '1',
+			'plugin' === $type ? 'file' : 'stylesheet' => (string) $requested->get_identifier(),
+		);
+		$service = $this->link_service();
+		$this->expectException( \RAN\Storage\PackageStorageFailure::class );
+		$service->execute( PackageOperation::from_input( 'install-' . $type, $input ) );
+	}
+
+	private function link_service(): PackageOperationService {
+		$coordinator = $this->createMock( DeploymentCoordinator::class );
+		$coordinator->expects( self::never() )->method( 'execute_manual' );
+		$lock = new WordPressUpdaterLock();
+		return new PackageOperationService(
+			$this->plugins,
+			$this->themes,
+			$coordinator,
+			new PackageRemovalService(
+				$this->plugins,
+				$this->themes,
+				$this->createStub( \RAN\PackageRemoval\PackageRemovalGateway::class ),
+				$this->attempts,
+				$lock
+			),
+			$lock,
+			$this->source_guard
+		);
 	}
 
 	/** @return array<string, array{string}> */
@@ -310,11 +384,11 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		$coordinator->execute_manual( $this->update_command( $type, $package ) );
 	}
 
-	private function inventory( string $type, Plugin|Theme $package ): void {
+	private function inventory( string $type, Plugin|Theme $package, Plugin|Theme|null $existing = null ): void {
 		( 'plugin' === $type ? $this->plugins : $this->themes )->method( 'from_slug' )->willReturn( $package );
 		$this->plugins->method( 'all_deployment_plugins' )->willReturn( 'plugin' === $type ? array( $package ) : array() );
 		$this->themes->method( 'all_deployment_themes' )->willReturn( 'theme' === $type ? array( $package ) : array() );
-		( 'plugin' === $type ? $this->plugins : $this->themes )->method( 'plugin' === $type ? 'booster_plugin_from_file' : 'booster_theme_from_stylesheet' )->willReturn( $package );
+		( 'plugin' === $type ? $this->plugins : $this->themes )->method( 'plugin' === $type ? 'booster_plugin_from_file' : 'booster_theme_from_stylesheet' )->willReturn( $existing ?? $package );
 	}
 
 	private function package( string $type, string $slug, string $subdirectory ): Plugin|Theme {

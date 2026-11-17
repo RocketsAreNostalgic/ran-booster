@@ -253,14 +253,17 @@ class DeploymentCoordinator {
 	 * original failure; an unwritable row stays running and is reported as such.
 	 */
 	private function settle_after_throw( DeploymentAttempt $attempt, Throwable $failure ): DeploymentOutcome {
-		$context = $attempt->log_context() + array( 'step' => 'execute_running' );
+		$context = $attempt->log_context() + array(
+			'correlation_id' => $attempt->get_correlation_id(),
+			'step'           => 'execute_running',
+		);
 		BoosterLogger::log_exception( 'deployment execution threw', $failure, $context );
 		try {
 			$current = $this->attempts->find_exact( $attempt->get_id() );
 			if ( null !== $current && DeploymentState::RUNNING !== $current->get_state() ) {
 				$settled = null;
 			} else {
-				$settled = $this->attempts->reconcile_confirmed_stopped( $attempt->get_id() );
+				$settled = $this->attempts->reconcile_confirmed_stopped( $attempt->get_id(), runner_throw: true );
 			}
 		} catch ( Throwable $storage ) {
 			BoosterLogger::log_exception( 'deployment attempt left running', $storage, $context );

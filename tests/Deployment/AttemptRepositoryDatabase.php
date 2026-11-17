@@ -58,6 +58,8 @@ namespace RAN\Tests\Deployment {
 		}
 		/** @var array<int, array<string, mixed>> */
 		public array $rows = array();
+		/** @var list<array<string,mixed>> */
+		public array $activity_rows = array();
 		/** @var array<string, string> Exact installed identifier to stored lifetime. */
 		public array $management = array();
 		/** @var array<string, string> */
@@ -65,6 +67,7 @@ namespace RAN\Tests\Deployment {
 		/** @var list<string> */
 		public array $queries                = array();
 		public ?string $fail_query_contains  = null;
+		public ?\Throwable $query_failure    = null;
 		public ?string $zero_query_contains  = null;
 		public bool $fail_insert             = false;
 		public ?int $fail_insert_number      = null;
@@ -74,7 +77,7 @@ namespace RAN\Tests\Deployment {
 		public mixed $tamper_insert_value    = null;
 		public ?string $tamper_update_column = null;
 		public mixed $tamper_update_value    = null;
-		/** @var array{rows: array<int, array<string, mixed>>, options: array<string, string>}|null */
+		/** @var array{rows: array<int, array<string, mixed>>, options: array<string, string>, activity: list<array<string,mixed>>}|null */
 		private ?array $snapshot      = null;
 		private int $insert_calls     = 0;
 		public string $server_info    = '8.4.6';
@@ -108,6 +111,11 @@ namespace RAN\Tests\Deployment {
 		/** @param array<string, mixed> $data */
 		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassBeforeLastUsed -- Preserve the wpdb insert signature; this fixture owns one in-memory table.
 		public function insert( string $table, array $data ): int|false {
+			if ( 'wp_ran_booster_activity' === $table ) {
+				$data['id']            = count( $this->activity_rows ) + 1;
+				$this->activity_rows[] = $data;
+				return 1;
+			}
 			++$this->insert_calls;
 			if ( $this->fail_insert || $this->insert_calls === $this->fail_insert_number ) {
 				return false;
@@ -145,6 +153,12 @@ namespace RAN\Tests\Deployment {
 			}
 			$this->queries[] = $query;
 			if ( null !== $this->fail_query_contains && str_contains( $query, $this->fail_query_contains ) ) {
+				if ( null !== $this->query_failure ) {
+					$failure                   = $this->query_failure;
+					$this->query_failure       = null;
+					$this->fail_query_contains = null;
+					throw $failure;
+				}
 				$this->last_error = 'database details must not escape';
 
 				return false;
@@ -155,8 +169,9 @@ namespace RAN\Tests\Deployment {
 			if ( 'START TRANSACTION' === $query ) {
 				$this->selection->query( $query );
 				$this->snapshot = array(
-					'rows'    => $this->rows,
-					'options' => $this->option_rows,
+					'rows'     => $this->rows,
+					'options'  => $this->option_rows,
+					'activity' => $this->activity_rows,
 				);
 
 				return 1;
@@ -173,12 +188,28 @@ namespace RAN\Tests\Deployment {
 			if ( 'ROLLBACK' === $query ) {
 				$this->selection->query( $query );
 				if ( null !== $this->snapshot ) {
-					$this->rows        = $this->snapshot['rows'];
-					$this->option_rows = $this->snapshot['options'];
+					$this->rows          = $this->snapshot['rows'];
+					$this->option_rows   = $this->snapshot['options'];
+					$this->activity_rows = $this->snapshot['activity'];
 				}
 				$this->snapshot = null;
 
 				return 1;
+			}
+			if ( preg_match( "/^UPDATE wp_ran_booster_activity SET (.+) WHERE correlation = '([a-f0-9]{32})' AND status = 'incomplete'$/", $query, $matches ) === 1 ) {
+				foreach ( $this->activity_rows as &$activity ) {
+					if ( $activity['correlation'] !== $matches[2] || 'incomplete' !== $activity['status'] ) {
+						continue;
+					}
+					preg_match_all( "/([a-z_]+) = '((?:\\\\.|[^'])*)'/", $matches[1], $assignments, PREG_SET_ORDER );
+					foreach ( $assignments as $assignment ) {
+						$activity[ $assignment[1] ] = stripslashes( $assignment[2] );
+					}
+					unset( $activity );
+					return 1;
+				}
+				unset( $activity );
+				return 0;
 			}
 			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('([^']+)', '([^']+)', 'no'\)$/", $query, $matches ) === 1 ) {
 				if ( isset( $this->option_rows[ stripslashes( $matches[1] ) ] ) ) {
@@ -282,6 +313,46 @@ namespace RAN\Tests\Deployment {
 				$result           = $this->selection->get_results( $query );
 				$this->last_error = $this->selection->last_error;
 				return $result;
+			}
+			if ( str_contains( $query, 'information_schema.TABLES' ) && str_contains( $query, 'wp_ran_booster_activity' ) ) {
+				return array( (object) array( 'engine' => 'InnoDB' ) );
+			}
+			if ( str_contains( $query, 'information_schema.STATISTICS' ) && str_contains( $query, 'wp_ran_booster_activity' ) ) {
+				return array_map(
+					static fn ( array $row ): object => (object) $row,
+					array(
+						array(
+							'index_name' => 'PRIMARY',
+							'non_unique' => 0,
+							'columns'    => 'id',
+							'prefixes'   => 0,
+						),
+						array(
+							'index_name' => 'correlation',
+							'non_unique' => 0,
+							'columns'    => 'correlation',
+							'prefixes'   => 0,
+						),
+						array(
+							'index_name' => 'history',
+							'non_unique' => 1,
+							'columns'    => 'sort_at,id',
+							'prefixes'   => 0,
+						),
+						array(
+							'index_name' => 'summary',
+							'non_unique' => 1,
+							'columns'    => 'context_key,purpose,id',
+							'prefixes'   => 0,
+						),
+					)
+				);
+			}
+			if ( preg_match( "/^SELECT id FROM wp_ran_booster_activity WHERE correlation = '([a-f0-9]{32})'$/", $query, $match ) === 1 ) {
+				return array_map( static fn ( array $row ): object => (object) array( 'id' => $row['id'] ), array_values( array_filter( $this->activity_rows, static fn ( array $row ): bool => $row['correlation'] === $match[1] ) ) );
+			}
+			if ( 'SELECT id FROM wp_ran_booster_activity WHERE id = 0' === $query ) {
+				return array();
 			}
 			if ( 'SHOW ENGINES' === $query ) {
 				++$this->capability_reads;

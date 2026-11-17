@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import vm from 'node:vm';
 
 const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-secure-inputs.js', import.meta.url),
@@ -10,6 +11,64 @@ const editorSource = source.slice(
 	source.indexOf('\tfunction initCredentialEditor()'),
 	source.indexOf('\tfunction initCredentialSettings()')
 );
+const dialogSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-dialog.js', import.meta.url),
+	'utf8'
+);
+
+test('confirmation adapter resolves once and returns focus on cancellation', async () => {
+	let rendered;
+	let unmounted = 0;
+	let focused = 0;
+	let accepted = 0;
+	let cancelled = 0;
+	const host = { remove() {} };
+	const document = { body: { append() {} }, createElement: () => host };
+	const trigger = {
+		ownerDocument: document,
+		isConnected: true,
+		focus: () => focused++,
+	};
+	const window = {
+		ranBoosterUI: {
+			version: '0.26.0',
+			AlertDialog: { Root: 'root', Popup: 'popup' },
+		},
+		wp: {
+			element: {
+				createElement: (type, props, child) => ({ type, props, child }),
+				createRoot: () => ({
+					render: (value) => {
+						rendered = value;
+					},
+					unmount: () => unmounted++,
+				}),
+				flushSync: (callback) => callback(),
+			},
+		},
+	};
+	vm.runInNewContext(dialogSource, { window, queueMicrotask });
+	const open = () =>
+		window.ranBoosterOpenDialog.confirm(
+			trigger,
+			'Discard?',
+			() => accepted++,
+			() => cancelled++
+		);
+	assert.equal(open(), true);
+	rendered.props.onOpenChange(false);
+	rendered.props.onOpenChange(false);
+	await Promise.resolve();
+	assert.equal(cancelled, 1);
+	assert.equal(focused, 1);
+	assert.equal(unmounted, 1);
+	assert.equal(open(), true);
+	rendered.props.onConfirm();
+	rendered.props.onOpenChange(false);
+	await Promise.resolve();
+	assert.equal(accepted, 1);
+	assert.equal(cancelled, 1);
+});
 function event(type, detail) {
 	const value = new Event(type, { cancelable: true });
 	if (detail) {
@@ -24,6 +83,7 @@ function fixture(available = true, query = '') {
 	const kind = new EventTarget();
 	const removal = new EventTarget();
 	const button = new EventTarget();
+	button.isConnected = true;
 	button.getAttribute = () => 'saved';
 	const form = new EventTarget();
 	window.location = {
@@ -37,6 +97,7 @@ function fixture(available = true, query = '') {
 	};
 	form.querySelector = () => cancel;
 	const editor = {
+		isConnected: true,
 		dataset: {},
 		hidden: false,
 		contains: () => !state.moved,
@@ -161,6 +222,61 @@ test('switching credential identity cannot silently erase a dirty draft', () => 
 	state.button.dispatchEvent(event('click'));
 	assert.equal(state.populations, 1);
 	assert.equal(state.opens, 1);
+});
+
+test('accepted native confirmation retains the link when the editor dialog fails', () => {
+	const state = fixture();
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'different';
+	state.accept = true;
+	state.window.ranBoosterOpenDialog = () => null;
+	const click = event('click');
+	state.button.dispatchEvent(click);
+	assert.equal(click.defaultPrevented, false);
+});
+
+test('asynchronous confirmation resumes the original switch once and cancel retains the draft', () => {
+	const state = fixture();
+	state.form.value = 'draft';
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'different';
+	let accept;
+	let cancel;
+	let prompts = 0;
+	state.window.ranBoosterOpenDialog.confirm = (button, message, yes, no) => {
+		assert.equal(button, state.button);
+		assert.equal(message, 'Discard unsaved credential changes?');
+		prompts++;
+		accept = yes;
+		cancel = no;
+		return true;
+	};
+	state.button.dispatchEvent(event('click'));
+	state.button.dispatchEvent(event('click'));
+	assert.equal(prompts, 1);
+	cancel();
+	assert.equal(state.form.value, 'draft');
+	assert.equal(state.populations, 0);
+	state.button.dispatchEvent(event('click'));
+	accept();
+	accept();
+	assert.equal(state.populations, 1);
+	assert.equal(state.opens, 1);
+});
+
+test('a stale identity switch does not replace the draft', () => {
+	const state = fixture();
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'different';
+	let accept;
+	state.window.ranBoosterOpenDialog.confirm = (button, message, yes) => {
+		accept = yes;
+		return true;
+	};
+	state.button.dispatchEvent(event('click'));
+	state.button.isConnected = false;
+	accept();
+	assert.equal(state.populations, 0);
 });
 
 for (const [query, id, secret] of [

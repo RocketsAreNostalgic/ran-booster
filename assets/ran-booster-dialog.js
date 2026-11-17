@@ -27,6 +27,80 @@
 	];
 	const tabParts = ['Root', 'List', 'Tab', 'Panel'];
 	let active = null;
+	let confirming = false;
+
+	// Return false when the public confirmation runtime is unavailable.
+	function confirmAction(trigger, title, onConfirm, onCancel) {
+		const ui = window.ranBoosterUI;
+		const alert = ui?.AlertDialog;
+		const element = window.wp?.element;
+		if (
+			ui?.version !== '0.26.0' ||
+			!alert?.Root ||
+			!alert.Popup ||
+			typeof element?.createElement !== 'function' ||
+			typeof element.createRoot !== 'function' ||
+			typeof element.flushSync !== 'function' ||
+			!trigger?.ownerDocument?.body
+		) {
+			return false;
+		}
+		if (confirming) {
+			return true;
+		}
+		confirming = true;
+		const host = trigger.ownerDocument.createElement('div');
+		trigger.ownerDocument.body.append(host);
+		const root = element.createRoot(host);
+		let accepted = false;
+		let finished = false;
+		function finish() {
+			if (finished) {
+				return;
+			}
+			finished = true;
+			queueMicrotask(() => {
+				root.unmount();
+				host.remove();
+				confirming = false;
+				if (accepted) {
+					onConfirm();
+				} else {
+					onCancel();
+					if (trigger.isConnected) {
+						trigger.focus();
+					}
+				}
+			});
+		}
+		try {
+			element.flushSync(() => {
+				root.render(
+					element.createElement(
+						alert.Root,
+						{
+							defaultOpen: true,
+							onConfirm: () => {
+								accepted = true;
+							},
+							onOpenChange: (open) => {
+								if (!open) {
+									finish();
+								}
+							},
+						},
+						element.createElement(alert.Popup, { title })
+					)
+				);
+			});
+		} catch {
+			root.unmount();
+			host.remove();
+			confirming = false;
+			return false;
+		}
+		return true;
+	}
 
 	function components() {
 		const ui = window.ranBoosterUI;
@@ -440,5 +514,6 @@
 		return handle;
 	}
 
+	openDialog.confirm = confirmAction;
 	window.ranBoosterOpenDialog = openDialog;
 })();

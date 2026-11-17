@@ -13,6 +13,7 @@ namespace RAN\Tests\AddOn;
 	require_once __DIR__ . '/../Support/ProspectiveReleaseFacadeWordPressFunctions.php';
 	require_once __DIR__ . '/../fixtures/ran-booster-release-capability-provider/src/Providers.php';
 
+	use PHPUnit\Framework\Attributes\DataProvider;
 	use PHPUnit\Framework\TestCase;
 	use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
 	use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
@@ -635,7 +636,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'release_candidates_available', $result->code() );
 		self::assertSame(
 			array(
-				'candidates' => array(
+				'candidates'       => array(
 					array(
 						'release_id'           => '52',
 						'tag'                  => 'v2.0.0-beta.2',
@@ -653,13 +654,80 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 						'expected_asset_names' => array( 'example-1.2.3.zip' ),
 					),
 				),
-				'channel'    => 'prerelease',
+				'channel'          => 'prerelease',
+				'search_exhausted' => null,
+				'diagnostics'      => null,
 			),
 			$result->data()
 		);
 		self::assertSame( 1, ProspectiveRepositoryProvider::$listing_calls );
 		self::assertSame( 0, $executor->install_calls );
 		self::assertSame( 0, $plugins->adoption_calls );
+	}
+
+	/** @param 'stable'|'prerelease' $channel */
+	#[DataProvider( 'listing_observation_cases' )]
+	public function test_listing_observations_survive_the_real_reader_including_empty_results( string $type, string $channel, int $count, ?bool $search ): void {
+		$observed   = null !== $search;
+		$candidates = array();
+		for ( $index = 0; $index < $count; ++$index ) {
+			$candidates[] = new RepositoryReleaseCandidate( (string) ( 42 + $index ), 'v1.2.3', '1.2.3', false, '2026-07-27T08:00:00Z', array( 'example.zip' ) );
+		}
+		$report   = array(
+			'scanned_count' => 4,
+			'dropped_count' => 1,
+			'drops'         => array(
+				array(
+					'release_identity' => '41',
+					'tag'              => 'V1.2+RC.1',
+					'reason'           => 'tag_not_version',
+				),
+			),
+			'truncated'     => false,
+		);
+		$provider = new ProspectiveRepositoryProvider( candidate_list: new RepositoryReleaseCandidateList( $candidates, $search, $observed ? $report : null ) );
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$facade   = $this->facade( $plugins, $executor, provider: $provider );
+		$result   = $facade->list_candidates( $type, $this->repository_request(), $channel, 'valid-nonce' );
+		self::assertSame( $count > 0, $result->successful() );
+		self::assertSame( 0 === $count ? 'no_releases' : 'release_candidates_available', $result->code() );
+		self::assertSame( $channel, $result->data()['channel'] ?? null );
+		self::assertCount( $count, $result->data()['candidates'] ?? array() );
+		self::assertArrayHasKey( 'search_exhausted', $result->data() );
+		self::assertSame( $search, $result->data()['search_exhausted'] );
+		self::assertSame(
+			$observed ? array(
+				'scanned_count' => 4,
+				'dropped_count' => 1,
+				'drops'         => array(
+					array(
+						'reason' => 'tag_not_version',
+						'tag'    => 'V1.2+RC.1',
+					),
+				),
+				'truncated'     => false,
+			) : null,
+			$result->data()['diagnostics'] ?? null
+		);
+		self::assertSame( 1, ProspectiveRepositoryProvider::$listing_calls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$inspection_calls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisition_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
+	}
+
+	/** @return iterable<string,array{string,string,int,?bool}> */
+	public static function listing_observation_cases(): iterable {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( 'stable', 'prerelease' ) as $channel ) {
+				foreach ( array( 0, 1, 3 ) as $count ) {
+					foreach ( array( null, false, true ) as $search ) {
+						yield $type . '-' . $channel . '-' . $count . '-' . ( null === $search ? 'legacy' : ( $search ? 'stopped' : 'not-stopped' ) ) => array( $type, $channel, $count, $search );
+					}
+				}
+			}
+		}
 	}
 
 	public function test_internal_candidate_reader_closes_resolver_and_listing_failures(): void {
@@ -1153,13 +1221,16 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	public function test_inspect_maps_only_closed_provider_rejections(): void {
 		$cases = array(
-			array( 'no_releases', RepositoryReleaseInspectionRejected::no_releases() ),
-			array( 'release_invalid', RepositoryReleaseInspectionRejected::invalid_release() ),
-			array( 'release_invalid', RepositoryReleaseInspectionRejected::incompatible() ),
-			array( 'unable_to_check', new RuntimeException( 'provider-secret-message' ) ),
+			array( 'no_releases', RepositoryReleaseInspectionRejected::no_releases(), array() ),
+			array( 'release_invalid', RepositoryReleaseInspectionRejected::invalid_release(), array() ),
+			array( 'release_invalid', RepositoryReleaseInspectionRejected::incompatible(), array() ),
+			array( 'release_invalid', RepositoryReleaseInspectionRejected::incompatible( 'digest_missing' ), array( 'rejection_reason' => 'digest_missing' ) ),
+			array( 'release_invalid', RepositoryReleaseInspectionRejected::incompatible( 'future_reason' ), array() ),
+			array( 'release_invalid', RepositoryReleaseInspectionRejected::incompatible( 'digest_missing_remote_suffix' ), array() ),
+			array( 'unable_to_check', new RuntimeException( 'provider-secret-message' ), array() ),
 		);
 
-		foreach ( $cases as [ $expected_code, $failure ] ) {
+		foreach ( $cases as [ $expected_code, $failure, $expected_data ] ) {
 			$provider = new ProspectiveRepositoryProvider( inspection: $failure );
 			$facade   = $this->facade(
 				new ProspectivePluginRepository(),
@@ -1177,7 +1248,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 			self::assertFalse( $result->successful() );
 			self::assertSame( $expected_code, $result->code() );
-			self::assertSame( array(), $result->data() );
+			self::assertSame( $expected_data, $result->data() );
 		}
 		self::assertSame( 0, ProspectiveRepositoryProvider::$metadata_calls );
 	}

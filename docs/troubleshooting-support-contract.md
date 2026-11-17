@@ -146,6 +146,36 @@ lock can wait, so this check has no time-bound guarantee. Other Troubleshooting
 panels and support-report POST collection do not start this check. Storage
 setup and recovery remain in Settings.
 
+## Published-release guidance (Core #828)
+
+Troubleshooting provides fixed guidance explaining skipped releases and points
+to the managed or prospective release picker. Actual observations appear only
+under the picker that requested its current bounded search. This satisfies the
+owner's smaller #828 scope once the producer/provider pieces are published and
+adopted. It does not add a listing action to Troubleshooting or an observation
+transport from another operation.
+
+Listing counts and samples describe records examined in that search. The
+search can stop with zero or fewer than eight candidates; an empty result
+does not prove that the repository has no published releases. Sample truncation
+is independent of search termination. Missing or invalid metadata remains
+unknown. Tags are screened original context and reasons select fixed Core
+copy; arbitrary remote text and diagnostic identities never become display
+messages.
+
+A missing published ZIP digest is an inspection failure, separate from listing.
+Selecting a release inspects its exact archive. Automatic preflight considers
+at most two provider-ordered candidates, continuing only after incompatibility.
+It does not retain newer rejection history after an older candidate succeeds.
+
+Passive GET and report generation start no release listing. Existing basic
+diagnostics during report generation retain their separate contract above.
+No picker tags, identities, listing reasons, arbitrary source codes or report
+arrays are added to the sharing allowlist, even when safe for local display.
+No option, transient, schema, retained sample or result-history store is added.
+The deferred #1004 design would require a fresh explicitly requested read and
+could not retain a listing beyond its result; it is not implemented here.
+
 ## Diagnostic input storage
 
 One fixed nonautoload site option contains a versioned map, capped at 64 live

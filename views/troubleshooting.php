@@ -134,6 +134,13 @@ $repository_placeholder = array() === $locator_examples
 	<?php } else { ?>
 		<h3 class="ran-booster-section__title" id="ran-booster-run-diagnostics-heading"><?php esc_html_e( 'Run diagnostics', 'ran-booster' ); ?></h3>
 		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a Git provider and run a health check.', 'ran-booster' ); ?></p>
+		<details class="ran-booster-disclosure">
+			<summary><?php esc_html_e( 'Why published releases may be skipped', 'ran-booster' ); ?></summary>
+			<p><?php esc_html_e( 'The release picker shows observations from its current bounded search, including skipped releases and whether the search stopped early. An empty search does not prove that the repository has no releases.', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'Listing checks release metadata. Selecting a release inspects its exact ZIP, including its published digest. Automatic preflight considers at most two candidates and continues only after incompatibility.', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'Open a managed package’s Releases settings or choose Releases while adding a package to see its current search. Troubleshooting does not fetch or retain that list.', 'ran-booster' ); ?></p>
+			<p><a href="<?php echo esc_url( $admin_base . '?page=ran-booster-plugins' ); ?>"><?php esc_html_e( 'Manage plugins', 'ran-booster' ); ?></a> · <a href="<?php echo esc_url( $admin_base . '?page=ran-booster-themes' ); ?>"><?php esc_html_e( 'Manage themes', 'ran-booster' ); ?></a></p>
+		</details>
 
 	<form method="post" action="" class="ran-booster-troubleshooting__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-troubleshooting-diagnostics-error" hx-post="" hx-target="#ran-booster-troubleshooting-diagnostics-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
 		<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-run-troubleshooting' ); ?>

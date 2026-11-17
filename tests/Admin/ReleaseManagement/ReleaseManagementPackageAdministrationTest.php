@@ -943,6 +943,60 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( '_wpnonce=nonce-for-upgrade-theme_example-theme', $html );
 	}
 
+	#[DataProvider( 'package_types' )]
+	public function test_managed_picker_callbacks_preserve_listing_observations_and_digest_failure( string $type, string $identifier ): void {
+		$report = array(
+			'scanned_count' => 3,
+			'dropped_count' => 1,
+			'drops'         => array(
+				array(
+					'release_identity' => '40',
+					'tag'              => 'release-1.2',
+					'reason'           => 'tag_not_version',
+				),
+			),
+			'truncated'     => false,
+		);
+		foreach ( array( 'stable', 'prerelease' ) as $channel ) {
+			$tracking                       = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', $type, channel: $channel ) );
+			$controls                       = ReleaseManagementFixture::controls( $tracking );
+			$request                        = $this->managed_request( 'list_candidates', $channel );
+			$request['expected_type']       = $type;
+			$request['expected_identifier'] = $identifier;
+			$request['_wpnonce']            = 'nonce-for-release-tracking-list_candidates-' . $type . '-' . $identifier . '-3-' . $channel;
+			foreach ( array( array(), array( new RepositoryReleaseCandidate( '42', 'v1.2.0', '1.2.0', false, '2026-08-20T09:00:00Z', array( 'example.zip' ) ) ) ) as $candidates ) {
+				$tracking->candidate_list = new RepositoryReleaseCandidateList( $candidates, true, $report );
+				$result                   = $controls->process_managed_browser_request( 'list_candidates', $request );
+				self::assertTrue( $result['successful'] );
+				self::assertSame( array() === $candidates ? 'no_releases' : 'release_candidates_available', $result['code'] );
+				self::assertTrue( $result['data']['search_exhausted'] );
+				self::assertSame( 3, $result['data']['diagnostics']['scanned_count'] );
+				self::assertSame(
+					array(
+						array(
+							'reason' => 'tag_not_version',
+							'tag'    => 'release-1.2',
+						),
+					),
+					$result['data']['diagnostics']['drops']
+				);
+			}
+		}
+		$tracking->candidate_inspection = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, 'example', reason_code: 'digest_missing' );
+		$request['_wpnonce']            = 'nonce-for-release-tracking-inspect_candidate-' . $type . '-' . $identifier . '-3-' . $channel;
+		$request['release_id']          = '42';
+		$request['release_tag']         = 'v1.2.0';
+		$result                         = $controls->process_managed_browser_request( 'inspect_candidate', $request );
+		self::assertFalse( $result['successful'] );
+		self::assertSame( array( 'rejection_reason' => 'digest_missing' ), $result['data'] );
+		$tracking->after_candidate_inspection = static function () use ( $tracking, $type ): void {
+			$tracking->set_status( ReleaseManagementFixture::status( 'branch', $type ) );
+		};
+		$result                               = $controls->process_managed_browser_request( 'inspect_candidate', $request );
+		self::assertSame( 'source_changed', $result['code'] );
+		self::assertSame( array(), $result['data'] );
+	}
+
 	public function test_managed_browser_separates_empty_stable_and_preview_tracks_from_read_failures(): void {
 		$tracking                 = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->candidate_list = new RepositoryReleaseCandidateList( array() );
@@ -1566,7 +1620,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 	public function test_release_failure_states_use_accurate_wording_and_never_the_old_message(): void {
 		$cases = array(
-			'no_releases'          => array( 'No published release was found for the selected track.', 'Publish a release for the selected Stable or Preview track, then use Check releases.' ),
+			'no_releases'          => array( 'No eligible releases were found in this search.', 'Review the release picker for skipped releases and the selected track, then use Check releases.' ),
 			'release_incompatible' => array( 'A published release was found, but it does not have exactly one package ZIP, or its header or Update URI does not match.', 'exactly one package ZIP asset' ),
 			''                     => array( 'Booster could not confirm an eligible published release for this track.', 'make sure it has one package ZIP' ),
 		);
@@ -2099,7 +2153,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	/** @return array<string, array{string, string, string, string, string}> */
 	public static function failed_enable_reasons(): array {
 		return array(
-			'no published release'             => array( 'no_releases', '', 'No published release was found for the selected track.', 'Publish a release for the selected Stable or Preview track, then use Check releases.', 'release_unavailable' ),
+			'no published release'             => array( 'no_releases', '', 'No eligible releases were found in this search.', 'Review the release picker for skipped releases and the selected track, then use Check releases.', 'release_unavailable' ),
 			'no package ZIP'                   => array( 'package_asset_missing', 'v0.4.0', 'Release v0.4.0 has no .zip package asset.', 'Attach exactly one .zip package to the release, then use Check releases.', 'release_unavailable' ),
 			'more than one package ZIP'        => array( 'package_asset_ambiguous', 'v0.4.0', 'Release v0.4.0 has more than one .zip package asset.', 'Keep exactly one .zip package on the release, then use Check releases.', 'release_unavailable' ),
 			'one ZIP, cause inside it'         => array( 'release_incompatible', 'v0.4.0', 'does not have exactly one package ZIP, or its header or Update URI does not match.', 'exactly one package ZIP asset', 'release_unavailable' ),

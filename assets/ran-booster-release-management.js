@@ -46,6 +46,104 @@ const appendLookupHint = (target, hint) => {
 	}
 };
 
+const renderListingObservations = (target, data = null) => {
+	if (!target) {
+		return;
+	}
+	target.replaceChildren();
+	target.hidden = !data;
+	if (!data) {
+		return;
+	}
+	const { __, sprintf } = wp.i18n;
+	const paragraph = (text) => {
+		const row = document.createElement('p');
+		row.textContent = text;
+		target.append(row);
+	};
+	if (data.search_exhausted === true) {
+		paragraph(
+			__(
+				'The release search stopped at its limit. Older eligible releases may not be shown.',
+				'ran-booster'
+			)
+		);
+	}
+	const report = data.diagnostics;
+	if (!report) {
+		paragraph(
+			__(
+				'Skipped-release details are unavailable for this search.',
+				'ran-booster'
+			)
+		);
+		return;
+	}
+	paragraph(
+		sprintf(
+			/* translators: 1: number of release records scanned, 2: number rejected by listing rules. */
+			__(
+				'%1$d release records checked; %2$d skipped by listing rules.',
+				'ran-booster'
+			),
+			report.scanned_count,
+			report.dropped_count
+		)
+	);
+	const reasons = {
+		release_metadata_invalid: __(
+			'Release metadata is invalid.',
+			'ran-booster'
+		),
+		release_immutable_invalid: __(
+			'The release immutable field is missing or invalid.',
+			'ran-booster'
+		),
+		release_publication_invalid: __(
+			'The release publication time is invalid.',
+			'ran-booster'
+		),
+		release_page_invalid: __(
+			'The release page does not match this repository.',
+			'ran-booster'
+		),
+		release_draft: __('Draft releases are excluded.', 'ran-booster'),
+		tag_not_version: __(
+			'The release tag is not an accepted version.',
+			'ran-booster'
+		),
+		prerelease_not_allowed: __(
+			'Prereleases are excluded from the selected channel.',
+			'ran-booster'
+		),
+	};
+	for (const drop of Array.isArray(report.drops)
+		? report.drops.slice(0, 8)
+		: []) {
+		if (!drop || !Object.hasOwn(reasons, drop.reason)) {
+			continue;
+		}
+		paragraph(
+			drop.tag
+				? sprintf(
+						/* translators: 1: screened original release tag, 2: fixed reason the release was skipped. */
+						__('%1$s: %2$s', 'ran-booster'),
+						drop.tag,
+						reasons[drop.reason]
+					)
+				: reasons[drop.reason]
+		);
+	}
+	if (report.truncated === true) {
+		paragraph(
+			__(
+				'The skipped-release sample is incomplete. Counts include skips not shown here.',
+				'ran-booster'
+			)
+		);
+	}
+};
+
 const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const { __, sprintf } = wp.i18n;
 	if (
@@ -60,6 +158,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		return;
 	}
 	managedReleaseBrowsers.add(managedBrowser);
+	const observations = managedBrowser.querySelector(
+		'[data-ran-booster-release-observations]'
+	);
 	const candidates = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-candidates]'
 	);
@@ -254,6 +355,25 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				return;
 			}
 			if (!response.successful || response.code !== 'release_ready') {
+				if (response.data?.rejection_reason === 'digest_missing') {
+					showError(
+						__(
+							'The release ZIP has no published digest.',
+							'ran-booster'
+						)
+					);
+					setStatus(
+						__(
+							'Published release could not be inspected',
+							'ran-booster'
+						),
+						__(
+							'The release ZIP has no published digest.',
+							'ran-booster'
+						)
+					);
+					return;
+				}
 				throw new Error('inspection_failed');
 			}
 			const relationship = response.data.version_relationship;
@@ -370,6 +490,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	};
 	const list = async () => {
 		const current = ++sequence;
+		renderListingObservations(observations);
 		selected = null;
 		clearError();
 		setListBusy(true);
@@ -422,31 +543,26 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (response.code === 'no_releases') {
 				const empty = document.createElement('p');
 				empty.className = 'ran-booster-release-candidate';
-				empty.textContent =
-					managedBrowser.dataset.ranBoosterManagedReleaseChannel ===
-					'prerelease'
-						? wp.i18n.__(
-								'No Preview releases have been published for this package yet.',
-								'ran-booster'
-							)
-						: wp.i18n.__(
-								'No Stable releases have been published for this package yet.',
-								'ran-booster'
-							);
+				empty.textContent = wp.i18n.__(
+					'No eligible releases were found in this search.',
+					'ran-booster'
+				);
 				candidateList.append(empty);
 				if (candidates) {
 					candidates.hidden = false;
 					showPlaceholder(false);
 				}
 				setStatus(
-					wp.i18n.__('No published releases found', 'ran-booster'),
+					wp.i18n.__('No eligible releases found', 'ran-booster'),
 					empty.textContent
 				);
+				renderListingObservations(observations, response.data);
 				return;
 			}
 			if (releases.length === 0) {
 				throw new Error('invalid_candidates');
 			}
+			renderListingObservations(observations, response.data);
 			const nativeOffer = releases.find(isNativeUpdateOffer);
 			const inspectable = releases.filter(
 				(candidate) => candidate.version_relationship !== 'older'
@@ -810,6 +926,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		'[data-ran-booster-release-status-heading]'
 	);
 	const status = setup.querySelector('[data-ran-booster-release-status]');
+	const observations = setup.querySelector(
+		'[data-ran-booster-release-observations]'
+	);
 	const message = setup.querySelector(
 		'[data-ran-booster-release-status-message]'
 	);
@@ -925,6 +1044,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	};
 
 	const setChoiceState = (state) => {
+		if (['waiting', 'unsupported', 'subdirectory'].includes(state)) {
+			renderListingObservations(observations);
+		}
 		const disabled =
 			state === 'waiting' ||
 			state === 'unsupported' ||
@@ -974,6 +1096,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	};
 
 	const showIdle = () => {
+		renderListingObservations(observations);
 		selectedRelease = null;
 		setChoiceState('available');
 		setStatus(
@@ -1129,6 +1252,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	};
 
 	const showUnavailable = (code, hint = null) => {
+		renderListingObservations(observations);
 		if (code === 'unsupported_provider') {
 			forceBranchForUnsupportedProvider();
 			return;
@@ -1148,7 +1272,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				'ran-booster'
 			);
 			statusMessage = wp.i18n.__(
-				'This repository does not publish an eligible stable or preview release.',
+				'No eligible releases were found in this search.',
 				'ran-booster'
 			);
 		} else if (noRelease) {
@@ -1157,7 +1281,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				'ran-booster'
 			);
 			statusMessage = wp.i18n.__(
-				'This repository does not publish an eligible stable release.',
+				'No eligible releases were found in this search.',
 				'ran-booster'
 			);
 		}
@@ -1175,11 +1299,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		setHidden(candidates, true);
 	};
 
-	const showCandidateUnavailable = (code) => {
+	const showCandidateUnavailable = (code, data = null) => {
 		selectedRelease = null;
 		setChoiceState('unavailable');
-		setStatus(
-			wp.i18n.__('Published release could not be used', 'ran-booster'),
+		let description =
 			code === 'release_invalid'
 				? wp.i18n.__(
 						'The selected release did not pass the package checks. Earlier releases remain available.',
@@ -1188,7 +1311,16 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				: wp.i18n.__(
 						'The selected release could not be checked. Earlier releases remain available.',
 						'ran-booster'
-					),
+					);
+		if (data?.rejection_reason === 'digest_missing') {
+			description = wp.i18n.__(
+				'The release ZIP has no published digest.',
+				'ran-booster'
+			);
+		}
+		setStatus(
+			wp.i18n.__('Published release could not be used', 'ran-booster'),
+			description,
 			{ retry: true }
 		);
 		setHidden(install, true);
@@ -1288,6 +1420,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	};
 
 	const listCandidates = async () => {
+		renderListingObservations(observations);
 		if (hasSubdirectory()) {
 			forceBranchForSubdirectory();
 			return;
@@ -1318,6 +1451,13 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				showCandidates(response.data);
 			} else {
 				showUnavailable(response.code, response.data?.lookup_hint);
+			}
+			if (
+				(response.successful &&
+					response.code === 'release_candidates_available') ||
+				response.code === 'no_releases'
+			) {
+				renderListingObservations(observations, response.data);
 			}
 		} catch {
 			if (sequence === requestSequence) {
@@ -1386,7 +1526,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (response.successful && response.code === 'release_ready') {
 				showReady(response.data);
 			} else {
-				showCandidateUnavailable(response.code);
+				showCandidateUnavailable(response.code, response.data);
 			}
 		} catch {
 			if (sequence === requestSequence) {
@@ -1406,6 +1546,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	};
 
 	const chooseBranch = () => {
+		renderListingObservations(observations);
 		releaseSelected = false;
 		requestSequence += 1;
 		selectedRelease = null;
@@ -1458,6 +1599,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	};
 
 	const scheduleDiscovery = () => {
+		renderListingObservations(observations);
 		requestSequence += 1;
 		selectedRelease = null;
 		updateAdvancedSummary();

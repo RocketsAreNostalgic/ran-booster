@@ -85,6 +85,28 @@ GitHub Provider host qualification and Bitbucket registration must move together
 with Core; Branch Updater and Release Updater protocols do not change as part of
 this work.
 
+## Listing observations and inspection refinements
+
+Core #828's optional listing observations belong to the existing release
+candidate value, not workflow status or history. Both pickers can show a
+bounded skipped-release sample and an early-search-stop flag, including an
+empty result. They do not grant inspection or installation authority and do
+not change workflow V4 or Provider API 15. Providers detect both new carrier
+properties before using the trailing named constructor arguments; see the
+[listing contract](provider-extension-contract.md#optional-listing-observations-core-828).
+
+Missing digest remains an exact inspection failure. Core accepts only the
+existing incompatible rejection's exact `digest_missing` refinement for the
+new fixed explanation. Automatic preflight still tries at most two candidates
+in provider order and continues only after incompatibility; an older valid
+candidate can succeed. No newer-rejection history is retained after that
+success, and no complete inspection walk is added.
+
+These observations remain request-local and are excluded from support export.
+They add no workflow method, callback, observer transport or stored state.
+Publication of producers and the coordinated four-package dependency adoption
+remain separate from this Core source change.
+
 ## Persisted history
 
 The matching V3 Provider rejects obsolete update-history rows before building

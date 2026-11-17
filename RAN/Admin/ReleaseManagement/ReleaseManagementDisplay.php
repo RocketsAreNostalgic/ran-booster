@@ -364,6 +364,7 @@ final class ReleaseManagementDisplay {
 				<h4 data-ran-booster-managed-release-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
 				<p data-ran-booster-managed-release-message></p>
 			</div>
+			<div class="description" data-ran-booster-release-observations role="status" aria-live="polite" hidden></div>
 		</div>
 		<?php
 	}
@@ -689,6 +690,7 @@ final class ReleaseManagementDisplay {
 				</div>
 				<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-release-retry hidden><?php esc_html_e( 'Retry release check', 'ran-booster' ); ?></button>
 			</div>
+			<div class="description" data-ran-booster-release-observations role="status" aria-live="polite" hidden></div>
 			<section
 				class="ran-booster-readiness-panel ran-booster-release-preflight"
 				aria-labelledby="ran-booster-release-preflight-heading-<?php echo esc_attr( $type ); ?>"
@@ -1006,7 +1008,8 @@ final class ReleaseManagementDisplay {
 		}
 		if ( 'release_unavailable' === $code ) {
 			return match ( $reason ) {
-				'no_releases' => __( 'No published release was found for the selected track.', 'ran-booster' ),
+				'no_releases' => __( 'No eligible releases were found in this search.', 'ran-booster' ),
+				'digest_missing' => __( 'The release ZIP has no published digest.', 'ran-booster' ),
 				/* translators: %s: release tag, for example v1.2.0. */
 				'package_asset_missing' => sprintf( __( 'Release %s has no .zip package asset.', 'ran-booster' ), $detail ),
 				/* translators: %s: release tag, for example v1.2.0. */
@@ -1067,7 +1070,7 @@ final class ReleaseManagementDisplay {
 		}
 		if ( 'release_unavailable' === $code ) {
 			return match ( $reason ) {
-				'no_releases' => __( 'Publish a release for the selected Stable or Preview track, then use Check releases.', 'ran-booster' ),
+				'no_releases' => __( 'Review the release picker for skipped releases and the selected track, then use Check releases.', 'ran-booster' ),
 				'package_asset_missing' => __( 'Attach exactly one .zip package to the release, then use Check releases.', 'ran-booster' ),
 				'package_asset_ambiguous' => __( 'Keep exactly one .zip package on the release, then use Check releases.', 'ran-booster' ),
 				'release_incompatible' => __( 'Make sure the release has exactly one package ZIP asset, and that its plugin or theme header and Update URI match this repository. Then use Check releases.', 'ran-booster' ),

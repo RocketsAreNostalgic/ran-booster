@@ -85,13 +85,12 @@ final class PackageMagicReadTest extends TestCase {
 			$package->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
 			$package->set_source( PackageSource::RELEASE_ASSET, 7 );
 			$package->set_deployment_ref( 'v2.0.0' );
-			$package->set_installation_slug( 'installation-fallback' );
 			$package->set_subdirectory( 'packages/installation' );
 			$expected = array(
 				'identifier'           => $identifier,
 				'displayName'          => 'Example package',
 				'version'              => '2.0.0',
-				'slug'                 => 'installation',
+				'slug'                 => Plugin::class === $class ? 'example' : 'example-theme',
 				'subdirectory'         => 'packages/installation',
 				'deploymentPolicy'     => DeploymentPolicy::AUTOMATIC,
 				'source'               => PackageSource::RELEASE_ASSET,
@@ -122,8 +121,8 @@ final class PackageMagicReadTest extends TestCase {
 					}
 				}
 			}
-			// @phpstan-ignore property.protected (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
-			self::assertSame( 'installation-fallback', $package->installation_slug );
+			// @phpstan-ignore property.notFound (The removed transient installation field must behave like an unmapped magic property.)
+			self::assertNull( $package->installation_slug );
 			// @phpstan-ignore property.notFound (Exercise actual PHP magic dispatch for inaccessible and unmapped names without replacing property access with a direct method call.)
 			self::assertNull( $package->_installation_slug );
 			self::assertSame( $identifier, (string) $package );

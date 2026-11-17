@@ -169,5 +169,13 @@ Missing, pruned, unavailable or contradictory evidence keeps generic policy copy
 HTTP status, outcome, correlation and signed feedback transport remain unchanged.
 Attempt JSON, email/filter data and support exports omit the optional reason.
 
+Credential validation and branch archive or head failures may record the original
+provider failure's screened `source_code` as a diagnostic Activity fact. It never
+selects an outcome or sentence. Branch settlement retains it only for the observed
+running attempt when selection, adoption and the stored snapshot still match in the
+terminal transaction. Cleanup supersession and runner-throw reconciliation omit it.
+Invalid optional codes are omitted without discarding the outcome. The attempt
+snapshot, failure email and support export do not include the code.
+
 Native release message replacement remains held pending a suitable producer
-boundary. Other branch reasons and any future source-code field need separate work.
+boundary. Other branch reasons need separate work.

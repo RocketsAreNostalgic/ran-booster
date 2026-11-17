@@ -460,10 +460,11 @@ final class DeploymentAttemptRepository {
 		RuntimeSupport::assert_managed_operations_allowed();
 		$id           = $this->positive_id( $attempt_id );
 		$working_copy = false;
+		$source_code  = null;
 		$attempt      = $this->transaction(
-			function () use ( $id, $outcome, $at, $working_copy_observation, &$working_copy ): DeploymentAttempt {
+			function () use ( $id, $outcome, $at, $working_copy_observation, &$working_copy, &$source_code ): DeploymentAttempt {
 				if ( null !== $working_copy_observation && $id === $working_copy_observation->get_id()
-					&& DeploymentOutcome::CODE_POLICY_BLOCKED === $outcome->get_code() ) {
+					&& ( DeploymentOutcome::CODE_POLICY_BLOCKED === $outcome->get_code() || null !== $outcome->get_provider_failure()?->source_code ) ) {
 					// Optional refinement must not continue after an authority read aborts the transaction.
 					$observed     = $working_copy_observation->safe_data();
 					$working_copy = 'running' === $observed['state'] && null === $observed['mutation_started_at']
@@ -473,6 +474,8 @@ final class DeploymentAttemptRepository {
 					$locked       = DeploymentAttempt::from_database( $this->locked_attempt_row( $id ) );
 					$working_copy = $working_copy && $locked->safe_data() === $observed
 						&& $locked->get_request()->to_json() === $working_copy_observation->get_request()->to_json();
+					$source_code  = $working_copy ? $outcome->get_provider_failure()?->source_code : null;
+					$working_copy = $working_copy && DeploymentOutcome::CODE_POLICY_BLOCKED === $outcome->get_code();
 				}
 				$data = array(
 					'state'        => $outcome->get_state()->value,
@@ -484,7 +487,7 @@ final class DeploymentAttemptRepository {
 				}
 				$attempt = $this->require_exact( $id );
 				$this->assert_attempt_data( $attempt, $data );
-				$working_copy = $working_copy && null !== $working_copy_observation
+				$same_observation = null !== $working_copy_observation
 					&& array_replace(
 						$attempt->safe_data(),
 						array(
@@ -494,7 +497,11 @@ final class DeploymentAttemptRepository {
 						)
 					) === $working_copy_observation->safe_data()
 					&& $attempt->get_request()->to_json() === $working_copy_observation->get_request()->to_json();
-				$this->record_activity_outcome( $attempt, $outcome, working_copy: $working_copy );
+				$working_copy     = $working_copy && $same_observation;
+				if ( ! $same_observation ) {
+					$source_code = null;
+				}
+				$this->record_activity_outcome( $attempt, $outcome, working_copy: $working_copy, source_code: $source_code );
 				return $attempt;
 			}
 		);
@@ -948,7 +955,7 @@ final class DeploymentAttemptRepository {
 		}
 	}
 
-	private function record_activity_outcome( DeploymentAttempt $attempt, DeploymentOutcome $outcome, bool $runner_throw = false, bool $working_copy = false ): void {
+	private function record_activity_outcome( DeploymentAttempt $attempt, DeploymentOutcome $outcome, bool $runner_throw = false, bool $working_copy = false, ?string $source_code = null ): void {
 		if ( null === $this->activity ) {
 			return;
 		}
@@ -957,7 +964,7 @@ final class DeploymentAttemptRepository {
 			return;
 		}
 		$status = DeploymentState::SUCCEEDED === $outcome->get_state() ? 'succeeded' : 'failed';
-		if ( ! $this->activity->complete_by_correlation( $attempt->get_correlation_id(), $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt, $runner_throw ) + ( $working_copy ? array( 'branch_refusal' => 'target_is_working_copy' ) : array() ) ) ) {
+		if ( ! $this->activity->complete_by_correlation( $attempt->get_correlation_id(), $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt, $runner_throw ) + ( $working_copy ? array( 'branch_refusal' => 'target_is_working_copy' ) : array() ) + ( null !== $source_code ? array( 'source_code' => $source_code ) : array() ) ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 	}

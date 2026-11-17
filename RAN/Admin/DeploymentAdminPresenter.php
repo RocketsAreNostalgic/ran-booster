@@ -79,20 +79,24 @@ final class DeploymentAdminPresenter {
 		return $this->outcome( 'error', 'ran_booster_deployment_failed', $message, $reference, $operation, $outcome_code );
 	}
 
-	private function retained_branch_facts( string $correlation, ?int $attempt_id = null, ?string $operation = null ): ?string {
+	/** @param array<string,mixed>|null $record Already-read Activity row.
+	 * @param array<string,mixed>|null $attempt_data Already-read attempt. */
+	private function retained_branch_facts( string $correlation, ?int $attempt_id = null, ?string $operation = null, ?array $record = null, ?array $attempt_data = null ): ?string {
 		try {
-			$page = $this->activity_store?->activity_history( array( 'correlation' => $correlation ), limit: 2 );
-			if ( null === $page || ! $page['available'] || 1 !== count( $page['records'] ) ) {
-				return null;
+			if ( null === $record ) {
+				$page = $this->activity_store?->activity_history( array( 'correlation' => $correlation ), limit: 2 );
+				if ( null === $page || ! $page['available'] || 1 !== count( $page['records'] ) ) {
+					return null;
+				}
+				$record = $page['records'][0];
 			}
-			$record  = $page['records'][0];
 			$encoded = $this->branch_facts( $record, $correlation, $attempt_id );
 			$facts   = null === $encoded ? null : json_decode( $encoded, true );
 			if ( ! is_array( $facts ) || ( null !== $operation && ( ( $record['operation'] ?? '' ) . '-' . ( $record['subject_type'] ?? '' ) !== $operation || 'manual' !== ( $facts['deployment_source'] ?? null ) ) ) ) {
 				return null;
 			}
 			if ( null !== $attempt_id ) {
-				$data = $this->attempts?->find_exact( $attempt_id )?->safe_data();
+				$data = $attempt_data ?? $this->attempts?->find_exact( $attempt_id )?->safe_data();
 				if ( null === $data || $data['correlation_id'] !== $correlation || 'failed' !== $data['state'] || 'policy_blocked' !== $data['outcome_code']
 					|| null !== $data['mutation_started_at'] || 'branch' !== $data['package_source'] || ( $record['operation'] ?? null ) !== $data['operation']
 					|| ( $record['subject_type'] ?? null ) !== $data['package_type'] || ( $facts['deployment_source'] ?? null ) !== $data['source'] ) {
@@ -115,6 +119,32 @@ final class DeploymentAdminPresenter {
 			&& 1 === preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) && ( $record['correlation'] ?? null ) === $correlation
 			&& is_array( $facts ) && is_int( $facts['deployment_attempt_id'] ?? null ) && $facts['deployment_attempt_id'] > 0
 			&& ( null === $attempt_id || $facts['deployment_attempt_id'] === $attempt_id ) ? $encoded : null;
+	}
+
+	/** @param array<string,mixed> $record Activity row.
+	 * @param array<string,mixed>|null $attempt Exact attempt when rendering detail. */
+	private function source_reference( array $record, ?array $attempt = null ): ?string {
+		$facts = is_string( $record['facts'] ?? null ) && strlen( $record['facts'] ) <= 4096 ? json_decode( $record['facts'], true ) : null;
+		if ( ! is_array( $facts ) || 'core' !== ( $record['provenance'] ?? null ) || ! in_array( $record['status'] ?? null, array( 'failed', 'rejected' ), true ) ) {
+			return null;
+		}
+		if ( null !== $attempt && ( 'branch' !== $attempt['package_source'] || 'failed' !== $attempt['state']
+			|| ( $record['correlation'] ?? null ) !== $attempt['correlation_id'] || ( $record['provider'] ?? null ) !== $attempt['provider']
+			|| ( $record['operation'] ?? null ) !== $attempt['operation'] || ( $record['subject_type'] ?? null ) !== $attempt['package_type']
+			|| ( $record['reason'] ?? null ) !== $attempt['outcome_code'] || ( $facts['deployment_attempt_id'] ?? null ) !== $attempt['id']
+			|| ( $facts['deployment_source'] ?? null ) !== $attempt['source'] || ( $facts['deployment_outcome'] ?? null ) !== $attempt['outcome_code']
+			|| ( $facts['deployment_package_slug'] ?? null ) !== $attempt['package_slug'] || 'failed' !== ( $facts['deployment_state'] ?? null )
+			|| null !== $attempt['mutation_started_at'] || null !== ( $facts['deployment_settled_by'] ?? null ) ) ) {
+			return null;
+		}
+		if ( null === $attempt && ! ( ( 'credential.validate' === ( $record['operation'] ?? null ) && 'provider' === ( $record['subject_type'] ?? null ) )
+			|| ( in_array( $record['operation'] ?? null, array( 'install', 'update' ), true ) && 'failed' === ( $record['status'] ?? null )
+			&& in_array( $record['subject_type'] ?? null, array( 'plugin', 'theme' ), true ) && is_int( $facts['deployment_attempt_id'] ?? null )
+			&& $facts['deployment_attempt_id'] > 0 && 'failed' === ( $facts['deployment_state'] ?? null )
+			&& ( $record['reason'] ?? null ) === ( $facts['deployment_outcome'] ?? null ) && ! isset( $facts['deployment_settled_by'] ) ) ) ) {
+			return null;
+		}
+		return DeploymentOutcomeMessage::activity_facts( $record['facts'], true )[ __( 'Source code', 'ran-booster' ) ] ?? null;
 	}
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
@@ -190,9 +220,18 @@ final class DeploymentAdminPresenter {
 				return $base;
 			}
 			try {
-				$detail                = $this->attempts->find_exact( $attempt_id );
-				$base['detail']        = null !== $detail && hash_equals( $detail->get_correlation_id(), $reference ) ? $detail : null;
-				$base['outcome_facts'] = null !== $base['detail'] ? $this->retained_branch_facts( $reference, $attempt_id ) : null;
+				$detail         = $this->attempts->find_exact( $attempt_id );
+				$base['detail'] = null !== $detail && hash_equals( $detail->get_correlation_id(), $reference ) ? $detail : null;
+				if ( null !== $base['detail'] ) {
+					$page = $this->activity_store?->activity_history( array( 'correlation' => $reference ), limit: 2 );
+					if ( null === $page || ! $page['available'] ) {
+						throw new \RuntimeException( 'Activity storage is unavailable.' );
+					}
+					$data                     = $base['detail']->safe_data();
+					$base['outcome_facts']    = 1 === count( $page['records'] ) && 'policy_blocked' === $data['outcome_code'] ? $this->retained_branch_facts( $reference, $attempt_id, record: $page['records'][0], attempt_data: $data ) : null;
+					$base['source_reference'] = 1 === count( $page['records'] ) ? $this->source_reference( $page['records'][0], $data ) : null;
+					$base['source_label']     = $provider_labels[ $data['provider'] ] ?? ( 'gh' === $data['provider'] ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $data['provider'] ? __( 'Bitbucket', 'ran-booster' ) : __( 'Unknown', 'ran-booster' ) ) );
+				}
 				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->get_outcome()?->get_code() ) {
 					$data    = $base['detail']->safe_data();
 					$summary = $this->attempts->package_activity_summary( (string) $data['package_type'], (string) $data['package_slug'], $base['detail']->get_request()->adoption_token );
@@ -293,6 +332,8 @@ final class DeploymentAdminPresenter {
 						'resolved_at'         => $resolved_at,
 						'resolved_by'         => $resolved_by,
 						'provider_label'      => $provider_labels[ (string) ( $record['provider'] ?? '' ) ] ?? ( 'gh' === ( $record['provider'] ?? '' ) ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === ( $record['provider'] ?? '' ) ? __( 'Bitbucket', 'ran-booster' ) : (string) ( $record['provider'] ?? '' ) ) ),
+						'source_reference'    => $this->source_reference( $record ),
+						'source_label'        => $provider_labels[ (string) ( $record['provider'] ?? '' ) ] ?? ( 'gh' === ( $record['provider'] ?? '' ) ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === ( $record['provider'] ?? '' ) ? __( 'Bitbucket', 'ran-booster' ) : __( 'Unknown', 'ran-booster' ) ) ),
 					)
 				);
 			}

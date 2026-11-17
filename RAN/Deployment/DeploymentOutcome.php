@@ -155,7 +155,7 @@ final readonly class DeploymentOutcome {
 		self::CODE_DEPLOYMENT_MAINTENANCE_ACTIVE     => DeploymentState::FAILED,
 	);
 
-	private function __construct( private string $code, private DeploymentState $state ) {
+	private function __construct( private string $code, private DeploymentState $state, private ?ProviderFailure $provider_failure = null ) {
 	}
 
 	public static function from_code( string $code ): self {
@@ -178,7 +178,12 @@ final readonly class DeploymentOutcome {
 		}
 
 		// A provider's reason wins; otherwise the reason Core derives from the legacy integer code.
-		return self::from_code( ProviderFailure::from_throwable( $failure )?->deployment_outcome_code() ?? self::CODE_PROVIDER_FAILED );
+		$code = ProviderFailure::from_throwable( $failure )?->deployment_outcome_code() ?? self::CODE_PROVIDER_FAILED;
+		return new self( $code, self::STATES[ $code ], ProviderFailure::carried( $failure ) );
+	}
+
+	public function get_provider_failure(): ?ProviderFailure {
+		return $this->provider_failure;
 	}
 
 	public function get_code(): string {

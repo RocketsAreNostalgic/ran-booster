@@ -78,11 +78,15 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	private RepositorySourceGuardDatabase $source_database;
 	private RepositorySourceGuard $source_guard;
 	private int $random_byte = 1;
+	private mixed $previous_activity_options;
+	private bool $had_activity_options;
 	/** @var list<string> */
 	private array $fixtures = array();
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		$this->had_activity_options                  = array_key_exists( 'ran_booster_activity_options', $GLOBALS );
+		$this->previous_activity_options             = $GLOBALS['ran_booster_activity_options'] ?? null;
 		$GLOBALS['ran_booster_storage_test_options'] = array();
 		unset( $GLOBALS['ran_booster_admitted_http_request_args'], $GLOBALS['ran_booster_admitted_http_guards'] );
 		\RAN\RepositoryProvider\authenticated_archive_hooks_reset();
@@ -125,6 +129,11 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
+		if ( $this->had_activity_options ) {
+			$GLOBALS['ran_booster_activity_options'] = $this->previous_activity_options;
+		} else {
+			unset( $GLOBALS['ran_booster_activity_options'] );
+		}
 		foreach ( $this->fixtures as $fixture ) {
 			if ( file_exists( $fixture ) || is_link( $fixture ) ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
@@ -1478,6 +1487,85 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
+	#[DataProvider( 'provider_source_cases' )]
+	public function test_provider_archive_failure_records_original_code_in_atomic_activity( string $source, ?string $expected ): void {
+		$this->enable_activity();
+		$provider                  = new ParityRepositoryProvider( null );
+		$provider->prepare_failure = new \RAN\RepositoryProvider\ProviderRequestFailed( new \RAN\RepositoryProvider\ProviderFailure( 'http_4xx_other', source_code: $source ) );
+		$attempt                   = $this->running_update();
+		$outcome                   = $this->coordinator( $provider )->execute_claimed( $attempt );
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID, $outcome->get_code() );
+		self::assertSame( $expected, $this->activity_facts()['source_code'] ?? null );
+		self::assertStringNotContainsString( $source, (string) $this->database->rows[0]['request_json'] );
+	}
+
+	/** @return iterable<string,array{string,?string}> */
+	public static function provider_source_cases(): iterable {
+		yield 'valid' => array( 'abuse_detected', 'abuse_detected' );
+		yield 'secret' => array( 'secret_orchid', null );
+		yield 'control' => array( "api.error\n", null );
+		yield 'encoded' => array( 'api%2eerror', null );
+		yield 'oversized' => array( str_repeat( 'a', 64 ) . '_secret', null );
+	}
+
+	public function test_a_later_success_cannot_inherit_a_failed_provider_observation(): void {
+		$this->enable_activity();
+		$provider                  = new ParityRepositoryProvider( null );
+		$provider->prepare_failure = new \RAN\RepositoryProvider\ProviderRequestFailed( new \RAN\RepositoryProvider\ProviderFailure( 'http_4xx_other', source_code: 'abuse_detected' ) );
+		$adapter                   = $this->adapter( $this->running_update(), $provider );
+		try {
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+			self::fail( 'The provider must fail before the later terminal result.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID, $failure->outcome_code );
+		}
+		$adapter->finish( DeploymentOutcome::CODE_DEPLOYED );
+		self::assertArrayNotHasKey( 'source_code', $this->activity_facts() );
+		self::assertSame( 'deployed', $this->database->rows[0]['outcome_code'] );
+	}
+
+	public function test_failed_authority_read_reconciles_without_the_original_code(): void {
+		$this->enable_activity();
+		$provider                  = new ParityRepositoryProvider( null );
+		$provider->on_prepare      = function (): void {
+			$this->database->abort_authority_read = $this->database->authority_reads + 1;
+		};
+		$provider->prepare_failure = new \RAN\RepositoryProvider\ProviderRequestFailed( new \RAN\RepositoryProvider\ProviderFailure( 'http_4xx_other', source_code: 'abuse_detected' ) );
+		$outcome                   = $this->coordinator( $provider )->execute_claimed( $this->running_update() );
+		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $outcome->get_code() );
+		self::assertSame( 'runner_throw', $this->activity_facts()['deployment_settled_by'] ?? null );
+		self::assertArrayNotHasKey( 'source_code', $this->activity_facts() );
+	}
+
+	#[DataProvider( 'cleanup_failure_cases' )]
+	public function test_head_failure_records_original_code_and_cleanup_supersession_drops_it( bool $cleanup_fails ): void {
+			$this->enable_activity();
+			$archive            = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+			$archive->on_verify = static function (): void {
+				throw new \RAN\RepositoryProvider\ProviderRequestFailed( new \RAN\RepositoryProvider\ProviderFailure( 'http_4xx_other', source_code: 'abuse_detected' ) );
+			};
+		if ( $cleanup_fails ) {
+			$archive->on_cleanup = static function (): void {
+				throw new RuntimeException( 'cleanup failed' );
+			};
+		}
+			$this->download_fixture( 'example' );
+			$attempt = $this->running_update();
+			$outcome = $this->coordinator( new ParityRepositoryProvider( $archive ) )->execute_claimed( $attempt );
+			self::assertSame( $cleanup_fails ? DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED : DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID, $outcome->get_code() );
+			$rows = $this->database->activity_rows;
+			$row  = end( $rows );
+			self::assertIsArray( $row );
+			$facts = json_decode( (string) $row['facts'], true );
+			self::assertSame( $cleanup_fails ? null : 'abuse_detected', $facts['source_code'] ?? null );
+	}
+
+	/** @return iterable<string,array{bool}> */
+	public static function cleanup_failure_cases(): iterable {
+		yield 'normal cleanup' => array( false );
+		yield 'cleanup failure' => array( true );
+	}
+
 	/** @return array<string,mixed> */
 	private function activity_facts(): array {
 		$facts = json_decode( (string) $this->database->activity_rows[0]['facts'], true );
@@ -1868,6 +1956,8 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 
 	public int $prepare_calls                 = 0;
 	public ?RuntimeException $prepare_failure = null;
+	/** @var null|callable(): void */
+	public $on_prepare = null;
 
 	public ?ArchiveRequest $last_request = null;
 	public function __construct( private ?ParityProviderArchive $archive, private int $archive_api_version = 1 ) {}
@@ -1884,6 +1974,9 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 	public function prepare_archive( ArchiveRequest $request ): ProviderPreparedArchive {
 		$this->last_request = $request;
 		++$this->prepare_calls;
+		if ( null !== $this->on_prepare ) {
+			( $this->on_prepare )();
+		}
 		if ( null !== $this->prepare_failure ) {
 			throw $this->prepare_failure;
 		}

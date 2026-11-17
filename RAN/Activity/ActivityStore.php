@@ -598,9 +598,18 @@ final class ActivityStore {
 
 	/** @param array<string,scalar|null> $facts */
 	private function encode_facts( array $facts ): string {
+		if ( array_key_exists( 'source_code', $facts ) ) {
+			$source_code = \RAN\RepositoryProvider\ProviderFailure::normalize_source_code( $facts['source_code'] );
+			if ( null === $source_code ) {
+				unset( $facts['source_code'] );
+			} else {
+				$facts['source_code'] = $source_code;
+			}
+		}
 		foreach ( $facts as $key => $value ) {
 			$expiry = 'expires_at' === $key && is_string( $value ) ? \DateTimeImmutable::createFromFormat( '!Y-m-d\TH:i:s\Z', $value ) : false;
 			$valid  = match ( $key ) {
+				'source_code' => true,
 				'expiry_state' => in_array( $value, array( 'not_reported', 'unknown', 'known' ), true ),
 				'expires_at' => null === $value || ( is_string( $value ) && $expiry instanceof \DateTimeImmutable && $expiry->format( 'Y-m-d\TH:i:s\Z' ) === $value ),
 				'webhook_state' => in_array( $value, array( 'succeeded', 'partial', 'ambiguous', 'failed' ), true ),

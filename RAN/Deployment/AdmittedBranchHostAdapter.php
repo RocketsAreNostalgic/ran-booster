@@ -91,6 +91,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 	private ?ProviderPreparedArchive $provider_archive = null;
 	private ?string $mutation_lock_token               = null;
 	private bool $provider_archive_cleaned             = false;
+	private ?DeploymentOutcome $provider_observation   = null;
+	private ?DeploymentAttempt $observed_attempt       = null;
 
 	public function __construct(
 		private DeploymentAttempt $attempt,
@@ -190,7 +192,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 	}
 
 	public function finish_with_reason( string $code, AdmittedFailureReason $reason ): void {
-		$observed = DeploymentOutcome::CODE_POLICY_BLOCKED === $code && FailureReason::TARGET_IS_WORKING_COPY === $reason->reason
+		$this->provider_observation = null;
+		$observed                   = DeploymentOutcome::CODE_POLICY_BLOCKED === $code && FailureReason::TARGET_IS_WORKING_COPY === $reason->reason
 			&& ! $reason->cleanup_failed && null === $reason->primary_outcome
 			&& DeploymentState::RUNNING === $this->attempt->get_state() && null === $this->attempt->safe_data()['mutation_started_at'];
 		$this->finish_attempt( $code, $observed ? $this->attempt : null );
@@ -198,7 +201,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 
 	private function finish_attempt( string $code, ?DeploymentAttempt $working_copy_observation = null ): void {
 		try {
-			$this->attempt = $this->attempts->finish( $this->attempt->get_id(), DeploymentOutcome::from_code( $code ), working_copy_observation: $working_copy_observation );
+			$observed      = $this->provider_observation;
+			$outcome       = null !== $observed && $observed->get_code() === $code ? $observed : DeploymentOutcome::from_code( $code );
+			$this->attempt = $this->attempts->finish( $this->attempt->get_id(), $outcome, working_copy_observation: $working_copy_observation ?? ( $outcome === $observed ? $this->observed_attempt : null ) );
 		} catch ( DeploymentStorageFailure $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
@@ -242,7 +247,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			);
 		} catch ( Throwable $failure ) {
 			BoosterLogger::log_provider_failure( 'branch provider archive request failed', $failure, $this->attempt->log_context() + array( 'step' => 'prepare_archive' ) );
-			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
+			$this->stage_provider_failure( $failure );
 		}
 
 		$provider_archive = $this->provider_archive;
@@ -260,7 +265,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			throw $failure;
 		} catch ( Throwable $failure ) {
 			$this->cleanup_provider_archive( $provider_archive );
-			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
+			$this->stage_provider_failure( $failure );
 		}
 
 		try {
@@ -580,7 +585,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			$this->stage( DeploymentOutcome::CODE_STALE_EVENT );
 		} catch ( Throwable $failure ) {
 			BoosterLogger::log_provider_failure( 'branch head verification failed', $failure, $this->attempt->log_context() + array( 'step' => 'verify_current_head' ) );
-			$this->stage( DeploymentOutcome::from_provider_failure( $failure )->get_code() );
+			$this->stage_provider_failure( $failure );
 		}
 	}
 
@@ -780,7 +785,16 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 	}
 
 	private function stage( string $code ): never {
+		$this->provider_observation = null;
+		$this->observed_attempt     = null;
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 		throw new AdmittedBranchStageFailure( $code );
+	}
+
+	private function stage_provider_failure( Throwable $failure ): never {
+		$this->provider_observation = DeploymentOutcome::from_provider_failure( $failure );
+		$this->observed_attempt     = $this->attempt;
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Only the closed outcome is transported to the runner.
+		throw new AdmittedBranchStageFailure( $this->provider_observation->get_code() );
 	}
 }

@@ -77,6 +77,9 @@ $package_settings_label = 'theme' === $package_type
 			</section>
 		<?php } ?>
 		<dl class="ran-booster-activity__details">
+			<?php if ( is_string( $deployment_activity['source_reference'] ?? null ) ) { ?>
+				<div><dt><?php esc_html_e( 'Source code', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) $deployment_activity['source_label'] ); ?>: <code><?php echo esc_html( $deployment_activity['source_reference'] ); ?></code></dd></div>
+			<?php } ?>
 			<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd>
 			<?php
 			$copy_value = (string) $item['correlation_id'];

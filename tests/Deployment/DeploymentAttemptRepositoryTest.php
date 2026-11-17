@@ -1182,6 +1182,56 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		}
 	}
 
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'source_observation_cases' )]
+	public function test_source_fact_requires_current_authority_and_the_observed_attempt( string $change ): void {
+		$had_previous = array_key_exists( 'ran_booster_activity_options', $GLOBALS );
+		$previous     = $GLOBALS['ran_booster_activity_options'] ?? null;
+		try {
+			$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+			$this->repository                        = new DeploymentAttemptRepository( $this->database, 'wp_ran_booster_deployment_attempts', clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-17 00:00:00 UTC' ), database_lifecycle: $this->database_lifecycle, activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ), selection: $this->queued_selection( $this->database ) );
+			$this->webhook( 'example' );
+			$running = $this->repository->claim_next();
+			self::assertNotNull( $running );
+			if ( 'selection' === $change ) {
+				$this->database->selection->active_bytes = 'a:0:{}';
+			} elseif ( 'adoption' === $change ) {
+				$this->database->management_rows['example']['repository'] = 'org/changed';
+			} elseif ( 'request' === $change ) {
+				$request                      = json_decode( $this->database->rows[0]['request_json'], true );
+				$request['configured_branch'] = 'changed';
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact persisted test snapshot.
+				$this->database->rows[0]['request_json'] = json_encode( $request, JSON_UNESCAPED_SLASHES );
+			}
+			$this->database->fail_commit         = 'commit' === $change;
+			$this->database->fail_query_contains = 'activity' === $change ? "SET status = 'failed'" : null;
+			$failure                             = new \RAN\RepositoryProvider\ProviderFailure( 'http_4xx_other', source_code: 'abuse_detected' );
+			$outcome                             = DeploymentOutcome::from_provider_failure( new \RAN\RepositoryProvider\ProviderRequestFailed( $failure ) );
+			try {
+				$this->repository->finish( $running->get_id(), $outcome, working_copy_observation: 'missing' === $change ? null : $running );
+				self::assertNotContains( $change, array( 'commit', 'activity' ) );
+			} catch ( DeploymentStorageFailure ) {
+				self::assertContains( $change, array( 'commit', 'activity' ) );
+				self::assertSame( 'running', $this->database->rows[0]['state'] );
+			}
+			$facts = json_decode( (string) $this->database->activity_rows[0]['facts'], true );
+			self::assertSame( 'valid' === $change ? 'abuse_detected' : null, $facts['source_code'] ?? null );
+			self::assertStringNotContainsString( 'abuse_detected', (string) $this->database->rows[0]['request_json'] );
+		} finally {
+			if ( ! $had_previous ) {
+				unset( $GLOBALS['ran_booster_activity_options'] );
+			} else {
+				$GLOBALS['ran_booster_activity_options'] = $previous;
+			}
+		}
+	}
+
+	/** @return iterable<string,array{string}> */
+	public static function source_observation_cases(): iterable {
+		foreach ( array( 'valid', 'selection', 'adoption', 'request', 'missing', 'commit', 'activity' ) as $case ) {
+			yield $case => array( $case );
+		}
+	}
+
 	public function test_valid_but_different_terminal_timestamp_fails_readback(): void {
 		$running                              = $this->manual( 'example' );
 		$this->database->tamper_update_column = 'finished_at';

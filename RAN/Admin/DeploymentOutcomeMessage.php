@@ -51,7 +51,7 @@ final class DeploymentOutcomeMessage {
 	}
 
 	/** @return array<string, string> Closed, display-safe observation details. */
-	public static function activity_facts( mixed $encoded ): array {
+	public static function activity_facts( mixed $encoded, bool $include_source_code = false ): array {
 		$facts = is_string( $encoded ) && strlen( $encoded ) <= 4096 ? json_decode( $encoded, true ) : null;
 		if ( ! is_array( $facts ) ) {
 			return array();
@@ -84,6 +84,10 @@ final class DeploymentOutcomeMessage {
 					default => (string) $value,
 				};
 			}
+		}
+		$source_code = $include_source_code ? \RAN\RepositoryProvider\ProviderFailure::normalize_source_code( $facts['source_code'] ?? null ) : null;
+		if ( null !== $source_code ) {
+			$details[ __( 'Source code', 'ran-booster' ) ] = $source_code;
 		}
 		return $details;
 	}

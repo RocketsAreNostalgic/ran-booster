@@ -605,6 +605,11 @@ class ProviderProfileAdminController {
 		\Throwable $exception
 	): void {
 		$error = $this->record_failure( $exception, $action, 'credential_profile' );
+		// Render the authorized native credential failure in this POST so its
+		// allowlisted draft never needs a redirect, URL payload or persisted store.
+		if ( 'save-access-profile' === $action && 'true' !== ( $_SERVER['HTTP_HX_REQUEST'] ?? '' ) ) {
+			return;
+		}
 		if ( null === $request || null === $this->interaction ) {
 			return;
 		}

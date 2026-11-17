@@ -17,7 +17,7 @@ function event(type, detail) {
 	}
 	return value;
 }
-function fixture(available = true) {
+function fixture(available = true, query = '') {
 	const document = new EventTarget();
 	const window = new EventTarget();
 	const cancel = new EventTarget();
@@ -26,9 +26,16 @@ function fixture(available = true) {
 	const button = new EventTarget();
 	button.getAttribute = () => 'saved';
 	const form = new EventTarget();
+	window.location = {
+		href: 'https://example.test/wp-admin/admin.php' + query,
+	};
+	form.action = window.location.href;
 	form.isConnected = true;
 	form.elements = {
 		'ran_booster[id]': { value: 'saved' },
+		'ran_booster[label]': {},
+		'ran_booster[secret]': {},
+		'ran_booster[provider]': { value: 'fixture' },
 		'ran_booster[expires_on]': { value: '2027-01-01', dataset: {} },
 	};
 	form.querySelector = () => cancel;
@@ -69,7 +76,7 @@ function fixture(available = true) {
 		window.ranBoosterOpenDialog = (trigger, content, options) => {
 			assert.equal(trigger, button);
 			assert.equal(content, form);
-			assert.equal(options.initialFocus(), cancel);
+			state.focusTarget = options.initialFocus();
 			assert.equal(options.disablePointerDismissal, true);
 			state.moved = true;
 			state.opens++;
@@ -104,7 +111,7 @@ function fixture(available = true) {
 	return state;
 }
 
-test('same native form opens with Cancel focus and retains draft across close/reopen', () => {
+test('same native form opens with Label focus and retains draft across close/reopen', () => {
 	const state = fixture();
 	assert.equal(state.form.noValidate, false);
 	state.form.value = 'synthetic unsaved draft';
@@ -114,6 +121,7 @@ test('same native form opens with Cancel focus and retains draft across close/re
 	state.button.dispatchEvent(click);
 	assert.equal(click.defaultPrevented, true);
 	assert.equal(state.opens, 1, 'initialization must not duplicate handlers');
+	assert.equal(state.focusTarget, state.form.elements['ran_booster[label]']);
 	state.kind.dispatchEvent(event('change'));
 	state.removal.dispatchEvent(event('change'));
 	assert.deepEqual(
@@ -201,3 +209,102 @@ test('switching credential identity cannot silently erase a dirty draft', () => 
 	assert.equal(state.populations, 1);
 	assert.equal(state.opens, 1);
 });
+
+const successRedirect =
+	'https://example.test/wp-admin/admin.php?page=ran-booster&tab=fixture&ran_booster_interaction_operation=core%3Asave-access-profile&ran_booster_interaction_target=core_provider_profiles&ran_booster_interaction_outcome=success';
+function warnsOnLeave(state) {
+	const leaving = event('beforeunload');
+	state.window.dispatchEvent(leaving);
+	return leaving.defaultPrevented;
+}
+function redirectResponse(
+	state,
+	redirect = successRedirect,
+	status = 200,
+	elt = state.form
+) {
+	return event('htmx:beforeOnLoad', {
+		requestConfig: { elt },
+		xhr: {
+			status,
+			getResponseHeader: (name) =>
+				name === 'HX-Redirect' ? redirect : null,
+		},
+	});
+}
+test('only matching confirmed credential redirect temporarily permits leaving', async () => {
+	const state = fixture();
+	state.form.dispatchEvent(event('input'));
+	for (const res of [
+		redirectResponse(state, null),
+		redirectResponse(state, successRedirect, 422),
+		redirectResponse(state, successRedirect, 200, {}),
+		redirectResponse(
+			state,
+			successRedirect.replace('tab=fixture', 'tab=other')
+		),
+		redirectResponse(
+			state,
+			successRedirect.replace(
+				'outcome=success',
+				'outcome=validation_failure'
+			)
+		),
+		redirectResponse(
+			state,
+			successRedirect.replace('example.test', 'other.test')
+		),
+	]) {
+		state.document.dispatchEvent(res);
+		assert.equal(warnsOnLeave(state), true);
+	}
+	state.document.dispatchEvent(redirectResponse(state));
+	assert.equal(warnsOnLeave(state), false);
+	await new Promise((resolve) => setTimeout(resolve, 0));
+	assert.equal(
+		warnsOnLeave(state),
+		true,
+		'grant expires if navigation does not complete'
+	);
+	const vetoed = redirectResponse(state);
+	state.document.dispatchEvent(vetoed);
+	vetoed.preventDefault();
+	assert.equal(
+		warnsOnLeave(state),
+		true,
+		'later beforeOnLoad veto retains draft protection'
+	);
+	state.document.dispatchEvent(redirectResponse(state));
+	state.form.dispatchEvent(event('input'));
+	assert.equal(
+		warnsOnLeave(state),
+		true,
+		'further edits revoke the navigation grant'
+	);
+});
+
+for (const [query, id, secret] of [
+	['?replace_credential=saved', 'saved', true],
+	['?replace_credential=other', 'saved', false],
+	['?replace_credential=', '', false],
+	['?add_credential=1', '', false],
+	['', 'saved', false],
+]) {
+	test(`focus is keyed to exact replacement request: ${query || 'none'} / ${id || 'add'}`, () => {
+		const state = fixture(true, query);
+		assert.equal(
+			state.opens,
+			0,
+			'native URL selections remain inline with JS'
+		);
+		state.button.getAttribute = () => id;
+		state.form.elements['ran_booster[id]'].value = id;
+		state.button.dispatchEvent(event('click'));
+		assert.equal(
+			state.focusTarget,
+			state.form.elements[
+				secret ? 'ran_booster[secret]' : 'ran_booster[label]'
+			]
+		);
+	});
+}

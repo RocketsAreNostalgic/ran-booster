@@ -881,6 +881,7 @@
 		let dialog = null;
 		let dirty = editor.dataset.credentialDraft === 'true';
 		let submitting = false;
+		let savedResponse = null;
 		const confirmDiscard = () => {
 			return (
 				!dirty ||
@@ -891,9 +892,11 @@
 			);
 		};
 		form.addEventListener('input', () => {
+			savedResponse = null;
 			dirty = true;
 		});
 		form.addEventListener('change', () => {
+			savedResponse = null;
 			dirty = true;
 		});
 		form.addEventListener('submit', (event) => {
@@ -905,10 +908,61 @@
 		window.addEventListener(
 			'beforeunload',
 			(event) => {
-				if (dirty && !submitting && form.isConnected) {
+				if (
+					dirty &&
+					!submitting &&
+					form.isConnected &&
+					(!savedResponse || savedResponse.defaultPrevented)
+				) {
 					event.preventDefault();
 					event.returnValue = '';
 				}
+			},
+			options
+		);
+		document.addEventListener(
+			'htmx:beforeOnLoad',
+			(event) => {
+				const { xhr, requestConfig } = event.detail || {};
+				if (
+					requestConfig?.elt !== form ||
+					xhr.status !== 200 ||
+					xhr.getResponseHeader('HX-Location')
+				) {
+					return;
+				}
+				const redirect = xhr.getResponseHeader('HX-Redirect');
+				if (!redirect) {
+					return;
+				}
+				let destination;
+				try {
+					destination = new URL(redirect, window.location.href);
+				} catch {
+					return;
+				}
+				const query = destination.searchParams;
+				const action = new URL(form.action, window.location.href);
+				if (
+					destination.origin !== action.origin ||
+					destination.pathname !== action.pathname ||
+					query.get('page') !== 'ran-booster' ||
+					query.get('tab') !==
+						form.elements['ran_booster[provider]'].value ||
+					query.get('ran_booster_interaction_operation') !==
+						'core:save-access-profile' ||
+					query.get('ran_booster_interaction_target') !==
+						'core_provider_profiles' ||
+					query.get('ran_booster_interaction_outcome') !== 'success'
+				) {
+					return;
+				}
+				// htmx redirects before beforeSwap/afterRequest. Retain the event so
+				// a later veto still guards the draft, and expire this navigation grant.
+				savedResponse = event;
+				setTimeout(() => {
+					savedResponse = null;
+				}, 0);
 			},
 			options
 		);
@@ -985,11 +1039,21 @@
 						populateCredentialModal(editor, button);
 						dirty = false;
 					}
+					const replacing =
+						id !== '' &&
+						new URL(window.location.href).searchParams.get(
+							'replace_credential'
+						) === id;
 					dialog = window.ranBoosterOpenDialog(button, form, {
 						title: editor.querySelector(
 							'.ran-booster-dialog__title'
 						).textContent,
-						initialFocus: () => cancel,
+						initialFocus: () =>
+							form.elements[
+								replacing
+									? 'ran_booster[secret]'
+									: 'ran_booster[label]'
+							],
 						disablePointerDismissal: true,
 					});
 					if (dialog) {

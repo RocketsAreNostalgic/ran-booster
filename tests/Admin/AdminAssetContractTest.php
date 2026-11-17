@@ -928,7 +928,7 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	private function assert_general_field_label_rule( string $css ): void {
-		if ( 1 !== preg_match( '/:is\(\.ran-booster-admin, \.ran-booster-repository-picker-portal\)\s+:is\(\s*label:not\(([^{]*?)\),\s*\.ran-booster-settings-field > label,\s*\.ran-booster-credential-modal__form label\s*\)\s*\{([^}]*)\}/', $css, $m ) ) {
+		if ( 1 !== preg_match( '/:is\(\s*\.ran-booster-admin,\s*\.ran-booster-repository-picker-portal,\s*\.ran-booster-ui-dialog-portal\s*\)\s+:is\(\s*label:not\(([^{]*?)\),\s*\.ran-booster-settings-field > label,\s*\.ran-booster-credential-modal__form label\s*\)\s*\{([^}]*)\}/', $css, $m ) ) {
 			self::fail( 'The shared form field label rule is missing.' );
 		}
 		self::assertStringContainsString( 'font-weight: var(--ran-booster-font-weight-semibold);', $m[2] );
@@ -954,7 +954,7 @@ final class AdminAssetContractTest extends TestCase {
 			'ran-booster/20-repository-picker.css' => '/\.ran-booster-repository-picker__public-search > label,[^{]*\{([^}]*)\}/',
 			'ran-booster/30-provider-cards.css'    => '/\.ran-booster-provider-receiver__field > label \{([^}]*)\}/',
 			'ran-booster/50-troubleshooting-and-activity.css' => '/\.ran-booster-troubleshooting__fields label \{([^}]*)\}/',
-			'ran-booster/70-credential-dialog.css' => '/\.ran-booster-credential-modal__form label \{([^}]*)\}/',
+			'ran-booster/70-credential-dialog.css' => '/\.ran-booster-credential-modal__form\s+label \{([^}]*)\}/',
 		) as $file => $pattern ) {
 			if ( 1 !== preg_match( $pattern, $this->asset( $file ), $rule ) ) {
 				self::fail( 'Missing label layout rule in ' . $file );
@@ -1847,7 +1847,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "modal.querySelector('[data-delete-credential-cancel]').focus();", $credential_script );
 		self::assertStringContainsString( 'confirmButton.disabled = !usageKnown || inUse;', $credential_script );
 		self::assertStringContainsString( 'window.ranBoosterOpenDialog(button, form, {', $credential_script );
-		self::assertStringContainsString( 'initialFocus: () => cancel', $credential_script );
+		self::assertStringContainsString( "'replace_credential'", $credential_script );
+		self::assertStringContainsString( "? 'ran_booster[secret]'", $credential_script );
+		self::assertStringContainsString( ": 'ran_booster[label]'", $credential_script );
 		self::assertStringContainsString( 'disablePointerDismissal: true', $credential_script );
 		self::assertStringContainsString( 'data-credential-cancel', $credential_script );
 
@@ -1894,7 +1896,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'expiryInput.dataset.originalValue = expiryInput.value;', $script );
 		self::assertStringContainsString( "expiryInput.dataset.replacementStarted = 'true';", $script );
 		self::assertStringContainsString( 'data-provider-expires-on=', $this->view( 'provider.php' ) );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-credential-modal__field-row {', $dialog );
+		self::assertMatchesRegularExpression( '/:is\(\.ran-booster-admin, \.ran-booster-ui-dialog-portal\)\s+\.ran-booster-credential-modal__field-row \{/', $dialog );
 		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr) minmax(180px, 0.7fr);', $dialog );
 		self::assertStringContainsString( "\$kind['short_label'] ?? \$kind['label']", $modals );
 	}

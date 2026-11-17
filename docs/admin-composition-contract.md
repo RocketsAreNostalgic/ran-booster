@@ -61,13 +61,19 @@ separate, and all merge/publication holds continue.
 Repository credential add/edit uses the public `Dialog` export from
 `@wordpress/ui` 0.26.0 through the existing `ranBoosterOpenDialog` bridge.
 The overlay moves the protected native form and preserves its submit event,
-fields and draft across close/reopen. Actual HTMX origin cleanup tears it down;
+fields and draft across close/reopen. Initial focus is Label for Add/Edit, or
+Secret only when the clicked credential ID exactly matches the current
+`replace_credential` URL value. Native add/replacement URL selections stay inline
+with JavaScript too. Actual HTMX origin cleanup tears it down;
 a refused swap leaves it intact. Delete and webhook dialogs remain separate.
 
 Native add/edit links select the same inline form without JavaScript. All
 configuration fields remain usable in that fallback; the existing handler
 validates only the selected kind. Failed native saves restore allowlisted
-non-secret fields for that response only. Secrets and submitted nonces are
+non-secret fields by continuing the authorized POST render instead of redirecting.
+Only a matching successful credential `HX-Redirect` temporarily bypasses the
+dirty-form leave warning; failed or vetoed responses retain it. Portal styling
+uses the same credential rules as the inline fallback. Secrets and submitted nonces are
 never restored. Blank-secret edits retain the stored credential. Drafts are
 excluded from HTMX history; no URL, flash or persistent draft store is added.
 Installed WordPress, assistive-technology and native-zoom acceptance are separate

@@ -224,6 +224,8 @@ function fixture(available = true, query = '') {
 			state.populations++;
 			form.elements['ran_booster[id]'].value =
 				button.getAttribute('data-id') || '';
+			form.elements['ran_booster[label]'].value =
+				button.getAttribute('data-label') || '';
 			form.elements['ran_booster[secret]'].value = '';
 		},
 		(root) => state.updates.push(root),
@@ -275,15 +277,32 @@ test('missing or failing Dialog and modified clicks retain native link behavior'
 
 test('missing dialog helper still confirms a dirty identity switch', () => {
 	const state = fixture(false);
+	state.form.elements['ran_booster[id]'].value = '';
+	state.form.elements['ran_booster[label]'].value = 'Add draft';
+	state.form.elements['ran_booster[secret]'].value = 'synthetic secret';
 	state.form.dispatchEvent(event('input'));
-	state.button.getAttribute = () => 'different';
+	state.button.getAttribute = (name) =>
+		({ 'data-id': 'B', 'data-label': 'Credential B' })[name] || '';
 	const declined = event('click');
 	state.button.dispatchEvent(declined);
 	assert.equal(declined.defaultPrevented, true);
+	assert.equal(state.form.elements['ran_booster[id]'].value, '');
+	assert.equal(state.form.elements['ran_booster[label]'].value, 'Add draft');
+	assert.equal(
+		state.form.elements['ran_booster[secret]'].value,
+		'synthetic secret'
+	);
 	state.accept = true;
 	const accepted = event('click');
 	state.button.dispatchEvent(accepted);
 	assert.equal(accepted.defaultPrevented, false);
+	assert.equal(state.form.elements['ran_booster[id]'].value, 'B');
+	assert.equal(
+		state.form.elements['ran_booster[label]'].value,
+		'Credential B'
+	);
+	assert.equal(state.form.elements['ran_booster[secret]'].value, '');
+	assert.equal(state.populations, 1);
 });
 
 test('switching credential identity cannot silently erase a dirty draft', () => {

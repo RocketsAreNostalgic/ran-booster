@@ -924,9 +924,13 @@
 					}
 					const id = button.getAttribute('data-id') || '';
 					const destination = button.href;
-					const switchIdentity = (deferred = false) => {
+					const switchIdentity = (
+						deferred = false,
+						confirmed = false
+					) => {
 						if (
 							(deferred ||
+								confirmed ||
 								typeof window.ranBoosterOpenDialog ===
 									'function') &&
 							(form.elements['ran_booster[id]'].value !== id ||
@@ -1014,6 +1018,8 @@
 							event.preventDefault();
 							return;
 						}
+						switchIdentity(false, true);
+						return;
 					}
 					switchIdentity();
 				});

@@ -72,7 +72,7 @@ final class SupportReport {
 		'unverified_pre_download_result',
 		'unverified_pre_install',
 	);
-	private const LOG_MESSAGES  = array( 'attempt admitted (manual)', 'attempt queued (manual batch)', 'attempt queued (webhook)', 'attempt claimed from queue', 'deployment execution started', 'attempt finished', 'attempt reconciled as stopped', 'mutation guard blocked deployment', 'branch archive preparation failed', 'deployment worker failed', 'deployment worker storage failure' );
+	private const LOG_MESSAGES  = array( 'attempt admitted (manual)', 'attempt queued (manual batch)', 'attempt queued (webhook)', 'attempt claimed from queue', 'deployment execution started', 'attempt finished', 'attempt reconciled as stopped', 'mutation guard blocked deployment', 'branch archive preparation failed', 'deployment worker failed', 'deployment worker storage failure', 'admin error notice emitted' );
 	/** @var array<string,array<string,string>> */
 	private array $identities = array();
 

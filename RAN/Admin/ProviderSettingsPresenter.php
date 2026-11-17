@@ -1593,6 +1593,13 @@ final readonly class ProviderSettingsPresenter {
 			),
 			'overview_url'                      => $provider_url(),
 			'credentials_url'                   => $provider_url( array( 'view' => 'credentials' ) ),
+			'credential_form'                   => $this->credential_form( $provider, $credential_projection['rows'], $data['credential_form_request'] ?? array() ),
+			'add_credential_url'                => $provider_url(
+				array(
+					'view'           => 'credentials',
+					'add_credential' => '1',
+				)
+			) . '#ran-booster-credential-editor',
 			'secrets_url'                       => $provider_url( array( 'view' => 'signing-secrets' ) ),
 			'provider_list_action_url'          => admin_url( 'admin.php' ),
 			'provider_mutation_fields'          => $mutation_fields,
@@ -1612,7 +1619,39 @@ final readonly class ProviderSettingsPresenter {
 		) + $this->profile_copy( $provider_label );
 	}
 
-
+	/**
+	 * @param array<string, mixed> $provider Provider metadata.
+	 * @param list<array<string, mixed>> $rows Safe credential rows.
+	 * @param array<string, mixed> $request Allowlisted form selection and native draft.
+	 * @return array<string, mixed>
+	 */
+	private function credential_form( array $provider, array $rows, array $request ): array {
+		$form = array(
+			'open'          => ! empty( $request['open'] ),
+			'draft'         => ! empty( $request['draft'] ),
+			'id'            => '',
+			'label'         => '',
+			'kind'          => $provider['credential_kinds'][0]['code'] ?? '',
+			'configuration' => array(),
+			'expires_on'    => '',
+			'provider_max'  => '',
+			'self_destruct' => false,
+		);
+		$id   = $request['id'] ?? '';
+		if ( '' !== $id ) {
+			$matches = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['id'] === $id && ! empty( $row['editable'] ) ) );
+			if ( empty( $matches ) ) {
+				$form['open'] = false;
+				return $form;
+			}
+			$row                  = $matches[0];
+			$form                 = array_merge( $form, array_intersect_key( $row, array_flip( array( 'id', 'label', 'kind', 'configuration', 'self_destruct' ) ) ) );
+			$form['open']         = true;
+			$form['provider_max'] = $row['provider_expires_on'];
+			$form['expires_on']   = ! empty( $row['self_destruct'] ) ? ( $row['destroy_on'] ?? '' ) : ( ! empty( $row['expiry']['manual_expires_on'] ) ? $row['expiry']['manual_expires_on'] : $row['provider_expires_on'] );
+		}
+		return array_replace( $form, array_intersect_key( $request, array_flip( array( 'label', 'kind', 'configuration', 'expires_on', 'self_destruct' ) ) ) );
+	}
 
 	/**
 	 * @param array<array-key, mixed> $profiles Profile entries; non-array entries are skipped.

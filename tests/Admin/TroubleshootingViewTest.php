@@ -2383,7 +2383,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Saved credentials are used for repository access.', $html );
 		self::assertStringNotContainsString( 'Saved credentials can be used for repository access.', $html );
 		self::assertStringNotContainsString( 'Open credential management to review saved credentials and their usage.', $html );
-		self::assertStringContainsString( '>Add credential</button>', $html );
+		self::assertStringContainsString( '>Add credential</a>', $html );
 		self::assertStringContainsString( 'data-credential-modal="access"', $html );
 		self::assertStringNotContainsString( 'ran-booster-provider-management-table--access', $html );
 		self::assertStringContainsString( 'id="ran-booster-webhook-secrets-heading" class="ran-booster-section__title">Signing secrets</h3>', $html );
@@ -4277,7 +4277,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 			$this->assert_flat_profile_layout( $html );
 			self::assertStringContainsString( 'credentials' === $provider_view ? 'No credentials match the current filters.' : 'No webhook secrets match the current filters.', $html );
-			self::assertStringContainsString( 'credentials' === $provider_view ? '>Add credential</button>' : '>Add webhook secret</button>', $html );
+			self::assertStringContainsString( 'credentials' === $provider_view ? '>Add credential</a>' : '>Add webhook secret</button>', $html );
 		}
 	}
 
@@ -4297,7 +4297,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '[contains(@class,"ran-booster-panel")])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header[contains(@class,"ran-booster-action-row")]/div/h2[@id="ran-booster-provider-heading"][@tabindex="-1"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//h2[@id="ran-booster-provider-heading"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header/button[@data-modal])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header/*[(self::a and @data-modal="access" and contains(@href,"add_credential=1")) or (self::button and @data-modal="webhook")])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/div[@class="ran-booster-collection"]/div[@class="ran-booster-collection__toolbar"]/form[@class="ran-booster-provider-list-controls"]/ancestor::div[@class="ran-booster-collection"]/div[@class="ran-booster-data-table-wrap"]/table[contains(concat(" ", @class, " ")," ran-booster-provider-management-table ")][not(contains(@class,"--rows"))])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//table[contains(@class,"widefat") or contains(@class,"striped")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/footer)' ) );

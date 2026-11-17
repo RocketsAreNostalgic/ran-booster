@@ -530,6 +530,104 @@ final class WebhookProcessorTest extends TestCase {
 		}
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_capture_storage_warnings_cannot_escape_into_the_webhook_response_or_php_log(): void {
+		define( 'WP_DEBUG_LOG', true );
+		$directory = sys_get_temp_dir() . '/ran-webhook-warning-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Private capture fixture owned by this subprocess.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/secrets.json' );
+		$capture->start();
+		$lock = $directory . '/ran-booster-debug.php.lock';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Replace only the fixture lock with a real warning-producing storage failure.
+		self::assertTrue( unlink( $lock ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- fopen cannot open a directory for writing.
+		self::assertTrue( mkdir( $lock, 0700 ) );
+		$settings = array();
+		foreach ( array(
+			'error_log'      => $directory . '/php.log',
+			'log_errors'     => '1',
+			'display_errors' => '1',
+			'html_errors'    => '0',
+		) as $key => $value ) {
+			$settings[ $key ] = ini_get( $key );
+			// phpcs:ignore WordPress.PHP.IniSet.Risky -- Separate subprocess owns and restores its diagnostic settings.
+			self::assertNotFalse( ini_set( $key, $value ) );
+		}
+		$warnings = 0;
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.prevent_path_disclosure_error_reporting, WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_error_reporting -- Enable real native warning disclosure in the isolated subprocess as the negative control.
+		$reporting = error_reporting( E_ALL );
+		$previous  = static function () use ( &$warnings ): bool {
+			++$warnings;
+			return false;
+		};
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Forward native warnings to PHP and test restoration of the prior handler.
+		set_error_handler( $previous, E_WARNING );
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
+		try {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Positive direct-log control before testing byte-for-byte silence.
+			error_log( 'synthetic-warning-log-control' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect only the private direct PHP log.
+			$baseline = file_get_contents( $directory . '/php.log' );
+			self::assertIsString( $baseline );
+			self::assertStringContainsString( 'synthetic-warning-log-control', $baseline );
+			self::assertFalse( \RAN\Logging\BoosterLogger::capture_webhook( 'signature_missing' ) );
+			$processor = $this->processor(
+				new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) ),
+				new WebhookProcessorCoordinator()
+			);
+			ob_start();
+			try {
+				$response = $processor->handle( 'gh', $this->request( '{}', array() ) );
+			} finally {
+				$output = ob_get_clean();
+			}
+			self::assertSame( 401, $response->get_status() );
+			self::assertSame( array( 'message' => 'Webhook authentication failed.' ), $response->get_data() );
+			self::assertSame( '', $output );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Native storage warnings must leave the direct log bytes unchanged.
+			self::assertSame( $baseline, file_get_contents( $directory . '/php.log' ) );
+			self::assertSame( 0, $warnings );
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Inspect the restored handler without changing the handler stack depth.
+			self::assertSame( $previous, set_error_handler( $previous, E_WARNING ) );
+			restore_error_handler();
+			ob_start();
+			try {
+				self::assertTrue( \RAN\Logging\BoosterLogger::log( 'ordinary storage warning control' ) );
+			} finally {
+				$ordinary_output = ob_get_clean();
+			}
+			self::assertSame( 1, $warnings );
+			self::assertIsString( $ordinary_output );
+			self::assertStringContainsString( 'fopen(', $ordinary_output );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- The identical ordinary storage failure must still reach native PHP logging.
+			$ordinary_log = file_get_contents( $directory . '/php.log' );
+			self::assertIsString( $ordinary_log );
+			self::assertStringContainsString( $lock, $ordinary_log );
+			self::assertStringContainsString( 'ordinary storage warning control', $ordinary_log );
+		} finally {
+			restore_error_handler();
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.prevent_path_disclosure_error_reporting, WordPress.PHP.DiscouragedPHPFunctions.runtime_configuration_error_reporting -- Restore the subprocess's original reporting mask.
+			error_reporting( $reporting );
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			foreach ( $settings as $key => $value ) {
+				if ( is_string( $value ) ) {
+					// phpcs:ignore WordPress.PHP.IniSet.Risky -- Restore the subprocess diagnostic settings.
+					ini_set( $key, $value );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the owned failing lock directory.
+			rmdir( $lock );
+			foreach ( array( '/ran-booster-debug.php', '/php.log' ) as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this subprocess's capture and direct log fixtures.
+				unlink( $directory . $file );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- All fixture files have been removed.
+			rmdir( $directory );
+		}
+	}
+
 	public function test_probe_and_ignored_envelopes_do_not_invoke_the_intake(): void {
 		$spy         = new WebhookProcessorCoordinatorSpy();
 		$coordinator = new WebhookProcessorCoordinator( null, $spy );

@@ -396,8 +396,18 @@ codes are separate from the frozen `ProviderFailure` vocabulary.
 Only the processor's final response boundary emits the diagnostic, after current
 selection checks. Revocation suppresses any pending verification/normalization
 cause. HTTP status/body, signing, scope and admission authority are unchanged.
-Admission/database-specific diagnostics and durable store-failure diagnostics
-remain separate work; this carrier does not implement them.
+Core also observes `provider_not_found`, `selection_unavailable`,
+`event_fanout_exceeded`, `delivery_conflict`, `database_unsupported`,
+`capacity_exhausted`, `storage_failure`, `configured_ref_refused`,
+`invalid_request` and `processing_failure` at that boundary. Storage reasons
+come only from the corresponding typed failure and predicates; other exceptions
+remain generic. A revoked selection takes precedence over a pending cause.
+Configured refs and other request details never enter the observation.
+
+Observations require an already active temporary capture and are sampled at
+most once per five seconds, shared with ordinary capture writes. They do not
+start capture or enter the native PHP log. Durable store-failure diagnostics
+and any change to verifier authentication status remain separate work.
 
 ## Required provider surface
 

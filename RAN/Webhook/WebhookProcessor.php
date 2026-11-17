@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Webhook;
 
 use InvalidArgumentException;
+use RAN\Deployment\CredentialShapedRef;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\GitHubProviderSelection;
@@ -55,7 +56,7 @@ final readonly class WebhookProcessor {
 			$envelope     = $normalizer->normalize_webhook( $webhook->with_verification( $verification ) );
 			$guard();
 			if ( count( $envelope->get_events() ) > 32 ) {
-				throw new WebhookRejected( 400, 'Webhook event fan-out is too large.' );
+				throw new WebhookRejected( 400, 'Webhook event fan-out is too large.', 'event_fanout_exceeded' );
 			}
 
 			if ( $envelope->is_probe() ) {
@@ -86,6 +87,7 @@ final readonly class WebhookProcessor {
 			return $this->response( 202, 'Webhook accepted.', $result );
 		} catch ( WebhookRejected $exception ) {
 			if ( ! $this->available( $provider ) ) {
+				BoosterLogger::capture_webhook( 'selection_unavailable' );
 				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
 			}
 			$status = $this->rejection_status( $exception->get_status_code() );
@@ -97,29 +99,45 @@ final readonly class WebhookProcessor {
 			);
 		} catch ( InvalidProviderCode | UnknownProvider | UnsupportedProviderCapability ) {
 			if ( ! $this->available( $provider ) ) {
+				BoosterLogger::capture_webhook( 'selection_unavailable' );
 				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
 			}
+			BoosterLogger::capture_webhook( 'provider_not_found' );
 			return $this->response( 404, 'Webhook provider not found.' );
 		} catch ( DeploymentStorageFailure $failure ) {
 			if ( ! $this->available( $provider ) ) {
+				BoosterLogger::capture_webhook( 'selection_unavailable' );
 				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
 			}
 			if ( $failure->is_delivery_conflict() ) {
+				BoosterLogger::capture_webhook( 'delivery_conflict' );
 				return $this->response( 409, 'Webhook delivery conflict.' );
 			}
 
+			BoosterLogger::capture_webhook( $failure->is_database_unsupported() ? 'database_unsupported' : ( $failure->is_capacity_exhausted() ? 'capacity_exhausted' : 'storage_failure' ) );
 			return $failure->is_database_unsupported() || $failure->is_capacity_exhausted()
 				? $this->response( 503, 'Webhook processing is temporarily unavailable.' )
 				: $this->response( 500, 'Webhook processing failed.' );
-		} catch ( InvalidArgumentException ) {
+		} catch ( CredentialShapedRef ) {
 			if ( ! $this->available( $provider ) ) {
+				BoosterLogger::capture_webhook( 'selection_unavailable' );
 				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
 			}
+			BoosterLogger::capture_webhook( 'configured_ref_refused' );
+			return $this->response( 400, 'Invalid webhook request.' );
+		} catch ( InvalidArgumentException ) {
+			if ( ! $this->available( $provider ) ) {
+				BoosterLogger::capture_webhook( 'selection_unavailable' );
+				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
+			}
+			BoosterLogger::capture_webhook( 'invalid_request' );
 			return $this->response( 400, 'Invalid webhook request.' );
 		} catch ( Throwable ) {
 			if ( ! $this->available( $provider ) ) {
+				BoosterLogger::capture_webhook( 'selection_unavailable' );
 				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
 			}
+			BoosterLogger::capture_webhook( 'processing_failure' );
 			return $this->response( 500, 'Webhook processing failed.' );
 		}
 	}

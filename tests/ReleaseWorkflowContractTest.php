@@ -60,11 +60,48 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'schema:"ran-profile-b-promotion"', $workflow );
 		self::assertStringContainsString( 'wordpress-release-candidate:', $workflow );
 		self::assertStringContainsString( 'name: Release candidate install readback', $workflow );
-		self::assertStringContainsString( 'run: composer check', $workflow );
+		self::assertStringContainsString( 'run: composer check:repository', $workflow );
+		self::assertStringContainsString( 'run: composer analyze:development', $workflow );
 		self::assertStringContainsString( 'run: pnpm check', $workflow );
 		self::assertStringContainsString( 'fromJSON(needs.runtime-archive.outputs.wordpress-matrix)', $workflow );
 		self::assertSame( 1, substr_count( $workflow, 'bash scripts/build-release.sh' ) );
-		self::assertSame( 3, substr_count( $workflow, 'name: Verify exact source checkout' ) );
+		// Repository, development analysis, candidate readback and WordPress each verify the archive's exact source SHA.
+		self::assertSame( 4, substr_count( $workflow, 'name: Verify exact source checkout' ) );
+	}
+
+	public function test_analysis_split_uses_read_only_full_lane_exact_source_and_four_workers(): void {
+		$workflow = $this->workflow( 'quality.yml' );
+		$jobs     = array();
+		foreach ( array( 'repository-quality', 'development-analysis' ) as $name ) {
+			self::assertSame( 1, preg_match( '/^  ' . $name . ':\n(?:(?!^  [a-z]).)*/ms', $workflow, $matches ) );
+			if ( ! isset( $matches[0] ) ) {
+				self::fail( 'Expected the ' . $name . ' job.' );
+			}
+			$jobs[ $name ] = $matches[0];
+			self::assertStringContainsString( 'needs: runtime-archive', $matches[0] );
+			self::assertStringContainsString( "if: \${{ needs.runtime-archive.outputs.lane == 'full' }}", $matches[0] );
+			self::assertStringContainsString( 'persist-credentials: false', $matches[0] );
+			self::assertStringContainsString( 'ref: ${{ needs.runtime-archive.outputs.source-commit }}', $matches[0] );
+			self::assertLessThan( strpos( $matches[0], 'composer install' ), strpos( $matches[0], 'name: Verify exact source checkout' ) );
+		}
+		$development = $jobs['development-analysis'];
+		self::assertStringContainsString( "permissions:\n      contents: read\n    steps:", $development );
+		self::assertStringNotContainsString( 'secrets.', $development );
+		self::assertStringNotContainsString( 'continue-on-error', $development );
+		self::assertStringNotContainsString( 'cache', $development );
+		self::assertStringNotContainsString( 'pnpm', $development );
+		self::assertStringNotContainsString( 'setup-node', $development );
+		self::assertStringContainsString( "php-version: '8.2'", $development );
+		self::assertStringContainsString( 'tools: composer:v2', $development );
+		self::assertStringContainsString( 'composer install --no-interaction --prefer-dist --no-progress', $development );
+		self::assertStringContainsString( 'RAN_SOURCE_COMMIT: ${{ needs.runtime-archive.outputs.source-commit }}', $development );
+		self::assertStringContainsString( 'test "$(git rev-parse HEAD)" = "$RAN_SOURCE_COMMIT"', $development );
+		self::assertStringContainsString( "PHPSTAN_DEVELOPMENT_PROCESSES: '4'", $development );
+		self::assertSame( 1, substr_count( $workflow, 'PHPSTAN_DEVELOPMENT_PROCESSES:' ) );
+		self::assertStringContainsString( 'run: composer analyze:development', $development );
+		self::assertStringContainsString( 'run: composer check:repository', $jobs['repository-quality'] );
+		self::assertStringContainsString( 'run: composer test:published-template-pack', $jobs['repository-quality'] );
+		self::assertStringContainsString( 'run: pnpm check', $jobs['repository-quality'] );
 	}
 
 	public function test_terminal_quality_fans_in_full_and_candidate_product_evidence(): void {
@@ -75,10 +112,13 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( '  quality:', $workflow );
 		self::assertStringContainsString( 'name: Quality', $workflow );
 		self::assertStringContainsString( '- repository-quality', $workflow );
+		self::assertStringContainsString( '- development-analysis', $workflow );
 		self::assertStringContainsString( '- wordpress-release-candidate', $workflow );
 		self::assertStringContainsString( '- wordpress', $workflow ); // phpcs:ignore WordPress.WP.CapitalPDangit.MisspelledInText -- YAML job key is lowercase.
 		self::assertStringContainsString( 'test "$WORDPRESS_RESULT" = success', $workflow );
 		self::assertStringContainsString( 'test "$RELEASE_CANDIDATE_RESULT" = success', $workflow );
+		self::assertStringContainsString( "name: Quality\n    if: \${{ always() }}", $workflow );
+		self::assertStringContainsString( 'DEVELOPMENT_ANALYSIS_RESULT: ${{ needs.development-analysis.result }}', $workflow );
 	}
 
 	public function test_terminal_quality_rejects_missing_or_failed_evidence(): void {
@@ -92,15 +132,15 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertIsString( $script );
 
 		$valid_lanes = array(
-			'full'              => array( 'success', 'success', 'skipped', 'success' ),
-			'release-candidate' => array( 'success', 'skipped', 'success', 'skipped' ),
+			'full'              => array( 'success', 'success', 'success', 'skipped', 'success' ),
+			'release-candidate' => array( 'success', 'skipped', 'skipped', 'success', 'skipped' ),
 		);
-		$keys        = array( 'RUNTIME_ARCHIVE_RESULT', 'REPOSITORY_QUALITY_RESULT', 'RELEASE_CANDIDATE_RESULT', 'WORDPRESS_RESULT' );
+		$keys        = array( 'RUNTIME_ARCHIVE_RESULT', 'REPOSITORY_QUALITY_RESULT', 'DEVELOPMENT_ANALYSIS_RESULT', 'RELEASE_CANDIDATE_RESULT', 'WORDPRESS_RESULT' );
 		$cases       = array();
 		foreach ( $valid_lanes as $lane => $valid_results ) {
 			$cases[] = array( $lane, $valid_results, true );
 			foreach ( $valid_results as $index => $expected_result ) {
-				foreach ( array( 'success', 'failure', 'cancelled', 'skipped' ) as $result ) {
+				foreach ( array( 'success', 'failure', 'cancelled', 'skipped', '', 'unknown', null ) as $result ) {
 					if ( $expected_result === $result ) {
 						continue;
 					}
@@ -114,7 +154,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		$cases[] = array( 'unknown', $valid_lanes['full'], false );
 
 		foreach ( $cases as [ $lane, $results, $should_pass ] ) {
-			$environment         = array_combine( $keys, $results );
+			$environment         = array_filter( array_combine( $keys, $results ), static fn( ?string $result ): bool => null !== $result );
 			$environment['LANE'] = $lane;
 			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Execute the actual terminal gate to prove failure, cancellation and skipped-evidence behavior.
 			$process = proc_open(
@@ -135,7 +175,7 @@ final class ReleaseWorkflowContractTest extends TestCase {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the isolated gate subprocess error pipe.
 			fclose( $pipes[2] );
 			$exit_code = proc_close( $process );
-			self::assertSame( $should_pass, 0 === $exit_code, $lane . ': ' . implode( ', ', $results ) . '\n' . $output . $errors );
+			self::assertSame( $should_pass, 0 === $exit_code, $lane . ': ' . implode( ', ', $environment ) . '\n' . $output . $errors );
 		}
 	}
 

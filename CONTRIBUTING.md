@@ -11,6 +11,20 @@ pnpm check
 
 `composer check` is the ordinary non-mutating PHP aggregate. It retains localisation/generated-state checks, deterministic tests, Admin Shell verification, the independent `lint:syntax` parser sweep, `standards` (PHPCS/WPCS/PHPCompatibility), and the existing blocking `analyze` contract. `composer standards:fix` is the matching mutating PHPCBF command and is not part of the required check.
 
+Full CI runs `Repository quality` and `Development analysis` in parallel after
+`Runtime archive`, both at its exact source commit. Repository quality runs
+`composer check:repository`, immutable template-pack verification and unchanged
+`pnpm check`. Both `check` and `check:repository` run `i18n:check` first, then the
+shared `check:common` stages; the former ends with complete `analyze`, the latter
+with `analyze:production`. Development analysis runs `composer analyze:development` with four
+workers and no cache. Together the PHP commands expand to the complete local
+`composer check` contract, with each analysis run once. Local `composer analyze`
+still runs production followed by development analysis. The required local gates
+remain `composer check` and `pnpm check`. Terminal `Quality` requires both jobs and the WordPress matrix
+on the full lane; the release-candidate lane requires those jobs to be skipped
+and retains exact archive and candidate install readback. This adds evidence,
+without changing release admission or artifact promotion.
+
 For a quick local pre-push check, `composer analyze:changed` runs level-8 analysis on only the development PHP under `scripts/` and `tests/` that changed from `origin/main` (committed, staged, unstaged and untracked), using the same configurations and profile routing as the full runner, and takes seconds. It does not reproduce the runner's batching partition, so it can differ for files whose test classes collide with other declarations. The full `composer check` and CI remain authoritative. `test:unit` runs PHPUnit with the memory limit lifted so `composer check` finishes on a default 128M PHP.
 
 Runtime, archive, release-candidate, and WordPress lifecycle changes need the focused proof required by [AGENTS.md](AGENTS.md). Do not commit generated release ZIPs, secret sidecars, WordPress runtime state, or credentials.

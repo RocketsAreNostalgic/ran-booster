@@ -286,3 +286,8 @@ Start resets the capture window; stopped, expired or unsafe storage admits no
 sample. There is no separate rate state, per-class fairness or complete ledger.
 The support report's existing log projection may omit this new record; this
 slice adds no report exporter or durable diagnostic entry.
+
+Provider failure logs may contain a screened optional `source_code` alongside
+existing provider and operation context. This diagnostic reference is omitted
+from the fixed support-report projection, even when the code is valid. It does
+not change the closed failure reason or the support report allowlist.

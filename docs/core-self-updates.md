@@ -127,37 +127,40 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core loads lock-pinned `ran/wp-release-updater` beta.20 (Protocol 8) after its
-single-site admission check and retains the public registrar. Runtime arbitration
-and prospective releases stay available independently of Core discovery. Other
-physical runtime copies must satisfy the pinned family/provenance selection
-contract; incompatible families fail closed.
+Core loads lock-pinned `ran/wp-release-updater` beta.21 after single-site
+admission. The root Composer manifest declares runtime protocol 11, up from 8.
+The packaged runtime manifest and the active broker must agree with that
+declaration. Physical copies with conflicting protocols refuse target
+registration in either load order.
 
-The published updater fact selected for this uptake is beta.20 reference
-`2f29812935fa10fef7c0dc8b2fc5a78898aee211`, with runtime revision
-`d9e14911e41262d6e5c2aa50742c5d5ed5da578092fbc67e83ac9f6c591f4796`.
-This records the released artifact identity; it does not by itself qualify
-Core integration. Qualification belongs to the exact-PR proof and review receipt.
-
-Core's bundled GitHub provider shares this single updater copy. Published GitHub
-Example v0.2.2 has its own beta.15/Protocol 7 copy; standalone updater Example
-v0.2.0 has beta.13/Protocol 6. Matching published example releases, including
-GitHub Example's qualified provider composition, are required wherever those
-examples are used before Protocol 8 composition qualification. Older example
-compositions remain held. Matching releases are tracked in
+The published beta.21 commit is
+`6f5d66b3f5b6f7e1ece992d36da80b19f5788907`. Its runtime revision is
+`69c8bdb41e1e4f4ec1af9e53d453fecc60b87e78d9dc07ffb7b9310015164e5d`.
+Core's bundled GitHub provider shares this copy. GitHub Example v0.2.2 carries
+beta.15/Protocol 7, and standalone updater Example v0.2.0 carries
+beta.13/Protocol 6. Example installations with a separate runtime need a
+compatible release and composition proof. See
 [GitHub Example #17](https://github.com/RocketsAreNostalgic/ran-booster-github-example/issues/17)
 and [standalone Example #7](https://github.com/RocketsAreNostalgic/ran-wp-release-updater-example/issues/7).
-Inspected Bitbucket, Migrator and both retired add-on archives carry no updater
-copy; adoption does not restore retired runtimes.
 
-Branch working-copy refusal remains `policy_blocked`, with misleading generic
+The previously inspected Bitbucket, Migrator and retired add-on archives carry
+no updater copy.
+
+The broker validates the latest native outcome and supplies it as the eleventh
+status field, `last_native_outcome`, with `null` when absent. Core continues to
+project its existing status fields. The updater writes schema 2 in its existing
+target binding row. It reads a schema 1 binding with an absent latest outcome.
+On downgrade, the beta.20 binding reader rejects a schema 2 row and the old
+runtime cannot claim that binding. The published codecs were exercised in both
+directions. A WordPress site downgrade has not been exercised.
+
+Branch working-copy refusal remains `policy_blocked`, with generic
 Updates/file-modification advice. Native release refusal uses
 `ran_wp_release_updater_target_is_working_copy` and “The update operation was
-not admitted.” Core shows generic “Published release status needs attention,”
-with no new persisted refusal record. This does not complete #889 or #834:
-closed-reason retention and fixed working-copy advice are proposed follow-up
-work only. No working-copy override is enabled; Core's stronger self-source
-guard, including `composer.json` in `auto` mode, remains unchanged.
+not admitted.” Core shows “Published release status needs attention.” The
+working-copy override stays off. Core's stronger self-source guard includes
+`composer.json` in `auto` mode. Operator-facing guidance is tracked in #889
+and #834.
 
 Core declares its exact target in manual mode when current policy permits, or
 in disabled/forced-off mode otherwise. Disabled registration preserves the

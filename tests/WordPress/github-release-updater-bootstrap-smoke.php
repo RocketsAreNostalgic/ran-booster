@@ -93,7 +93,7 @@ if ( is_string( $ran_booster_copy ) ) {
 
 $ran_booster_assert( is_object( $ran_booster_broker ), 'The release updater broker must register before plugins_loaded.' );
 $ran_booster_assert( is_object( $ran_booster_registrar ), 'The release updater must return its public registrar.' ); // @phpstan-ignore function.alreadyNarrowedType (Runtime acceptance proof retains the observed loaded value check rather than relying on analyzer assumptions.)
-$ran_booster_assert( 8 === $ran_booster_broker->protocol_version(), 'The public registrar must use Protocol 8.' );
+$ran_booster_assert( 11 === $ran_booster_broker->protocol_version(), 'The public registrar must use Protocol 11.' );
 
 $ran_booster_core_updater = ( new RAN\WordPress\ManagedReleaseUpdaterRegistrar( $ran_booster_registrar ) )->plugin(
 	'github',
@@ -135,9 +135,10 @@ try {
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Copy only the installed, locked runtime source.
 			$ran_booster_bytes = (string) file_get_contents( $ran_booster_source . '/' . $ran_booster_relative );
-			if ( 'conflict' === $ran_booster_kind ) {
-				// A synthetic protocol-7 broker/bootstrap, not qualification of any published older example.
-				$ran_booster_bytes = str_replace( array( '8 === $ran_wp_release_updater_broker->protocol_version()', 'return 8;' ), array( '7 === $ran_wp_release_updater_broker->protocol_version()', 'return 7;' ), $ran_booster_bytes );
+			if ( 'conflict' === $ran_booster_kind && 'bootstrap.php' === $ran_booster_relative ) {
+				// A synthetic protocol-8 broker/bootstrap, not qualification of any published older example.
+				$ran_booster_bytes = str_replace( array( '11 === $ran_wp_release_updater_broker->protocol_version()', 'return 11;' ), array( '8 === $ran_wp_release_updater_broker->protocol_version()', 'return 8;' ), $ran_booster_bytes, $ran_booster_replacements );
+				$ran_booster_assert( 2 === $ran_booster_replacements, 'Both broker protocol literals must be present in the conflict fixture.' );
 			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Fixture bytes are confined to the private temporary copy.
 			file_put_contents( $ran_booster_destination, $ran_booster_bytes );
@@ -150,7 +151,7 @@ try {
 		$ran_booster_metadata['package_revision'] = hash( 'sha256', $ran_booster_payload );
 		if ( 'conflict' === $ran_booster_kind ) {
 			$ran_booster_metadata['package_version']  = '0.0.0-protocol-conflict-fixture';
-			$ran_booster_metadata['runtime_protocol'] = 7;
+			$ran_booster_metadata['runtime_protocol'] = 8;
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents, WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON re-seals only this synthetic copy after its protocol mutation.
 		file_put_contents( $ran_booster_copy_root . '/runtime-copy.json', json_encode( $ran_booster_metadata, JSON_THROW_ON_ERROR ) );

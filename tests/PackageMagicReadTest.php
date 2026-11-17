@@ -91,7 +91,7 @@ final class PackageMagicReadTest extends TestCase {
 				'identifier'           => $identifier,
 				'displayName'          => 'Example package',
 				'version'              => '2.0.0',
-				'slug'                 => 'installation',
+				'slug'                 => Plugin::class === $class ? 'example' : 'example-theme',
 				'subdirectory'         => 'packages/installation',
 				'deploymentPolicy'     => DeploymentPolicy::AUTOMATIC,
 				'source'               => PackageSource::RELEASE_ASSET,

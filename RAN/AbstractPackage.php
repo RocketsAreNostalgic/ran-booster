@@ -47,12 +47,8 @@ abstract class AbstractPackage implements Package {
 	}
 
 	public function get_slug(): mixed {
-		if ( $this->has_subdirectory() ) {
-			return PackageSubdirectory::installation_slug( '', $this->get_subdirectory() );
-		}
-
 		return PackageSubdirectory::installation_slug(
-			$this->installation_slug ?? $this->runtime_slug(),
+			$this->runtime_slug(),
 			null
 		);
 	}
@@ -176,6 +172,6 @@ abstract class AbstractPackage implements Package {
 	}
 
 	protected function runtime_slug(): string {
-		throw new \LogicException( 'The package type does not define an installed package slug.' );
+		return $this->installation_slug ?? throw new \LogicException( 'The package type does not define an installed package slug.' );
 	}
 }

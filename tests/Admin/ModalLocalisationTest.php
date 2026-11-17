@@ -51,7 +51,7 @@ final class ModalLocalisationTest extends TestCase {
 
 		self::assertStringContainsString( 'id="ran-booster-access-modal-title" class="ran-booster-dialog__title">Ajouter un identifiant de depot</h2>', $html );
 		self::assertStringContainsString( 'id="ran-booster-webhook-modal-title" class="ran-booster-dialog__title">Ajouter un secret Push-to-Deploy</h2>', $html );
-		self::assertSame( 3, substr_count( $html, 'aria-label="Fermer"' ) );
+		self::assertSame( 2, substr_count( $html, 'aria-label="Fermer"' ) );
 		self::assertStringContainsString( '>Etiquette <input type="text" name="ran_booster[label]"', $html );
 		self::assertStringContainsString( 'placeholder="p. ex. acces de deploiement"', $html );
 		self::assertStringContainsString( 'placeholder="p. ex. webhooks d’organisation"', $html );
@@ -69,7 +69,7 @@ final class ModalLocalisationTest extends TestCase {
 		self::assertStringContainsString( 'data-provider-label="Provider &lt;data&gt;"', $html );
 		self::assertStringContainsString( '>Provider credential kind</option>', $html );
 		self::assertStringContainsString( '>Provider field <input type="text"', $html );
-		self::assertStringContainsString( 'placeholder="provider-field-placeholder" disabled', $html );
+		self::assertStringContainsString( 'placeholder="provider-field-placeholder" value=""', $html );
 		self::assertStringContainsString( '>Provider scope</option>', $html );
 		self::assertStringContainsString( 'data-target-label="Provider target"', $html );
 		self::assertStringContainsString( 'value="workspace" data-webhook-profile-id="workspace-hook" disabled', $html );
@@ -138,6 +138,18 @@ final class ModalLocalisationTest extends TestCase {
 		$managed_repositories    = array(
 			'owners'       => array( 'workspace' ),
 			'repositories' => array( array( 'target' => 'workspace/example' ) ),
+		);
+
+		$credentials_url = '/wp-admin/admin.php?page=ran-booster&tab=provider-code&view=credentials';
+		$credential_form = array(
+			'open'          => false,
+			'id'            => '',
+			'label'         => '',
+			'kind'          => 'provider-kind',
+			'configuration' => array(),
+			'expires_on'    => '',
+			'provider_max'  => '',
+			'self_destruct' => false,
 		);
 
 		ob_start();

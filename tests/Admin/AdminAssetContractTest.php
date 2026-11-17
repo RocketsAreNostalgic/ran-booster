@@ -1846,11 +1846,11 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'populateDeleteCredentialModal(modal, button);', $credential_script );
 		self::assertStringContainsString( "modal.querySelector('[data-delete-credential-cancel]').focus();", $credential_script );
 		self::assertStringContainsString( 'confirmButton.disabled = !usageKnown || inUse;', $credential_script );
-		self::assertStringContainsString( "get('replace_credential')", $credential_script );
-		self::assertMatchesRegularExpression(
-			"/button\\.getAttribute\\('data-id'\\)\\s*===\\s*requestedReplacement/",
-			$credential_script
-		);
+		self::assertStringContainsString( 'window.ranBoosterOpenDialog(button, form, {', $credential_script );
+		self::assertStringContainsString( 'initialFocus: () => cancel', $credential_script );
+		self::assertStringContainsString( 'disablePointerDismissal: true', $credential_script );
+		self::assertStringContainsString( 'data-credential-cancel', $credential_script );
+
 		self::assertStringContainsString( "querySelector('.ran-booster-secret-input')", $credential_script );
 		self::assertStringContainsString( "'ran-booster:provider-tasks-ready'", $credential_script );
 		self::assertStringContainsString( 'initWebhookUrlCopy(root);', $credential_script );

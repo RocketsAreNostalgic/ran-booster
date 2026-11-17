@@ -133,6 +133,7 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 			'invalid_release',
 			'release_identity_mismatch',
 			'release_incompatible',
+			'digest_missing',
 			'package_asset_missing',
 			'package_asset_ambiguous',
 			'release_version_mismatch',

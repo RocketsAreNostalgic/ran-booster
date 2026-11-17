@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use Throwable;
 
 /** @internal Owns untrusted prospective values, result projection and exact facade calls. */
@@ -56,6 +57,9 @@ final class ProspectiveReleaseOperations {
 		$data  = $this->normalize_candidate_list_data( $result->data() );
 		$codes = array( 'runtime_unsupported', 'unsupported_provider', 'no_releases', 'unable_to_check' );
 		if ( ! $result->successful() && in_array( $result->code(), $codes, true ) ) {
+			if ( 'no_releases' === $result->code() && isset( $data['candidates'] ) && array() === $data['candidates'] && ( $data['channel'] ?? $channel ) === $channel ) {
+				return $outcome( 'no_releases', false, $data );
+			}
 			$provider = $result->data()['rate_limited_provider'] ?? null;
 
 			return $outcome( $result->code(), false, 'unable_to_check' === $result->code() && is_string( $provider ) && 1 === preg_match( '/\A[a-z0-9][a-z0-9_-]{0,31}\z/D', $provider ) ? array( 'rate_limited_provider' => $provider ) : array() );
@@ -123,6 +127,9 @@ final class ProspectiveReleaseOperations {
 					|| ! hash_equals( $tag, (string) ( $data['tag'] ?? '' ) ) ) ) ) {
 			return $outcome( 'operation_failed', false );
 		}
+		if ( 'inspect' === $operation && ! $successful && 'release_invalid' === $code && 'digest_missing' === ( $result->data()['rejection_reason'] ?? null ) ) {
+			$data['rejection_reason'] = 'digest_missing';
+		}
 
 		if ( 'inspect' === $operation && $successful ) {
 			$expectation = $result->data()['provider_expectation'] ?? null;
@@ -138,7 +145,7 @@ final class ProspectiveReleaseOperations {
 
 	/**
 	 * @param array<mixed> $data
-	 * @return array{candidates?:list<array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,expected_asset_names:list<string>}>,channel?:string}
+	 * @return array{candidates?:list<array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,expected_asset_names:list<string>}>,channel?:string,search_exhausted?:?bool,diagnostics?:array{scanned_count:int,dropped_count:int,drops:list<array{reason:string,tag:?string}>,truncated:bool}|null}
 	 */
 	private function normalize_candidate_list_data( array $data ): array {
 		$raw_candidates = is_array( $data['candidates'] ?? null ) ? $data['candidates'] : null;
@@ -184,7 +191,11 @@ final class ProspectiveReleaseOperations {
 				'expected_asset_names' => $asset_names,
 			);
 		}
-		$safe = array( 'candidates' => $candidates );
+		$safe = array(
+			'candidates'       => $candidates,
+			'search_exhausted' => is_bool( $data['search_exhausted'] ?? null ) ? $data['search_exhausted'] : null,
+			'diagnostics'      => RepositoryReleaseCandidateList::normalize_diagnostics( $data['diagnostics'] ?? null, projected: true ),
+		);
 		if ( isset( $data['channel'] )
 			&& is_string( $data['channel'] )
 			&& in_array( $data['channel'], array( 'stable', 'prerelease' ), true ) ) {

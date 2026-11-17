@@ -175,6 +175,18 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		$this->request( 'GET', 'troubleshooting' );
 
 		$this->run_admin_init();
+		$troubleshooting_panel = 'diagnostics';
+		$troubleshooting       = array(
+			'providers'       => array(),
+			'ran'             => false,
+			'release_listing' => array( 'tag' => 'withheld-listing-canary' ),
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Why published releases may be skipped', $html );
+		self::assertStringNotContainsString( 'withheld-listing-canary', $html );
+		self::assertStringNotContainsString( 'ran_booster_release_list_candidates', $html );
 
 		self::assertSame( 0, $fixture['secrets']->validations );
 		self::assertSame( 0, $fixture['database']->upgrades );

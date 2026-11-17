@@ -63,8 +63,13 @@ final class ProspectiveReleaseCandidateReader {
 				is_string( $repository['credential_id'] ?? null ) && '' !== $repository['credential_id'] ? $repository['credential_id'] : null
 			);
 			$result     = $listing->list_release_candidates( $type, $reference, $channel );
+			$metadata   = array(
+				'channel'          => $channel,
+				'search_exhausted' => $result->search_exhausted,
+				'diagnostics'      => $result->diagnostics,
+			);
 			if ( array() === $result->candidates ) {
-				return ProspectiveReleaseResult::failure( 'no_releases' );
+				return ProspectiveReleaseResult::failure( 'no_releases', array( 'candidates' => array() ) + $metadata );
 			}
 
 			$candidates = array();
@@ -91,10 +96,7 @@ final class ProspectiveReleaseCandidateReader {
 
 			return ProspectiveReleaseResult::success(
 				'release_candidates_available',
-				array(
-					'candidates' => $candidates,
-					'channel'    => $channel,
-				)
+				array( 'candidates' => $candidates ) + $metadata
 			);
 		} catch ( Throwable $failure ) {
 			BoosterLogger::log_provider_failure(

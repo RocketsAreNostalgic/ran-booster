@@ -16,6 +16,22 @@ use RAN\Tests\Admin\ReleaseManagement\Support\PackageProjection;
 use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class ReleaseManagementControlsTest extends TestCase {
+	public function test_both_picker_observation_regions_remain_outside_candidate_only_fieldsets(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( 'create', 'edit' ) as $mode ) {
+				$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', $type ) ) );
+				ob_start();
+				$controls->render_advanced_source_section( $mode, $type, 'release_asset', 'edit' === $mode ? new PackageProjection( 'release_asset', $type ) : null, 'https://example.test/wp-admin/admin.php' );
+				$html     = (string) ob_get_clean();
+				$document = new \DOMDocument();
+				$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+				$xpath = new \DOMXPath( $document );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-release-observations and @hidden and @role="status"])' ) );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(//fieldset//*[@data-ran-booster-release-observations])' ) );
+			}
+		}
+	}
+
 	#[Before]
 	public function reset_word_press(): void {
 		ReleaseManagementFixture::reset_word_press();

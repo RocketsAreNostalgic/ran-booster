@@ -28,6 +28,48 @@ require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Logging/LoggingWordPressFunctions.php';
 
 final class SupportReportTest extends TestCase {
+	public function test_listing_context_and_source_codes_are_omitted_even_when_they_are_valid_display_values(): void {
+		$this->environment();
+		$canaries = array( 'release-1.2.3', 'tag_not_version', '9876543210123456789', 'wp_http.transport_other' );
+		$listing  = array(
+			'search_exhausted' => true,
+			'diagnostics'      => array(
+				'scanned_count' => 4,
+				'dropped_count' => 1,
+				'drops'         => array(
+					array(
+						'tag'              => $canaries[0],
+						'reason'           => $canaries[1],
+						'release_identity' => $canaries[2],
+					),
+				),
+				'truncated'     => false,
+			),
+			'source_code'      => $canaries[3],
+		);
+		$row      = array(
+			'status'      => 'pass',
+			'code'        => 'gh.repository.reachable',
+			'message'     => $canaries[0],
+			'remediation' => $canaries[1],
+		) + $listing;
+		$report   = new SupportReport( new InstallationFacts( new ProviderRegistry() ), themes: $this->empty_themes() );
+		$text     = $report->generate(
+			$listing,
+			array(
+				'state'     => 'completed',
+				'local'     => array(),
+				'providers' => array( 'gh' => array( $row ) ),
+			)
+		)['text'];
+		self::assertStringContainsString( 'gh.repository.reachable', $text, 'Positive control: the supplied fresh diagnostic was projected.' );
+		foreach ( $canaries as $canary ) {
+			self::assertStringNotContainsString( $canary, $text );
+		}
+		self::assertStringNotContainsString( 'release_identity', $text );
+		self::assertStringNotContainsString( 'search_exhausted', $text );
+	}
+
 	public function test_core_projection_preserves_recorded_operator_history_and_rejects_untrusted_values(): void {
 		$method = new \ReflectionMethod( SupportReport::class, 'core_update_lines' );
 		$core   = array(

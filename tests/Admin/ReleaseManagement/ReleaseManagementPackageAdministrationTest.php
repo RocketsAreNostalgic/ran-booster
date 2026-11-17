@@ -2154,6 +2154,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	public static function failed_enable_reasons(): array {
 		return array(
 			'no published release'             => array( 'no_releases', '', 'No eligible releases were found in this search.', 'Review the release picker for skipped releases and the selected track, then use Check releases.', 'release_unavailable' ),
+			'missing published digest'         => array( 'digest_missing', '', 'The release ZIP has no published digest.', 'Publish the release ZIP again so its digest is available, then use Check releases.', 'release_unavailable' ),
 			'no package ZIP'                   => array( 'package_asset_missing', 'v0.4.0', 'Release v0.4.0 has no .zip package asset.', 'Attach exactly one .zip package to the release, then use Check releases.', 'release_unavailable' ),
 			'more than one package ZIP'        => array( 'package_asset_ambiguous', 'v0.4.0', 'Release v0.4.0 has more than one .zip package asset.', 'Keep exactly one .zip package on the release, then use Check releases.', 'release_unavailable' ),
 			'one ZIP, cause inside it'         => array( 'release_incompatible', 'v0.4.0', 'does not have exactly one package ZIP, or its header or Update URI does not match.', 'exactly one package ZIP asset', 'release_unavailable' ),

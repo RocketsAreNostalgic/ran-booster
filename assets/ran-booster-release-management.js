@@ -51,7 +51,7 @@ const renderListingObservations = (target, data = null) => {
 		return;
 	}
 	target.replaceChildren();
-	target.hidden = !data;
+	target.hidden = true;
 	if (!data) {
 		return;
 	}
@@ -60,6 +60,7 @@ const renderListingObservations = (target, data = null) => {
 		const row = document.createElement('p');
 		row.textContent = text;
 		target.append(row);
+		target.hidden = false;
 	};
 	if (data.search_exhausted === true) {
 		paragraph(
@@ -71,12 +72,14 @@ const renderListingObservations = (target, data = null) => {
 	}
 	const report = data.diagnostics;
 	if (!report) {
-		paragraph(
-			__(
-				'Skipped-release details are unavailable for this search.',
-				'ran-booster'
-			)
-		);
+		if (Array.isArray(data.candidates) && data.candidates.length === 0) {
+			paragraph(
+				__(
+					'Skipped-release details are unavailable for this search.',
+					'ran-booster'
+				)
+			);
+		}
 		return;
 	}
 	paragraph(

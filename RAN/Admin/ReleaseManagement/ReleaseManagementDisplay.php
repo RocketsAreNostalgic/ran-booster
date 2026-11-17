@@ -1070,6 +1070,7 @@ final class ReleaseManagementDisplay {
 		}
 		if ( 'release_unavailable' === $code ) {
 			return match ( $reason ) {
+				'digest_missing' => __( 'Publish the release ZIP again so its digest is available, then use Check releases.', 'ran-booster' ),
 				'no_releases' => __( 'Review the release picker for skipped releases and the selected track, then use Check releases.', 'ran-booster' ),
 				'package_asset_missing' => __( 'Attach exactly one .zip package to the release, then use Check releases.', 'ran-booster' ),
 				'package_asset_ambiguous' => __( 'Keep exactly one .zip package on the release, then use Check releases.', 'ran-booster' ),

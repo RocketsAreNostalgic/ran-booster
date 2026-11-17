@@ -56,7 +56,9 @@ function observationNode() {
 	return {
 		hidden: true,
 		children: [],
+		dataset: {},
 		textContent: '',
+		addEventListener() {},
 		append(...rows) {
 			this.children.push(...rows);
 		},
@@ -72,6 +74,7 @@ function observationNode() {
 const observationI18n = {
 	i18n: {
 		__: (text) => text,
+		_n: (singular, plural, count) => (count === 1 ? singular : plural),
 		sprintf: (text, ...values) =>
 			text.replace(/%(\d+)\$[ds]/g, (_, index) =>
 				String(values[Number(index) - 1])
@@ -122,7 +125,11 @@ test('listing observation renderer uses fixed reasons and text nodes, bounds sam
 		text,
 		/withheld_unknown|withheld_ninth|8 newest|Enter a tag/
 	);
-	render(target, { search_exhausted: false, diagnostics: null });
+	render(target, {
+		candidates: [],
+		search_exhausted: false,
+		diagnostics: null,
+	});
 	assert.equal(target.children.length, 1);
 	assert.match(target.children[0].textContent, /details are unavailable/);
 	render(target);
@@ -148,11 +155,16 @@ for (const picker of ['managed', 'prospective']) {
 			const forceBranchForSubdirectory=()=>{}, forceBranchForUnsupportedProvider=()=>{};
 			const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{};
 			const showPlaceholder=()=>{}, setStatus=()=>{}, setChecking=()=>{}, showUnavailable=()=>{}, showError=()=>{};
+			const showCandidates=()=>{}, isNativeUpdateOffer=()=>false, inspect=()=>{};
+			const candidateElements=new Map(); let selectedOutcome=null;
 			${declaration(picker === 'managed' ? 'list' : 'listCandidates')}
 			return ${picker === 'managed' ? 'list' : 'listCandidates'};
 		`
 		)(
-			{ createElement: observationNode },
+			{
+				createElement: observationNode,
+				createTextNode: (textContent) => ({ textContent }),
+			},
 			observationI18n,
 			observations,
 			() => {
@@ -204,6 +216,43 @@ for (const picker of ['managed', 'prospective']) {
 		await failed;
 		assert.equal(observations.hidden, true);
 		assert.equal(observations.children.length, 0);
+		for (const count of [0, 1]) {
+			for (const stopped of [false, true]) {
+				const next = load();
+				pending.at(-1).resolve({
+					successful: true,
+					code: count
+						? 'release_candidates_available'
+						: 'no_releases',
+					data: {
+						candidates: count
+							? [
+									{
+										release_id: '1',
+										version: '1.0.0',
+										tag: 'v1.0.0',
+										prerelease: false,
+										version_relationship: 'newer',
+									},
+								]
+							: [],
+						search_exhausted: stopped,
+						diagnostics: null,
+					},
+				});
+				await next;
+				const text = observations.children
+					.map((row) => row.textContent)
+					.join('\n');
+				assert.equal(/details are unavailable/.test(text), count === 0);
+				assert.equal(/search stopped at its limit/.test(text), stopped);
+				assert.equal(observations.hidden, count === 1 && !stopped);
+				assert.equal(
+					observations.children.length,
+					Number(count === 0) + Number(stopped)
+				);
+			}
+		}
 	});
 }
 

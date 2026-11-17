@@ -668,7 +668,10 @@ and sets `truncated` exactly when counts exceed the retained sample. Default
 wire mode remains strict, including empty undersampled reports. Callers must
 select the mode explicitly; missing wire fields never imply a projection.
 Both pickers preserve observations on empty and nonempty outcomes, with fixed
-Core wording and DOM text nodes. Search termination and sample truncation are
+Core wording and DOM text nodes. Without a report, unavailable-details guidance
+appears only on an empty candidate list. A stopped-search warning remains
+visible with or without candidates; a region with no observations stays hidden.
+Search termination and sample truncation are
 independent. No listing observation enters storage, Activity or support export.
 
 Producer publication and provider forwarding are separate prerequisites. The

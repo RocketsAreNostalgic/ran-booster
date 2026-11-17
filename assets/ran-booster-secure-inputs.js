@@ -876,12 +876,8 @@
 		editor.dataset.bound = 'true';
 		const form = editor.querySelector('form');
 		const cancel = form.querySelector('[data-credential-cancel]');
-		const listeners = new AbortController();
-		const options = { signal: listeners.signal };
 		let dialog = null;
 		let dirty = editor.dataset.credentialDraft === 'true';
-		let nativeSubmit = null;
-		let savedResponse = null;
 		const confirmDiscard = () => {
 			return (
 				!dirty ||
@@ -892,144 +888,11 @@
 			);
 		};
 		form.addEventListener('input', () => {
-			nativeSubmit = null;
-			savedResponse = null;
 			dirty = true;
 		});
 		form.addEventListener('change', () => {
-			nativeSubmit = null;
-			savedResponse = null;
 			dirty = true;
 		});
-		form.addEventListener('submit', (event) => {
-			// Read final cancellation from the original event; never resubmit.
-			nativeSubmit = event;
-		});
-		window.addEventListener(
-			'pageshow',
-			() => {
-				nativeSubmit = null;
-				savedResponse = null;
-			},
-			options
-		);
-		window.addEventListener(
-			'beforeunload',
-			(event) => {
-				if (
-					dirty &&
-					(!nativeSubmit || nativeSubmit.defaultPrevented) &&
-					form.isConnected &&
-					(!savedResponse || savedResponse.defaultPrevented)
-				) {
-					event.preventDefault();
-					event.returnValue = '';
-				}
-			},
-			options
-		);
-		document.addEventListener(
-			'htmx:beforeOnLoad',
-			(event) => {
-				const { xhr, requestConfig } = event.detail || {};
-				if (
-					requestConfig?.elt !== form ||
-					xhr.status !== 200 ||
-					xhr.getResponseHeader('HX-Location')
-				) {
-					return;
-				}
-				const redirect = xhr.getResponseHeader('HX-Redirect');
-				if (!redirect) {
-					return;
-				}
-				let destination;
-				try {
-					destination = new URL(redirect, window.location.href);
-				} catch {
-					return;
-				}
-				const query = destination.searchParams;
-				const action = new URL(form.action, window.location.href);
-				if (
-					destination.origin !== action.origin ||
-					destination.pathname !== action.pathname ||
-					query.get('page') !== 'ran-booster' ||
-					query.get('tab') !==
-						form.elements['ran_booster[provider]'].value ||
-					query.get('ran_booster_interaction_operation') !==
-						'core:save-access-profile' ||
-					query.get('ran_booster_interaction_target') !==
-						'core_provider_profiles' ||
-					query.get('ran_booster_interaction_outcome') !== 'success'
-				) {
-					return;
-				}
-				// htmx redirects before beforeSwap/afterRequest. Retain the event so
-				// a later veto still guards the draft, and expire this navigation grant.
-				savedResponse = event;
-				setTimeout(() => {
-					savedResponse = null;
-				}, 0);
-			},
-			options
-		);
-		document.addEventListener(
-			'htmx:beforeSwap',
-			(event) => {
-				const detail = event.detail;
-				const origin = detail?.requestConfig?.elt;
-				const status = detail?.xhr?.status;
-				// Enhanced mutations may enable these responses after this handler.
-				const maySwap =
-					detail?.shouldSwap || [400, 409, 422, 500].includes(status);
-				const inheritedSwap = origin?.closest?.(
-					'[hx-swap], [data-hx-swap]'
-				);
-				const swap =
-					detail?.swapOverride ||
-					inheritedSwap?.getAttribute('hx-swap') ||
-					inheritedSwap?.getAttribute('data-hx-swap') ||
-					window.htmx?.config?.defaultSwapStyle ||
-					'innerHTML';
-				const style = swap.trim().split(/\s+/)[0];
-				const hasOutOfBand =
-					/\b(?:data-)?hx-swap-oob(?:\s|=|\/|>)/i.test(
-						String(detail?.serverResponse || '')
-					) ||
-					origin?.closest?.('[hx-select-oob], [data-hx-select-oob]');
-				const harmlessSwap =
-					[
-						'none',
-						'beforebegin',
-						'afterbegin',
-						'beforeend',
-						'afterend',
-					].includes(style) && !hasOutOfBand;
-				if (
-					maySwap &&
-					!harmlessSwap &&
-					(detail.target?.contains(editor) ||
-						detail.target?.contains(form)) &&
-					(origin === form || !confirmDiscard())
-				) {
-					// Credential saves confirm success by redirect, never by replacing
-					// the editor. Reject login HTML and other unconfirmed responses.
-					event.preventDefault();
-					event.detail.shouldSwap = false;
-				}
-			},
-			options
-		);
-		document.addEventListener(
-			'htmx:beforeCleanupElement',
-			(event) => {
-				if (event.detail?.elt?.contains(editor)) {
-					listeners.abort();
-				}
-			},
-			options
-		);
 		cancel.addEventListener('click', (event) => {
 			if (dialog && !editor.contains(form)) {
 				event.preventDefault();

@@ -29,13 +29,10 @@ function fixture(available = true, query = '') {
 	window.location = {
 		href: 'https://example.test/wp-admin/admin.php' + query,
 	};
-	form.action = window.location.href;
-	form.isConnected = true;
 	form.elements = {
 		'ran_booster[id]': { value: 'saved' },
 		'ran_booster[label]': {},
 		'ran_booster[secret]': {},
-		'ran_booster[provider]': { value: 'fixture' },
 		'ran_booster[expires_on]': { value: '2027-01-01', dataset: {} },
 	};
 	form.querySelector = () => cancel;
@@ -151,116 +148,6 @@ test('missing or failing Dialog and modified clicks retain native link behavior'
 	assert.equal(modified.defaultPrevented, false);
 });
 
-test('dirty interlocks reject unconfirmed form replacement and preserve scoped errors', async () => {
-	const state = fixture();
-	state.form.dispatchEvent(event('input'));
-	const leave = event('beforeunload');
-	state.window.dispatchEvent(leave);
-	assert.equal(leave.defaultPrevented, true);
-	const response = {
-		shouldSwap: true,
-		target: { contains: () => true },
-		requestConfig: { elt: {} },
-	};
-	state.document.dispatchEvent(event('htmx:beforeSwap', response));
-	assert.equal(response.shouldSwap, false);
-	response.shouldSwap = true;
-	response.requestConfig.elt = state.form;
-	state.document.dispatchEvent(event('htmx:beforeSwap', response));
-	assert.equal(
-		response.shouldSwap,
-		false,
-		'form origin alone never confirms a destructive response'
-	);
-	const formReplacement = event('htmx:beforeSwap', {
-		shouldSwap: true,
-		target: { contains: (node) => node === state.form },
-		requestConfig: { elt: state.form },
-	});
-	state.document.dispatchEvent(formReplacement);
-	assert.equal(formReplacement.defaultPrevented, true);
-	assert.equal(formReplacement.detail.shouldSwap, false);
-	const serverError = event('htmx:beforeSwap', {
-		shouldSwap: false,
-		xhr: { status: 500 },
-		target: { contains: (node) => node === state.form },
-		requestConfig: { elt: state.form },
-	});
-	state.document.dispatchEvent(serverError);
-	assert.equal(
-		serverError.defaultPrevented,
-		true,
-		'a later response handler must not enable an unconfirmed editor swap'
-	);
-	const siblingError = event('htmx:beforeSwap', {
-		shouldSwap: false,
-		xhr: { status: 500 },
-		target: { contains: (node) => node === state.form },
-		requestConfig: { elt: {} },
-	});
-	state.document.dispatchEvent(siblingError);
-	assert.equal(
-		siblingError.defaultPrevented,
-		true,
-		'a later response handler must not bypass the sibling discard guard'
-	);
-	const scopedError = {
-		shouldSwap: true,
-		target: { contains: () => false },
-		requestConfig: { elt: state.form },
-	};
-	state.document.dispatchEvent(event('htmx:beforeSwap', scopedError));
-	assert.equal(scopedError.shouldSwap, true);
-	const submit = event('submit');
-	submit.submitter = { name: 'original-submitter' };
-	state.form.dispatchEvent(submit);
-	assert.equal(submit.defaultPrevented, false);
-	await Promise.resolve();
-	const nativeLeave = event('beforeunload');
-	state.window.dispatchEvent(nativeLeave);
-	assert.equal(nativeLeave.defaultPrevented, false);
-	const enhancedSubmit = event('submit');
-	state.form.dispatchEvent(enhancedSubmit);
-	enhancedSubmit.preventDefault();
-	await Promise.resolve();
-	const refusedLeave = event('beforeunload');
-	state.window.dispatchEvent(refusedLeave);
-	assert.equal(refusedLeave.defaultPrevented, true);
-	state.document.dispatchEvent(
-		event('htmx:beforeCleanupElement', { elt: { contains: () => true } })
-	);
-	const afterRemoval = event('beforeunload');
-	state.window.dispatchEvent(afterRemoval);
-	assert.equal(afterRemoval.defaultPrevented, false);
-});
-
-test('dirty editor does not prompt for responses that cannot replace it', () => {
-	const state = fixture();
-	let prompts = 0;
-	state.window.confirm = () => {
-		prompts++;
-		return false;
-	};
-	state.form.dispatchEvent(event('input'));
-	for (const [status, swapOverride] of [
-		[204, undefined],
-		[200, 'none'],
-		[200, 'beforeend'],
-	]) {
-		const response = event('htmx:beforeSwap', {
-			shouldSwap: status !== 204,
-			xhr: { status },
-			swapOverride,
-			target: { contains: (node) => node === state.form },
-			requestConfig: { elt: {} },
-			serverResponse: '<p>safe</p>',
-		});
-		state.document.dispatchEvent(response);
-		assert.equal(response.defaultPrevented, false);
-	}
-	assert.equal(prompts, 0);
-});
-
 test('switching credential identity cannot silently erase a dirty draft', () => {
 	const state = fixture();
 	state.form.dispatchEvent(event('input'));
@@ -274,79 +161,6 @@ test('switching credential identity cannot silently erase a dirty draft', () => 
 	state.button.dispatchEvent(event('click'));
 	assert.equal(state.populations, 1);
 	assert.equal(state.opens, 1);
-});
-
-const successRedirect =
-	'https://example.test/wp-admin/admin.php?page=ran-booster&tab=fixture&ran_booster_interaction_operation=core%3Asave-access-profile&ran_booster_interaction_target=core_provider_profiles&ran_booster_interaction_outcome=success';
-function warnsOnLeave(state) {
-	const leaving = event('beforeunload');
-	state.window.dispatchEvent(leaving);
-	return leaving.defaultPrevented;
-}
-function redirectResponse(
-	state,
-	redirect = successRedirect,
-	status = 200,
-	elt = state.form
-) {
-	return event('htmx:beforeOnLoad', {
-		requestConfig: { elt },
-		xhr: {
-			status,
-			getResponseHeader: (name) =>
-				name === 'HX-Redirect' ? redirect : null,
-		},
-	});
-}
-test('only matching confirmed credential redirect temporarily permits leaving', async () => {
-	const state = fixture();
-	state.form.dispatchEvent(event('input'));
-	for (const res of [
-		redirectResponse(state, null),
-		redirectResponse(state, successRedirect, 422),
-		redirectResponse(state, successRedirect, 200, {}),
-		redirectResponse(
-			state,
-			successRedirect.replace('tab=fixture', 'tab=other')
-		),
-		redirectResponse(
-			state,
-			successRedirect.replace(
-				'outcome=success',
-				'outcome=validation_failure'
-			)
-		),
-		redirectResponse(
-			state,
-			successRedirect.replace('example.test', 'other.test')
-		),
-	]) {
-		state.document.dispatchEvent(res);
-		assert.equal(warnsOnLeave(state), true);
-	}
-	state.document.dispatchEvent(redirectResponse(state));
-	assert.equal(warnsOnLeave(state), false);
-	await new Promise((resolve) => setTimeout(resolve, 0));
-	assert.equal(
-		warnsOnLeave(state),
-		true,
-		'grant expires if navigation does not complete'
-	);
-	const vetoed = redirectResponse(state);
-	state.document.dispatchEvent(vetoed);
-	vetoed.preventDefault();
-	assert.equal(
-		warnsOnLeave(state),
-		true,
-		'later beforeOnLoad veto retains draft protection'
-	);
-	state.document.dispatchEvent(redirectResponse(state));
-	state.form.dispatchEvent(event('input'));
-	assert.equal(
-		warnsOnLeave(state),
-		true,
-		'further edits revoke the navigation grant'
-	);
 });
 
 for (const [query, id, secret] of [
@@ -371,47 +185,6 @@ for (const [query, id, secret] of [
 			state.form.elements[
 				secret ? 'ran_booster[secret]' : 'ran_booster[label]'
 			]
-		);
-	});
-}
-
-for (const reset of ['input', 'change', 'pageshow']) {
-	test(`native submit bypass expires on ${reset}`, async () => {
-		const state = fixture();
-		state.form.dispatchEvent(event('input'));
-		const original = event('submit');
-		original.submitter = { name: 'original' };
-		state.form.dispatchEvent(original);
-		await Promise.resolve();
-		assert.equal(
-			warnsOnLeave(state),
-			false,
-			'uncancelled native navigation is allowed'
-		);
-		(reset === 'pageshow' ? state.window : state.form).dispatchEvent(
-			event(reset)
-		);
-		assert.equal(
-			warnsOnLeave(state),
-			true,
-			'restored document or fresh editing must be guarded'
-		);
-		state.form.dispatchEvent(event('submit'));
-		state.form.dispatchEvent(event('input'));
-		await Promise.resolve();
-		assert.equal(
-			warnsOnLeave(state),
-			true,
-			'a queued observation cannot rearm bypass after an edit'
-		);
-		const cancelled = event('submit');
-		state.form.dispatchEvent(cancelled);
-		cancelled.preventDefault();
-		await Promise.resolve();
-		assert.equal(
-			warnsOnLeave(state),
-			true,
-			'cancelled native submit never permits leaving'
 		);
 	});
 }

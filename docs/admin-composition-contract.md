@@ -71,13 +71,11 @@ Native add/edit links select the same inline form without JavaScript. All
 configuration fields remain usable in that fallback; the existing handler
 validates only the selected kind. Failed native saves restore allowlisted
 non-secret fields by continuing the authorized POST render instead of redirecting.
-Only a matching successful credential `HX-Redirect` temporarily bypasses the
-dirty-form leave warning; failed or vetoed responses retain it. Unconfirmed
-form responses cannot replace the editor, including expired-authentication login
-HTML. Native-submit bypass resets on fresh edits and page restoration. Portal styling
-uses the same credential rules as the inline fallback. Secrets and submitted nonces are
-never restored. Blank-secret edits retain the stored credential. Drafts are
-excluded from HTMX history; no URL, flash or persistent draft store is added.
+Portal styling uses the same credential rules as the inline fallback. Secrets
+and submitted nonces are never restored. Blank-secret edits retain the stored
+credential. An unsaved draft is not protected against navigation, inline Cancel,
+an expired session or another page update. Drafts are excluded from HTMX history;
+no URL, flash or persistent draft store is added.
 Installed WordPress, assistive-technology and native-zoom acceptance are separate
 from synthetic browser fixtures and source gates.
 

@@ -456,11 +456,23 @@ final class DeploymentAttemptRepository {
 			}
 		);
 	}
-	public function finish( int $attempt_id, DeploymentOutcome $outcome, ?DateTimeInterface $at = null ): DeploymentAttempt {
+	public function finish( int $attempt_id, DeploymentOutcome $outcome, ?DateTimeInterface $at = null, ?DeploymentAttempt $working_copy_observation = null ): DeploymentAttempt {
 		RuntimeSupport::assert_managed_operations_allowed();
-		$id = $this->positive_id( $attempt_id );
-		return $this->transaction(
-			function () use ( $id, $outcome, $at ): DeploymentAttempt {
+		$id           = $this->positive_id( $attempt_id );
+		$working_copy = false;
+		$attempt      = $this->transaction(
+			function () use ( $id, $outcome, $at, $working_copy_observation, &$working_copy ): DeploymentAttempt {
+				if ( null !== $working_copy_observation && $id === $working_copy_observation->get_id()
+					&& DeploymentOutcome::CODE_POLICY_BLOCKED === $outcome->get_code() ) {
+					$observed     = $working_copy_observation->safe_data();
+					$working_copy = 'running' === $observed['state'] && null === $observed['mutation_started_at']
+						&& 'branch' === $observed['package_source'] && in_array( $observed['operation'], array( 'install', 'update' ), true )
+						&& null === $this->provider_refusal( $working_copy_observation )
+						&& $this->adoption_matches( $observed['operation'], $observed['package_type'], $observed['provider'], $observed['provider_repository_id'], $working_copy_observation->get_request(), $observed['package_source'], $observed['package_source_revision'] );
+					$locked       = DeploymentAttempt::from_database( $this->locked_attempt_row( $id ) );
+					$working_copy = $working_copy && $locked->safe_data() === $observed
+						&& $locked->get_request()->to_json() === $working_copy_observation->get_request()->to_json();
+				}
 				$data = array(
 					'state'        => $outcome->get_state()->value,
 					'outcome_code' => $outcome->get_code(),
@@ -471,17 +483,28 @@ final class DeploymentAttemptRepository {
 				}
 				$attempt = $this->require_exact( $id );
 				$this->assert_attempt_data( $attempt, $data );
-				$this->record_activity_outcome( $attempt, $outcome );
-				BoosterLogger::log(
-					'attempt finished',
-					$attempt->log_context() + array(
-						'transition'   => 'running->' . $outcome->get_state()->value,
-						'outcome_code' => $outcome->get_code(),
-					)
-				);
+				$working_copy = $working_copy && null !== $working_copy_observation
+					&& array_replace(
+						$attempt->safe_data(),
+						array(
+							'state'        => 'running',
+							'outcome_code' => null,
+							'finished_at'  => null,
+						)
+					) === $working_copy_observation->safe_data()
+					&& $attempt->get_request()->to_json() === $working_copy_observation->get_request()->to_json();
+				$this->record_activity_outcome( $attempt, $outcome, working_copy: $working_copy );
 				return $attempt;
 			}
 		);
+		BoosterLogger::log(
+			'attempt finished',
+			$attempt->log_context() + array(
+				'transition'   => 'running->' . $outcome->get_state()->value,
+				'outcome_code' => $outcome->get_code(),
+			) + ( $working_copy ? array( 'branch_refusal' => 'target_is_working_copy' ) : array() )
+		);
+		return $attempt;
 	}
 	public function find_exact( int $attempt_id ): ?DeploymentAttempt {
 		$query = $this->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 2', $this->table_name, $this->positive_id( $attempt_id ) );
@@ -924,7 +947,7 @@ final class DeploymentAttemptRepository {
 		}
 	}
 
-	private function record_activity_outcome( DeploymentAttempt $attempt, DeploymentOutcome $outcome, bool $runner_throw = false ): void {
+	private function record_activity_outcome( DeploymentAttempt $attempt, DeploymentOutcome $outcome, bool $runner_throw = false, bool $working_copy = false ): void {
 		if ( null === $this->activity ) {
 			return;
 		}
@@ -933,7 +956,7 @@ final class DeploymentAttemptRepository {
 			return;
 		}
 		$status = DeploymentState::SUCCEEDED === $outcome->get_state() ? 'succeeded' : 'failed';
-		if ( ! $this->activity->complete_by_correlation( $attempt->get_correlation_id(), $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt, $runner_throw ) ) ) {
+		if ( ! $this->activity->complete_by_correlation( $attempt->get_correlation_id(), $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt, $runner_throw ) + ( $working_copy ? array( 'branch_refusal' => 'target_is_working_copy' ) : array() ) ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 	}
@@ -1163,21 +1186,31 @@ final class DeploymentAttemptRepository {
 
 	/** Lock management before attempt rows, closing capture-before-admission races. */
 	private function lock_adoption( string $operation, string $type, string $provider, string $repository_id, DeploymentRequest $request, string $source, int $revision ): void {
+		if ( 'install' === $operation && ( null !== $request->adoption_token || null !== $request->installed_identifier ) ) {
+			throw DeploymentStorageFailure::invalid_record();
+		}
+		if ( ! $this->adoption_matches( $operation, $type, $provider, $repository_id, $request, $source, $revision ) ) {
+			throw DeploymentStorageFailure::inconsistent();
+		}
+	}
+
+	/** A changed snapshot is ordinary absence of authority; failed SQL still throws. */
+	private function adoption_matches( string $operation, string $type, string $provider, string $repository_id, DeploymentRequest $request, string $source, int $revision ): bool {
 		if ( 'install' === $operation ) {
 			if ( null !== $request->adoption_token || null !== $request->installed_identifier ) {
-				throw DeploymentStorageFailure::invalid_record();
+				return false;
 			}
 			$rows = $this->read_rows( $this->prepare( 'SELECT * FROM %i WHERE package_type = %d FOR UPDATE', ran_booster_table_name(), 'plugin' === $type ? 1 : 2 ) );
 			foreach ( $rows as $row ) {
 				if ( ! is_string( $row->package ?? null ) || explode( '/', $row->package )[0] === $request->package_slug ) {
-					throw DeploymentStorageFailure::inconsistent();
+					return false;
 				}
 			}
-			return; // Execution still checks physical destination absence under the updater lock.
+			return true; // Execution still checks physical destination absence under the updater lock.
 		}
 		if ( null === $request->adoption_token || null === $request->installed_identifier
 			|| ! AdoptionIdentity::matches( $request->adoption_token, $provider, $repository_id ) ) {
-			throw DeploymentStorageFailure::inconsistent();
+			return false;
 		}
 		$rows     = $this->read_rows(
 			$this->prepare(
@@ -1202,9 +1235,14 @@ final class DeploymentAttemptRepository {
 			'source_revision'        => $revision,
 		);
 		if ( 1 !== count( $rows ) ) {
-			throw DeploymentStorageFailure::inconsistent();
+			return false;
 		}
-		$this->assert_row_data( $rows[0], $expected );
+		foreach ( $expected as $column => $value ) {
+			if ( ! property_exists( $rows[0], $column ) || ! $this->same_stored_value( $rows[0]->{$column}, $value ) ) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private function active_package_attempt( string $package_type, string $package_slug ): ?DeploymentAttempt {

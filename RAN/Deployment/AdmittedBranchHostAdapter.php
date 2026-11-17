@@ -27,12 +27,14 @@ use RAN\WPBranchUpdater\V1\Archive\ArchiveOffer;
 use RAN\WPBranchUpdater\V1\Archive\ArchiveValidator;
 use RAN\WPBranchUpdater\V1\Archive\PreparedArchive;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedArchiveSource;
-use RAN\WPBranchUpdater\V1\Contract\AdmittedAttemptJournal;
+use RAN\WPBranchUpdater\V1\Contract\AdmittedAttemptReasonJournal;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedBranchArtifact;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedPackageExecutor;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedTargetFacts;
 use RAN\WPBranchUpdater\V1\Contract\MutationLock;
 use RAN\WPBranchUpdater\V1\Runtime\AdmittedBranchDurabilityFailure;
+use RAN\WPBranchUpdater\V1\Runtime\AdmittedFailureReason;
+use RAN\WPBranchUpdater\V1\Runtime\FailureReason;
 use RAN\WPBranchUpdater\V1\Runtime\AdmittedBranchStageFailure;
 use RAN\WPBranchUpdater\V1\Runtime\BranchDeploymentDeclaration;
 use RAN\WPBranchUpdater\V1\Runtime\BranchDeploymentLockReleaseFailure;
@@ -51,7 +53,7 @@ use ZipArchive;
  *
  * @internal Branch deployment composition only.
  */
-final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, AdmittedArchiveSource, AdmittedTargetFacts, AdmittedPackageExecutor, MutationLock {
+final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, AdmittedArchiveSource, AdmittedTargetFacts, AdmittedPackageExecutor, MutationLock {
 	private const VALIDATOR_OUTCOMES = array(
 		ArchiveValidator::CODE_ZIP_UNAVAILABLE           => DeploymentOutcome::CODE_DEPLOYMENT_ZIP_EXTENSION_MISSING,
 		ArchiveValidator::CODE_ZIP_INVALID               => DeploymentOutcome::CODE_ARCHIVE_ZIP_INVALID,
@@ -184,8 +186,19 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	public function finish( string $code ): void {
+		$this->finish_attempt( $code );
+	}
+
+	public function finish_with_reason( string $code, AdmittedFailureReason $reason ): void {
+		$observed = DeploymentOutcome::CODE_POLICY_BLOCKED === $code && FailureReason::TARGET_IS_WORKING_COPY === $reason->reason
+			&& ! $reason->cleanup_failed && null === $reason->primary_outcome
+			&& DeploymentState::RUNNING === $this->attempt->get_state() && null === $this->attempt->safe_data()['mutation_started_at'];
+		$this->finish_attempt( $code, $observed ? $this->attempt : null );
+	}
+
+	private function finish_attempt( string $code, ?DeploymentAttempt $working_copy_observation = null ): void {
 		try {
-			$this->attempt = $this->attempts->finish( $this->attempt->get_id(), DeploymentOutcome::from_code( $code ) );
+			$this->attempt = $this->attempts->finish( $this->attempt->get_id(), DeploymentOutcome::from_code( $code ), working_copy_observation: $working_copy_observation );
 		} catch ( DeploymentStorageFailure $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );

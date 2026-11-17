@@ -570,6 +570,35 @@ return static function ( wpdb $database ): void {
 		$query( $database->prepare( 'ALTER TABLE %i ENGINE=InnoDB', $table ) );
 		$journal->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
 		$expect( 'succeeded' === $database->get_var( $database->prepare( 'SELECT status FROM %i WHERE correlation = %s', $table, $attempt->get_correlation_id() ) ), 'restored InnoDB permits atomic completion' );
+		foreach ( array( 'activity', 'commit' ) as $failure ) {
+			$refused    = $journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+			$injected   = false;
+			$reject     = static function ( string $sql ) use ( $table, $failure, &$injected ): string {
+				if ( ! $injected && ( ( 'commit' === $failure && 'COMMIT' === $sql ) || ( 'activity' === $failure && str_starts_with( $sql, "UPDATE $table SET status = " ) ) ) ) {
+					$injected = true;
+					return 'SELECT * FROM ran_889_deliberately_absent';
+				}
+				return $sql;
+			};
+			$suppressed = $database->suppress_errors( true );
+			add_filter( 'query', $reject );
+			try {
+				$journal->finish( $refused->get_id(), DeploymentOutcome::from_code( 'policy_blocked' ), working_copy_observation: $refused );
+				throw new RuntimeException( 'A failed refusal transaction was accepted.' );
+			} catch ( DeploymentStorageFailure ) {
+				$expect( $injected, 'refusal failure reaches its intended transaction boundary' );
+			} finally {
+				remove_filter( 'query', $reject );
+				$database->suppress_errors( $suppressed );
+			}
+			$expect( DeploymentState::RUNNING === $journal->find_exact( $refused->get_id() )?->get_state(), 'refusal rollback preserves running journal' );
+			$rolled_back = $store->activity_history( array( 'correlation' => $refused->get_correlation_id() ), limit: 2 );
+			$expect( $rolled_back['available'] && 1 === count( $rolled_back['records'] ) && ! str_contains( (string) $rolled_back['records'][0]['facts'], 'branch_refusal' ), 'refusal rollback leaves no retained fact' );
+			$journal->finish( $refused->get_id(), DeploymentOutcome::from_code( 'policy_blocked' ), working_copy_observation: $refused );
+			$committed     = $store->activity_history( array( 'correlation' => $refused->get_correlation_id() ), limit: 2 );
+			$refusal_facts = json_decode( (string) ( $committed['records'][0]['facts'] ?? '' ), true );
+			$expect( $committed['available'] && 1 === count( $committed['records'] ) && 'failed' === $committed['records'][0]['status'] && 'target_is_working_copy' === ( $refusal_facts['branch_refusal'] ?? null ), 'refusal commits in its one exact correlated report' );
+		}
 		// Fixed fixture measurements, not live-site latency guarantees or performance gates.
 		$digits  = '(SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)';
 		$numbers = "(SELECT a.n + 10*b.n + 100*c.n + 1000*d.n AS n FROM $digits a CROSS JOIN $digits b CROSS JOIN $digits c CROSS JOIN $digits d)";

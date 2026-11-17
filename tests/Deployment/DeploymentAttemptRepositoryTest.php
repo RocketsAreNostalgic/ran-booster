@@ -1066,6 +1066,61 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertSame( 'deployed', $finished->get_outcome()?->get_code() );
 	}
 
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'working_copy_terminal_cases' )]
+	public function test_working_copy_fact_requires_the_same_running_snapshot_and_authority( string $change ): void {
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$this->repository                        = new DeploymentAttemptRepository(
+			$this->database,
+			'wp_ran_booster_deployment_attempts',
+			clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-17 00:00:00 UTC' ),
+			database_lifecycle: $this->database_lifecycle,
+			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ),
+			selection: $this->queued_selection( $this->database )
+		);
+		$this->webhook( 'example' );
+		$running = $this->repository->claim_next();
+		self::assertNotNull( $running );
+		$observation = $running;
+		if ( 'adoption' === $change ) {
+			$this->database->management_rows['example']['repository'] = 'org/changed';
+		} elseif ( 'selection' === $change ) {
+			$this->database->selection->active_bytes = '';
+		} elseif ( 'correlation' === $change ) {
+			$this->database->rows[0]['correlation_id'] = str_repeat( 'f', 32 );
+		} elseif ( 'request' === $change ) {
+			$request                      = json_decode( $this->database->rows[0]['request_json'], true );
+			$request['configured_branch'] = 'changed';
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact persisted snapshot bytes at the SQL boundary, without requiring WordPress.
+			$this->database->rows[0]['request_json'] = json_encode( $request, JSON_UNESCAPED_SLASHES );
+		} elseif ( 'fence' === $change ) {
+			$this->repository->mark_mutation_started( $running->get_id() );
+		} elseif ( 'observation' === $change ) {
+			$observation = $this->manual( 'other' );
+		} elseif ( 'owner' === $change ) {
+			$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( 'preflight_failed' ) );
+		}
+		$this->database->fail_commit         = 'commit' === $change;
+		$this->database->fail_query_contains = 'activity' === $change ? "SET status = 'failed'" : ( 'write' === $change ? "SET state = 'failed'" : null );
+		$this->database->fail_reads          = 'read' === $change;
+		try {
+			$terminal = $this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( 'success' === $change ? 'deployed' : 'policy_blocked' ), working_copy_observation: $observation );
+			self::assertFalse( in_array( $change, array( 'commit', 'activity', 'write', 'owner', 'read', 'correlation' ), true ) );
+			self::assertSame( 'success' === $change ? 'deployed' : 'policy_blocked', $terminal->get_outcome()?->get_code() );
+		} catch ( DeploymentStorageFailure ) {
+			self::assertContains( $change, array( 'commit', 'activity', 'write', 'owner', 'read', 'correlation' ) );
+			self::assertSame( 'owner' === $change ? 'failed' : 'running', $this->database->rows[0]['state'] );
+		}
+		$facts = json_decode( (string) $this->database->activity_rows[0]['facts'], true );
+		self::assertSame( 'valid' === $change ? 'target_is_working_copy' : null, $facts['branch_refusal'] ?? null );
+	}
+
+	/** @return iterable<string,array{string}> */
+	public static function working_copy_terminal_cases(): iterable {
+		foreach ( array( 'valid', 'adoption', 'selection', 'correlation', 'request', 'fence', 'observation', 'owner', 'success', 'commit', 'activity', 'write', 'read' ) as $case ) {
+			yield $case => array( $case );
+		}
+	}
+
 	public function test_valid_but_different_terminal_timestamp_fails_readback(): void {
 		$running                              = $this->manual( 'example' );
 		$this->database->tamper_update_column = 'finished_at';

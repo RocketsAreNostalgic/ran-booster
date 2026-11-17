@@ -8,6 +8,9 @@ require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/CredentialExpiryWordPressFunctions.php';
 require_once __DIR__ . '/BackgroundDeploymentFailureWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Activity/ActivityConnection.php';
+require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/NoticeIconGlobalWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\BackgroundDeploymentFailureEmail;
@@ -254,6 +257,48 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertFalse( $email->notify( $manual ) );
 		self::assertFalse( $email->notify( $success ) );
 		self::assertCount( 1, $GLOBALS['ran_booster_background_failure_mail'] );
+	}
+
+	public function test_background_notice_uses_exact_retained_fact_but_email_and_filter_do_not(): void {
+		$row                                     = $this->row( 1, 'working-copy', 'example', 'webhook', DeploymentOutcome::CODE_POLICY_BLOCKED );
+		$this->database->rows                    = array( $row );
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
+		$facts                                   = array(
+			'branch_refusal'                 => 'target_is_working_copy',
+			'deployment_attempt_id'          => 1,
+			'deployment_source'              => 'webhook',
+			'deployment_state'               => 'failed',
+			'deployment_outcome'             => 'policy_blocked',
+			'deployment_mutation_started_at' => null,
+		);
+		foreach ( array( 1, 2, 3 ) as $fact_id ) {
+			$facts['deployment_attempt_id']                 = 2 === $fact_id ? 2 : 1;
+			$this->database->rows[0]['mutation_started_at'] = 3 === $fact_id ? '2026-07-23 12:01:00' : null;
+			$db->read_results                               = array(
+				array(
+					array(
+						'correlation'  => $row['correlation_id'],
+						'provenance'   => 'core',
+						'operation'    => 'update',
+						'subject_type' => 'plugin',
+						'status'       => 'failed',
+						'reason'       => 'policy_blocked',
+						'facts'        => \RAN\Admin\wp_json_encode( $facts ),
+					),
+				),
+			);
+			$presenter                                      = new DeploymentAdminPresenter( $this->monitor(), attempts: $this->attempts, activity_store: new \RAN\Activity\ActivityStore( $db ) );
+			ob_start();
+			$presenter->render();
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 1 === $fact_id ? 'version-controlled working copy' : 'A package update policy blocked', $html );
+		}
+		self::assertTrue( ( new BackgroundDeploymentFailureEmail() )->notify( DeploymentAttempt::from_database( $row ) ) );
+		$export = \RAN\Admin\wp_json_encode( array( $GLOBALS['ran_booster_background_failure_mail'], $GLOBALS['ran_booster_background_failure_filter_context'] ) );
+		self::assertIsString( $export );
+		self::assertStringNotContainsString( 'branch_refusal', $export );
+		self::assertStringNotContainsString( 'target_is_working_copy', $export );
 	}
 
 	private function monitor(): BackgroundDeploymentFailureMonitor {

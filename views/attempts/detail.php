@@ -60,7 +60,7 @@ $package_settings_label = 'theme' === $package_type
 			? __( 'Failure reason', 'ran-booster' )
 			: __( 'Outcome', 'ran-booster' );
 		?>
-		<p><strong><?php echo esc_html( $outcome_label ); ?>:</strong> <?php echo esc_html( null === $item['outcome_code'] ? __( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : DeploymentOutcomeMessage::for_code( (string) $item['outcome_code'] ) ); ?></p>
+		<p><strong><?php echo esc_html( $outcome_label ); ?>:</strong> <?php echo esc_html( null === $item['outcome_code'] ? __( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : DeploymentOutcomeMessage::for_code( (string) $item['outcome_code'], $deployment_activity['outcome_facts'] ?? null ) ); ?></p>
 		<?php if ( 'restoration_uncertain' === ( $item['outcome_code'] ?? null ) ) { ?>
 			<section aria-labelledby="ran-booster-historical-uncertainty-heading">
 				<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>

@@ -88,7 +88,17 @@ final class DeploymentOutcomeMessage {
 		return $details;
 	}
 
-	public static function for_code( string $code ): string {
+	public static function for_code( string $code, mixed $encoded_facts = null ): string {
+		$facts = is_string( $encoded_facts ) && strlen( $encoded_facts ) <= 4096 ? json_decode( $encoded_facts, true ) : null;
+		if ( 'policy_blocked' === $code && is_array( $facts )
+			&& 'target_is_working_copy' === ( $facts['branch_refusal'] ?? null )
+			&& 'failed' === ( $facts['deployment_state'] ?? null ) && ( $facts['deployment_outcome'] ?? null ) === $code
+			&& is_int( $facts['deployment_attempt_id'] ?? null ) && $facts['deployment_attempt_id'] > 0
+			&& in_array( $facts['deployment_source'] ?? null, array( 'manual', 'webhook' ), true )
+			&& array_key_exists( 'deployment_mutation_started_at', $facts ) && null === $facts['deployment_mutation_started_at']
+			&& ! isset( $facts['deployment_settled_by'] ) && ! isset( $facts['deployment_resolved_by'] ) && ! isset( $facts['deployment_resolved_at'] ) ) {
+			return __( 'This package is a version-controlled working copy, so the update was blocked; update it through its version-control workflow.', 'ran-booster' );
+		}
 		return match ( $code ) {
 			'deployed'                       => __( 'WordPress completed and Booster verified the package deployment.', 'ran-booster' ),
 			'no_change'                      => __( 'The requested package bytes were already installed.', 'ran-booster' ),

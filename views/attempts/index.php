@@ -131,7 +131,7 @@ $origin_labels = array(
 				$state            = (string) ( $item['state'] ?? '' );
 				$summary          = $recorded_check
 					? DeploymentOutcomeMessage::for_activity( $state, (string) ( $item['reason'] ?? '' ), (string) ( $item['message'] ?? '' ) )
-					: DeploymentOutcomeMessage::for_code( (string) ( $item['outcome_code'] ?? 'pending' ) );
+					: DeploymentOutcomeMessage::for_code( (string) ( $item['outcome_code'] ?? 'pending' ), $item['outcome_facts'] ?? null );
 				$project_label    = (string) ( $item['package_slug'] ?? '' );
 				$package_type     = (string) ( $item['package_type'] ?? '' );
 				$provider_label   = (string) ( $item['provider_label'] ?? $item['provider'] ?? '' );

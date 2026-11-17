@@ -925,18 +925,21 @@
 					const id = button.getAttribute('data-id') || '';
 					const destination = button.href;
 					const switchIdentity = (deferred = false) => {
+						if (
+							(deferred ||
+								typeof window.ranBoosterOpenDialog ===
+									'function') &&
+							(form.elements['ran_booster[id]'].value !== id ||
+								(!dirty && editor.hidden))
+						) {
+							populateCredentialModal(editor, button);
+							dirty = false;
+						}
 						if (typeof window.ranBoosterOpenDialog !== 'function') {
 							if (deferred) {
 								window.location.assign(destination);
 							}
 							return;
-						}
-						if (
-							form.elements['ran_booster[id]'].value !== id ||
-							(!dirty && editor.hidden)
-						) {
-							populateCredentialModal(editor, button);
-							dirty = false;
 						}
 						const replacing =
 							id !== '' &&

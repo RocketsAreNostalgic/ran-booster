@@ -222,6 +222,9 @@ function fixture(available = true, query = '') {
 		(text) => text,
 		() => {
 			state.populations++;
+			form.elements['ran_booster[id]'].value =
+				button.getAttribute('data-id') || '';
+			form.elements['ran_booster[secret]'].value = '';
 		},
 		(root) => state.updates.push(root),
 		(root) => state.updates.push(root)
@@ -397,6 +400,32 @@ for (const failure of ['missing', 'throws', 'null']) {
 		]);
 	});
 }
+
+test('accepted same-document fallback selects the credential and clears the draft secret', () => {
+	const state = fixture();
+	state.form.elements['ran_booster[id]'].value = '';
+	state.form.elements['ran_booster[secret]'].value = 'synthetic draft';
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'B';
+	let accept;
+	state.window.ranBoosterOpenDialog.confirm = (
+		button,
+		title,
+		message,
+		yes
+	) => {
+		accept = yes;
+		return true;
+	};
+	state.button.dispatchEvent(event('click'));
+	delete state.window.ranBoosterOpenDialog;
+	accept();
+	accept();
+	assert.equal(state.form.elements['ran_booster[id]'].value, 'B');
+	assert.equal(state.form.elements['ran_booster[secret]'].value, '');
+	assert.equal(state.populations, 1);
+	assert.deepEqual(state.navigations, ['https://example.test/credential-b']);
+});
 
 test('changed destination makes an accepted switch stale', () => {
 	const state = fixture();

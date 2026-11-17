@@ -135,70 +135,122 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		$controller                                   = $this->controller();
 		$method                                       = new \ReflectionMethod( $controller, 'result_query_arguments' );
 		foreach ( array( true, false ) as $successful ) {
-			foreach ( array( 'missing', 'expired', 'replaced', 'consumed', 'failed_write', 'empty', 'malformed_json', 'delete_failure' ) as $condition ) {
-				$GLOBALS['ran_booster_interaction_test_meta'] = array();
-				$outcome                                      = array(
-					'type'                  => 'plugin',
-					'identifier'            => 'example/example.php',
-					'code'                  => 'workflow_unknown',
-					'successful'            => $successful,
-					'preview_key'           => '',
-					'failure_stage'         => $successful ? '' : 'unexpected',
-					'diagnostic_code'       => $successful ? '' : 'unexpected_runtime_failure',
-					'correlation_reference' => '',
-					'message'               => 'Provider result',
-					'remediation'           => '',
-				);
-				if ( 'empty' === $condition ) {
-					if ( ! $successful ) {
-						continue;
-					}
-					$outcome['message'] = '';
-				}
-				if ( 'failed_write' === $condition ) {
-					$GLOBALS['ran_booster_interaction_test_write_fails'] = true;
-				}
-				$args = $method->invoke( $controller, $outcome );
-				unset( $GLOBALS['ran_booster_interaction_test_write_fails'] );
-				$key = \RAN\Admin\Interaction\SignedAdminInteractionFlow::MESSAGE_META_KEY;
-				if ( 'missing' === $condition ) {
+			foreach ( array( 'unknown', 'known' ) as $kind ) {
+				foreach ( array( 'missing', 'expired', 'replaced', 'consumed', 'failed_write', 'empty', 'malformed_json', 'delete_failure' ) as $condition ) {
 					$GLOBALS['ran_booster_interaction_test_meta'] = array();
-				} elseif ( 'expired' === $condition ) {
-					$GLOBALS['ran_booster_interaction_test_meta'][1][ $key ]['at'] = time() - 61;
-				} elseif ( 'malformed_json' === $condition ) {
-					$GLOBALS['ran_booster_interaction_test_meta'][1][ $key ]['message'] = '{';
-				} elseif ( 'replaced' === $condition ) {
-					$method->invoke( $controller, $outcome );
-				} elseif ( 'consumed' === $condition ) {
+					$outcome                                      = array(
+						'type'                  => 'plugin',
+						'identifier'            => 'example/example.php',
+						'code'                  => 'unknown' === $kind ? 'workflow_unknown' : ( $successful ? 'workflow_setup_open' : 'workflow_unauthorised' ),
+						'successful'            => $successful,
+						'preview_key'           => '',
+						'failure_stage'         => $successful ? '' : 'unexpected',
+						'diagnostic_code'       => $successful ? '' : 'unexpected_runtime_failure',
+						'correlation_reference' => '',
+						'message'               => 'Provider result',
+						'remediation'           => '',
+					);
+					if ( 'empty' === $condition ) {
+						$outcome['message'] = '';
+					}
+					if ( 'failed_write' === $condition ) {
+						$GLOBALS['ran_booster_interaction_test_write_fails'] = true;
+					}
+					$args = $method->invoke( $controller, $outcome );
+					unset( $GLOBALS['ran_booster_interaction_test_write_fails'] );
+					$key = \RAN\Admin\Interaction\SignedAdminInteractionFlow::MESSAGE_META_KEY;
+					if ( 'missing' === $condition ) {
+						$GLOBALS['ran_booster_interaction_test_meta'] = array();
+					} elseif ( 'expired' === $condition ) {
+						$GLOBALS['ran_booster_interaction_test_meta'][1][ $key ]['at'] = time() - 61;
+					} elseif ( 'malformed_json' === $condition ) {
+						$GLOBALS['ran_booster_interaction_test_meta'][1][ $key ]['message'] = '{';
+					} elseif ( 'replaced' === $condition ) {
+						$method->invoke( $controller, $outcome );
+					} elseif ( 'consumed' === $condition ) {
+						$_GET = $args;
+						self::assertNotNull( $this->controller()->requested_result() );
+					}
 					$_GET = $args;
-					self::assertNotNull( $this->controller()->requested_result() );
-				}
-				$_GET = $args;
-				if ( 'delete_failure' === $condition ) {
-					$GLOBALS['ran_booster_interaction_test_delete_fails'] = true;
-				}
-				$result = $this->controller()->requested_result();
-				unset( $GLOBALS['ran_booster_interaction_test_delete_fails'] );
-				self::assertNotNull( $result );
-				$html = ( new \RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay() )->result_notice(
-					array(
-						'result_code'        => $result['code'],
-						'result_successful'  => $result['successful'],
-						'failure_stage'      => $result['failure_stage'],
-						'diagnostic_code'    => $result['diagnostic_code'],
-						'result_message'     => $result['message'],
-						'result_remediation' => $result['remediation'],
-					)
-				);
-				self::assertStringContainsString( 'The result details are not available.', $html, $condition );
-				if ( $successful ) {
-					self::assertStringNotContainsString( 'refused', $html, $condition );
-					self::assertStringNotContainsString( 'retry', strtolower( $html ), $condition );
+					if ( 'delete_failure' === $condition ) {
+						$GLOBALS['ran_booster_interaction_test_delete_fails'] = true;
+					}
+					$result = $this->controller()->requested_result();
+					unset( $GLOBALS['ran_booster_interaction_test_delete_fails'] );
+					self::assertNotNull( $result );
+					$html     = ( new \RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay() )->result_notice(
+						array(
+							'result_code'        => $result['code'],
+							'result_successful'  => $result['successful'],
+							'failure_stage'      => $result['failure_stage'],
+							'diagnostic_code'    => $result['diagnostic_code'],
+							'result_message'     => $result['message'],
+							'result_remediation' => $result['remediation'],
+						)
+					);
+					$expected = 'unknown' === $kind ? 'The result details are not available.' : ( $successful ? 'The atomic draft pull request is open.' : 'The Git provider did not authorise the operation' );
+					self::assertStringContainsString( $expected, $html, $condition );
+					if ( $successful ) {
+						self::assertStringNotContainsString( 'refused', $html, $condition );
+						self::assertStringNotContainsString( 'retry', strtolower( $html ), $condition );
+					}
 				}
 			}
 		}
 	}
 
+
+
+
+	public function test_result_codes_match_the_actual_display_match_arms(): void {
+		$display_method = new \ReflectionMethod( \RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay::class, 'workflow_message' );
+		$source_file    = $display_method->getFileName();
+		self::assertIsString( $source_file );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect the maintained display method to protect its actual match arms.
+		$source = file_get_contents( $source_file );
+		self::assertIsString( $source );
+		$lines  = explode( "\n", $source );
+		$method = implode( "\n", array_slice( $lines, $display_method->getStartLine() - 1, $display_method->getEndLine() - $display_method->getStartLine() + 1 ) );
+		preg_match_all( "/'(?<code>workflow_[a-z_]+)'(?=\\s*(?:,|=>))/", $method, $matches );
+		$display_codes    = $matches['code'];
+		$constant         = new \ReflectionClassConstant( ReleaseWorkflowRequestController::class, 'RESULT_CODES' );
+		$controller_codes = $constant->getValue();
+		self::assertIsArray( $controller_codes );
+		$controller_codes = array_values( array_diff( $controller_codes, array( 'workflow_unknown' ) ) );
+		sort( $display_codes );
+		sort( $controller_codes );
+		self::assertNotEmpty( $display_codes );
+		self::assertSame( $display_codes, $controller_codes );
+	}
+
+	public function test_empty_result_preserves_an_earlier_unread_message(): void {
+		$GLOBALS['ran_booster_interaction_test_meta'] = array();
+		$controller                                   = $this->controller();
+		$method                                       = new \ReflectionMethod( $controller, 'result_query_arguments' );
+		$outcome                                      = array(
+			'type'                  => 'plugin',
+			'identifier'            => 'example/example.php',
+			'code'                  => 'workflow_setup_open',
+			'successful'            => true,
+			'preview_key'           => '',
+			'failure_stage'         => '',
+			'diagnostic_code'       => '',
+			'correlation_reference' => '',
+			'message'               => 'Earlier result',
+			'remediation'           => '',
+		);
+		$earlier                                      = $method->invoke( $controller, $outcome );
+		$outcome['message']                           = '';
+		$later                                        = $method->invoke( $controller, $outcome );
+		$_GET         = $later;
+		$later_result = $this->controller()->requested_result();
+		self::assertNotNull( $later_result );
+		self::assertSame( '', $later_result['message'] );
+		$_GET           = $earlier;
+		$earlier_result = $this->controller()->requested_result();
+		self::assertNotNull( $earlier_result );
+		self::assertSame( 'Earlier result', $earlier_result['message'] );
+	}
 
 	public function test_invalid_result_markers_do_not_consume_the_held_message(): void {
 		$GLOBALS['ran_booster_interaction_test_meta'] = array();

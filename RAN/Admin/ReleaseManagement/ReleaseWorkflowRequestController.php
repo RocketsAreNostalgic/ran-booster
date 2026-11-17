@@ -546,7 +546,7 @@ final class ReleaseWorkflowRequestController {
 		$args[ self::RESULT_MARKER_QUERY_KEY ] = $marker;
 		$action                                = $this->result_nonce_action( $code, $successful, $type, $identifier, max( 0, $source_revision ), $channel, $stage, $diagnostic, $diagnostic_available, $reference, $provider_code, $repository_id, $marker );
 		$text                                  = wp_json_encode( array( $message, $remediation ) );
-		if ( is_string( $text ) ) {
+		if ( is_string( $text ) && ( '' !== $message || '' !== $remediation ) ) {
 			SignedAdminInteractionFlow::hold_message( $action, $text );
 		}
 		$args[ self::RESULT_NONCE_QUERY_KEY ] = wp_create_nonce( $action );
@@ -596,8 +596,8 @@ final class ReleaseWorkflowRequestController {
 		$text    = is_string( $held ) ? json_decode( $held, true ) : null;
 		$message = is_array( $text ) && isset( $text[0], $text[1] ) && is_string( $text[0] ) && is_string( $text[1] )
 			? $this->result_display_text( $text[0] )
-			: __( 'The result details are not available. Check the page or Activity for the current state.', 'ran-booster' );
-		if ( $successful && 'workflow_unknown' === $code && '' === $message ) {
+			: '';
+		if ( 'workflow_unknown' === $code && '' === $message ) {
 			$message = __( 'The result details are not available. Check the page or Activity for the current state.', 'ran-booster' );
 		}
 		$remediation         = $this->result_display_text( is_array( $text ) ? ( $text[1] ?? '' ) : '' );

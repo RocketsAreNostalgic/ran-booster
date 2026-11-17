@@ -69,12 +69,19 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		self::assertTrue( $capture->append( 'exact threshold', 5 ) );
 		$future     = $this->now;
 		$this->now -= 10;
+		self::assertFalse( $capture->append( 'rollback sample with future entry', 5 ) );
+		self::assertTrue( $capture->append( 'ordinary rollback remains writable' ) );
+		self::assertSame( gmdate( 'Y-m-d\TH:i:s\Z', $future ), $capture->snapshot()['entries'][2]['at'] );
+		self::assertFalse( $capture->append( 'ordinary append does not hide future entry', 5 ) );
 		for ( $index = 0; $index < 401; ++$index ) {
-			self::assertFalse( $this->capture()->append( 'rollback ordinary' ) );
+			self::assertTrue( $this->capture()->append( 'rollback ordinary' ) );
 			self::assertFalse( $capture->append( 'rollback sample', 5 ) );
 		}
-		self::assertSame( 3, count( $capture->snapshot()['entries'] ) );
-		self::assertSame( gmdate( 'Y-m-d\TH:i:s\Z', $future ), $capture->snapshot()['entries'][2]['at'] );
+		self::assertSame( 400, count( $capture->snapshot()['entries'] ) );
+		self::assertNotContains( gmdate( 'Y-m-d\TH:i:s\Z', $future ), array_column( $capture->snapshot()['entries'], 'at' ) );
+		$this->now += 5;
+		self::assertTrue( $capture->append( 'accepted early sample after rollback eviction', 5 ) );
+		self::assertLessThan( $future, $this->now );
 		$this->now = $future;
 		for ( $index = 0; $index < 401; ++$index ) {
 			self::assertTrue( $capture->append( 'ordinary eviction' ) );
@@ -105,7 +112,7 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Preserve each original timestamp while reordering the isolated capture fixture.
 		file_put_contents( $this->capture_path, implode( "\n", $lines ) );
 		$this->now -= 5;
-		self::assertFalse( $capture->append( 'ordinary rollback' ) );
+		self::assertTrue( $capture->append( 'ordinary rollback' ) );
 		self::assertFalse( $capture->append( 'sample rollback', 5 ) );
 		$this->now += 9;
 		self::assertFalse( $capture->append( 'four seconds after newest', 5 ) );

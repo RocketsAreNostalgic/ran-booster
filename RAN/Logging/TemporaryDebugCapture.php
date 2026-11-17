@@ -286,8 +286,9 @@ final class TemporaryDebugCapture {
 						$at     = strtotime( $entry['at'] );
 						$latest = null === $latest ? $at : max( $latest, $at );
 					}
-					// Refuse rollback writes too: eviction must not erase the future timestamp.
-					if ( null !== $latest && ( $latest > $now || $now - $latest < $minimum_interval ) ) {
+					// Samples use the newest retained timestamp; ordinary capture keeps its existing append behavior.
+					if ( $minimum_interval > 0 && null !== $latest
+						&& ( $latest > $now || $now - $latest < $minimum_interval ) ) {
 						return false;
 					}
 

@@ -60,6 +60,34 @@ final class RecoveryHttpDiagnosticTest extends TestCase {
 		self::assertSame( $url, $decoded['url'] );
 	}
 
+	public function test_unsafe_suffix_after_a_complete_excerpt_omits_the_body(): void {
+		$prefix = str_repeat( 'service ', 20 );
+		self::assertSame( 160, strlen( $prefix ) );
+		foreach ( array(
+			$prefix                  => $prefix,
+			$prefix . 'nonce=secret' => 'redacted',
+		) as $body => $expected ) {
+			$output  = RecoveryHttpDiagnostic::format(
+				array(
+					'response' => array(
+						'code'    => 503,
+						'message' => '',
+					),
+					'headers'  => array(),
+					'body'     => $body,
+				),
+				'http://localhost/wp-admin/admin.php?page=ran-booster-themes&package=ran-recovery-0123456789-theme-release',
+				'theme',
+				'release',
+				false,
+				false
+			);
+			$decoded = json_decode( substr( $output, strlen( '[RAN_RECOVERY_HTTP_DIAGNOSTIC] ' ) ), true );
+			self::assertIsArray( $decoded );
+			self::assertSame( $expected, $decoded['body'] );
+		}
+	}
+
 	public function test_hostile_values_are_omitted_before_bounding(): void {
 		$url = 'http://localhost/wp-admin/admin.php?page=ran-booster-themes&package=ran-recovery-0123456789-theme-release';
 		foreach ( array( 'cookie=secret', 'Authorization: Bearer secret', '_wpnonce=secret', '<html>secret</html>', "hello\nsecret", str_repeat( 'x', 300 ) . ' password=secret', 'password%3Dsecret', 'password&#61;secret', 'password\\u003dsecret', 'cGFzc3dvcmQ9c2VjcmV0', '70617373776f7264', 'the session token is hidden', 'the upstream service is unavailable. ' . str_repeat( 'safe ', 50 ) . 'nonce' ) as $body ) {

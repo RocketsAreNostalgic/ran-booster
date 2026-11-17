@@ -54,7 +54,7 @@ final readonly class DeploymentRequest {
 		}
 		self::assert_locator( $repository );
 		self::assert_credential_id( $credential_id );
-		self::assert_safe_text( $configured_branch, 255 );
+		self::assert_safe_text( $configured_branch, 255, true );
 		self::assert_package_slug( $package_slug );
 		self::assert_subdirectory( $subdirectory );
 		if ( null !== $initiating_user_id && $initiating_user_id < 1 ) {
@@ -227,12 +227,14 @@ final readonly class DeploymentRequest {
 		}
 	}
 
-	private static function assert_safe_text( string $value, int $limit ): void {
+	private static function assert_safe_text( string $value, int $limit, bool $is_ref = false ): void {
 		if ( '' === $value || strlen( $value ) > $limit || preg_match( '//u', $value ) !== 1
-			|| preg_match( '/[[:cntrl:]]/', $value ) === 1
-			|| preg_match( '/(?:https?:\/\/|[A-Za-z][A-Za-z0-9+.-]*:\/\/)[^\s]*@/i', $value ) === 1
-			|| preg_match( '/\b(?:authorization|bearer|token|secret|password|signature)\b\s*[:=]/i', $value ) === 1 ) {
+			|| preg_match( '/[[:cntrl:]]/', $value ) === 1 ) {
 			throw new InvalidArgumentException( 'A deployment request field is unsafe.' );
+		}
+		if ( preg_match( '/(?:https?:\/\/|[A-Za-z][A-Za-z0-9+.-]*:\/\/)[^\s]*@/i', $value ) === 1
+			|| preg_match( '/\b(?:authorization|bearer|token|secret|password|signature)\b\s*[:=]/i', $value ) === 1 ) {
+			throw $is_ref ? new CredentialShapedRef() : new InvalidArgumentException( 'A deployment request field is unsafe.' );
 		}
 	}
 }

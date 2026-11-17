@@ -916,7 +916,8 @@ this contract, so a provider feature-detects it and otherwise throws the plain
 exceptions with HTTP-like codes:
 
 ```php
-if ( class_exists( \RAN\RepositoryProvider\ProviderFailure::class ) ) {
+if ( class_exists( \RAN\RepositoryProvider\ProviderFailure::class )
+    && class_exists( \RAN\RepositoryProvider\ProviderRequestFailed::class ) ) {
 	throw new \RAN\RepositoryProvider\ProviderRequestFailed(
 		new \RAN\RepositoryProvider\ProviderFailure( reason: 'repository_not_found_or_no_access', http_status: 404 )
 	);
@@ -924,11 +925,11 @@ if ( class_exists( \RAN\RepositoryProvider\ProviderFailure::class ) ) {
 throw new \RuntimeException( 'Repository not found.', 404 );
 ```
 
-When no `ProviderFailure` is present, Core derives a reason from the integer
-code (see [Legacy codes](#legacy-codes)), so a provider that never adopts the
-carrier still reports every situation Core can distinguish by code. It keeps its
-existing copy: Core words a derived reason with the copy it already had for that
-code, and a carried reason with the reason copy below.
+When no `ProviderFailure` is present, some Core consumers derive a reason from
+the integer code (see [Legacy codes](#legacy-codes)). This loses distinctions that share a
+code and cannot recover retry or expiry facts. The picker and package-save
+notices keep their existing status copy for a plain exception; they use the
+reason copy below only for an explicitly carried failure.
 
 ### Reason vocabulary
 
@@ -937,8 +938,8 @@ rejects any other. It refines the coarser
 `ReleaseFailure` codes of the release updater (see
 [Updater correspondence](#updater-correspondence)).
 
-Typed facts are listed where they apply. "Core shows" is the fixed Core copy,
-paraphrased; typed numbers are rendered by Core as text.
+Typed facts are listed where they apply. "Core shows" paraphrases the copy
+available to consumers of `message()`; not every consumer displays it.
 
 | Reason | Use when | Typed facts | Core shows |
 | --- | --- | --- | --- |
@@ -982,8 +983,9 @@ existing wording; elsewhere they read as an incompatible package.
 
 `http_status` is the host's status, `retry_after` is a whole number of seconds
 the provider read from a header, and `reset_at` is a Unix timestamp. Parse them
-to integers in the provider; never pass header text. Core renders them as text,
-for example "try again in about two minutes". It renders a retry time only for
+to integers in the provider; never pass header text. `ProviderFailure::message()`
+can render them as text, for example "try again in about two minutes", where a
+consumer uses it. It renders a retry time only for
 the two rate-limit reasons, and only when the time is between one second and
 one day ahead. The failure carries no free text: do not send response bodies,
 headers, `WP_Error` messages or exception messages anywhere.
@@ -1052,15 +1054,17 @@ input.
 drive Core's walk: only `incompatible` lets Core inspect the next candidate, at
 most two in all. The optional failure refines what Core shows for an
 `incompatible` rejection: a failure reason of `package_asset_missing`,
-`package_asset_ambiguous` or `release_incompatible` selects that wording; any
-other reason falls back to the wording Core derives from the candidate's
-`expected_asset_names`, so a provider that returns candidates lists them
+`package_asset_ambiguous` or `release_incompatible` selects that wording. If the
+carried reason is not one of those three, Core uses the legacy `detail` when it
+names one of them. Otherwise Core derives the wording from the candidate's
+`expected_asset_names` count, so a provider that returns candidates lists them
 completely. `incompatible( ?string $detail, ?ProviderFailure $failure )` keeps
-its existing lower-case `detail`; a failure, when given, takes precedence.
+its existing lower-case `detail`; only a recognized carried reason takes
+precedence over it.
 
 `RepositoryReleaseAcquisitionRejected::changed()` reports that the release no
-longer matches the one that was inspected. Core shows that the release changed
-and that nothing was installed.
+longer matches the one that was inspected. The receiving workflow maps that rejection to its own closed result; it does
+not establish that every release surface displays the carried reason.
 
 ### Where Core uses a reason
 
@@ -1069,17 +1073,22 @@ and that nothing was installed.
 | Repository picker and package save (resolve) | Shows the reason copy for a carried failure and keeps the status copy for a plain exception. Logs the class, code and reason |
 | Saved credential check | Shows the reason copy (expired, under-scoped, store failure and rate limit are told apart) and logs the reason |
 | Deployment archive preparation and head verification | Maps the reason onto the attempt outcome codes below and logs the class, code and reason |
-| Release read (candidate listing, inspection, preflight) | Logs the class, code and reason. The notice keeps its closed code |
-| Release inspection and acquisition rejection | Chooses the notice wording as described above |
+| Release read (candidate listing, inspection, preflight) | Logs the class, code and derived or carried reason. Managed release lookup can use a carried rate-limit reason to offer a public lookup profile; notices retain closed codes |
+| Release inspection and acquisition rejection | Managed inspection uses the refinement described above; prospective inspection and installation map rejections to coarse result codes. A carried reason does not generally become release notice copy |
 
 ### What Core shows and logs
 
-Core owns every sentence the administrator reads. It shows the reason's copy and
-typed facts as text. Provider messages and exception messages are never shown.
+Core chooses the failure copy at these boundaries. The picker, package save and
+saved-credential check can show carried reason copy and applicable typed facts.
+Other consumers may reduce the failure to a closed outcome or notice code.
+Provider exception messages are not shown; separately, the screened fixed
+provider-authored text described in [Failure text screening](#failure-text-screening)
+can appear in its designated surfaces.
 
 Core is the only logger. `BoosterLogger` records the exception class and code
-and these safe keys: `reason` (the closed vocabulary, otherwise dropped),
-`http_status`, `retry_after`, `operation`, `provider` and `step`. It never
+and permitted context keys including `reason` (the closed vocabulary, otherwise
+dropped), `http_status`, `retry_after`, `operation`, `provider` and `step`.
+Failure logging does not retain `reset_at` or `credential_expires_at`. It never
 records exception messages or provider text. Logging happens only when
 `WP_DEBUG_LOG` or the Troubleshooting capture is on.
 
@@ -1129,9 +1138,10 @@ predates the carrier therefore still reads a sensible code.
 
 #### Updater correspondence
 
-The release updater reports coarse `ReleaseFailure` codes. Each provider reason
-corresponds to one of them, and the rate-limit `retry_after` range (1 to 86400)
-is the same as the updater's.
+The release updater reports coarse `ReleaseFailure` codes. The table describes
+conceptual correspondence, not an automatic conversion or a guarantee that a
+provider failure reaches the native updater. Its rate-limit `retry_after` range
+(1 to 86400) is the same as the updater's.
 
 | Provider reasons | `ReleaseFailure` code |
 | --- | --- |
@@ -1150,6 +1160,21 @@ is the same as the updater's.
 The updater's `ReleaseRejection` reasons (for example `no_package_zip` and
 `multiple_package_zips`) are updater-side. Core words them as the existing
 `package_*` ids and does not accept them from a provider.
+
+### Current adoption and proposed remainder
+
+The bundled GitHub provider beta.23 carries `rate_limited` and bounded status,
+retry and reset facts for anonymous repository resolution when the host exposes
+both carrier classes. Other paths still have their own existing results or
+integer-code fallbacks; this adoption does not complete provider carrier work.
+
+The remaining work in #920 is proposed and held: webhook rejection and ignored
+reasons, webhook-management ambiguity, reason-specific release notices, Activity
+and support-report reason detail, and an optional screened `ProviderFailure`
+`detail`. The current failure value has no text or `detail` argument. The existing
+inspection rejection `detail` is a separate closed legacy refinement, not that
+proposal. Carrier-dependent work in #927 also remains held. Neither the shared
+`FailureText` screener nor the beta.23 adoption makes those proposals current.
 
 ### Secrets rules for providers
 

@@ -978,11 +978,10 @@
 			'htmx:beforeSwap',
 			(event) => {
 				if (
-					event.detail?.shouldSwap &&
-					(event.detail.target?.contains(editor) ||
-						event.detail.target?.contains(form)) &&
+					(event.detail?.target?.contains(editor) ||
+						event.detail?.target?.contains(form)) &&
 					(event.detail.requestConfig?.elt === form ||
-						!confirmDiscard())
+						(event.detail?.shouldSwap && !confirmDiscard()))
 				) {
 					// Credential saves confirm success by redirect, never by replacing
 					// the editor. Reject login HTML and other unconfirmed responses.

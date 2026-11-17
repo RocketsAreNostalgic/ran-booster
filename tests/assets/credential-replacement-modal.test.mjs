@@ -180,6 +180,17 @@ test('dirty interlocks reject unconfirmed form replacement and preserve scoped e
 	state.document.dispatchEvent(formReplacement);
 	assert.equal(formReplacement.defaultPrevented, true);
 	assert.equal(formReplacement.detail.shouldSwap, false);
+	const serverError = event('htmx:beforeSwap', {
+		shouldSwap: false,
+		target: { contains: (node) => node === state.form },
+		requestConfig: { elt: state.form },
+	});
+	state.document.dispatchEvent(serverError);
+	assert.equal(
+		serverError.defaultPrevented,
+		true,
+		'a later response handler must not enable an unconfirmed editor swap'
+	);
 	const scopedError = {
 		shouldSwap: true,
 		target: { contains: () => false },

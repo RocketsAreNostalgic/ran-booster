@@ -923,8 +923,12 @@
 						return;
 					}
 					const id = button.getAttribute('data-id') || '';
+					const destination = button.href;
 					const switchIdentity = (deferred = false) => {
 						if (typeof window.ranBoosterOpenDialog !== 'function') {
+							if (deferred) {
+								window.location.assign(destination);
+							}
 							return;
 						}
 						if (
@@ -939,22 +943,26 @@
 							new URL(window.location.href).searchParams.get(
 								'replace_credential'
 							) === id;
-						dialog = window.ranBoosterOpenDialog(button, form, {
-							title: editor.querySelector(
-								'.ran-booster-dialog__title'
-							).textContent,
-							initialFocus: () =>
-								form.elements[
-									replacing
-										? 'ran_booster[secret]'
-										: 'ran_booster[label]'
-								],
-							disablePointerDismissal: true,
-						});
+						try {
+							dialog = window.ranBoosterOpenDialog(button, form, {
+								title: editor.querySelector(
+									'.ran-booster-dialog__title'
+								).textContent,
+								initialFocus: () =>
+									form.elements[
+										replacing
+											? 'ran_booster[secret]'
+											: 'ran_booster[label]'
+									],
+								disablePointerDismissal: true,
+							});
+						} catch {
+							dialog = null;
+						}
 						if (dialog) {
 							event.preventDefault();
 						} else if (deferred) {
-							window.location.assign(button.href);
+							window.location.assign(destination);
 						}
 					};
 					if (
@@ -982,6 +990,7 @@
 								if (
 									button.isConnected &&
 									editor.isConnected &&
+									button.href === destination &&
 									(button.getAttribute('data-id') || '') ===
 										id
 								) {

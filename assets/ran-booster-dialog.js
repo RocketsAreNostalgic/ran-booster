@@ -206,7 +206,16 @@
 
 		portal.className = 'ran-booster-ui-dialog-portal';
 		doc.body.append(host, portal);
-		const root = createRoot(host);
+		let root;
+		try {
+			root = createRoot(host);
+		} catch {
+			markers.forEach(({ marker }) => marker.remove());
+			host.remove();
+			portal.remove();
+			listeners.abort();
+			return null;
+		}
 		// Everything else on the page is inert while the dialog is open,
 		// including skip links and other siblings of the admin wrapper that
 		// the library does not cover. Live regions stay announceable, and only

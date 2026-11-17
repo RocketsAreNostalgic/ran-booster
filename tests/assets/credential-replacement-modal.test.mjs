@@ -142,10 +142,12 @@ function fixture(available = true, query = '') {
 	const removal = new EventTarget();
 	const button = new EventTarget();
 	button.isConnected = true;
+	button.href = 'https://example.test/credential-b';
 	button.getAttribute = () => 'saved';
 	const form = new EventTarget();
 	window.location = {
 		href: 'https://example.test/wp-admin/admin.php' + query,
+		assign: (url) => state.navigations.push(url),
 	};
 	form.elements = {
 		'ran_booster[id]': { value: 'saved' },
@@ -177,6 +179,7 @@ function fixture(available = true, query = '') {
 		opens: 0,
 		populations: 0,
 		updates: [],
+		navigations: [],
 		accept: false,
 		form,
 		editor,
@@ -360,6 +363,60 @@ test('a stale identity switch does not replace the draft', () => {
 	state.button.isConnected = false;
 	accept();
 	assert.equal(state.populations, 0);
+});
+
+for (const failure of ['missing', 'throws', 'null']) {
+	test(`accepted deferred switch follows the original link once when editor ${failure}`, () => {
+		const state = fixture();
+		state.form.dispatchEvent(event('input'));
+		state.button.getAttribute = () => 'different';
+		let accept;
+		state.window.ranBoosterOpenDialog.confirm = (
+			button,
+			title,
+			message,
+			yes
+		) => {
+			accept = yes;
+			return true;
+		};
+		state.button.dispatchEvent(event('click'));
+		if (failure === 'missing') {
+			delete state.window.ranBoosterOpenDialog;
+		} else if (failure === 'throws') {
+			state.window.ranBoosterOpenDialog = () => {
+				throw new Error('unavailable');
+			};
+		} else {
+			state.window.ranBoosterOpenDialog = () => null;
+		}
+		accept();
+		accept();
+		assert.deepEqual(state.navigations, [
+			'https://example.test/credential-b',
+		]);
+	});
+}
+
+test('changed destination makes an accepted switch stale', () => {
+	const state = fixture();
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'different';
+	let accept;
+	state.window.ranBoosterOpenDialog.confirm = (
+		button,
+		title,
+		message,
+		yes
+	) => {
+		accept = yes;
+		return true;
+	};
+	state.button.dispatchEvent(event('click'));
+	state.button.href = 'https://example.test/other';
+	accept();
+	assert.equal(state.populations, 0);
+	assert.deepEqual(state.navigations, []);
 });
 
 for (const [query, id, secret] of [

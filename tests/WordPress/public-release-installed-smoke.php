@@ -245,7 +245,7 @@ try {
 			$ran_booster_assert( '2.0.0' === $ran_booster_package->get_version() && RAN\PackageSource::RELEASE_ASSET === $ran_booster_package->get_source(), 'Successful prospective install was not adopted exactly.' );
 			$ran_booster_clean_streams();
 			$ran_booster_picker_proof = require __DIR__ . '/core-published-adoption-proof.php';
-			$ran_booster_picker_proof( $ran_booster_container, $type, $ran_booster_identifier, $ran_booster_package->get_source_revision(), $ran_booster_request, $ran_booster_assert );
+			$ran_booster_picker_proof( $ran_booster_container, $type, $ran_booster_identifier, $ran_booster_package->get_source_revision(), $ran_booster_request, $ran_booster_archive_root, $ran_booster_assert );
 			$ran_booster_assert( $ran_booster_counts['zip'] === $ran_booster_before['zip'] + 5, 'Picker listings or missing-digest inspection acquired a ZIP.' );
 			// Exercise the same installed services for a managed target whose native outcome is uncertain.
 			$ran_booster_token = $ran_booster_lock->try_acquire_without_reclaim();

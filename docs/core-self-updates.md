@@ -143,6 +143,13 @@ compatible release and composition proof. See
 [GitHub Example #17](https://github.com/RocketsAreNostalgic/ran-booster-github-example/issues/17)
 and [standalone Example #7](https://github.com/RocketsAreNostalgic/ran-wp-release-updater-example/issues/7).
 
+GitHub provider beta.25 retains beta.24's release-list reports and digest
+details. Provider #126 adds an optional source code to existing failures.
+For a transport failure, `wp_http.` identifies the WordPress HTTP API
+boundary. A plugin can supply the original `WP_Error` code there. A
+rate-limited release list carries `release_updater.rate_limited`. Core
+screens these identifiers when accepting the failure and writing log context.
+
 The previously inspected Bitbucket, Migrator and retired add-on archives carry
 no updater copy.
 

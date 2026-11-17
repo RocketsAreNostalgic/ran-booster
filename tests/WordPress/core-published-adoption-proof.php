@@ -6,22 +6,28 @@ use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\Internal\CoreContainer;
+use RAN\Logging\BoosterLogger;
+use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\ProviderRequestFailed;
+use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 
 // Exercise the installed picker callbacks with the adopted fixture's real provider.
-return static function ( CoreContainer $container, string $type, string $identifier, int $revision, array $repository, callable $assert ): void {
+return static function ( CoreContainer $container, string $type, string $identifier, int $revision, array $repository, string $archive_root, callable $assert ): void {
 	$controls    = $container->make( ReleaseManagementControls::class );
 	$prospective = $container->make( ProspectiveReleaseFacade::class );
 	$managed     = $container->make( ReleaseTrackingFacade::class );
 	$registry    = $container->make( ProviderRegistry::class );
 	$listing     = $registry->require_capability( 'gh', RepositoryReleaseCandidateListing::class );
 	$reference   = new RepositoryReference( $repository['repository'], 'plugin' === $type ? '951001' : '951002', false, null );
-	$release_url = 'https://api.github.com/repos/' . $repository['repository'] . '/releases';
+	$repo_url    = 'https://api.github.com/repos/' . $repository['repository'];
+	$release_url = $repo_url . '/releases';
 	$wire        = new class() {
-		public string $mode = '';
+		public string $mode        = '';
+		public ?string $error_code = null;
 		/** @var list<array{string,string}> */
 		public array $reads = array();
 
@@ -31,7 +37,11 @@ return static function ( CoreContainer $container, string $type, string $identif
 		}
 	};
 	$observed    = array();
-	$http        = static function ( mixed $response, array $args, string $url ) use ( $wire, $release_url ): mixed {
+	$http        = static function ( mixed $response, array $args, string $url ) use ( $wire, $repo_url, $release_url ): mixed {
+		if ( null !== $wire->error_code && $url === $repo_url ) {
+			$wire->reads[] = array( $args['method'], $url );
+			return new WP_Error( $wire->error_code, 'Untrusted transport fixture message.' );
+		}
 		if ( ! is_array( $response ) || ! str_starts_with( $url, $release_url ) ) {
 			return $response;
 		}
@@ -72,14 +82,82 @@ return static function ( CoreContainer $container, string $type, string $identif
 	};
 	$first_page  = array( 'GET', $release_url . '?per_page=20&page=1' );
 	$second_page = array( 'GET', $release_url . '?per_page=20&page=2' );
+	// The caller fenced this private archive directory. Core owns the capture format and lock.
+	$capture = new TemporaryDebugCapture( $archive_root . '/secrets.json' );
+	$capture->start();
+	BoosterLogger::configure_capture( $capture );
+	$assert_capture = static function ( callable $log, array $expected ) use ( $capture, $assert ): void {
+		$before = count( $capture->snapshot()['entries'] );
+		$log();
+		$entries = $capture->snapshot()['entries'];
+		$assert( count( $entries ) === $before + 1, 'Missing provider failure log entry.' );
+		$prefix = '[ran-booster] provider proof ';
+		$line   = $entries[ $before ]['line'];
+		$assert( str_starts_with( $line, $prefix ), 'Unexpected provider failure log message.' );
+		$context = json_decode( substr( $line, strlen( $prefix ) ), true, 8, JSON_THROW_ON_ERROR );
+		ksort( $context );
+		ksort( $expected );
+		$assert( $expected === $context, 'Captured provider failure context differs from the screened contract.' );
+	};
 	add_filter( 'pre_http_request', $http, PHP_INT_MIN + 1, 3 );
 	try {
+		$provider = $registry->get( 'gh' );
+		$request  = new RepositoryLookupRequest( $repository['repository'], null, true );
+		foreach ( array(
+			'http_request_failed'   => 'wp_http.http_request_failed',
+			'plugin_custom_failure' => 'wp_http.plugin_custom_failure',
+			'http_request_failed '  => null,
+			'token_expired'         => null,
+		) as $api_code => $expected_code ) {
+			$wire->start( 'transport' );
+			$wire->error_code = $api_code;
+			try {
+				$provider->resolve_repository( $request );
+				throw new RuntimeException( 'The installed provider lost the transport failure.' );
+			} catch ( ProviderRequestFailed $failure ) {
+				$fact = $failure->failure;
+				$assert( 'transport_other' === $fact->reason && $expected_code === $fact->source_code, 'The real transport carrier changed its reason or API code.' );
+				$expected = array(
+					'reason'   => 'transport_other',
+					'provider' => 'gh',
+				);
+				if ( null !== $expected_code ) {
+					$expected['source_code'] = $expected_code;
+				}
+				$assert_capture( static fn () => BoosterLogger::log_failure( 'provider proof', $fact, array( 'provider' => 'gh' ) ), $expected );
+			}
+			$assert( array( array( 'GET', $repo_url ) ) === $wire->reads, 'The transport control did not make exactly one repository GET.' );
+		}
+		$wire->error_code = null;
+		// Exercise Core's log screen independently of the typed carrier's input screen.
+		$assert_capture(
+			static fn () => BoosterLogger::log(
+				'provider proof',
+				array(
+					'source_code' => 'wp_http.token_expired',
+					'provider'    => 'gh',
+				)
+			),
+			array( 'provider' => 'gh' )
+		);
 		$wire->start( 'rate' );
 		try {
 			$listing->list_release_candidates( $type, $reference, 'stable' );
 			throw new RuntimeException( 'The installed provider lost the listing failure.' );
 		} catch ( RepositoryReleaseReadUnavailable $failure ) {
-			$assert( 'rate_limited' === $failure->failure?->reason && 120 === $failure->failure->retry_after && null === $failure->failure->http_status, 'The listing carrier lost the upstream retry delay or invented an HTTP status.' );
+			$fact = $failure->failure;
+			if ( null === $fact || 'rate_limited' !== $fact->reason || 120 !== $fact->retry_after || null !== $fact->http_status || 'release_updater.rate_limited' !== $fact->source_code ) {
+				throw new RuntimeException( 'The listing carrier lost its retry delay or screened updater code.' );
+			}
+			$assert_capture(
+				static fn () => BoosterLogger::log_failure( 'provider proof', $fact, array( 'provider' => 'gh' ) ),
+				array(
+					'reason'      => 'rate_limited',
+					'retry_after' => 120,
+					'source_code' => 'release_updater.rate_limited',
+					'provider'    => 'gh',
+				)
+			);
 		}
 		$assert( array( $first_page ) === $wire->reads, 'The carrier proof did not make the expected listing request.' );
 		foreach ( array( 'managed', 'prospective' ) as $picker ) {
@@ -143,6 +221,8 @@ return static function ( CoreContainer $container, string $type, string $identif
 		}
 	} finally {
 		remove_filter( 'pre_http_request', $http, PHP_INT_MIN + 1 );
+		BoosterLogger::configure_capture( $container->make( TemporaryDebugCapture::class ) );
+		$capture->delete_managed_storage();
 	}
 	// The deterministic callback responses can be replayed against the packaged picker loaders.
 	WP_CLI::debug( (string) wp_json_encode( $observed ), 'published-adoption' ); // @phpstan-ignore class.notFound (WP-CLI owns debug output in the disposable installed proof.)

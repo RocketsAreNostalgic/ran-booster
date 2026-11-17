@@ -364,20 +364,40 @@ replaces an unread flash, and `render()` requires `manage_options`.
 `respond()` message is open, bounded display text that no closed code can
 represent. The owner approved one narrow, bounded exception: a separate
 user-meta row, `_ran_booster_interaction_outcome`, holding `{at, site, action,
-message}`. It lives 60 seconds, belongs to one user and one site, and is claimed
-once (deleting the exact value) only after the signed marker verifies, so a
-forged, replayed, cross-user, cross-site, expired or tampered marker never reads
-it. It has no event id: the marker's operation, target and destination binding
-is enough, because the row is presentation only and has no operational consumer.
-It is never an Activity, incident or recovery source, and it does not widen
-`FeedbackFlash`, which stays closed-code only. No new catalogue and no API 4 are
-introduced. Expired rows are deleted on the next administration load, and
-uninstall removes the key. If the marker verifies but the row is missing,
-expired, replaced or was never written, a full-page or no-JavaScript landing
-shows one fixed neutral persistent info notice (an enhanced landing shows
-nothing extra, because its success is visible in the swapped region): "The
-result details are not available. Check the page or Activity for the current
-state." It does not advise a retry and does not say the operation failed.
+message}`. It lives 60 seconds and belongs to one user and one site. A marker
+must verify before a matching row is read. The signed interaction marker binds
+operation, target and destination. The row is presentation only: it is never
+an Activity, incident or recovery source, and it does not widen `FeedbackFlash`,
+which stays closed-code only. No new catalogue or API 4 is introduced.
+
+Release workflow results share this row. Each redirect carries a fresh random
+identifier bound into its nonce action; the row holds that action and a JSON
+pair of bounded message and remediation text. Identical results therefore do
+not share a marker, and a failed write cannot make the new marker read an older
+row. Missing, expired, replaced, malformed or consumed text falls back to the
+fixed Core copy for a known code. An unknown code uses the unavailable-details
+message without inferring a failed operation. A result with no message or
+remediation writes no row, preserving any earlier unread result. The newest
+interaction or workflow result that carries text replaces the previous unread row. Expired rows
+are reaped on an administration load, and uninstall removes the key.
+
+Claims and stale-row cleanup use one conditional database delete scoped to the
+user, metadata key and exact serialized value, followed by user metadata cache
+invalidation even when no row is deleted. A failed or zero-row delete never
+claims text. Identical duplicate rows are removed together; case-distinct values
+remain distinct. This bypasses the standard metadata deletion filters and hooks,
+which do not offer an atomic value-bound delete. A disposable WordPress/MySQL
+barrier proof exercises replacement, cleanup, competing claims and database
+failure; the in-memory test double is not evidence of database atomicity. The
+standalone proof is not currently run by CI, so this property is not continuously
+checked.
+
+For signed interactions, a missing, expired, replaced or unwritten row shows a
+fixed neutral persistent info notice on full-page and no-JavaScript landings;
+an enhanced landing shows nothing extra because success is visible in the
+swapped region. The notice says: "The result details are not available. Check
+the page or Activity for the current state." It does not advise a retry or say
+the operation failed.
 
 ### Interface contract between the flash (P1) and the host (P2)
 

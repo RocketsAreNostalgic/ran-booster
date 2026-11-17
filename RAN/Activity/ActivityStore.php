@@ -614,6 +614,7 @@ final class ActivityStore {
 				'deployment_mutation_started_at', 'deployment_finished_at' => null === $value || ( is_string( $value ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $value ) ),
 				'deployment_resolved_at' => null === $value || ( is_string( $value ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $value ) ),
 				'deployment_resolved_by' => null === $value || ( is_int( $value ) && $value > 0 ),
+				'deployment_settled_by' => 'runner_throw' === $value,
 				'deployment_outcome' => null === $value || ( is_string( $value ) && 1 === preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/', $value ) ),
 				default => null,
 			};

@@ -36,7 +36,9 @@ namespace RAN\Tests\Deployment {
 
 		/** @var \Closure():void|null */
 		public ?\Closure $on_management_read = null;
-		public string $options               = 'wp_options';
+		/** @var \Closure():void|null */
+		public ?\Closure $on_lock_release = null;
+		public string $options            = 'wp_options';
 		public \RAN\Tests\RepositoryProvider\SelectionContextDatabase $selection;
 		/** @var array<string, array<string, mixed>> */
 		public array $management_rows = array();
@@ -223,6 +225,9 @@ namespace RAN\Tests\Deployment {
 					return 0;
 				}
 				unset( $this->option_rows[ $name ] );
+				if ( null !== $this->on_lock_release ) {
+					( $this->on_lock_release )();
+				}
 
 				return 1;
 			}

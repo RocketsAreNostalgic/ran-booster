@@ -153,6 +153,12 @@ A changed observation omits the fact; failed storage still aborts the transactio
 The terminal refinement opts into strict selection reads, including nested reads.
 One-shot SQL failures and malformed authority escape to the transaction owner;
 confirmed unavailable providers remain ordinary mismatches. Other callers stay tolerant.
+The failed refinement transaction writes no terminal outcome, Activity completion
+or refusal fact. Under #842, the coordinator then settles the stopped runner in a
+fresh transaction: `worker_stopped` before the fence, or `interrupted` after it,
+with `deployment_settled_by: runner_throw`. Its finished log follows commit.
+If that settlement also fails, the attempt remains running without a finished log.
+A healthy retry through the coordinator is a new attempt, not replay of a settled row.
 The completion and optional Activity fact `branch_refusal: target_is_working_copy`
 commit together. The existing repository completion log receives that singleton
 only after commit. The coordinator's separate completion log remains generic.

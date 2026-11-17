@@ -315,7 +315,7 @@ their existing behavior. Foreign receivers retain their actual owner’s names.
 Magic package reads preserve getter-first lookup for the existing 15 getter
 keys, including their case variants. Renamed protected backing fields have new
 exact fallback spellings: `deployment_policy`, `source_revision`,
-`deployment_ref`, `installation_slug`, `plugin_uri`, `theme_uri`, `author_uri`,
+`deployment_ref`, `plugin_uri`, `theme_uri`, `author_uri`,
 `text_domain`, `domain_path` and `author_name`. Old fallback-only spellings are
 removed. Unknown keys and unrelated subclass getters retain their behavior;
 underscore-prefixed getter aliases are not introduced. WordPress header keys

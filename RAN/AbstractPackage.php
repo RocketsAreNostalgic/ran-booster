@@ -21,8 +21,7 @@ abstract class AbstractPackage implements Package {
 	private ?string $adoption_token               = null;
 	/** @var string|null Normalized relative path, or no subdirectory. */
 	protected $subdirectory;
-	protected ?string $deployment_ref    = null;
-	protected ?string $installation_slug = null;
+	protected ?string $deployment_ref = null;
 
 	public function get_adoption_token(): ?string {
 		return $this->adoption_token;
@@ -47,18 +46,10 @@ abstract class AbstractPackage implements Package {
 	}
 
 	public function get_slug(): mixed {
-		if ( $this->has_subdirectory() ) {
-			return PackageSubdirectory::installation_slug( '', $this->get_subdirectory() );
-		}
-
 		return PackageSubdirectory::installation_slug(
-			$this->installation_slug ?? $this->runtime_slug(),
+			$this->runtime_slug(),
 			null
 		);
-	}
-
-	public function set_installation_slug( ?string $slug ): void {
-		$this->installation_slug = null === $slug ? null : PackageSubdirectory::normalize_slug( $slug );
 	}
 
 	public function get_subdirectory(): mixed {

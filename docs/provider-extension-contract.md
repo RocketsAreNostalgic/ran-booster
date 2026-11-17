@@ -994,7 +994,7 @@ does with it.
 ### The failure value
 
 `RAN\RepositoryProvider\ProviderFailure` is a final, immutable value. It
-carries no text of its own.
+carries a closed reason, typed facts and an optional screened diagnostic code.
 
 ```php
 new \RAN\RepositoryProvider\ProviderFailure(
@@ -1002,7 +1002,8 @@ new \RAN\RepositoryProvider\ProviderFailure(
 	http_status: 429,                // optional int, 100 to 599
 	retry_after: 60,                 // optional int seconds, 1 to 86400
 	reset_at: 1767225600,            // optional int Unix timestamp
-	credential_expires_at: null      // optional UTC string, Y-m-d\TH:i:s\Z
+	credential_expires_at: null,     // optional UTC string, Y-m-d\TH:i:s\Z
+	source_code: 'abuse_detected'   // optional documented source code
 );
 ```
 
@@ -1023,6 +1024,30 @@ if ( class_exists( \RAN\RepositoryProvider\ProviderFailure::class )
 }
 throw new \RuntimeException( 'Repository not found.', 404 );
 ```
+
+### Optional source code
+
+A provider may pass the source's documented error-code field unchanged as
+`source_code`. Core keeps it as a diagnostic reference in the common failure
+logs; the closed reason still controls behavior and copy. Core uses existing
+provider and operation or step context for the source label. A provider may use
+a dotted origin such as `api.abuse_detected` or
+`wp_http.http_request_failed` when relaying another source's code; Core does
+not parse or verify the prefix.
+
+Only original strings of 1–64 ASCII bytes matching
+`[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*` are considered. Core also applies both
+shared identifier and strict secret-text screens to the whole original. Unsafe
+or wrong-type values are silently omitted, without trimming, conversion or
+truncation. The strict screen conservatively omits some plausible codes, such
+as `token_expired`. Supply documented codes only, never messages, headers,
+bodies, request IDs, credentials or other identifiers. Do not infer a code
+from a status or exception.
+
+The property is newer than API 15. Before passing the new named argument, check
+`property_exists( \RAN\RepositoryProvider\ProviderFailure::class, 'source_code' )`
+in addition to the existing class checks; older API 15 hosts do not accept it.
+Activity and support reports do not include this reference in this slice.
 
 When no `ProviderFailure` is present, some Core consumers derive a reason from
 the integer code (see [Legacy codes](#legacy-codes)). This loses distinctions that share a

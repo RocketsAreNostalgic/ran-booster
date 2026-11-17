@@ -15,6 +15,7 @@ use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\ProviderFailure;
 use RAN\RepositoryProvider\ProviderRequestFailed;
+use RAN\Troubleshooting\SupportReport;
 use RuntimeException;
 
 require_once __DIR__ . '/LoggingWordPressFunctions.php';
@@ -127,6 +128,47 @@ final class BoosterLoggerTest extends TestCase {
 			'[ran-booster] provider request failed {"reason":"rate_limited","http_status":403,"retry_after":120,"operation":"repository_browse","provider":"gh","exception_class":"RAN\\\\RepositoryProvider\\\\ProviderRequestFailed","exception_code":"403"}',
 			$this->capture->snapshot()['entries'][0]['line']
 		);
+	}
+
+	public function test_source_code_reaches_capture_from_both_carriers(): void {
+		$code = str_repeat( 'abuse_detected_', 4 ) . 'code';
+		BoosterLogger::log_failure( 'result failed', new ProviderFailure( 'http_4xx_other', source_code: 'abuse_detected' ), array( 'provider' => 'gh' ) );
+		BoosterLogger::log_provider_failure( 'request failed', new ProviderRequestFailed( new ProviderFailure( 'http_4xx_other', source_code: $code ) ), array( 'step' => 'browse' ) );
+		$entries = $this->capture->snapshot()['entries'];
+		self::assertStringContainsString( '"source_code":"abuse_detected"', $entries[0]['line'] );
+		self::assertStringContainsString( '"provider":"gh"', $entries[0]['line'] );
+		self::assertStringContainsString( '"source_code":"' . $code . '"', $entries[1]['line'] );
+		self::assertStringContainsString( '"step":"browse"', $entries[1]['line'] );
+	}
+
+	public function test_direct_source_code_context_screens_the_original_and_non_strings(): void {
+		$stringable = new class() {
+			public function __toString(): string {
+				throw new RuntimeException( 'Must not convert diagnostic input.' );
+			}
+		};
+		BoosterLogger::log( 'direct', array( 'source_code' => 'api.abuse_detected' ) );
+		self::assertStringContainsString( '"source_code":"api.abuse_detected"', $this->last_line() );
+		foreach ( array( null, true, 123, 1.2, array(), $stringable, "abuse_detected\n", 'secret_orchid', 'token_expired', 'a%2eb', 'https://example.test/path', '<b>code</b>', str_repeat( 'a', 64 ) . '_secret' ) as $value ) {
+			BoosterLogger::log( 'direct', array( 'source_code' => $value ) );
+			self::assertStringNotContainsString( 'source_code', $this->last_line() );
+		}
+	}
+
+	public function test_support_projection_omits_a_valid_captured_source_code(): void {
+		BoosterLogger::log(
+			'attempt finished',
+			array(
+				'source_code' => 'abuse_detected',
+				'attempt_id'  => 12,
+			)
+		);
+		$line = $this->last_line();
+		self::assertStringContainsString( 'abuse_detected', $line );
+		$projected = SupportReport::safe_log( $line );
+		self::assertNotNull( $projected );
+		self::assertStringContainsString( 'attempt=', $projected );
+		self::assertStringNotContainsString( 'abuse_detected', $projected );
 	}
 
 	public function test_a_legacy_code_logs_its_derived_reason_and_never_the_message(): void {
@@ -545,7 +587,7 @@ final class BoosterLoggerTest extends TestCase {
 		$keys = ( new \ReflectionClassConstant( BoosterLogger::class, 'SAFE_CONTEXT_KEYS' ) )->getValue();
 		self::assertIsArray( $keys );
 		self::assertSame(
-			array( 'attempt_id', 'branch_refusal', 'correlation_id', 'diagnostic_id', 'event', 'exception_class', 'exception_code', 'http_status', 'operation', 'outcome_code', 'package_slug', 'provider', 'reason', 'resolved_by', 'resolved_ref', 'retry_after', 'source', 'state', 'step', 'transition' ),
+			array( 'attempt_id', 'branch_refusal', 'correlation_id', 'diagnostic_id', 'event', 'exception_class', 'exception_code', 'http_status', 'operation', 'outcome_code', 'package_slug', 'provider', 'reason', 'resolved_by', 'resolved_ref', 'retry_after', 'source', 'source_code', 'state', 'step', 'transition' ),
 			array_keys( $keys )
 		);
 	}

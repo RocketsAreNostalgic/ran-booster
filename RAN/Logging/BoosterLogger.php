@@ -41,6 +41,7 @@ final class BoosterLogger {
 		'resolved_ref'    => true,
 		'retry_after'     => true,
 		'source'          => true,
+		'source_code'     => true,
 		'state'           => true,
 		'step'            => true,
 		'transition'      => true,
@@ -117,6 +118,7 @@ final class BoosterLogger {
 				'reason'      => $failure->reason,
 				'http_status' => $failure->http_status,
 				'retry_after' => $failure->retry_after,
+				'source_code' => $failure->source_code,
 			),
 			static fn ( string|int|null $value ): bool => null !== $value
 		);
@@ -159,6 +161,14 @@ final class BoosterLogger {
 
 		foreach ( $context as $key => $value ) {
 			if ( ! is_string( $key ) || ! isset( self::SAFE_CONTEXT_KEYS[ $key ] ) ) {
+				continue;
+			}
+
+			if ( 'source_code' === $key ) {
+				$code = ProviderFailure::normalize_source_code( $value );
+				if ( null !== $code ) {
+					$safe[ $key ] = $code;
+				}
 				continue;
 			}
 

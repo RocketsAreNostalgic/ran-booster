@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\RepositoryProvider;
 
 use InvalidArgumentException;
+use RAN\UpdaterSupport\V1\FailureText;
 use Throwable;
 
 /**
@@ -60,6 +61,7 @@ final readonly class ProviderFailure {
 	public ?int $retry_after;
 	public ?int $reset_at;
 	public ?string $credential_expires_at;
+	public ?string $source_code;
 
 	/**
 	 * @param string      $reason                Required closed reason id.
@@ -67,6 +69,7 @@ final readonly class ProviderFailure {
 	 * @param int|null    $retry_after           Whole seconds, 1 to 86400.
 	 * @param int|null    $reset_at              Unix timestamp the limit resets.
 	 * @param string|null $credential_expires_at UTC `Y-m-d\TH:i:s\Z`.
+	 * @param mixed       $source_code           Optional untrusted diagnostic identifier.
 	 * @throws InvalidArgumentException For an unknown reason or a value out of range.
 	 */
 	public function __construct(
@@ -74,7 +77,8 @@ final readonly class ProviderFailure {
 		?int $http_status = null,
 		?int $retry_after = null,
 		?int $reset_at = null,
-		?string $credential_expires_at = null
+		?string $credential_expires_at = null,
+		mixed $source_code = null
 	) {
 		if ( ! in_array( $reason, self::REASONS, true )
 			|| ( null !== $http_status && ( $http_status < 100 || $http_status > 599 ) )
@@ -89,6 +93,20 @@ final readonly class ProviderFailure {
 		$this->retry_after           = $retry_after;
 		$this->reset_at              = $reset_at;
 		$this->credential_expires_at = $credential_expires_at;
+		$this->source_code           = self::normalize_source_code( $source_code );
+	}
+
+	/** Screen the whole original diagnostic without converting or modifying it. */
+	public static function normalize_source_code( mixed $value ): ?string {
+		if ( ! is_string( $value ) || strlen( $value ) > 64
+			|| 1 !== preg_match( '/\A[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*\z/D', $value )
+			|| FailureText::identifier( $value ) !== $value
+			|| FailureText::strict( $value, 64 ) !== $value
+		) {
+			return null;
+		}
+
+		return $value;
 	}
 
 	/**

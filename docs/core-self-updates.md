@@ -127,17 +127,37 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core loads lock-pinned `ran/wp-release-updater` beta.19 (Protocol 7) after its
+Core loads lock-pinned `ran/wp-release-updater` beta.20 (Protocol 8) after its
 single-site admission check and retains the public registrar. Runtime arbitration
 and prospective releases stay available independently of Core discovery. Other
 physical runtime copies must satisfy the pinned family/provenance selection
 contract; incompatible families fail closed.
 
-The published updater fact selected for this uptake is beta.19 reference
-`c6aa2e6e1456b0ad4abec24bf41a870d151eb4b2`, with runtime revision
-`75f5ddf3474cd62bad9d1fbe5788e523e0e32c8b2a561b55be454d42dd2e5307`.
+The published updater fact selected for this uptake is beta.20 reference
+`2f29812935fa10fef7c0dc8b2fc5a78898aee211`, with runtime revision
+`d9e14911e41262d6e5c2aa50742c5d5ed5da578092fbc67e83ac9f6c591f4796`.
 This records the released artifact identity; it does not by itself qualify
 Core integration. Qualification belongs to the exact-PR proof and review receipt.
+
+Core's bundled GitHub provider shares this single updater copy. Published GitHub
+Example v0.2.2 has its own beta.15/Protocol 7 copy; standalone updater Example
+v0.2.0 has beta.13/Protocol 6. Matching published example releases, including
+GitHub Example's qualified provider composition, are required wherever those
+examples are used before Protocol 8 composition qualification. Older example
+compositions remain held. Matching releases are tracked in
+[GitHub Example #17](https://github.com/RocketsAreNostalgic/ran-booster-github-example/issues/17)
+and [standalone Example #7](https://github.com/RocketsAreNostalgic/ran-wp-release-updater-example/issues/7).
+Inspected Bitbucket, Migrator and both retired add-on archives carry no updater
+copy; adoption does not restore retired runtimes.
+
+Branch working-copy refusal remains `policy_blocked`, with misleading generic
+Updates/file-modification advice. Native release refusal uses
+`ran_wp_release_updater_target_is_working_copy` and “The update operation was
+not admitted.” Core shows generic “Published release status needs attention,”
+with no new persisted refusal record. This does not complete #889 or #834:
+closed-reason retention and fixed working-copy advice are proposed follow-up
+work only. No working-copy override is enabled; Core's stronger self-source
+guard, including `composer.json` in `auto` mode, remains unchanged.
 
 Core declares its exact target in manual mode when current policy permits, or
 in disabled/forced-off mode otherwise. Disabled registration preserves the

@@ -50,12 +50,12 @@
         "ext-sodium": "*",
         "ext-zip": "*",
         "ran/booster-github-provider": "1.0.0-beta.23",
-        "ran/updater-support": "1.0.0-beta.7",
-        "ran/wp-branch-updater": "1.0.0-beta.15",
-        "ran/wp-release-updater": "~1.0.0-beta.19"
+        "ran/updater-support": "1.0.0-beta.8",
+        "ran/wp-branch-updater": "1.0.0-beta.16",
+        "ran/wp-release-updater": "1.0.0-beta.20"
     },
     "extra": {
-        "ran-updater-runtime-protocol": 7
+        "ran-updater-runtime-protocol": 8
     },
     "scripts": {
         "test:characterization": "@php tests/characterization.php",

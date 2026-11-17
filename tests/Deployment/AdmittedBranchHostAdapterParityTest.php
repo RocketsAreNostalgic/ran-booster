@@ -148,6 +148,135 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue( array() );
 	}
 
+	#[DataProvider( 'overwrite_targets' )]
+	public function test_target_directory_matches_word_press_destination( string $type, string $operation, bool $alternate ): void {
+		$slug    = 'example';
+		$request = new DeploymentRequest(
+			'owner/example',
+			null,
+			false,
+			'main',
+			$slug,
+			null,
+			DeploymentPolicy::AUTOMATIC,
+			7,
+			self::MAXIMUM_ARTIFACT_BYTES,
+			installed_identifier: 'update' === $operation ? ( 'plugin' === $type ? 'example/example.php' : $slug ) : null,
+			adoption_token: 'update' === $operation ? 'gh:R_example:11111111-1111-4111-8111-111111111111' : null
+		);
+		if ( 'update' === $operation ) {
+			$identifier                                     = (string) $request->installed_identifier;
+			$this->database->management[ $identifier ]      = (string) $request->adoption_token;
+			$this->database->management_rows[ $identifier ] = array(
+				'provider'               => 'gh',
+				'provider_repository_id' => 'R_example',
+				'repository'             => 'owner/example',
+				'branch'                 => 'main',
+				'private'                => 0,
+				'credential_id'          => null,
+				'subdirectory'           => null,
+				'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+				'source'                 => 'branch',
+				'source_revision'        => 1,
+			);
+		}
+		$theme = $this->createPartialMock( \RAN\Theme::class, array( 'get_identifier' ) );
+		$theme->method( 'get_identifier' )->willReturn( $slug );
+		$theme->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$theme->set_adoption_token( 'gh:R_example:11111111-1111-4111-8111-111111111111' );
+		$theme->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
+		$theme->set_source( PackageSource::BRANCH, 1 );
+		$this->themes->managed = $theme;
+		$root                  = $alternate ? sys_get_temp_dir() . '/alternate-theme-root' : \get_theme_root();
+		$GLOBALS['ran_booster_parity_theme_roots'][ $slug ] = $root;
+		try {
+			$attempt = $this->attempts->admit_and_claim_manual( $operation, $type, 'gh', 'R_example', $request, 'main', 'branch', 'update' === $operation ? 1 : 0 );
+			$adapter = $this->adapter( $attempt, new ParityRepositoryProvider( null ) );
+			self::assertSame( ( 'plugin' === $type ? WP_PLUGIN_DIR : $root ) . '/' . $slug, $adapter->target_directory( $adapter->declaration() ) );
+			self::assertFalse( $adapter->declaration()->allow_working_copy );
+		} finally {
+			unset( $GLOBALS['ran_booster_parity_theme_roots'] );
+		}
+	}
+
+	/** @return iterable<string,array{string,string,bool}> */
+	public static function overwrite_targets(): iterable {
+		foreach ( array( 'install', 'update' ) as $operation ) {
+			yield 'plugin ' . $operation => array( 'plugin', $operation, false );
+			yield 'theme ' . $operation => array( 'theme', $operation, false );
+			yield 'alternate theme ' . $operation => array( 'theme', $operation, true );
+		}
+	}
+
+	#[DataProvider( 'working_copy_markers' )]
+	public function test_working_copy_refuses_before_durable_mutation( string $marker, string $shape ): void {
+		$target = WP_PLUGIN_DIR . '/example';
+		$this->ensure_directory( $target );
+		$path = $target . '/' . $marker;
+		try {
+			if ( 'directory' === $shape ) {
+				$this->ensure_directory( $path );
+			} elseif ( 'link' === $shape ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_symlink -- Deliberately dangling marker in this disposable target.
+				self::assertTrue( symlink( $target . '/absent', $path ) );
+			} else {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable version-control marker fixture.
+				file_put_contents( $path, 'gitdir: /unavailable' );
+			}
+			$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+			$executor = new ParityCoreExecutor();
+			$adapter  = $this->adapter( $this->running_update(), new ParityRepositoryProvider( $archive ), executor: $executor );
+			$this->download_fixture( 'example' );
+			self::assertSame( DeploymentOutcome::CODE_POLICY_BLOCKED, $this->deploy( $adapter ) );
+			self::assertSame( 0, $executor->calls );
+			self::assertSame( 1, $archive->cleanup_calls );
+			self::assertNull( $adapter->terminal_attempt()->safe_data()['mutation_started_at'] );
+			self::assertSame( DeploymentState::FAILED, $adapter->terminal_attempt()->get_state() );
+		} finally {
+			$this->remove_tree( $target );
+		}
+	}
+
+	/** @return iterable<string,array{string,string}> */
+	public static function working_copy_markers(): iterable {
+		foreach ( array( '.git', '.svn', '.hg', '.bzr' ) as $marker ) {
+			foreach ( array( 'file', 'directory', 'link' ) as $shape ) {
+				yield $marker . ' ' . $shape => array( $marker, $shape );
+			}
+		}
+	}
+
+	public function test_missing_target_ancestor_marker_and_composer_metadata_do_not_refuse(): void {
+		$target = WP_PLUGIN_DIR . '/example';
+		$marker = WP_PLUGIN_DIR . '/.git';
+		self::assertDirectoryDoesNotExist( $target );
+		self::assertFileDoesNotExist( $marker );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Ancestor marker is deliberately outside the disposable package target.
+		file_put_contents( $marker, 'ancestor' );
+		try {
+			foreach ( array( false, true ) as $metadata ) {
+				if ( $metadata ) {
+					$this->ensure_directory( $target );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Composer metadata alone is a negative working-copy control.
+					file_put_contents( $target . '/composer.json', '{}' );
+				}
+				$executor                  = new ParityCoreExecutor();
+				$executor->after_execution = function (): void {
+					$this->plugins->managed['fixture'] = $this->plugin( version: '2.0.0' );
+				};
+				$adapter                   = $this->adapter( $this->running_update(), new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ), executor: $executor );
+				$this->download_fixture( 'example' );
+				self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $this->deploy( $adapter ) );
+				self::assertSame( 1, $executor->calls );
+				$this->plugins->managed['fixture'] = $this->plugin();
+			}
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test's ancestor marker.
+			unlink( $marker );
+			$this->remove_tree( $target );
+		}
+	}
+
 	public function test_guarded_github_archive_retains_post_download_head_authority_until_runner_verification(): void {
 		$commit = '0123456789abcdef0123456789abcdef01234567';
 		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
@@ -1444,7 +1573,11 @@ final class ParityPluginRepository extends PluginRepository {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ParityThemeRepository extends ThemeRepository {
+	public ?\RAN\Theme $managed = null;
 	public function __construct() {}
+	public function booster_theme_from_stylesheet( $stylesheet ) {
+		return $this->managed ?? throw new RuntimeException( 'Missing managed theme: ' . $stylesheet );
+	}
 }
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
@@ -1557,3 +1690,11 @@ final class LongExceptionXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Exercises namespaced exception logging.
 final class ParityRunnerException extends \RuntimeException {}
+
+// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound -- The adapter's WordPress function double stays with its destination tests.
+namespace RAN\Deployment;
+
+// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- This bounded WordPress double supplies alternate theme roots for the real adapter.
+function get_theme_root( string $stylesheet = '' ): string {
+	return $GLOBALS['ran_booster_parity_theme_roots'][ $stylesheet ] ?? \get_theme_root();
+}

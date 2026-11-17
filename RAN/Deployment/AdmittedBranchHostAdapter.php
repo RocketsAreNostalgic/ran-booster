@@ -108,7 +108,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	/** Construct the immutable package declaration from Booster's admitted snapshot. */
 	public function declaration(): BranchDeploymentDeclaration {
-		if ( null !== $this->attempt->get_request()->expected_identifier && ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || 3 !== constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) ) ) {
+		if ( null !== $this->attempt->get_request()->expected_identifier && ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || ! in_array( constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 3, 4 ), true ) ) ) {
 			$this->stage( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
 		}
 		if ( null === $this->attempt->safe_data()['mutation_started_at'] ) {
@@ -121,7 +121,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			if ( 'webhook' === $data['source'] || $data['requested_ref'] !== $request->selected_commit ) {
 				$this->stage( DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID );
 			}
-			if ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || ! in_array( constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 2, 3 ), true ) || 2 !== ( $this->providers->metadata()[ (string) $data['provider'] ]->archive_api_version ?? 1 ) ) {
+			if ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || ! in_array( constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 2, 3, 4 ), true ) || 2 !== ( $this->providers->metadata()[ (string) $data['provider'] ]->archive_api_version ?? 1 ) ) {
 				$this->stage( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
 			}
 		}
@@ -319,6 +319,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	public function assert_mutation_allowed(): void {
 		$this->assert_provider_current();
 		PackageMutationGuard::assert_filesystem_mutation_allowed();
+	}
+
+	public function target_directory( BranchDeploymentDeclaration $deployment ): string {
+		$this->assert_declaration( $deployment );
+		$root = 'plugin' === $deployment->package_type ? WP_PLUGIN_DIR : get_theme_root( $deployment->installed_identifier ?? $deployment->slug );
+		return rtrim( $root, '/\\' ) . '/' . $deployment->slug;
 	}
 
 	public function frozen_target( BranchDeploymentDeclaration $deployment, bool $defer_existing ): ?array {

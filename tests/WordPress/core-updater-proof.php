@@ -39,6 +39,18 @@ final class RAN_Booster_CoreUpdaterProof {
 			throw new RuntimeException( 'The proof run identity is invalid.' );
 		}
 
+		$expected_root = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Verify the exact operator-owned disposable marker before fixture installation/deletion.
+		$marker = is_file( ABSPATH . '.ran-booster-disposable-test-site' ) ? file_get_contents( ABSPATH . '.ran-booster-disposable-test-site' ) : false;
+		if ( ! is_string( $expected_root ) || realpath( $expected_root ) !== realpath( ABSPATH )
+			|| realpath( WP_CONTENT_DIR ) !== realpath( ABSPATH ) . '/wp-content'
+			|| realpath( WP_PLUGIN_DIR ) !== realpath( WP_CONTENT_DIR ) . '/plugins'
+			|| realpath( get_theme_root() ) !== realpath( WP_CONTENT_DIR ) . '/themes'
+			|| 'http://localhost' !== get_option( 'siteurl' ) || "RAN Booster disposable test site\n" !== $marker
+			|| is_link( ABSPATH . '.ran-booster-disposable-test-site' ) || is_link( WP_PLUGIN_DIR . '/ran-booster' ) ) {
+			throw new RuntimeException( 'The native proof requires the exact disposable site roots and URL.' );
+		}
+
 		$this->original_stylesheet = (string) get_option( 'stylesheet' );
 
 		clearstatcache( true, ABSPATH . '.maintenance' );
@@ -48,6 +60,18 @@ final class RAN_Booster_CoreUpdaterProof {
 	}
 
 	public function run(): void {
+		// New native declarations deliberately defer after any operation of that type.
+		// Seed and finish these installed-file fixtures before the updater exercises.
+		try {
+			foreach ( array( 'plugin', 'theme' ) as $type ) {
+				$slug = $this->slug( 'native-' . $type );
+				$this->native_guard_fixture( $type, $slug );
+				$this->native_working_copy_refusal( $type, $slug );
+			}
+		} finally {
+			$this->cleanup();
+		}
+
 		$unrelated_slug       = $this->slug( 'unrelated-plugin' );
 		$unrelated_identifier = $this->plugin_identifier( $unrelated_slug );
 		$unrelated_archive    = $this->archive( 'plugin', $unrelated_slug, '9.0.0', 'unrelated-original' );
@@ -153,6 +177,99 @@ final class RAN_Booster_CoreUpdaterProof {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture owns exact native files, streams and cleanup paths; WordPress filesystem abstraction would change the proof.
 			if ( is_file( $archive ) && ! unlink( $archive ) ) {
 				throw new RuntimeException( 'A disposable proof archive could not be removed.' );
+			}
+		}
+	}
+
+	/** Seed valid installed files without starting a WordPress updater operation. */
+	private function native_guard_fixture( string $type, string $slug ): void {
+		$directory = ( 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root() ) . '/' . $slug;
+		$this->assert_destination_absent( $directory );
+		$archive = $this->archive( $type, $slug, '1.0.0', 'native-guard' );
+		$zip     = new ZipArchive();
+		if ( true !== $zip->open( $archive ) ) {
+			throw new RuntimeException( 'The native guard fixture archive is unavailable.' );
+		}
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Seed only the exact disposable native guard target before updater discovery starts.
+			if ( ! mkdir( $directory, 0700 ) ) {
+				throw new RuntimeException( 'The native guard fixture directory could not be created.' );
+			}
+			if ( 'plugin' === $type ) {
+				$this->plugins[] = $this->plugin_identifier( $slug );
+			} else {
+				$this->themes[] = $slug;
+			}
+			foreach ( 'plugin' === $type ? array( $slug . '.php' ) : array( 'style.css', 'index.php' ) as $file ) {
+				$bytes = $zip->getFromName( 'repository-native-guard/' . $file );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Copy exact archive-owned headers into this isolated installed-file fixture.
+				if ( ! is_string( $bytes ) || strlen( $bytes ) !== file_put_contents( $directory . '/' . $file, $bytes ) ) {
+					throw new RuntimeException( 'The native guard fixture file could not be created.' );
+				}
+			}
+		} finally {
+			$zip->close();
+		}
+	}
+
+	private function native_working_copy_refusal( string $type, string $slug ): void {
+		$root     = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root( $slug );
+		$identity = 'plugin' === $type ? $this->plugin_identifier( $slug ) : $slug;
+		$file     = $root . '/' . $slug . '/' . ( 'plugin' === $type ? basename( $identity ) : 'style.css' );
+		if ( is_link( $root ) || is_link( dirname( $file ) ) || realpath( dirname( $file ) ) !== dirname( $file ) ) {
+			throw new RuntimeException( 'Native guard proof requires an unshared physical fixture target.' );
+		}
+		$registrar = new \RAN\WordPress\ManagedReleaseUpdaterRegistrar( \RAN\WordPress\ReleaseUpdaterBootstrap::register() );
+		$target    = $registrar->$type( 'github', $file, 'fixtures/' . $slug, '42', 'stable', 'manual' );
+		if ( ! $target->register() || 'target_active' !== $target->status()['code'] ) {
+			throw new RuntimeException( 'Native working-copy proof requires an active installed target.' );
+		}
+		$marker = dirname( $file ) . '/.git';
+		$this->assert_destination_absent( $marker );
+		$original       = hash_file( 'sha256', $file );
+		$extra          = array(
+			'type'   => $type,
+			'action' => 'update',
+			$type    => $identity,
+		);
+		$assert_refusal = static function ( mixed $result ): void {
+			if ( ! $result instanceof WP_Error || 'ran_wp_release_updater_target_is_working_copy' !== $result->get_error_code()
+				|| 'The update operation was not admitted.' !== $result->get_error_message() ) {
+				throw new RuntimeException( 'Native working-copy refusal did not retain its exact error contract.' );
+			}
+		};
+		$race           = static function ( mixed $response, array $hook_extra ) use ( $marker, $extra ): mixed {
+			if ( $extra === $hook_extra ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Marker appears on WordPress's final native pre-install boundary.
+				file_put_contents( $marker, 'gitdir: absent' );
+			}
+			return $response;
+		};
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Existing working copy must refuse before acquisition.
+			file_put_contents( $marker, 'gitdir: absent' );
+			$upgrader = 'plugin' === $type ? new Plugin_Upgrader( new Automatic_Upgrader_Skin() ) : new Theme_Upgrader( new Automatic_Upgrader_Skin() );
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Invoke the exact native WordPress boundary under test.
+			$assert_refusal( apply_filters( 'upgrader_pre_download', false, 'https://proof.invalid/unacquired.zip', $upgrader, $extra ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Reset only this test's marker before the race.
+			unlink( $marker );
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Invoke the exact native WordPress boundary under test.
+			$control = apply_filters( 'upgrader_pre_install', true, $extra );
+			if ( $control instanceof WP_Error && 'ran_wp_release_updater_target_is_working_copy' === $control->get_error_code() ) {
+				throw new RuntimeException( 'An absent marker produced a false working-copy refusal.' );
+			}
+			add_filter( 'upgrader_pre_install', $race, 0, 2 );
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Invoke the exact native WordPress boundary under test.
+			$assert_refusal( apply_filters( 'upgrader_pre_install', true, $extra ) );
+			// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Compare captured installed bytes against live readback after native refusal.
+			if ( $original !== hash_file( 'sha256', $file ) ) {
+				throw new RuntimeException( 'Native refusal changed the installed package bytes.' );
+			}
+		} finally {
+			remove_filter( 'upgrader_pre_install', $race, 0 );
+			if ( is_file( $marker ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test's marker before ordinary fixture cleanup.
+				unlink( $marker );
 			}
 		}
 	}
@@ -471,10 +588,10 @@ final class RAN_Booster_CoreUpdaterProof {
 		}
 		$root = 'repository-' . preg_replace( '/[^a-z0-9-]/', '-', $marker );
 		if ( 'plugin' === $kind ) {
-			$header = "<?php\n/*\nPlugin Name: RAN Booster core updater proof {$slug}\nVersion: {$version}\nRequires at least: 7.0\nRequires PHP: 8.2\n*/\n";
+			$header = "<?php\n/*\nPlugin Name: RAN Booster core updater proof {$slug}\nVersion: {$version}\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/fixtures/{$slug}\n*/\n";
 			$zip->addFromString( $root . '/' . $slug . '.php', $header );
 		} else {
-			$header = "/*\nTheme Name: RAN Booster core updater proof {$slug}\nVersion: {$version}\nRequires at least: 7.0\nRequires PHP: 8.2\n*/\n";
+			$header = "/*\nTheme Name: RAN Booster core updater proof {$slug}\nVersion: {$version}\nRequires at least: 7.0\nRequires PHP: 8.2\nUpdate URI: https://github.com/fixtures/{$slug}\n*/\n";
 			$zip->addFromString( $root . '/style.css', $header );
 			$zip->addFromString( $root . '/index.php', "<?php\n" );
 		}

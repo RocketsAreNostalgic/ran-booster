@@ -60,14 +60,40 @@ $ran_booster_assert = static function ( bool $condition, string $message ): void
 	}
 };
 
+$ran_booster_copy  = $argv[1] ?? null;
+$ran_booster_order = $argv[2] ?? null;
+if ( is_string( $ran_booster_copy ) && 'before' === $ran_booster_order ) {
+	require $ran_booster_copy . '/bootstrap.php';
+}
+
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated runtime-selection fixture.
 $wp_version            = '6.8.0';
 $ran_booster_registrar = RAN\WordPress\ReleaseUpdaterBootstrap::register();
 $ran_booster_broker    = $GLOBALS['ran_wp_release_updater_v1_broker'] ?? null;
 
+if ( is_string( $ran_booster_copy ) && 'after' === $ran_booster_order ) {
+	require $ran_booster_copy . '/bootstrap.php';
+}
+if ( is_string( $ran_booster_copy ) ) {
+	$ran_booster_probe          = ( new RAN\WordPress\ManagedReleaseUpdaterRegistrar( $ran_booster_registrar ) )->plugin( 'github', dirname( __DIR__, 2 ) . '/ran-booster.php', 'RocketsAreNostalgic/ran-booster', '1319710173' );
+	$ran_booster_probe_register = array( $ran_booster_probe, 'register' );
+	$ran_booster_probe_status   = array( $ran_booster_probe, 'status' );
+	if ( ! is_callable( $ran_booster_probe_register ) || ! is_callable( $ran_booster_probe_status ) ) {
+		throw new RuntimeException( 'The public target handle must expose registration and status.' );
+	}
+	$ran_booster_probe_register();
+	if ( 'conflict' === ( $argv[3] ?? '' ) ) {
+		$ran_booster_assert( 'protocol_conflict_inactive' === $ran_booster_probe_status()['code'], 'Incompatible copies must refuse in either load order.' );
+	} else {
+		$ran_booster_assert( 2 === $ran_booster_broker->diagnostics()['candidate_count'], 'Both same-protocol physical copies must participate.' );
+		$ran_booster_assert( 'queued' === $ran_booster_probe_status()['state'], 'Same-protocol targets must remain admitted.' );
+	}
+	exit( 0 );
+}
+
 $ran_booster_assert( is_object( $ran_booster_broker ), 'The release updater broker must register before plugins_loaded.' );
 $ran_booster_assert( is_object( $ran_booster_registrar ), 'The release updater must return its public registrar.' ); // @phpstan-ignore function.alreadyNarrowedType (Runtime acceptance proof retains the observed loaded value check rather than relying on analyzer assumptions.)
-$ran_booster_assert( 7 === $ran_booster_broker->protocol_version(), 'The public registrar must use Protocol 7.' );
+$ran_booster_assert( 8 === $ran_booster_broker->protocol_version(), 'The public registrar must use Protocol 8.' );
 
 $ran_booster_core_updater = ( new RAN\WordPress\ManagedReleaseUpdaterRegistrar( $ran_booster_registrar ) )->plugin(
 	'github',
@@ -83,5 +109,80 @@ $ran_booster_target       = new RAN\WordPress\CoreSelfUpdateNativeTarget( $ran_b
 
 $ran_booster_assert( $ran_booster_target->register(), 'The Core target must register through the selected neutral runtime.' );
 $ran_booster_assert( ! $ran_booster_target->status()->active, 'A queued public target must not claim native authority.' );
+
+$ran_booster_parameter = ( new ReflectionMethod( $ran_booster_registrar, 'plugin' ) )->getParameters()[8];
+$ran_booster_assert( 'allow_working_copy' === $ran_booster_parameter->getName() && false === $ran_booster_parameter->getDefaultValue(), 'Native working-copy refusal must remain the default.' );
+$ran_booster_declaration = ( new ReflectionProperty( $ran_booster_core_updater, 'declaration' ) )->getValue( $ran_booster_core_updater );
+$ran_booster_assert( is_array( $ran_booster_declaration ) && ! ( $ran_booster_declaration['allow_working_copy'] ?? false ), 'Core must not override the native working-copy guard.' );
+$ran_booster_source  = dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater';
+$ran_booster_fixture = sys_get_temp_dir() . '/ran-booster-runtime-copies-' . bin2hex( random_bytes( 8 ) );
+try {
+	foreach ( array( 'same', 'conflict' ) as $ran_booster_kind ) {
+		$ran_booster_copy_root = $ran_booster_fixture . '/' . $ran_booster_kind;
+		$ran_booster_files     = array( 'bootstrap.php', 'runtime.php', 'runtime-copy.json' );
+		foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $ran_booster_source . '/src', FilesystemIterator::SKIP_DOTS ) ) as $ran_booster_file ) {
+			if ( $ran_booster_file->isFile() ) {
+				$ran_booster_files[] = substr( $ran_booster_file->getPathname(), strlen( $ran_booster_source ) + 1 );
+			}
+		}
+		sort( $ran_booster_files, SORT_STRING );
+		$ran_booster_payload = '';
+		foreach ( $ran_booster_files as $ran_booster_relative ) {
+			$ran_booster_destination = $ran_booster_copy_root . '/' . $ran_booster_relative;
+			if ( ! is_dir( dirname( $ran_booster_destination ) ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated physical runtime-copy fixture.
+				mkdir( dirname( $ran_booster_destination ), 0700, true );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Copy only the installed, locked runtime source.
+			$ran_booster_bytes = (string) file_get_contents( $ran_booster_source . '/' . $ran_booster_relative );
+			if ( 'conflict' === $ran_booster_kind ) {
+				// A synthetic protocol-7 broker/bootstrap, not qualification of any published older example.
+				$ran_booster_bytes = str_replace( array( '8 === $ran_wp_release_updater_broker->protocol_version()', 'return 8;' ), array( '7 === $ran_wp_release_updater_broker->protocol_version()', 'return 7;' ), $ran_booster_bytes );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Fixture bytes are confined to the private temporary copy.
+			file_put_contents( $ran_booster_destination, $ran_booster_bytes );
+			if ( str_ends_with( $ran_booster_relative, '.php' ) ) {
+				$ran_booster_payload .= $ran_booster_relative . "\0" . hash( 'sha256', $ran_booster_bytes ) . "\n";
+			}
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the locked runtime-copy facts for this fixture.
+		$ran_booster_metadata                     = json_decode( (string) file_get_contents( $ran_booster_copy_root . '/runtime-copy.json' ), true, flags: JSON_THROW_ON_ERROR );
+		$ran_booster_metadata['package_revision'] = hash( 'sha256', $ran_booster_payload );
+		if ( 'conflict' === $ran_booster_kind ) {
+			$ran_booster_metadata['package_version']  = '0.0.0-protocol-conflict-fixture';
+			$ran_booster_metadata['runtime_protocol'] = 7;
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents, WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON re-seals only this synthetic copy after its protocol mutation.
+		file_put_contents( $ran_booster_copy_root . '/runtime-copy.json', json_encode( $ran_booster_metadata, JSON_THROW_ON_ERROR ) );
+		foreach ( array( 'before', 'after' ) as $ran_booster_load_order ) {
+			$ran_booster_command = array( PHP_BINARY, __FILE__, $ran_booster_copy_root, $ran_booster_load_order, $ran_booster_kind );
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Separate PHP processes are required to exercise both runtime class load orders.
+			$ran_booster_process = proc_open(
+				$ran_booster_command,
+				array(
+					0 => STDIN,
+					1 => STDOUT,
+					2 => STDERR,
+				),
+				$ran_booster_pipes
+			);
+			$ran_booster_assert( is_resource( $ran_booster_process ) && 0 === proc_close( $ran_booster_process ), 'Physical runtime-copy load-order proof failed.' );
+		}
+	}
+} finally {
+	if ( is_dir( $ran_booster_fixture ) ) {
+		foreach ( new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $ran_booster_fixture, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST ) as $ran_booster_file ) {
+			if ( $ran_booster_file->isDir() ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the owned runtime-copy fixture.
+				rmdir( $ran_booster_file->getPathname() );
+			} else {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the owned runtime-copy fixture.
+				unlink( $ran_booster_file->getPathname() );
+			}
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the owned runtime-copy root.
+		rmdir( $ran_booster_fixture );
+	}
+}
 
 printf( "Core release updater bootstrap smoke passed.\n" );

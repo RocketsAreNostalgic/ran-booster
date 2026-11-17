@@ -113,6 +113,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 				'maintenance',
 				'allowed',
 				'preflight',
+				'target',
 				'mutation',
 				'execute',
 				'maintenance',
@@ -402,6 +403,11 @@ final class BoundaryAdmittedHost implements AdmittedAttemptJournal, AdmittedArch
 	public function verify_current_head(): void {
 		$this->events[] = 'verify';
 	}
+	public function target_directory( BranchDeploymentDeclaration $deployment ): string {
+		$this->events[] = 'target';
+		return sys_get_temp_dir() . '/ran-booster-absent-target/' . $deployment->slug;
+	}
+
 	public function assert_mutation_allowed(): void {
 		$this->events[] = 'allowed';
 	}

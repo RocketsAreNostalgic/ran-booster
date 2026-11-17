@@ -163,7 +163,7 @@ final class BlueprintRepositoryVerifier {
 			&& ( TargetPackageAction::INSTALL !== $item->action
 				|| null !== $item->package->release_configuration
 				|| ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' )
-				|| 3 !== constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' )
+				|| ! in_array( constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 3, 4 ), true )
 				|| 2 !== ( $this->providers->metadata()[ $item->package->provider ]->archive_api_version ?? 1 )
 				|| ( 'gh' === $item->package->provider && 40 !== strlen( (string) $item->package->selection['commit'] ) ) ) ) {
 			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );

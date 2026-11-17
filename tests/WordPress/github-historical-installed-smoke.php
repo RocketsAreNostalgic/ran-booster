@@ -23,9 +23,9 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI || '1' !== getenv( 'RAN_BOOSTER_GITHUB_HI
 	throw new RuntimeException( 'Historical proof requires the exact disposable installed Core administrator.' );
 }
 $ran_booster_branch_path = WP_PLUGIN_DIR . '/ran-booster/vendor/ran/wp-branch-updater/src/Runtime/BranchUpdater.php';
-if ( ! in_array( constant( BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 2, 3 ), true ) || realpath( $ran_booster_branch_path ) !== $ran_booster_branch_path
+if ( ! in_array( constant( BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 2, 3, 4 ), true ) || realpath( $ran_booster_branch_path ) !== $ran_booster_branch_path
 	|| ( new ReflectionClass( BranchUpdater::class ) )->getFileName() !== $ran_booster_branch_path ) {
-	throw new RuntimeException( 'Historical proof requires the installed Branch admitted API 2 or 3.' );
+	throw new RuntimeException( 'Historical proof requires the installed Branch admitted API 2, 3 or 4.' );
 }
 require_once ABSPATH . 'wp-admin/includes/file.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';

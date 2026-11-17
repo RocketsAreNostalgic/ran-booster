@@ -384,7 +384,7 @@ final class DeploymentAttemptRepository {
 	}
 
 	/** Current guard also establishes selection-before-adoption-before-attempt lock order. */
-	public function provider_refusal( DeploymentAttempt $attempt ): ?string {
+	public function provider_refusal( DeploymentAttempt $attempt, bool $strict_storage = false ): ?string {
 		$data = $attempt->safe_data();
 		if ( 'gh' !== $data['provider'] ) {
 			return null;
@@ -393,7 +393,7 @@ final class DeploymentAttemptRepository {
 			return DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE;
 		}
 		$request = $attempt->get_request();
-		return $this->selection->deployment_refusal( $request->provider_selection_generation, (string) $data['package_type'], $request->installed_identifier ?? $request->package_slug );
+		return $this->selection->deployment_refusal( $request->provider_selection_generation, (string) $data['package_type'], $request->installed_identifier ?? $request->package_slug, strict_storage: $strict_storage );
 	}
 
 	private function selection_generation(): int {
@@ -464,10 +464,11 @@ final class DeploymentAttemptRepository {
 			function () use ( $id, $outcome, $at, $working_copy_observation, &$working_copy ): DeploymentAttempt {
 				if ( null !== $working_copy_observation && $id === $working_copy_observation->get_id()
 					&& DeploymentOutcome::CODE_POLICY_BLOCKED === $outcome->get_code() ) {
+					// Optional refinement must not continue after an authority read aborts the transaction.
 					$observed     = $working_copy_observation->safe_data();
 					$working_copy = 'running' === $observed['state'] && null === $observed['mutation_started_at']
 						&& 'branch' === $observed['package_source'] && in_array( $observed['operation'], array( 'install', 'update' ), true )
-						&& null === $this->provider_refusal( $working_copy_observation )
+						&& null === $this->provider_refusal( $working_copy_observation, strict_storage: true )
 						&& $this->adoption_matches( $observed['operation'], $observed['package_type'], $observed['provider'], $observed['provider_repository_id'], $working_copy_observation->get_request(), $observed['package_source'], $observed['package_source_revision'] );
 					$locked       = DeploymentAttempt::from_database( $this->locked_attempt_row( $id ) );
 					$working_copy = $working_copy && $locked->safe_data() === $observed

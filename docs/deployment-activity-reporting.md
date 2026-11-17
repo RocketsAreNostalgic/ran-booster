@@ -150,6 +150,9 @@ Cleanup supersession and post-fence observations cannot create this explanation.
 Core passes the existing observed attempt to the terminal transaction. Selection,
 adoption, attempt ID, correlation, request and pre-fence state must still match.
 A changed observation omits the fact; failed storage still aborts the transaction.
+The terminal refinement opts into strict selection reads, including nested reads.
+One-shot SQL failures and malformed authority escape to the transaction owner;
+confirmed unavailable providers remain ordinary mismatches. Other callers stay tolerant.
 The completion and optional Activity fact `branch_refusal: target_is_working_copy`
 commit together. The existing repository completion log receives that singleton
 only after commit. The coordinator's separate completion log remains generic.

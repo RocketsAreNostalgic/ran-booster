@@ -32,14 +32,14 @@ final readonly class SignedWebhookVerifier {
 		try {
 			$materials = $this->secrets->webhook_materials( $request->get_provider() );
 		} catch ( Throwable ) {
-			throw $this->authentication_failed();
+			throw $this->authentication_failed( 'secret_store_unavailable' );
 		}
 
 		if ( null !== $guard ) {
 			$guard();
 		}
 		if ( array() === $materials || count( $materials ) > SecretsFile::MAX_WEBHOOK_PROFILES ) {
-			throw $this->authentication_failed();
+			throw $this->authentication_failed( array() === $materials ? 'profiles_missing' : 'profile_invalid' );
 		}
 
 		$matches = array();
@@ -53,7 +53,7 @@ final readonly class SignedWebhookVerifier {
 		}
 
 		if ( array() === $matches ) {
-			throw $this->authentication_failed();
+			throw $this->authentication_failed( 'signature_mismatch' );
 		}
 		usort(
 			$matches,
@@ -74,8 +74,11 @@ final readonly class SignedWebhookVerifier {
 
 	private function signature( WebhookRequest $request, ProviderWebhookPolicy $policy ): string {
 		$values = $request->get_raw_header_values( $policy->get_signature_header() );
+		if ( array() === $values ) {
+			throw $this->authentication_failed( 'signature_missing' );
+		}
 		if ( 1 !== count( $values ) || 1 !== preg_match( '/\Asha256=[a-f0-9]{64}\z/D', $values[0] ) ) {
-			throw $this->authentication_failed();
+			throw $this->authentication_failed( 'signature_malformed' );
 		}
 
 		return $values[0];
@@ -90,7 +93,7 @@ final readonly class SignedWebhookVerifier {
 			|| ! is_string( $material['target'] ?? null )
 			|| ! is_string( $material['secret'] ?? null )
 		) {
-			throw $this->authentication_failed();
+			throw $this->authentication_failed( 'profile_invalid' );
 		}
 
 		$secret = $material['secret'];
@@ -98,12 +101,12 @@ final readonly class SignedWebhookVerifier {
 			|| strlen( $secret ) > self::MAX_SECRET_BYTES
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $secret )
 		) {
-			throw $this->authentication_failed();
+			throw $this->authentication_failed( 'secret_invalid' );
 		}
 
 		$authority_id = $material['authority_id'] ?? '';
 		if ( ! is_string( $authority_id ) ) {
-			throw $this->authentication_failed();
+			throw $this->authentication_failed( 'profile_invalid' );
 		}
 
 		return array(
@@ -115,7 +118,7 @@ final readonly class SignedWebhookVerifier {
 		);
 	}
 
-	private function authentication_failed(): WebhookRejected {
-		return new WebhookRejected( 401, 'Webhook authentication failed.' );
+	private function authentication_failed( string $reason ): WebhookRejected {
+		return new WebhookRejected( 401, 'Webhook authentication failed.', $reason );
 	}
 }

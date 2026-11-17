@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Logging;
 
 use RAN\RepositoryProvider\ProviderFailure;
+use RAN\RepositoryProvider\WebhookRejected;
 use RAN\UpdaterSupport\V1\FailureText;
 use Throwable;
 
@@ -118,6 +119,19 @@ final class BoosterLogger {
 			),
 			static fn ( string|int|null $value ): bool => null !== $value
 		);
+	}
+
+
+	/** Sample a closed intake observation only in an explicitly configured active capture. */
+	public static function capture_webhook( string $reason ): bool {
+		if ( ! in_array( $reason, WebhookRejected::REASONS, true ) ) {
+			return false;
+		}
+
+		return self::$capture?->append(
+			self::PREFIX . ' Webhook intake {"step":"webhook","event":"intake","reason":"' . $reason . '"}',
+			5
+		) ?? false;
 	}
 
 

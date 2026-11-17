@@ -258,14 +258,14 @@ final class TemporaryDebugCapture {
 	/**
 	 * Append an already-sanitized line without ever disrupting runtime work.
 	 */
-	public function append( string $line ): bool {
+	public function append( string $line, int $minimum_interval = 0 ): bool {
 		try {
 			if ( ! $this->capture_exists() ) {
 				return false;
 			}
 
 			return $this->with_exclusive_lock(
-				function () use ( $line ): bool {
+				function () use ( $line, $minimum_interval ): bool {
 					if ( ! $this->capture_exists() ) {
 						return false;
 					}
@@ -280,8 +280,19 @@ final class TemporaryDebugCapture {
 						return false;
 					}
 
+					$now    = $this->now();
+					$latest = null;
+					foreach ( $document['entries'] as $entry ) {
+						$at     = strtotime( $entry['at'] );
+						$latest = null === $latest ? $at : max( $latest, $at );
+					}
+					// Refuse rollback writes too: eviction must not erase the future timestamp.
+					if ( null !== $latest && ( $latest > $now || $now - $latest < $minimum_interval ) ) {
+						return false;
+					}
+
 					$document['entries'][] = array(
-						'at'   => $this->timestamp( $this->now() ),
+						'at'   => $this->timestamp( $now ),
 						'line' => $this->one_line( $line ),
 					);
 					$document['entries']   = array_slice( $document['entries'], -self::MAX_ENTRIES );

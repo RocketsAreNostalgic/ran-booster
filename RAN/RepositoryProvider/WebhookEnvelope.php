@@ -17,7 +17,8 @@ final readonly class WebhookEnvelope {
 	 */
 	private function __construct(
 		private string $type,
-		private array $events = array()
+		private array $events = array(),
+		private ?string $reason = null
 	) {
 	}
 
@@ -25,8 +26,8 @@ final readonly class WebhookEnvelope {
 		return new self( self::PROBE );
 	}
 
-	public static function ignored(): self {
-		return new self( self::IGNORED );
+	public static function ignored( ?string $reason = null ): self {
+		return new self( self::IGNORED, array(), in_array( $reason, WebhookRejected::REASONS, true ) ? $reason : null );
 	}
 
 	public static function events( PushEvent ...$events ): self {
@@ -35,6 +36,10 @@ final readonly class WebhookEnvelope {
 		}
 
 		return new self( self::EVENTS, array_values( $events ) );
+	}
+
+	public function get_reason(): ?string {
+		return $this->reason;
 	}
 
 	public function is_probe(): bool {

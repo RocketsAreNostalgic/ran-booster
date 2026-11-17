@@ -265,3 +265,22 @@ removes 14 against the prior source head (including moved projection lines),
 adds 107 test lines, and stays within its separate pre-edit budget. It adds no
 type, public seam, collector or state. Its standalone tests prove projection
 and redaction; Settings-owned composition must prove durable-check integration.
+
+### Temporary webhook intake samples
+
+Core's webhook diagnostics use only the configured, explicitly active temporary
+capture. `BoosterLogger::capture_webhook()` never writes to PHP/WordPress debug
+logs, even when capture is unavailable and `WP_DEBUG_LOG` is enabled. A record
+contains fixed step/event values and one closed reason, with no request, header,
+body, signature, digest, delivery/profile/provider/site identity, secret size,
+ref, path, exception message or generic context. Unknown reasons are omitted.
+
+Samples share the existing exclusive append lock and latest capture timestamp.
+At most one sampled webhook line is appended per five seconds; ordinary writes
+can suppress samples. Ring eviction does not reset the bound. If any recorded
+timestamp is in the future, all appends fail closed until the clock catches up;
+existing timestamps are never rewritten. Ordinary debug-log delivery is unchanged.
+Start resets the capture window; stopped, expired or unsafe storage admits no
+sample. There is no separate rate state, per-class fairness or complete ledger.
+The support report's existing log projection may omit this new record; this
+slice adds no report exporter or durable diagnostic entry.

@@ -254,7 +254,7 @@ final class SignedAdminInteractionFlow {
 			self::QUERY_RETURN       => $request->canonical_url,
 			self::QUERY_ERROR_REGION => $request->error_region_id,
 		);
-		$this->hold_message( $this->nonce_action( $args ), $message );
+		self::hold_message( $this->nonce_action( $args ), $message );
 		$args[ self::QUERY_NONCE ] = wp_create_nonce( $this->nonce_action( $args ) );
 
 		return add_query_arg(
@@ -304,7 +304,7 @@ final class SignedAdminInteractionFlow {
 		if ( 1 !== wp_verify_nonce( $nonce, $this->nonce_action( $args ) ) ) {
 			return null;
 		}
-		$held     = $this->claim_message( $this->nonce_action( $args ) );
+		$held     = self::claim_message( $this->nonce_action( $args ) );
 		$fallback = null === $held;
 		$message  = $held ?? __( 'The result details are not available. Check the page or Activity for the current state.', 'ran-booster' );
 
@@ -326,7 +326,7 @@ final class SignedAdminInteractionFlow {
 	 * Hold the outcome text for this user's next render on this site. A later outcome replaces an unread one.
 	 * The row is presentation only: it is never an Activity, incident or recovery record.
 	 */
-	private function hold_message( string $action, string $message ): void {
+	public static function hold_message( string $action, string $message ): void {
 		$user_id = get_current_user_id();
 		if ( $user_id > 0 ) {
 			// WordPress unslashes meta values on write, so the row is slashed to round-trip backslashes.
@@ -349,34 +349,44 @@ final class SignedAdminInteractionFlow {
 	private function reap_expired_message(): void {
 		$user_id = get_current_user_id();
 		$held    = $user_id > 0 ? get_user_meta( $user_id, self::MESSAGE_META_KEY, true ) : '';
-		if ( '' !== $held && ! $this->is_live_row( $held ) ) {
-			delete_user_meta( $user_id, self::MESSAGE_META_KEY );
+		if ( $user_id > 0 && ! self::is_live_row( $held ) && ( '' !== $held || metadata_exists( 'user', $user_id, self::MESSAGE_META_KEY ) ) ) {
+			self::delete_observed_message( $user_id, $held );
 		}
 	}
 
-	private function is_live_row( mixed $held ): bool {
+	private static function is_live_row( mixed $held ): bool {
 		return is_array( $held )
 			&& is_int( $held['at'] ?? null ) && time() - $held['at'] <= self::MESSAGE_TTL
 			&& is_int( $held['site'] ?? null ) && is_string( $held['action'] ?? null ) && is_string( $held['message'] ?? null );
 	}
 
 	/** Read the held text once, only for the signed marker and site it was written for. */
-	private function claim_message( string $action ): ?string {
+	public static function claim_message( string $action ): ?string {
 		$user_id = get_current_user_id();
 		$held    = $user_id > 0 ? get_user_meta( $user_id, self::MESSAGE_META_KEY, true ) : '';
 		if ( '' === $held ) {
 			return null;
 		}
-		if ( ! $this->is_live_row( $held ) ) {
-			delete_user_meta( $user_id, self::MESSAGE_META_KEY );
+		if ( ! self::is_live_row( $held ) ) {
+			self::delete_observed_message( $user_id, $held );
 			return null;
 		}
 		// Another site's screen leaves the row for its own site, and it expires.
 		if ( get_current_blog_id() !== $held['site'] || ! hash_equals( $action, $held['action'] ) ) {
 			return null;
 		}
-		// Deleting the exact value is the claim: the tab that loses the race shows the neutral fallback.
-		return delete_user_meta( $user_id, self::MESSAGE_META_KEY, wp_slash( $held ) ) ? $held['message'] : null;
+		return self::delete_observed_message( $user_id, $held ) ? $held['message'] : null;
+	}
+
+	/** Delete only the exact observed value, including malformed rows. */
+	private static function delete_observed_message( int $user_id, mixed $held ): bool {
+		global $wpdb;
+		$serialized = maybe_serialize( $held );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- One conditional delete makes the observed-value claim atomic; invalidate the user metadata cache below.
+		$deleted = $wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE user_id = %d AND BINARY meta_key = BINARY %s AND BINARY meta_value = BINARY %s', $wpdb->usermeta, $user_id, self::MESSAGE_META_KEY, $serialized ) );
+		wp_cache_delete( $user_id, 'user_meta' );
+
+		return is_int( $deleted ) && $deleted > 0;
 	}
 
 	/** @phpstan-assert AdminInteractionOutcome::SUCCESS|AdminInteractionOutcome::ACCEPTED|AdminInteractionOutcome::VALIDATION_FAILURE|AdminInteractionOutcome::UNEXPECTED_FAILURE $kind */

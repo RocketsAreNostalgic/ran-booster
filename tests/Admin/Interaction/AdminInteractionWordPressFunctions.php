@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace RAN\Admin\Interaction;
 
+require_once __DIR__ . '/InteractionMetaDatabaseDouble.php';
+
 function __( string $text, string $domain = 'default' ): string {
 	return $GLOBALS['ran_booster_interaction_test_translations'][ $domain ][ $text ] ?? $text;
 }
@@ -136,4 +138,30 @@ if ( ! function_exists( 'absint' ) ) {
 	function absint( mixed $value ): int {
 		return abs( (int) $value );
 	}
+}
+
+
+function maybe_serialize( mixed $value ): mixed {
+	$GLOBALS['ran_booster_interaction_previous_wpdb'] = $GLOBALS['wpdb'] ?? null;
+	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install the unit database double only for the claim, restoring the previous global at cache invalidation.
+	$GLOBALS['wpdb'] = new InteractionMetaDatabaseDouble();
+	// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- The fixture mirrors WordPress metadata serialization for controlled test values.
+	return is_array( $value ) || is_object( $value ) ? serialize( $value ) : $value;
+}
+
+function wp_cache_delete( int $user_id, string $group ): bool {
+	unset( $user_id, $group );
+	if ( null === $GLOBALS['ran_booster_interaction_previous_wpdb'] ) {
+		unset( $GLOBALS['wpdb'] );
+	} else {
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the global saved before this controlled unit claim.
+		$GLOBALS['wpdb'] = $GLOBALS['ran_booster_interaction_previous_wpdb'];
+	}
+	unset( $GLOBALS['ran_booster_interaction_previous_wpdb'] );
+	return true;
+}
+
+function metadata_exists( string $type, int $user_id, string $key ): bool {
+	unset( $type );
+	return array_key_exists( $key, $GLOBALS['ran_booster_interaction_test_meta'][ $user_id ] ?? array() );
 }

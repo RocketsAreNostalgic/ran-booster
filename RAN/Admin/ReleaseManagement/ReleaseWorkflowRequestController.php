@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin\ReleaseManagement;
 
 use RAN\UpdaterSupport\V1\FailureText;
+use RAN\Admin\Interaction\SignedAdminInteractionFlow;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Logging\BoosterLogger;
@@ -33,17 +34,50 @@ final class ReleaseWorkflowRequestController {
 	private const RESULT_REVISION_QUERY_KEY             = 'ran_booster_release_workflow_source_revision';
 	private const RESULT_PROVIDER_QUERY_KEY             = 'ran_booster_release_workflow_provider';
 	private const RESULT_REPOSITORY_QUERY_KEY           = 'ran_booster_release_workflow_repository';
+	private const RESULT_MARKER_QUERY_KEY               = 'ran_booster_release_workflow_marker';
 	private const RESULT_NONCE_QUERY_KEY                = 'ran_booster_release_workflow_result_nonce';
 	private const RESULT_STAGE_QUERY_KEY                = 'ran_booster_release_workflow_failure_stage';
 	private const RESULT_DIAGNOSTIC_QUERY_KEY           = 'ran_booster_release_workflow_diagnostic';
 	private const RESULT_DIAGNOSTIC_AVAILABLE_QUERY_KEY = 'ran_booster_release_workflow_diagnostic_available';
 	private const RESULT_REFERENCE_QUERY_KEY            = 'ran_booster_release_workflow_reference';
-	private const RESULT_MESSAGE_QUERY_KEY              = 'ran_booster_release_workflow_message';
-	private const RESULT_REMEDIATION_QUERY_KEY          = 'ran_booster_release_workflow_remediation';
 	private const FAILURE_DIAGNOSTIC_CODES              = array( 'malformed_request', 'permissions_unavailable', 'package_source_changed', 'nonce_expired', 'credential_authorisation_unavailable', 'preflight_contract_unavailable', 'provider_unavailable', 'repository_source_conflict', 'repository_source_unavailable', 'repository_release_owner_exists', 'no_releases', 'invalid_release', 'release_identity_mismatch', 'release_incompatible', 'package_asset_missing', 'package_asset_ambiguous', 'release_version_mismatch', 'package_header_missing', 'package_header_invalid', 'package_archive_unreadable', 'package_zip_extension_unavailable', 'package_archive_size_invalid', 'package_archive_too_large', 'package_archive_path_unsafe', 'package_archive_path_duplicate', 'package_archive_root_invalid', 'package_archive_entry_duplicate', 'package_archive_entry_limit', 'release_version_invalid', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'release_automation_detected', 'repository_snapshot_unavailable', 'template_pack_unavailable', 'preview_storage_unavailable', 'repository_mutation_unverified', 'local_persistence_unavailable', 'unexpected_runtime_failure' );
+	private const RESULT_CODES                          = array(
+		'workflow_inspected',
+		'workflow_setup_open',
+		'workflow_setup_recovered',
+		'workflow_pr_open',
+		'workflow_pr_closed',
+		'workflow_pr_merged',
+		'workflow_partial',
+		'workflow_unauthorised',
+		'workflow_rate_limited',
+		'workflow_invalid_response',
+		'workflow_template_unavailable',
+		'workflow_preflight_unavailable',
+		'workflow_remote_unavailable',
+		'workflow_release_ready',
+		'workflow_release_automation_conflict',
+		'workflow_release_automation_present',
+		'workflow_release_path_conflict',
+		'workflow_package_ambiguous',
+		'workflow_version_mismatch',
+		'workflow_version_contract_custom',
+		'workflow_runtime_paths_unknown',
+		'workflow_prettier_contract_custom',
+		'workflow_repository_unsupported',
+		'workflow_profile_missing',
+		'workflow_profile_modified',
+		'workflow_target_changed',
+		'workflow_template_superseded',
+		'workflow_invalid_request',
+		'workflow_unknown',
+	);
 	private const RESULT_NONCE_ACTION                   = 'ran-booster-release-workflow-result-';
 	private const PREVIEW_QUERY_KEY                     = 'ran_booster_release_workflow_preview';
 	private const CHANNEL_QUERY_KEY                     = 'ran_booster_release_workflow_channel';
+
+	/** @var array{code:string,successful:bool,type:string,identifier:string,source_revision:int,provider:string,repository:string,channel:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,message:string,remediation:string}|null */
+	private ?array $cached_result = null;
 
 	public function __construct(
 		private readonly ReleaseTrackingFacade $releases,
@@ -483,19 +517,18 @@ final class ReleaseWorkflowRequestController {
 	 * @return array<string, string>
 	 */
 	private function result_query_arguments( array $outcome, string $channel = '', int $source_revision = 0, string $provider_code = '', string $repository_id = '' ): array {
-		$type                                 = in_array( $outcome['type'], array( 'plugin', 'theme' ), true ) ? $outcome['type'] : 'plugin';
-		$identifier                           = strlen( $outcome['identifier'] ) <= 255 ? $outcome['identifier'] : '';
-		$code                                 = sanitize_key( $outcome['code'] );
-		$code                                 = strlen( $code ) <= 64 ? $code : 'invalid_request';
-		$successful                           = $outcome['successful'];
-		$channel                              = ( 'stable' === $channel ) ? $channel : '';
-		$stage                                = in_array( $outcome['failure_stage'], array( 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ? $outcome['failure_stage'] : '';
-		$diagnostic                           = $this->failure_diagnostic_code( $outcome['diagnostic_code'], $stage );
-		$diagnostic_available                 = true === ( $outcome['diagnostic_available'] ?? false );
-		$reference                            = $diagnostic_available && is_string( $outcome['correlation_reference'] ) && 1 === preg_match( '/\A[a-f0-9]{32}\z/D', $outcome['correlation_reference'] ) ? $outcome['correlation_reference'] : '';
-		$message                              = $this->result_display_text( $outcome['message'] ?? '' );
-		$remediation                          = $this->result_display_text( $outcome['remediation'] ?? '' );
-		$args                                 = array(
+		$type                                  = in_array( $outcome['type'], array( 'plugin', 'theme' ), true ) ? $outcome['type'] : 'plugin';
+		$identifier                            = strlen( $outcome['identifier'] ) <= 255 ? $outcome['identifier'] : '';
+		$code                                  = in_array( $outcome['code'], self::RESULT_CODES, true ) ? $outcome['code'] : 'workflow_unknown';
+		$successful                            = $outcome['successful'];
+		$channel                               = ( 'stable' === $channel ) ? $channel : '';
+		$stage                                 = in_array( $outcome['failure_stage'], array( 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ? $outcome['failure_stage'] : '';
+		$diagnostic                            = $this->failure_diagnostic_code( $outcome['diagnostic_code'], $stage );
+		$diagnostic_available                  = true === ( $outcome['diagnostic_available'] ?? false );
+		$reference                             = $diagnostic_available && is_string( $outcome['correlation_reference'] ) && 1 === preg_match( '/\A[a-f0-9]{32}\z/D', $outcome['correlation_reference'] ) ? $outcome['correlation_reference'] : '';
+		$message                               = $this->result_display_text( $outcome['message'] ?? '' );
+		$remediation                           = $this->result_display_text( $outcome['remediation'] ?? '' );
+		$args                                  = array(
 			self::RESULT_QUERY_KEY                      => $code,
 			self::RESULT_SUCCESS_QUERY_KEY              => $successful ? '1' : '0',
 			self::RESULT_TYPE_QUERY_KEY                 => $type,
@@ -507,13 +540,16 @@ final class ReleaseWorkflowRequestController {
 			self::RESULT_DIAGNOSTIC_QUERY_KEY           => $diagnostic,
 			self::RESULT_DIAGNOSTIC_AVAILABLE_QUERY_KEY => $diagnostic_available ? '1' : '0',
 			self::RESULT_REFERENCE_QUERY_KEY            => $reference,
-			self::RESULT_MESSAGE_QUERY_KEY              => $message,
-			self::RESULT_REMEDIATION_QUERY_KEY          => $remediation,
 		);
-		$args[ self::CHANNEL_QUERY_KEY ]      = $channel;
-		$args[ self::RESULT_NONCE_QUERY_KEY ] = wp_create_nonce(
-			$this->result_nonce_action( $code, $successful, $type, $identifier, max( 0, $source_revision ), $channel, $stage, $diagnostic, $diagnostic_available, $reference, $provider_code, $repository_id, $message, $remediation )
-		);
+		$args[ self::CHANNEL_QUERY_KEY ]       = $channel;
+		$marker                                = wp_generate_uuid4();
+		$args[ self::RESULT_MARKER_QUERY_KEY ] = $marker;
+		$action                                = $this->result_nonce_action( $code, $successful, $type, $identifier, max( 0, $source_revision ), $channel, $stage, $diagnostic, $diagnostic_available, $reference, $provider_code, $repository_id, $marker );
+		$text                                  = wp_json_encode( array( $message, $remediation ) );
+		if ( is_string( $text ) && ( '' !== $message || '' !== $remediation ) ) {
+			SignedAdminInteractionFlow::hold_message( $action, $text );
+		}
+		$args[ self::RESULT_NONCE_QUERY_KEY ] = wp_create_nonce( $action );
 
 		return $args;
 	}
@@ -521,16 +557,19 @@ final class ReleaseWorkflowRequestController {
 	/** @return array{code:string,successful:bool,type:string,identifier:string,source_revision:int,channel:string,failure_stage:string,diagnostic_code:string,diagnostic_available:bool,correlation_reference:string,message:string,remediation:string}|null */
 
 	public function requested_result(): ?array {
+		if ( null !== $this->cached_result ) {
+			return $this->cached_result;
+		}
 		$values = array();
-		foreach ( array( self::RESULT_QUERY_KEY, self::RESULT_SUCCESS_QUERY_KEY, self::RESULT_TYPE_QUERY_KEY, self::RESULT_PACKAGE_QUERY_KEY, self::RESULT_REVISION_QUERY_KEY, self::RESULT_PROVIDER_QUERY_KEY, self::RESULT_REPOSITORY_QUERY_KEY, self::CHANNEL_QUERY_KEY, self::RESULT_STAGE_QUERY_KEY, self::RESULT_DIAGNOSTIC_QUERY_KEY, self::RESULT_DIAGNOSTIC_AVAILABLE_QUERY_KEY, self::RESULT_REFERENCE_QUERY_KEY, self::RESULT_MESSAGE_QUERY_KEY, self::RESULT_REMEDIATION_QUERY_KEY, self::RESULT_NONCE_QUERY_KEY ) as $key ) {
+		foreach ( array( self::RESULT_QUERY_KEY, self::RESULT_SUCCESS_QUERY_KEY, self::RESULT_TYPE_QUERY_KEY, self::RESULT_PACKAGE_QUERY_KEY, self::RESULT_REVISION_QUERY_KEY, self::RESULT_PROVIDER_QUERY_KEY, self::RESULT_REPOSITORY_QUERY_KEY, self::CHANNEL_QUERY_KEY, self::RESULT_STAGE_QUERY_KEY, self::RESULT_DIAGNOSTIC_QUERY_KEY, self::RESULT_DIAGNOSTIC_AVAILABLE_QUERY_KEY, self::RESULT_REFERENCE_QUERY_KEY, self::RESULT_MARKER_QUERY_KEY, self::RESULT_NONCE_QUERY_KEY ) as $key ) {
 			$value = $_GET[ $key ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 			if ( ! is_string( $value ) ) {
 				return null;
 			}
 			$values[] = wp_unslash( $value );
 		}
-		[ $code, $success, $type, $identifier, $revision, $provider, $repository, $channel, $stage, $diagnostic, $available, $reference, $message, $remediation, $nonce ] = $values;
-		if ( sanitize_key( $code ) !== $code || '' === $code || strlen( $code ) > 64
+		[ $code, $success, $type, $identifier, $revision, $provider, $repository, $channel, $stage, $diagnostic, $available, $reference, $marker, $nonce ] = $values;
+		if ( ! in_array( $code, self::RESULT_CODES, true )
 			|| sanitize_key( $provider ) !== $provider || strlen( $provider ) > 32
 			|| strlen( $repository ) > 191 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $repository )
 			|| ! in_array( $success, array( '0', '1' ), true )
@@ -541,18 +580,28 @@ final class ReleaseWorkflowRequestController {
 			|| ! in_array( $stage, array( '', 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true )
 			|| ! in_array( $diagnostic, array( '', ...self::FAILURE_DIAGNOSTIC_CODES ), true )
 			|| ! in_array( $available, array( '0', '1' ), true )
-			|| $message !== $this->result_display_text( $message ) || $remediation !== $this->result_display_text( $remediation )
+			|| 1 !== preg_match( '/\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/D', $marker )
 			|| ( '' !== $reference && 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $reference ) ) ) {
 			return null;
 		}
 
 		$successful           = '1' === $success;
 		$diagnostic_available = '1' === $available;
-		if ( 1 !== wp_verify_nonce( $nonce, $this->result_nonce_action( $code, $successful, $type, $identifier, (int) $revision, $channel, $stage, $diagnostic, $diagnostic_available, $reference, $provider, $repository, $message, $remediation ) ) ) {
+		$action               = $this->result_nonce_action( $code, $successful, $type, $identifier, (int) $revision, $channel, $stage, $diagnostic, $diagnostic_available, $reference, $provider, $repository, $marker );
+		if ( 1 !== wp_verify_nonce( $nonce, $action ) ) {
 			return null;
 		}
 
-		return array(
+		$held    = SignedAdminInteractionFlow::claim_message( $action );
+		$text    = is_string( $held ) ? json_decode( $held, true ) : null;
+		$message = is_array( $text ) && isset( $text[0], $text[1] ) && is_string( $text[0] ) && is_string( $text[1] )
+			? $this->result_display_text( $text[0] )
+			: '';
+		if ( 'workflow_unknown' === $code && '' === $message ) {
+			$message = __( 'The result details are not available. Check the page or Activity for the current state.', 'ran-booster' );
+		}
+		$remediation         = $this->result_display_text( is_array( $text ) ? ( $text[1] ?? '' ) : '' );
+		$this->cached_result = array(
 			'code'                  => $code,
 			'successful'            => $successful,
 			'type'                  => $type,
@@ -568,6 +617,8 @@ final class ReleaseWorkflowRequestController {
 			'message'               => $message,
 			'remediation'           => $remediation,
 		);
+
+		return $this->cached_result;
 	}
 
 	/** Return the normalized opaque preview key for GET-side projection. */
@@ -579,8 +630,8 @@ final class ReleaseWorkflowRequestController {
 		return 1 === preg_match( '/\\A[a-f0-9]{32}\\z/D', $value ) ? $value : '';
 	}
 
-	private function result_nonce_action( string $code, bool $successful, string $type, string $identifier, int $source_revision, string $channel, string $stage = '', string $diagnostic = '', bool $diagnostic_available = false, string $reference = '', string $provider_code = '', string $repository_id = '', string $message = '', string $remediation = '' ): string {
-		$payload = wp_json_encode( array( $code, $successful, $type, $identifier, $source_revision, $channel, $stage, $diagnostic, $diagnostic_available, $reference, $provider_code, $repository_id, $message, $remediation ) );
+	private function result_nonce_action( string $code, bool $successful, string $type, string $identifier, int $source_revision, string $channel, string $stage = '', string $diagnostic = '', bool $diagnostic_available = false, string $reference = '', string $provider_code = '', string $repository_id = '', string $marker = '' ): string {
+		$payload = wp_json_encode( array( $code, $successful, $type, $identifier, $source_revision, $channel, $stage, $diagnostic, $diagnostic_available, $reference, $provider_code, $repository_id, $marker ) );
 
 		return self::RESULT_NONCE_ACTION . hash( 'sha256', is_string( $payload ) ? $payload : '' );
 	}

@@ -251,7 +251,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:155
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:301
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:353
-#: views/attempts/detail.php:101
+#: views/attempts/detail.php:100
 #: views/attempts/index.php:217
 #: views/portability-review.php:280
 #: views/portability-review.php:312
@@ -6118,7 +6118,7 @@ msgid "External replacement"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:238
-#: views/attempts/detail.php:110
+#: views/attempts/detail.php:109
 #: views/attempts/index.php:83
 #: views/packages/fields/provider.php:19
 #: views/packages/fields/provider.php:22
@@ -6380,120 +6380,116 @@ msgstr ""
 msgid "Before you retry"
 msgstr ""
 
-#: views/attempts/detail.php:68
-msgid "WordPress reported that it changed this package, but Booster could not confirm the final result. The package may already contain the requested update."
-msgstr ""
-
 #. translators: 1: later verified deployment date, 2: later deployment ID.
-#: views/attempts/detail.php:71
+#: views/attempts/detail.php:70
 #, php-format
 msgid "Booster verified a later deployment on %1$s (activity #%2$d), so the package has since reached a known state."
 msgstr ""
 
-#: views/attempts/detail.php:73
+#: views/attempts/detail.php:72
 msgid "Check that the package is present, has the expected version and activation state, and that the site is not in maintenance mode."
 msgstr ""
 
-#: views/attempts/detail.php:75
+#: views/attempts/detail.php:74
 msgid "Checking the box only clears the retry block. It does not change the package or prove what happened before."
 msgstr ""
 
-#: views/attempts/detail.php:83
+#: views/attempts/detail.php:82
 #: views/attempts/index.php:197
 #: views/attempts/index.php:216
 msgid "Support reference"
 msgstr ""
 
-#: views/attempts/detail.php:86
+#: views/attempts/detail.php:85
 msgid "Copy support reference"
 msgstr ""
 
-#: views/attempts/detail.php:91
+#: views/attempts/detail.php:90
 msgid "Git provider request ID"
 msgstr ""
 
-#: views/attempts/detail.php:94
+#: views/attempts/detail.php:93
 msgid "Copy Git provider request ID"
 msgstr ""
 
-#: views/attempts/detail.php:99
+#: views/attempts/detail.php:98
 msgid "State"
 msgstr ""
 
-#: views/attempts/detail.php:100
+#: views/attempts/detail.php:99
 #: views/attempts/index.php:218
 msgid "Origin"
 msgstr ""
 
-#: views/attempts/detail.php:111
+#: views/attempts/detail.php:110
 #: views/attempts/index.php:219
 msgid "Requested reference"
 msgstr ""
 
-#: views/attempts/detail.php:112
+#: views/attempts/detail.php:111
 #: views/attempts/index.php:220
 msgid "Resolved reference"
 msgstr ""
 
-#: views/attempts/detail.php:112
+#: views/attempts/detail.php:111
 #: views/attempts/index.php:220
 msgid "Not resolved"
 msgstr ""
 
-#: views/attempts/detail.php:113
+#: views/attempts/detail.php:112
 #: views/attempts/index.php:221
 msgid "Mutation began"
 msgstr ""
 
-#: views/attempts/detail.php:113
+#: views/attempts/detail.php:112
 #: views/attempts/index.php:221
 msgid "No"
 msgstr ""
 
-#: views/attempts/detail.php:114
+#: views/attempts/detail.php:113
 #: views/attempts/index.php:222
 msgid "Finished"
 msgstr ""
 
-#: views/attempts/detail.php:114
+#: views/attempts/detail.php:113
 #: views/attempts/index.php:222
 msgid "Not finished"
 msgstr ""
 
-#: views/attempts/detail.php:116
+#: views/attempts/detail.php:115
 #: views/attempts/index.php:224
 msgid "Operator review"
 msgstr ""
 
 #. translators: 1: review date and time, 2: WordPress user ID.
-#: views/attempts/detail.php:116
+#: views/attempts/detail.php:115
 #: views/attempts/index.php:224
 #, php-format
 msgid "Resolved %1$s by user #%2$d"
 msgstr ""
 
-#: views/attempts/detail.php:125
+#: views/attempts/detail.php:124
 msgid "I have checked the package's current state and want to allow another deployment."
 msgstr ""
 
-#: views/attempts/detail.php:129
+#: views/attempts/detail.php:128
 msgid "Allow retry"
 msgstr ""
 
-#: views/attempts/detail.php:131
+#: views/attempts/detail.php:130
 msgid "Allow retry and return to theme settings"
 msgstr ""
 
-#: views/attempts/detail.php:133
+#: views/attempts/detail.php:132
 msgid "Allow retry and return to plugin settings"
 msgstr ""
 
-#: views/attempts/detail.php:145
+#: views/attempts/detail.php:144
 #: views/attempts/index.php:236
 msgid "I have confirmed that the deployment worker has stopped."
 msgstr ""
 
-#: views/attempts/detail.php:146
+#: views/attempts/detail.php:145
 #: views/attempts/index.php:237
 msgid "Reconcile stopped worker"
 msgstr ""

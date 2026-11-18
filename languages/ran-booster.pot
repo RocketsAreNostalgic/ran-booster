@@ -815,28 +815,6 @@ msgstr ""
 msgid "Bitbucket"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:136
-#: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:121
-#: RAN/Troubleshooting/TroubleshootingService.php:234
-#: RAN/Troubleshooting/TroubleshootingService.php:247
-#: views/attempts/index.php:179
-#: views/overview-dashboard.php:53
-#: views/overview-dashboard.php:74
-#: views/overview-dashboard.php:81
-#: views/overview-dashboard.php:88
-#: views/portability-review.php:109
-#: views/settings-general.php:119
-#: views/settings-general.php:255
-#: views/settings-storage.php:51
-#: views/troubleshooting-installation.php:73
-#: views/troubleshooting-installation.php:165
-#: views/troubleshooting-installation.php:173
-#: views/troubleshooting.php:268
-#: assets/ran-booster-portability.js:785
-msgid "Unknown"
-msgstr ""
-
 #. translators: 1: random support reference, 2: activity record link.
 #: RAN/Admin/DeploymentAdminPresenter.php:153
 #, php-format
@@ -859,11 +837,11 @@ msgstr ""
 msgid "Failure reference"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:356
+#: RAN/Admin/DeploymentAdminPresenter.php:355
 msgid "Older activity filters were cleared. Use Git provider and Activity subject to filter activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:378
+#: RAN/Admin/DeploymentAdminPresenter.php:377
 #: RAN/Admin/PackageAdminController.php:370
 #: RAN/Admin/PackageAdminController.php:389
 #: RAN/Admin/PortabilityController.php:632
@@ -877,7 +855,7 @@ msgstr ""
 msgid "Theme"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:378
+#: RAN/Admin/DeploymentAdminPresenter.php:377
 #: RAN/Admin/PackageAdminController.php:370
 #: RAN/Admin/PackageAdminController.php:389
 #: RAN/Admin/PortabilityController.php:632
@@ -891,28 +869,28 @@ msgstr ""
 msgid "Plugin"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:383
+#: RAN/Admin/DeploymentAdminPresenter.php:382
 msgid "That Git provider filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:386
+#: RAN/Admin/DeploymentAdminPresenter.php:385
 msgid "That Git provider is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:402
+#: RAN/Admin/DeploymentAdminPresenter.php:401
 msgid "Non-package events"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:410
+#: RAN/Admin/DeploymentAdminPresenter.php:409
 msgid "That Activity subject filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:413
-#: RAN/Admin/DeploymentAdminPresenter.php:426
+#: RAN/Admin/DeploymentAdminPresenter.php:412
+#: RAN/Admin/DeploymentAdminPresenter.php:425
 msgid "That Activity subject is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:429
+#: RAN/Admin/DeploymentAdminPresenter.php:428
 msgid "The Activity subject filter was cleared because it does not match the selected Git provider."
 msgstr ""
 
@@ -1078,6 +1056,27 @@ msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:71
 msgid "Diagnostic partial-result reason"
+msgstr ""
+
+#: RAN/Admin/DeploymentOutcomeMessage.php:80
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:121
+#: RAN/Troubleshooting/TroubleshootingService.php:234
+#: RAN/Troubleshooting/TroubleshootingService.php:247
+#: views/attempts/index.php:179
+#: views/overview-dashboard.php:53
+#: views/overview-dashboard.php:74
+#: views/overview-dashboard.php:81
+#: views/overview-dashboard.php:88
+#: views/portability-review.php:109
+#: views/settings-general.php:119
+#: views/settings-general.php:255
+#: views/settings-storage.php:51
+#: views/troubleshooting-installation.php:73
+#: views/troubleshooting-installation.php:165
+#: views/troubleshooting-installation.php:173
+#: views/troubleshooting.php:268
+#: assets/ran-booster-portability.js:785
+msgid "Unknown"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80

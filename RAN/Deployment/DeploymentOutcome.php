@@ -178,8 +178,8 @@ final readonly class DeploymentOutcome {
 		}
 
 		// A provider's reason wins; otherwise the reason Core derives from the legacy integer code.
-		$code = ProviderFailure::from_throwable( $failure )?->deployment_outcome_code() ?? self::CODE_PROVIDER_FAILED;
-		return new self( $code, self::STATES[ $code ], ProviderFailure::carried( $failure ) );
+		$outcome = self::from_code( ProviderFailure::from_throwable( $failure )?->deployment_outcome_code() ?? self::CODE_PROVIDER_FAILED );
+		return new self( $outcome->code, $outcome->state, ProviderFailure::carried( $failure ) );
 	}
 
 	public function get_provider_failure(): ?ProviderFailure {

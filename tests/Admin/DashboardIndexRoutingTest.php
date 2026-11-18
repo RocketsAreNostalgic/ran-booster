@@ -1269,6 +1269,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 				self::assertSame( 'no-error' === $scenario ? 0.0 : 1.0, $xpath->evaluate( 'count(//p[text()="Enter a label & try again."])' ), $scenario );
 				self::assertStringContainsString( 'Unrelated warning.', $html );
 				self::assertStringContainsString( 'Unrelated success.', $html );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(concat(" ", normalize-space(@class), " "), " notice-success ")]/descendant::p[text()="Unrelated success."])' ), $scenario );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-feedback-key="credential_test"])' ), $scenario );
 				self::assertStringNotContainsString( 'NEVER-REDISPLAY', $html );
 				if ( 'native' === $scenario ) {
 					self::assertSame( 'Draft label', $xpath->evaluate( 'string(//input[@name="ran_booster[label]"]/@value)' ) );

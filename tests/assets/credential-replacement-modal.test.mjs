@@ -155,7 +155,19 @@ function fixture(available = true, query = '') {
 		'ran_booster[secret]': {},
 		'ran_booster[expires_on]': { value: '2027-01-01', dataset: {} },
 	};
-	form.querySelector = () => cancel;
+	const errorText = { textContent: '' };
+	const error = { hidden: true, querySelector: () => errorText };
+	let description = null;
+	form.getAttribute = (name) =>
+		name === 'aria-describedby' ? description : null;
+	form.setAttribute = (name, value) => {
+		if (name === 'aria-describedby') description = value;
+	};
+	form.removeAttribute = (name) => {
+		if (name === 'aria-describedby') description = null;
+	};
+	form.querySelector = (selector) =>
+		selector === '#ran-booster-access-profile-error' ? error : cancel;
 	const editor = {
 		isConnected: true,
 		dataset: {},
@@ -182,6 +194,8 @@ function fixture(available = true, query = '') {
 		navigations: [],
 		accept: false,
 		form,
+		error,
+		errorText,
 		editor,
 		window,
 		document,
@@ -237,6 +251,12 @@ function fixture(available = true, query = '') {
 
 test('same native form opens with Label focus and retains draft across close/reopen', () => {
 	const state = fixture();
+	state.form.setAttribute(
+		'aria-describedby',
+		'ran-booster-access-profile-error'
+	);
+	state.error.hidden = false;
+	state.errorText.textContent = 'Native failure';
 	assert.equal(state.form.noValidate, false);
 	state.form.value = 'synthetic unsaved draft';
 	state.form.dispatchEvent(event('input'));
@@ -258,6 +278,12 @@ test('same native form opens with Label focus and retains draft across close/reo
 	state.button.dispatchEvent(event('click'));
 	assert.equal(state.populations, 0);
 	assert.equal(state.form.value, 'synthetic unsaved draft');
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorText.textContent, 'Native failure');
+	assert.equal(
+		state.form.getAttribute('aria-describedby'),
+		'ran-booster-access-profile-error'
+	);
 });
 
 test('missing or failing Dialog and modified clicks retain native link behavior', () => {
@@ -320,6 +346,43 @@ test('switching credential identity cannot silently erase a dirty draft', () => 
 	assert.equal(state.opens, 1);
 });
 
+for (const destination of ['different', '']) {
+	test(`native failure follows the draft until an accepted switch to ${destination || 'Add'}`, () => {
+		const state = fixture();
+		state.form.setAttribute(
+			'aria-describedby',
+			'ran-booster-access-profile-error'
+		);
+		state.error.hidden = false;
+		state.errorText.textContent = 'Native failure';
+		state.form.dispatchEvent(event('input'));
+		state.button.getAttribute = () => destination;
+		state.button.dispatchEvent(event('click'));
+		assert.equal(state.error.hidden, false);
+		assert.equal(state.errorText.textContent, 'Native failure');
+		assert.equal(
+			state.form.getAttribute('aria-describedby'),
+			'ran-booster-access-profile-error'
+		);
+		state.accept = true;
+		state.button.dispatchEvent(event('click'));
+		assert.equal(state.error.hidden, true);
+		assert.equal(state.errorText.textContent, '');
+		assert.equal(state.form.getAttribute('aria-describedby'), null);
+	});
+}
+
+test('switching leaves script-driven errors alone', () => {
+	const state = fixture();
+	state.error.hidden = false;
+	state.errorText.textContent = 'Enhanced failure';
+	state.button.getAttribute = () => 'different';
+	state.button.dispatchEvent(event('click'));
+	assert.equal(state.populations, 1);
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorText.textContent, 'Enhanced failure');
+});
+
 test('accepted native confirmation retains the link when the editor dialog fails', () => {
 	const state = fixture();
 	state.form.dispatchEvent(event('input'));
@@ -333,6 +396,12 @@ test('accepted native confirmation retains the link when the editor dialog fails
 
 test('asynchronous confirmation resumes the original switch once and cancel retains the draft', () => {
 	const state = fixture();
+	state.form.setAttribute(
+		'aria-describedby',
+		'ran-booster-access-profile-error'
+	);
+	state.error.hidden = false;
+	state.errorText.textContent = 'Native failure';
 	state.form.value = 'draft';
 	state.form.dispatchEvent(event('input'));
 	state.button.getAttribute = () => 'different';
@@ -360,11 +429,16 @@ test('asynchronous confirmation resumes the original switch once and cancel reta
 	cancel();
 	assert.equal(state.form.value, 'draft');
 	assert.equal(state.populations, 0);
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorText.textContent, 'Native failure');
 	state.button.dispatchEvent(event('click'));
 	accept();
 	accept();
 	assert.equal(state.populations, 1);
 	assert.equal(state.opens, 1);
+	assert.equal(state.error.hidden, true);
+	assert.equal(state.errorText.textContent, '');
+	assert.equal(state.form.getAttribute('aria-describedby'), null);
 });
 
 test('a stale identity switch does not replace the draft', () => {

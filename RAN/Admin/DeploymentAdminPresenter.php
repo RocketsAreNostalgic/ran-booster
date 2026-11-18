@@ -132,8 +132,8 @@ final class DeploymentAdminPresenter {
 	}
 
 	/** @param array<string,string> $labels */
-	private function provider_label( string $provider, array $labels, ?string $fallback = null ): string {
-		return $labels[ $provider ] ?? ( 'gh' === $provider ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $provider ? __( 'Bitbucket', 'ran-booster' ) : ( $fallback ?? __( 'Unknown', 'ran-booster' ) ) ) );
+	private function provider_label( string $provider, array $labels ): string {
+		return $labels[ $provider ] ?? ( 'gh' === $provider ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $provider ? __( 'Bitbucket', 'ran-booster' ) : $provider ) );
 	}
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
@@ -323,9 +323,8 @@ final class DeploymentAdminPresenter {
 						'outcome_facts'       => $this->branch_facts( $record, (string) $record['correlation'], $attempt_id ),
 						'resolved_at'         => $resolved_at,
 						'resolved_by'         => $resolved_by,
-						'provider_label'      => $this->provider_label( (string) ( $record['provider'] ?? '' ), $provider_labels, (string) ( $record['provider'] ?? '' ) ),
+						'provider_label'      => $this->provider_label( (string) ( $record['provider'] ?? '' ), $provider_labels ),
 						'source_reference'    => $this->source_reference( $record ),
-						'source_label'        => $this->provider_label( (string) ( $record['provider'] ?? '' ), $provider_labels ),
 					)
 				);
 			}
@@ -361,7 +360,7 @@ final class DeploymentAdminPresenter {
 		foreach ( $providers as $provider ) {
 			$provider_options[] = array(
 				'value' => $provider['provider'],
-				'label' => $this->provider_label( $provider['provider'], $provider_labels, $provider['provider'] ),
+				'label' => $this->provider_label( $provider['provider'], $provider_labels ),
 			);
 		}
 		$package_options = array();
@@ -375,7 +374,7 @@ final class DeploymentAdminPresenter {
 				'provider'         => $package['provider'],
 				'subject_type'     => $package['subject_type'],
 				'subject_identity' => $package['subject_identity'],
-				'label'            => sprintf( '%1$s · %2$s: %3$s', $this->provider_label( $package['provider'], $provider_labels, $package['provider'] ), 'theme' === $package['subject_type'] ? __( 'Theme', 'ran-booster' ) : __( 'Plugin', 'ran-booster' ), $package_labels[ $package['provider'] . "\0" . $package['subject_type'] . "\0" . $package['subject_identity'] ] ?? $package['subject_identity'] ),
+				'label'            => sprintf( '%1$s · %2$s: %3$s', $this->provider_label( $package['provider'], $provider_labels ), 'theme' === $package['subject_type'] ? __( 'Theme', 'ran-booster' ) : __( 'Plugin', 'ran-booster' ), $package_labels[ $package['provider'] . "\0" . $package['subject_type'] . "\0" . $package['subject_identity'] ] ?? $package['subject_identity'] ),
 			);
 		}
 		$provider = $this->activity_filter_value( 'activity_provider' );

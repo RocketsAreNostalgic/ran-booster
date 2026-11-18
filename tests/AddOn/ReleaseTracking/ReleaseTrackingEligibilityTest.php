@@ -26,7 +26,7 @@ final class ReleaseTrackingEligibilityTest extends TestCase {
 				}
 				self::fail( 'Oversized folder accepted.' );
 			} catch ( \InvalidArgumentException ) {
-				self::assertTrue( true );
+				self::addToAssertionCount( 1 );
 			}
 		}
 	}

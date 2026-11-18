@@ -1923,13 +1923,15 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$facade   = $this->facade( $plugins, $executor, updater_lock: $lock );
 		foreach ( array( 'Example/example.php', 'different/example.php', str_repeat( 'a', 151 ) . '/' . str_repeat( 'b', 100 ) . '.php' ) as $identity ) {
 			$this->set_ready_release();
-			$this->acquisition->identifier_override = $identity;
-			$result                                 = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ) );
+			$acquisition = $this->acquisition;
+			self::assertNotNull( $acquisition );
+			$acquisition->identifier_override = $identity;
+			$result                           = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ) );
 			self::assertSame( 'package_identity_mismatch', $result->code() );
 			self::assertSame( 0, $lock->acquire_calls );
 			self::assertSame( 0, $executor->install_calls );
-			self::assertSame( 0, $this->acquisition->handoff_calls );
-			self::assertSame( 1, $this->acquisition->discard_calls );
+			self::assertSame( 0, $acquisition->handoff_calls );
+			self::assertSame( 1, $acquisition->discard_calls );
 		}
 	}
 

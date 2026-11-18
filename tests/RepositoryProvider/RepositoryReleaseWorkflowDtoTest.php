@@ -23,7 +23,7 @@ final class RepositoryReleaseWorkflowDtoTest extends TestCase {
 				new \RAN\RepositoryProvider\RepositoryReleaseInspection( '42', 'v1', '1.0.0', 'commit', $components[0], $components[1], 'fingerprint' );
 				self::fail( 'Invalid identity component accepted.' );
 			} catch ( InvalidArgumentException ) {
-				self::assertTrue( true );
+				self::addToAssertionCount( 1 );
 			}
 		}
 	}

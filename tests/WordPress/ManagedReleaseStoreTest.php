@@ -32,7 +32,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 				new ManagedReleaseConfiguration( $values[0], $values[1] );
 				self::fail( 'Invalid component accepted.' );
 			} catch ( \InvalidArgumentException ) {
-				self::assertTrue( true );
+				self::addToAssertionCount( 1 );
 			}
 		}
 	}

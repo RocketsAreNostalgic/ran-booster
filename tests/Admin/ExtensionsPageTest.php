@@ -400,7 +400,6 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'Extension installed.', $output );
 		self::assertStringContainsString( 'data-feedback-key="extension_installed" data-intent="success" role="status">Extension installed.</div>', $output );
 		self::assertStringNotContainsString( 'notice-success', $output );
-		self::assertStringNotContainsString( 'data-feedback-target', $output );
 		$_GET['ran_booster_extension_id'] = '<script>alert(1)</script>';
 		$output                           = $this->render();
 		self::assertStringNotContainsString( 'Extension installed.', $output );
@@ -416,10 +415,11 @@ final class ExtensionsPageTest extends TestCase {
 		$output                               = $this->render();
 		self::assertStringContainsString( 'The extension could not be installed.', $output );
 		self::assertStringContainsString( 'class="notice inline notice-warning ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $output );
-		// The inline notice is the record; the pointer leads to it and the success host never shows it alone.
-		self::assertStringContainsString( 'id="ran-booster-extension-result" class="notice inline notice-warning', $output );
-		self::assertStringContainsString( 'data-feedback-key="extension_result" data-intent="warning" data-feedback-target="ran-booster-extension-result"', $output );
+		// The inline notice is the one element and the record; the host reads its key and text from it.
+		self::assertStringContainsString( 'data-feedback-key="extension_result" class="notice inline notice-warning', $output );
+		self::assertSame( 1, substr_count( $output, 'extension_result' ) );
 		self::assertStringNotContainsString( 'data-intent="success"', $output );
+		self::assertStringNotContainsString( 'data-ran-booster-feedback', $output );
 		$_GET['ran_booster_extension_result'] = '<script>alert(1)</script>';
 		$output                               = $this->render();
 		self::assertStringNotContainsString( '<script>alert(1)</script>', $output );

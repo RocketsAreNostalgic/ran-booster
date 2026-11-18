@@ -634,12 +634,14 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		}
 
 		foreach ( array(
-			AdminInteractionOutcome::validation_failure( $request, 'Could not <verify>.' ),
-			AdminInteractionOutcome::unexpected_failure( $request ),
-		) as $failure ) {
+			array( AdminInteractionOutcome::validation_failure( $request, 'Could not <verify>.' ), 'interaction_validation_failure' ),
+			array( AdminInteractionOutcome::unexpected_failure( $request ), 'interaction_unexpected_failure' ),
+		) as [ $failure, $key ] ) {
 			$html = $render( $failure );
 			self::assertStringContainsString( 'notice notice-error', $html );
 			self::assertStringContainsString( 'role="alert"', $html );
+			// The notice carries the key, so the host takes it, shows a pointer and strips the address.
+			self::assertStringContainsString( 'data-feedback-key="' . $key . '"', $html );
 			self::assertStringNotContainsString( 'data-ran-booster-feedback', $html );
 		}
 
@@ -647,6 +649,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		self::assertStringContainsString( 'notice notice-info', $html );
 		self::assertStringContainsString( self::FALLBACK, $html );
 		self::assertStringNotContainsString( 'data-ran-booster-feedback', $html, 'The fallback is persistent, not a timed snackbar.' );
+		self::assertStringNotContainsString( 'data-feedback-key', $html );
 	}
 
 	public function test_capability_and_nonce_markers_are_unchanged_by_text_removal(): void {

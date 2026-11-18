@@ -72,12 +72,18 @@ function build(options = {}) {
 	const created = [];
 	const targets = new Map();
 	const containers = [];
+	const noticeNodes = [];
 	const document = {
 		readyState,
 		activeElement: null,
 		querySelectorAll(selector) {
 			if (selector === '[data-ran-booster-feedback]') {
 				return containers.filter((container) => !container.removed);
+			}
+			if (
+				selector === '[data-ran-booster-ui-notice][data-feedback-key]'
+			) {
+				return noticeNodes;
 			}
 			return options.candidates?.(selector) ?? [];
 		},
@@ -219,6 +225,27 @@ function build(options = {}) {
 						: null,
 			};
 		},
+		// A coded inline notice: it carries its own key and intent, and the host reads its first paragraph.
+		notice({ key, intent, text, connected = true }) {
+			const marks = new Set();
+			const node = {
+				isConnected: connected,
+				hasAttribute: (name) =>
+					name === 'data-ran-booster-ui-notice' || marks.has(name),
+				setAttribute: (name) => marks.add(name),
+				getAttribute: (name) =>
+					({
+						'data-feedback-key': key,
+						'data-ran-booster-ui-notice-intent': intent,
+					})[name] ?? null,
+				querySelector: (selector) =>
+					selector.includes('notice-content')
+						? { textContent: text }
+						: null,
+			};
+			noticeNodes.push(node);
+			return node;
+		},
 		staticContainer(items) {
 			const marks = new Set();
 			const container = {
@@ -251,7 +278,6 @@ function build(options = {}) {
 						({
 							'data-feedback-key': spec.key,
 							'data-intent': spec.intent,
-							'data-feedback-target': spec.target,
 						})[name] ?? null,
 					querySelector: (selector) =>
 						selector === 'a.ran-booster-feedback__activity'
@@ -859,64 +885,50 @@ test('the message is only the fixed item text, not the URL, storage or any other
 	assert.equal(env.notices[0].content, 'Fixed copy.');
 });
 
-test('a server-rendered failure becomes only a pointer to its inline element', () => {
+test('a coded failure notice becomes only a pointer to itself and stays in the page', () => {
 	const env = boot();
-	env.target('inline-failure');
-	const container = env.staticContainer([
-		{
-			key: 'check_failed',
-			intent: 'error',
-			text: 'The release check failed.',
-			target: 'inline-failure',
-		},
-	]);
-	env.feedback.consume();
+	const notice = env.notice({
+		key: 'check_failed',
+		intent: 'error',
+		text: 'The release check failed.',
+	});
+	assert.equal(env.feedback.consume(), 1);
 	assert.equal(env.notices.length, 1);
+	assert.equal(env.notices[0].content, 'The release check failed.');
 	assert.match(env.notices[0].className, /--error/);
 	assert.equal(env.notices[0].actions[0].label, 'Show details');
-	assert.equal(container.removed, true);
+	assert.equal(notice.hasAttribute('data-ran-booster-feedback-taken'), true);
+	// A later pass does not take the same notice again.
+	assert.equal(env.feedback.consume(), 0);
+	assert.equal(env.notices.length, 1);
 });
 
-test('a failure without a present inline target stays static and is never snackbar-only', () => {
+test('a coded notice that is no longer in the page is never shown, so a failure is never snackbar-only', () => {
 	const env = boot();
-	env.target('elsewhere');
-	const container = env.staticContainer([
-		{ key: 'a', intent: 'error', text: 'No target.' },
-		{
-			key: 'b',
-			intent: 'warning',
-			text: 'Missing target.',
-			target: 'not-on-the-page',
-		},
-	]);
-	env.feedback.consume();
+	env.notice({
+		key: 'a',
+		intent: 'warning',
+		text: 'Gone.',
+		connected: false,
+	});
+	assert.equal(env.feedback.consume(), 0);
 	assert.equal(env.notices.length, 0);
-	assert.equal(container.items.length, 2);
-	assert.equal(container.removed, false);
 });
 
-test('a warning in the result keeps the success static and durable', () => {
+test('an info notice is one element: a timed snackbar reads its first paragraph and the notice stays', () => {
 	const env = boot();
-	env.target('inline-failure');
-	const container = env.staticContainer([
-		{ key: 's', intent: 'success', text: 'Saved.' },
-		{
-			key: 'w',
-			intent: 'warning',
-			text: 'Saved, with a warning.',
-			target: 'inline-failure',
-		},
-	]);
-	env.feedback.consume();
-	assert.deepEqual(
-		env.notices.map((notice) => notice.content),
-		['Saved, with a warning.']
-	);
-	assert.deepEqual(
-		container.items.map((item) => item.getAttribute('data-feedback-key')),
-		['s']
-	);
-	assert.equal(container.removed, false);
+	const notice = env.notice({
+		key: 'refresh_recent',
+		intent: 'info',
+		text: ' Checked a moment ago. ',
+	});
+	assert.equal(env.feedback.consume(), 1);
+	assert.equal(env.notices[0].content, 'Checked a moment ago.');
+	assert.match(env.notices[0].className, /--info/);
+	assert.equal(env.notices[0].actions.length, 0);
+	assert.equal(notice.hasAttribute('data-ran-booster-feedback-taken'), true);
+	env.tick(DURATION);
+	assert.equal(env.notices.length, 0);
 });
 
 test('when the host cannot render, the confirmed static result stays visible', () => {
@@ -1124,28 +1136,6 @@ test('an item expiring or evicted never takes focus from a different item', () =
 	assert.equal(env.document.activeElement, inner);
 });
 
-test('a qualified result keeps its success static on every later pass', () => {
-	const env = boot();
-	env.target('inline-failure');
-	const container = env.staticContainer([
-		{ key: 's', intent: 'success', text: 'Saved.' },
-		{
-			key: 'w',
-			intent: 'warning',
-			text: 'Saved, with a warning.',
-			target: 'inline-failure',
-		},
-	]);
-	env.feedback.consume();
-	env.feedback.consume();
-	env.documentListeners.get('htmx:afterSwap')();
-	assert.deepEqual(
-		env.notices.map((notice) => notice.content),
-		['Saved, with a warning.']
-	);
-	assert.equal(container.items.length, 1);
-});
-
 test('a repeated result refreshes the control focus returns to', () => {
 	const env = boot({
 		candidates: () => [],
@@ -1316,7 +1306,7 @@ test('a snackbar that did not render is refused and torn down', () => {
 	assert.equal(env.root.unmounted, true);
 });
 
-test('a pointer to an inline notice is hidden until the host takes it', () => {
+test('no stylesheet rule hides a feedback result: a coded notice is the only element', () => {
 	const css = fs.readFileSync(
 		new URL(
 			'../../assets/ran-booster/25-admin-primitives.css',
@@ -1324,10 +1314,12 @@ test('a pointer to an inline notice is hidden until the host takes it', () => {
 		),
 		'utf8'
 	);
-	assert.match(
+	assert.doesNotMatch(css, /data-feedback-target/);
+	assert.doesNotMatch(
 		css,
-		/\.ran-booster-feedback__item\[data-feedback-target\]\[data-intent="error"\],\s*\.ran-booster-feedback__item\[data-feedback-target\]\[data-intent="warning"\]\s*\{\s*display: none;/
+		/\.ran-booster-feedback__item[^{]*\{[^}]*display:\s*none/
 	);
+	assert.doesNotMatch(source, /data-feedback-target/);
 });
 
 test('a taken success strips the result arguments on first render', () => {
@@ -1406,7 +1398,7 @@ test('a failing replaceState never throws out of the host', () => {
 	assert.equal(env.notices.length, 1);
 });
 
-test('a pointer whose target is missing stays unshown and the address is kept', () => {
+test('a notice that left the page stays unshown and the address is kept', () => {
 	const env = build();
 	const replaced = [];
 	env.window.history = {
@@ -1415,23 +1407,20 @@ test('a pointer whose target is missing stays unshown and the address is kept', 
 	};
 	env.window.location.href =
 		'https://example.test/wp-admin/admin.php?ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n';
-	const container = env.staticContainer([
-		{
-			key: 'bulk_error',
-			intent: 'error',
-			text: 'Stale.',
-			target: 'no-such-element',
-		},
-	]);
+	env.notice({
+		key: 'bulk_error',
+		intent: 'error',
+		text: 'Stale.',
+		connected: false,
+	});
 	env.run();
 	assert.equal(env.notices.length, 0);
-	assert.equal(container.items.length, 1);
 	assert.deepEqual(replaced, []);
 });
 
 // The result address is stripped on first render for every consumed result,
 // so a reload or Back shows no earlier result.
-function loadEnv(href, items, { targets = [] } = {}) {
+function loadEnv(href, items, { notices = [] } = {}) {
 	const env = build();
 	const replaced = [];
 	env.window.history = {
@@ -1440,25 +1429,22 @@ function loadEnv(href, items, { targets = [] } = {}) {
 			replaced.push([state, String(url)]),
 	};
 	env.window.location.href = href;
-	for (const id of targets) {
-		env.target(id);
-	}
+	notices.forEach((spec) => env.notice(spec));
 	const container = env.staticContainer(items);
 	return { env, replaced, container };
 }
 
 const BASE = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins';
 const FAILURE_URL = `${BASE}&ran_booster_bulk_error=stale&_ran_booster_bulk_notice_nonce=n&package=a`;
-const POINTER = {
+const FAILURE = {
 	key: 'bulk_error',
 	intent: 'error',
 	text: 'Stale.',
-	target: 'ran-booster-feedback-bulk-error',
 };
 
-test('a taken failure pointer strips the address on first render and is shown once', () => {
-	const { env, replaced } = loadEnv(FAILURE_URL, [POINTER], {
-		targets: ['ran-booster-feedback-bulk-error'],
+test('a taken failure notice strips the address on first render and is shown once', () => {
+	const { env, replaced } = loadEnv(FAILURE_URL, [], {
+		notices: [FAILURE],
 	});
 	env.run();
 	assert.deepEqual(
@@ -1470,18 +1456,15 @@ test('a taken failure pointer strips the address on first render and is shown on
 
 test('a consumed release check failure strips its result before reload', () => {
 	const url = `${BASE}&ran_booster_release_result=refresh_check_failed&ran_booster_release_success=0&ran_booster_release_result_nonce=n&ran_booster_release_recheck=1`;
-	const { env, replaced } = loadEnv(
-		url,
-		[
+	const { env, replaced } = loadEnv(url, [], {
+		notices: [
 			{
 				key: 'refresh_check_failed',
 				intent: 'error',
 				text: 'Failed.',
-				target: 'release-result',
 			},
 		],
-		{ targets: ['release-result'] }
-	);
+	});
 	env.run();
 	assert.equal(replaced[0][1], `${BASE}&ran_booster_release_recheck=1`);
 	const reload = loadEnv(replaced[0][1], []);
@@ -1489,24 +1472,16 @@ test('a consumed release check failure strips its result before reload', () => {
 	assert.equal(reload.env.notices.length, 0);
 });
 
-test('a mixed container strips once and the failure record stays in the page', () => {
+test('a success item and a failure notice strip once and the failure record stays in the page', () => {
 	const { env, replaced } = loadEnv(
 		`${FAILURE_URL}&ran_booster_result=install&_ran_booster_notice_nonce=m`,
-		[
-			{ key: 'package_install', intent: 'success', text: 'Installed.' },
-			POINTER,
-		],
-		{ targets: ['ran-booster-feedback-bulk-error'] }
+		[{ key: 'package_install', intent: 'success', text: 'Installed.' }],
+		{ notices: [FAILURE] }
 	);
 	env.run();
-	assert.equal(env.notices.length, 1);
+	assert.equal(env.notices.length, 2);
 	assert.equal(replaced.length, 1);
 	assert.equal(replaced[0][1], `${BASE}&package=a`);
-	// The pointer is a snackbar; the inline record it points at is untouched.
-	assert.equal(
-		env.document.getElementById('ran-booster-feedback-bulk-error').removed,
-		false
-	);
 });
 
 test('a taken info item strips the address too', () => {
@@ -1574,12 +1549,12 @@ test('a reload on the stripped signed address shows nothing and strips nothing',
 	assert.deepEqual(replaced, []);
 });
 
-// A pointer with no target is not shown, so it does not count as taken and the
-// address is left as it is.
-test('an unshown pointer does not count as taken and the address is left alone', () => {
-	const { env, replaced } = loadEnv(FAILURE_URL, [
-		{ ...POINTER, target: 'no-such-element' },
-	]);
+// A notice the host cannot show does not count as taken, so the address is
+// left as it is.
+test('an unshown notice does not count as taken and the address is left alone', () => {
+	const { env, replaced } = loadEnv(FAILURE_URL, [], {
+		notices: [{ ...FAILURE, connected: false }],
+	});
 	env.run();
 	assert.equal(env.notices.length, 0);
 	assert.deepEqual(replaced, []);

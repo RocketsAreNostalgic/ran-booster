@@ -707,20 +707,20 @@ msgstr ""
 msgid "RAN Booster could not remember the notice dismissal."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryReminder.php:76
+#: RAN/Admin/CredentialExpiryReminder.php:77
 #: RAN/Admin/ProviderProfileAdminController.php:684
 msgid "Expiry unknown"
 msgstr ""
 
 #. translators: %s is the credential expiry date in YYYY-MM-DD format.
-#: RAN/Admin/CredentialExpiryReminder.php:91
+#: RAN/Admin/CredentialExpiryReminder.php:92
 #, php-format
 msgid "Expired %s"
 msgstr ""
 
 #. translators: %d is the number of days until the credential expires.
-#: RAN/Admin/CredentialExpiryReminder.php:96
-#: RAN/Admin/CredentialExpiryReminder.php:101
+#: RAN/Admin/CredentialExpiryReminder.php:97
+#: RAN/Admin/CredentialExpiryReminder.php:102
 #, php-format
 msgid "Expires in %d day"
 msgid_plural "Expires in %d days"
@@ -728,7 +728,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s is the credential expiry date in YYYY-MM-DD format.
-#: RAN/Admin/CredentialExpiryReminder.php:106
+#: RAN/Admin/CredentialExpiryReminder.php:107
 #, php-format
 msgid "Expires %s"
 msgstr ""

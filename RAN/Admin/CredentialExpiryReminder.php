@@ -7,6 +7,7 @@ namespace RAN\Admin;
 use DateTimeImmutable;
 use DateTimeZone;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\ProviderCredentialPolicySupplier;
 use RAN\Secrets\SecretsFile;
 
 /**
@@ -129,7 +130,9 @@ final class CredentialExpiryReminder {
 	public function affected(): array {
 		$affected = array();
 		foreach ( $this->providers->all() as $provider => $repository_provider ) {
-			unset( $repository_provider );
+			if ( ! $repository_provider instanceof ProviderCredentialPolicySupplier ) {
+				continue;
+			}
 			foreach ( $this->secrets->credential_profiles( $provider ) as $profile ) {
 				$status = $this->status( $provider, $profile );
 				if ( in_array( $status['stage'], array( 'warning', 'urgent', 'expired' ), true ) ) {

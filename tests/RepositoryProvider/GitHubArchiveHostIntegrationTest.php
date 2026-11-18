@@ -14,6 +14,7 @@ use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\AuthenticatedPreparedArchive;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\StaleDeployment;
+use RAN\RepositoryProvider\ProviderRequestFailed;
 use RuntimeException;
 use RAN\Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\Tests\RepositoryProvider\Support\RepositoryResolverSecretsStub;
@@ -161,9 +162,10 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 				)
 			);
 			self::fail( 'A repository identity mismatch must prevent deployment.' );
-		} catch ( RuntimeException $exception ) {
-			self::assertSame( 502, $exception->getCode() );
-			self::assertSame( 'GitHub returned an invalid repository identity while resolving the branch.', $exception->getMessage() );
+		} catch ( ProviderRequestFailed $exception ) {
+			self::assertSame( 409, $exception->getCode() );
+			self::assertSame( 'repository_identity_changed', $exception->failure->reason );
+			self::assertSame( 'The repository provider request failed.', $exception->getMessage() );
 		}
 
 		self::assertCount( 1, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
@@ -173,11 +175,23 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 	#[DataProvider( 'branch_head_failure_provider' )]
 	public function test_branch_head_failures_are_explicit_and_never_prepare_archive_authentication(
 		mixed $response,
-		int $expected_code
+		int $expected_code,
+		string $expected_reason,
+		?int $probe_status = null
 	): void {
-		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
-			array( $this->repository_identity_response( true ), $response )
-		);
+		$responses = array( $this->repository_identity_response( true ), $response );
+		$base      = 'https://api.github.com/repos/RocketsAreNostalgic/example-plugin';
+		$urls      = array( $base, $base . '/branches/main' );
+		if ( null !== $probe_status ) {
+			$urls[]      = $base . '/branches?per_page=1';
+			$responses[] = array(
+				'response' => array( 'code' => $probe_status ),
+				'body'     => 200 === $probe_status
+					? '[{"name":"other","commit":{"sha":"0123456789abcdef0123456789abcdef01234567"}}]'
+					: '{"message":"upstream-response-canary"}',
+			);
+		}
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue( $responses );
 		$secrets  = new RepositoryResolverSecretsStub( array( 'private-profile' => self::TOKEN ) );
 		$provider = $this->provider( $secrets );
 
@@ -191,89 +205,112 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 				)
 			);
 			self::fail( 'A failed GitHub branch-head lookup must prevent deployment.' );
-		} catch ( RuntimeException $exception ) {
+		} catch ( ProviderRequestFailed $exception ) {
+			self::assertSame( $expected_reason, $exception->failure->reason );
 			self::assertSame( $expected_code, $exception->getCode() );
+			self::assertSame( 'The repository provider request failed.', $exception->getMessage() );
 			self::assertStringNotContainsString( self::TOKEN, $exception->getMessage() );
 			self::assertStringNotContainsString( 'upstream-response-canary', $exception->getMessage() );
 		}
 
-		self::assertCount( 2, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
+		$requests = \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests();
+		self::assertSame( $urls, array_column( $requests, 'url' ) );
+		if ( null !== $probe_status ) {
+			self::assertSame( $requests[1]['arguments'], $requests[2]['arguments'] );
+			self::assertSame( 'GET', $requests[2]['arguments']['method'] ?? 'GET' );
+			self::assertSame( 0, $requests[2]['arguments']['redirection'] );
+			self::assertSame( 65536, $requests[2]['arguments']['limit_response_size'] );
+		}
 		$this->assert_no_archive_hooks();
 	}
 
 	/**
-	 * @return array<string, array{mixed, int}>
+	 * @return array<string, array{mixed, int, string, 3?:int}>
 	 */
 	public static function branch_head_failure_provider(): array {
 		return array(
-			'transport error'    => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_failed' ), 502 ),
-			'blocked transport'  => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_not_executed' ), 502 ),
-			'local policy error' => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'local_policy_canary' ), 502 ),
-			'no transport'       => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_failure' ), 502 ),
-			'rate limit'         => array(
+			'transport error'     => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_failed' ), 504, 'transport_other' ),
+			'blocked transport'   => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_not_executed' ), 504, 'blocked_by_site' ),
+			'local policy error'  => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'local_policy_canary' ), 504, 'transport_other' ),
+			'no transport'        => array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_failure' ), 504, 'transport_other' ),
+			'rate limit'          => array(
 				array(
 					'response' => array( 'code' => 429 ),
 					'headers'  => array( 'Retry-After' => '12' ),
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				429,
+				'rate_limited',
 			),
-			'bad gateway'        => array(
+			'bad gateway'         => array(
 				array(
 					'response' => array( 'code' => 502 ),
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				502,
+				'http_5xx',
 			),
-			'temporary service'  => array(
+			'temporary service'   => array(
 				array(
 					'response' => array( 'code' => 503 ),
 					'headers'  => array( 'Retry-After' => '1200' ),
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
-				502,
+				503,
+				'http_5xx',
 			),
-			'gateway timeout'    => array(
+			'gateway timeout'     => array(
 				array(
 					'response' => array( 'code' => 504 ),
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
-				502,
+				504,
+				'http_5xx',
 			),
-			'not implemented'    => array(
+			'not implemented'     => array(
 				array(
 					'response' => array( 'code' => 501 ),
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
-				502,
+				501,
+				'http_5xx',
 			),
-			'http unsupported'   => array(
+			'http unsupported'    => array(
 				array(
 					'response' => array( 'code' => 505 ),
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
-				502,
+				505,
+				'http_5xx',
 			),
-			'missing branch'     => array(
+			'missing branch'      => array(
 				array(
 					'response' => array( 'code' => 404 ),
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
 				404,
+				'ref_not_found',
+				200,
 			),
-			'provider failure'   => array(
+			'unconfirmed access'  => array( array( 'response' => array( 'code' => 404 ) ), 404, 'repository_not_found_or_no_access', 403 ),
+			'rejected credential' => array( array( 'response' => array( 'code' => 401 ) ), 401, 'credential_rejected' ),
+			'denied access'       => array( array( 'response' => array( 'code' => 403 ) ), 403, 'permission_denied' ),
+			'refused redirect'    => array( array( 'response' => array( 'code' => 301 ) ), 504, 'redirect_blocked' ),
+			'provider failure'    => array(
 				array(
 					'response' => array( 'code' => 500 ),
 					'body'     => '{"message":"upstream-response-canary"}',
 				),
-				502,
+				500,
+				'http_5xx',
 			),
-			'malformed success'  => array(
+			'malformed success'   => array(
 				array(
 					'response' => array( 'code' => 200 ),
 					'body'     => '{"name":"main"}',
 				),
 				502,
+				'response_invalid',
 			),
 		);
 	}
@@ -319,9 +356,10 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			$this->provider( new RepositoryResolverSecretsStub() )
 				->prepare_archive( $this->archive_request( 'release', false ) );
 			self::fail( 'An oversized SHA-only response must not be accepted as an immutable ref.' );
-		} catch ( RuntimeException $exception ) {
+		} catch ( ProviderRequestFailed $exception ) {
 			self::assertSame( 502, $exception->getCode() );
-			self::assertStringContainsString( 'invalid revision-resolution response', $exception->getMessage() );
+			self::assertSame( 'response_invalid', $exception->failure->reason );
+			self::assertSame( 'The repository provider request failed.', $exception->getMessage() );
 		}
 
 		$requests = \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests();

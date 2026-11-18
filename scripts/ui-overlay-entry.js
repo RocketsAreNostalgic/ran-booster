@@ -1,7 +1,12 @@
 import './ui-runtime-entry.js';
-import { Dialog, Input, Tabs } from '@wordpress/ui';
+import { AlertDialog, Dialog, Input, Tabs } from '@wordpress/ui';
 
 Object.assign(window.ranBoosterUI, {
+	AlertDialog: {
+		Root: AlertDialog.Root,
+		Popup: AlertDialog.Popup,
+		Portal: AlertDialog.Portal,
+	},
 	Dialog: {
 		Root: Dialog.Root,
 		Popup: Dialog.Popup,

@@ -169,5 +169,18 @@ Missing, pruned, unavailable or contradictory evidence keeps generic policy copy
 HTTP status, outcome, correlation and signed feedback transport remain unchanged.
 Attempt JSON, email/filter data and support exports omit the optional reason.
 
+Credential validation and branch archive or head failures may record the original
+provider failure's screened `source_code` as a diagnostic Activity fact. It never
+selects an outcome or sentence. Branch settlement copies it from that attempt's
+carried failure only when the runner reports the same outcome. Recording the
+reference adds no selection or adoption reads or locks. The working-copy fact
+retains its independent authority checks. Cleanup supersession and runner-throw
+reconciliation omit the reference.
+Rendering re-screens the stored reference for Core failed or rejected install,
+update and credential-validation rows. It does not re-prove the writer's attempt
+binding or interpret the code as an outcome or provider identity.
+Invalid optional codes are omitted without discarding the outcome. The attempt
+snapshot, failure email and support export do not include the code.
+
 Native release message replacement remains held pending a suitable producer
-boundary. Other branch reasons and any future source-code field need separate work.
+boundary. Other branch reasons need separate work.

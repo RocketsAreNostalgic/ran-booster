@@ -19,9 +19,10 @@ final class ActivityConnection implements DeploymentWriteConnection {
 	/** @var list<int|false> */
 	public array $query_results = array();
 	/** @var list<string> */
-	public array $insert_tables = array();
-	public bool $fail_insert    = false;
-	public string|null $engine  = 'InnoDB';
+	public array $insert_tables      = array();
+	public ?\Throwable $read_failure = null;
+	public bool $fail_insert         = false;
+	public string|null $engine       = 'InnoDB';
 	/** @var list<array{index_name:string,non_unique:int,columns:string,prefixes:int}>|null */
 	public ?array $indexes = array(
 		array(
@@ -60,6 +61,9 @@ final class ActivityConnection implements DeploymentWriteConnection {
 
 	public function get_results( string $query ): mixed {
 		$this->queries[] = $query;
+		if ( null !== $this->read_failure ) {
+			throw $this->read_failure;
+		}
 		if ( str_contains( $query, 'information_schema.TABLES' ) ) {
 			return array( (object) array( 'engine' => $this->engine ) );
 		}

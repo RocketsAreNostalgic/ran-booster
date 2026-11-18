@@ -241,14 +241,18 @@ class ProviderProfileAdminController {
 			'invalid' => 'rejected',
 			default => 'failed',
 		};
+		$facts = array(
+			'expiry_state' => null === $result?->expiry ? 'not_reported' : ( $result->expiry->is_known() ? 'known' : 'unknown' ),
+			'expires_at'   => $result?->expiry?->expires_at,
+		);
+		if ( null !== $result?->failure?->source_code ) {
+			$facts['source_code'] = $result->failure->source_code;
+		}
 		$this->activity?->complete(
 			$id,
 			$status,
 			'credential.' . ( $result->reason ?? 'validation_failed' ),
-			facts: array(
-				'expiry_state' => null === $result?->expiry ? 'not_reported' : ( $result->expiry->is_known() ? 'known' : 'unknown' ),
-				'expires_at'   => $result?->expiry?->expires_at,
-			)
+			facts: $facts
 		);
 	}
 

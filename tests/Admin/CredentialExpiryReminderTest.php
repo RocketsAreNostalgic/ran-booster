@@ -19,6 +19,8 @@ use RAN\Admin\CredentialExpiryReminder;
 use RAN\Admin\NoticePreference;
 use RAN\RepositoryProvider\CredentialExpiryReport;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\ProviderCredentialPolicySupplier;
+use RAN\RepositoryProvider\ProviderCredentialPolicy;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\RepositoryProvider;
@@ -104,6 +106,56 @@ final class CredentialExpiryReminderTest extends TestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the shared WordPress database double.
 		$GLOBALS['wpdb'] = $this->previous_wpdb;
 		parent::tearDown();
+	}
+
+	#[DataProvider( 'credentialless_notice_states' )]
+	public function test_provider_without_credentials_preserves_the_admin_notice( bool $has_expiring_credential ): void {
+		if ( $has_expiring_credential ) {
+			$this->credential( 'expiring', 'Existing credential' );
+			$this->provider_expiry( 'expiring', $this->now->modify( '+2 days' ) );
+		}
+		$before = new CredentialExpiryNotice( $this->reminders() );
+		self::assertSame( $has_expiring_credential, $before->should_load_dismissal_script() );
+		$summary = $before->overview_summary();
+		$this->providers->register(
+			new class() implements RepositoryProvider {
+				use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+				public function get_metadata(): ProviderMetadata {
+					return new ProviderMetadata(
+						ProviderCode::parse( 'public-only' ),
+						'Public-only provider',
+						'https://example.test/',
+						'Owner',
+						new \RAN\RepositoryProvider\Admin\ProviderAdminMetadata( array(), array() )
+					);
+				}
+			}
+		);
+
+		$after = new CredentialExpiryNotice( $this->reminders() );
+		self::assertSame( $has_expiring_credential, $after->should_load_dismissal_script() );
+		self::assertSame( $summary, $after->overview_summary() );
+		ob_start();
+		try {
+			$after->render();
+		} finally {
+			$html = (string) ob_get_clean();
+		}
+		if ( $has_expiring_credential ) {
+			self::assertStringContainsString( 'Existing credential (GitHub): Expires in 2 days.', $html );
+			self::assertStringNotContainsString( 'Public-only provider', $html );
+		} else {
+			self::assertSame( '', $html );
+		}
+	}
+
+	/** @return array<string, array{bool}> */
+	public static function credentialless_notice_states(): array {
+		return array(
+			'empty notice'      => array( false ),
+			'existing reminder' => array( true ),
+		);
 	}
 
 	public function test_exact_warning_urgent_and_expired_boundaries_use_the_injected_clock(): void {
@@ -535,8 +587,17 @@ final class CredentialExpiryReminderTest extends TestCase {
 	}
 
 	public function test_notice_pairs_each_credential_with_its_own_action_across_providers(): void {
-		$other = $this->createMock( RepositoryProvider::class );
-		$other->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'other' ), 'Other <provider>', 'https://example.com/', 'Owner' ) );
+		$other     = new class() implements RepositoryProvider, ProviderCredentialPolicySupplier {
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+			public function get_metadata(): ProviderMetadata {
+				return new ProviderMetadata( ProviderCode::parse( 'other' ), 'Other <provider>', 'https://example.com/', 'Owner' );
+			}
+
+			public function get_credential_policy(): ProviderCredentialPolicy {
+				return new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureCredentialPolicy( ProviderCode::parse( 'other' ) );
+			}
+		};
 		$providers = new ProviderRegistry( array( new ExpiryReminderProvider(), $other ) );
 		$secrets   = $this->createMock( SecretsFile::class );
 		$secrets->method( 'credential_profiles' )->willReturnCallback(

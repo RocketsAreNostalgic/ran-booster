@@ -1986,31 +1986,30 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function test_deployment_activity_renders_known_package_version_failure_in_index_and_detail(): void {
-		$attempt              = DeploymentAttempt::from_database(
-			array(
-				'id'                      => 2,
-				'correlation_id'          => str_repeat( 'd', 32 ),
-				'source'                  => 'manual',
-				'operation'               => 'update',
-				'package_type'            => 'plugin',
-				'package_slug'            => 'example',
-				'package_source'          => 'branch',
-				'package_source_revision' => 1,
-				'release_identity'        => null,
-				'provider'                => 'gh',
-				'provider_repository_id'  => 'repository-1',
-				'requested_ref'           => 'main',
-				'resolved_ref'            => null,
-				'delivery_id'             => null,
-				'delivery_digest'         => null,
-				'state'                   => 'failed',
-				'mutation_started_at'     => null,
-				'outcome_code'            => 'package_version_missing',
-				'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
-				'created_at'              => '2026-07-23 06:00:00',
-				'finished_at'             => '2026-07-23 06:00:01',
-			)
+		$row                  = array(
+			'id'                      => 2,
+			'correlation_id'          => str_repeat( 'd', 32 ),
+			'source'                  => 'manual',
+			'operation'               => 'update',
+			'package_type'            => 'plugin',
+			'package_slug'            => 'example',
+			'package_source'          => 'branch',
+			'package_source_revision' => 1,
+			'release_identity'        => null,
+			'provider'                => 'gh',
+			'provider_repository_id'  => 'repository-1',
+			'requested_ref'           => 'main',
+			'resolved_ref'            => null,
+			'delivery_id'             => null,
+			'delivery_digest'         => null,
+			'state'                   => 'failed',
+			'mutation_started_at'     => null,
+			'outcome_code'            => 'package_version_missing',
+			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
+			'created_at'              => '2026-07-23 06:00:00',
+			'finished_at'             => '2026-07-23 06:00:01',
 		);
+		$attempt              = DeploymentAttempt::from_database( $row );
 		$deployment_activity  = array(
 			'items'                 => array( $attempt->safe_data() ),
 			'unavailable'           => false,
@@ -2041,6 +2040,12 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertStringNotContainsString( 'secret-canary', $html );
 			self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=plugin%2Fexample.php', $html );
 		}
+		self::assertStringNotContainsString( 'Recovery steps', $detail );
+
+		$deployment_activity['detail'] = DeploymentAttempt::from_database( array( 'outcome_code' => 'deployment_maintenance_active' ) + $row );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=documentation#ran-booster-deployment-recovery">Recovery steps</a>', (string) ob_get_clean() );
 	}
 
 	public function test_needs_attention_detail_shows_origin_and_protected_resolution_confirmation(): void {
@@ -2103,6 +2108,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'panel=activity', $html );
 		self::assertStringContainsString( 'page=ran-booster-themes&amp;package=example-theme', $html );
 		self::assertStringContainsString( 'Open theme settings', $html );
+		self::assertStringContainsString( 'tab=documentation#ran-booster-deployment-recovery">Recovery steps</a>', $html );
 		self::assertStringNotContainsString( 'class="button button-primary" href="https://example.test/wp-admin/admin.php?page=ran-booster-themes', $html );
 	}
 

@@ -59,6 +59,7 @@ $reserved_documentation_ids = array_fill_keys(
 		'ran-booster-file-protection',
 		'ran-booster-credential-storage',
 		'ran-booster-installing-and-managing-packages',
+		'ran-booster-deployment-recovery',
 		'ran-booster-push-to-deploy',
 		'ran-booster-webhook-cleanup',
 		'ran-booster-about',
@@ -461,6 +462,9 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 				</ol>
 				<p><?php esc_html_e( 'Immutable releases, manifests, checksums and signatures are not required. GitHub’s automatic source archives are not used, so a release without an uploaded ZIP is not accepted. If your workflow builds the ZIP, attach it with:', 'ran-booster' ); ?></p>
 				<pre tabindex="0" role="region" aria-label="<?php esc_attr_e( 'Code example: attach the release ZIP', 'ran-booster' ); ?>"><code>gh release upload "$TAG" my-package.zip</code></pre>
+				<h4 id="ran-booster-deployment-recovery"><?php esc_html_e( 'When a deployment stops part-way', 'ran-booster' ); ?></h4>
+				<p><?php esc_html_e( 'WordPress creates a .maintenance file in the WordPress root directory while it updates and deletes it when it finishes. A stopped update can leave the file behind. WordPress ignores one older than ten minutes, but Booster will not deploy while it exists.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Treat the file as in use if it is less than ten minutes old or Activity shows a running deployment. Otherwise delete it, then check the package. Deleting the file does not repair the package.', 'ran-booster' ); ?></p>
 			</div>
 		</details>
 		</div></div></div>

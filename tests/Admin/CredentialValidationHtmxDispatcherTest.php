@@ -33,9 +33,13 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 	use \RAN\Tests\Support\CapturesBoosterLog;
 
 	private HtmxCredentialValidationTestController $controller;
+	private mixed $previous_activity_options;
+	private bool $had_activity_options;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		$this->had_activity_options      = array_key_exists( 'ran_booster_activity_options', $GLOBALS );
+		$this->previous_activity_options = $GLOBALS['ran_booster_activity_options'] ?? null;
 		$this->start_log_capture();
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
@@ -49,6 +53,11 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
+		if ( $this->had_activity_options ) {
+			$GLOBALS['ran_booster_activity_options'] = $this->previous_activity_options;
+		} else {
+			unset( $GLOBALS['ran_booster_activity_options'] );
+		}
 		$this->stop_log_capture();
 		$_POST = array();
 		unset(
@@ -149,6 +158,31 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			self::assertNull( $response->toast_message );
 			self::assertSame( 'The repository provider rate-limited credential validation. Try again later.', $response->error );
 			self::assertSame( 422, $response->status );
+		}
+	}
+
+	public function test_credential_activity_records_only_the_safe_original_failure_code(): void {
+		foreach ( array( 'abuse_detected', 'secret_orchid' ) as $code ) {
+			$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+			$database                                = new \RAN\Tests\Activity\ActivityConnection();
+			$activity                                = new \RAN\Activity\ActivityStore( $database, 'test_activity' );
+			$evidence                                = new class() extends \RAN\Admin\RepositoryBranchCheckEvidenceStore {
+				protected function read_option(): array {
+					return array( 'generation' => 1 );
+				}
+			};
+			$failure                                 = new ProviderFailure( 'credential_rejected', source_code: $code );
+			$result                                  = CredentialValidationResult::invalid( $failure );
+			self::assertSame( $failure, $result->failure );
+			$dispatcher           = $this->dispatcher( $this->createMock( Dashboard::class ), $result, $activity, $evidence );
+			$_POST['ran_booster'] = $this->request();
+			$dispatcher->dispatch_post_requests();
+			$completion = end( $database->prepared );
+			self::assertIsArray( $completion );
+			self::assertSame( 'rejected', $completion['args'][0] );
+			self::assertSame( 'credential.invalid', $completion['args'][1] );
+			$facts = json_decode( (string) $completion['args'][4], true );
+			self::assertSame( 'abuse_detected' === $code ? $code : null, $facts['source_code'] ?? null );
 		}
 	}
 

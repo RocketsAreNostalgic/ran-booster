@@ -185,7 +185,7 @@ final class ProviderFailureTest extends TestCase {
 	}
 
 	public function test_a_carried_failure_wins_over_the_legacy_code_on_every_carrier(): void {
-		$failure = new ProviderFailure( 'rate_limited_secondary', 403, 30 );
+		$failure = new ProviderFailure( 'rate_limited_secondary', 403, 30, source_code: 'abuse_detected' );
 
 		foreach (
 			array(
@@ -196,7 +196,7 @@ final class ProviderFailureTest extends TestCase {
 			self::assertSame( $failure, ProviderFailure::carried( $carrier ) );
 			self::assertSame( $failure, ProviderFailure::from_throwable( $carrier ) );
 		}
-		$release = new ProviderFailure( 'release_changed' );
+		$release = new ProviderFailure( 'release_changed', source_code: 'abuse_detected' );
 		self::assertSame( $release, ProviderFailure::carried( RepositoryReleaseAcquisitionRejected::changed( $release ) ) );
 		self::assertSame( $release, ProviderFailure::carried( RepositoryReleaseInspectionRejected::invalid_release( $release ) ) );
 	}

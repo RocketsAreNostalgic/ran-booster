@@ -144,6 +144,7 @@ final class SupportReportTest extends TestCase {
 					'reason'           => 'diagnostics.partial',
 					'message'          => 'private-prose-canary',
 					'actor'            => 'private-actor-canary',
+					'facts'            => '{"source_code":"abuse_detected"}',
 				),
 			),
 		);
@@ -204,6 +205,8 @@ final class SupportReportTest extends TestCase {
 		self::assertSame( 'Package 1', $activity['subject'] );
 		self::assertSame( 'Provider 1', $activity['provider'] );
 		self::assertSame( 'diagnostics.partial', $activity['reason'] );
+		self::assertStringNotContainsString( 'abuse_detected', $text );
+		self::assertStringNotContainsString( 'source_code', $text );
 		$inspect = static function ( mixed $value ) use ( &$inspect ): void {
 			if ( is_array( $value ) ) {
 				foreach ( $value as $key => $child ) {

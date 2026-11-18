@@ -118,6 +118,9 @@ collectors and cannot interrupt a blocking call. Output is at most 1 MiB UTF-8;
 retain metadata and omit whole section data from the end when the encoded limit is reached. No recursive
 serialization of arbitrary source objects is permitted.
 
+Provider source codes may appear in screened logs and Activity, but the support
+report's fixed projections omit them, including codes that pass screening.
+
 | Source | Allowed fields and bounds | Cost / effect |
 | --- | --- | --- |
 | Runtime | WP/PHP/database numeric versions; OS family; SAPI; known server family; memory/time/post/upload limits; zip/sodium/curl/json/openssl/mbstring presence; filesystem method constant; cron/debug/environment flags | Fixed runtime reads; one database version read; no Site Health dump, phpinfo, remote request or directory traversal |

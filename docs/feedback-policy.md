@@ -441,7 +441,10 @@ use today, and the owner is told.
   existing "Queued ... Skipped: N." sentence as a success snackbar with a View
   Activity action, or as a warning pointer when anything was skipped (R12). The
   notice stays because it is the progress region, and the poller rewrites its
-  sentence as soon as the page loads. The final result of a finished bulk update
+  sentence as soon as the page loads. Because the host takes the notice, it
+  strips the bulk result arguments from the address (see Result addresses), so a
+  reload or Back during a run shows no summary notice and no View Activity link,
+  and only the package rows show progress, which the poller keeps updating. The final result of a finished bulk update
   is still announced through the `ran-booster:admin-mutation-success` event,
   which reaches the host only for General and provider saves, so a finished bulk
   update produces no snackbar. That deviates from R9 and awaits an owner decision

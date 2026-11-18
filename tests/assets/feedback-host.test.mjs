@@ -1487,6 +1487,23 @@ test('a taken failure notice strips the address on first render and is shown onc
 	assert.deepEqual(replaced, [[{ htmx: true }, `${BASE}&package=a`]]);
 });
 
+test('a taken bulk queue notice strips the bulk result arguments, so a reload shows no summary', () => {
+	const bulk =
+		'ran_booster_bulk_operation=queue-update&ran_booster_bulk_selected=2&ran_booster_bulk_changed=0&ran_booster_bulk_unchanged=0&ran_booster_bulk_queued=2&ran_booster_bulk_skips=&ran_booster_bulk_runner=scheduled&ran_booster_bulk_error=&_ran_booster_bulk_notice_nonce=n';
+	const { env, replaced } = loadEnv(`${BASE}&${bulk}&package=a`, [], {
+		notices: [
+			{
+				key: 'bulk_update_queue',
+				intent: 'success',
+				text: 'Queued 2 plugins for sequential branch reinstall. Skipped: 0.',
+			},
+		],
+	});
+	env.run();
+	assert.equal(env.notices.length, 1);
+	assert.deepEqual(replaced, [[{ htmx: true }, `${BASE}&package=a`]]);
+});
+
 test('a consumed release check failure strips its result before reload', () => {
 	const url = `${BASE}&ran_booster_release_result=refresh_check_failed&ran_booster_release_success=0&ran_booster_release_result_nonce=n&ran_booster_release_recheck=1`;
 	const { env, replaced } = loadEnv(url, [], {

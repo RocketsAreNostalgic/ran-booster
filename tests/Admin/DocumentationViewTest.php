@@ -85,6 +85,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'Git provider request ID shown on a webhook attempt in Booster Activity', $html );
 		self::assertStringContainsString( 'Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-webhook-cleanup">Retained webhook setup and cleanup</h4>', $html );
+		self::assertStringContainsString( '<h4 id="ran-booster-deployment-recovery">When a deployment stops part-way</h4>', $html );
 		self::assertStringContainsString( 'Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup', $html );
 		self::assertStringContainsString( 'any branch-managed package using the same repository can continue to need the webhook', $html );
 		self::assertStringContainsString( 'Remove the remote Git provider webhook first, then remove only a local signing secret that is no longer used', $html );

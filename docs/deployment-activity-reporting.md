@@ -174,6 +174,9 @@ provider failure's screened `source_code` as a diagnostic Activity fact. It neve
 selects an outcome or sentence. Branch settlement retains it only for the observed
 running attempt when selection, adoption and the stored snapshot still match in the
 terminal transaction. Cleanup supersession and runner-throw reconciliation omit it.
+Rendering re-screens the stored reference for Core failed or rejected install,
+update and credential-validation rows. It does not re-prove the writer's attempt
+binding or interpret the code as an outcome or provider identity.
 Invalid optional codes are omitted without discarding the outcome. The attempt
 snapshot, failure email and support export do not include the code.
 

@@ -1346,7 +1346,7 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 	}
 
-	public function test_source_code_list_and_detail_require_core_provenance_and_exact_tuple(): void {
+	public function test_source_code_list_and_detail_use_screened_core_failure_references(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Preserve the isolated request fixture.
 		$previous_get                            = $_GET;
 		$had_options                             = array_key_exists( 'ran_booster_activity_options', $GLOBALS );
@@ -1435,20 +1435,12 @@ final class TroubleshootingViewTest extends TestCase {
 			$record['provenance'] = 'core';
 			$valid_record         = $record;
 			foreach ( array(
-				array( 'status' => 'rejected' ),
-				array( 'subject_identity' => 'foreign/main.php' ),
-				array( 'adoption_token' => 'gh:R_example:00000000-0000-4000-8000-000000000002' ),
-				array(
-					'reason' => 'worker_stopped',
-					'facts'  => wp_json_encode( array_replace( $facts, array( 'deployment_outcome' => 'worker_stopped' ) ) ),
-				),
-				array(
-					'reason' => 'provider_selection_changed',
-					'facts'  => wp_json_encode( array_replace( $facts, array( 'deployment_outcome' => 'provider_selection_changed' ) ) ),
-				),
-				array( 'facts' => wp_json_encode( array_replace( $facts, array( 'deployment_mutation_started_at' => '2026-11-17 00:00:00' ) ) ) ),
-				array( 'facts' => wp_json_encode( array_replace( $facts, array( 'deployment_settled_by' => 'runner_throw' ) ) ) ),
-				array( 'facts' => wp_json_encode( array_replace( $facts, array( 'deployment_resolved_by' => 1 ) ) ) ),
+				array( 'status' => 'succeeded' ),
+				array( 'status' => 'incomplete' ),
+				array( 'status' => 'skipped' ),
+				array( 'provenance' => 'provider' ),
+				array( 'operation' => 'delete' ),
+				array( 'operation' => 'credential.save' ),
 			) as $change ) {
 				$record           = array_replace( $valid_record, $change );
 				$_GET             = array(
@@ -1457,13 +1449,26 @@ final class TroubleshootingViewTest extends TestCase {
 				);
 				$db->read_results = array( array( $record ) );
 				self::assertNull( $presenter->activity()['source_reference'] ?? null, implode( ', ', array_keys( $change ) ) );
-				if ( ! isset( $change['adoption_token'] ) && ! isset( $change['subject_identity'] ) ) {
-					$_GET             = array();
-					$db->read_results = array( array(), array(), array( $record ) );
-					$listing          = $presenter->activity();
-					self::assertNull( $listing['items'][0]['source_reference'] ?? null, implode( ', ', array_keys( $change ) ) );
-				}
+				$_GET             = array();
+				$db->read_results = array( array(), array(), array( $record ) );
+				$listing          = $presenter->activity();
+				self::assertNull( $listing['items'][0]['source_reference'] ?? null, implode( ', ', array_keys( $change ) ) );
 			}
+			$spaced           = array_replace( $valid_record, array( 'subject_identity' => 'example/My Plugin.php' ) );
+			$_GET             = array();
+			$db->read_results = array( array(), array(), array( $spaced ) );
+			self::assertSame( 'api.abuse_detected', $presenter->activity()['items'][0]['source_reference'] );
+			$_GET                = array(
+				'attempt'   => '17',
+				'reference' => str_repeat( 'a', 32 ),
+			);
+			$journal->rows       = array( array_replace( $row, array( 'request_json' => str_replace( 'example/main.php', 'example/My Plugin.php', $row['request_json'] ) ) ) );
+			$db->read_results    = array( array( $spaced ) );
+			$deployment_activity = $presenter->activity();
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+			self::assertStringContainsString( 'GitHub: <code>api.abuse_detected</code>', (string) ob_get_clean() );
+			$journal->rows       = array( $row );
 			$record              = $valid_record;
 			$_GET                = array(
 				'attempt'   => '17',
@@ -1474,9 +1479,6 @@ final class TroubleshootingViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
 			self::assertStringNotContainsString( 'api.abuse_detected', (string) ob_get_clean() );
-			$record['provider'] = 'bb';
-			$db->read_results   = array( array( $record ) );
-			self::assertNull( $presenter->activity()['source_reference'] );
 			$db->read_results    = array( false );
 			$deployment_activity = $presenter->activity();
 			self::assertFalse( $deployment_activity['unavailable'] );
@@ -1484,6 +1486,7 @@ final class TroubleshootingViewTest extends TestCase {
 			require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
 			self::assertStringContainsString( 'repository or credential configuration is invalid', (string) ob_get_clean() );
 			foreach ( array(
+				'failed'          => 'provider_request_invalid',
 				'running'         => null,
 				'needs_attention' => 'restoration_uncertain',
 			) as $state => $outcome ) {
@@ -1508,13 +1511,24 @@ final class TroubleshootingViewTest extends TestCase {
 						)
 					);
 				}
-				$db->read_results    = array( false );
-				$deployment_activity = $presenter->activity();
-				self::assertFalse( $deployment_activity['unavailable'] );
-				ob_start();
-				require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
-				$html = (string) ob_get_clean();
-				self::assertStringContainsString( 'running' === $state ? 'Reconcile stopped worker' : 'Booster verified a later deployment', $html );
+				foreach ( array( false, true ) as $throwing ) {
+					// WordPress query filters can throw through get_results(), rather than returning false.
+					$db->read_failure    = $throwing ? new \RuntimeException( 'Optional Activity query filter failed.' ) : null;
+					$db->read_results    = array( false );
+					$deployment_activity = $presenter->activity();
+					self::assertFalse( $deployment_activity['unavailable'] );
+					self::assertNotNull( $deployment_activity['detail'] );
+					self::assertNull( $deployment_activity['source_reference'] ?? null );
+					ob_start();
+					require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+					$html     = (string) ob_get_clean();
+					$expected = 'running' === $state ? 'Reconcile stopped worker' : ( 'needs_attention' === $state ? 'Booster verified a later deployment' : 'repository or credential configuration is invalid' );
+					self::assertStringContainsString( $expected, $html );
+					if ( 'needs_attention' === $state ) {
+						self::assertSame( 18, $deployment_activity['later_verified_attempt']?->get_id() );
+					}
+				}
+				$db->read_failure = null;
 			}
 			$journal->rows    = array( $row );
 			$without_activity = new \RAN\Admin\DeploymentAdminPresenter( attempts: $attempts );
@@ -1526,6 +1540,7 @@ final class TroubleshootingViewTest extends TestCase {
 			require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
 			self::assertStringContainsString( 'Deployment activity is temporarily unavailable.', (string) ob_get_clean() );
 			$journal->fail_reads        = false;
+			$record['provider']         = 'bb';
 			$record['operation']        = 'credential.validate';
 			$record['subject_type']     = 'provider';
 			$record['status']           = 'rejected';
@@ -1557,7 +1572,7 @@ final class TroubleshootingViewTest extends TestCase {
 				$db->read_results = array( array(), array(), array( $record ) );
 				$listing          = $presenter->activity();
 				self::assertSame( 'api.abuse_detected', $listing['items'][0]['source_reference'] );
-				foreach ( array( array( 'status' => 'succeeded' ), array( 'reason' => 'provider_request_invalid' ), array( 'subject_identity' => 'gh' ), array( 'correlation' => 'invalid' ) ) as $change ) {
+				foreach ( array( array( 'status' => 'succeeded' ), array( 'provenance' => 'provider' ), array( 'operation' => 'credential.save' ) ) as $change ) {
 					$db->read_results = array( array(), array(), array( array_replace( $record, $change ) ) );
 					$listing          = $presenter->activity();
 					self::assertNull( $listing['items'][0]['source_reference'] ?? null );

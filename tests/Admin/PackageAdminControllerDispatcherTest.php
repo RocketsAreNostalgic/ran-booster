@@ -51,6 +51,30 @@ use WP_Error;
 
 final class PackageAdminControllerDispatcherTest extends TestCase {
 
+	/** @return iterable<string,array{string,bool,string}> */
+	public static function unavailable_save_branches(): iterable {
+		foreach ( array( 'ref_not_found', 'redirect_blocked' ) as $reason ) {
+			foreach ( array( false, true ) as $after_lookup ) {
+				foreach ( array( 'plugin', 'theme' ) as $type ) {
+					yield $reason . ( $after_lookup ? ' branch ' : ' repository ' ) . $type => array( $reason, $after_lookup, $type );
+				}
+			}
+		}
+	}
+
+	#[DataProvider( 'unavailable_save_branches' )]
+	public function test_missing_and_redirected_branches_refuse_save_without_fallback( string $reason, bool $after_lookup, string $type ): void {
+		$package   = EditBoundaryPackage::make( 'plugin' === $type ? 'fixture/fixture.php' : 'fixture', 'gh' );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( 503, new \RAN\RepositoryProvider\ProviderFailure( $reason, 503 ), $after_lookup ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' )->with( self::callback( static fn ( mixed $message ): bool => $message instanceof WP_Error && 'The selected branch could not be found. Check its name on the provider.' === $message->get_error_message() ) );
+		$request               = $this->unchanged_edit_request();
+		$request['stylesheet'] = 'fixture';
+		$result                = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-' . $type, $request, true );
+		self::assertFalse( $result );
+	}
+
 	public function test_manual_working_copy_copy_requires_one_exact_core_activity_record(): void {
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
 		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
@@ -911,7 +935,7 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 
 	public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
 		unset( $request );
-		throw new \RuntimeException( 'Archive preparation is not used by this test.' );
+		return new \RAN\Tests\RepositoryProvider\Support\ExternalFixturePreparedArchive( 'https://example.test/unused.zip', str_repeat( 'a', 40 ) );
 	}
 }
 
@@ -922,7 +946,7 @@ final class FailingLookupProvider implements RepositoryProvider {
 
 	public int $lookups = 0;
 
-	public function __construct( private readonly int $code, private readonly ?\RAN\RepositoryProvider\ProviderFailure $failure = null ) {
+	public function __construct( private readonly int $code, private readonly ?\RAN\RepositoryProvider\ProviderFailure $failure = null, private readonly bool $after_lookup = false ) {
 	}
 
 	public function get_metadata(): ProviderMetadata {
@@ -932,6 +956,9 @@ final class FailingLookupProvider implements RepositoryProvider {
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
 		unset( $request );
 		++$this->lookups;
+		if ( $this->after_lookup ) {
+			return new RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'owner/original', 'fixture', 'repository-id', false, 'main', null );
+		}
 
 		throw null === $this->failure
 			? new \RuntimeException( 'Provider lookup failed.', $this->code )
@@ -940,7 +967,7 @@ final class FailingLookupProvider implements RepositoryProvider {
 
 	public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
 		unset( $request );
-		throw new \RuntimeException( 'Archive preparation is not used by this test.' );
+		throw null === $this->failure ? new \RuntimeException( 'Provider lookup failed.', $this->code ) : new \RAN\RepositoryProvider\ProviderRequestFailed( $this->failure );
 	}
 }
 

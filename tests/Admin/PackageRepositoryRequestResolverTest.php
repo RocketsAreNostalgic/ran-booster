@@ -36,6 +36,65 @@ use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 final class PackageRepositoryRequestResolverTest extends TestCase {
 
+	/** @return list<array{string,bool,?string}> */
+	public static function save_branch_targets(): array {
+		return array( array( '', false, null ), array( 'feature/é', false, null ), array( 'feature/private', true, 'deployment-profile' ) );
+	}
+
+	/** @return list<array{bool}> */
+	public static function failed_branch_revisions(): array {
+		return array( array( false ), array( true ) );
+	}
+
+	#[DataProvider( 'failed_branch_revisions' )]
+	public function test_save_discards_preparation_when_revision_cannot_be_verified( bool $typed_failure ): void {
+		$provider = $this->createMock( RepositoryProvider::class );
+		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'bb' ), 'Fixture', 'https://example.test/', 'Owner' ) );
+		$provider->method( 'get_provider_diagnostics' )->willReturn( $this->createStub( \RAN\RepositoryProvider\ProviderDiagnostics::class ) );
+		$provider->method( 'resolve_repository' )->willReturn( new RepositoryDescriptor( ProviderCode::parse( 'bb' ), 'owner/repository', 'repository', 'repo-42', false, 'main', null ) );
+		$archive = $this->createMock( PreparedArchive::class );
+		$archive->expects( self::never() )->method( 'get_url' );
+		$archive->expects( self::once() )->method( 'cleanup' );
+		if ( $typed_failure ) {
+			$failure = new \RAN\RepositoryProvider\ProviderRequestFailed( new \RAN\RepositoryProvider\ProviderFailure( 'ref_not_found' ) );
+			$archive->method( 'get_resolved_ref' )->willThrowException( $failure );
+			$this->expectExceptionObject( $failure );
+		} else {
+			$archive->method( 'get_resolved_ref' )->willReturn( '' );
+			$this->expectException( RuntimeException::class );
+		}
+		$provider->method( 'prepare_archive' )->willReturn( $archive );
+		( new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) ) )->resolve_branch(
+			array(
+				'provider'   => 'bb',
+				'repository' => 'owner/repository',
+			)
+		);
+	}
+
+	#[DataProvider( 'save_branch_targets' )]
+	public function test_save_verifies_the_chosen_branch_with_the_resolved_access( string $branch, bool $is_private, ?string $credential ): void {
+		$provider = $this->createMock( RepositoryProvider::class );
+		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'bb' ), 'Fixture', 'https://example.test/', 'Owner' ) );
+		$provider->method( 'get_provider_diagnostics' )->willReturn( $this->createStub( \RAN\RepositoryProvider\ProviderDiagnostics::class ) );
+		$provider->method( 'resolve_repository' )->willReturn( new RepositoryDescriptor( ProviderCode::parse( 'bb' ), 'owner/repository', 'repository', 'repo-42', $is_private, 'trunk', $credential ) );
+		$archive = $this->createMock( PreparedArchive::class );
+		$archive->expects( self::never() )->method( 'get_url' );
+		$archive->method( 'get_resolved_ref' )->willReturn( str_repeat( 'a', 40 ) );
+		$archive->expects( self::once() )->method( 'cleanup' );
+		$expected_branch = '' === $branch ? 'trunk' : $branch;
+		$provider->expects( self::once() )->method( 'prepare_archive' )->with( self::callback( static fn ( ArchiveRequest $request ): bool => $expected_branch === $request->ref && 'repo-42' === $request->repository->provider_repository_id && $is_private === $request->repository->private && $credential === $request->repository->credential_id ) )->willReturn( $archive );
+		$result = ( new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) ) )->resolve_branch(
+			array(
+				'provider'      => 'bb',
+				'repository'    => 'owner/repository',
+				'branch'        => $branch,
+				'credential_id' => $credential ?? '',
+			)
+		);
+		self::assertSame( '' === $branch ? 'trunk' : $branch, $result['branch'] );
+	}
+
 	/** @param array<string, mixed> $input */
 	#[DataProvider( 'invalid_command_providers' )]
 	public function test_install_commands_require_an_exact_provider_code( array $input ): void {
@@ -97,6 +156,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		self::assertSame( '1', $result['private'] );
 		self::assertSame( 'bitbucket-deploy', $result['credential_id'] );
 		self::assertSame( 'trunk', $result['branch'] );
+		self::assertNull( $provider->archive_request, 'Generic repository resolution remains metadata-only.' );
 		self::assertInstanceOf( RepositoryLookupRequest::class, $provider->request );
 		self::assertSame( $opaque_locator, $provider->request->locator );
 		self::assertSame( 'resolved-package', $result['package_slug'] );
@@ -339,6 +399,18 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 
 		self::assertNotNull( $provider->request );
 		self::assertSame( 'public_lookup', $provider->request->credential_id );
+		self::assertNull( $provider->archive_request, 'Public metadata resolution does not verify a branch.' );
+		( new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) ) )->resolve_branch(
+			array(
+				'provider'                            => 'gh',
+				'repository'                          => 'owner/repository',
+				'provider_repository_identity_source' => 'picker',
+				'public_lookup_profile_id'            => 'public_lookup',
+			)
+		);
+		self::assertNotNull( $provider->archive_request );
+		self::assertSame( 'public_lookup', $provider->archive_request->repository->credential_id );
+		self::assertFalse( $provider->archive_request->repository->private );
 		self::assertTrue( $provider->request->public_only );
 		self::assertSame( '', $result['credential_id'] );
 		self::assertSame( '0', $result['private'] );
@@ -537,7 +609,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		return $plugin;
 	}
 
-	/** @return RepositoryProvider&WebhookNormalizer&object{request: ?RepositoryLookupRequest} */
+	/** @return RepositoryProvider&WebhookNormalizer&object{request: ?RepositoryLookupRequest,archive_request:?ArchiveRequest} */
 	private function resolving_provider(
 		RepositoryDescriptor $descriptor,
 		?ProviderCode $registered_code = null
@@ -548,6 +620,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public ?RepositoryLookupRequest $request;
+			public ?ArchiveRequest $archive_request = null;
 
 			public function __construct(
 				private RepositoryDescriptor $descriptor,
@@ -566,9 +639,9 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				return $this->descriptor;
 			}
 
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
-				throw new RuntimeException( 'Archive preparation is not used by this test.' );
+				$this->archive_request = $request;
+				return new \RAN\Tests\RepositoryProvider\Support\ExternalFixturePreparedArchive( 'https://example.test/unused.zip', str_repeat( 'a', 40 ) );
 			}
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of normalize_webhook retains the production method contract; these inputs do not affect this controlled result.
@@ -586,7 +659,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		};
 	}
 
-	/** @return RepositoryProvider&CredentialedPublicRepositoryBrowser&object{request: ?RepositoryLookupRequest} */
+	/** @return RepositoryProvider&CredentialedPublicRepositoryBrowser&object{request: ?RepositoryLookupRequest,archive_request:?ArchiveRequest} */
 	private function credentialed_resolving_provider(
 		RepositoryDescriptor $descriptor
 	): RepositoryProvider&CredentialedPublicRepositoryBrowser {
@@ -595,6 +668,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 			public ?RepositoryLookupRequest $request = null;
+			public ?ArchiveRequest $archive_request  = null;
 
 			public function __construct( private RepositoryDescriptor $descriptor ) {
 			}
@@ -618,9 +692,9 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				return $this->descriptor;
 			}
 
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 			public function prepare_archive( ArchiveRequest $request ): PreparedArchive {
-				throw new RuntimeException( 'Archive preparation is not used by this test.' );
+				$this->archive_request = $request;
+				return new \RAN\Tests\RepositoryProvider\Support\ExternalFixturePreparedArchive( 'https://example.test/unused.zip', str_repeat( 'a', 40 ) );
 			}
 		};
 	}

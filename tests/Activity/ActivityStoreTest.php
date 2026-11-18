@@ -640,6 +640,89 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertStringContainsString( 'AND NOT (', $this->connection->queries[0] );
 	}
 
+	public function test_needing_attention_records_its_completion_time_once(): void {
+		$correlation = str_repeat( 'a', 32 );
+		self::assertTrue( $this->store->progress_by_correlation( $correlation, 'deployment.running', facts: array( 'deployment_state' => 'running' ) ) );
+		self::assertStringNotContainsString( 'completed_at', (string) end( $this->connection->queries ) );
+		self::assertTrue( $this->store->progress_by_correlation( $correlation, 'deployment.needs_attention', facts: array( 'deployment_state' => 'needs_attention' ) ) );
+		self::assertMatchesRegularExpression( "/, completed_at = COALESCE\(completed_at, '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'\) WHERE correlation = %s/", (string) end( $this->connection->queries ) );
+	}
+
+	public function test_decisive_update_outcomes_classify_review_failure_and_clearing(): void {
+		$capture  = self::capture();
+		$packages = array(
+			array(
+				'subject_type'     => 'plugin',
+				'subject_identity' => 'review/review.php',
+				'adoption_token'   => $capture['adoption_token'],
+			),
+			array(
+				'subject_type'     => 'plugin',
+				'subject_identity' => 'failed/failed.php',
+				'adoption_token'   => $capture['adoption_token'],
+			),
+			array(
+				'subject_type'     => 'theme',
+				'subject_identity' => 'cleared',
+				'adoption_token'   => $capture['adoption_token'],
+			),
+			array(
+				'subject_type'     => 'theme',
+				'subject_identity' => 'unrecorded',
+				'adoption_token'   => $capture['adoption_token'],
+			),
+		);
+		$row      = static fn ( int $index, string $status, string $facts ): object => (object) array(
+			'id'               => 10 - $index,
+			'context_key'      => hash( 'sha256', $packages[ $index ]['subject_type'] . "\0" . $packages[ $index ]['subject_identity'] . "\0" . $capture['adoption_token'] . "\0" ),
+			'subject_type'     => $packages[ $index ]['subject_type'],
+			'subject_identity' => $packages[ $index ]['subject_identity'],
+			'adoption_token'   => $capture['adoption_token'],
+			'status'           => $status,
+			'facts'            => $facts,
+		);
+
+		$this->connection->read_results = array(
+			array(
+				$row( 0, 'failed', '{}' ),
+				$row( 0, 'incomplete', '{"deployment_resolved_at":null}' ),
+				$row( 1, 'incomplete', '{"deployment_resolved_at":"2026-11-18 10:00:00"}' ),
+				$row( 2, 'succeeded', '{}' ),
+			),
+		);
+		$read                           = $this->store->decisive_update_outcomes( $packages );
+		self::assertTrue( $read['available'] );
+		self::assertSame( array( 'needs_review', 'failed', 'clear', 'clear' ), array_column( $read['outcomes'], 'state' ) );
+		self::assertSame( 'incomplete', $read['outcomes'][0]['record']['status'] ?? null );
+		self::assertNull( $read['outcomes'][3]['record'] );
+		$query = (string) end( $this->connection->queries );
+		self::assertStringContainsString( 'ORDER BY completed_at DESC, id DESC', $query );
+		self::assertStringContainsString( "reason NOT IN ('lock_unavailable','policy_blocked','provider_rate_limited','stale_event')", $query );
+		self::assertStringContainsString( "status = 'succeeded' AND reason = 'deployed'", $query );
+		self::assertStringContainsString( 'completed_at IS NOT NULL', $query );
+
+		$this->connection->read_results = array( false );
+		self::assertFalse( $this->store->decisive_update_outcomes( $packages )['available'] );
+		$queries = count( $this->connection->queries );
+		self::assertFalse( $this->store->decisive_update_outcomes( array( array( 'adoption_token' => 'invalid' ) + $packages[0] ) )['available'] );
+		$GLOBALS['ran_booster_activity_options'] = array();
+		self::assertFalse( $this->store->decisive_update_outcomes( $packages )['available'] );
+		self::assertCount( $queries, $this->connection->queries );
+	}
+
+	public function test_prune_keeps_the_deciding_deployment_of_a_current_adoption(): void {
+		$capture = array_replace(
+			self::capture(),
+			array(
+				'context' => '',
+				'purpose' => null,
+			)
+		);
+		self::assertSame( 0, $this->store->prune( array( $capture ) ) );
+		self::assertStringContainsString( 'UNION SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY context_key ORDER BY completed_at DESC, id DESC)', $this->connection->queries[0] );
+		self::assertContains( hash( 'sha256', "plugin\0example/example.php\0" . $capture['adoption_token'] . "\0" ), array_merge( ...array_column( $this->connection->prepared, 'args' ) ) );
+	}
+
 	public function test_install_refuses_future_schema_and_missing_columns(): void {
 		$GLOBALS['ran_booster_activity_options'][ ActivityStore::VERSION_OPTION ] = '2';
 		self::assertFalse( $this->store->install() );

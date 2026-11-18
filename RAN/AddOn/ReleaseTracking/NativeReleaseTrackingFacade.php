@@ -1065,10 +1065,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			$package_root = $identifier;
 		} else {
-			$parts = explode( '/', $identifier );
-			if ( 2 !== count( $parts ) || '' === $parts[0] || '' === $parts[1] ) {
-				return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::INVALID_PACKAGE_IDENTITY );
-			}
 			$package_root = $parts[0];
 		}
 

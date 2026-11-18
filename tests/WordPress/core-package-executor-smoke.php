@@ -7,8 +7,10 @@ if ( ! is_string( $ran_booster_root ) || '' === $ran_booster_root ) {
 	throw new RuntimeException( 'The executor source root is unavailable.' );
 }
 
+require_once WP_PLUGIN_DIR . '/ran-booster/RAN/WordPress/BranchUpdaterBootstrap.php';
+RAN\WordPress\BranchUpdaterBootstrap::register();
+
 $ran_booster_executor_source = array(
-	RAN\UpdaterSupport\V1\PackageDirectory::class    => '/vendor/ran/updater-support/src/PackageDirectory.php',
 	RAN\Deployment\PreparedArtifact::class           => '/RAN/Deployment/PreparedArtifact.php',
 	RAN\Runtime\RuntimeSupport::class                => '/RAN/Runtime/RuntimeSupport.php',
 	RAN\WordPress\CorePackageExecutionFailure::class => '/RAN/WordPress/CorePackageExecutionFailure.php',
@@ -29,8 +31,6 @@ foreach ( $ran_booster_executor_source as $ran_booster_class => $ran_booster_rel
 	require_once $ran_booster_source_path;
 }
 
-require_once WP_PLUGIN_DIR . '/ran-booster/RAN/WordPress/BranchUpdaterBootstrap.php';
-RAN\WordPress\BranchUpdaterBootstrap::register();
 require_once __DIR__ . '/CorePackageSmokeArtifact.php';
 
 require_once ABSPATH . 'wp-admin/includes/file.php';

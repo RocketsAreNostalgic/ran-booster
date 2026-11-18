@@ -916,27 +916,23 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		);
 		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( $status ) );
 		$package  = new PackageProjection( 'release_asset' );
-		$render   = static function ( array $denied, bool $network ) use ( $controls, $package ): string {
+		$render   = static function ( array $denied ) use ( $controls, $package ): string {
 			$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = $denied;
-			$GLOBALS['ran_booster_release_management_test_network_admin']       = $network;
 			try {
 				ob_start();
 				$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 
 				return (string) ob_get_clean();
 			} finally {
-				unset( $GLOBALS['ran_booster_release_management_test_denied_capabilities'], $GLOBALS['ran_booster_release_management_test_network_admin'] );
+				unset( $GLOBALS['ran_booster_release_management_test_denied_capabilities'] );
 			}
 		};
 		$no_link  = 'data-ran-booster-managed-release-native-update-url=""';
 
 		// The Plugins screen refuses without activate_plugins and its update frame without update_plugins.
-		self::assertStringContainsString( $no_link, $render( array( 'activate_plugins' ), false ) );
-		self::assertStringContainsString( $no_link, $render( array( 'update_plugins' ), false ) );
-		// Only the network Plugins screen also requires manage_network_plugins.
-		self::assertStringContainsString( $no_link, $render( array( 'manage_network_plugins' ), true ) );
-		self::assertStringContainsString( 'https://example.test/wp-admin/plugins.php?action=update-selected', $render( array( 'manage_network_plugins' ), false ) );
-		self::assertStringContainsString( 'https://example.test/wp-admin/network/plugins.php?action=update-selected', $render( array(), true ) );
+		self::assertStringContainsString( $no_link, $render( array( 'activate_plugins' ) ) );
+		self::assertStringContainsString( $no_link, $render( array( 'update_plugins' ) ) );
+		self::assertStringContainsString( 'https://example.test/wp-admin/plugins.php?action=update-selected', $render( array( 'manage_network_plugins' ) ) );
 	}
 
 	public function test_package_operation_actions_render_a_disabled_secondary_update_now_for_release_packages_only(): void {

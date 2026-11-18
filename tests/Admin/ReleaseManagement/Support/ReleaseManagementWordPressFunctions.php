@@ -145,12 +145,8 @@ function is_multisite(): bool {
 	return true === ( $GLOBALS['ran_booster_release_management_test_multisite'] ?? false );
 }
 
-function is_network_admin(): bool {
-	return true === ( $GLOBALS['ran_booster_release_management_test_network_admin'] ?? false );
-}
-
 function self_admin_url( string $path = '' ): string {
-	return is_network_admin() ? network_admin_url( $path ) : admin_url( $path );
+	return admin_url( $path );
 }
 
 function wp_nonce_url( string $actionurl, int|string $action = -1, string $name = '_wpnonce' ): string {

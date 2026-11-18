@@ -388,7 +388,7 @@ final class ReleaseManagementDisplay {
 		$type       = $status->type();
 		$identifier = $status->identifier();
 		if ( 'plugin' === $type ) {
-			if ( ! current_user_can( 'activate_plugins' ) || ! current_user_can( 'update_plugins' ) || ( is_network_admin() && ! current_user_can( 'manage_network_plugins' ) ) ) {
+			if ( ! current_user_can( 'activate_plugins' ) || ! current_user_can( 'update_plugins' ) ) {
 				return '';
 			}
 			return wp_nonce_url(

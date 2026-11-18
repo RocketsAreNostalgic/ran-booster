@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.0.0-beta.47](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.46...v1.0.0-beta.47) (2026-11-18)
+
+
+### Features
+
+* **activity:** record provider failure references ([#1016](https://github.com/RocketsAreNostalgic/ran-booster/issues/1016)) ([414f059](https://github.com/RocketsAreNostalgic/ran-booster/commit/414f0596346768aeac15bf46dd6c16449d27ce18))
+* **provider:** screen diagnostic source codes ([#1012](https://github.com/RocketsAreNostalgic/ran-booster/issues/1012)) ([99c3be3](https://github.com/RocketsAreNostalgic/ran-booster/commit/99c3be350ecc03506c98d1f89aee08b4c220c830))
+* **releases:** explain skipped release candidates ([#1008](https://github.com/RocketsAreNostalgic/ran-booster/issues/1008)) ([fafb2c7](https://github.com/RocketsAreNostalgic/ran-booster/commit/fafb2c7dd5ff26ebdbc80fbf5233cf0a6cc14ed2))
+* **webhooks:** sample closed intake reasons in debug capture ([#1006](https://github.com/RocketsAreNostalgic/ran-booster/issues/1006)) ([28d922b](https://github.com/RocketsAreNostalgic/ran-booster/commit/28d922b4bbd793ac7822e98864b7c65ce305ace5))
+
+
+### Bug Fixes
+
+* **admin-ui:** confirm credential identity switches ([#1018](https://github.com/RocketsAreNostalgic/ran-booster/issues/1018)) ([c4366c1](https://github.com/RocketsAreNostalgic/ran-booster/commit/c4366c1a1a65919c3c3da7f62dea42a1552501d2))
+* **admin-ui:** confirm package results from server markers ([#986](https://github.com/RocketsAreNostalgic/ran-booster/issues/986)) ([aac4e06](https://github.com/RocketsAreNostalgic/ran-booster/commit/aac4e06c5bc2ac3e8cea74cfd7aa7007966a3a87))
+* **admin-ui:** keep hidden provider links accessible ([#997](https://github.com/RocketsAreNostalgic/ran-booster/issues/997)) ([c4b6cc3](https://github.com/RocketsAreNostalgic/ran-booster/commit/c4b6cc31976ca0bfe865146297a362752aa1a776))
+* **admin-ui:** preserve feedback during history saves ([#984](https://github.com/RocketsAreNostalgic/ran-booster/issues/984)) ([2adfb8b](https://github.com/RocketsAreNostalgic/ran-booster/commit/2adfb8b4d45ceff06c1c4f444abdc6d68fb83f0d))
+* **admin-ui:** preserve native credential editing with Dialog ([#1003](https://github.com/RocketsAreNostalgic/ran-booster/issues/1003)) ([0a3e6de](https://github.com/RocketsAreNostalgic/ran-booster/commit/0a3e6de6b336ab92d4b574e4905309a04f01bb80))
+* **admin:** correct deployment outcome messages ([#1014](https://github.com/RocketsAreNostalgic/ran-booster/issues/1014)) ([297d2b8](https://github.com/RocketsAreNostalgic/ran-booster/commit/297d2b80170cadab444f37fa1253826805e9db41))
+* **admin:** show native credential errors in the form ([#1022](https://github.com/RocketsAreNostalgic/ran-booster/issues/1022)) ([e3b339d](https://github.com/RocketsAreNostalgic/ran-booster/commit/e3b339dd2aca18c7cbcf0235e429cea9e9bfd86a))
+* **deployment:** explain branch working-copy refusals ([#1001](https://github.com/RocketsAreNostalgic/ran-booster/issues/1001)) ([d04a904](https://github.com/RocketsAreNostalgic/ran-booster/commit/d04a904b34dcd7fda6af3b57ad7583e3f6c4fdd3))
+* **deployment:** explain credential-shaped ref refusal ([#992](https://github.com/RocketsAreNostalgic/ran-booster/issues/992)) ([46d384b](https://github.com/RocketsAreNostalgic/ran-booster/commit/46d384bc18b23b43d973c46ae3cb98d95fa03fe1))
+* **deployment:** identify runner throw settlement ([#991](https://github.com/RocketsAreNostalgic/ran-booster/issues/991)) ([ea0d343](https://github.com/RocketsAreNostalgic/ran-booster/commit/ea0d3436bf273b5edab2229a487f4453614c3eeb))
+* **packages:** keep installed folder as package identity ([#1007](https://github.com/RocketsAreNostalgic/ran-booster/issues/1007)) ([666b758](https://github.com/RocketsAreNostalgic/ran-booster/commit/666b75802312e5c8e82adb69814187f4fc654e5e))
+* **releases:** keep workflow text out of urls ([#989](https://github.com/RocketsAreNostalgic/ran-booster/issues/989)) ([17af97f](https://github.com/RocketsAreNostalgic/ran-booster/commit/17af97fc33e750b5d545aca73da9c445be2a06ca))
+* **support:** include failed manual actions in reports ([#1005](https://github.com/RocketsAreNostalgic/ran-booster/issues/1005)) ([2e2a35e](https://github.com/RocketsAreNostalgic/ran-booster/commit/2e2a35ebf8c8818427e07edc02403722c0f35aba))
+* **updates:** adopt published updater and provider contracts ([#1021](https://github.com/RocketsAreNostalgic/ran-booster/issues/1021)) ([95f6335](https://github.com/RocketsAreNostalgic/ran-booster/commit/95f633585f40e565ded7afb69695f1003211553c))
+* **webhook:** capture bounded admission refusal reasons ([#1013](https://github.com/RocketsAreNostalgic/ran-booster/issues/1013)) ([7b22c1d](https://github.com/RocketsAreNostalgic/ran-booster/commit/7b22c1d14786bca6d951d4ff05c0395136dda446))
+
 ## [1.0.0-beta.46](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.45...v1.0.0-beta.46) (2026-11-16)
 
 

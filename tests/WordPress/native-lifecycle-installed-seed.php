@@ -118,6 +118,13 @@ for ( $ran_booster_number = 1; $ran_booster_number <= (int) $ran_booster_scale; 
 	);
 	update_option( 'ran_booster_c4_native_items', $ran_booster_items, false );
 	$ran_booster_archives[ $ran_booster_repository ] = $ran_booster_archive;
+	// Manual plugin targets start active: the Update now link must update a plugin that is running.
+	if ( 'plugin' === $type && 'manual' === $ran_booster_policy ) {
+		wp_clean_plugins_cache( false );
+		if ( null !== activate_plugin( $ran_booster_identifier, '', false, true ) ) {
+			throw new RuntimeException( 'The native lifecycle manual plugin fixture was not activated.' );
+		}
+	}
 }
 update_option( 'ran_booster_c4_native_items', $ran_booster_items, false );
 update_option( 'ran_booster_c4_native_archives', $ran_booster_archives, false );

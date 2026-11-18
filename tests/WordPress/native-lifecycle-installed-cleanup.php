@@ -29,6 +29,7 @@ foreach ( array( $ran_booster_site, WP_CONTENT_DIR, WP_PLUGIN_DIR, get_theme_roo
 if ( ! is_file( WP_PLUGIN_DIR . '/ran-booster/ran-booster.php' ) ) {
 	throw new RuntimeException( 'Native cleanup requires installed Core.' );
 }
+require_once ABSPATH . 'wp-admin/includes/plugin.php';
 $ran_booster_items = get_option( 'ran_booster_c4_native_items', array() );
 if ( ! is_array( $ran_booster_items ) || count( $ran_booster_items ) > 20 ) {
 	throw new RuntimeException( 'Native cleanup manifest is invalid.' );
@@ -51,6 +52,9 @@ foreach ( $ran_booster_items as $ran_booster_item ) {
 	}
 	if ( is_link( $ran_booster_directory ) || ( file_exists( $ran_booster_directory ) && realpath( $ran_booster_directory ) !== $ran_booster_directory ) ) {
 		throw new RuntimeException( 'Native cleanup target is unsafe.' );
+	}
+	if ( 'plugin' === $type ) {
+		deactivate_plugins( $ran_booster_identifier, true );
 	}
 	if ( is_dir( $ran_booster_directory ) ) {
 		$ran_booster_expected = 'plugin' === $type ? array( $ran_booster_metadata ) : array( 'style.css', 'index.php', 'functions.php' );

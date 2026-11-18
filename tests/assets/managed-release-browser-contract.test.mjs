@@ -152,7 +152,7 @@ const createHarness = (
 		ranBoosterManagedReleaseInspectNonce: 'inspect',
 		ranBoosterManagedReleaseAjaxUrl: '/ajax',
 		ranBoosterManagedReleaseNativeUpdateUrl:
-			'/wp-admin/update.php?action=upgrade-plugin&plugin=example%2Fplugin.php&_wpnonce=upgrade',
+			'/wp-admin/plugins.php?action=update-selected&plugins=example%2Fplugin.php&_wpnonce=bulk',
 		ranBoosterManagedReleaseNativeUpdateVersion: '3.0.0',
 		ranBoosterManagedReleaseNativeUpdateReleaseId: nativeOfferReleaseId,
 	};
@@ -587,7 +587,7 @@ test('managed browser inspects the newer release and enables Update now when the
 	const update = harness.nodes.get('native-update');
 	assert.equal(update.getAttribute('aria-disabled'), 'false');
 	assert.equal(update.textContent, 'Update to 3.0.0');
-	assert.match(update.getAttribute('href'), /action=upgrade-plugin/);
+	assert.match(update.getAttribute('href'), /action=update-selected/);
 
 	const installed = radioFor(harness, 'same');
 	installed.checked = true;
@@ -900,7 +900,7 @@ test('managed browser enables the native Core update only for its exact newer in
 	);
 	assert.equal(
 		harness.nodes.get('native-update').getAttribute('href'),
-		'/wp-admin/update.php?action=upgrade-plugin&plugin=example%2Fplugin.php&_wpnonce=upgrade'
+		'/wp-admin/plugins.php?action=update-selected&plugins=example%2Fplugin.php&_wpnonce=bulk'
 	);
 	const outcome = descendants(harness.nodes.get('candidate-list')).find(
 		(node) => node.className === 'ran-booster-release-candidate__outcome'
@@ -1723,7 +1723,7 @@ test('the Update now button outside the browser is found, enabled, relabelled an
 	assert.equal(button.getAttribute('aria-disabled'), 'false');
 	assert.equal(button.getAttribute('tabindex'), null);
 	assert.equal(button.classList.contains('disabled'), false);
-	assert.match(button.getAttribute('href'), /upgrade-plugin/);
+	assert.match(button.getAttribute('href'), /update-selected/);
 	assert.equal(button.textContent, 'Update to 3.0.0');
 
 	await harness.nodes.get('retry').dispatch('click');

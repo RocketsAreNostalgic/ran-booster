@@ -48,7 +48,8 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 					$resolver->resolve( $request );
 				}
 				self::fail( 'Invalid path accepted.' );
-			} catch ( \RAN\InvalidPackageSubdirectory ) {
+			} catch ( \RAN\InvalidPackageSubdirectory $failure ) {
+				self::assertSame( 'The package subdirectory must be a normalized relative path.', $failure->getMessage() );
 				self::assertNull( $provider->request );
 			}
 		}

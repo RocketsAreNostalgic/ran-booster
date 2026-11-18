@@ -59,8 +59,8 @@ final readonly class PackageRepositoryRequestResolver {
 		$subdirectory_input = $request['subdirectory'] ?? null;
 		try {
 			$subdirectory = PackageDirectory::normalize( is_string( $subdirectory_input ) ? wp_unslash( $subdirectory_input ) : $subdirectory_input );
-		} catch ( InvalidArgumentException $failure ) {
-			throw new InvalidPackageSubdirectory( $failure->getMessage(), 0, $failure );
+		} catch ( InvalidArgumentException ) {
+			throw new InvalidPackageSubdirectory( 'The package subdirectory must be a normalized relative path.' );
 		}
 		$credential_input = $request['credential_id'] ?? null;
 		$credential_id    = is_string( $credential_input ) ? trim( wp_unslash( $credential_input ) ) : '';
@@ -157,8 +157,8 @@ final readonly class PackageRepositoryRequestResolver {
 		$subdirectory_input = $request['subdirectory'] ?? null;
 		try {
 			$subdirectory = PackageDirectory::normalize( is_string( $subdirectory_input ) ? wp_unslash( $subdirectory_input ) : $subdirectory_input );
-		} catch ( InvalidArgumentException $failure ) {
-			throw new InvalidPackageSubdirectory( $failure->getMessage(), 0, $failure );
+		} catch ( InvalidArgumentException ) {
+			throw new InvalidPackageSubdirectory( 'The package subdirectory must be a normalized relative path.' );
 		}
 
 		$credential_input = $request['credential_id'] ?? null;

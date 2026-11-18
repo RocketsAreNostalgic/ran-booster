@@ -143,6 +143,8 @@ final class CredentialEditorFallbackTest extends TestCase {
 			self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"][@hidden])' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form[@novalidate])' ) );
 			self::assertSame( 'post', $xpath->evaluate( 'string(//*[@id="ran-booster-credential-editor"]//form/@method)' ) );
+			self::assertSame( '#ran-booster-credential-editor', $xpath->evaluate( 'string(//*[@id="ran-booster-credential-editor"]//form/@action)' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form[@hx-post=""])' ) );
 			self::assertSame( 'save-access-profile', $xpath->evaluate( 'string(//*[@id="ran-booster-credential-editor"]//input[@name="ran_booster[action]"]/@value)' ) );
 			self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//select/option)' ) );
 			self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//input[contains(@name,"configuration")][@disabled or @required])' ) );
@@ -167,6 +169,15 @@ final class CredentialEditorFallbackTest extends TestCase {
 				)
 			)['open']
 		);
+	}
+
+	public function test_error_region_precedes_fields_for_add_and_edit(): void {
+		foreach ( array( array( 'open' => true ), array( 'id' => 'saved' ) ) as $request ) {
+			$xpath = $this->xpath( $this->render( $this->project( $request ), 'Save failed' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form/*[1][@id="ran-booster-access-profile-error"][not(@hidden)])' ) );
+			self::assertSame( 'Save failed', trim( (string) $xpath->evaluate( 'string(//*[@id="ran-booster-access-profile-error"])' ) ) );
+			self::assertSame( 'ran-booster-access-profile-error', $xpath->evaluate( 'string(//*[@id="ran-booster-credential-editor"]//form/@aria-describedby)' ) );
+		}
 	}
 
 	/**
@@ -247,8 +258,8 @@ final class CredentialEditorFallbackTest extends TestCase {
 	}
 
 	/** @param array<string, mixed> $credential_form Safe form projection. */
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The included production view reads this local template binding.
-	private function render( array $credential_form ): string {
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The included production view reads both local template bindings.
+	private function render( array $credential_form, ?string $credential_form_error = null ): string {
 		$provider                = $this->provider();
 		$has_credential_settings = true;
 		$has_webhook_settings    = false;

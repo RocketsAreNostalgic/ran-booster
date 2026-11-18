@@ -143,6 +143,7 @@ test('advanced summary typography applies only at the narrow breakpoint', () => 
 	assert.ok(summary);
 	assert.ok(fallback);
 	assert.match(summary.body, /font-size: var\(--ran-booster-font-size-sm\)/);
+	assert.match(summary.body, /overflow-wrap: anywhere/);
 	assert.ok(summary.selector.includes(createScope));
 	assert.ok(
 		parse(narrowMedia()).some((r) => r.selector === summary.selector),

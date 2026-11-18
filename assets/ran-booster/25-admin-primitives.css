@@ -1203,6 +1203,7 @@
 		[data-ran-booster-ui-disclosure="package-advanced-settings"]
 		.ran-booster-advanced-source-summary {
 		font-size: var(--ran-booster-font-size-sm);
+		overflow-wrap: anywhere;
 	}
 
 	.ran-booster-admin

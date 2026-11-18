@@ -2,6 +2,28 @@
  * CUA DOM-tab adapter for focused package-settings browser regressions.
  * These assertions inspect rendered geometry and focus, never CSS source.
  */
+
+/* At 390px with a long branch, pass the native height to the mounted check. */
+export async function assertCreateNoteFits(tab, fallbackHeight) {
+	const height = await tab.playwright.evaluate(() => {
+		const host = document.querySelector(
+			'.ran-booster-package-settings--create [data-ran-booster-ui-disclosure="package-advanced-settings"]'
+		);
+		const note = host?.querySelector(
+			'[data-ran-booster-ui-disclosure-meta]'
+		);
+		const trigger = host?.querySelector('[role="button"], summary');
+		if (!note || !trigger || note.scrollWidth > note.clientWidth) {
+			throw new Error('Create disclosure is missing or note overflows.');
+		}
+		return trigger.getBoundingClientRect().height;
+	});
+	if (fallbackHeight !== undefined) {
+		assertEqual(height, fallbackHeight, 'Create header height shifted.');
+	}
+	return height;
+}
+
 export async function assertNavigationProgress(tab, selector, busy = false) {
 	return tab.playwright.evaluate(
 		({ selector, busy }) => {

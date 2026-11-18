@@ -1182,6 +1182,66 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		}
 	}
 
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'source_completion_cases' )]
+	public function test_provider_source_fact_finishes_without_authority_refinement( string $scenario ): void {
+		$had_previous = array_key_exists( 'ran_booster_activity_options', $GLOBALS );
+		$previous     = $GLOBALS['ran_booster_activity_options'] ?? null;
+		try {
+			$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+			$this->repository                        = new DeploymentAttemptRepository( $this->database, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->database_lifecycle, activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ), selection: $this->queued_selection( $this->database ) );
+			if ( 'install' === $scenario ) {
+				$running = $this->manual( 'example' );
+			} else {
+				$this->webhook( 'example' );
+				$running = $this->repository->claim_next();
+			}
+			self::assertNotNull( $running );
+			$this->database->authority_reads               = 0;
+			$this->database->queries                       = array();
+			$this->database->selection->selection->queries = array();
+			if ( 'selection throw' === $scenario ) {
+				$this->database->selection->on_active_read = static function (): void {
+					throw new \RuntimeException( 'Selection read must not run during provider settlement.' );
+				};
+			} elseif ( 'adoption throw' === $scenario ) {
+				$this->database->on_management_read = static function (): void {
+					throw new \RuntimeException( 'Adoption read must not run during provider settlement.' );
+				};
+			}
+			$this->database->fail_commit         = 'commit' === $scenario;
+			$this->database->fail_query_contains = 'activity' === $scenario ? "SET status = 'failed'" : null;
+			$failure                             = new \RAN\RepositoryProvider\ProviderFailure( 'http_4xx_other', source_code: 'abuse_detected' );
+			$outcome                             = DeploymentOutcome::from_provider_failure( new \RAN\RepositoryProvider\ProviderRequestFailed( $failure ) );
+			try {
+				$terminal = $this->repository->finish( $running->get_id(), $outcome, working_copy_observation: 'unobserved' === $scenario ? null : $running );
+				self::assertNotContains( $scenario, array( 'commit', 'activity' ) );
+				self::assertSame( DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID, $terminal->get_outcome()?->get_code() );
+			} catch ( DeploymentStorageFailure ) {
+				self::assertContains( $scenario, array( 'commit', 'activity' ) );
+				self::assertSame( 'running', $this->database->rows[0]['state'] );
+			}
+			$facts = json_decode( (string) $this->database->activity_rows[0]['facts'], true );
+			self::assertSame( in_array( $scenario, array( 'commit', 'activity' ), true ) ? null : 'abuse_detected', $facts['source_code'] ?? null );
+			self::assertSame( 0, $this->database->authority_reads );
+			self::assertSame( array(), array_values( array_filter( $this->database->selection->selection->queries, static fn ( string $sql ): bool => str_contains( $sql, 'SELECT' ) ) ) );
+			self::assertSame( array(), array_values( array_filter( $this->database->queries, static fn ( string $sql ): bool => str_starts_with( $sql, 'SELECT' ) && str_contains( $sql, '`wp_ran_booster`' ) ) ) );
+			self::assertStringNotContainsString( 'abuse_detected', (string) $this->database->rows[0]['request_json'] );
+		} finally {
+			if ( ! $had_previous ) {
+				unset( $GLOBALS['ran_booster_activity_options'] );
+			} else {
+				$GLOBALS['ran_booster_activity_options'] = $previous;
+			}
+		}
+	}
+
+	/** @return iterable<string,array{string}> */
+	public static function source_completion_cases(): iterable {
+		foreach ( array( 'update', 'install', 'unobserved', 'selection throw', 'adoption throw', 'commit', 'activity' ) as $scenario ) {
+			yield $scenario => array( $scenario );
+		}
+	}
+
 	public function test_valid_but_different_terminal_timestamp_fails_readback(): void {
 		$running                              = $this->manual( 'example' );
 		$this->database->tamper_update_column = 'finished_at';

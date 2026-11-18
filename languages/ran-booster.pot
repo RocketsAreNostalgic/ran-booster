@@ -251,8 +251,8 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:155
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:301
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:353
-#: views/attempts/detail.php:98
-#: views/attempts/index.php:211
+#: views/attempts/detail.php:101
+#: views/attempts/index.php:217
 #: views/portability-review.php:280
 #: views/portability-review.php:312
 #: views/portability-review.php:313
@@ -708,7 +708,7 @@ msgid "RAN Booster could not remember the notice dismissal."
 msgstr ""
 
 #: RAN/Admin/CredentialExpiryReminder.php:76
-#: RAN/Admin/ProviderProfileAdminController.php:680
+#: RAN/Admin/ProviderProfileAdminController.php:684
 msgid "Expiry unknown"
 msgstr ""
 
@@ -776,72 +776,94 @@ msgid "Retry is allowed. No package files or settings were changed."
 msgstr ""
 
 #. translators: %d is the number of managed packages with a current background deployment failure.
-#: RAN/Admin/DeploymentAdminPresenter.php:54
+#: RAN/Admin/DeploymentAdminPresenter.php:55
 #, php-format
 msgid "%d managed package needs attention."
 msgid_plural "%d managed packages need attention."
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:58
+#: RAN/Admin/DeploymentAdminPresenter.php:59
 #: RAN/Admin/ManagedPluginFailureRows.php:72
 msgid "Replace credential"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:61
+#: RAN/Admin/DeploymentAdminPresenter.php:62
 msgid "RAN Booster automatic deployment failed:"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:64
+#: RAN/Admin/DeploymentAdminPresenter.php:65
 #: RAN/Admin/ManagedPluginFailureRows.php:70
 msgid "Review deployment"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:65
+#: RAN/Admin/DeploymentAdminPresenter.php:66
 msgid "Acknowledge this incident"
 msgstr ""
 
 #. translators: 1: safe deployment result, 2: random support reference, 3: activity page URL.
-#: RAN/Admin/DeploymentAdminPresenter.php:77
+#: RAN/Admin/DeploymentAdminPresenter.php:78
 #, php-format
 msgid "%1$s Reference: <code>%2$s</code>. <a href=\"%3$s\">View deployment activity</a>."
 msgstr ""
 
+#: RAN/Admin/DeploymentAdminPresenter.php:136
+msgid "GitHub"
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:136
+msgid "Bitbucket"
+msgstr ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:136
+#: RAN/Admin/DeploymentOutcomeMessage.php:80
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:121
+#: RAN/Troubleshooting/TroubleshootingService.php:234
+#: RAN/Troubleshooting/TroubleshootingService.php:247
+#: views/attempts/index.php:179
+#: views/overview-dashboard.php:53
+#: views/overview-dashboard.php:74
+#: views/overview-dashboard.php:81
+#: views/overview-dashboard.php:88
+#: views/portability-review.php:109
+#: views/settings-general.php:119
+#: views/settings-general.php:255
+#: views/settings-storage.php:51
+#: views/troubleshooting-installation.php:73
+#: views/troubleshooting-installation.php:165
+#: views/troubleshooting-installation.php:173
+#: views/troubleshooting.php:268
+#: assets/ran-booster-portability.js:785
+msgid "Unknown"
+msgstr ""
+
 #. translators: 1: random support reference, 2: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:134
+#: RAN/Admin/DeploymentAdminPresenter.php:153
 #, php-format
 msgid "Deployment attempt left running. Reference: <code>%1$s</code>. <a href=\"%2$s\">Reconcile it in Recent Activity</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:141
+#: RAN/Admin/DeploymentAdminPresenter.php:160
 #, php-format
 msgid "Booster could not confirm how an earlier deployment of the %1$s %2$s ended, so it has paused retries. No deployment is currently running. <a href=\"%3$s\">Check the package and allow another attempt</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: deployment state, 4: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:144
+#: RAN/Admin/DeploymentAdminPresenter.php:163
 #, php-format
 msgid "Booster is already tracking the %1$s %2$s in state %3$s. <a href=\"%4$s\">Review this deployment activity record</a> before trying again."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:295
-#: RAN/Admin/DeploymentAdminPresenter.php:331
-#: RAN/Admin/DeploymentAdminPresenter.php:345
-msgid "GitHub"
+#: RAN/Admin/DeploymentAdminPresenter.php:198
+msgid "Failure reference"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:295
-#: RAN/Admin/DeploymentAdminPresenter.php:331
-#: RAN/Admin/DeploymentAdminPresenter.php:345
-msgid "Bitbucket"
-msgstr ""
-
-#: RAN/Admin/DeploymentAdminPresenter.php:323
+#: RAN/Admin/DeploymentAdminPresenter.php:356
 msgid "Older activity filters were cleared. Use Git provider and Activity subject to filter activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:345
+#: RAN/Admin/DeploymentAdminPresenter.php:378
 #: RAN/Admin/PackageAdminController.php:370
 #: RAN/Admin/PackageAdminController.php:389
 #: RAN/Admin/PortabilityController.php:632
@@ -855,7 +877,7 @@ msgstr ""
 msgid "Theme"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:345
+#: RAN/Admin/DeploymentAdminPresenter.php:378
 #: RAN/Admin/PackageAdminController.php:370
 #: RAN/Admin/PackageAdminController.php:389
 #: RAN/Admin/PortabilityController.php:632
@@ -869,28 +891,28 @@ msgstr ""
 msgid "Plugin"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:350
+#: RAN/Admin/DeploymentAdminPresenter.php:383
 msgid "That Git provider filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:353
+#: RAN/Admin/DeploymentAdminPresenter.php:386
 msgid "That Git provider is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:369
+#: RAN/Admin/DeploymentAdminPresenter.php:402
 msgid "Non-package events"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:377
+#: RAN/Admin/DeploymentAdminPresenter.php:410
 msgid "That Activity subject filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:380
-#: RAN/Admin/DeploymentAdminPresenter.php:393
+#: RAN/Admin/DeploymentAdminPresenter.php:413
+#: RAN/Admin/DeploymentAdminPresenter.php:426
 msgid "That Activity subject is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:396
+#: RAN/Admin/DeploymentAdminPresenter.php:429
 msgid "The Activity subject filter was cleared because it does not match the selected Git provider."
 msgstr ""
 
@@ -1056,27 +1078,6 @@ msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:71
 msgid "Diagnostic partial-result reason"
-msgstr ""
-
-#: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:121
-#: RAN/Troubleshooting/TroubleshootingService.php:234
-#: RAN/Troubleshooting/TroubleshootingService.php:247
-#: views/attempts/index.php:179
-#: views/overview-dashboard.php:53
-#: views/overview-dashboard.php:74
-#: views/overview-dashboard.php:81
-#: views/overview-dashboard.php:88
-#: views/portability-review.php:109
-#: views/settings-general.php:119
-#: views/settings-general.php:255
-#: views/settings-storage.php:51
-#: views/troubleshooting-installation.php:73
-#: views/troubleshooting-installation.php:165
-#: views/troubleshooting-installation.php:173
-#: views/troubleshooting.php:268
-#: assets/ran-booster-portability.js:785
-msgid "Unknown"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
@@ -2036,161 +2037,161 @@ msgstr ""
 msgid "Repository credential validated successfully."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:267
-#: RAN/Admin/ProviderProfileAdminController.php:270
+#: RAN/Admin/ProviderProfileAdminController.php:271
+#: RAN/Admin/ProviderProfileAdminController.php:274
 msgid "A default public repository lookup profile is unavailable for this Git provider."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:273
 #: RAN/Admin/ProviderProfileAdminController.php:277
-#: RAN/Admin/ProviderProfileAdminController.php:282
+#: RAN/Admin/ProviderProfileAdminController.php:281
+#: RAN/Admin/ProviderProfileAdminController.php:286
 msgid "Choose Anonymous or a saved repository credential."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:289
+#: RAN/Admin/ProviderProfileAdminController.php:293
 msgid "Public repository lookup will use anonymous access."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:290
+#: RAN/Admin/ProviderProfileAdminController.php:294
 msgid "Default public repository lookup profile saved."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:315
+#: RAN/Admin/ProviderProfileAdminController.php:319
 msgid "Choose a supported credential type."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:326
+#: RAN/Admin/ProviderProfileAdminController.php:330
 msgid "Complete every required credential field."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:330
+#: RAN/Admin/ProviderProfileAdminController.php:334
 msgid "Enter a valid account email address."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:336
+#: RAN/Admin/ProviderProfileAdminController.php:340
 msgid "Enter the credential secret."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:343
+#: RAN/Admin/ProviderProfileAdminController.php:347
 msgid "Enter a valid credential expiry date."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:351
+#: RAN/Admin/ProviderProfileAdminController.php:355
 msgid "Enter a valid expiry / removal date."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:370
+#: RAN/Admin/ProviderProfileAdminController.php:374
 msgid "The expiry / removal date cannot be later than the expiry reported by the Git provider."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:375
+#: RAN/Admin/ProviderProfileAdminController.php:379
 msgid "Enter an expiry / removal date before enabling automatic removal."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:417
+#: RAN/Admin/ProviderProfileAdminController.php:421
 msgid "Booster could not verify that the repository credential was saved."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:428
+#: RAN/Admin/ProviderProfileAdminController.php:432
 msgid "Repository credential saved with automatic removal enabled."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:430
+#: RAN/Admin/ProviderProfileAdminController.php:434
 msgid "Repository credential replaced. Validate it to refresh Git provider expiry information."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:431
+#: RAN/Admin/ProviderProfileAdminController.php:435
 msgid "Repository credential saved."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:450
+#: RAN/Admin/ProviderProfileAdminController.php:454
 msgid "Choose a supported Push-to-Deploy scope."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:455
+#: RAN/Admin/ProviderProfileAdminController.php:459
 msgid "Enter the target for this Push-to-Deploy scope."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:459
+#: RAN/Admin/ProviderProfileAdminController.php:463
 msgid "Enter the Push-to-Deploy secret."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:491
+#: RAN/Admin/ProviderProfileAdminController.php:495
 msgid "Booster could not verify that the Push-to-Deploy secret was saved."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:493
+#: RAN/Admin/ProviderProfileAdminController.php:497
 msgid "Push-to-Deploy secret saved."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:498
+#: RAN/Admin/ProviderProfileAdminController.php:502
 msgid "Choose a repository credential to remove."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:506
+#: RAN/Admin/ProviderProfileAdminController.php:510
 msgid "Choose a saved repository credential to remove."
 msgstr ""
 
 #. translators: %d is the number of managed packages using this repository credential.
-#: RAN/Admin/ProviderProfileAdminController.php:514
+#: RAN/Admin/ProviderProfileAdminController.php:518
 #, php-format
 msgid "This repository credential is used by %d managed package. Assign another credential before deleting it."
 msgid_plural "This repository credential is used by %d managed packages. Assign another credential before deleting it."
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:523
+#: RAN/Admin/ProviderProfileAdminController.php:527
 msgid "Booster could not verify that the repository credential was removed."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:549
+#: RAN/Admin/ProviderProfileAdminController.php:553
 msgid "Repository credential removed. Public repository lookup now uses anonymous access."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:550
+#: RAN/Admin/ProviderProfileAdminController.php:554
 msgid "Repository credential removed."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:557
+#: RAN/Admin/ProviderProfileAdminController.php:561
 msgid "Choose a Push-to-Deploy secret to remove."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:562
+#: RAN/Admin/ProviderProfileAdminController.php:566
 msgid "Choose a saved Push-to-Deploy secret to remove."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:566
+#: RAN/Admin/ProviderProfileAdminController.php:570
 msgid "Booster could not verify that the Push-to-Deploy secret was removed."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:568
+#: RAN/Admin/ProviderProfileAdminController.php:572
 msgid "Push-to-Deploy secret removed."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:573
+#: RAN/Admin/ProviderProfileAdminController.php:577
 msgid "You do not have sufficient permissions to manage Booster Git provider settings."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:574
+#: RAN/Admin/ProviderProfileAdminController.php:578
 msgid "You do not have sufficient permissions to manage Booster credentials."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:586
-#: RAN/Admin/ProviderProfileAdminController.php:591
+#: RAN/Admin/ProviderProfileAdminController.php:590
+#: RAN/Admin/ProviderProfileAdminController.php:595
 msgid "Choose a valid credential profile."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:638
+#: RAN/Admin/ProviderProfileAdminController.php:642
 msgid "Booster could not complete the credential request."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:644
-#: RAN/Admin/ProviderProfileAdminController.php:651
-#: RAN/Admin/ProviderProfileAdminController.php:659
+#: RAN/Admin/ProviderProfileAdminController.php:648
+#: RAN/Admin/ProviderProfileAdminController.php:655
+#: RAN/Admin/ProviderProfileAdminController.php:663
 msgid "Choose a supported Git provider."
 msgstr ""
 
-#: RAN/Admin/ProviderProfileAdminController.php:663
+#: RAN/Admin/ProviderProfileAdminController.php:667
 msgid "Git provider settings are unavailable."
 msgstr ""
 
@@ -6117,7 +6118,7 @@ msgid "External replacement"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:238
-#: views/attempts/detail.php:107
+#: views/attempts/detail.php:110
 #: views/attempts/index.php:83
 #: views/packages/fields/provider.php:19
 #: views/packages/fields/provider.php:22
@@ -6360,14 +6361,14 @@ msgid "Manual administrator action"
 msgstr ""
 
 #: views/attempts/detail.php:60
-#: views/attempts/index.php:209
+#: views/attempts/index.php:212
 msgid "Failure reason"
 msgstr ""
 
 #: views/attempts/detail.php:61
 #: views/attempts/index.php:125
 #: views/attempts/index.php:179
-#: views/attempts/index.php:209
+#: views/attempts/index.php:212
 msgid "Outcome"
 msgstr ""
 
@@ -6397,103 +6398,103 @@ msgstr ""
 msgid "Checking the box only clears the retry block. It does not change the package or prove what happened before."
 msgstr ""
 
-#: views/attempts/detail.php:80
+#: views/attempts/detail.php:83
 #: views/attempts/index.php:197
-#: views/attempts/index.php:210
+#: views/attempts/index.php:216
 msgid "Support reference"
 msgstr ""
 
-#: views/attempts/detail.php:83
+#: views/attempts/detail.php:86
 msgid "Copy support reference"
 msgstr ""
 
-#: views/attempts/detail.php:88
+#: views/attempts/detail.php:91
 msgid "Git provider request ID"
 msgstr ""
 
-#: views/attempts/detail.php:91
+#: views/attempts/detail.php:94
 msgid "Copy Git provider request ID"
 msgstr ""
 
-#: views/attempts/detail.php:96
+#: views/attempts/detail.php:99
 msgid "State"
 msgstr ""
 
-#: views/attempts/detail.php:97
-#: views/attempts/index.php:212
+#: views/attempts/detail.php:100
+#: views/attempts/index.php:218
 msgid "Origin"
 msgstr ""
 
-#: views/attempts/detail.php:108
-#: views/attempts/index.php:213
+#: views/attempts/detail.php:111
+#: views/attempts/index.php:219
 msgid "Requested reference"
 msgstr ""
 
-#: views/attempts/detail.php:109
-#: views/attempts/index.php:214
+#: views/attempts/detail.php:112
+#: views/attempts/index.php:220
 msgid "Resolved reference"
 msgstr ""
 
-#: views/attempts/detail.php:109
-#: views/attempts/index.php:214
+#: views/attempts/detail.php:112
+#: views/attempts/index.php:220
 msgid "Not resolved"
 msgstr ""
 
-#: views/attempts/detail.php:110
-#: views/attempts/index.php:215
+#: views/attempts/detail.php:113
+#: views/attempts/index.php:221
 msgid "Mutation began"
 msgstr ""
 
-#: views/attempts/detail.php:110
-#: views/attempts/index.php:215
+#: views/attempts/detail.php:113
+#: views/attempts/index.php:221
 msgid "No"
 msgstr ""
 
-#: views/attempts/detail.php:111
-#: views/attempts/index.php:216
+#: views/attempts/detail.php:114
+#: views/attempts/index.php:222
 msgid "Finished"
 msgstr ""
 
-#: views/attempts/detail.php:111
-#: views/attempts/index.php:216
+#: views/attempts/detail.php:114
+#: views/attempts/index.php:222
 msgid "Not finished"
 msgstr ""
 
-#: views/attempts/detail.php:113
-#: views/attempts/index.php:218
+#: views/attempts/detail.php:116
+#: views/attempts/index.php:224
 msgid "Operator review"
 msgstr ""
 
 #. translators: 1: review date and time, 2: WordPress user ID.
-#: views/attempts/detail.php:113
-#: views/attempts/index.php:218
+#: views/attempts/detail.php:116
+#: views/attempts/index.php:224
 #, php-format
 msgid "Resolved %1$s by user #%2$d"
 msgstr ""
 
-#: views/attempts/detail.php:122
+#: views/attempts/detail.php:125
 msgid "I have checked the package's current state and want to allow another deployment."
 msgstr ""
 
-#: views/attempts/detail.php:126
+#: views/attempts/detail.php:129
 msgid "Allow retry"
 msgstr ""
 
-#: views/attempts/detail.php:128
+#: views/attempts/detail.php:131
 msgid "Allow retry and return to theme settings"
 msgstr ""
 
-#: views/attempts/detail.php:130
+#: views/attempts/detail.php:133
 msgid "Allow retry and return to plugin settings"
 msgstr ""
 
-#: views/attempts/detail.php:142
-#: views/attempts/index.php:230
+#: views/attempts/detail.php:145
+#: views/attempts/index.php:236
 msgid "I have confirmed that the deployment worker has stopped."
 msgstr ""
 
-#: views/attempts/detail.php:143
-#: views/attempts/index.php:231
+#: views/attempts/detail.php:146
+#: views/attempts/index.php:237
 msgid "Reconcile stopped worker"
 msgstr ""
 
@@ -6648,23 +6649,23 @@ msgstr ""
 msgid "Completed (UTC)"
 msgstr ""
 
-#: views/attempts/index.php:221
+#: views/attempts/index.php:227
 msgid "Package settings"
 msgstr ""
 
-#: views/attempts/index.php:246
+#: views/attempts/index.php:252
 msgid "View latest activity"
 msgstr ""
 
-#: views/attempts/index.php:249
+#: views/attempts/index.php:255
 msgid "View older activity"
 msgstr ""
 
-#: views/attempts/index.php:250
+#: views/attempts/index.php:256
 msgid "Loading older activity…"
 msgstr ""
 
-#: views/attempts/index.php:251
+#: views/attempts/index.php:257
 msgid "Older activity could not be loaded. Try again."
 msgstr ""
 

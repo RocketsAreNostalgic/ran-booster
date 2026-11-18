@@ -494,7 +494,7 @@ final class DeploymentAttemptRepository {
 						)
 					) === $working_copy_observation->safe_data()
 					&& $attempt->get_request()->to_json() === $working_copy_observation->get_request()->to_json();
-				$this->record_activity_outcome( $attempt, $outcome, working_copy: $working_copy );
+				$this->record_activity_outcome( $attempt, $outcome, working_copy: $working_copy, source_code: DeploymentState::FAILED === $outcome->get_state() ? $outcome->get_provider_failure()?->source_code : null );
 				return $attempt;
 			}
 		);
@@ -948,7 +948,7 @@ final class DeploymentAttemptRepository {
 		}
 	}
 
-	private function record_activity_outcome( DeploymentAttempt $attempt, DeploymentOutcome $outcome, bool $runner_throw = false, bool $working_copy = false ): void {
+	private function record_activity_outcome( DeploymentAttempt $attempt, DeploymentOutcome $outcome, bool $runner_throw = false, bool $working_copy = false, ?string $source_code = null ): void {
 		if ( null === $this->activity ) {
 			return;
 		}
@@ -957,7 +957,7 @@ final class DeploymentAttemptRepository {
 			return;
 		}
 		$status = DeploymentState::SUCCEEDED === $outcome->get_state() ? 'succeeded' : 'failed';
-		if ( ! $this->activity->complete_by_correlation( $attempt->get_correlation_id(), $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt, $runner_throw ) + ( $working_copy ? array( 'branch_refusal' => 'target_is_working_copy' ) : array() ) ) ) {
+		if ( ! $this->activity->complete_by_correlation( $attempt->get_correlation_id(), $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt, $runner_throw ) + ( $working_copy ? array( 'branch_refusal' => 'target_is_working_copy' ) : array() ) + ( null !== $source_code ? array( 'source_code' => $source_code ) : array() ) ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 	}

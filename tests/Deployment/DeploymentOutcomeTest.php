@@ -20,6 +20,14 @@ final class DeploymentOutcomeTest extends TestCase {
 		self::assertSame( 'deployed', $outcome->get_code() );
 	}
 
+	public function test_provider_outcome_retains_only_the_original_carrier(): void {
+		$failure = new \RAN\RepositoryProvider\ProviderFailure( 'http_4xx_other', source_code: 'abuse_detected' );
+		$outcome = DeploymentOutcome::from_provider_failure( new \RAN\RepositoryProvider\ProviderRequestFailed( $failure ) );
+		self::assertSame( $failure, $outcome->get_provider_failure() );
+		self::assertNull( DeploymentOutcome::from_code( $outcome->get_code() )->get_provider_failure() );
+		self::assertNull( DeploymentOutcome::from_provider_failure( new \RuntimeException( 'failure', 403 ) )->get_provider_failure() );
+	}
+
 	/** @return iterable<string, array{string}> */
 	public static function archive_failure_codes(): iterable {
 		yield 'compressed archive' => array( DeploymentOutcome::CODE_ARCHIVE_COMPRESSED_TOO_LARGE );

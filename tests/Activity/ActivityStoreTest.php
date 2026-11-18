@@ -136,6 +136,22 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		}
 	}
 
+	public function test_optional_source_code_is_screened_without_losing_the_outcome(): void {
+		foreach ( array(
+			'abuse_detected',
+			'secret_orchid',
+			"bad\ncode",
+			'api%2eerror',
+			str_repeat( 'a', 65 ) . 'secret',
+			42,
+		) as $value ) {
+			self::assertTrue( $this->store->complete( 1, 'failed', 'provider_failed', facts: array( 'source_code' => $value ) ) );
+			$complete = end( $this->connection->prepared );
+			self::assertIsArray( $complete );
+			self::assertContains( 'abuse_detected' === $value ? '{"source_code":"abuse_detected"}' : '[]', $complete['args'] );
+		}
+	}
+
 	public function test_runner_throw_fact_accepts_only_the_closed_value(): void {
 		$correlation = str_repeat( 'a', 32 );
 		self::assertTrue(

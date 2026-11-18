@@ -13,8 +13,15 @@ export async function assertCreateNoteFits(tab, fallbackHeight) {
 			'[data-ran-booster-ui-disclosure-meta]'
 		);
 		const trigger = host?.querySelector('[role="button"], summary');
-		if (!note || !trigger || note.scrollWidth > note.clientWidth) {
-			throw new Error('Create disclosure is missing or note overflows.');
+		const clip = note?.closest('.ran-booster-ui-disclosure, summary');
+		if (!note || !trigger || !clip) {
+			throw new Error('Create disclosure or boundary is missing.');
+		}
+		const bounds = clip.getBoundingClientRect();
+		const rect = note.getBoundingClientRect();
+		const inside = rect.left >= bounds.left && rect.right <= bounds.right;
+		if (note.scrollWidth > note.clientWidth || !inside) {
+			throw new Error('Create disclosure note is clipped.');
 		}
 		return trigger.getBoundingClientRect().height;
 	});

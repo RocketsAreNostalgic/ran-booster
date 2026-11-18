@@ -388,15 +388,18 @@ final class ReleaseManagementDisplay {
 		$type       = $status->type();
 		$identifier = $status->identifier();
 		if ( 'plugin' === $type ) {
+			if ( ! current_user_can( 'activate_plugins' ) || ! current_user_can( 'update_plugins' ) || ( is_network_admin() && ! current_user_can( 'manage_network_plugins' ) ) ) {
+				return '';
+			}
 			return wp_nonce_url(
 				add_query_arg(
 					array(
-						'action' => 'upgrade-plugin',
-						'plugin' => $identifier,
+						'action'  => 'update-selected',
+						'plugins' => $identifier,
 					),
-					self_admin_url( 'update.php' )
+					self_admin_url( 'plugins.php' )
 				),
-				'upgrade-plugin_' . $identifier
+				'bulk-plugins'
 			);
 		}
 

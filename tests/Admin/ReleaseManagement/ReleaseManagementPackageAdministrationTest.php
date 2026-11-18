@@ -888,9 +888,55 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		}
 		self::assertStringContainsString( 'data-ran-booster-managed-release-wordpress-url=""', $denied_html );
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
-		self::assertStringContainsString( 'action=upgrade-plugin', $html );
-		self::assertStringContainsString( 'plugin=example%2Fexample.php', $html );
-		self::assertStringContainsString( '_wpnonce=nonce-for-upgrade-plugin_example%2Fexample.php', $html );
+		// WordPress's one-item bulk route updates an active plugin without deactivating it first.
+		self::assertStringContainsString( 'https://example.test/wp-admin/plugins.php?action=update-selected', $html );
+		self::assertStringContainsString( 'plugins=example%2Fexample.php', $html );
+		self::assertStringContainsString( '_wpnonce=nonce-for-bulk-plugins', $html );
+		self::assertStringNotContainsString( 'upgrade-plugin', $html );
+	}
+
+	public function test_managed_plugin_update_link_requires_exactly_what_the_wordpress_plugins_screen_requires(): void {
+		$status   = new \RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus(
+			'plugin',
+			'example/example.php',
+			'release_asset',
+			3,
+			'101',
+			'manual',
+			new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE, 'https://github.com/example/example', 'example-plugin' ),
+			new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0' ),
+			'example-plugin',
+			'1.0.0',
+			'1.2.0',
+			true,
+			'',
+			'',
+			'',
+			'stable'
+		);
+		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( $status ) );
+		$package  = new PackageProjection( 'release_asset' );
+		$render   = static function ( array $denied, bool $network ) use ( $controls, $package ): string {
+			$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = $denied;
+			$GLOBALS['ran_booster_release_management_test_network_admin']       = $network;
+			try {
+				ob_start();
+				$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+
+				return (string) ob_get_clean();
+			} finally {
+				unset( $GLOBALS['ran_booster_release_management_test_denied_capabilities'], $GLOBALS['ran_booster_release_management_test_network_admin'] );
+			}
+		};
+		$no_link  = 'data-ran-booster-managed-release-native-update-url=""';
+
+		// The Plugins screen refuses without activate_plugins and its update frame without update_plugins.
+		self::assertStringContainsString( $no_link, $render( array( 'activate_plugins' ), false ) );
+		self::assertStringContainsString( $no_link, $render( array( 'update_plugins' ), false ) );
+		// Only the network Plugins screen also requires manage_network_plugins.
+		self::assertStringContainsString( $no_link, $render( array( 'manage_network_plugins' ), true ) );
+		self::assertStringContainsString( 'https://example.test/wp-admin/plugins.php?action=update-selected', $render( array( 'manage_network_plugins' ), false ) );
+		self::assertStringContainsString( 'https://example.test/wp-admin/network/plugins.php?action=update-selected', $render( array(), true ) );
 	}
 
 	public function test_package_operation_actions_render_a_disabled_secondary_update_now_for_release_packages_only(): void {
@@ -938,7 +984,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_advanced_source_section( 'edit', 'theme', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'action=upgrade-theme', $html );
+		self::assertStringContainsString( 'https://example.test/wp-admin/update.php?action=upgrade-theme', $html );
 		self::assertStringContainsString( 'theme=example-theme', $html );
 		self::assertStringContainsString( '_wpnonce=nonce-for-upgrade-theme_example-theme', $html );
 	}

@@ -65,7 +65,6 @@ $package_settings_label = 'theme' === $package_type
 			<section aria-labelledby="ran-booster-historical-uncertainty-heading">
 				<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 				<h4 id="ran-booster-historical-uncertainty-heading"><?php esc_html_e( 'Before you retry', 'ran-booster' ); ?></h4>
-				<p><?php esc_html_e( 'WordPress reported that it changed this package, but Booster could not confirm the final result. The package may already contain the requested update.', 'ran-booster' ); ?></p>
 				<?php if ( $later_verified_attempt instanceof DeploymentAttempt ) { ?>
 					<?php $later_verified_data = $later_verified_attempt->safe_data(); ?>
 					<p><?php echo esc_html( sprintf( /* translators: 1: later verified deployment date, 2: later deployment ID. */ __( 'Booster verified a later deployment on %1$s (activity #%2$d), so the package has since reached a known state.', 'ran-booster' ), (string) ( $later_verified_data['finished_at'] ?? $later_verified_data['created_at'] ?? '' ), $later_verified_attempt->get_id() ) ); ?></p>

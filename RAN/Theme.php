@@ -2,6 +2,7 @@
 
 namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use WP_Theme;
 
 class Theme extends AbstractPackage {
@@ -56,6 +57,6 @@ class Theme extends AbstractPackage {
 	}
 
 	protected function runtime_slug(): string {
-		return (string) $this->get_identifier();
+		return PackageDirectory::installed_slug( 'theme', (string) $this->get_identifier() );
 	}
 }

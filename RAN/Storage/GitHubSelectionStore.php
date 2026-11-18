@@ -52,7 +52,7 @@ final class GitHubSelectionStore {
 		$keys        = array();
 		$maximum_key = (string) PHP_INT_MAX;
 		for ( $index = 0; $index < $count; ++$index ) {
-			if ( ! preg_match( '/\Gi:(0|[1-9][0-9]{0,18});s:([1-9][0-9]{0,2}):"/', $bytes, $item, 0, $offset ) || (int) $item[2] > 191 ) {
+			if ( ! preg_match( '/\Gi:(0|[1-9][0-9]{0,18});s:([1-9][0-9]{0,2}):"/', $bytes, $item, 0, $offset ) || (int) $item[2] > 255 ) {
 				throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
 			}
 			if ( strlen( $item[1] ) > strlen( $maximum_key ) || ( strlen( $item[1] ) === strlen( $maximum_key ) && strcmp( $item[1], $maximum_key ) > 0 ) || isset( $keys[ $item[1] ] ) ) {
@@ -192,7 +192,7 @@ final class GitHubSelectionStore {
 		}
 		if ( isset( $state['native_mutation'] ) ) {
 			$marker = $state['native_mutation'];
-			if ( ! is_array( $marker ) || array_keys( $marker ) !== array( 'selection_generation', 'owner_tag', 'target_type', 'installed_identity', 'phase' ) || ! is_int( $marker['selection_generation'] ) || $marker['selection_generation'] < 0 || $marker['selection_generation'] > $state['selection_generation'] || ! is_string( $marker['owner_tag'] ) || 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $marker['owner_tag'] ) || ! in_array( $marker['target_type'], array( 'plugin', 'theme' ), true ) || ! is_string( $marker['installed_identity'] ) || '' === $marker['installed_identity'] || strlen( $marker['installed_identity'] ) > 191 || preg_match( '/[\x00-\x1f\x7f]/', $marker['installed_identity'] ) || 'started' !== $marker['phase'] ) {
+			if ( ! is_array( $marker ) || array_keys( $marker ) !== array( 'selection_generation', 'owner_tag', 'target_type', 'installed_identity', 'phase' ) || ! is_int( $marker['selection_generation'] ) || $marker['selection_generation'] < 0 || $marker['selection_generation'] > $state['selection_generation'] || ! is_string( $marker['owner_tag'] ) || 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $marker['owner_tag'] ) || ! in_array( $marker['target_type'], array( 'plugin', 'theme' ), true ) || ! is_string( $marker['installed_identity'] ) || '' === $marker['installed_identity'] || strlen( $marker['installed_identity'] ) > ( 'plugin' === $marker['target_type'] ? 255 : 191 ) || preg_match( '/[\x00-\x1f\x7f]/', $marker['installed_identity'] ) || 'started' !== $marker['phase'] ) {
 				throw new \InvalidArgumentException( 'Invalid native mutation owner.' );
 			}
 		}

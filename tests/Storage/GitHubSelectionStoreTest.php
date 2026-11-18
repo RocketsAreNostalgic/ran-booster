@@ -149,6 +149,56 @@ final class GitHubSelectionStoreTest extends TestCase {
 		self::assertSame( 'revoked', $store->read()['approval'] );
 	}
 
+	public function test_native_marker_identity_bounds_are_specific_to_target_type(): void {
+		foreach ( array( array( 'plugin', 195, true ), array( 'plugin', 255, true ), array( 'plugin', 256, false ), array( 'theme', 191, true ), array( 'theme', 192, false ) ) as $case ) {
+			list( $type, $length, $accepted ) = $case;
+			$db                               = new SelectionDatabase();
+			$store                            = new GitHubSelectionStore( $db, 'wp_options' );
+			$initial                          = $store->initialize_bundled( $this->declaration() );
+			$next                             = $initial;
+			$identity                         = 'plugin' === $type
+				? ( 195 === $length ? str_repeat( 'A', 100 ) . '/' . str_repeat( 'b', 90 ) . '.php' : str_repeat( 'A', $length - 105 ) . '/' . str_repeat( 'b', 100 ) . '.php' )
+				: str_repeat( 'a', $length );
+			$next['native_mutation']          = array(
+				'selection_generation' => 0,
+				'owner_tag'            => str_repeat( 'a', 32 ),
+				'target_type'          => $type,
+				'installed_identity'   => $identity,
+				'phase'                => 'started',
+			);
+			try {
+				self::assertTrue( $store->compare_and_swap( $initial, $next ) );
+				self::assertTrue( $accepted );
+				self::assertSame( $next, $store->read() );
+			} catch ( \InvalidArgumentException ) {
+				self::assertFalse( $accepted );
+				self::assertSame( $initial, $store->read() );
+			}
+		}
+	}
+
+	public function test_serialized_active_plugins_identity_length_boundary(): void {
+		foreach ( array( 195, 255, 256 ) as $length ) {
+			$identity = 195 === $length ? str_repeat( 'A', 100 ) . '/' . str_repeat( 'b', 90 ) . '.php' : str_repeat( 'A', $length - 105 ) . '/' . str_repeat( 'b', 100 ) . '.php';
+			$db       = new SelectionDatabase();
+			$db->rows = array(
+				(object) array(
+					'option_name'  => 'active_plugins',
+					// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- The WordPress option uses this format.
+					'option_value' => serialize( array( $identity ) ),
+					'autoload'     => 'yes',
+				),
+			);
+			try {
+				self::assertSame( array( $identity ), ( new GitHubSelectionStore( $db, 'wp_options' ) )->active_plugins() );
+				self::assertLessThanOrEqual( 255, $length );
+			} catch ( DatabaseLifecycleFailure $failure ) {
+				self::assertSame( 256, $length );
+				self::assertSame( 'active_plugins_invalid', $failure->reason() );
+			}
+		}
+	}
+
 	public function test_cas_rejects_unretained_contract_and_invalid_generation_without_write(): void {
 		$db      = new SelectionDatabase();
 		$store   = new GitHubSelectionStore( $db, 'wp_options' );

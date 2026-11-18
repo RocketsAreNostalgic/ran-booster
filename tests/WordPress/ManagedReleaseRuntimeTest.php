@@ -190,6 +190,40 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 	}
 
+	public function test_invalid_installed_plugin_header_refuses_before_metadata_read(): void {
+		$identifier = 'example/' . str_repeat( 'a', 101 ) . '.php';
+		$reflection = new \ReflectionClass( \RAN\Plugin::class );
+		$package    = $reflection->newInstanceWithoutConstructor();
+		$reflection->getProperty( 'file' )->setValue( $package, $identifier );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', '123456789', 'main' ) );
+		$package->set_source( PackageSource::BRANCH, 1 );
+		$package->set_deployment_policy( DeploymentPolicy::MANUAL );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore();
+		$lock      = new RuntimeUpdaterLock();
+		$providers = $this->release_metadata_registry();
+		$registrar = $this->registrar( $plugins, $themes, $store, $lock, $providers );
+		$reads     = 0;
+		$facade    = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$registrar,
+			$lock,
+			$providers,
+			metadata_eligible: static function () use ( &$reads ): bool {
+				++$reads;
+				return true;
+			}
+		);
+		$status    = $facade->status( 'plugin', $identifier );
+		self::assertSame( ReleaseTrackingEligibility::INVALID_PACKAGE_IDENTITY, $status->eligibility()->code() );
+		self::assertSame( 0, $reads );
+		self::assertSame( 0, $lock->acquires );
+	}
+
 	public function test_configuration_rejects_traversal_and_invalid_channel(): void {
 		foreach (
 			array(
@@ -251,7 +285,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		$store    = new RuntimeReleaseStore(
 			array(
-				"plugin\0installed-example/example.php" => new ManagedReleaseConfiguration( 'canonical-example', 'example.php' ),
+				"plugin\0installed-example/example.php" => new ManagedReleaseConfiguration( 'installed-example', 'example.php' ),
 				"plugin\0disabled/disabled.php"         => new ManagedReleaseConfiguration( 'disabled', 'disabled.php' ),
 				"theme\0example-theme"                  => new ManagedReleaseConfiguration(
 					'example-theme',
@@ -297,7 +331,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				rtrim( WP_PLUGIN_DIR, '/\\' ) . '/installed-example/example.php',
 				$targets[0]['plugin_file']
 			);
-			self::assertSame( 'canonical-example', $targets[0]['pluginSlug'] );
+			self::assertSame( 'installed-example', $targets[0]['pluginSlug'] );
 			self::assertSame( 'manual', $targets[0]['autoUpdatePolicy'] );
 			self::assertSame( 'stable', $targets[0]['channel'] );
 			self::assertSame( 'disabled', $targets[1]['autoUpdatePolicy'] );
@@ -818,6 +852,50 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertInstanceOf( \WP_Error::class, $result );
 		self::assertSame( 'ran_booster_native_update_authority_changed', $result->get_error_code() );
 		self::assertSame( 0, $lock->acquires );
+	}
+
+	public function test_real_installed_identity_rejects_wrong_configuration_at_registration_and_fresh_fence(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			$this->repository_rows = array();
+			$identifier            = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+			$root                  = 'plugin' === $type ? 'example' : 'example-theme';
+			$header                = 'plugin' === $type ? 'example.php' : 'style.css';
+			$this->package( $type, $identifier, $root, DeploymentPolicy::MANUAL ); // Seed the source guard's management row.
+			$reflection = new \ReflectionClass( 'plugin' === $type ? \RAN\Plugin::class : \RAN\Theme::class );
+			$package    = $reflection->newInstanceWithoutConstructor();
+			$reflection->getProperty( 'plugin' === $type ? 'file' : 'stylesheet' )->setValue( $package, $identifier );
+			$package->set_repository( new ManagedRepository( 'gh', 'owner/example', '123456789', 'main' ) );
+			$package->set_adoption_token( 'gh:123456789:11111111-1111-4111-8111-111111111111' );
+			$package->set_source( PackageSource::RELEASE_ASSET, 1 );
+			$package->set_deployment_policy( DeploymentPolicy::MANUAL );
+			$plugins = $this->createStub( PluginRepository::class );
+			$themes  = $this->createStub( ThemeRepository::class );
+			$plugins->method( 'all_deployment_plugins' )->willReturn( 'plugin' === $type ? array( $identifier => $package ) : array() );
+			$themes->method( 'all_deployment_themes' )->willReturn( 'theme' === $type ? array( $identifier => $package ) : array() );
+			if ( 'plugin' === $type ) {
+				$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+			} else {
+				$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
+			}
+			$store     = new RuntimeReleaseStore( array( $type . "\0" . $identifier => new ManagedReleaseConfiguration( strtoupper( $root ), $header ) ) );
+			$lock      = new RuntimeUpdaterLock();
+			$registrar = $this->registrar( $plugins, $themes, $store, $lock, $this->release_metadata_registry() );
+			$registrar->register();
+			self::assertNull( $registrar->target( $type, $identifier ) );
+			$store->replace_configuration( $type, $identifier, new ManagedReleaseConfiguration( $root, $header ) );
+			$registrar = $this->registrar( $plugins, $themes, $store, $lock, $this->release_metadata_registry() );
+			$registrar->register();
+			self::assertNotNull( $registrar->target( $type, $identifier ) );
+			$extra = array(
+				$type    => $identifier,
+				'action' => 'update',
+				'type'   => $type,
+			);
+			self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), $extra ) );
+			$store->replace_configuration( $type, $identifier, new ManagedReleaseConfiguration( 'different', $header ) );
+			$this->assert_native_authority_error( $registrar->fence_native_mutation( false, $extra ) );
+			self::assertSame( array( 'runtime-lock' ), $lock->releases );
+		}
 	}
 
 	public function test_stale_managed_offers_fail_closed_when_target_registration_fails(): void {
@@ -4048,7 +4126,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				};
 				$plugins->method( 'booster_plugin_from_file' )->willReturnCallback( $read );
 				$themes->method( 'booster_theme_from_stylesheet' )->willReturnCallback( $read );
-				$store     = new RuntimeReleaseStore( array( $type . "\0" . $identifier => new ManagedReleaseConfiguration( 'example', 'plugin' === $type ? 'example.php' : 'style.css' ) ) );
+				$store     = new RuntimeReleaseStore( array( $type . "\0" . $identifier => new ManagedReleaseConfiguration( 'plugin' === $type ? 'example' : 'example-theme', 'plugin' === $type ? 'example.php' : 'style.css' ) ) );
 				$lock      = new RuntimeUpdaterLock();
 				$registrar = $this->registrar( $plugins, $themes, $store, $lock, $this->release_metadata_registry() );
 				$registrar->register();
@@ -4088,7 +4166,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 					};
 					$plugins->method( 'booster_plugin_from_file' )->willReturnCallback( $read );
 					$themes->method( 'booster_theme_from_stylesheet' )->willReturnCallback( $read );
-					$store     = new RuntimeReleaseStore( array( $type . "\0" . $identifier => new ManagedReleaseConfiguration( 'example', 'plugin' === $type ? 'example.php' : 'style.css' ) ) );
+					$store     = new RuntimeReleaseStore( array( $type . "\0" . $identifier => new ManagedReleaseConfiguration( 'plugin' === $type ? 'example' : 'example-theme', 'plugin' === $type ? 'example.php' : 'style.css' ) ) );
 					$lock      = new RuntimeUpdaterLock();
 					$providers = $this->release_metadata_registry();
 					$facade    = $this->facade(

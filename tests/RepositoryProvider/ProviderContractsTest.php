@@ -622,7 +622,7 @@ final class ProviderContractsTest extends TestCase {
 		}
 
 		$values    = $valid;
-		$values[4] = str_repeat( 'a', 101 );
+		$values[4] = str_repeat( 'a', 192 );
 		$this->expectException( \InvalidArgumentException::class );
 		new RepositoryReleaseInspection( ...$values );
 	}

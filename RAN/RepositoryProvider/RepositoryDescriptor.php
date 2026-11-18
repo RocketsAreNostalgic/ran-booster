@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace RAN\RepositoryProvider;
 
 use InvalidArgumentException;
-use RAN\PackageSubdirectory;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 
 final readonly class RepositoryDescriptor {
 	public string $locator;
@@ -23,7 +23,7 @@ final readonly class RepositoryDescriptor {
 	) {
 		$this->private      = $is_private;
 		$this->locator      = RepositoryLocator::require_valid( $locator );
-		$this->package_slug = PackageSubdirectory::normalize_slug( $package_slug );
+		$this->package_slug = PackageDirectory::normalize_slug( $package_slug );
 		if ( strlen( $this->package_slug ) > 191 ) {
 			throw new InvalidArgumentException( 'The provider package slug is invalid.' );
 		}

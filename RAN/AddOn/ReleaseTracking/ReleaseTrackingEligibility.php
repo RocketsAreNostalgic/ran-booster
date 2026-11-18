@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\AddOn\ReleaseTracking;
 
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use InvalidArgumentException;
 
 /**
@@ -39,7 +40,7 @@ final readonly class ReleaseTrackingEligibility {
 			),
 			true
 		) || strlen( $this->expected_update_uri ) > 255
-			|| strlen( $this->package_root ) > 100 ) {
+			|| ( '' !== $this->package_root && ! PackageDirectory::is_valid_name( $this->package_root ) ) ) {
 			throw new InvalidArgumentException( 'Release tracking eligibility is invalid.' );
 		}
 	}

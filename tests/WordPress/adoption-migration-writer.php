@@ -22,6 +22,9 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI || '1' !== getenv( 'RAN_BOOSTER_RECOVERY_
 // Each process loads one untouched source generation; no old bootstrap hooks are activated.
 $ran_booster_writer_autoload = 'old-writer' === $ran_booster_writer_action ? $ran_booster_writer_dir . '/old/autoload.php' : WP_PLUGIN_DIR . '/ran-booster/autoload.php';
 require $ran_booster_writer_autoload;
+if ( 'old-writer' !== $ran_booster_writer_action ) {
+	\RAN\WordPress\BranchUpdaterBootstrap::register();
+}
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 require_once ABSPATH . 'wp-admin/includes/file.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';

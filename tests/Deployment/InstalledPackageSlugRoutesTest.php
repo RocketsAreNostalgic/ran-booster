@@ -119,20 +119,22 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		$this->remove_tree( $this->directory );
 	}
 
-	/** @return iterable<string, array{string, string, string}> */
+	/** @return iterable<string, array{string, string, string, string}> */
 	public static function update_routes(): iterable {
 		foreach ( array( 'plugin', 'theme' ) as $type ) {
 			foreach ( array( 'packages/MyPackage', 'packages/renamed-source' ) as $subdirectory ) {
 				foreach ( array( 'manual', 'bulk', 'webhook' ) as $route ) {
-					yield "$type $subdirectory $route" => array( $type, $subdirectory, $route );
+					foreach ( array( 'mypackage', 'MyPackage' ) as $slug ) {
+						yield "$type $subdirectory $route $slug" => array( $type, $subdirectory, $route, $slug );
+					}
 				}
 			}
 		}
 	}
 
 	#[DataProvider( 'update_routes' )]
-	public function test_installed_folder_survives_every_update_route( string $type, string $subdirectory, string $route ): void {
-		$package    = $this->package( $type, 'mypackage', $subdirectory );
+	public function test_installed_folder_survives_every_update_route( string $type, string $subdirectory, string $route, string $slug ): void {
+		$package    = $this->package( $type, $slug, $subdirectory );
 		$identifier = (string) $package->get_identifier();
 		$this->inventory( $type, $package );
 		$this->database->management[ $identifier ]      = (string) $package->get_adoption_token();
@@ -153,22 +155,26 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		$executor = $this->createMock( WordPressCorePackageExecutor::class );
 		$executor->expects( self::once() )->method( 'update_' . $type )->with(
 			self::isInstanceOf( PreparedPackageArtifact::class ),
-			'mypackage',
+			$slug,
 			$subdirectory,
 			$identifier
 		)->willReturnCallback(
 			static function ( PreparedPackageArtifact $artifact, string $slug, ?string $source, string $installed ) use ( $type, $package, $subdirectory, &$details ): CorePackageExecutionResult {
 				self::assertSame( $subdirectory, $source );
-				self::assertSame( 'mypackage', $slug );
+				self::assertSame( $package->get_slug(), $slug );
 				self::assertSame( $package->get_identifier(), $installed );
-				$wrong     = 'plugin' === $type
+				$wrong        = 'plugin' === $type
 					? ( new WordPressCorePackageExecutor() )->update_plugin( $artifact, 'wrong-folder', $source, $installed )
 					: ( new WordPressCorePackageExecutor() )->update_theme( $artifact, 'wrong-folder', $source, $installed );
-				$details[] = $wrong->get_detail();
-				$foreign   = 'plugin' === $type
+				$details[]    = $wrong->get_detail();
+				$foreign      = 'plugin' === $type
 					? ( new WordPressCorePackageExecutor() )->update_plugin( $artifact, $slug, $source, 'foreign/package.php' )
 					: ( new WordPressCorePackageExecutor() )->update_theme( $artifact, $slug, $source, 'foreign' );
-				$details[] = $foreign->get_detail();
+				$details[]    = $foreign->get_detail();
+				$case_changed = 'plugin' === $type
+					? ( new WordPressCorePackageExecutor() )->update_plugin( $artifact, strtoupper( $slug ), $source, $installed )
+					: ( new WordPressCorePackageExecutor() )->update_theme( $artifact, strtoupper( $slug ), $source, $installed );
+				$details[]    = $case_changed->get_detail();
 				( new ReflectionClass( $package ) )->getProperty( 'version' )->setValue( $package, '2.0.0' );
 				return CorePackageExecutionResult::succeeded();
 			}
@@ -218,18 +224,18 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 			}
 			$attempt = $this->attempts->claim_next();
 			self::assertNotNull( $attempt );
-			self::assertSame( 'mypackage', $attempt->get_request()->package_slug );
+			self::assertSame( $slug, $attempt->get_request()->package_slug );
 			self::assertSame( $subdirectory, $attempt->get_request()->subdirectory );
 			$outcome = $coordinator->execute_claimed( $attempt );
 			self::assertSame( DeploymentState::SUCCEEDED, $outcome->get_state(), $outcome->get_code() );
 		}
-		self::assertSame( 'mypackage', $package->get_slug() );
-		self::assertSame( array( 'identifier_mismatch', 'identifier_mismatch' ), $details );
+		self::assertSame( $slug, $package->get_slug() );
+		self::assertSame( array( 'identifier_mismatch', 'identifier_mismatch', 'identifier_mismatch' ), $details );
 		self::assertSame( '2.0.0', $package->get_version() );
 		self::assertSame( $identifier, $package->get_identifier() );
 		self::assertSame( 'succeeded', $this->database->rows[0]['state'] );
 		$request = DeploymentRequest::from_json( (string) $this->database->rows[0]['request_json'] );
-		self::assertSame( 'mypackage', $request->package_slug );
+		self::assertSame( $slug, $request->package_slug );
 		self::assertSame( $subdirectory, $request->subdirectory );
 	}
 
@@ -371,18 +377,6 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		self::assertSame( 'succeeded', $result['status'], $result['outcome_code'] );
 	}
 
-	#[DataProvider( 'package_types' )]
-	public function test_mixed_case_installed_folder_remains_refused( string $type ): void {
-		$package = $this->package( $type, 'MixedCase', 'packages/MixedCase' );
-		$this->inventory( $type, $package );
-
-		$executor = $this->createMock( WordPressCorePackageExecutor::class );
-		$executor->expects( self::never() )->method( 'update_' . $type );
-		$coordinator = $this->coordinator( $executor );
-		$this->expectException( \InvalidArgumentException::class );
-		$this->expectExceptionMessage( 'The package slug is invalid.' );
-		$coordinator->execute_manual( $this->update_command( $type, $package ) );
-	}
 
 	private function inventory( string $type, Plugin|Theme $package, Plugin|Theme|null $existing = null ): void {
 		( 'plugin' === $type ? $this->plugins : $this->themes )->method( 'from_slug' )->willReturn( $package );

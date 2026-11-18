@@ -6,7 +6,7 @@ namespace RAN\Storage;
 
 use RAN\Deployment\DeploymentPolicy;
 use RAN\PackageSource;
-use RAN\PackageSubdirectory;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\RepositoryLocator;
 
@@ -91,7 +91,7 @@ class PackageModel {
 			}
 
 			if ( 'subdirectory' === $key ) {
-				$this->$key = PackageSubdirectory::normalize( $value );
+				$this->$key = PackageDirectory::normalize( $value );
 				continue;
 			}
 

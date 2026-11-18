@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace RAN\Portability;
 
 use InvalidArgumentException;
-use RAN\PackageSubdirectory;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\WordPress\ManagedReleaseConfiguration;
@@ -34,7 +34,7 @@ final readonly class BlueprintPackage {
 		if ( null !== $subdirectory && strlen( $subdirectory ) > 255 ) {
 			throw new InvalidArgumentException( 'The portability package record is invalid.' );
 		}
-		$normalized_subdirectory = PackageSubdirectory::normalize( $subdirectory );
+		$normalized_subdirectory = PackageDirectory::normalize( $subdirectory );
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| ! self::safe_package_identifier( $identifier, $type )
 			|| '' === $display_name || trim( $display_name ) !== $display_name || strlen( $display_name ) > 191 || 1 !== preg_match( '//u', $display_name ) || preg_match( '/[\x00-\x1F\x7F]/', $display_name )
@@ -241,13 +241,13 @@ final readonly class BlueprintPackage {
 			return false;
 		}
 		if ( 'theme' === $type ) {
-			return PackageSubdirectory::normalize_slug( $identifier ) === $identifier;
+			return PackageDirectory::normalize_slug( $identifier ) === $identifier;
 		}
 		if ( ! str_ends_with( $identifier, '.php' ) ) {
 			return false;
 		}
 		try {
-			return PackageSubdirectory::normalize( $identifier ) === $identifier;
+			return PackageDirectory::normalize( $identifier ) === $identifier;
 		} catch ( InvalidArgumentException ) {
 			return false;
 		}

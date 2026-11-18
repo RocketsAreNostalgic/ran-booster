@@ -13,6 +13,24 @@ use RAN\Deployment\DeploymentRequest;
 
 final class DeploymentRequestTest extends TestCase {
 
+	public function test_installed_folder_name_accepts_case_and_191_byte_limit(): void {
+		foreach ( array( 'MixedCase', str_repeat( 'A', 100 ), str_repeat( 'A', 101 ), str_repeat( 'A', 191 ) ) as $slug ) {
+			$request = new DeploymentRequest( 'owner/example', null, false, 'main', $slug, null, DeploymentPolicy::MANUAL, 1 );
+			self::assertSame( $slug, $request->package_slug );
+		}
+		$this->expectException( InvalidArgumentException::class );
+		new DeploymentRequest( 'owner/example', null, false, 'main', str_repeat( 'A', 192 ), null, DeploymentPolicy::MANUAL, 1 );
+	}
+
+	public function test_explicit_initial_identity_remains_bounded_at_191_bytes(): void {
+		$identifier = 'example/' . str_repeat( 'a', 179 ) . '.php';
+		self::assertSame( 191, strlen( $identifier ) );
+		$request = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, expected_identifier: $identifier );
+		self::assertSame( $identifier, $request->expected_identifier );
+		$this->expectException( InvalidArgumentException::class );
+		new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, expected_identifier: 'example/' . str_repeat( 'a', 180 ) . '.php' );
+	}
+
 	public function test_initial_identity_round_trip_preserves_generation_and_historical_selection(): void {
 		$request  = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::DISABLED, 1, provider_selection_generation: 7, selected_commit: str_repeat( 'a', 40 ), expected_identifier: 'example/Main.php' );
 		$restored = DeploymentRequest::from_json( $request->to_json() );

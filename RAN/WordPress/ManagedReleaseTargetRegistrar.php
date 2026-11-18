@@ -707,7 +707,8 @@ final class ManagedReleaseTargetRegistrar {
 		$configuration = $this->store->configuration( $type, $identifier );
 		$repository_id = $package->get_provider_repository_id();
 		$provider_code = $package->get_provider_code();
-		if ( null === $provider_code
+		if ( $identifier !== (string) $package->get_identifier()
+			|| null === $provider_code
 			|| ! is_string( $repository_id )
 			|| '' === $repository_id
 			|| null === $configuration
@@ -839,10 +840,10 @@ final class ManagedReleaseTargetRegistrar {
 		ManagedReleaseConfiguration $configuration
 	): bool {
 		if ( 'theme' === $type ) {
-			return 'style.css' === strtolower( $configuration->metadata_file() );
+			return $identifier === $configuration->package_root() && 'style.css' === $configuration->metadata_file();
 		}
 
-		return basename( $identifier ) === $configuration->metadata_file();
+		return $identifier === $configuration->package_root() . '/' . $configuration->metadata_file();
 	}
 
 	private function metadata_path(

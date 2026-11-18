@@ -10,7 +10,7 @@ use RAN\AbstractPackage;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
 use RAN\Package;
-use RAN\PackageSubdirectory;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\PackageSource;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Settings\GeneralPreferenceStore;
@@ -401,7 +401,7 @@ abstract class AbstractPackageRepository {
 			try {
 				$rows = $this->package_rows( $model->package );
 				if ( 1 !== count( $rows )
-					|| null !== PackageSubdirectory::normalize( $this->value_from_row( $rows[0], 'subdirectory' ) ) ) {
+					|| null !== PackageDirectory::normalize( $this->value_from_row( $rows[0], 'subdirectory' ) ) ) {
 					return $this->source_conflict_result();
 				}
 			} catch ( InvalidArgumentException ) {
@@ -514,7 +514,7 @@ abstract class AbstractPackageRepository {
 					throw PackageStorageFailure::duplicate_package_rows();
 				}
 				try {
-					$subdirectory = PackageSubdirectory::normalize( $rows[0]->subdirectory ?? null );
+					$subdirectory = PackageDirectory::normalize( $rows[0]->subdirectory ?? null );
 				} catch ( InvalidArgumentException ) {
 					throw PackageStorageFailure::write_failed();
 				}

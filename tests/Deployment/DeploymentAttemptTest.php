@@ -13,6 +13,32 @@ use RAN\Deployment\DeploymentStorageFailure;
 
 final class DeploymentAttemptTest extends TestCase {
 
+	public function test_persisted_folder_name_uses_shared_case_and_length_contract(): void {
+		foreach ( array( 'MixedCase', str_repeat( 'A', 191 ) ) as $slug ) {
+			$row                 = $this->row();
+			$row['package_slug'] = $slug;
+			$row['request_json'] = ( new DeploymentRequest( 'group/package', null, false, 'main', $slug, null, DeploymentPolicy::MANUAL, 1 ) )->to_json();
+			self::assertSame( $slug, DeploymentAttempt::from_database( $row )->safe_data()['package_slug'] );
+		}
+		foreach ( array( str_repeat( 'A', 192 ), array( 'example' ), '../unsafe', '-unsafe', 'Example' ) as $slug ) {
+			$row                 = $this->row();
+			$row['package_slug'] = $slug;
+			try {
+				DeploymentAttempt::from_database( $row );
+				self::fail( 'Unsafe or mismatched persisted folder accepted.' );
+			} catch ( DeploymentStorageFailure ) {
+				self::addToAssertionCount( 1 );
+			}
+		}
+	}
+
+	public function test_persisted_outcome_identifier_remains_lowercase(): void {
+		$row                 = $this->row();
+		$row['outcome_code'] = 'DEPLOYED';
+		$this->expectException( DeploymentStorageFailure::class );
+		DeploymentAttempt::from_database( $row );
+	}
+
 	public function test_hydrates_the_exact_safe_projection_without_digest_or_request_json(): void {
 		$attempt = DeploymentAttempt::from_database( record: $this->row() );
 

@@ -8,7 +8,7 @@ use InvalidArgumentException;
 use JsonException;
 use RAN\AdoptionIdentity;
 use RAN\PackageArtifactLimit;
-use RAN\PackageSubdirectory;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 
 /**
  * The closed, secret-free execution snapshot stored with an attempt.
@@ -205,7 +205,7 @@ final readonly class DeploymentRequest {
 	}
 
 	private static function assert_package_slug( string $value ): void {
-		if ( preg_match( '/^[a-z0-9][a-z0-9._-]{0,190}$/D', $value ) !== 1 ) {
+		if ( ! PackageDirectory::is_valid_name( $value ) ) {
 			throw new InvalidArgumentException( 'The package slug is invalid.' );
 		}
 	}
@@ -217,7 +217,7 @@ final readonly class DeploymentRequest {
 
 		self::assert_safe_text( $value, 255 );
 		try {
-			$normalized = PackageSubdirectory::normalize( $value );
+			$normalized = PackageDirectory::normalize( $value );
 		} catch ( InvalidArgumentException $exception ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Chained for developers and never rendered.
 			throw new InvalidArgumentException( 'The package subdirectory is invalid.', 0, $exception );

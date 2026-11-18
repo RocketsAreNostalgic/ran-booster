@@ -36,6 +36,7 @@ use RAN\Theme;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\WordPressUpdaterLock;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use Throwable;
 
 /**
@@ -193,7 +194,8 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			);
 
 			if ( $release_id !== $inspection->provider_release_id
-				|| ! hash_equals( $tag, $inspection->tag ) ) {
+				|| ! hash_equals( $tag, $inspection->tag )
+				|| ! $this->valid_package_identity( $type, $inspection->package_root, $inspection->main_file ) ) {
 				throw RepositoryReleaseInspectionRejected::invalid_release();
 			}
 
@@ -347,6 +349,13 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		return $this->repositories->resolve( $request );
 	}
 
+	private function valid_package_identity( string $type, string $root, string $main_file ): bool {
+		return PackageDirectory::is_valid_name( $root )
+			&& ( 'plugin' === $type
+				? strlen( $root . '/' . $main_file ) <= 255 && 1 === preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.php\z/D', $main_file )
+				: 'theme' === $type && 'style.css' === $main_file );
+	}
+
 	/**
 	 * @param array<string, mixed> $repository
 	 */
@@ -372,7 +381,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			$version       = $release->version();
 			$repository    = $this->managed_repository( $repository );
 			do {
-				if ( null !== $expected_identifier && ! hash_equals( $expected_identifier, $identifier ) ) {
+				if ( ! $this->valid_package_identity( $type, $package_root, $metadata_file )
+					|| ! hash_equals( $identifier, 'plugin' === $type ? $package_root . '/' . $metadata_file : $package_root )
+					|| ( null !== $expected_identifier && ! hash_equals( $expected_identifier, $identifier ) ) ) {
 					$outcome = ProspectiveReleaseResult::failure( 'package_identity_mismatch' );
 					break;
 				}
@@ -767,7 +778,8 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return;
 		}
 		$parts = explode( '/', $identifier );
-		if ( ( 'plugin' === $type && ( 2 !== count( $parts ) || ! str_ends_with( $parts[1], '.php' ) ) )
+		if ( strlen( $identifier ) > ( 'plugin' === $type ? 255 : 191 )
+			|| ( 'plugin' === $type && ( 2 !== count( $parts ) || ! str_ends_with( $parts[1], '.php' ) ) )
 			|| ( 'theme' === $type && 1 !== count( $parts ) ) ) {
 			throw new InvalidArgumentException( 'The expected package identity is invalid.' );
 		}

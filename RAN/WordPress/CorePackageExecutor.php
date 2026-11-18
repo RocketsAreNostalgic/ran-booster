@@ -7,7 +7,7 @@ namespace RAN\WordPress;
 use Closure;
 use InvalidArgumentException;
 use RAN\Deployment\PreparedArtifact;
-use RAN\PackageSubdirectory;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\Runtime\RuntimeSupport;
 use Throwable;
 use WP_Error;
@@ -105,8 +105,11 @@ class CorePackageExecutor {
 	): array|CorePackageExecutionResult {
 		try {
 			$artifact->assert_unchanged();
-			$slug         = PackageSubdirectory::normalize_slug( $package_slug );
-			$subdirectory = PackageSubdirectory::normalize( $subdirectory );
+			$slug = PackageDirectory::normalize_slug( $package_slug );
+			if ( ! PackageDirectory::is_valid_name( $slug ) ) {
+				return CorePackageExecutionResult::failed( CorePackageExecutionFailure::INVALID_REQUEST );
+			}
+			$subdirectory = PackageDirectory::normalize( $subdirectory );
 		} catch ( Throwable ) {
 			return CorePackageExecutionResult::failed( CorePackageExecutionFailure::INVALID_REQUEST );
 		}
@@ -255,7 +258,7 @@ class CorePackageExecutor {
 		}
 
 		try {
-			return PackageSubdirectory::normalize_slug( trim( $match[1] ) );
+			return PackageDirectory::normalize_slug( trim( $match[1] ) );
 		} catch ( InvalidArgumentException ) {
 			return false;
 		}

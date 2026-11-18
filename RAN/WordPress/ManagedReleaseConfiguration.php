@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\WordPress;
 
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use InvalidArgumentException;
 use JsonException;
 
@@ -21,8 +22,8 @@ final readonly class ManagedReleaseConfiguration {
 		string $metadata_file,
 		string $channel = 'stable'
 	) {
-		if ( 1 !== preg_match( '/\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})\z/D', $package_root )
-			|| 1 !== preg_match( '/\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,190})\z/D', $metadata_file ) ) {
+		if ( ! PackageDirectory::is_valid_name( $package_root )
+			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(?:php|css)\z/D', $metadata_file ) ) {
 			throw new InvalidArgumentException( 'The managed release configuration is invalid.' );
 		}
 		if ( ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {

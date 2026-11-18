@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0-beta.48](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.47...v1.0.0-beta.48) (2026-11-18)
+
+
+### Features
+
+* **admin:** link deployment recovery steps from activity detail ([#1039](https://github.com/RocketsAreNostalgic/ran-booster/issues/1039)) ([2fb7cc1](https://github.com/RocketsAreNostalgic/ran-booster/commit/2fb7cc1c047b85e5f22e451adfa95dd9c20ac447))
+
+
+### Bug Fixes
+
+* **admin:** remove misleading uncertainty notice copy ([#1032](https://github.com/RocketsAreNostalgic/ran-booster/issues/1032)) ([9536e34](https://github.com/RocketsAreNostalgic/ran-booster/commit/9536e34fdb7d5389f1b8dd797e8d7c28ad86609f))
+* **admin:** skip credentialless providers in expiry reminders ([#1031](https://github.com/RocketsAreNostalgic/ran-booster/issues/1031)) ([a6c2098](https://github.com/RocketsAreNostalgic/ran-booster/commit/a6c209814ca90b99508007cc328cb0b9ba6c777f))
+* **admin:** verify branch checks and saves ([#1035](https://github.com/RocketsAreNostalgic/ran-booster/issues/1035)) ([697a963](https://github.com/RocketsAreNostalgic/ran-booster/commit/697a963ba3d91b7e16c5d53f4c909186ddbe0c63))
+* **packages:** align installed folder identity ([#1027](https://github.com/RocketsAreNostalgic/ran-booster/issues/1027)) ([a4f3380](https://github.com/RocketsAreNostalgic/ran-booster/commit/a4f33803c58b9fcbadf380a13d9d06f6a55fa37d))
+* **packages:** complete native updates of active plugins ([#1034](https://github.com/RocketsAreNostalgic/ran-booster/issues/1034)) ([453605a](https://github.com/RocketsAreNostalgic/ran-booster/commit/453605a9497d6926d3b6eada4cfa1158f7b4b21f))
+* **ui:** align disclosure fallback on mount ([#1023](https://github.com/RocketsAreNostalgic/ran-booster/issues/1023)) ([aa8a312](https://github.com/RocketsAreNostalgic/ran-booster/commit/aa8a3126f9d7fa390f47ffa2afa6b63df98a482f))
+
 ## [1.0.0-beta.47](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.46...v1.0.0-beta.47) (2026-11-18)
 
 

@@ -878,15 +878,7 @@
 		const cancel = form.querySelector('[data-credential-cancel]');
 		let dialog = null;
 		let dirty = editor.dataset.credentialDraft === 'true';
-		const confirmDiscard = () => {
-			return (
-				!dirty ||
-				// eslint-disable-next-line no-alert -- Preserve native dirty-form confirmation in this Dialog-only slice.
-				window.confirm(
-					__('Discard unsaved credential changes?', 'ran-booster')
-				)
-			);
-		};
+		let confirmationPending = false;
 		form.addEventListener('input', () => {
 			dirty = true;
 		});
@@ -926,43 +918,110 @@
 						event.metaKey ||
 						event.shiftKey ||
 						event.altKey ||
-						event.button > 0 ||
-						typeof window.ranBoosterOpenDialog !== 'function'
+						event.button > 0
 					) {
 						return;
 					}
 					const id = button.getAttribute('data-id') || '';
+					const destination = button.href;
+					const switchIdentity = (
+						deferred = false,
+						confirmed = false
+					) => {
+						if (
+							(deferred ||
+								confirmed ||
+								typeof window.ranBoosterOpenDialog ===
+									'function') &&
+							(form.elements['ran_booster[id]'].value !== id ||
+								(!dirty && editor.hidden))
+						) {
+							populateCredentialModal(editor, button);
+							dirty = false;
+						}
+						if (typeof window.ranBoosterOpenDialog !== 'function') {
+							if (deferred) {
+								window.location.assign(destination);
+							}
+							return;
+						}
+						const replacing =
+							id !== '' &&
+							new URL(window.location.href).searchParams.get(
+								'replace_credential'
+							) === id;
+						try {
+							dialog = window.ranBoosterOpenDialog(button, form, {
+								title: editor.querySelector(
+									'.ran-booster-dialog__title'
+								).textContent,
+								initialFocus: () =>
+									form.elements[
+										replacing
+											? 'ran_booster[secret]'
+											: 'ran_booster[label]'
+									],
+								disablePointerDismissal: true,
+							});
+						} catch {
+							dialog = null;
+						}
+						if (dialog) {
+							event.preventDefault();
+						} else if (deferred) {
+							window.location.assign(destination);
+						}
+					};
 					if (
-						form.elements['ran_booster[id]'].value !== id ||
-						(!dirty && editor.hidden)
+						dirty &&
+						form.elements['ran_booster[id]'].value !== id
 					) {
-						if (!confirmDiscard()) {
+						if (confirmationPending) {
 							event.preventDefault();
 							return;
 						}
-						populateCredentialModal(editor, button);
-						dirty = false;
+						const message = __(
+							'Discard unsaved credential changes?',
+							'ran-booster'
+						);
+						confirmationPending = true;
+						const opened = window.ranBoosterOpenDialog?.confirm?.(
+							button,
+							__('Unsaved credential changes', 'ran-booster'),
+							message,
+							() => {
+								if (!confirmationPending) {
+									return;
+								}
+								confirmationPending = false;
+								if (
+									button.isConnected &&
+									editor.isConnected &&
+									button.href === destination &&
+									(button.getAttribute('data-id') || '') ===
+										id
+								) {
+									switchIdentity(true);
+								}
+							},
+							() => {
+								confirmationPending = false;
+							}
+						);
+						if (opened) {
+							event.preventDefault();
+							return;
+						}
+						confirmationPending = false;
+						// eslint-disable-next-line no-alert -- Native fallback when the shared confirmation is unavailable.
+						if (!window.confirm(message)) {
+							event.preventDefault();
+							return;
+						}
+						switchIdentity(false, true);
+						return;
 					}
-					const replacing =
-						id !== '' &&
-						new URL(window.location.href).searchParams.get(
-							'replace_credential'
-						) === id;
-					dialog = window.ranBoosterOpenDialog(button, form, {
-						title: editor.querySelector(
-							'.ran-booster-dialog__title'
-						).textContent,
-						initialFocus: () =>
-							form.elements[
-								replacing
-									? 'ran_booster[secret]'
-									: 'ran_booster[label]'
-							],
-						disablePointerDismissal: true,
-					});
-					if (dialog) {
-						event.preventDefault();
-					}
+					switchIdentity();
 				});
 			});
 	}

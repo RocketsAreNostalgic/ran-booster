@@ -606,3 +606,233 @@ test('a sub-heading inside a section uses the shared sub-heading modifier', () =
 		/<h4 id="ran-booster-package-source-heading" class="ran-booster-section__title ran-booster-section__title--sub">/
 	);
 });
+
+/*
+ * Package heading position (#939): Managed Plugins and Managed Themes show an
+ * install action only when the list has packages, so the heading must not move
+ * when the action appears. Every rule that reaches the heading row is resolved
+ * with its media conditions at each width band. Rules under other conditions
+ * (layers, containers, forced colours) are left out.
+ */
+const packageSheets = fs
+	.readdirSync(new URL('ran-booster/', root))
+	.filter((name) => name.endsWith('.css'))
+	.sort()
+	.map((name) => read(`ran-booster/${name}`));
+
+const conditionedRules = packageSheets.flatMap((css) => {
+	const src = css.replace(/\/\*[\s\S]*?\*\//g, '');
+	const found = [];
+	const stack = [];
+	let start = 0;
+	for (let i = 0; i < src.length; i += 1) {
+		if (src[i] === '{') {
+			stack.push(src.slice(start, i).replace(/\s+/g, ' ').trim());
+			start = i + 1;
+		} else if (src[i] === '}') {
+			const selector = stack.pop();
+			if (selector !== undefined && !selector.startsWith('@')) {
+				found.push({
+					selector,
+					body: src.slice(start, i),
+					at: [...stack],
+				});
+			}
+			start = i + 1;
+		}
+	}
+	return found;
+});
+
+const appliesAt = (condition, width) => {
+	if (condition.startsWith('@supports')) {
+		return true;
+	}
+	if (!condition.startsWith('@media ')) {
+		return false;
+	}
+	return condition
+		.slice(7)
+		.split(' and ')
+		.every((part) => {
+			const m = part.trim().match(/^\((min|max)-width: (\d+)px\)$/);
+			if (m) {
+				return m[1] === 'min' ? width >= +m[2] : width <= +m[2];
+			}
+			return part.trim() === 'screen';
+		});
+};
+
+const compounds = (branch) => {
+	const parts = [];
+	let open = 0;
+	let current = '';
+	for (const ch of branch) {
+		open += Number(ch === '(') - Number(ch === ')');
+		if (open === 0 && (ch === ' ' || ch === '>')) {
+			parts.push(current, ch === '>' ? '>' : '');
+			current = '';
+		} else {
+			current += ch;
+		}
+	}
+	return [...parts, current].filter(Boolean);
+};
+
+/* Only classes, tags and :is() of those can match; anything else is treated as not matching. */
+const matchesCompound = (compound, element) =>
+	(compound.match(/:is\([^()]*\)|[.#:]?[\w-]+|\[[^\]]*\]/g) || []).every(
+		(part) => {
+			if (part.startsWith(':is(')) {
+				return branches(part.slice(4, -1)).some((item) =>
+					matchesCompound(item, element)
+				);
+			}
+			if (part.startsWith('.')) {
+				return element.classes.includes(part.slice(1));
+			}
+			return /^[a-z]/.test(part) && part === element.tag;
+		}
+	);
+
+/* path: the element, then its ancestors from the nearest outwards. */
+const reaches = (branch, path) => {
+	const parts = compounds(branch).reverse();
+	if (!matchesCompound(parts[0], path[0])) {
+		return false;
+	}
+	let at = 0;
+	let child = false;
+	for (const part of parts.slice(1)) {
+		if (part === '>') {
+			child = true;
+			continue;
+		}
+		const next = path.findIndex(
+			(element, i) =>
+				i > at &&
+				(!child || i === at + 1) &&
+				matchesCompound(part, element)
+		);
+		if (next < 0) {
+			return false;
+		}
+		at = next;
+		child = false;
+	}
+	return true;
+};
+
+const branchSpecificity = (branch) =>
+	specificity(
+		branch.replace(/:is\(([^()]*)\)/g, (_, list) =>
+			branches(list).reduce((a, b) =>
+				outranks(specificity(b), specificity(a)) ? b : a
+			)
+		)
+	);
+
+/* A shorthand that also sets the property, and how to read it from the value. */
+const shorthands = {
+	'align-items': ['place-items', (v) => v.split(' ')[0]],
+	'align-self': ['place-self', (v) => v.split(' ')[0]],
+	'flex-direction': [
+		'flex-flow',
+		(v) => v.split(' ').find((t) => /^(?:row|column)/.test(t)) ?? 'row',
+	],
+	'flex-wrap': [
+		'flex-flow',
+		(v) => v.split(' ').find((t) => t.includes('wrap')) ?? 'nowrap',
+	],
+};
+
+const computed = (path, property, width) => {
+	const [shorthand, pick] = shorthands[property] ?? [];
+	let winner;
+	for (const rule of conditionedRules) {
+		if (!rule.at.every((c) => appliesAt(c, width))) {
+			continue;
+		}
+		const declarations = rule.body
+			.split(';')
+			.map((d) => d.split(':').map((x) => x.trim()))
+			.filter(([name]) => name === property || name === shorthand);
+		const reaching = branches(rule.selector).filter((b) =>
+			reaches(b, path)
+		);
+		if (!declarations.length || !reaching.length) {
+			continue;
+		}
+		const [name, ...rest] = declarations.at(-1);
+		const value = rest.join(':');
+		const plain = value.replace(/\s*!important$/, '');
+		const candidate = {
+			important: value.endsWith('!important'),
+			value: name === property ? plain : pick(plain),
+			specificity: reaching
+				.map(branchSpecificity)
+				.reduce((a, b) => (outranks(b, a) ? b : a)),
+		};
+		if (
+			!winner ||
+			candidate.important > winner.important ||
+			(candidate.important === winner.important &&
+				!outranks(winner.specificity, candidate.specificity))
+		) {
+			winner = candidate;
+		}
+	}
+	return winner?.value;
+};
+
+test('a package heading keeps its position whether or not the row has an action', () => {
+	const packageList = fs.readFileSync(
+		new URL('../../views/packages/index.php', import.meta.url),
+		'utf8'
+	);
+	const markup = packageList.match(
+		/<header class="([^"]+)">\s*<h2 class="([^"]+)">(?:(?!<\/header>)[\s\S])*?<a class="([^"]+)"/
+	);
+	assert.ok(markup, 'the package heading row markup is missing');
+	const wrap = { tag: 'div', classes: ['wrap', 'ran-booster-admin'] };
+	const row = { tag: 'header', classes: markup[1].split(' ') };
+	const title = { tag: 'h2', classes: markup[2].split(' ') };
+	const action = { tag: 'a', classes: markup[3].split(' ') };
+	const page = [
+		wrap,
+		{ tag: 'div', classes: [] },
+		{ tag: 'body', classes: [] },
+	];
+	const rowPath = [row, ...page];
+
+	for (const width of [1280, 1100, 1000, 783, 782, 600, 390]) {
+		const at = `at ${width}px`;
+		assert.equal(computed(rowPath, 'display', width), 'flex', at);
+		const direction = computed(rowPath, 'flex-direction', width) ?? 'row';
+		assert.ok(!direction.endsWith('-reverse'), `${at}: ${direction}`);
+		assert.notEqual(
+			computed(rowPath, 'flex-wrap', width),
+			'wrap-reverse',
+			at
+		);
+		for (const item of [title, action]) {
+			assert.equal(
+				computed([item, ...rowPath], 'order', width),
+				undefined,
+				at
+			);
+		}
+		if (direction === 'row') {
+			const self = computed([title, ...rowPath], 'align-self', width);
+			const align =
+				self && self !== 'auto'
+					? self
+					: (computed(rowPath, 'align-items', width) ?? 'normal');
+			assert.match(
+				align,
+				/^(?:flex-start|start|self-start|stretch|normal)$/,
+				`${at} the heading must sit at the row start, not ${align}`
+			);
+		}
+	}
+});

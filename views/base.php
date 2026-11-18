@@ -171,6 +171,19 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 		</div>
 	<?php } ?>
 	<?php if ( ! in_array( $view, array( 'packages/index', 'packages/recovery' ), true ) ) { ?>
+		<?php
+		$credential_form_error = null;
+		if ( 'index' === $view && 'provider.php' === ( $tab_view ?? null ) && empty( $route_not_found ) && ! isset( $add_on_tab )
+			&& ! empty( $has_credential_settings ) && ! empty( $credential_form['open'] ) && ! empty( $credential_form['draft'] ) && isset( $messages ) && is_array( $messages ) ) {
+			foreach ( $messages as $notice_index => $notice ) {
+				if ( 'ran_booster_credentials_error' === ( $notice['code'] ?? null ) && 'error' === ( $notice['type'] ?? null ) && is_string( $notice['message'] ?? null ) ) {
+					$credential_form_error                = $notice['message'];
+					$messages[ $notice_index ]['message'] = null;
+					break;
+				}
+			}
+		}
+		?>
 		<?php require __DIR__ . '/notices.php'; ?>
 	<?php } ?>
 

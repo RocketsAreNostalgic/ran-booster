@@ -68,6 +68,8 @@ use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 use RAN\Tests\Support\CredentialUsageDatabase;
 use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
+require_once __DIR__ . '/DevelopmentEnvironmentDetectorWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/FeedbackWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
@@ -1253,8 +1255,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 				}
 				$data = $dashboard->get_index()['data'];
 				ob_start();
-				( new ReflectionMethod( Dashboard::class, 'render' ) )->invoke( $dashboard, 'index', $data );
-				$html                = (string) ob_get_clean();
+				try {
+					( new ReflectionMethod( Dashboard::class, 'render' ) )->invoke( $dashboard, 'index', $data );
+					$html = (string) ob_get_contents();
+				} finally {
+					ob_end_clean();
+				}
 				$dashboard->messages = $messages;
 				$document            = new \DOMDocument();
 				$previous            = libxml_use_internal_errors( true );

@@ -84,7 +84,6 @@ API 14 must not feature-detect or fall back to the retired two-argument shape.
 The context remains bounded and does not create a generic dependency-injection
 seam.
 
-
 The native checkpoints are an additive Provider API15 extension; the factory's
 three arguments and existing provider interfaces are unchanged. A replacement
 that requires them must check both methods are available and refuse unsupported
@@ -191,11 +190,11 @@ Core screens provider-authored text with one shared screener,
 copy of its rules. It screens the whole text before bounding it and drops a
 rejected text whole; it never redacts or truncates. Core uses it by mode:
 
-| Mode | Core sink |
-| --- | --- |
-| `display( $text, $max )` | `ProviderDiagnosticResult` message and remediation (512), `InvalidCredentialInput` message (512), `RepositoryWebhookOperationResult` and `RepositoryWebhookFitnessResult` remediation (512), the webhook controller (255) and the release workflow result text (512) |
-| `identifier( $text )`, `commit_id( $text )` | `BoosterLogger` closed ids and commit ids |
-| `strict( $text, $max )` | `BoosterLogger` string values that are not ids |
+| Mode                                        | Core sink                                                                                                                                                                                                                                                            |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `display( $text, $max )`                    | `ProviderDiagnosticResult` message and remediation (512), `InvalidCredentialInput` message (512), `RepositoryWebhookOperationResult` and `RepositoryWebhookFitnessResult` remediation (512), the webhook controller (255) and the release workflow result text (512) |
+| `identifier( $text )`, `commit_id( $text )` | `BoosterLogger` closed ids and commit ids                                                                                                                                                                                                                            |
+| `strict( $text, $max )`                     | `BoosterLogger` string values that are not ids                                                                                                                                                                                                                       |
 
 `display()` takes curated sentences only: printable ASCII with none of the
 following, anywhere in the text: `/`, `\`, `@`, `=`, `<`, `>`, `&`, `;` or `?`
@@ -1065,39 +1064,39 @@ rejects any other. It refines the coarser
 Typed facts are listed where they apply. "Core shows" paraphrases the copy
 available to consumers of `message()`; not every consumer displays it.
 
-| Reason | Use when | Typed facts | Core shows |
-| --- | --- | --- | --- |
-| `credential_missing` | The request needs a credential and none is selected or saved | None | No credential is saved for this request. |
-| `credential_store_unavailable` | The provider could not read stored credential material | None | Booster could not read the saved credential. |
-| `credential_format_invalid` | Saved material has a shape this provider never accepts; nothing was sent | None | The saved credential is not in a format the provider accepts. |
-| `credential_rejected` | The host answered that authentication failed | `http_status` 401 | The Git provider rejected the credential. |
-| `credential_expired` | The host says the credential has expired | `credential_expires_at` if known | The credential has expired, with the date when known. |
-| `permission_denied` | Authenticated, but the credential lacks scope or access for this action | `http_status` 403 | The credential lacks permission for this request. |
-| `rate_limited` | The primary rate limit is exhausted | `retry_after` or `reset_at`, `http_status` | Rate limit reached, with a retry time when given. |
-| `rate_limited_secondary` | The host applied a secondary or abuse limit | `retry_after`, `http_status` | The provider is throttling requests, with a retry time when given. |
-| `repository_not_found_or_no_access` | A 404 that cannot separate absence from missing access | `http_status` 404 | Not found, or the credential cannot access it. |
-| `repository_not_found` | The provider can prove the repository does not exist | `http_status` 404 | The repository does not exist. |
-| `ref_not_found` | The branch, tag or commit does not exist or is gone | `http_status` 404 or 410 | The requested revision is not available. |
-| `owner_not_found` | The user, organisation or workspace does not exist | `http_status` 404 | The owner could not be found. |
-| `repository_identity_changed` | The locator now resolves to a different stable repository ID than expected | None | The repository changed identity; review the package source. |
-| `repository_no_default_branch` | The repository exists but has no default branch (empty) | None | The repository has no default branch. |
-| `http_timeout` | A request timed out | None | The provider took too long. |
-| `dns_failed` | The host name did not resolve | None | The site could not look up the provider host. |
-| `tls_failed` | TLS negotiation or certificate verification failed | None | The site could not make a secure connection. |
-| `blocked_by_site` | WordPress or the site refused the request (for example `WP_HTTP_BLOCK_EXTERNAL`, an `http_request_not_executed` result) | None | This site blocks outbound requests to the provider. |
-| `redirect_blocked` | A redirect went to a disallowed host or scheme, or exceeded the redirect limit | None | The provider redirected the request somewhere not allowed. |
-| `transport_other` | Any other failure before an HTTP status existed | None | The provider could not be reached. |
-| `http_4xx_other` | Any 4xx not covered above | `http_status` | The provider refused the request. |
-| `http_5xx` | Any 5xx | `http_status` | The provider reported an error. |
-| `response_invalid` | The reply was not the expected shape | None | The provider returned an invalid response. |
-| `response_too_large` | The reply exceeded the request's size limit | None | The provider returned too much data. |
-| `site_filesystem_unsupported` | WordPress cannot use direct filesystem access for this operation | None | This site's filesystem method does not support the operation. |
-| `site_zip_unavailable` | The PHP ZIP extension is missing | None | The server cannot read ZIP packages. |
-| `operation_superseded` | A newer operation replaced this one | None | A newer operation replaced this one. |
-| `no_releases` | No eligible published release exists for the channel | None | No published release for this track. |
-| `release_invalid` | A release is malformed or does not match its listing | None | The release could not be validated. |
-| `release_changed` | The release differs from what was inspected (fingerprint changed) | None | The release changed after inspection. |
-| `release_incompatible` | The release is not a valid package for this repository | None | The release is not a compatible package. |
+| Reason                              | Use when                                                                                                                | Typed facts                                | Core shows                                                         |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------ |
+| `credential_missing`                | The request needs a credential and none is selected or saved                                                            | None                                       | No credential is saved for this request.                           |
+| `credential_store_unavailable`      | The provider could not read stored credential material                                                                  | None                                       | Booster could not read the saved credential.                       |
+| `credential_format_invalid`         | Saved material has a shape this provider never accepts; nothing was sent                                                | None                                       | The saved credential is not in a format the provider accepts.      |
+| `credential_rejected`               | The host answered that authentication failed                                                                            | `http_status` 401                          | The Git provider rejected the credential.                          |
+| `credential_expired`                | The host says the credential has expired                                                                                | `credential_expires_at` if known           | The credential has expired, with the date when known.              |
+| `permission_denied`                 | Authenticated, but the credential lacks scope or access for this action                                                 | `http_status` 403                          | The credential lacks permission for this request.                  |
+| `rate_limited`                      | The primary rate limit is exhausted                                                                                     | `retry_after` or `reset_at`, `http_status` | Rate limit reached, with a retry time when given.                  |
+| `rate_limited_secondary`            | The host applied a secondary or abuse limit                                                                             | `retry_after`, `http_status`               | The provider is throttling requests, with a retry time when given. |
+| `repository_not_found_or_no_access` | A 404 that cannot separate absence from missing access                                                                  | `http_status` 404                          | Not found, or the credential cannot access it.                     |
+| `repository_not_found`              | The provider can prove the repository does not exist                                                                    | `http_status` 404                          | The repository does not exist.                                     |
+| `ref_not_found`                     | The branch, tag or commit does not exist or is gone                                                                     | `http_status` 404 or 410                   | The requested revision is not available.                           |
+| `owner_not_found`                   | The user, organisation or workspace does not exist                                                                      | `http_status` 404                          | The owner could not be found.                                      |
+| `repository_identity_changed`       | The locator now resolves to a different stable repository ID than expected                                              | None                                       | The repository changed identity; review the package source.        |
+| `repository_no_default_branch`      | The repository exists but has no default branch (empty)                                                                 | None                                       | The repository has no default branch.                              |
+| `http_timeout`                      | A request timed out                                                                                                     | None                                       | The provider took too long.                                        |
+| `dns_failed`                        | The host name did not resolve                                                                                           | None                                       | The site could not look up the provider host.                      |
+| `tls_failed`                        | TLS negotiation or certificate verification failed                                                                      | None                                       | The site could not make a secure connection.                       |
+| `blocked_by_site`                   | WordPress or the site refused the request (for example `WP_HTTP_BLOCK_EXTERNAL`, an `http_request_not_executed` result) | None                                       | This site blocks outbound requests to the provider.                |
+| `redirect_blocked`                  | A redirect went to a disallowed host or scheme, or exceeded the redirect limit                                          | None                                       | The provider redirected the request somewhere not allowed.         |
+| `transport_other`                   | Any other failure before an HTTP status existed                                                                         | None                                       | The provider could not be reached.                                 |
+| `http_4xx_other`                    | Any 4xx not covered above                                                                                               | `http_status`                              | The provider refused the request.                                  |
+| `http_5xx`                          | Any 5xx                                                                                                                 | `http_status`                              | The provider reported an error.                                    |
+| `response_invalid`                  | The reply was not the expected shape                                                                                    | None                                       | The provider returned an invalid response.                         |
+| `response_too_large`                | The reply exceeded the request's size limit                                                                             | None                                       | The provider returned too much data.                               |
+| `site_filesystem_unsupported`       | WordPress cannot use direct filesystem access for this operation                                                        | None                                       | This site's filesystem method does not support the operation.      |
+| `site_zip_unavailable`              | The PHP ZIP extension is missing                                                                                        | None                                       | The server cannot read ZIP packages.                               |
+| `operation_superseded`              | A newer operation replaced this one                                                                                     | None                                       | A newer operation replaced this one.                               |
+| `no_releases`                       | No eligible published release exists for the channel                                                                    | None                                       | No published release for this track.                               |
+| `release_invalid`                   | A release is malformed or does not match its listing                                                                    | None                                       | The release could not be validated.                                |
+| `release_changed`                   | The release differs from what was inspected (fingerprint changed)                                                       | None                                       | The release changed after inspection.                              |
+| `release_incompatible`              | The release is not a valid package for this repository                                                                  | None                                       | The release is not a compatible package.                           |
 
 The release group also accepts `package_asset_missing` and
 `package_asset_ambiguous`. A rejection that carries one of them keeps its
@@ -1123,15 +1122,15 @@ absent: the release read carrier accepts every group except release, the
 release rejection carriers accept the release group, and the saved-credential
 check accepts the credential, rate, transport and http groups.
 
-| Operation | Carrier | Attach as |
-| --- | --- | --- |
-| `resolve_repository()`, repository browsing, `prepare_archive()`, `verify_current_head()` | `ProviderRequestFailed`, a final `RuntimeException` | `new ProviderRequestFailed( $failure )`; `getCode()` returns the failure's `http_status`, else the reason's default code |
-| Release listing, inspection | `RepositoryReleaseReadUnavailable` | `new RepositoryReleaseReadUnavailable( failure: $failure )`; the constructor keeps the `RuntimeException` message, code and previous arguments and adds `failure` last, so existing calls are unchanged |
-| Release inspection rejection | `RepositoryReleaseInspectionRejected` | Optional last argument of `no_releases()`, `invalid_release()` and `incompatible()` |
-| Release acquisition rejection | `RepositoryReleaseAcquisitionRejected` | Optional argument of `invalid_release()`, `cleanup_failed()` and `changed()` (reason `release_changed`) |
-| Saved credential check | `CredentialValidationResult` | Optional argument of `invalid()`, `unavailable()`, `rate_limited()` and `invalid_response()`. `valid()` accepts none |
-| Submitted credential shape | `InvalidCredentialInput` | Unchanged: closed `reason` and a fixed message |
-| Diagnostics | `ProviderDiagnosticResult` | Unchanged: stable `code`, safe `message` and `remediation`, optional `Throwable` |
+| Operation                                                                                 | Carrier                                             | Attach as                                                                                                                                                                                               |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolve_repository()`, repository browsing, `prepare_archive()`, `verify_current_head()` | `ProviderRequestFailed`, a final `RuntimeException` | `new ProviderRequestFailed( $failure )`; `getCode()` returns the failure's `http_status`, else the reason's default code                                                                                |
+| Release listing, inspection                                                               | `RepositoryReleaseReadUnavailable`                  | `new RepositoryReleaseReadUnavailable( failure: $failure )`; the constructor keeps the `RuntimeException` message, code and previous arguments and adds `failure` last, so existing calls are unchanged |
+| Release inspection rejection                                                              | `RepositoryReleaseInspectionRejected`               | Optional last argument of `no_releases()`, `invalid_release()` and `incompatible()`                                                                                                                     |
+| Release acquisition rejection                                                             | `RepositoryReleaseAcquisitionRejected`              | Optional argument of `invalid_release()`, `cleanup_failed()` and `changed()` (reason `release_changed`)                                                                                                 |
+| Saved credential check                                                                    | `CredentialValidationResult`                        | Optional argument of `invalid()`, `unavailable()`, `rate_limited()` and `invalid_response()`. `valid()` accepts none                                                                                    |
+| Submitted credential shape                                                                | `InvalidCredentialInput`                            | Unchanged: closed `reason` and a fixed message                                                                                                                                                          |
+| Diagnostics                                                                               | `ProviderDiagnosticResult`                          | Unchanged: stable `code`, safe `message` and `remediation`, optional `Throwable`                                                                                                                        |
 
 On the credential check, pair the factory with its reason (`invalid()` with a
 credential or permission reason, `rate_limited()` with a rate reason,
@@ -1149,28 +1148,28 @@ input.
 
 ### Situations
 
-| Situation | Reason | Facts | Carrier |
-| --- | --- | --- | --- |
-| Rate limited | `rate_limited`, or `rate_limited_secondary` for abuse limits | `retry_after` or `reset_at`, `http_status` | Request or release carrier |
-| Credential missing | `credential_missing` | None | Request, release or validation |
-| Credential invalid | `credential_rejected` | `http_status` | Same |
-| Credential expired | `credential_expired` | `credential_expires_at` | Same |
-| Credential under-scoped | `permission_denied` | `http_status` | Same |
-| Credential store failed | `credential_store_unavailable` | None | Same |
-| Repository not found or moved | `repository_not_found_or_no_access`, or `repository_not_found` when provable; `repository_identity_changed` when the stable ID differs | `http_status` | Request carrier |
-| Revision gone | `ref_not_found` | `http_status` | Request carrier |
-| No default branch | `repository_no_default_branch` | None | Request carrier |
-| Transport failure | `http_timeout`, `dns_failed`, `tls_failed`, `redirect_blocked` or `transport_other` | None | Request or release carrier |
-| Environment blocks HTTP | `blocked_by_site` | None | Request or release carrier |
-| Upstream error | `http_5xx` | `http_status` | Request or release carrier |
-| Bad or oversized reply | `response_invalid` or `response_too_large` | None | Request carrier |
-| Release listing empty | Return an empty candidate list | None | None |
-| Release inspection rejected | `no_releases`, `invalid_release` or `incompatible` through the rejection factories, with a refining failure reason | None | Inspection carrier |
-| Release changed during acquisition | `release_changed` | None | Acquisition carrier |
-| Acquisition cleanup failed | `cleanup_failed()` | None | Acquisition carrier |
-| Filesystem or ZIP unsupported | `site_filesystem_unsupported`, `site_zip_unavailable` | None | Request or release carrier |
-| Saved credential check | `CredentialValidationResult::invalid()`, `unavailable()`, `rate_limited()` or `invalid_response()` with a failure | Per reason | Validation result |
-| Submitted credential has a bad shape | `InvalidCredentialInput`: `invalid_configuration`, `credential_kind_mismatch` or `invalid_secret_shape` | None | Exception |
+| Situation                            | Reason                                                                                                                                 | Facts                                      | Carrier                        |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------ |
+| Rate limited                         | `rate_limited`, or `rate_limited_secondary` for abuse limits                                                                           | `retry_after` or `reset_at`, `http_status` | Request or release carrier     |
+| Credential missing                   | `credential_missing`                                                                                                                   | None                                       | Request, release or validation |
+| Credential invalid                   | `credential_rejected`                                                                                                                  | `http_status`                              | Same                           |
+| Credential expired                   | `credential_expired`                                                                                                                   | `credential_expires_at`                    | Same                           |
+| Credential under-scoped              | `permission_denied`                                                                                                                    | `http_status`                              | Same                           |
+| Credential store failed              | `credential_store_unavailable`                                                                                                         | None                                       | Same                           |
+| Repository not found or moved        | `repository_not_found_or_no_access`, or `repository_not_found` when provable; `repository_identity_changed` when the stable ID differs | `http_status`                              | Request carrier                |
+| Revision gone                        | `ref_not_found`                                                                                                                        | `http_status`                              | Request carrier                |
+| No default branch                    | `repository_no_default_branch`                                                                                                         | None                                       | Request carrier                |
+| Transport failure                    | `http_timeout`, `dns_failed`, `tls_failed`, `redirect_blocked` or `transport_other`                                                    | None                                       | Request or release carrier     |
+| Environment blocks HTTP              | `blocked_by_site`                                                                                                                      | None                                       | Request or release carrier     |
+| Upstream error                       | `http_5xx`                                                                                                                             | `http_status`                              | Request or release carrier     |
+| Bad or oversized reply               | `response_invalid` or `response_too_large`                                                                                             | None                                       | Request carrier                |
+| Release listing empty                | Return an empty candidate list                                                                                                         | None                                       | None                           |
+| Release inspection rejected          | `no_releases`, `invalid_release` or `incompatible` through the rejection factories, with a refining failure reason                     | None                                       | Inspection carrier             |
+| Release changed during acquisition   | `release_changed`                                                                                                                      | None                                       | Acquisition carrier            |
+| Acquisition cleanup failed           | `cleanup_failed()`                                                                                                                     | None                                       | Acquisition carrier            |
+| Filesystem or ZIP unsupported        | `site_filesystem_unsupported`, `site_zip_unavailable`                                                                                  | None                                       | Request or release carrier     |
+| Saved credential check               | `CredentialValidationResult::invalid()`, `unavailable()`, `rate_limited()` or `invalid_response()` with a failure                      | Per reason                                 | Validation result              |
+| Submitted credential has a bad shape | `InvalidCredentialInput`: `invalid_configuration`, `credential_kind_mismatch` or `invalid_secret_shape`                                | None                                       | Exception                      |
 
 ### Release rejection
 
@@ -1201,13 +1200,13 @@ not establish that every release surface displays the carried reason.
 
 ### Where Core uses a reason
 
-| Boundary | What Core does with the reason |
-| --- | --- |
-| Repository picker and package save (resolve) | Shows the reason copy for a carried failure and keeps the status copy for a plain exception. Logs the class, code and reason |
-| Saved credential check | Shows the reason copy (expired, under-scoped, store failure and rate limit are told apart) and logs the reason |
-| Deployment archive preparation and head verification | Maps the reason onto the attempt outcome codes below and logs the class, code and reason |
-| Release read (candidate listing, inspection, preflight) | Logs the class, code and derived or carried reason. Managed release lookup can use a carried rate-limit reason to offer a public lookup profile; notices retain closed codes |
-| Release inspection and acquisition rejection | Managed inspection uses the refinement described above; prospective inspection and installation map rejections to coarse result codes. A carried reason does not generally become release notice copy |
+| Boundary                                                | What Core does with the reason                                                                                                                                                                        |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository picker and package save (resolve)            | Shows the reason copy for a carried failure and keeps the status copy for a plain exception. Logs the class, code and reason                                                                          |
+| Saved credential check                                  | Shows the reason copy (expired, under-scoped, store failure and rate limit are told apart) and logs the reason                                                                                        |
+| Deployment archive preparation and head verification    | Maps the reason onto the attempt outcome codes below and logs the class, code and reason                                                                                                              |
+| Release read (candidate listing, inspection, preflight) | Logs the class, code and derived or carried reason. Managed release lookup can use a carried rate-limit reason to offer a public lookup profile; notices retain closed codes                          |
+| Release inspection and acquisition rejection            | Managed inspection uses the refinement described above; prospective inspection and installation map rejections to coarse result codes. A carried reason does not generally become release notice copy |
 
 ### What Core shows and logs
 
@@ -1240,18 +1239,18 @@ attempt record, Activity and the support report carry the outcome code only.
 Without a `ProviderFailure`, Core reads `getCode()` of a `RuntimeException`
 thrown by the request operations:
 
-| Code | Reason Core derives |
-| --- | --- |
-| `400`, `422` | `http_4xx_other` |
-| `401` | `credential_rejected` |
-| `403` | `permission_denied` |
-| `404` | `repository_not_found_or_no_access` |
-| `410` | `ref_not_found` |
-| `413` | `response_too_large` |
-| `429` | `rate_limited` |
-| `502`, `503` | `http_5xx` |
-| `504` | `transport_other` |
-| Anything else, including `0` | No reason: generic failure |
+| Code                         | Reason Core derives                 |
+| ---------------------------- | ----------------------------------- |
+| `400`, `422`                 | `http_4xx_other`                    |
+| `401`                        | `credential_rejected`               |
+| `403`                        | `permission_denied`                 |
+| `404`                        | `repository_not_found_or_no_access` |
+| `410`                        | `ref_not_found`                     |
+| `413`                        | `response_too_large`                |
+| `429`                        | `rate_limited`                      |
+| `502`, `503`                 | `http_5xx`                          |
+| `504`                        | `transport_other`                   |
+| Anything else, including `0` | No reason: generic failure          |
 
 Existing providers use `504` only when the HTTP request failed before any
 response arrived (a `WP_Error`), and `502` and `503` for a bad or unavailable
@@ -1276,38 +1275,40 @@ conceptual correspondence, not an automatic conversion or a guarantee that a
 provider failure reaches the native updater. Its rate-limit `retry_after` range
 (1 to 86400) is the same as the updater's.
 
-| Provider reasons | `ReleaseFailure` code |
-| --- | --- |
-| `credential_missing`, `credential_store_unavailable`, `credential_format_invalid` | `credential_unavailable` |
+| Provider reasons                                                                   | `ReleaseFailure` code           |
+| ---------------------------------------------------------------------------------- | ------------------------------- |
+| `credential_missing`, `credential_store_unavailable`, `credential_format_invalid`  | `credential_unavailable`        |
 | `credential_rejected`, `credential_expired`, `permission_denied`, location reasons | `repository_access_unavailable` |
-| `rate_limited`, `rate_limited_secondary` | `rate_limited` |
-| Transport, `http_*` and `response_*` reasons | `provider_unavailable` |
-| `site_filesystem_unsupported` | `filesystem_unsupported` |
-| `site_zip_unavailable` | `runtime_unavailable` |
-| `operation_superseded` | `operation_failed` |
-| `no_releases` | `release_unavailable` |
-| `release_invalid` | `invalid_release` |
-| `release_incompatible` | `package_incompatible` |
-| `release_changed` | `release_changed` |
+| `rate_limited`, `rate_limited_secondary`                                           | `rate_limited`                  |
+| Transport, `http_*` and `response_*` reasons                                       | `provider_unavailable`          |
+| `site_filesystem_unsupported`                                                      | `filesystem_unsupported`        |
+| `site_zip_unavailable`                                                             | `runtime_unavailable`           |
+| `operation_superseded`                                                             | `operation_failed`              |
+| `no_releases`                                                                      | `release_unavailable`           |
+| `release_invalid`                                                                  | `invalid_release`               |
+| `release_incompatible`                                                             | `package_incompatible`          |
+| `release_changed`                                                                  | `release_changed`               |
 
 The updater's `ReleaseRejection` reasons (for example `no_package_zip` and
 `multiple_package_zips`) are updater-side. Core words them as the existing
 `package_*` ids and does not accept them from a provider.
 
-### Current adoption and proposed remainder
+### Historical beta.23 adoption and proposed remainder
 
-The bundled GitHub provider beta.23 carries `rate_limited` and bounded status,
+At the beta.23 adoption, the bundled GitHub provider carried `rate_limited` and bounded status,
 retry and reset facts for anonymous repository resolution when the host exposes
 both carrier classes. Other paths still have their own existing results or
 integer-code fallbacks; this adoption does not complete provider carrier work.
 
-The remaining work in #920 is proposed and held: webhook rejection and ignored
+At that point, the remaining work in #920 was proposed and held: webhook rejection and ignored
 reasons, webhook-management ambiguity, reason-specific release notices, Activity
 and support-report reason detail, and an optional screened `ProviderFailure`
 `detail`. The current failure value has no text or `detail` argument. The existing
 inspection rejection `detail` is a separate closed legacy refinement, not that
 proposal. Carrier-dependent work in #927 also remains held. Neither the shared
-`FailureText` screener nor the beta.23 adoption makes those proposals current.
+`FailureText` screener nor the beta.23 adoption made those proposals current.
+For the current bundled versions and their qualified behavior, see the
+[shared-updater handoff](core-self-updates.md#shared-updater-handoff).
 
 ### Secrets rules for providers
 

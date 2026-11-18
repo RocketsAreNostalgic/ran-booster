@@ -115,14 +115,14 @@ On first view the feedback host also strips the marker arguments
 Back shows nothing. Without JavaScript the server cannot strip them, so a
 no-JavaScript reload shows the neutral fallback.
 
-Known deviation: a validation or unexpected failure that arrives by redirect
-(no JavaScript, or a form that is not HTMX-enhanced) renders as an inline
-notice, not a host item, so the host does not strip the marker. On reload the
-row is gone and the neutral fallback replaces the failure text, and it shows
-again on each reload while the nonce is valid. Enhanced failures render inline
-from the response body and never use the row. The cleaner fix, a pointer item
-or a host-item fallback so the host strips the address, is a follow-up for the
-pointer and notice collapse in #953 and the feedback work in #755 P7.
+A validation or unexpected failure that arrives by redirect (no JavaScript, or
+a form that is not HTMX-enhanced) renders as an inline notice that carries the
+key `interaction_<kind>`. With JavaScript the host takes that notice, shows a
+pointer to it and strips the marker, so a reload shows nothing. Without
+JavaScript the marker stays: the row is gone on reload and the neutral fallback
+replaces the failure text, and it shows again on each reload while the nonce is
+valid. Enhanced failures render inline from the response body and never use the
+row.
 
 What an add-on gets from `respond()`, with no new API and no change to the
 exact API 3 guard:
@@ -194,8 +194,8 @@ omitted because its inline message is the record; to be revisited after use. A s
 dismisses itself after one 10 second constant owned by the host, pauses while
 the pointer is over it or focus is inside it, and also dismisses with its
 control or Escape. An error or warning item is only a pointer to a persistent
-inline message (`data-feedback-target`), is silent, never times out, and is
-never shown without its target. A result that carries a warning keeps its
+inline notice that carries its key, is silent, never times out, and is never
+shown without that notice in the page. A result that carries a warning keeps its
 success static. The host mounts inside the Booster frame
 (`.wrap.ran-booster-admin`, falling back to `#wpcontent`), follows it when
 an HTMX swap replaces the frame, and centres on it through CSS alone.

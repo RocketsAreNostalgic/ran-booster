@@ -190,7 +190,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:60
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:356
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:37
-#: views/extensions.php:239
+#: views/extensions.php:238
 #: views/provider.php:545
 #: views/provider.php:566
 #: views/troubleshooting.php:239
@@ -268,7 +268,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:242
 #: views/attempts/index.php:123
 #: views/attempts/index.php:177
-#: views/extensions.php:247
+#: views/extensions.php:246
 #: views/portability-review.php:31
 #: views/troubleshooting-installation.php:11
 #: views/troubleshooting-installation.php:195
@@ -567,7 +567,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:564
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:329
 #: views/extensions.php:16
-#: views/extensions.php:100
+#: views/extensions.php:99
 #: views/troubleshooting-installation.php:173
 #: views/troubleshooting-installation.php:174
 msgid "Active"
@@ -1425,81 +1425,81 @@ msgstr ""
 msgid "An add-on guide is temporarily unavailable. Check plugin compatibility and the error log."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:102
+#: RAN/Admin/Feedback/FeedbackFlash.php:90
 msgid "Release check complete."
 msgstr ""
 
 #. translators: %s: release version.
-#: RAN/Admin/Feedback/FeedbackFlash.php:120
+#: RAN/Admin/Feedback/FeedbackFlash.php:105
 #, php-format
 msgid "Newer release %s available. Updates are off for this package."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:121
+#: RAN/Admin/Feedback/FeedbackFlash.php:106
 msgid "Newer release available. Updates are off for this package."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:124
+#: RAN/Admin/Feedback/FeedbackFlash.php:109
 msgid "Checked a moment ago."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:125
+#: RAN/Admin/Feedback/FeedbackFlash.php:110
 msgid "Checked: no newer release. Updates are off for this package."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:126
+#: RAN/Admin/Feedback/FeedbackFlash.php:111
 msgid "Check not run. Updates are off for this package."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:126
+#: RAN/Admin/Feedback/FeedbackFlash.php:111
 msgid "Nothing is wrong. Turn updates on in the package settings to check for releases."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:127
+#: RAN/Admin/Feedback/FeedbackFlash.php:112
 msgid "Check not run. Site configuration turns updates off."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:127
+#: RAN/Admin/Feedback/FeedbackFlash.php:112
 msgid "Nothing is wrong. Site configuration blocks updates for every package; change it there to allow checks."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:128
+#: RAN/Admin/Feedback/FeedbackFlash.php:113
 msgid "Releases were not checked. Use Check releases to retry."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:129
+#: RAN/Admin/Feedback/FeedbackFlash.php:114
 msgid "The newest release cannot be used."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:129
+#: RAN/Admin/Feedback/FeedbackFlash.php:114
 msgid "It did not pass Booster's eligibility checks. Activity records the reason."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:130
+#: RAN/Admin/Feedback/FeedbackFlash.php:115
 msgid "The release check failed."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:130
+#: RAN/Admin/Feedback/FeedbackFlash.php:115
 msgid "Booster could not finish the check. Try again; if it repeats, see Activity."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:131
+#: RAN/Admin/Feedback/FeedbackFlash.php:116
 msgid "The release check could not start. Review this package’s published release settings, then retry."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:143
+#: RAN/Admin/Feedback/FeedbackFlash.php:128
 msgid "Release tracking enabled."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:144
+#: RAN/Admin/Feedback/FeedbackFlash.php:129
 msgid "Release track changed. The installed package was not changed and Automatic was reset to Manual."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:145
+#: RAN/Admin/Feedback/FeedbackFlash.php:130
 msgid "Branch-based package management is restored."
 msgstr ""
 
-#: RAN/Admin/Feedback/FeedbackFlash.php:158
+#: RAN/Admin/Feedback/FeedbackFlash.php:142
 msgid "Release check complete. No newer eligible release was found."
 msgstr ""
 
@@ -2643,7 +2643,7 @@ msgstr ""
 msgid "Package update orchestration guide"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:783
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:780
 msgid "View all conflicting packages"
 msgstr ""
 
@@ -2949,7 +2949,7 @@ msgstr ""
 
 #. translators: %s is plugin or theme.
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:722
-#: views/extensions.php:118
+#: views/extensions.php:117
 #: views/packages/create.php:182
 #: views/packages/create.php:184
 #: views/packages/create.php:185
@@ -6173,7 +6173,7 @@ msgid "Enabled candidates"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:258
-#: views/extensions.php:236
+#: views/extensions.php:235
 #: views/settings-general.php:255
 msgid "Installed version"
 msgstr ""
@@ -6259,7 +6259,7 @@ msgid "Not run"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:311
-#: views/extensions.php:232
+#: views/extensions.php:231
 #: views/packages/index.php:546
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:11
@@ -6752,7 +6752,7 @@ msgid "Keep the existing WP_DEBUG_LOG destination."
 msgstr ""
 
 #: views/debug-capture.php:55
-#: views/extensions.php:109
+#: views/extensions.php:108
 #: views/troubleshooting-installation.php:173
 msgid "Inactive"
 msgstr ""
@@ -6906,7 +6906,7 @@ msgstr ""
 
 #: views/documentation.php:91
 #: views/documentation.php:306
-#: views/extensions.php:219
+#: views/extensions.php:218
 msgid "Requirements"
 msgstr ""
 
@@ -6968,7 +6968,7 @@ msgid "Reference"
 msgstr ""
 
 #: views/documentation.php:240
-#: views/extensions.php:251
+#: views/extensions.php:250
 msgid "Documentation"
 msgstr ""
 
@@ -7705,103 +7705,103 @@ msgid "Add focused capabilities to Booster."
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:82
+#: views/extensions.php:81
 #, php-format
 msgid "More details about %s"
 msgstr ""
 
-#: views/extensions.php:106
+#: views/extensions.php:105
 msgid "Activating…"
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:106
+#: views/extensions.php:105
 #, php-format
 msgctxt "extension action"
 msgid "Activate %s"
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:106
+#: views/extensions.php:105
 msgid "Activate"
 msgstr ""
 
-#: views/extensions.php:111
+#: views/extensions.php:110
 msgid "A network administrator must activate this plugin."
 msgstr ""
 
-#: views/extensions.php:111
+#: views/extensions.php:110
 msgid "You do not have permission to activate this plugin."
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:118
+#: views/extensions.php:117
 #, php-format
 msgctxt "extension action"
 msgid "Install %s"
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:118
+#: views/extensions.php:117
 msgid "Install"
 msgstr ""
 
-#: views/extensions.php:121
+#: views/extensions.php:120
 msgid "You do not have permission to install plugins."
 msgstr ""
 
-#: views/extensions.php:125
+#: views/extensions.php:124
 msgid "More details"
 msgstr ""
 
-#: views/extensions.php:127
+#: views/extensions.php:126
 msgid "Manage plugin"
 msgstr ""
 
-#: views/extensions.php:136
+#: views/extensions.php:135
 msgid "By"
 msgstr ""
 
-#: views/extensions.php:139
-#: views/extensions.php:255
+#: views/extensions.php:138
+#: views/extensions.php:254
 msgid "Support"
 msgstr ""
 
-#: views/extensions.php:147
+#: views/extensions.php:146
 msgid "Beta"
 msgstr ""
 
-#: views/extensions.php:157
+#: views/extensions.php:156
 msgid "Compatible"
 msgstr ""
 
-#: views/extensions.php:157
+#: views/extensions.php:156
 msgid "with your version of Booster"
 msgstr ""
 
-#: views/extensions.php:176
+#: views/extensions.php:175
 #: views/troubleshooting.php:241
 #: views/troubleshooting.php:290
 msgid "Details"
 msgstr ""
 
-#: views/extensions.php:208
+#: views/extensions.php:207
 msgid "About this extension"
 msgstr ""
 
-#: views/extensions.php:212
+#: views/extensions.php:211
 msgid "What it adds"
 msgstr ""
 
-#: views/extensions.php:229
+#: views/extensions.php:228
 msgid "Extension details"
 msgstr ""
 
-#: views/extensions.php:241
+#: views/extensions.php:240
 msgid "Compatibility"
 msgstr ""
 
-#: views/extensions.php:253
+#: views/extensions.php:252
 msgid "Release page"
 msgstr ""
 
@@ -11333,7 +11333,7 @@ msgctxt "plugin"
 msgid "%s update failed."
 msgstr ""
 
-#: assets/ran-booster-feedback.js:280
+#: assets/ran-booster-feedback.js:282
 msgid "Show details"
 msgstr ""
 

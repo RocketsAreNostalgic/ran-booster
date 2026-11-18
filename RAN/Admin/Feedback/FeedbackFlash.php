@@ -22,16 +22,6 @@ final class FeedbackFlash {
 
 	/** Store the codes for this user's next Booster screen. A later call replaces an unread flash. */
 	public static function enqueue( string ...$codes ): void {
-		self::store( $codes );
-	}
-
-	/** Store one Check releases result, with the newer release version it may name. */
-	public static function enqueue_check_result( string $code, string $version = '' ): void {
-		self::store( array( $code ), $version );
-	}
-
-	/** @param array<array-key, string> $codes */
-	private static function store( array $codes, string $version = '' ): void {
 		$user_id = get_current_user_id();
 		$codes   = array_slice(
 			array_values( array_unique( array_filter( $codes, static fn ( string $code ): bool => null !== self::definition( $code ) ) ) ),
@@ -49,7 +39,7 @@ final class FeedbackFlash {
 				'site'  => get_current_blog_id(),
 				'at'    => time(),
 				'codes' => $codes,
-			) + ( self::valid_version( $version ) ? array( 'version' => $version ) : array() )
+			)
 		);
 	}
 
@@ -77,19 +67,17 @@ final class FeedbackFlash {
 
 		$items = '';
 		foreach ( $flash['codes'] as $code ) {
-			$version    = is_string( $flash['version'] ?? null ) ? $flash['version'] : '';
-			$definition = is_string( $code ) ? self::definition( $code, $version ) : null;
+			$definition = is_string( $code ) ? self::definition( $code ) : null;
 			if ( null !== $definition ) {
-				$items .= self::item( $code, $definition[0], $definition[1], $definition[2] ?? '' );
+				$items .= self::item( $code, $definition[0], $definition[1] );
 			}
 		}
 		echo self::container( $items ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- container() escapes every dynamic value; the code is a closed vocabulary member.
 	}
 
 	/** One static feedback item: a closed key and fixed Core copy, which the client host turns into a snackbar. */
-	public static function item( string $key, string $intent, string $text, string $target = '' ): string {
-		$target = '' === $target ? '' : ' data-feedback-target="' . esc_attr( $target ) . '"';
-		return '<div class="ran-booster-feedback__item" data-feedback-key="' . esc_attr( $key ) . '" data-intent="' . esc_attr( $intent ) . '"' . $target . ' role="' . ( 'error' === $intent ? 'alert' : 'status' ) . '">' . esc_html( $text ) . '</div>';
+	public static function item( string $key, string $intent, string $text ): string {
+		return '<div class="ran-booster-feedback__item" data-feedback-key="' . esc_attr( $key ) . '" data-intent="' . esc_attr( $intent ) . '" role="' . ( 'error' === $intent ? 'alert' : 'status' ) . '">' . esc_html( $text ) . '</div>';
 	}
 
 	/** The container the client host consumes, or nothing when there are no items. */
@@ -102,12 +90,9 @@ final class FeedbackFlash {
 		return __( 'Release check complete.', 'ran-booster' );
 	}
 
-	/** The id of the inline notice a Check releases pointer leads to. */
-	public const CHECK_RESULT_TARGET = 'ran-booster-release-check-result';
-
 	/**
 	 * The one copy source for a Check releases result that is not a success:
-	 * the snackbar and the inline notice show the summary, and the notice adds the detail.
+	 * the inline notice shows the summary and the detail, and the host reads the summary from the notice for the snackbar.
 	 *
 	 * @return array{0: 'info'|'error'|'warning', 1: string, 2: string}|null Intent, summary and detail for a closed result code.
 	 */
@@ -147,9 +132,8 @@ final class FeedbackFlash {
 		};
 	}
 
-	/** @return array{0: 'success'|'info'|'error'|'warning', 1: string, 2?: string}|null Intent, fixed Core copy and optional inline target for a closed code. */
-	private static function definition( string $code, string $version = '' ): ?array {
-		$check     = self::check_result( $code, $version );
+	/** @return array{0: 'success', 1: string}|null Intent and fixed Core copy for a closed code. */
+	private static function definition( string $code ): ?array {
 		$operation = self::release_operation_success( $code );
 		if ( null !== $operation ) {
 			return array( 'success', $operation );
@@ -157,7 +141,7 @@ final class FeedbackFlash {
 		return match ( $code ) {
 			'release_check_current' => array( 'success', __( 'Release check complete. No newer eligible release was found.', 'ran-booster' ) ),
 			'release_check_update'  => array( 'success', self::release_checked() ),
-			default                 => null === $check ? null : array( $check[0], $check[1], self::CHECK_RESULT_TARGET ),
+			default                 => null,
 		};
 	}
 }

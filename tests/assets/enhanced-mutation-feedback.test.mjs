@@ -3735,13 +3735,13 @@ test('a signed address without the server marker cannot confirm a result', () =>
 	assert.deepEqual(replaced, []);
 });
 
-test('a pointer or excluded notice does not override a server confirmation', () => {
+test('a coded or excluded notice does not override a server confirmation', () => {
 	const marker = {
 		under: ['wpbody'],
 		attributes: { 'data-ran-booster-confirmed-package-result': '' },
 	};
 	for (const attributes of [
-		{ 'data-intent': 'error', 'data-feedback-target': 'failure' },
+		{ 'data-intent': 'error', 'data-feedback-key': 'failure' },
 		{ 'data-ran-booster-provider-storage-notice': '' },
 		{ 'data-ran-booster-assistance-site-notice': '' },
 	]) {

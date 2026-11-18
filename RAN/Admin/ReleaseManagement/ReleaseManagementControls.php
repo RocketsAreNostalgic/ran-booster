@@ -525,11 +525,8 @@ final class ReleaseManagementControls {
 			// A confirmed settings operation travels as a closed-code flash too; the new state is its own record.
 			FeedbackFlash::enqueue( $outcome['code'] );
 		} else {
+			// A result that is not a success is its inline notice, which the host reads and which stays the record.
 			$url = add_query_arg( $this->result_query_arguments( $outcome, $channel ), $url );
-			// A result that is not a success points at its inline notice, which stays the record.
-			if ( 'refresh' === $operation && ! $outcome['successful'] && null !== FeedbackFlash::check_result( $outcome['code'] ) ) {
-				FeedbackFlash::enqueue_check_result( $outcome['code'], ReleaseTrackingPreflight::detail( $outcome['detail'] ?? '' ) );
-			}
 		}
 
 		return $settings ? $url . '#ran-booster-advanced-source-settings' : $url;

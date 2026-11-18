@@ -73,28 +73,17 @@ final class FeedbackFlashTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'][1] );
 	}
 
-	public function test_a_pointer_carries_its_intent_and_inline_target_and_info_is_a_status(): void {
-		FeedbackFlash::enqueue( 'refresh_skipped_disabled', 'refresh_check_failed' );
+	public function test_a_coded_check_result_is_its_inline_notice_and_never_a_flash_item(): void {
+		FeedbackFlash::enqueue( 'refresh_skipped_disabled', 'refresh_check_failed', 'refresh_unchecked' );
 
-		$html = $this->render();
-
-		self::assertStringContainsString( 'data-feedback-key="refresh_skipped_disabled" data-intent="info" data-feedback-target="ran-booster-release-check-result" role="status"', $html );
-		self::assertStringContainsString( 'data-feedback-key="refresh_check_failed" data-intent="error" data-feedback-target="ran-booster-release-check-result" role="alert"', $html );
+		self::assertSame( array(), $this->meta() );
+		self::assertSame( '', $this->render() );
 	}
 
 	public function test_a_check_made_while_updates_are_off_is_info_and_names_only_a_valid_version(): void {
-		FeedbackFlash::enqueue_check_result( 'refresh_newer_while_off', '2.0.0' );
-		self::assertSame( '2.0.0', $this->meta()[1][ self::KEY ]['version'] );
-		$html = $this->render();
-		self::assertStringContainsString( 'data-feedback-key="refresh_newer_while_off" data-intent="info"', $html );
-		self::assertStringContainsString( '>Newer release 2.0.0 available. Updates are off for this package.</div>', $html );
-
-		FeedbackFlash::enqueue_check_result( 'refresh_newer_while_off', '<b>2</b>' );
-		self::assertArrayNotHasKey( 'version', $this->meta()[1][ self::KEY ] );
-		self::assertStringContainsString( '>Newer release available. Updates are off for this package.</div>', $this->render() );
-
-		FeedbackFlash::enqueue( 'refresh_current_while_off' );
-		self::assertStringContainsString( 'data-intent="info"', $this->render() );
+		self::assertSame( 'info', FeedbackFlash::check_result( 'refresh_newer_while_off', '2.0.0' )[0] ?? null );
+		self::assertSame( 'Newer release 2.0.0 available. Updates are off for this package.', FeedbackFlash::check_result( 'refresh_newer_while_off', '2.0.0' )[1] ?? null );
+		self::assertSame( 'Newer release available. Updates are off for this package.', FeedbackFlash::check_result( 'refresh_newer_while_off', '<b>2</b>' )[1] ?? null );
 		self::assertSame( 'Checked: no newer release. Updates are off for this package.', FeedbackFlash::check_result( 'refresh_current_while_off', '2.0.0' )[1] ?? null );
 	}
 

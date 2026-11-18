@@ -62,7 +62,7 @@ Each rule is written to be implemented and tested.
 | R11 Dialogs | Destructive or irreversible confirmations stay in dialogs (#782). The snackbar shows only the result afterwards. | Not applicable; routed by #782. |
 | R12 Qualified success | Owner decision: a warning suppresses the success snackbar. A result that carries a warning or partial outcome (saved-before-reinstall, repository check skipped) is therefore not reduced to a success snackbar; it gets a warning pointer and stays durable and inline. An `info` item does not qualify a success. | Producer test: a result with a warning produces no success snackbar. |
 | R13 One copy source | The snackbar text comes from the same Core copy source as the inline text for that outcome. It is never a second string. Provider and add-on text reaches the snackbar only through the existing bounded-message screener. | Test: the snackbar message equals the string from the shared source for the same code. |
-| R14 Static fallback | Without JavaScript the same result renders server-side as a Core notice. With JavaScript the host converts that element into the snackbar without leaving a duplicate. A warning or error pointer repeats its inline notice, so CSS hides the pointer item by default and the inline notice, which carries `role` (`alert` for an error, `status` for a warning), is the one visible and announced result. If the host never mounts or `show()` fails, the notice is still there; the host's pointer is silent, so nothing is announced twice. A success or info item is the visible static result. | No-JS and JS-on browser checks; exactly one visible result per event. |
+| R14 Static fallback | Without JavaScript the same result renders server-side as a Core notice. With JavaScript the host converts that element into the snackbar without leaving a duplicate. A result that is not a success has one element, its inline notice, which carries the closed key and `role` (`alert` for an error, `status` otherwise); the host reads the key, intent and first paragraph from it, so no hidden duplicate and no stylesheet rule is involved. If the host never mounts or `show()` fails, the notice is still there; the host's pointer is silent, so nothing is announced twice. A success item is the visible static result. | No-JS and JS-on browser checks; exactly one visible result per event. |
 | R15 Never lose a confirmed result | If the host cannot render (component or its styles missing), the confirmed result stays visible in its static form. | Test: with the host unavailable, the static result remains. |
 | R16 No data in URLs | Redirect URLs carry no display text. Closed codes and identifiers only. | Test: no redirect query value contains message text. |
 
@@ -74,9 +74,10 @@ string (`release_status_message()`) in `ReleaseManagementDisplay` are separate.
 P1 derives both from one source for this producer.
 
 A check that did not succeed never uses success intent or claims a release was
-or was not found. It gets a pointer and an inline notice that share one copy
-source (`FeedbackFlash::check_result()`): the snackbar shows the summary and
-the notice shows the summary and a detail line.
+or was not found. Its inline notice carries the key and is the
+one element; the host reads the summary (its first paragraph) for the snackbar,
+and the notice adds a detail line. Both come from one copy source
+(`FeedbackFlash::check_result()`).
 
 | Result code | Updater status and reason | Intent | Summary |
 | --- | --- | --- | --- |
@@ -412,16 +413,20 @@ This section is the single source for the contract.
   `data-feedback-key` (the closed code), `data-intent` (`success`, `info`, `error`
   or `warning`) and `role` (`alert` for error, `status` otherwise). Its text is
   fixed Core copy.
-- `data-feedback-target`: the id of the inline notice a pointer leads to. An
-  error or warning item without a present target stays static. Check releases
-  emits it; package, bulk and extension warnings adopt it in P3
+- A result that is not a success is not an item. Its inline notice carries
+  `data-feedback-key`, and the host reads the intent from
+  `data-ran-booster-ui-notice-intent` and the text from the first paragraph of
+  the notice content. The notice stays in the page, is the pointer's target and
+  is marked taken once shown. Check releases, package, bulk and extension
+  results and the redirect failure of a signed interaction use it
   (see [Request-scoped feedback items](notice-placement.md#request-scoped-feedback-items-755-p3)).
 - Optional: a `.ran-booster-feedback__activity` link to Activity for queued or
   accepted results (P3).
 - Without JavaScript the items are the visible static fallback, styled as a
-  normal notice. The host converts them into snackbars (success, info, and
-  the failure or warning pointer) and removes the static element, leaving no
-  duplicate (R14). A failure item is never snackbar-only (R3).
+  normal notice. The host converts a success item into a snackbar and removes
+  the static element, leaving no duplicate (R14). A coded notice stays, and its
+  snackbar is an info message or only a pointer to it. A failure is never
+  snackbar-only (R3).
 - The host never evicts a pointer to a persistent error (see Behaviour).
 
 If this proves arduous or becomes another subsystem to maintain, P1 falls back
@@ -456,12 +461,12 @@ use today, and the owner is told.
   not a host item, so it does not strip the address either.
   - Failures by redirect: a validation or unexpected failure that arrives by
     redirect (no JavaScript, or a form that is not HTMX-enhanced) renders as an
-    inline notice, so the host does not strip the marker. On reload the row is
-    gone and the neutral fallback replaces the failure text, and it re-shows on
-    each reload while the nonce is valid. Enhanced failures render inline from
-    the response body and never use the row. The cleaner fix, a pointer item or
-    a host-item fallback so the host strips the address, is a follow-up for the
-    pointer and notice collapse in #953 and #755 P7.
+    inline notice that carries the key `interaction_<kind>`. With JavaScript the
+    host takes it, shows a pointer and strips the marker. Without JavaScript the
+    marker stays: on reload the row is gone, the neutral fallback replaces the
+    failure text, and it re-shows on each reload while the nonce is valid.
+    Enhanced failures render inline from the response body and never use the
+    row.
 - **Edit saves.** They still reach the host through the enhanced save path
   (`data-ran-booster-package-saved`) until P7 retires that bridge.
 - **Result addresses (earlier results never replay).** A signed request result

@@ -14,6 +14,8 @@
 	// Success and info stand alone and dismiss themselves; an error or
 	// warning is only a pointer to its inline message.
 	const timed = (intent) => intent === 'success' || intent === 'info';
+	const TAKEN = 'data-ran-booster-feedback-taken';
+	const SPOKEN = 'data-ran-booster-feedback-spoken';
 
 	let state = null;
 	let sequence = 0;
@@ -315,9 +317,52 @@
 		return true;
 	}
 
-	// Convert the server-rendered fallback into snackbars, leaving any item
-	// that cannot be shown (no host, no inline target, qualified result) as
-	// the visible static result.
+	// Convert the server-rendered results into snackbars. A success item is
+	// the static form of its snackbar and goes once shown. A coded notice is
+	// its own record: the host reads its key, intent and first paragraph, and
+	// shows an error or warning only as a pointer to it. The notice stays, so
+	// there is one element per result with or without JavaScript. Whatever
+	// cannot be shown (no host, no room) stays as the visible static result.
+	function present(node) {
+		const notice = node.hasAttribute('data-ran-booster-ui-notice');
+		const intent = node.getAttribute(
+			notice ? 'data-ran-booster-ui-notice-intent' : 'data-intent'
+		);
+		const link = node.querySelector('a.ran-booster-feedback__activity');
+		const text =
+			(notice
+				? node.querySelector('[data-ran-booster-ui-notice-content] > p')
+						?.textContent
+				: Array.from(node.childNodes)
+						.filter((child) => child !== link)
+						.map((child) => child.textContent)
+						.join('')
+			)?.trim() ?? '';
+		// Core builds the Activity link; still accept this origin only.
+		const action =
+			/^https?:$/.test(link?.protocol) &&
+			link.origin === window.location.origin
+				? { label: link.textContent.trim(), url: link.href }
+				: null;
+		const id = node.getAttribute('data-feedback-key');
+		const target = notice && !timed(intent) ? node : null;
+		if (show(text, { intent, id, target, action })) {
+			// The notice is the record, so it stays; a success item goes.
+			if (notice) {
+				node.setAttribute(TAKEN, '');
+			} else {
+				node.remove();
+			}
+			return 1;
+		}
+		if (timed(intent) && !node.hasAttribute(SPOKEN)) {
+			// Not shown: the static result stays, spoken politely once.
+			node.setAttribute(SPOKEN, '');
+			window.wp?.a11y?.speak?.(text, 'polite');
+		}
+		return 0;
+	}
+
 	function consume() {
 		let taken = 0;
 		place();
@@ -325,65 +370,17 @@
 		document
 			.querySelectorAll('[data-ran-booster-feedback]')
 			.forEach((container) => {
-				const items = Array.from(
-					container.querySelectorAll('[data-feedback-key]')
-				);
-				// A consumed failure leaves a mark so a later pass still keeps the
-				// success of a qualified result static.
-				const mark = 'data-ran-booster-feedback-qualified';
-				const failure =
-					container.hasAttribute(mark) ||
-					items.some(
-						(item) => !timed(item.getAttribute('data-intent'))
-					);
-				if (failure) {
-					container.setAttribute(mark, '');
-				}
-				items.forEach((item) => {
-					const intent = item.getAttribute('data-intent');
-					const target = document.getElementById(
-						item.getAttribute('data-feedback-target') || ''
-					);
-					// A qualified result keeps its success static; info stands alone.
-					if (
-						intent === 'success'
-							? failure
-							: !timed(intent) && !target
-					) {
-						return;
-					}
-					const link = item.querySelector(
-						'a.ran-booster-feedback__activity'
-					);
-					const text = Array.from(item.childNodes)
-						.filter((node) => node !== link)
-						.map((node) => node.textContent)
-						.join('');
-					// Core builds the Activity link; still accept this origin only.
-					const action =
-						/^https?:$/.test(link?.protocol) &&
-						link.origin === window.location.origin
-							? { label: link.textContent.trim(), url: link.href }
-							: null;
-					const id = item.getAttribute('data-feedback-key');
-					if (show(text, { intent, id, target, action })) {
-						taken++;
-						item.remove();
-					} else if (
-						timed(intent) &&
-						!item.hasAttribute('data-ran-booster-feedback-spoken')
-					) {
-						// Not shown: the static result stays, spoken politely once.
-						item.setAttribute(
-							'data-ran-booster-feedback-spoken',
-							''
-						);
-						window.wp?.a11y?.speak?.(text.trim(), 'polite');
-					}
-				});
+				container
+					.querySelectorAll('[data-feedback-key]')
+					.forEach((item) => (taken += present(item)));
 				if (!container.querySelector('[data-feedback-key]')) {
 					container.remove();
 				}
+			});
+		document
+			.querySelectorAll('[data-ran-booster-ui-notice][data-feedback-key]')
+			.forEach((notice) => {
+				taken += notice.hasAttribute(TAKEN) ? 0 : present(notice);
 			});
 		return taken;
 	}

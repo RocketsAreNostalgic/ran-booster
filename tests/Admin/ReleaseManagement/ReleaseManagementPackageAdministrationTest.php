@@ -2023,7 +2023,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'check_results_that_did_not_succeed' )]
-	public function test_a_check_that_did_not_succeed_gets_a_pointer_and_a_matching_inline_notice( string $code, string $intent, string $text, string $detail ): void {
+	public function test_a_check_that_did_not_succeed_is_one_inline_notice_the_host_reads( string $code, string $intent, string $text, string $detail ): void {
 		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
 		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->refresh_result             = \RAN\AddOn\ReleaseTracking\ReleaseTrackingResult::failed( $code, 'Published release information was not checked.', check_reason: 'policy_disabled' );
@@ -2033,27 +2033,24 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Parsing the already signed local PRG fixture.
 		parse_str( $query, $_GET );
 
-		self::assertSame( array( $code ), $GLOBALS['ran_booster_feedback_test']['meta'][1][ \RAN\Admin\Feedback\FeedbackFlash::USER_META_KEY ]['codes'] );
+		// Any intent, info included, is one element: no flash item repeats the notice, so nothing depends on a stylesheet to hide a duplicate.
+		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'] );
 		ob_start();
 		\RAN\Admin\Feedback\FeedbackFlash::render();
-		$snackbar = (string) ob_get_clean();
-		self::assertStringContainsString( 'data-intent="' . $intent . '"', $snackbar );
-		self::assertStringContainsString( 'data-feedback-target="ran-booster-release-check-result"', $snackbar );
-		self::assertStringContainsString( '>' . $text . '</div>', $snackbar );
-		self::assertStringNotContainsString( 'data-intent="success"', $snackbar );
-		self::assertStringNotContainsString( 'No newer eligible release', $snackbar );
+		self::assertSame( '', (string) ob_get_clean() );
 
 		ob_start();
 		$controls->render_operation_notice();
 		$inline = (string) ob_get_clean();
-		self::assertStringContainsString( 'id="ran-booster-release-check-result" role="' . ( 'error' === $intent ? 'alert' : 'status' ) . '"', $inline );
+		self::assertStringContainsString( 'data-feedback-key="' . $code . '" role="' . ( 'error' === $intent ? 'alert' : 'status' ) . '"', $inline );
+		self::assertSame( 1, substr_count( $inline, 'data-feedback-key' ) );
 		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="' . $intent . '"', $inline );
 		self::assertStringContainsString( $text, $inline );
 		self::assertStringContainsString( $detail, $inline );
 		self::assertStringNotContainsString( 'notice-success', $inline );
 	}
 
-	public function test_a_newer_release_found_while_updates_are_off_names_its_version_in_the_snackbar_and_the_notice(): void {
+	public function test_a_newer_release_found_while_updates_are_off_names_its_version_in_the_notice(): void {
 		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
 		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->refresh_result             = \RAN\AddOn\ReleaseTracking\ReleaseTrackingResult::failed( 'refresh_newer_while_off', 'Published release information was not offered.', detail: '2.0.0-rc.1', check_reason: 'newer_release_observed' );
@@ -2064,11 +2061,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		parse_str( $query, $_GET );
 
 		ob_start();
-		\RAN\Admin\Feedback\FeedbackFlash::render();
-		self::assertStringContainsString( '>Newer release 2.0.0-rc.1 available. Updates are off for this package.</div>', (string) ob_get_clean() );
-		ob_start();
 		$controls->render_operation_notice();
-		self::assertStringContainsString( 'Newer release 2.0.0-rc.1 available. Updates are off for this package.', (string) ob_get_clean() );
+		self::assertStringContainsString( '<p>Newer release 2.0.0-rc.1 available. Updates are off for this package.</p>', (string) ob_get_clean() );
 
 		// A tampered version breaks the signature, so the signed notice does not render.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tampering with the parsed local fixture on purpose.
@@ -2136,17 +2130,16 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( $sentence . '</span>', $this->render_release_view( array() ) );
 	}
 
-	public function test_only_check_results_with_inline_copy_use_the_flash(): void {
+	public function test_no_check_result_that_is_not_a_success_uses_the_flash(): void {
 		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
 		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', last_checked_at: '' ) );
 		$controls                             = ReleaseManagementFixture::controls( $tracking );
 		$warning                              = $controls->process_admin_post_request( 'refresh', $this->request( 'refresh' ) );
 
-		self::assertSame( array( 'refresh_unchecked' ), $GLOBALS['ran_booster_feedback_test']['meta'][1][ \RAN\Admin\Feedback\FeedbackFlash::USER_META_KEY ]['codes'] );
-		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
-		$bad_nonce                            = $this->request( 'refresh' );
-		$bad_nonce['_wpnonce']                = 'wrong';
-		$failure                              = $controls->process_admin_post_request( 'refresh', $bad_nonce );
+		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'] );
+		$bad_nonce             = $this->request( 'refresh' );
+		$bad_nonce['_wpnonce'] = 'wrong';
+		$failure               = $controls->process_admin_post_request( 'refresh', $bad_nonce );
 
 		self::assertStringContainsString( 'ran_booster_release_result=refresh_unchecked', $warning );
 		self::assertStringContainsString( 'ran_booster_release_result=invalid_request', $failure );

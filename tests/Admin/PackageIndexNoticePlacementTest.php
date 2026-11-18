@@ -136,7 +136,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-confirmed-package-result', $html );
 	}
 
-	public function test_a_warning_suppresses_the_success_snackbar_and_points_to_its_inline_record(): void {
+	public function test_a_warning_suppresses_the_success_snackbar_and_is_its_own_record(): void {
 		$html = $this->notices(
 			array(
 				array(
@@ -153,8 +153,8 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 
 		self::assertStringContainsString( '<p>Plugin was successfully saved.</p>', $html );
 		self::assertStringNotContainsString( 'data-intent="success"', $html );
-		self::assertStringContainsString( 'id="ran-booster-feedback-package-edit-unverified" role="status" class="notice notice-warning inline', $html );
-		self::assertStringContainsString( 'data-feedback-key="package_edit_unverified" data-intent="warning" data-feedback-target="ran-booster-feedback-package-edit-unverified"', $html );
+		self::assertStringContainsString( 'data-feedback-key="package_edit_unverified" role="status" class="notice notice-warning inline', $html );
+		self::assertSame( 1, substr_count( $html, 'package_edit_unverified' ), 'The warning is one element, not a notice and a pointer.' );
 
 		$qualified = $this->notices(
 			array(
@@ -184,13 +184,13 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 			)
 		);
 
-		// The inline record owns the announcement; the hidden pointer is silent.
-		self::assertStringContainsString( 'id="ran-booster-feedback-bulk-error" role="alert" class="notice notice-error inline', $html );
-		self::assertStringContainsString( 'data-intent="error" data-feedback-target="ran-booster-feedback-bulk-error" role="alert">A selected package changed.</div>', $html );
-		self::assertStringNotContainsString( 'data-intent="success"', $html );
+		// The inline record is the one element: it carries the key and the announcement.
+		self::assertStringContainsString( 'data-feedback-key="bulk_error" role="alert" class="notice notice-error inline', $html );
+		self::assertSame( 1, substr_count( $html, 'bulk_error' ) );
+		self::assertStringNotContainsString( 'data-ran-booster-feedback', $html );
 	}
 
-	public function test_an_info_message_with_a_code_stands_alone_without_id_or_pointer(): void {
+	public function test_an_info_message_with_a_code_is_one_element_without_a_pointer(): void {
 		$html = $this->notices(
 			array(
 				array(
@@ -201,9 +201,10 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'notice notice-info inline', $html );
+		// Without JavaScript this is the only visible result, and no stylesheet rule has to hide a duplicate.
+		self::assertStringContainsString( 'data-feedback-key="bulk_plugin_state" role="status" class="notice notice-info inline', $html );
+		self::assertSame( 1, substr_count( $html, 'bulk_plugin_state' ) );
 		self::assertStringNotContainsString( 'data-ran-booster-feedback', $html );
-		self::assertStringNotContainsString( ' id="ran-booster-feedback-', $html );
 	}
 
 	public function test_a_message_without_a_closed_feedback_code_keeps_its_notice_and_adds_no_item(): void {

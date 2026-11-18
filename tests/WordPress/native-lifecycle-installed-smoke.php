@@ -225,6 +225,7 @@ if ( $ran_booster_before_refresh !== $ran_booster_activity->activity_history( ar
 	throw new RuntimeException( 'Refresh alone invented native check history.' );
 }
 
+require_once ABSPATH . 'wp-admin/includes/plugin.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-automatic-updater.php';
 delete_site_transient( 'update_plugins' );
@@ -328,10 +329,42 @@ foreach ( array( $ran_booster_items[ (int) $ran_booster_index - 1 ] ) as $ran_bo
 			remove_filter( 'automatic_updates_is_vcs_checkout', $ran_booster_vcs_checkout, PHP_INT_MAX );
 			WP_Upgrader::release_lock( 'auto_updater' );
 		}
+	} elseif ( 'plugin' === $type ) {
+		// An active plugin is updated through the Update now link Booster renders for it.
+		$ran_booster_identifier = $ran_booster_item['identifier'];
+		if ( ! is_plugin_active( $ran_booster_identifier ) ) {
+			throw new RuntimeException( 'The installed native manual plugin fixture is not active.' );
+		}
+		$ran_booster_package = new RAN\Admin\AdminPackageProjection( 'plugin', $ran_booster_identifier, 'C4 ' . $ran_booster_item['number'], 'gh', 'release_asset', 1, 'manual', admin_url( 'admin.php?page=ran-booster-plugins' ) );
+		ob_start();
+		do_action( 'ran_booster_admin_package_advanced_source_sections', 'edit', 'plugin', 'release_asset', $ran_booster_package, $ran_booster_package->settings_url() );
+		$ran_booster_pane = (string) ob_get_clean();
+		if ( 1 !== preg_match( '/\sdata-ran-booster-managed-release-native-update-url="([^"]+)"/', $ran_booster_pane, $ran_booster_match ) ) {
+			throw new RuntimeException( 'The installed release pane rendered no Update now link.' );
+		}
+		$ran_booster_link  = html_entity_decode( $ran_booster_match[1], ENT_QUOTES | ENT_HTML5 );
+		$ran_booster_query = array();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The proof reads the exact rendered link components with native failure semantics.
+		parse_str( (string) parse_url( $ran_booster_link, PHP_URL_QUERY ), $ran_booster_query );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The proof reads the exact rendered link components with native failure semantics.
+		$ran_booster_route = basename( (string) parse_url( $ran_booster_link, PHP_URL_PATH ) ) . '?action=' . ( is_string( $ran_booster_query['action'] ?? null ) ? $ran_booster_query['action'] : '' );
+		$ran_booster_nonce = is_string( $ran_booster_query['_wpnonce'] ?? null ) ? $ran_booster_query['_wpnonce'] : '';
+		// WP-CLI cannot request the admin screens, so the proof makes the upgrader call each WordPress route makes.
+		if ( 'plugins.php?action=update-selected' === $ran_booster_route && ( $ran_booster_query['plugins'] ?? null ) === $ran_booster_identifier && false !== wp_verify_nonce( $ran_booster_nonce, 'bulk-plugins' ) ) {
+			// plugins.php frames update.php, which runs a one-item bulk upgrade and leaves the plugin active.
+			$ran_booster_bulk_result = ( new Plugin_Upgrader( new Bulk_Plugin_Upgrader_Skin() ) )->bulk_upgrade( array( $ran_booster_identifier ), array( 'clear_update_cache' => false ) );
+			$ran_booster_result      = is_array( $ran_booster_bulk_result ) && is_array( $ran_booster_bulk_result[ $ran_booster_identifier ] ?? null ) ? true : $ran_booster_bulk_result;
+		} elseif ( 'update.php?action=upgrade-plugin' === $ran_booster_route && ( $ran_booster_query['plugin'] ?? null ) === $ran_booster_identifier && false !== wp_verify_nonce( $ran_booster_nonce, 'upgrade-plugin_' . $ran_booster_identifier ) ) {
+			// update.php runs the single-plugin upgrade, which deactivates an active plugin first.
+			$ran_booster_result = ( new Plugin_Upgrader( new WP_Upgrader_Skin() ) )->upgrade( $ran_booster_identifier, array( 'clear_update_cache' => false ) );
+		} else {
+			throw new RuntimeException( 'The installed Update now link names no WordPress plugin update route with a valid nonce.' );
+		}
+		if ( true === $ran_booster_result && ! in_array( $ran_booster_identifier, (array) get_option( 'active_plugins', array() ), true ) ) {
+			throw new RuntimeException( 'The installed Update now link left the active plugin inactive.' );
+		}
 	} else {
-		$ran_booster_result = 'plugin' === $type
-			? ( new Plugin_Upgrader( new WP_Upgrader_Skin() ) )->upgrade( $ran_booster_item['identifier'], array( 'clear_update_cache' => false ) )
-			: ( new Theme_Upgrader( new WP_Upgrader_Skin() ) )->upgrade( $ran_booster_item['identifier'], array( 'clear_update_cache' => false ) );
+		$ran_booster_result = ( new Theme_Upgrader( new WP_Upgrader_Skin() ) )->upgrade( $ran_booster_item['identifier'], array( 'clear_update_cache' => false ) );
 	}
 	if ( true !== $ran_booster_result ) {
 		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.

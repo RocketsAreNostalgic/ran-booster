@@ -44,5 +44,8 @@ foreach ( $ran_booster_items as $ran_booster_item_index => $ran_booster_item ) {
 	if ( '2.0.0' !== $ran_booster_version ) {
 		throw new RuntimeException( 'The installed native version changed after shutdown.' );
 	}
+	if ( 'plugin' === $ran_booster_type && 'manual' === ( $ran_booster_item['policy'] ?? null ) && ! is_plugin_active( $ran_booster_identity ) ) {
+		throw new RuntimeException( 'The updated manual plugin is no longer active after shutdown.' );
+	}
 }
 WP_CLI::success( 'Verified ' . $ran_booster_scale . ' native targets after real request shutdown and before cleanup.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

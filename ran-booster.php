@@ -133,9 +133,9 @@ $ran_booster_core_development_notice->register();
 			$ran_booster_container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
 			$provider_registry->seal();
 
-			$core_version        = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
-			$core_channel        = str_contains( $core_version, '-' ) ? 'prerelease' : 'stable';
-			$core_policy         = static fn (): CoreSelfUpdatePolicy => CoreSelfUpdatePolicy::detect( __FILE__, $core_version, true );
+			$core_version        = static fn (): string => (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
+			$core_channel        = str_contains( $core_version(), '-' ) ? 'prerelease' : 'stable';
+			$core_policy         = static fn (): CoreSelfUpdatePolicy => CoreSelfUpdatePolicy::detect( __FILE__, $core_version(), true );
 			$core_release_target = null;
 			$core_check          = null;
 			$current_policy      = $ran_booster_self_update_policy;

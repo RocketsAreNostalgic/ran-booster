@@ -936,6 +936,26 @@
 							(form.elements['ran_booster[id]'].value !== id ||
 								(!dirty && editor.hidden))
 						) {
+							if (
+								form.elements['ran_booster[id]'].value !== id ||
+								id === ''
+							) {
+								const error = form.querySelector(
+									'#ran-booster-access-profile-error'
+								);
+								if (error) {
+									error.hidden = true;
+									error.querySelector(
+										'[data-ran-booster-ui-notice-primary]'
+									).textContent = '';
+								}
+								if (
+									form.getAttribute('aria-describedby') ===
+									'ran-booster-access-profile-error'
+								) {
+									form.removeAttribute('aria-describedby');
+								}
+							}
 							populateCredentialModal(editor, button);
 							dirty = false;
 						}

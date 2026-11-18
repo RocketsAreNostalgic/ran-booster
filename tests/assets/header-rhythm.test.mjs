@@ -21,6 +21,14 @@ const primitives = read('ran-booster/25-admin-primitives.css');
 const packageSettings = read('ran-booster/65-package-settings.css');
 const troubleshooting = read('ran-booster/50-troubleshooting-and-activity.css');
 const wpdsTokens = read('lib/ran-booster-wpds-tokens.css');
+const createView = fs.readFileSync(
+	new URL('../../views/packages/create.php', import.meta.url),
+	'utf8'
+);
+const editView = fs.readFileSync(
+	new URL('../../views/packages/edit.php', import.meta.url),
+	'utf8'
+);
 
 const parse = (css) =>
 	[...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}@]+)\{([^{}]*)\}/g)]
@@ -73,6 +81,7 @@ const nestedTrigger = withBody(
 );
 const prominent = '[data-ran-booster-ui-disclosure-density="prominent"]';
 const depth = (r) => r.selector.split(',')[0].split(prominent).length - 1;
+const createScope = '.ran-booster-package-settings--create';
 
 const narrowMedia = () => {
 	const start = primitives.indexOf('@media screen and (max-width: 480px) {');
@@ -97,6 +106,7 @@ test('the narrow advanced fallback grid outranks the generic fallback flex', () 
 	const grid = rules.find(
 		(r) =>
 			r.selector.includes('package-advanced-settings') &&
+			r.selector.includes(createScope) &&
 			r.body.includes('display: grid')
 	);
 	const flex = rules.find(
@@ -105,7 +115,13 @@ test('the narrow advanced fallback grid outranks the generic fallback flex', () 
 	);
 	assert.ok(grid);
 	assert.ok(flex);
-	assert.ok(outranks(specificity(grid.selector), specificity(flex.selector)));
+	const createGrid = branches(grid.selector).find((s) =>
+		s.includes(createScope)
+	);
+	assert.ok(createGrid);
+	assert.ok(outranks(specificity(createGrid), specificity(flex.selector)));
+	assert.match(grid.body, /align-items: start/);
+	assert.match(grid.body, /row-gap: var\(--ran-booster-space-4\)/);
 	assert.ok(parse(narrowMedia()).some((r) => r.selector === grid.selector));
 });
 
@@ -127,6 +143,7 @@ test('advanced summary typography applies only at the narrow breakpoint', () => 
 	assert.ok(summary);
 	assert.ok(fallback);
 	assert.match(summary.body, /font-size: var\(--ran-booster-font-size-sm\)/);
+	assert.ok(summary.selector.includes(createScope));
 	assert.ok(
 		parse(narrowMedia()).some((r) => r.selector === summary.selector),
 		'the font-size correction must not apply at 512px'
@@ -140,11 +157,13 @@ test('the narrow fallback title and metadata keep the mounted row geometry', () 
 	const title = rules.find(
 		(r) =>
 			r.selector.includes('package-advanced-settings') &&
+			r.selector.includes(createScope) &&
 			r.selector.endsWith('> .ran-booster-section__title')
 	);
 	const meta = rules.find(
 		(r) =>
 			r.selector.includes('package-advanced-settings') &&
+			r.selector.includes(createScope) &&
 			r.selector.endsWith('> [data-ran-booster-ui-disclosure-meta]')
 	);
 	const small = parse(packageSettings).filter((r) =>
@@ -152,6 +171,18 @@ test('the narrow fallback title and metadata keep the mounted row geometry', () 
 	);
 	assert.ok(title);
 	assert.ok(meta);
+	assert.equal(
+		rules.filter(
+			(r) =>
+				r.selector.includes('package-advanced-settings') &&
+				r.selector.endsWith('> .ran-booster-section__title') &&
+				r.body.includes('line-height: inherit')
+		).length,
+		1,
+		'the title correction must not escape the Create scope'
+	);
+	assert.ok(parse(narrowMedia()).some((r) => r.selector === title.selector));
+	assert.ok(parse(narrowMedia()).some((r) => r.selector === meta.selector));
 	assert.match(title.body, /line-height: inherit/);
 	assert.match(meta.body, /display: flex/);
 	assert.match(meta.body, /grid-column: 1;/);
@@ -161,6 +192,38 @@ test('the narrow fallback title and metadata keep the mounted row geometry', () 
 			outranks(specificity(meta.selector), specificity(rule.selector))
 		);
 	}
+});
+
+test('Edit retains its original fallback grid and meta rules', () => {
+	assert.match(
+		createView,
+		/class="ran-booster-package-settings ran-booster-package-settings--create"/
+	);
+	assert.match(editView, /class="ran-booster-package-settings"/);
+	assert.doesNotMatch(editView, /ran-booster-package-settings--create/);
+	const narrow = parse(narrowMedia());
+	const originalGrid = narrow.find(
+		(r) =>
+			r.selector.includes('package-advanced-settings') &&
+			branches(r.selector).some(
+				(s) => !s.includes(createScope) && s.endsWith('> summary')
+			) &&
+			r.body.includes('grid-template-columns:')
+	);
+	const originalMeta = narrow.find(
+		(r) =>
+			r.selector.includes('package-advanced-settings') &&
+			!r.selector.includes(createScope) &&
+			r.selector.endsWith('> [data-ran-booster-ui-disclosure-meta]')
+	);
+	assert.ok(originalGrid);
+	assert.match(
+		originalGrid.body,
+		/grid-template-columns: minmax\(0, 1fr\) auto/
+	);
+	assert.ok(originalMeta);
+	assert.match(originalMeta.body, /grid-column: 1 \/ -1/);
+	assert.doesNotMatch(originalMeta.body, /display: flex|margin-block-start/);
 });
 
 test('the header rhythm tokens are defined once, from the space scale', () => {

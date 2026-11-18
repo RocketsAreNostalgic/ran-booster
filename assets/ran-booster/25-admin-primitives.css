@@ -1181,14 +1181,6 @@
 	font-weight: 400;
 }
 
-.ran-booster-admin
-	[data-ran-booster-ui-disclosure="package-advanced-settings"]
-	> details[data-ran-booster-ui-disclosure-fallback]
-	> summary
-	> .ran-booster-section__title {
-	line-height: inherit;
-}
-
 /*
  * A multi-part summary (title, then a status line of badges) stacks on narrow
  * screens: the title keeps its row with the chevron and the status line takes
@@ -1207,12 +1199,27 @@
 	}
 
 	.ran-booster-admin
+		.ran-booster-package-settings--create
 		[data-ran-booster-ui-disclosure="package-advanced-settings"]
 		.ran-booster-advanced-source-summary {
 		font-size: var(--ran-booster-font-size-sm);
 	}
 
 	.ran-booster-admin
+		.ran-booster-package-settings--create
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary
+		> .ran-booster-section__title {
+		line-height: inherit;
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary,
+	.ran-booster-admin
+		.ran-booster-package-settings--create
 		[data-ran-booster-ui-disclosure="package-advanced-settings"][data-ran-booster-ui-disclosure-density][data-ran-booster-ui-disclosure]
 		> details[data-ran-booster-ui-disclosure-fallback]
 		> summary {
@@ -1235,10 +1242,19 @@
 		> details[data-ran-booster-ui-disclosure-fallback]
 		> summary
 		> [data-ran-booster-ui-disclosure-meta] {
+		grid-column: 1 / -1;
+		margin-inline: 0;
+	}
+
+	.ran-booster-admin
+		.ran-booster-package-settings--create
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary
+		> [data-ran-booster-ui-disclosure-meta] {
 		display: flex;
 		grid-column: 1;
 		margin-block-start: 0;
-		margin-inline: 0;
 	}
 }
 

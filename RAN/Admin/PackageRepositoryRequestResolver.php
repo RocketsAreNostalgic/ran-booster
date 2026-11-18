@@ -45,8 +45,8 @@ final readonly class PackageRepositoryRequestResolver {
 	 * Complete an edit request from the stored package when no provider-dependent field changed.
 	 *
 	 * Used only as a fallback when the provider lookup is rate-limited or unavailable: a save
-	 * that keeps the same provider, repository, credential and subdirectory can then proceed
-	 * on the stored identity. Returns null when any of those fields differs or the stored
+	 * that keeps the same provider, repository, credential, subdirectory and branch can then
+	 * proceed on the stored identity. Returns null when any of those fields differs or the stored
 	 * identity is incomplete, so a changed repository is never accepted unverified.
 	 *
 	 * @param array<string, mixed> $request Package form request.
@@ -100,6 +100,9 @@ final readonly class PackageRepositoryRequestResolver {
 
 		$branch_input = $request['branch'] ?? '';
 		$branch       = is_string( $branch_input ) ? trim( sanitize_text_field( wp_unslash( $branch_input ) ) ) : '';
+		if ( '' !== $branch && $branch !== (string) $stored->get_branch() ) {
+			return null;
+		}
 
 		$request['provider']               = $provider->value;
 		$request['repository']             = (string) $stored->get_repository();
@@ -111,21 +114,11 @@ final readonly class PackageRepositoryRequestResolver {
 		$request['provider_repository_identity_source'] = 'resolved';
 		$request['private']                             = $stored->get_private() ? '1' : '0';
 		$request['credential_id']                       = $stored->get_credential_id();
-		$request['branch']                              = '' === $branch ? (string) $stored->get_branch() : $branch;
+		$request['branch']                              = (string) $stored->get_branch();
 		$request['deployment_policy']                   = $deployment_policy->value;
 		unset( $request['public_lookup_profile_id'] );
 
 		return $request;
-	}
-
-	/**
-	 * Resolve one controller-authorized public lookup without persisting it as package access.
-	 *
-	 * @param array<string, mixed> $request Package form request.
-	 * @return array<string, mixed>
-	 */
-	public function resolve_with_trusted_public_lookup_profile( array $request, ?string $profile_id ): array {
-		return $this->resolve_request( $request, $profile_id, true );
 	}
 
 	/**

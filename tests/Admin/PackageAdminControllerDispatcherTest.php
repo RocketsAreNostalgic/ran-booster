@@ -68,11 +68,33 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$providers = new ProviderRegistry( array( new FailingLookupProvider( 503, new \RAN\RepositoryProvider\ProviderFailure( $reason, 503 ), $after_lookup ) ) );
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );
-		$dashboard->expects( self::once() )->method( 'add_failure_message' )->with( self::callback( static fn ( mixed $message ): bool => $message instanceof WP_Error && 'The selected branch could not be found. Check its name on the provider.' === $message->get_error_message() ) );
+		$expected = 'ref_not_found' === $reason ? 'The selected branch could not be found. Check the branch name on the provider.' : 'The Git provider redirected the request somewhere that is not allowed.';
+		$dashboard->expects( self::once() )->method( 'add_failure_message' )->with( self::callback( static fn ( mixed $message ): bool => $message instanceof WP_Error && $expected === $message->get_error_message() ) );
 		$request               = $this->unchanged_edit_request();
 		$request['stylesheet'] = 'fixture';
 		$result                = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-' . $type, $request, true );
 		self::assertFalse( $result );
+	}
+
+	public function test_a_transient_branch_failure_never_saves_a_changed_branch(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( 0, new \RAN\RepositoryProvider\ProviderFailure( 'rate_limited', retry_after: 60 ), true ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+		$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-plugin', array_merge( $this->unchanged_edit_request(), array( 'branch' => 'renamed' ) ), true );
+		self::assertFalse( $result );
+	}
+
+	public function test_a_release_managed_package_saves_without_branch_verification(): void {
+		$package = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$package->set_source( \RAN\PackageSource::RELEASE_ASSET, 1 );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( 404, new \RAN\RepositoryProvider\ProviderFailure( 'ref_not_found', 404 ), true ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
+		$dashboard->expects( self::once() )->method( 'post_package_operation' )->willReturn( 'https://example.test/redirect' );
+		$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-plugin', $this->unchanged_edit_request(), true );
+		self::assertSame( 'https://example.test/redirect', $result );
 	}
 
 	public function test_manual_working_copy_copy_requires_one_exact_core_activity_record(): void {

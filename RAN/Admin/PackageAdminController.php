@@ -628,7 +628,11 @@ final class PackageAdminController {
 	 */
 	private function resolve( Dashboard $dashboard, array $request, ?array $trusted_public_lookup = null, ?Package $stored_package = null ): ?array {
 		try {
-			return $this->repositories?->resolve_branch( $request, $trusted_public_lookup ) ?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
+			// Only a branch-managed package or a new install deploys its branch, so only they verify it.
+			$resolved = ! $stored_package instanceof Package || PackageSource::BRANCH === $stored_package->get_source()
+				? $this->repositories?->resolve_branch( $request, $trusted_public_lookup )
+				: $this->repositories?->resolve( $request );
+			return $resolved ?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
 			$message = __( 'The selected Git provider is not available.', 'ran-booster' );
 		} catch ( UnsupportedProviderCapability $failure ) {
@@ -644,7 +648,7 @@ final class PackageAdminController {
 			}
 			// A provider's own reason is worded by Core; a plain exception keeps the status copy.
 			$message = match ( ProviderFailure::from_throwable( $failure )?->reason ) {
-				'ref_not_found', 'redirect_blocked' => __( 'The selected branch could not be found. Check its name on the provider.', 'ran-booster' ),
+				'ref_not_found' => __( 'The selected branch could not be found. Check the branch name on the provider.', 'ran-booster' ),
 				default => ProviderFailure::carried( $failure )?->message() ?? match ( $failure->getCode() ) {
 					401 => __( 'The Git provider rejected the selected credential.', 'ran-booster' ),
 					403 => __( 'The Git provider denied access. Check credential permissions or rate limits.', 'ran-booster' ),

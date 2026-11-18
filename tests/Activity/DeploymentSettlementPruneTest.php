@@ -18,8 +18,8 @@ final class DeploymentSettlementPruneTest extends TestCase {
 		}
 		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
 		$connection                              = new SettlementPruneConnection();
-		$connection->database->exec( 'CREATE TABLE activity (id INTEGER PRIMARY KEY, status TEXT, facts TEXT, started_at TEXT, context_key TEXT, purpose TEXT, subject_type TEXT, subject_identity TEXT, adoption_token TEXT, context TEXT, effect TEXT)' );
-		$insert = $connection->database->prepare( 'INSERT INTO activity VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)' );
+		$connection->database->exec( 'CREATE TABLE activity (id INTEGER PRIMARY KEY, status TEXT, facts TEXT, started_at TEXT, context_key TEXT, purpose TEXT, subject_type TEXT, subject_identity TEXT, adoption_token TEXT, context TEXT, effect TEXT, reason TEXT, completed_at TEXT)' );
+		$insert = $connection->database->prepare( 'INSERT INTO activity VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)' );
 		self::assertNotFalse( $insert );
 		foreach ( array( 'needs_attention', 'needs_attention', 'failed', 'failed' ) as $index => $state ) {
 			$facts = array(
@@ -30,7 +30,7 @@ final class DeploymentSettlementPruneTest extends TestCase {
 			if ( 1 === $index % 2 ) {
 				$facts['deployment_settled_by'] = 'runner_throw';
 			}
-			$insert->execute( array( $index + 1, 'failed' === $state ? 'failed' : 'incomplete', \RAN\Activity\wp_json_encode( $facts ), '2000-01-01 00:00:00', 'key', 'branch.check', 'plugin', 'example', null, '', 'none' ) );
+			$insert->execute( array( $index + 1, 'failed' === $state ? 'failed' : 'incomplete', \RAN\Activity\wp_json_encode( $facts ), '2000-01-01 00:00:00', 'key', 'branch.check', 'plugin', 'example', null, '', 'none', '', null ) );
 		}
 		$store = new ActivityStore( $connection, 'activity' );
 		self::assertSame( 2, $store->prune( array() ) );

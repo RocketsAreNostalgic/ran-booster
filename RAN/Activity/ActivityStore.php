@@ -22,6 +22,10 @@ final class ActivityStore {
 	/** Seconds before a repeated background skip of the same kind is recorded again. */
 	public const SKIPPED_HEARTBEAT = 86400;
 	private const PURPOSES         = array( 'branch.check', 'release.check', 'workflow.assessment' );
+	/** Failed deployment reasons that neither show nor clear a failed update. */
+	private const UPDATE_REFUSALS = array( 'lock_unavailable', 'policy_blocked', 'provider_rate_limited', 'stale_event' );
+	private const STATE           = "JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state'))";
+	private const UNRESOLVED      = "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_resolved_at')), 'null') = 'null'";
 	private string $table;
 
 	public function __construct( private ?object $database = null, ?string $table = null ) {
@@ -227,9 +231,11 @@ final class ActivityStore {
 		if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) || ! $this->transactional_storage() ) {
 			return false;
 		}
+		// A deployment needing attention has finished; record that once, on the clock complete() uses.
+		$finished = 'needs_attention' === ( $facts['deployment_state'] ?? null ) ? ", completed_at = COALESCE(completed_at, '" . gmdate( 'Y-m-d H:i:s' ) . "')" : '';
 		return 1 === $this->query(
 			$this->prepare(
-				"UPDATE {$this->table} SET stage = %s, message = %s, facts = %s WHERE correlation = %s AND status = 'incomplete'",
+				"UPDATE {$this->table} SET stage = %s, message = %s, facts = %s$finished WHERE correlation = %s AND status = 'incomplete'",
 				$code,
 				$message,
 				$encoded,
@@ -481,6 +487,62 @@ final class ActivityStore {
 	}
 
 	/**
+	 * The one reading of each managed package's update state for its current adoption: an unresolved
+	 * deployment needs review; otherwise the newest decisive outcome by completion time decides failed or clear.
+	 * Unavailable storage is never an all-clear.
+	 *
+	 * @param list<array{subject_type:string,subject_identity:string,adoption_token:string}> $packages
+	 * @return array{available:bool,outcomes:list<array{state:'needs_review'|'failed'|'clear',record:?Record}>}
+	 */
+	public function decisive_update_outcomes( array $packages ): array {
+		$unavailable = array(
+			'available' => false,
+			'outcomes'  => array(),
+		);
+		$keys        = array();
+		$outcomes    = array();
+		foreach ( $packages as $package ) {
+			$capture = $package + array(
+				'context'    => '',
+				'purpose'    => null,
+				'provenance' => 'core',
+			);
+			try {
+				$this->validate_capture( $capture );
+			} catch ( InvalidArgumentException ) {
+				return $unavailable;
+			}
+			$keys[]     = $this->context_key( $capture );
+			$outcomes[] = array(
+				'state'  => 'clear',
+				'record' => null,
+			);
+		}
+		$scope = array() === $keys ? '0 = 1' : $this->prepare( 'context_key IN (' . implode( ',', array_fill( 0, count( $keys ), '%s' ) ) . ')', ...$keys );
+		$rows  = ! $this->available() || null === $scope ? null : $this->rows( "SELECT * FROM {$this->table} WHERE id IN (" . $this->decisive_ids_sql( $scope ) . ") OR ($scope AND purpose IS NULL AND JSON_EXTRACT(facts, '$.deployment_attempt_id') IS NOT NULL AND " . self::STATE . " = 'needs_attention' AND " . self::UNRESOLVED . ') ORDER BY id DESC' );
+		if ( null === $rows ) {
+			return $unavailable;
+		}
+		foreach ( $rows as $row ) {
+			foreach ( $packages as $index => $package ) {
+				if ( 'needs_review' === $outcomes[ $index ]['state'] || $keys[ $index ] !== $row['context_key'] || $package['subject_type'] !== $row['subject_type'] || $package['subject_identity'] !== $row['subject_identity'] || $package['adoption_token'] !== $row['adoption_token'] ) {
+					continue;
+				}
+				$facts              = json_decode( (string) $row['facts'], true );
+				$review             = 'incomplete' === $row['status'] && null === ( is_array( $facts ) ? $facts['deployment_resolved_at'] ?? null : null );
+				$outcomes[ $index ] = array(
+					'state'  => $review ? 'needs_review' : ( 'succeeded' === $row['status'] ? 'clear' : 'failed' ),
+					'record' => $row,
+				);
+			}
+		}
+		return array(
+			'available' => true,
+			'outcomes'  => $outcomes,
+		);
+	}
+
+	/**
 	 * Existing composition supplies current active contexts; absence is not an empty authoritative inventory.
 	 * @param list<Capture> $current_contexts
 	 */
@@ -488,12 +550,16 @@ final class ActivityStore {
 		if ( ! $this->available() ) {
 			return false;
 		}
-		$active = array();
+		$active     = array();
+		$deployment = array();
 		foreach ( $current_contexts as $capture ) {
 			try {
 				$this->validate_capture( $capture );
 			} catch ( InvalidArgumentException ) {
 				return false;
+			}
+			if ( null !== $capture['adoption_token'] && null === $capture['purpose'] && '' === $capture['context'] ) {
+				$deployment[] = $this->context_key( $capture );
 			}
 			if ( null === $capture['adoption_token'] || null === $capture['purpose'] ) {
 				continue;
@@ -504,8 +570,12 @@ final class ActivityStore {
 			return false;
 		}
 		$active_sql = empty( $active ) ? '0 = 1' : implode( ' OR ', $active );
+		$decisive   = array() === $deployment ? '0 = 1' : $this->prepare( 'context_key IN (' . implode( ',', array_fill( 0, count( $deployment ), '%s' ) ) . ')', ...$deployment );
+		if ( null === $decisive ) {
+			return false;
+		}
 		// UNION materializes the same-table protection query on supported MySQL/MariaDB. The last two branches keep what summary() shows: the newest established row and the newest row that is not a skip.
-		$protection        = "SELECT retained_id FROM (SELECT MAX(id) retained_id FROM {$this->table} WHERE $active_sql GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION SELECT MAX(id) retained_id FROM {$this->table} WHERE ($active_sql) AND effect <> 'none' GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION SELECT MAX(id) retained_id FROM {$this->table} WHERE ($active_sql) AND status <> 'skipped' GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context) AS protected_activity";
+		$protection        = "SELECT retained_id FROM (SELECT MAX(id) retained_id FROM {$this->table} WHERE $active_sql GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION SELECT MAX(id) retained_id FROM {$this->table} WHERE ($active_sql) AND effect <> 'none' GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION SELECT MAX(id) retained_id FROM {$this->table} WHERE ($active_sql) AND status <> 'skipped' GROUP BY context_key,purpose,subject_type,subject_identity,adoption_token,context UNION " . $this->decisive_ids_sql( $decisive ) . ') AS protected_activity';
 		$retention         = self::retention_policy();
 		$maximum_rows      = $retention['maximum_rows'];
 		$deployment_safety = $this->deployment_safety_sql();
@@ -530,15 +600,24 @@ final class ActivityStore {
 	}
 
 	private function deployment_safety_sql(): string {
-		$state = "JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state'))";
-		return "(JSON_EXTRACT(facts, '$.deployment_attempt_id') IS NOT NULL AND ($state IN ('queued','running') OR ($state = 'needs_attention' AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_resolved_at')), 'null') = 'null')))";
+		return "(JSON_EXTRACT(facts, '$.deployment_attempt_id') IS NOT NULL AND (" . self::STATE . " IN ('queued','running') OR (" . self::STATE . " = 'needs_attention' AND " . self::UNRESOLVED . ')))';
+	}
+
+	/**
+	 * Per adoption, the deployment outcome that decides a failed update: the newest by completion time (ties by id)
+	 * of a failure other than a refusal, a resolved review, or a completed deployment. Rows without a completion time never decide.
+	 */
+	private function decisive_ids_sql( string $scope ): string {
+		$refusals = "'" . implode( "','", self::UPDATE_REFUSALS ) . "'";
+		return "SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY context_key ORDER BY completed_at DESC, id DESC) AS newest FROM {$this->table} WHERE ($scope) AND purpose IS NULL AND completed_at IS NOT NULL AND JSON_EXTRACT(facts, '$.deployment_attempt_id') IS NOT NULL AND ((status = 'failed' AND reason NOT IN ($refusals)) OR (status = 'succeeded' AND reason = 'deployed') OR (status = 'incomplete' AND " . self::STATE . " = 'needs_attention' AND NOT " . self::UNRESOLVED . '))) AS decisive WHERE newest = 1';
 	}
 
 	/** @return list<string|null> */
 	private function history_scope_where(): array {
-		$retention         = self::retention_policy();
-		$maximum_rows      = $retention['maximum_rows'];
-		$deployment_safety = $this->deployment_safety_sql();
+		$retention    = self::retention_policy();
+		$maximum_rows = $retention['maximum_rows'];
+		// Keep a package's deciding failure visible, so a link to its filtered history still finds it.
+		$deployment_safety = $this->deployment_safety_sql() . " OR (status <> 'succeeded' AND id IN (" . $this->decisive_ids_sql( '1 = 1' ) . '))';
 		return array(
 			$this->prepare( "(started_at >= %s OR $deployment_safety)", gmdate( 'Y-m-d H:i:s', time() - $retention['maximum_days'] * 86400 ) ),
 			"(id IN (SELECT id FROM (SELECT id FROM {$this->table} ORDER BY id DESC LIMIT $maximum_rows) AS recent_activity) OR $deployment_safety)",

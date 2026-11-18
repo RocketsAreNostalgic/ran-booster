@@ -6,6 +6,7 @@ use RAN\Activity\ActivityRequest;
 use RAN\Activity\ActivityStore;
 use RAN\AdoptionIdentity;
 use RAN\Admin\DeploymentAdminPresenter;
+use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
@@ -637,6 +638,112 @@ return static function ( wpdb $database ): void {
 			$retry = $store->activity_history( array( 'correlation' => $refused->get_correlation_id() ), limit: 2 );
 			$expect( $retry['available'] && 1 === count( $retry['records'] ) && str_contains( (string) $retry['records'][0]['facts'], 'target_is_working_copy' ), 'later healthy authority reads permit atomic refusal completion' );
 		}
+		// One decisive update outcome per adoption (#948) through the real journal; the fixture only assigns the adoption.
+		$query( $database->prepare( 'DELETE FROM %i', $table ) );
+		$token    = AdoptionIdentity::create( 'gh', 'activity-proof' );
+		$adopted  = array(
+			'subject_type'     => 'plugin',
+			'subject_identity' => 'activity-proof',
+			'adoption_token'   => $token,
+		);
+		$adopt    = static function () use ( $database, $table, $token, $query ): void {
+			$query( $database->prepare( "UPDATE %i SET adoption_token = %s, context_key = SHA2(CONCAT(subject_type, CHAR(0), subject_identity, CHAR(0), %s, CHAR(0), context), 256) WHERE adoption_token IS NULL AND JSON_EXTRACT(facts, '$.deployment_attempt_id') IS NOT NULL", $table, $token, $token ) );
+		};
+		$run      = static function ( string $code ) use ( $journal, $deploy, $adopt ): DeploymentAttempt {
+			$attempt = $journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+			$journal->finish( $attempt->get_id(), DeploymentOutcome::from_code( $code ) );
+			$adopt();
+			return $attempt;
+		};
+		$decide   = static function ( ?string $other = null ) use ( $store, $token ): array {
+			$read = $store->decisive_update_outcomes(
+				array(
+					array(
+						'subject_type'     => 'plugin',
+						'subject_identity' => 'activity-proof',
+						'adoption_token'   => $other ?? $token,
+					),
+				)
+			);
+			return array( $read['available'] ? $read['outcomes'][0]['state'] : 'unavailable', $read['outcomes'][0]['record']['correlation'] ?? null );
+		};
+		$finished = static function ( DeploymentAttempt $attempt, string $time ) use ( $database, $table, $query ): void {
+			$query( $database->prepare( 'UPDATE %i SET completed_at = %s WHERE correlation = %s', $table, $time, $attempt->get_correlation_id() ) );
+		};
+		$age      = static function () use ( $database, $table, $query ): void {
+			$query( $database->prepare( 'UPDATE %i SET started_at = %s', $table, '2000-01-01 00:00:00' ) );
+		};
+		$capture  = $adopted + array(
+			'context'    => '',
+			'purpose'    => null,
+			'provenance' => 'core',
+		);
+		$failure  = $run( DeploymentOutcome::CODE_PROVIDER_FAILED );
+		$expect( array( 'failed', $failure->get_correlation_id() ) === $decide(), 'an actionable failure decides' );
+		foreach ( array( 'provider_rate_limited', 'lock_unavailable', 'policy_blocked', 'stale_event', 'no_change' ) as $code ) {
+			$run( $code );
+		}
+		$expect( array( 'failed', $failure->get_correlation_id() ) === $decide(), 'refusals and an unchanged result neither hide nor clear a failure' );
+		$age();
+		$expect( 5 === $store->prune( array( $capture ) ), 'prune removes the aged non-deciding rows' );
+		$expect( array( 'failed', $failure->get_correlation_id() ) === $decide(), 'prune keeps the deciding failure' );
+		$history = $store->activity_history( array( 'subject_identity' => 'activity-proof' ) );
+		$expect( $history['available'] && array( $failure->get_correlation_id() ) === array_column( $history['records'], 'correlation' ), 'filtered history still shows the aged deciding failure' );
+		$success = $run( DeploymentOutcome::CODE_DEPLOYED );
+		$expect( array( 'clear', $success->get_correlation_id() ) === $decide(), 'a later deployment clears the failure' );
+		$age();
+		$expect( 1 === $store->prune( array( $capture ) ) && array( 'clear', $success->get_correlation_id() ) === $decide(), 'a cleared failure loses protection' );
+		$expect( array() === $store->activity_history( array( 'subject_identity' => 'activity-proof' ) )['records'], 'an aged deciding success stays out of ordinary history' );
+		// Activity ids follow admission, not completion: order by completion time, ties by id.
+		$finished( $success, '2000-01-01 00:00:00' );
+		$earlier = $run( DeploymentOutcome::CODE_DEPLOYED );
+		$later   = $run( DeploymentOutcome::CODE_PROVIDER_FAILED );
+		$finished( $later, '2001-01-01 00:00:00' );
+		$finished( $earlier, '2001-01-01 00:00:05' );
+		$expect( array( 'clear', $earlier->get_correlation_id() ) === $decide(), 'an earlier-admitted success finishing last clears a later-admitted failure' );
+		$earlier = $run( DeploymentOutcome::CODE_PROVIDER_FAILED );
+		$later   = $run( DeploymentOutcome::CODE_DEPLOYED );
+		$finished( $later, '2001-01-01 00:00:10' );
+		$finished( $earlier, '2001-01-01 00:00:15' );
+		$expect( array( 'failed', $earlier->get_correlation_id() ) === $decide(), 'an earlier-admitted failure finishing last is not hidden by a later-admitted success' );
+		$finished( $earlier, '2001-01-01 00:00:10' );
+		$expect( array( 'clear', $later->get_correlation_id() ) === $decide(), 'a same-second tie falls back to the later id' );
+		$uncertain = $run( DeploymentOutcome::CODE_INTERRUPTED );
+		$recorded  = $database->get_var( $database->prepare( 'SELECT completed_at FROM %i WHERE correlation = %s', $table, $uncertain->get_correlation_id() ) );
+		$expect( is_string( $recorded ) && abs( (int) strtotime( $recorded . ' UTC' ) - time() ) < 300, 'needing attention records its UTC completion time' );
+		$expect( array( 'needs_review', $uncertain->get_correlation_id() ) === $decide(), 'an unresolved deployment needs review' );
+		$finished( $uncertain, '2001-01-01 00:00:20' );
+		$journal->resolve_needs_attention( $uncertain->get_id(), $uncertain->get_correlation_id(), 1 );
+		$expect( '2001-01-01 00:00:20' === $database->get_var( $database->prepare( 'SELECT completed_at FROM %i WHERE correlation = %s', $table, $uncertain->get_correlation_id() ) ), 'Allow retry keeps the first completion time' );
+		$expect( array( 'failed', $uncertain->get_correlation_id() ) === $decide(), 'Allow retry leaves a failed update' );
+		// A failure completing while prune deletes neither loses the new evidence nor deletes the old in that batch.
+		$refusal = $run( 'provider_rate_limited' );
+		$racer   = $journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+		$adopt();
+		$age();
+		$raced = false;
+		$race  = static function ( string $sql ) use ( $table, $database, $second, $racer, &$raced, $expect ): string {
+			if ( ! $raced && str_starts_with( $sql, 'DELETE FROM ' . $table ) ) {
+				$raced = true;
+				$facts = json_decode( (string) $database->get_var( $database->prepare( 'SELECT facts FROM %i WHERE correlation = %s', $table, $racer->get_correlation_id() ) ), true );
+				$expect( is_array( $facts ) && $second->complete_by_correlation( $racer->get_correlation_id(), 'failed', 'provider_failed', 'provider_failed', facts: array( 'deployment_state' => 'failed' ) + $facts ), 'concurrent failure completion' );
+			}
+			return $sql;
+		};
+		add_filter( 'query', $race );
+		try {
+			$expect( false !== $store->prune( array( $capture ) ), 'racing decisive prune' );
+		} finally {
+			remove_filter( 'query', $race );
+		}
+		$retained = $database->get_col( $database->prepare( 'SELECT correlation FROM %i ORDER BY id', $table ) );
+		$expect( $raced && array( $uncertain->get_correlation_id(), $racer->get_correlation_id() ) === $retained && ! in_array( $refusal->get_correlation_id(), $retained, true ), 'the racing batch keeps the old and the new deciding rows' );
+		$expect( array( 'failed', $racer->get_correlation_id() ) === $decide(), 'the new failure decides' );
+		$expect( 1 === $store->prune( array( $capture ) ) && array( 'failed', $racer->get_correlation_id() ) === $decide(), 'the next batch removes the superseded failure' );
+		$expect( array( 'clear', null ) === $decide( AdoptionIdentity::create( 'gh', 'activity-proof' ) ), 're-adoption inherits no failure' );
+		$expect( array( 'unavailable', null ) === $decide( 'invalid' ), 'an invalid adoption is unavailable, not clear' );
+		$expect( 1 === $store->prune( array() ) && array( 'clear', null ) === $decide(), 'a departed adoption keeps nothing' );
+		$query( $database->prepare( "UPDATE %i SET state = 'failed' WHERE id = %d", $journal_table, $racer->get_id() ) );
 		// Fixed fixture measurements, not live-site latency guarantees or performance gates.
 		$digits  = '(SELECT 0 n UNION ALL SELECT 1 UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9)';
 		$numbers = "(SELECT a.n + 10*b.n + 100*c.n + 1000*d.n AS n FROM $digits a CROSS JOIN $digits b CROSS JOIN $digits c CROSS JOIN $digits d)";

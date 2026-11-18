@@ -718,6 +718,14 @@ class Booster {
 				foreach ( array( 'branch.check', 'release.check', 'workflow.assessment' ) as $purpose ) {
 					$contexts[] = $evidence->activity_context( $type, $package, $purpose );
 				}
+				// Deployments record no purpose or context; this keeps the package's deciding update outcome.
+				$contexts[] = array_replace(
+					end( $contexts ),
+					array(
+						'context' => '',
+						'purpose' => null,
+					)
+				);
 			}
 		}
 		for ( $batch = 0; $batch < 20; ++$batch ) {

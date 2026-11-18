@@ -804,12 +804,6 @@
 	align-items: center;
 }
 
-.ran-booster-admin
-	[data-ran-booster-ui-disclosure="package-advanced-settings"]
-	.ran-booster-advanced-source-summary {
-	font-size: var(--ran-booster-font-size-sm);
-}
-
 .ran-booster-admin .ran-booster-advanced-source-summary__heading {
 	color: var(--ran-booster-text-muted);
 	font-size: var(--ran-booster-font-size-sm);
@@ -1210,6 +1204,12 @@
 		.ran-booster-ui-disclosure__meta {
 		flex: 1 1 100%;
 		margin-inline: 0;
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		.ran-booster-advanced-source-summary {
+		font-size: var(--ran-booster-font-size-sm);
 	}
 
 	.ran-booster-admin

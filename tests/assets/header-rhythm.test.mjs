@@ -74,6 +74,25 @@ const nestedTrigger = withBody(
 const prominent = '[data-ran-booster-ui-disclosure-density="prominent"]';
 const depth = (r) => r.selector.split(',')[0].split(prominent).length - 1;
 
+const narrowMedia = () => {
+	const start = primitives.indexOf('@media screen and (max-width: 480px) {');
+	assert.notEqual(start, -1, 'the 480px media block is missing');
+	const open = primitives.indexOf('{', start);
+	let nesting = 1;
+	for (let i = open + 1; i < primitives.length; i += 1) {
+		if (primitives[i] === '{') {
+			nesting += 1;
+		}
+		if (primitives[i] === '}') {
+			nesting -= 1;
+		}
+		if (nesting === 0) {
+			return primitives.slice(open + 1, i);
+		}
+	}
+	assert.fail('the 480px media block is not closed');
+};
+
 test('the narrow advanced fallback grid outranks the generic fallback flex', () => {
 	const grid = rules.find(
 		(r) =>
@@ -87,18 +106,18 @@ test('the narrow advanced fallback grid outranks the generic fallback flex', () 
 	assert.ok(grid);
 	assert.ok(flex);
 	assert.ok(outranks(specificity(grid.selector), specificity(flex.selector)));
-	assert.match(
-		primitives,
-		/@media screen and \(max-width: 480px\)\s*\{[\s\S]*?display: grid/
-	);
+	assert.ok(parse(narrowMedia()).some((r) => r.selector === grid.selector));
 });
 
-test('advanced summary typography wins before and after mounting', () => {
-	const summary = rules.find(
+test('advanced summary typography applies only at the narrow breakpoint', () => {
+	const summaries = rules.filter(
 		(r) =>
 			r.selector.includes('package-advanced-settings') &&
-			r.selector.endsWith('.ran-booster-advanced-source-summary')
+			r.selector.endsWith('.ran-booster-advanced-source-summary') &&
+			r.body.includes('font-size:')
 	);
+	assert.equal(summaries.length, 1, 'one scoped font-size correction exists');
+	const [summary] = summaries;
 	const fallback = parse(packageSettings).find(
 		(r) =>
 			r.selector.endsWith(
@@ -108,6 +127,10 @@ test('advanced summary typography wins before and after mounting', () => {
 	assert.ok(summary);
 	assert.ok(fallback);
 	assert.match(summary.body, /font-size: var\(--ran-booster-font-size-sm\)/);
+	assert.ok(
+		parse(narrowMedia()).some((r) => r.selector === summary.selector),
+		'the font-size correction must not apply at 512px'
+	);
 	assert.ok(
 		outranks(specificity(summary.selector), specificity(fallback.selector))
 	);

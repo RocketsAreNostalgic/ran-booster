@@ -8,6 +8,8 @@ use InvalidArgumentException;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Package;
 use RAN\InvalidPackageSubdirectory;
+use RAN\RepositoryProvider\ArchiveRequest;
+use RAN\RepositoryProvider\RepositoryReference;
 use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
 use RAN\RepositoryProvider\ProviderCode;
@@ -32,12 +34,19 @@ final readonly class PackageRepositoryRequestResolver {
 		return $this->resolve_request( $request );
 	}
 
+	/** @param array<string,mixed> $request
+	 * @param array{profile_id:?string}|null $trusted_public_lookup
+	 * @return array<string,mixed> */
+	public function resolve_branch( array $request, ?array $trusted_public_lookup = null ): array {
+		return $this->resolve_request( $request, $trusted_public_lookup['profile_id'] ?? null, null !== $trusted_public_lookup, true );
+	}
+
 	/**
 	 * Complete an edit request from the stored package when no provider-dependent field changed.
 	 *
 	 * Used only as a fallback when the provider lookup is rate-limited or unavailable: a save
-	 * that keeps the same provider, repository, credential and subdirectory can then proceed
-	 * on the stored identity. Returns null when any of those fields differs or the stored
+	 * that keeps the same provider, repository, credential, subdirectory and branch can then
+	 * proceed on the stored identity. Returns null when any of those fields differs or the stored
 	 * identity is incomplete, so a changed repository is never accepted unverified.
 	 *
 	 * @param array<string, mixed> $request Package form request.
@@ -91,6 +100,9 @@ final readonly class PackageRepositoryRequestResolver {
 
 		$branch_input = $request['branch'] ?? '';
 		$branch       = is_string( $branch_input ) ? trim( sanitize_text_field( wp_unslash( $branch_input ) ) ) : '';
+		if ( '' !== $branch && $branch !== (string) $stored->get_branch() ) {
+			return null;
+		}
 
 		$request['provider']               = $provider->value;
 		$request['repository']             = (string) $stored->get_repository();
@@ -102,7 +114,7 @@ final readonly class PackageRepositoryRequestResolver {
 		$request['provider_repository_identity_source'] = 'resolved';
 		$request['private']                             = $stored->get_private() ? '1' : '0';
 		$request['credential_id']                       = $stored->get_credential_id();
-		$request['branch']                              = '' === $branch ? (string) $stored->get_branch() : $branch;
+		$request['branch']                              = (string) $stored->get_branch();
 		$request['deployment_policy']                   = $deployment_policy->value;
 		unset( $request['public_lookup_profile_id'] );
 
@@ -110,24 +122,14 @@ final readonly class PackageRepositoryRequestResolver {
 	}
 
 	/**
-	 * Resolve one controller-authorized public lookup without persisting it as package access.
-	 *
 	 * @param array<string, mixed> $request Package form request.
 	 * @return array<string, mixed>
 	 */
-	public function resolve_with_trusted_public_lookup_profile( array $request, ?string $profile_id ): array {
-		if ( null !== $profile_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $profile_id ) ) {
+	private function resolve_request( array $request, ?string $trusted_public_lookup_id = null, bool $trusted_public_lookup = false, bool $verify_branch = false ): array {
+		if ( $trusted_public_lookup && null !== $trusted_public_lookup_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $trusted_public_lookup_id ) ) {
 			throw new InvalidArgumentException( 'Choose a valid public repository lookup profile.' );
 		}
 
-		return $this->resolve_request( $request, $profile_id, true );
-	}
-
-	/**
-	 * @param array<string, mixed> $request Package form request.
-	 * @return array<string, mixed>
-	 */
-	private function resolve_request( array $request, ?string $trusted_public_lookup_id = null, bool $trusted_public_lookup = false ): array {
 		$provider_input = $request['provider'] ?? null;
 		if ( ! is_string( $provider_input ) ) {
 			throw new InvalidArgumentException( 'Choose a repository provider.' );
@@ -244,6 +246,18 @@ final readonly class PackageRepositoryRequestResolver {
 		$request['branch']            = '' === $branch ? $repository->default_branch : $branch;
 		$request['deployment_policy'] = $deployment_policy->value;
 		unset( $request['public_lookup_profile_id'] );
+
+		if ( $verify_branch ) {
+			$archive = $aggregate->prepare_archive( new ArchiveRequest( RepositoryReference::from_descriptor( $repository ), $request['branch'] ) );
+			try {
+				$revision = $archive->get_resolved_ref();
+				if ( '' === trim( $revision ) || strlen( $revision ) > 191 || preg_match( '/[\x00-\x1F\x7F]/', $revision ) ) {
+					throw new RuntimeException( 'The repository branch could not be verified.' );
+				}
+			} finally {
+				$archive->cleanup();
+			}
+		}
 
 		return $request;
 	}

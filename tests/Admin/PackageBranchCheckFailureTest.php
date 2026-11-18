@@ -1,0 +1,81 @@
+<?php
+
+declare(strict_types=1);
+
+namespace RAN\Tests\Admin;
+
+require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use RAN\AbstractPackage;
+use RAN\Activity\ActivityProgress;
+use RAN\Admin\ProviderSettingsPresenter;
+use RAN\ManagedRepository;
+use RAN\RepositoryProvider\PreparedArchive;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderDiagnostics;
+use RAN\RepositoryProvider\ProviderFailure;
+use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\ProviderRequestFailed;
+use RAN\RepositoryProvider\RepositoryProvider;
+use ReflectionClass;
+use ReflectionMethod;
+use ReflectionProperty;
+
+final class PackageBranchCheckFailureTest extends TestCase {
+
+	#[DataProvider( 'provider_failures' )]
+	public function test_branch_check_preserves_only_typed_location_distinctions( string $provider_code, string $reason, string $expected ): void {
+		$provider = $this->provider( $provider_code );
+		$failure  = 'legacy' === $reason ? new \RuntimeException( 'ref_not_found redirect_blocked canary', 404 ) : new ProviderRequestFailed( new ProviderFailure( $reason ) );
+		$provider->method( 'prepare_archive' )->willThrowException( $failure );
+		self::assertSame( $expected, $this->check( $provider, $provider_code ) );
+	}
+
+	/** @return iterable<string,array{string,string,string}> */
+	public static function provider_failures(): iterable {
+		foreach ( array( 'gh', 'bb' ) as $provider ) {
+			foreach ( array(
+				'ref_not_found'                     => 'branch_unavailable',
+				'redirect_blocked'                  => 'branch_redirected',
+				'repository_not_found_or_no_access' => 'unable_to_check',
+				'credential_rejected'               => 'unable_to_check',
+				'rate_limited'                      => 'unable_to_check',
+				'http_timeout'                      => 'unable_to_check',
+				'legacy'                            => 'unable_to_check',
+			) as $reason => $outcome ) {
+				yield $provider . ' ' . $reason => array( $provider, $reason, $outcome );
+			}
+		}
+	}
+
+	public function test_read_failure_is_typed_and_preparation_is_always_cleaned_without_acquiring_an_archive(): void {
+		$archive = $this->createMock( PreparedArchive::class );
+		$archive->expects( self::never() )->method( 'get_url' );
+		$archive->method( 'get_resolved_ref' )->willThrowException( new ProviderRequestFailed( new ProviderFailure( 'ref_not_found' ) ) );
+		$archive->expects( self::once() )->method( 'cleanup' );
+		$provider = $this->provider( 'bb' );
+		$provider->method( 'prepare_archive' )->willReturn( $archive );
+		self::assertSame( 'branch_unavailable', $this->check( $provider, 'bb' ) );
+	}
+
+	/** @return RepositoryProvider&\PHPUnit\Framework\MockObject\MockObject */
+	private function provider( string $code ): RepositoryProvider {
+		$provider = $this->createMock( RepositoryProvider::class );
+		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( $code ), 'Fixture', 'https://example.test/', 'Owner' ) );
+		$provider->method( 'get_provider_diagnostics' )->willReturn( $this->createStub( ProviderDiagnostics::class ) );
+		return $provider;
+	}
+
+	private function check( RepositoryProvider $provider, string $code ): string {
+		$presenter = ( new ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
+		( new ReflectionProperty( ProviderSettingsPresenter::class, 'providers' ) )->setValue( $presenter, new ProviderRegistry( array( $provider ) ) );
+		$package = $this->createStub( AbstractPackage::class );
+		$package->method( 'get_provider_code' )->willReturn( $code );
+		$package->method( 'get_repository' )->willReturn( new ManagedRepository( $code, 'owner/repository', 'repo-42', 'feature/ref', true, 'fixture-profile' ) );
+		$package->method( 'get_branch' )->willReturn( 'feature/ref' );
+		return (string) ( new ReflectionMethod( ProviderSettingsPresenter::class, 'check_package_repository_branch_while_locked' ) )->invoke( $presenter, $package, null, $this->createStub( ActivityProgress::class ) );
+	}
+}

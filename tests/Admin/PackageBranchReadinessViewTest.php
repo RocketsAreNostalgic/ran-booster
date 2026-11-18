@@ -668,6 +668,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
+		if ( in_array( $outcome, array( 'branch_unavailable', 'branch_redirected' ), true ) ) {
+			self::assertStringNotContainsString( 'is accessible with the saved repository settings.', $html );
+			self::assertStringNotContainsString( 'was accessible at the last check.', $html );
+		}
+
 		$document = new \DOMDocument();
 		$previous = libxml_use_internal_errors( true );
 		try {
@@ -710,6 +715,8 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	/** @return iterable<string, array{?string, string, string}> */
 	public static function branch_notice_states(): iterable {
 		$states = array(
+			'branch_unavailable'       => 'The saved branch could not be found. Check the branch name on the provider.',
+			'branch_redirected'        => 'The branch lookup was redirected. The branch may have been renamed or the repository moved. Check the current name on the provider.',
 			'provider_unavailable'     => 'The saved Git provider is unavailable, so Booster could not check the repository and branch.',
 			'unable_to_check'          => 'Booster could not access the saved repository and branch. Check the branch name and repository access, then try again.',
 			'subdirectory_unavailable' => 'The saved branch is accessible, but Booster could not find the configured subdirectory. Check the path and try again.',

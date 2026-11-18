@@ -1587,7 +1587,7 @@ final class TroubleshootingViewTest extends TestCase {
 			$deployment_activity        = $presenter->activity();
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
-			self::assertStringContainsString( 'Unknown: <code>api.abuse_detected</code>', (string) ob_get_clean() );
+			self::assertStringContainsString( 'missing-provider: <code>api.abuse_detected</code>', (string) ob_get_clean() );
 			$translations = $GLOBALS['ran_booster_admin_test_translations'];
 			try {
 				$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Failure reference'] = 'Same label';
@@ -1605,7 +1605,7 @@ final class TroubleshootingViewTest extends TestCase {
 					require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 					$html = (string) ob_get_clean();
 					self::assertStringContainsString( 'Not reported', $html );
-					self::assertSame( 'api.abuse_detected' === $value, str_contains( $html, 'Unknown: <code>' ) );
+					self::assertSame( 'api.abuse_detected' === $value, str_contains( $html, 'missing-provider: <code>' ) );
 					$_GET                = array(
 						'attempt'   => '17',
 						'reference' => str_repeat( 'a', 32 ),

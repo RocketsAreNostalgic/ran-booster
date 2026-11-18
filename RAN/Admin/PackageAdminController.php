@@ -628,12 +628,11 @@ final class PackageAdminController {
 	 */
 	private function resolve( Dashboard $dashboard, array $request, ?array $trusted_public_lookup = null, ?Package $stored_package = null ): ?array {
 		try {
-			if ( null !== $trusted_public_lookup ) {
-				return $this->repositories?->resolve_with_trusted_public_lookup_profile( $request, $trusted_public_lookup['profile_id'] )
-					?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
-			}
-
-			return $this->repositories?->resolve( $request ) ?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
+			// Only a branch-managed package or a new install deploys its branch, so only they verify it.
+			$resolved = ! $stored_package instanceof Package || PackageSource::BRANCH === $stored_package->get_source()
+				? $this->repositories?->resolve_branch( $request, $trusted_public_lookup )
+				: $this->repositories?->resolve( $request );
+			return $resolved ?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
 			$message = __( 'The selected Git provider is not available.', 'ran-booster' );
 		} catch ( UnsupportedProviderCapability $failure ) {
@@ -648,12 +647,15 @@ final class PackageAdminController {
 				return $stored_fallback;
 			}
 			// A provider's own reason is worded by Core; a plain exception keeps the status copy.
-			$message = ProviderFailure::carried( $failure )?->message() ?? match ( $failure->getCode() ) {
-				401 => __( 'The Git provider rejected the selected credential.', 'ran-booster' ),
-				403 => __( 'The Git provider denied access. Check credential permissions or rate limits.', 'ran-booster' ),
-				404 => __( 'The repository could not be found, or the selected credential cannot access it.', 'ran-booster' ),
-				429 => __( 'The Git provider rate limit has been reached. Nothing was saved. Try again later.', 'ran-booster' ),
-				default => __( 'Booster could not verify the repository. Please try again.', 'ran-booster' ),
+			$message = match ( ProviderFailure::from_throwable( $failure )?->reason ) {
+				'ref_not_found' => __( 'The selected branch could not be found. Check the branch name on the provider.', 'ran-booster' ),
+				default => ProviderFailure::carried( $failure )?->message() ?? match ( $failure->getCode() ) {
+					401 => __( 'The Git provider rejected the selected credential.', 'ran-booster' ),
+					403 => __( 'The Git provider denied access. Check credential permissions or rate limits.', 'ran-booster' ),
+					404 => __( 'The repository could not be found, or the selected credential cannot access it.', 'ran-booster' ),
+					429 => __( 'The Git provider rate limit has been reached. Nothing was saved. Try again later.', 'ran-booster' ),
+					default => __( 'Booster could not verify the repository. Please try again.', 'ran-booster' ),
+				},
 			};
 		} catch ( Throwable $failure ) {
 			$message = __( 'Booster could not verify the repository. Please try again.', 'ran-booster' );
@@ -687,6 +689,7 @@ final class PackageAdminController {
 		// plain settings save may continue without it.
 		if ( null !== $trusted_public_lookup
 			|| ! $stored_package instanceof Package
+			|| in_array( ProviderFailure::from_throwable( $failure )?->reason, array( 'ref_not_found', 'redirect_blocked' ), true )
 			|| $this->enabled( $request, 'reinstall_after_save' )
 			|| $this->enabled( $request, 'check_repository_branch_after_save' )
 			|| ! ( ProviderFailure::carried( $failure )?->is_transient() ?? in_array( $failure->getCode(), self::TRANSIENT_LOOKUP_CODES, true ) ) ) {

@@ -234,6 +234,30 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		}
 	}
 
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'specific_branch_failures' )]
+	public function test_specific_branch_failures_are_rejected_without_verification_evidence( string $outcome, string $reason ): void {
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
+		$store->record( 'plugin', $package, 'profile-a', 'verified' );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
+		$store->record( 'plugin', $package, 'profile-a', $outcome );
+
+		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+		self::assertSame( array(), $store->records['records'] );
+		self::assertSame( 'rejected', $store->database->records[2]['status'] );
+		self::assertSame( 'none', $store->database->records[2]['effect'] );
+		self::assertSame( $reason, $store->database->records[2]['reason'] );
+	}
+
+	/** @return array<string, array{string, string}> */
+	public static function specific_branch_failures(): array {
+		return array(
+			'missing'    => array( 'branch_unavailable', 'ref_not_found' ),
+			'redirected' => array( 'branch_redirected', 'redirect_blocked' ),
+		);
+	}
+
 	public function test_optional_history_failures_do_not_suppress_fresh_verification(): void {
 		foreach ( array( 'fail_insert', 'fail_complete', 'fail_read' ) as $failure ) {
 			$store   = new InMemoryRepositoryBranchCheckEvidenceStore();

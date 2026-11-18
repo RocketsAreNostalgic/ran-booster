@@ -161,10 +161,14 @@ function fixture(available = true, query = '') {
 	form.getAttribute = (name) =>
 		name === 'aria-describedby' ? description : null;
 	form.setAttribute = (name, value) => {
-		if (name === 'aria-describedby') description = value;
+		if (name === 'aria-describedby') {
+			description = value;
+		}
 	};
 	form.removeAttribute = (name) => {
-		if (name === 'aria-describedby') description = null;
+		if (name === 'aria-describedby') {
+			description = null;
+		}
 	};
 	form.querySelector = (selector) =>
 		selector === '#ran-booster-access-profile-error' ? error : cancel;
@@ -372,16 +376,32 @@ for (const destination of ['different', '']) {
 	});
 }
 
-test('switching leaves script-driven errors alone', () => {
-	const state = fixture();
-	state.error.hidden = false;
-	state.errorText.textContent = 'Enhanced failure';
-	state.button.getAttribute = () => 'different';
-	state.button.dispatchEvent(event('click'));
-	assert.equal(state.populations, 1);
-	assert.equal(state.error.hidden, false);
-	assert.equal(state.errorText.textContent, 'Enhanced failure');
-});
+for (const nativeFirst of [false, true]) {
+	test(`enhanced failure ${nativeFirst ? 'after native failure' : 'alone'} clears only after an accepted switch`, () => {
+		const state = fixture();
+		if (nativeFirst) {
+			state.form.setAttribute(
+				'aria-describedby',
+				'ran-booster-access-profile-error'
+			);
+		}
+		// Synthetic replacement of the error content; this is not a real HTMX request.
+		state.error.hidden = false;
+		state.errorText.textContent = 'Enhanced failure';
+		state.form.dispatchEvent(event('input'));
+		state.button.getAttribute = () => 'different';
+		state.button.dispatchEvent(event('click'));
+		assert.equal(state.populations, 0);
+		assert.equal(state.error.hidden, false);
+		assert.equal(state.errorText.textContent, 'Enhanced failure');
+		state.accept = true;
+		state.button.dispatchEvent(event('click'));
+		assert.equal(state.populations, 1);
+		assert.equal(state.error.hidden, true);
+		assert.equal(state.errorText.textContent, '');
+		assert.equal(state.form.getAttribute('aria-describedby'), null);
+	});
+}
 
 test('accepted native confirmation retains the link when the editor dialog fails', () => {
 	const state = fixture();

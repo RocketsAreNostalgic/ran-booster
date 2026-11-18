@@ -2186,7 +2186,7 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'WordPress reported that it changed this package, but Booster could not confirm the final result.', $html );
+		self::assertStringNotContainsString( 'WordPress reported that it changed this package', $html );
 		self::assertStringContainsString( 'Checking the box only clears the retry block. It does not change the package or prove what happened before.', $html );
 		self::assertStringContainsString( 'activity #8', $html );
 		self::assertStringContainsString( 'Allow retry', $html );

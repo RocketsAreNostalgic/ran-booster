@@ -43,6 +43,28 @@ if ( ! is_string( $ran_booster_expected_root ) || false === $ran_booster_wordpre
 	|| ! is_string( $ran_booster_archive_root ) || false === realpath( $ran_booster_archive_root ) ) {
 	throw new RuntimeException( 'The installed release-capability smoke requires the exact disposable site and fixture.' );
 }
+// Compare the installed package display and broker with the source tuple that built the ZIP.
+$ran_booster_read_json   = static function ( string $path ): array {
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- The disposable proof reads the fixed source and installed manifests.
+	return json_decode( (string) file_get_contents( $path ), true, 64, JSON_THROW_ON_ERROR );
+};
+$ran_booster_source_root = dirname( __DIR__, 2 );
+$ran_booster_project     = $ran_booster_read_json( $ran_booster_source_root . '/composer.json' );
+$ran_booster_lockfile    = $ran_booster_read_json( $ran_booster_source_root . '/composer.lock' );
+$ran_booster_versions    = new RAN\RepositoryProvider\InstalledPackageVersion();
+foreach ( $ran_booster_lockfile['packages'] as $ran_booster_dependency ) {
+	if ( $ran_booster_dependency['version'] !== $ran_booster_versions->for_package( $ran_booster_dependency['name'] ) ) {
+		throw new RuntimeException( 'Installed runtime package version differs from the release lock.' );
+	}
+}
+$ran_booster_runtime_path = '/vendor/ran/wp-release-updater/';
+$ran_booster_runtime_copy = $ran_booster_read_json( WP_PLUGIN_DIR . '/ran-booster' . $ran_booster_runtime_path . 'runtime-copy.json' );
+$ran_booster_broker       = $GLOBALS['ran_wp_release_updater_v1_broker'] ?? null;
+if ( 11 !== $ran_booster_project['extra']['ran-updater-runtime-protocol'] || 11 !== $ran_booster_runtime_copy['runtime_protocol']
+	|| ! is_object( $ran_booster_broker ) || ! is_callable( array( $ran_booster_broker, 'protocol_version' ) ) || 11 !== $ran_booster_broker->protocol_version()
+	|| $ran_booster_project['require']['ran/wp-release-updater'] !== $ran_booster_runtime_copy['package_version'] ) {
+	throw new RuntimeException( 'The root consumer, packaged runtime and active broker must agree on Protocol 11.' );
+}
 $ran_booster_redirect_proof = require __DIR__ . '/archive-redirect-installed-proof.php';
 $ran_booster_redirect_proof( $ran_booster_archive_root );
 

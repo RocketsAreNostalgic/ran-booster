@@ -38,6 +38,7 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 						'failure_code'              => null,
 						'installed_version'         => '1.0.0',
 						'last_check'                => 1_700_000_000,
+						'last_native_outcome'       => null,
 						'offered_release_identity'  => 'release:42',
 						'offered_version'           => '1.1.0',
 						'relationship'              => 'newer',
@@ -108,6 +109,7 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 				'failure_code'              => null,
 				'installed_version'         => '1.0.0',
 				'last_check'                => 1_700_000_000,
+				'last_native_outcome'       => null,
 				'offered_release_identity'  => null,
 				'offered_version'           => '1.1.0',
 				'relationship'              => 'newer',
@@ -138,9 +140,30 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 		self::assertFalse( $status->active );
 		self::assertSame( 'github_updater_status_unavailable', $status->failure_code );
 
-		$updater->native['offered_version'] = null;
-		$updater->native['candidate_tag']   = 'v1.1.0';
-		$status                             = $target->status();
+		$updater->native['offered_version']     = null;
+		$updater->native['last_native_outcome'] = array(
+			'outcome'            => 'verified_success',
+			'source'             => 'release_updater',
+			'wordpress_code'     => null,
+			'release_identity'   => '42',
+			'version'            => '1.0.0',
+			'last_observed_step' => 'completion_observed',
+			'recorded_at'        => 1_700_000_000,
+		);
+		self::assertTrue( $target->status()->active );
+		self::assertArrayNotHasKey( 'last_native_outcome', get_object_vars( $target->status() ) );
+		$updater->native['last_native_outcome'] = 'invalid';
+		self::assertFalse( $target->status()->active );
+		unset( $updater->native['last_native_outcome'] );
+		self::assertFalse( $target->status()->active );
+		$updater->native['unexpected'] = null;
+		self::assertFalse( $target->status()->active );
+		$updater->native['last_native_outcome'] = null;
+		self::assertFalse( $target->status()->active );
+		unset( $updater->native['unexpected'] );
+		self::assertTrue( $target->status()->active );
+		$updater->native['candidate_tag'] = 'v1.1.0';
+		$status                           = $target->status();
 		self::assertFalse( $status->active );
 		self::assertSame( 'github_updater_status_unavailable', $status->failure_code );
 

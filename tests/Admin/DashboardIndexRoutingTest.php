@@ -68,6 +68,8 @@ use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 use RAN\Tests\Support\CredentialUsageDatabase;
 use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
+require_once __DIR__ . '/DevelopmentEnvironmentDetectorWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/FeedbackWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
@@ -77,7 +79,9 @@ require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once dirname( __DIR__ ) . '/Logging/LoggingWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
-require_once dirname( __DIR__, 2 ) . '/RAN/Dashboard.php';
+if ( ! class_exists( \RAN\Dashboard::class, false ) ) {
+	require_once dirname( __DIR__, 2 ) . '/RAN/Dashboard.php';
+}
 
 final class DashboardIndexRoutingTest extends TestCase {
 	use \RAN\Tests\Support\QueuedSelectionFixture;
@@ -1205,6 +1209,87 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$_GET = array_merge( array( 'tab' => $tab ), $query );
 			$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), provider_credentials: true )->get_index()['data'];
 			self::assertArrayNotHasKey( 'route_not_found', $data, (string) wp_json_encode( $query ) );
+		}
+	}
+
+	public function test_native_credential_failure_is_rendered_once_with_the_open_form(): void {
+		$_GET                      = array(
+			'tab'  => 'bb',
+			'view' => 'credentials',
+		);
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_POST['ran_booster']      = array(
+			'action'   => 'save-access-profile',
+			'provider' => 'bb',
+			'id'       => '',
+			'label'    => 'Draft label',
+			'kind'     => 'api-key',
+			'secret'   => 'NEVER-REDISPLAY',
+		);
+		$dashboard                 = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), provider_credentials: true );
+		$dashboard->messages       = array(
+			array(
+				'type'    => 'error',
+				'code'    => 'ran_booster_credentials_error',
+				'message' => 'Enter a label & try again.',
+			),
+			array(
+				'type'    => 'warning',
+				'message' => 'Unrelated warning.',
+			),
+			array(
+				'type'     => 'success',
+				'feedback' => 'credential_test',
+				'message'  => 'Unrelated success.',
+			),
+		);
+		try {
+			foreach ( array( 'native', 'missing', 'htmx', 'no-error' ) as $scenario ) {
+				$_POST['ran_booster']['id'] = 'missing' === $scenario ? 'missing' : '';
+				if ( 'htmx' === $scenario ) {
+					$_SERVER['HTTP_HX_REQUEST'] = 'true';
+				} else {
+					unset( $_SERVER['HTTP_HX_REQUEST'] );
+				}
+				$messages = $dashboard->messages;
+				if ( 'no-error' === $scenario ) {
+					array_shift( $dashboard->messages );
+				}
+				$data = $dashboard->get_index()['data'];
+				ob_start();
+				try {
+					( new ReflectionMethod( Dashboard::class, 'render' ) )->invoke( $dashboard, 'index', $data );
+					$html = (string) ob_get_contents();
+				} finally {
+					ob_end_clean();
+				}
+				$dashboard->messages = $messages;
+				$document            = new \DOMDocument();
+				$previous            = libxml_use_internal_errors( true );
+				$document->loadHTML( $html );
+				libxml_clear_errors();
+				libxml_use_internal_errors( $previous );
+				$xpath = new \DOMXPath( $document );
+				$error = '//*[@id="ran-booster-access-profile-error"]';
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form/*[1][@id="ran-booster-access-profile-error"])' ), $scenario );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//*[@id="ran-booster-access-modal-title"]/../following-sibling::form/*[1][@id="ran-booster-access-profile-error"])' ), $scenario );
+				self::assertSame( 'native' === $scenario ? 1.0 : 0.0, $xpath->evaluate( 'count(' . $error . '[not(@hidden)])' ), $scenario );
+				self::assertSame( 'native' === $scenario ? 'Enter a label & try again.' : '', trim( (string) $xpath->evaluate( 'string(' . $error . ')' ) ), $scenario );
+				self::assertSame( 'native' === $scenario ? 1.0 : 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form[@aria-describedby="ran-booster-access-profile-error"])' ), $scenario );
+				self::assertSame( 'no-error' === $scenario ? 0.0 : 1.0, $xpath->evaluate( 'count(//p[text()="Enter a label & try again."])' ), $scenario );
+				self::assertStringContainsString( 'Unrelated warning.', $html );
+				self::assertStringContainsString( 'Unrelated success.', $html );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(concat(" ", normalize-space(@class), " "), " notice-success ")]/descendant::p[text()="Unrelated success."])' ), $scenario );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-feedback-key="credential_test"])' ), $scenario );
+				self::assertStringNotContainsString( 'NEVER-REDISPLAY', $html );
+				if ( 'native' === $scenario ) {
+					self::assertSame( 'Draft label', $xpath->evaluate( 'string(//input[@name="ran_booster[label]"]/@value)' ) );
+					self::assertSame( '', $xpath->evaluate( 'string(//input[@name="ran_booster[secret]"]/@value)' ) );
+				}
+			}
+		} finally {
+			$_POST = array();
+			unset( $_SERVER['REQUEST_METHOD'], $_SERVER['HTTP_HX_REQUEST'] );
 		}
 	}
 

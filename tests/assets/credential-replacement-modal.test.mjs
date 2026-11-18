@@ -155,7 +155,23 @@ function fixture(available = true, query = '') {
 		'ran_booster[secret]': {},
 		'ran_booster[expires_on]': { value: '2027-01-01', dataset: {} },
 	};
-	form.querySelector = () => cancel;
+	const errorText = { textContent: '' };
+	const error = { hidden: true, querySelector: () => errorText };
+	let description = null;
+	form.getAttribute = (name) =>
+		name === 'aria-describedby' ? description : null;
+	form.setAttribute = (name, value) => {
+		if (name === 'aria-describedby') {
+			description = value;
+		}
+	};
+	form.removeAttribute = (name) => {
+		if (name === 'aria-describedby') {
+			description = null;
+		}
+	};
+	form.querySelector = (selector) =>
+		selector === '#ran-booster-access-profile-error' ? error : cancel;
 	const editor = {
 		isConnected: true,
 		dataset: {},
@@ -182,6 +198,8 @@ function fixture(available = true, query = '') {
 		navigations: [],
 		accept: false,
 		form,
+		error,
+		errorText,
 		editor,
 		window,
 		document,
@@ -237,6 +255,12 @@ function fixture(available = true, query = '') {
 
 test('same native form opens with Label focus and retains draft across close/reopen', () => {
 	const state = fixture();
+	state.form.setAttribute(
+		'aria-describedby',
+		'ran-booster-access-profile-error'
+	);
+	state.error.hidden = false;
+	state.errorText.textContent = 'Native failure';
 	assert.equal(state.form.noValidate, false);
 	state.form.value = 'synthetic unsaved draft';
 	state.form.dispatchEvent(event('input'));
@@ -258,6 +282,12 @@ test('same native form opens with Label focus and retains draft across close/reo
 	state.button.dispatchEvent(event('click'));
 	assert.equal(state.populations, 0);
 	assert.equal(state.form.value, 'synthetic unsaved draft');
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorText.textContent, 'Native failure');
+	assert.equal(
+		state.form.getAttribute('aria-describedby'),
+		'ran-booster-access-profile-error'
+	);
 });
 
 test('missing or failing Dialog and modified clicks retain native link behavior', () => {
@@ -320,6 +350,88 @@ test('switching credential identity cannot silently erase a dirty draft', () => 
 	assert.equal(state.opens, 1);
 });
 
+test('reopening a clean saved credential preserves its enhanced error', () => {
+	const state = fixture();
+	state.editor.hidden = true;
+	state.error.hidden = false;
+	state.errorText.textContent = 'Enhanced failure';
+	state.button.dispatchEvent(event('click'));
+	assert.equal(state.populations, 1);
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorText.textContent, 'Enhanced failure');
+	state.cancel.dispatchEvent(event('click'));
+	state.button.dispatchEvent(event('click'));
+	assert.equal(state.populations, 2);
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorText.textContent, 'Enhanced failure');
+});
+
+test('resetting a clean hidden Add form clears its error', () => {
+	const state = fixture();
+	state.editor.hidden = true;
+	state.form.elements['ran_booster[id]'].value = '';
+	state.button.getAttribute = () => '';
+	state.error.hidden = false;
+	state.errorText.textContent = 'Enhanced failure';
+	state.button.dispatchEvent(event('click'));
+	assert.equal(state.populations, 1);
+	assert.equal(state.error.hidden, true);
+	assert.equal(state.errorText.textContent, '');
+});
+
+for (const destination of ['different', '']) {
+	test(`native failure follows the draft until an accepted switch to ${destination || 'Add'}`, () => {
+		const state = fixture();
+		state.form.setAttribute(
+			'aria-describedby',
+			'ran-booster-access-profile-error'
+		);
+		state.error.hidden = false;
+		state.errorText.textContent = 'Native failure';
+		state.form.dispatchEvent(event('input'));
+		state.button.getAttribute = () => destination;
+		state.button.dispatchEvent(event('click'));
+		assert.equal(state.error.hidden, false);
+		assert.equal(state.errorText.textContent, 'Native failure');
+		assert.equal(
+			state.form.getAttribute('aria-describedby'),
+			'ran-booster-access-profile-error'
+		);
+		state.accept = true;
+		state.button.dispatchEvent(event('click'));
+		assert.equal(state.error.hidden, true);
+		assert.equal(state.errorText.textContent, '');
+		assert.equal(state.form.getAttribute('aria-describedby'), null);
+	});
+}
+
+for (const nativeFirst of [false, true]) {
+	test(`enhanced failure ${nativeFirst ? 'after native failure' : 'alone'} clears only after an accepted switch`, () => {
+		const state = fixture();
+		if (nativeFirst) {
+			state.form.setAttribute(
+				'aria-describedby',
+				'ran-booster-access-profile-error'
+			);
+		}
+		// Synthetic replacement of the error content; this is not a real HTMX request.
+		state.error.hidden = false;
+		state.errorText.textContent = 'Enhanced failure';
+		state.form.dispatchEvent(event('input'));
+		state.button.getAttribute = () => 'different';
+		state.button.dispatchEvent(event('click'));
+		assert.equal(state.populations, 0);
+		assert.equal(state.error.hidden, false);
+		assert.equal(state.errorText.textContent, 'Enhanced failure');
+		state.accept = true;
+		state.button.dispatchEvent(event('click'));
+		assert.equal(state.populations, 1);
+		assert.equal(state.error.hidden, true);
+		assert.equal(state.errorText.textContent, '');
+		assert.equal(state.form.getAttribute('aria-describedby'), null);
+	});
+}
+
 test('accepted native confirmation retains the link when the editor dialog fails', () => {
 	const state = fixture();
 	state.form.dispatchEvent(event('input'));
@@ -333,6 +445,12 @@ test('accepted native confirmation retains the link when the editor dialog fails
 
 test('asynchronous confirmation resumes the original switch once and cancel retains the draft', () => {
 	const state = fixture();
+	state.form.setAttribute(
+		'aria-describedby',
+		'ran-booster-access-profile-error'
+	);
+	state.error.hidden = false;
+	state.errorText.textContent = 'Native failure';
 	state.form.value = 'draft';
 	state.form.dispatchEvent(event('input'));
 	state.button.getAttribute = () => 'different';
@@ -360,11 +478,16 @@ test('asynchronous confirmation resumes the original switch once and cancel reta
 	cancel();
 	assert.equal(state.form.value, 'draft');
 	assert.equal(state.populations, 0);
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorText.textContent, 'Native failure');
 	state.button.dispatchEvent(event('click'));
 	accept();
 	accept();
 	assert.equal(state.populations, 1);
 	assert.equal(state.opens, 1);
+	assert.equal(state.error.hidden, true);
+	assert.equal(state.errorText.textContent, '');
+	assert.equal(state.form.getAttribute('aria-describedby'), null);
 });
 
 test('a stale identity switch does not replace the draft', () => {

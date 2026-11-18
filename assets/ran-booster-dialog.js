@@ -27,6 +27,97 @@
 	];
 	const tabParts = ['Root', 'List', 'Tab', 'Panel'];
 	let active = null;
+	let confirming = false;
+
+	// Return false when the public confirmation runtime is unavailable.
+	function confirmAction(trigger, title, description, onConfirm, onCancel) {
+		const ui = window.ranBoosterUI;
+		const alert = ui?.AlertDialog;
+		const element = window.wp?.element;
+		if (
+			ui?.version !== '0.26.0' ||
+			!alert?.Root ||
+			!alert.Popup ||
+			typeof element?.createElement !== 'function' ||
+			typeof element.createRoot !== 'function' ||
+			typeof element.flushSync !== 'function' ||
+			!trigger?.ownerDocument?.body
+		) {
+			return false;
+		}
+		if (confirming) {
+			onCancel();
+			return true;
+		}
+		confirming = true;
+		const doc = trigger.ownerDocument;
+		let host;
+		let root;
+		let accepted = false;
+		let finished = false;
+		const cleanup = (event) => {
+			if (event.detail?.elt?.contains(trigger)) {
+				accepted = false;
+				finish();
+			}
+		};
+		function finish() {
+			if (finished) {
+				return;
+			}
+			finished = true;
+			doc.removeEventListener('htmx:beforeCleanupElement', cleanup);
+			queueMicrotask(() => {
+				root.unmount();
+				host.remove();
+				confirming = false;
+				if (accepted) {
+					onConfirm();
+				} else {
+					onCancel();
+					if (trigger.isConnected) {
+						trigger.focus();
+					}
+				}
+			});
+		}
+		try {
+			host = doc.createElement('div');
+			doc.body.append(host);
+			root = element.createRoot(host);
+			doc.addEventListener('htmx:beforeCleanupElement', cleanup);
+			element.flushSync(() => {
+				root.render(
+					element.createElement(
+						alert.Root,
+						{
+							defaultOpen: true,
+							onConfirm: () => {
+								accepted = true;
+							},
+							onOpenChange: (open) => {
+								if (!open) {
+									finish();
+								}
+							},
+						},
+						element.createElement(alert.Popup, {
+							title,
+							description,
+							'aria-modal': true,
+						})
+					)
+				);
+			});
+		} catch {
+			doc.removeEventListener('htmx:beforeCleanupElement', cleanup);
+			root?.unmount();
+			host?.remove();
+			confirming = false;
+			return false;
+		}
+		return true;
+	}
 
 	function components() {
 		const ui = window.ranBoosterUI;
@@ -115,7 +206,16 @@
 
 		portal.className = 'ran-booster-ui-dialog-portal';
 		doc.body.append(host, portal);
-		const root = createRoot(host);
+		let root;
+		try {
+			root = createRoot(host);
+		} catch {
+			markers.forEach(({ marker }) => marker.remove());
+			host.remove();
+			portal.remove();
+			listeners.abort();
+			return null;
+		}
 		// Everything else on the page is inert while the dialog is open,
 		// including skip links and other siblings of the admin wrapper that
 		// the library does not cover. Live regions stay announceable, and only
@@ -440,5 +540,6 @@
 		return handle;
 	}
 
+	openDialog.confirm = confirmAction;
 	window.ranBoosterOpenDialog = openDialog;
 })();

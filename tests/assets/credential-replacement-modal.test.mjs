@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import vm from 'node:vm';
 
 const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-secure-inputs.js', import.meta.url),
@@ -10,6 +11,122 @@ const editorSource = source.slice(
 	source.indexOf('\tfunction initCredentialEditor()'),
 	source.indexOf('\tfunction initCredentialSettings()')
 );
+const dialogSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-dialog.js', import.meta.url),
+	'utf8'
+);
+
+test('confirmation adapter resolves once and returns focus on cancellation', async () => {
+	let rendered;
+	let unmounted = 0;
+	let focused = 0;
+	let accepted = 0;
+	let cancelled = 0;
+	const host = { remove() {} };
+	const document = new EventTarget();
+	document.body = { append() {} };
+	document.createElement = () => host;
+	const trigger = {
+		ownerDocument: document,
+		isConnected: true,
+		focus: () => focused++,
+	};
+	const window = {
+		ranBoosterUI: {
+			version: '0.26.0',
+			AlertDialog: { Root: 'root', Popup: 'popup' },
+		},
+		wp: {
+			element: {
+				createElement: (type, props, child) => ({ type, props, child }),
+				createRoot: () => ({
+					render: (value) => {
+						rendered = value;
+					},
+					unmount: () => unmounted++,
+				}),
+				flushSync: (callback) => callback(),
+			},
+		},
+	};
+	vm.runInNewContext(dialogSource, { window, queueMicrotask });
+	const open = () =>
+		window.ranBoosterOpenDialog.confirm(
+			trigger,
+			'Unsaved changes',
+			'Discard?',
+			() => accepted++,
+			() => cancelled++
+		);
+	assert.equal(open(), true);
+	assert.equal(rendered.child.props['aria-modal'], true);
+	assert.equal(rendered.child.props.title, 'Unsaved changes');
+	assert.equal(rendered.child.props.description, 'Discard?');
+	rendered.props.onOpenChange(false);
+	rendered.props.onOpenChange(false);
+	await Promise.resolve();
+	assert.equal(cancelled, 1);
+	assert.equal(focused, 1);
+	assert.equal(unmounted, 1);
+	assert.equal(open(), true);
+	rendered.props.onConfirm();
+	rendered.props.onOpenChange(false);
+	await Promise.resolve();
+	assert.equal(accepted, 1);
+	assert.equal(cancelled, 1);
+});
+
+test('committed HTMX cleanup cancels the old prompt and settles overlapping callers', async () => {
+	const document = new EventTarget();
+	document.body = { append() {} };
+	document.createElement = () => ({ remove() {} });
+	const trigger = { ownerDocument: document, isConnected: false };
+	let cancelCount = 0;
+	let failRoot = true;
+	const window = {
+		ranBoosterUI: {
+			version: '0.26.0',
+			AlertDialog: { Root: 'root', Popup: 'popup' },
+		},
+		wp: {
+			element: {
+				createElement: (type, props, child) => ({ type, props, child }),
+				createRoot: () => {
+					if (failRoot) {
+						throw new Error('unavailable');
+					}
+					return { render() {}, unmount() {} };
+				},
+				flushSync: (callback) => callback(),
+			},
+		},
+	};
+	vm.runInNewContext(dialogSource, { window, queueMicrotask });
+	const open = () =>
+		window.ranBoosterOpenDialog.confirm(
+			trigger,
+			'Title',
+			'Question',
+			() => {},
+			() => cancelCount++
+		);
+	assert.equal(open(), false, 'construction failure allows native fallback');
+	failRoot = false;
+	assert.equal(open(), true, 'construction failure releases the guard');
+	assert.equal(open(), true);
+	assert.equal(cancelCount, 1, 'busy caller receives cancellation');
+	const refused = event('htmx:beforeSwap', { elt: { contains: () => true } });
+	document.dispatchEvent(refused);
+	assert.equal(cancelCount, 1, 'a refused swap does not cancel');
+	document.dispatchEvent(
+		event('htmx:beforeCleanupElement', {
+			elt: { contains: (node) => node === trigger },
+		})
+	);
+	await Promise.resolve();
+	assert.equal(cancelCount, 2, 'committed cleanup cancels the original');
+	assert.equal(open(), true, 'later prompt is not stuck');
+});
 function event(type, detail) {
 	const value = new Event(type, { cancelable: true });
 	if (detail) {
@@ -24,10 +141,13 @@ function fixture(available = true, query = '') {
 	const kind = new EventTarget();
 	const removal = new EventTarget();
 	const button = new EventTarget();
+	button.isConnected = true;
+	button.href = 'https://example.test/credential-b';
 	button.getAttribute = () => 'saved';
 	const form = new EventTarget();
 	window.location = {
 		href: 'https://example.test/wp-admin/admin.php' + query,
+		assign: (url) => state.navigations.push(url),
 	};
 	form.elements = {
 		'ran_booster[id]': { value: 'saved' },
@@ -37,6 +157,7 @@ function fixture(available = true, query = '') {
 	};
 	form.querySelector = () => cancel;
 	const editor = {
+		isConnected: true,
 		dataset: {},
 		hidden: false,
 		contains: () => !state.moved,
@@ -58,6 +179,7 @@ function fixture(available = true, query = '') {
 		opens: 0,
 		populations: 0,
 		updates: [],
+		navigations: [],
 		accept: false,
 		form,
 		editor,
@@ -100,6 +222,11 @@ function fixture(available = true, query = '') {
 		(text) => text,
 		() => {
 			state.populations++;
+			form.elements['ran_booster[id]'].value =
+				button.getAttribute('data-id') || '';
+			form.elements['ran_booster[label]'].value =
+				button.getAttribute('data-label') || '';
+			form.elements['ran_booster[secret]'].value = '';
 		},
 		(root) => state.updates.push(root),
 		(root) => state.updates.push(root)
@@ -148,6 +275,36 @@ test('missing or failing Dialog and modified clicks retain native link behavior'
 	assert.equal(modified.defaultPrevented, false);
 });
 
+test('missing dialog helper still confirms a dirty identity switch', () => {
+	const state = fixture(false);
+	state.form.elements['ran_booster[id]'].value = '';
+	state.form.elements['ran_booster[label]'].value = 'Add draft';
+	state.form.elements['ran_booster[secret]'].value = 'synthetic secret';
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = (name) =>
+		({ 'data-id': 'B', 'data-label': 'Credential B' })[name] || '';
+	const declined = event('click');
+	state.button.dispatchEvent(declined);
+	assert.equal(declined.defaultPrevented, true);
+	assert.equal(state.form.elements['ran_booster[id]'].value, '');
+	assert.equal(state.form.elements['ran_booster[label]'].value, 'Add draft');
+	assert.equal(
+		state.form.elements['ran_booster[secret]'].value,
+		'synthetic secret'
+	);
+	state.accept = true;
+	const accepted = event('click');
+	state.button.dispatchEvent(accepted);
+	assert.equal(accepted.defaultPrevented, false);
+	assert.equal(state.form.elements['ran_booster[id]'].value, 'B');
+	assert.equal(
+		state.form.elements['ran_booster[label]'].value,
+		'Credential B'
+	);
+	assert.equal(state.form.elements['ran_booster[secret]'].value, '');
+	assert.equal(state.populations, 1);
+});
+
 test('switching credential identity cannot silently erase a dirty draft', () => {
 	const state = fixture();
 	state.form.dispatchEvent(event('input'));
@@ -161,6 +318,153 @@ test('switching credential identity cannot silently erase a dirty draft', () => 
 	state.button.dispatchEvent(event('click'));
 	assert.equal(state.populations, 1);
 	assert.equal(state.opens, 1);
+});
+
+test('accepted native confirmation retains the link when the editor dialog fails', () => {
+	const state = fixture();
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'different';
+	state.accept = true;
+	state.window.ranBoosterOpenDialog = () => null;
+	const click = event('click');
+	state.button.dispatchEvent(click);
+	assert.equal(click.defaultPrevented, false);
+});
+
+test('asynchronous confirmation resumes the original switch once and cancel retains the draft', () => {
+	const state = fixture();
+	state.form.value = 'draft';
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'different';
+	let accept;
+	let cancel;
+	let prompts = 0;
+	state.window.ranBoosterOpenDialog.confirm = (
+		button,
+		title,
+		message,
+		yes,
+		no
+	) => {
+		assert.equal(button, state.button);
+		assert.equal(title, 'Unsaved credential changes');
+		assert.equal(message, 'Discard unsaved credential changes?');
+		prompts++;
+		accept = yes;
+		cancel = no;
+		return true;
+	};
+	state.button.dispatchEvent(event('click'));
+	state.button.dispatchEvent(event('click'));
+	assert.equal(prompts, 1);
+	cancel();
+	assert.equal(state.form.value, 'draft');
+	assert.equal(state.populations, 0);
+	state.button.dispatchEvent(event('click'));
+	accept();
+	accept();
+	assert.equal(state.populations, 1);
+	assert.equal(state.opens, 1);
+});
+
+test('a stale identity switch does not replace the draft', () => {
+	const state = fixture();
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'different';
+	let accept;
+	state.window.ranBoosterOpenDialog.confirm = (
+		button,
+		title,
+		message,
+		yes
+	) => {
+		accept = yes;
+		return true;
+	};
+	state.button.dispatchEvent(event('click'));
+	state.button.isConnected = false;
+	accept();
+	assert.equal(state.populations, 0);
+});
+
+for (const failure of ['missing', 'throws', 'null']) {
+	test(`accepted deferred switch follows the original link once when editor ${failure}`, () => {
+		const state = fixture();
+		state.form.dispatchEvent(event('input'));
+		state.button.getAttribute = () => 'different';
+		let accept;
+		state.window.ranBoosterOpenDialog.confirm = (
+			button,
+			title,
+			message,
+			yes
+		) => {
+			accept = yes;
+			return true;
+		};
+		state.button.dispatchEvent(event('click'));
+		if (failure === 'missing') {
+			delete state.window.ranBoosterOpenDialog;
+		} else if (failure === 'throws') {
+			state.window.ranBoosterOpenDialog = () => {
+				throw new Error('unavailable');
+			};
+		} else {
+			state.window.ranBoosterOpenDialog = () => null;
+		}
+		accept();
+		accept();
+		assert.deepEqual(state.navigations, [
+			'https://example.test/credential-b',
+		]);
+	});
+}
+
+test('accepted same-document fallback selects the credential and clears the draft secret', () => {
+	const state = fixture();
+	state.form.elements['ran_booster[id]'].value = '';
+	state.form.elements['ran_booster[secret]'].value = 'synthetic draft';
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'B';
+	let accept;
+	state.window.ranBoosterOpenDialog.confirm = (
+		button,
+		title,
+		message,
+		yes
+	) => {
+		accept = yes;
+		return true;
+	};
+	state.button.dispatchEvent(event('click'));
+	delete state.window.ranBoosterOpenDialog;
+	accept();
+	accept();
+	assert.equal(state.form.elements['ran_booster[id]'].value, 'B');
+	assert.equal(state.form.elements['ran_booster[secret]'].value, '');
+	assert.equal(state.populations, 1);
+	assert.deepEqual(state.navigations, ['https://example.test/credential-b']);
+});
+
+test('changed destination makes an accepted switch stale', () => {
+	const state = fixture();
+	state.form.dispatchEvent(event('input'));
+	state.button.getAttribute = () => 'different';
+	let accept;
+	state.window.ranBoosterOpenDialog.confirm = (
+		button,
+		title,
+		message,
+		yes
+	) => {
+		accept = yes;
+		return true;
+	};
+	state.button.dispatchEvent(event('click'));
+	state.button.href = 'https://example.test/other';
+	accept();
+	assert.equal(state.populations, 0);
+	assert.deepEqual(state.navigations, []);
 });
 
 for (const [query, id, secret] of [

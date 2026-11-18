@@ -16,6 +16,7 @@ use RAN\RepositoryProvider\Admin\WebhookScopeMetadata;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
 use RAN\RepositoryProvider\CredentialValidator;
 use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\ProviderFailure;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryBrowser;
 use RAN\RepositoryProvider\RepositoryPathInspector;
@@ -490,7 +491,7 @@ final readonly class ProviderSettingsPresenter {
 		}
 	}
 
-	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' */
+	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected' */
 	public function check_package_repository_branch( string $type, Package $package ): string {
 		if ( PackageSource::BRANCH !== $package->get_source() ) {
 			return 'unable_to_check';
@@ -516,7 +517,7 @@ final readonly class ProviderSettingsPresenter {
 		return $began ? $this->record_package_repository_branch_check( $type, $package, $profile_id, $result, $profile_fingerprint ) : 'unable_to_check';
 	}
 
-	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' */
+	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected' */
 	private function check_package_repository_branch_while_locked( Package $package, ?string $profile_id, \RAN\Activity\ActivityProgress $progress ): string {
 		try {
 			$provider = $this->providers->get( (string) $package->get_provider_code() );
@@ -567,9 +568,12 @@ final readonly class ProviderSettingsPresenter {
 					$result = 'verified';
 				}
 			}
-		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Provider failures intentionally map to a closed result.
-		} catch ( Throwable ) {
-			// The provider failure is intentionally not exposed to administrators.
+		} catch ( Throwable $failure ) {
+			$result = match ( ProviderFailure::from_throwable( $failure )?->reason ) {
+				'ref_not_found' => 'branch_unavailable',
+				'redirect_blocked' => 'branch_redirected',
+				default => 'unable_to_check',
+			};
 		} finally {
 			if ( null !== $archive ) {
 				try {
@@ -584,8 +588,8 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
-	 * @param 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable' $outcome
-	 * @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'
+	 * @param 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected' $outcome
+	 * @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected'
 	 */
 	private function record_package_repository_branch_check(
 		string $type,

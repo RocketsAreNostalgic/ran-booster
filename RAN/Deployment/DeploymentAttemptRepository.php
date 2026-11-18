@@ -19,6 +19,7 @@ use RAN\Storage\SqlReadConnection;
 use RAN\Storage\DeploymentWriteConnection;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use Throwable;
 
 /**
@@ -1467,7 +1468,7 @@ final class DeploymentAttemptRepository {
 	}
 
 	private function assert_package_slug( string $package_slug ): void {
-		if ( preg_match( '/^[a-z0-9][a-z0-9._-]{0,190}$/D', $package_slug ) !== 1 ) {
+		if ( ! PackageDirectory::is_valid_name( $package_slug ) ) {
 			throw DeploymentStorageFailure::invalid_record();
 		}
 	}

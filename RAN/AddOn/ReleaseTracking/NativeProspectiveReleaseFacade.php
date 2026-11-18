@@ -372,7 +372,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			$version       = $release->version();
 			$repository    = $this->managed_repository( $repository );
 			do {
-				if ( null !== $expected_identifier && ! hash_equals( $expected_identifier, $identifier ) ) {
+				if ( strlen( $identifier ) > ( 'plugin' === $type ? 255 : 191 )
+					|| ! hash_equals( $identifier, 'plugin' === $type ? $package_root . '/' . $metadata_file : $package_root )
+					|| ( 'theme' === $type && 'style.css' !== $metadata_file )
+					|| ( null !== $expected_identifier && ! hash_equals( $expected_identifier, $identifier ) ) ) {
 					$outcome = ProspectiveReleaseResult::failure( 'package_identity_mismatch' );
 					break;
 				}
@@ -767,7 +770,8 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return;
 		}
 		$parts = explode( '/', $identifier );
-		if ( ( 'plugin' === $type && ( 2 !== count( $parts ) || ! str_ends_with( $parts[1], '.php' ) ) )
+		if ( strlen( $identifier ) > ( 'plugin' === $type ? 255 : 191 )
+			|| ( 'plugin' === $type && ( 2 !== count( $parts ) || ! str_ends_with( $parts[1], '.php' ) ) )
 			|| ( 'theme' === $type && 1 !== count( $parts ) ) ) {
 			throw new InvalidArgumentException( 'The expected package identity is invalid.' );
 		}

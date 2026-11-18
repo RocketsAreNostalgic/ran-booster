@@ -10,6 +10,8 @@ contains multiple plugin files. Updating the managed package replaces the
 whole folder, including other files stored in it.
 
 New Branch installs still select a lower-case destination folder.
-Part 1 keeps the lower-case request and stored-attempt guards unchanged.
-The updater's `identifier_mismatch` guard still prevents changing folders.
-Mixed-case deployment admission awaits the coordinated dependency work in #999.
+The shared updater-support folder rule admits mixed-case installed names up to
+191 bytes. Installed identifiers retain their exact case for writes; ownership
+lookups remain case-folded. The updater's `identifier_mismatch` guard still
+prevents changing folders. A plugin identifier is bounded at 255 bytes in total;
+an explicit initial Branch identity remains bounded at 191 bytes.

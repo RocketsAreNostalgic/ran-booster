@@ -16,6 +16,29 @@ use RuntimeException;
 
 final class PackageMagicReadTest extends TestCase {
 
+	public function test_removal_identifier_bounds_follow_package_type(): void {
+		foreach ( array( array( 'plugin', 195, true ), array( 'plugin', 255, true ), array( 'plugin', 256, false ), array( 'theme', 191, true ), array( 'theme', 192, false ) ) as $case ) {
+			list( $type, $length, $accepted ) = $case;
+			$identifier                       = 'plugin' === $type
+				? ( 195 === $length ? str_repeat( 'A', 100 ) . '/' . str_repeat( 'b', 90 ) . '.php' : str_repeat( 'A', $length - 105 ) . '/' . str_repeat( 'b', 100 ) . '.php' )
+				: str_repeat( 'a', $length );
+			$input                            = array(
+				'plugin' === $type ? 'file' : 'stylesheet' => $identifier,
+				'confirm_package_removal'                  => '1',
+				'expected_source_revision'                 => '1',
+			);
+			foreach ( array( 'unlink-', 'unlink-delete-' ) as $action ) {
+				try {
+					$operation = \RAN\PackageOperation::from_input( $action . $type, $input );
+					self::assertTrue( $accepted );
+					self::assertSame( $identifier, $operation->identifier );
+				} catch ( \InvalidArgumentException ) {
+					self::assertFalse( $accepted );
+				}
+			}
+		}
+	}
+
 	public function test_unhydrated_optional_repository_getters_return_null_without_warnings(): void {
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Regression promotes unexpected unhydrated getter warnings to exceptions.
 		set_error_handler(

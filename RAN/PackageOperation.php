@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\RepositoryProvider\ProviderCode;
@@ -151,11 +152,11 @@ final readonly class PackageOperation {
 		$provider_id     = isset( $input['provider_repository_id'] ) && is_scalar( $input['provider_repository_id'] )
 			? self::provider_repository_id( (string) $input['provider_repository_id'] )
 			: null;
-		$subdirectory    = PackageSubdirectory::normalize( $input['subdirectory'] ?? null );
+		$subdirectory    = PackageDirectory::normalize( $input['subdirectory'] ?? null );
 		$package_slug    = 'install' === $operation
 			? ( $link_only
-				? PackageSubdirectory::installation_slug( $input['package_slug'] ?? '', $subdirectory )
-				: PackageSubdirectory::deployment_slug( $input['package_slug'] ?? '', $subdirectory ) )
+				? PackageDirectory::installation_slug( $input['package_slug'] ?? '', $subdirectory )
+				: PackageDirectory::deployment_slug( $input['package_slug'] ?? '', $subdirectory ) )
 			: null;
 
 		if ( null !== $expected_identifier && ( strlen( $expected_identifier ) > 191 || explode( '/', $expected_identifier )[0] !== $package_slug ) ) {
@@ -381,7 +382,7 @@ final readonly class PackageOperation {
 	private static function removal_identifier( ?string $identifier, string $package_type ): string {
 		$identifier = null === $identifier ? '' : trim( $identifier );
 		if ( '' === $identifier
-			|| strlen( $identifier ) > 191
+			|| strlen( $identifier ) > ( 'plugin' === $package_type ? 255 : 191 )
 			|| str_starts_with( $identifier, '/' )
 			|| str_contains( $identifier, '\\' )
 			|| preg_match( '/[\x00-\x1F\x7F]/', $identifier ) === 1

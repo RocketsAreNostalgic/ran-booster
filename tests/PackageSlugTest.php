@@ -36,7 +36,7 @@ final class PackageSlugTest extends TestCase {
 		}
 	}
 
-	public function test_mixed_case_installed_identity_is_preserved_without_admitting_deployment(): void {
+	public function test_mixed_case_installed_identity_is_preserved(): void {
 		self::assertSame( 'MixedCasePlugin', $this->plugin( 'MixedCasePlugin/plugin.php' )->get_slug() );
 		self::assertSame( 'MixedCaseTheme', $this->theme( 'MixedCaseTheme' )->get_slug() );
 	}

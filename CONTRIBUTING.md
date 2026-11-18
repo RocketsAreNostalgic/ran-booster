@@ -593,7 +593,7 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/PackageSource.php`, `RAN/Deployment/DeploymentOutcome.php`,
 `RAN/Deployment/DeploymentRequest.php`,
 `RAN/Deployment/DeploymentCheckFailure.php`,
-`RAN/Deployment/DeploymentStorageFailure.php`, `RAN/PackageSubdirectory.php`,
+`RAN/Deployment/DeploymentStorageFailure.php`,
 `RAN/Deployment/DeploymentAttempt.php`, `RAN/Deployment/DeploymentWorker.php`,
 `RAN/Deployment/WordPressWorkerWakeup.php`,
 `RAN/Storage/PackageMutationResult.php`, `RAN/Storage/PackageStorageFailure.php`,
@@ -947,10 +947,9 @@ DeploymentStorageFailure uses snake_case owned factories/accessors and
 `active_attempt` names. Inherited exception methods, numeric codes, messages and
 the sanitized active-attempt array keys remain unchanged.
 
-PackageSubdirectory uses snake_case slug helpers and the `provider_slug`
-parameter. Repository-relative path validation, destination case handling and
-exception messages remain unchanged. The distinct Branch Updater archive helper
-retains its own contract; this scope applies only to Core `RAN\PackageSubdirectory`.
+Package folder and subdirectory handling uses the public updater-support
+`RAN\UpdaterSupport\V1\PackageDirectory` contract. Core retains the typed
+subdirectory refusal at the administration request boundary.
 
 DeploymentAttempt uses snake_case owned hydration, accessors, projections and
 private validation helpers. Its durable row keys, request JSON and safe/log

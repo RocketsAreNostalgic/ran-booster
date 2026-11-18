@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin\ReleaseManagement;
 
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use Throwable;
@@ -381,11 +382,11 @@ final class ProspectiveReleaseOperations {
 	}
 
 	private function valid_package_root( mixed $package_root ): bool {
-		return is_string( $package_root ) && 1 === preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z/D', $package_root );
+		return is_string( $package_root ) && PackageDirectory::is_valid_name( $package_root );
 	}
 
 	private function valid_main_file( mixed $main_file ): bool {
-		return is_string( $main_file ) && 1 === preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z/D', $main_file );
+		return is_string( $main_file ) && 1 === preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(?:php|css)\z/D', $main_file );
 	}
 
 	private function valid_identifier( mixed $identifier ): bool {

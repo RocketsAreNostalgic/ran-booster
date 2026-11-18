@@ -319,6 +319,32 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertStringNotContainsString( 'UPDATE ', implode( "\n", $this->database->queries ) );
 	}
 
+	public function test_persisted_admission_and_activity_summary_accept_mixed_case_folder_bounds(): void {
+		$token = 'gh:R_fixed:11111111-1111-4111-8111-111111111111';
+		foreach ( array( 'MixedCase', str_repeat( 'A', 191 ) ) as $slug ) {
+			$request = new DeploymentRequest( 'org/example', 'profile_1', true, 'main', $slug, null, DeploymentPolicy::AUTOMATIC, 1 );
+			$attempt = $this->repository->admit_and_claim_manual( 'install', 'plugin', 'gh', 'R_fixed', $request, 'main', 'branch', 0 );
+			self::assertSame( $slug, $attempt->get_request()->package_slug );
+			self::assertSame( $slug, $this->repository->find_exact( $attempt->get_id() )?->get_request()->package_slug );
+			self::assertSame(
+				array(
+					'latest'          => null,
+					'last_successful' => null,
+				),
+				$this->repository->package_activity_summary( 'plugin', $slug, $token )
+			);
+			$this->repository->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
+		}
+		$queries = $this->database->queries;
+		try {
+			$this->repository->package_activity_summary( 'plugin', str_repeat( 'A', 192 ), $token );
+			self::fail( 'An oversized folder must not be queried.' );
+		} catch ( DeploymentStorageFailure $failure ) {
+			self::assertSame( DeploymentStorageFailure::invalid_record()->getMessage(), $failure->getMessage() );
+			self::assertSame( $queries, $this->database->queries );
+		}
+	}
+
 	public function test_unresolved_package_attempt_read_tracks_the_removal_contention_boundary(): void {
 		$attempt = $this->manual( 'example' );
 

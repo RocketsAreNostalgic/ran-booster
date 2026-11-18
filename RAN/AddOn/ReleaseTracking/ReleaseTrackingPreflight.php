@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\AddOn\ReleaseTracking;
 
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use InvalidArgumentException;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
 
@@ -45,7 +46,7 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 				self::RELEASE_ARCHIVE_UNREADABLE,
 			),
 			true
-		) || 1 !== preg_match( '/\A[A-Za-z0-9](?:[A-Za-z0-9._-]{0,99})\z/D', $this->package_root )
+		) || ! PackageDirectory::is_valid_name( $this->package_root )
 
 			|| strlen( $this->latest_version ) > 64
 

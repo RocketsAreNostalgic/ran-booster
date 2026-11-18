@@ -36,6 +36,24 @@ use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 final class PackageRepositoryRequestResolverTest extends TestCase {
 
+	public function test_invalid_subdirectory_keeps_typed_admin_refusal_in_both_paths(): void {
+		$provider = $this->resolving_provider( new RepositoryDescriptor( ProviderCode::parse( 'bb' ), 'workspace/repository', 'repository', 'provider-id-42', true, 'main', 'bitbucket-deploy' ) );
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+		foreach ( array( false, true ) as $unchanged ) {
+			try {
+				$request = array_merge( $this->edit_request(), array( 'subdirectory' => '../invalid' ) );
+				if ( $unchanged ) {
+					$resolver->resolve_unchanged( $request, $this->stored_plugin( 'workspace/repository', 'bitbucket-deploy', true ) );
+				} else {
+					$resolver->resolve( $request );
+				}
+				self::fail( 'Invalid path accepted.' );
+			} catch ( \RAN\InvalidPackageSubdirectory ) {
+				self::assertNull( $provider->request );
+			}
+		}
+	}
+
 	/** @param array<string, mixed> $input */
 	#[DataProvider( 'invalid_command_providers' )]
 	public function test_install_commands_require_an_exact_provider_code( array $input ): void {

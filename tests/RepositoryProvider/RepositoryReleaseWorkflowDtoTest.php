@@ -12,6 +12,21 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowResult;
 use RAN\RepositoryProvider\RepositoryReleaseWorkflowStatus;
 
 final class RepositoryReleaseWorkflowDtoTest extends TestCase {
+	public function test_release_inspection_folder_and_header_limits(): void {
+		foreach ( array( 100, 101, 191 ) as $length ) {
+			$root       = str_repeat( 'A', $length );
+			$inspection = new \RAN\RepositoryProvider\RepositoryReleaseInspection( '42', 'v1', '1.0.0', 'commit', $root, str_repeat( 'b', 100 ) . '.php', 'fingerprint' );
+			self::assertSame( $root, $inspection->package_root );
+		}
+		foreach ( array( array( str_repeat( 'A', 192 ), 'main.php' ), array( 'root', str_repeat( 'b', 101 ) . '.php' ), array( 'root', 'main.PHP' ) ) as $components ) {
+			try {
+				new \RAN\RepositoryProvider\RepositoryReleaseInspection( '42', 'v1', '1.0.0', 'commit', $components[0], $components[1], 'fingerprint' );
+				self::fail( 'Invalid identity component accepted.' );
+			} catch ( InvalidArgumentException ) {
+				self::assertTrue( true );
+			}
+		}
+	}
 	public function test_preview_uses_only_initial_pack_identity(): void {
 		$preview = new RepositoryReleaseWorkflowPreview(
 			str_repeat( 'a', 32 ),

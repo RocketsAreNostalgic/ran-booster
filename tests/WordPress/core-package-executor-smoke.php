@@ -8,7 +8,7 @@ if ( ! is_string( $ran_booster_root ) || '' === $ran_booster_root ) {
 }
 
 $ran_booster_executor_source = array(
-	RAN\PackageSubdirectory::class                   => '/RAN/PackageSubdirectory.php',
+	RAN\UpdaterSupport\V1\PackageDirectory::class    => '/vendor/ran/updater-support/src/PackageDirectory.php',
 	RAN\Deployment\PreparedArtifact::class           => '/RAN/Deployment/PreparedArtifact.php',
 	RAN\Runtime\RuntimeSupport::class                => '/RAN/Runtime/RuntimeSupport.php',
 	RAN\WordPress\CorePackageExecutionFailure::class => '/RAN/WordPress/CorePackageExecutionFailure.php',

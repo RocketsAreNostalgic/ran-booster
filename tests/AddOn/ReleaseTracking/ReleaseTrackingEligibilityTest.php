@@ -11,6 +11,26 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
 
 final class ReleaseTrackingEligibilityTest extends TestCase {
 
+	public function test_folder_bounds_apply_to_eligibility_and_preflight(): void {
+		foreach ( array( 100, 101, 191 ) as $length ) {
+			$root = str_repeat( 'A', $length );
+			self::assertSame( $root, ( new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE, '', $root ) )->package_root() );
+			self::assertSame( $root, ( new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, $root, '1.2.3', 'https://example.com/release' ) )->package_root() );
+		}
+		foreach ( array( 'eligibility', 'preflight' ) as $kind ) {
+			try {
+				if ( 'eligibility' === $kind ) {
+					new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE, '', str_repeat( 'A', 192 ) );
+				} else {
+					new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, str_repeat( 'A', 192 ), '1.2.3', 'https://example.com/release' );
+				}
+				self::fail( 'Oversized folder accepted.' );
+			} catch ( \InvalidArgumentException ) {
+				self::assertTrue( true );
+			}
+		}
+	}
+
 	public function test_eligible_identity_carries_only_safe_guidance(): void {
 		$eligibility = new ReleaseTrackingEligibility(
 			ReleaseTrackingEligibility::ELIGIBLE,

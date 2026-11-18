@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\Deployment\DeploymentPolicy;
 
 /**
@@ -46,7 +47,7 @@ abstract class AbstractPackage implements Package {
 	}
 
 	public function get_slug(): mixed {
-		return PackageSubdirectory::installation_slug(
+		return PackageDirectory::installation_slug(
 			$this->runtime_slug(),
 			null
 		);
@@ -61,7 +62,7 @@ abstract class AbstractPackage implements Package {
 	}
 
 	public function set_subdirectory( mixed $subdirectory ): void {
-		$this->subdirectory = PackageSubdirectory::normalize( $subdirectory );
+		$this->subdirectory = PackageDirectory::normalize( $subdirectory );
 	}
 
 	public function get_deployment_policy(): DeploymentPolicy {

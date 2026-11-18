@@ -7,7 +7,8 @@ namespace RAN\Admin;
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Package;
-use RAN\PackageSubdirectory;
+use RAN\InvalidPackageSubdirectory;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -56,12 +57,16 @@ final readonly class PackageRepositoryRequestResolver {
 		}
 
 		$subdirectory_input = $request['subdirectory'] ?? null;
-		$subdirectory       = PackageSubdirectory::normalize( is_string( $subdirectory_input ) ? wp_unslash( $subdirectory_input ) : $subdirectory_input );
-		$credential_input   = $request['credential_id'] ?? null;
-		$credential_id      = is_string( $credential_input ) ? trim( wp_unslash( $credential_input ) ) : '';
-		$public_lookup      = $request['public_lookup_profile_id'] ?? null;
-		$identity_source    = is_string( $request['provider_repository_identity_source'] ?? null ) ? sanitize_key( wp_unslash( $request['provider_repository_identity_source'] ) ) : '';
-		$expected_id        = $request['provider_repository_id'] ?? null;
+		try {
+			$subdirectory = PackageDirectory::normalize( is_string( $subdirectory_input ) ? wp_unslash( $subdirectory_input ) : $subdirectory_input );
+		} catch ( InvalidArgumentException $failure ) {
+			throw new InvalidPackageSubdirectory( $failure->getMessage(), 0, $failure );
+		}
+		$credential_input = $request['credential_id'] ?? null;
+		$credential_id    = is_string( $credential_input ) ? trim( wp_unslash( $credential_input ) ) : '';
+		$public_lookup    = $request['public_lookup_profile_id'] ?? null;
+		$identity_source  = is_string( $request['provider_repository_identity_source'] ?? null ) ? sanitize_key( wp_unslash( $request['provider_repository_identity_source'] ) ) : '';
+		$expected_id      = $request['provider_repository_id'] ?? null;
 		if ( ( $subdirectory ?? '' ) !== (string) $stored->get_subdirectory()
 			|| $credential_id !== $stored->get_credential_id()
 			|| 'picker' === $identity_source
@@ -150,7 +155,11 @@ final readonly class PackageRepositoryRequestResolver {
 			throw new InvalidArgumentException( 'Enter a repository account and name.' );
 		}
 		$subdirectory_input = $request['subdirectory'] ?? null;
-		$subdirectory       = PackageSubdirectory::normalize( is_string( $subdirectory_input ) ? wp_unslash( $subdirectory_input ) : $subdirectory_input );
+		try {
+			$subdirectory = PackageDirectory::normalize( is_string( $subdirectory_input ) ? wp_unslash( $subdirectory_input ) : $subdirectory_input );
+		} catch ( InvalidArgumentException $failure ) {
+			throw new InvalidPackageSubdirectory( $failure->getMessage(), 0, $failure );
+		}
 
 		$credential_input = $request['credential_id'] ?? null;
 		$credential_id    = is_string( $credential_input ) ? trim( wp_unslash( $credential_input ) ) : '';
@@ -219,7 +228,7 @@ final readonly class PackageRepositoryRequestResolver {
 		$request['provider']   = $provider->value;
 		$request['repository'] = $repository->locator;
 
-		$request['package_slug'] = PackageSubdirectory::installation_slug( $repository->package_slug, $subdirectory );
+		$request['package_slug'] = PackageDirectory::installation_slug( $repository->package_slug, $subdirectory );
 		$request['subdirectory'] = $subdirectory ?? '';
 
 		$request['provider_repository_id']              = $repository->provider_repository_id;

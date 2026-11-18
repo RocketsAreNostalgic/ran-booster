@@ -17,7 +17,7 @@ if ( ! is_file( $ran_booster_shared_path ) ) {
 }
 require_once $ran_booster_shared_path;
 require_once dirname( __DIR__, 2 ) . '/RAN/RepositoryProvider/RepositoryReleaseArtifactCustody.php';
-require_once dirname( __DIR__, 2 ) . '/RAN/PackageSubdirectory.php';
+require_once dirname( __DIR__, 2 ) . '/vendor/ran/updater-support/src/PackageDirectory.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Deployment/PreparedArtifact.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Runtime/RuntimeSupport.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/WordPress/CorePackageExecutionFailure.php';

@@ -7,14 +7,13 @@ namespace RAN\Tests;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\InvalidPackageSubdirectory;
-use RAN\PackageSubdirectory;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 
 final class PackageSubdirectoryTest extends TestCase {
 
 	#[DataProvider( 'valid_paths' )]
 	public function test_it_normalizes_valid_relative_paths( mixed $input, ?string $expected ): void {
-		self::assertSame( $expected, PackageSubdirectory::normalize( $input ) );
+		self::assertSame( $expected, PackageDirectory::normalize( $input ) );
 	}
 
 	/** @return array<string, array{mixed, string|null}> */
@@ -37,7 +36,7 @@ final class PackageSubdirectoryTest extends TestCase {
 	public function test_it_rejects_unsafe_paths( mixed $path ): void {
 		$this->expectException( InvalidArgumentException::class );
 
-		PackageSubdirectory::normalize( $path );
+		PackageDirectory::normalize( $path );
 	}
 
 	/** @return array<string, array{mixed}> */
@@ -71,37 +70,37 @@ final class PackageSubdirectoryTest extends TestCase {
 		);
 	}
 
-	public function test_it_maps_shared_path_failures_to_booster_exception(): void {
-		$this->expectException( InvalidPackageSubdirectory::class );
+	public function test_it_preserves_shared_path_failure(): void {
+		$this->expectException( InvalidPackageDirectory::class );
 		$this->expectExceptionMessage( 'The package subdirectory must be a normalized relative path.' );
 
-		PackageSubdirectory::normalize( 'C%3A/packages/example' );
+		PackageDirectory::normalize( 'C%3A/packages/example' );
 	}
 
 	public function test_it_derives_only_validated_slugs(): void {
-		self::assertSame( 'example-plugin', PackageSubdirectory::slug( 'packages/example-plugin' ) );
-		self::assertSame( 'example-plugin', PackageSubdirectory::normalize_slug( value: 'example-plugin' ) );
-		self::assertSame( 'repository', PackageSubdirectory::installation_slug( 'repository', null ) );
-		self::assertSame( 'example-plugin', PackageSubdirectory::installation_slug( 'repository', 'packages/example-plugin' ) );
-		self::assertSame( 'tnyGmaps', PackageSubdirectory::installation_slug( provider_slug: 'tnyGmaps', subdirectory: null ) );
-		self::assertSame( 'tnyGmaps', PackageSubdirectory::installation_slug( 'repository', 'packages/tnyGmaps' ) );
-		self::assertSame( 'tnygmaps', PackageSubdirectory::deployment_slug( 'tnyGmaps', null ) );
-		self::assertSame( 'tnygmaps', PackageSubdirectory::deployment_slug( provider_slug: 'repository', subdirectory: 'packages/tnyGmaps' ) );
+		self::assertSame( 'example-plugin', PackageDirectory::slug( 'packages/example-plugin' ) );
+		self::assertSame( 'example-plugin', PackageDirectory::normalize_slug( value: 'example-plugin' ) );
+		self::assertSame( 'repository', PackageDirectory::installation_slug( 'repository', null ) );
+		self::assertSame( 'example-plugin', PackageDirectory::installation_slug( 'repository', 'packages/example-plugin' ) );
+		self::assertSame( 'tnyGmaps', PackageDirectory::installation_slug( provider_slug: 'tnyGmaps', subdirectory: null ) );
+		self::assertSame( 'tnyGmaps', PackageDirectory::installation_slug( 'repository', 'packages/tnyGmaps' ) );
+		self::assertSame( 'tnygmaps', PackageDirectory::deployment_slug( 'tnyGmaps', null ) );
+		self::assertSame( 'tnygmaps', PackageDirectory::deployment_slug( provider_slug: 'repository', subdirectory: 'packages/tnyGmaps' ) );
 
 		$this->expectException( InvalidArgumentException::class );
-		PackageSubdirectory::normalize_slug( 'packages/example-plugin' );
+		PackageDirectory::normalize_slug( 'packages/example-plugin' );
 	}
 
 	public function test_it_rejects_trailing_separator_for_provider_destination_slug(): void {
 		$this->expectException( InvalidArgumentException::class );
 
-		PackageSubdirectory::normalize_slug( 'foo/' );
+		PackageDirectory::normalize_slug( 'foo/' );
 	}
 
 	public function test_it_is_idempotent_after_trailing_separator_canonicalization(): void {
-		$normalized = PackageSubdirectory::normalize( 'branch-fixture/' );
+		$normalized = PackageDirectory::normalize( 'branch-fixture/' );
 
 		self::assertSame( 'branch-fixture', $normalized );
-		self::assertSame( $normalized, PackageSubdirectory::normalize( $normalized ) );
+		self::assertSame( $normalized, PackageDirectory::normalize( $normalized ) );
 	}
 }

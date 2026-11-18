@@ -112,6 +112,8 @@ $saved_subdirectory_value         = isset( $saved_subdirectory_value ) && is_str
 	? trim( $saved_subdirectory_value )
 	: '';
 $repository_branch_check_message  = match ( $repository_branch_check_outcome ?? null ) {
+	'branch_unavailable' => __( 'The saved branch could not be found. Check the branch name on the provider.', 'ran-booster' ),
+	'branch_redirected' => __( 'The branch lookup was redirected. The branch may have been renamed or the repository moved. Check the current name on the provider.', 'ran-booster' ),
 	'provider_unavailable' => __( 'The saved Git provider is unavailable, so Booster could not check the repository and branch.', 'ran-booster' ),
 	'unable_to_check'      => __( 'Booster could not access the saved repository and branch. Check the branch name and repository access, then try again.', 'ran-booster' ),
 	'subdirectory_unavailable' => __( 'The saved branch is accessible, but Booster could not find the configured subdirectory. Check the path and try again.', 'ran-booster' ),
@@ -122,7 +124,7 @@ $repository_branch_check_intent = null !== $repository_branch_check_message ? 'w
 $repository_state_class         = match ( true ) {
 	! $identity_ready                         => 'is-warning',
 	$repository_branch_verified                => 'is-ok',
-	$saved_identity_ready                      => 'is-ok',
+	$saved_identity_ready && ! in_array( $repository_branch_check_outcome, array( 'branch_unavailable', 'branch_redirected' ), true ) => 'is-ok',
 	null !== $repository_branch_check_outcome   => 'is-warning',
 	default                                  => 'is-pending',
 };
@@ -132,7 +134,7 @@ if ( in_array( $repository_branch_check_outcome ?? null, array( 'verified', 'sub
 	$saved_repository_label = __( 'was accessible at the last check.', 'ran-booster' );
 } elseif ( 'provider_unavailable' === ( $repository_branch_check_outcome ?? null ) ) {
 	$saved_repository_label = __( 'is saved, but the Git provider is unavailable.', 'ran-booster' );
-} elseif ( 'unable_to_check' === ( $repository_branch_check_outcome ?? null ) ) {
+} elseif ( in_array( $repository_branch_check_outcome ?? null, array( 'unable_to_check', 'branch_unavailable', 'branch_redirected' ), true ) ) {
 	$saved_repository_label = __( 'is saved, but access could not be verified.', 'ran-booster' );
 } else {
 	$saved_repository_label = __( 'is saved. Access has not been checked.', 'ran-booster' );

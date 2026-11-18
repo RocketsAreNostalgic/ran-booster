@@ -22,13 +22,13 @@ use ReflectionMethod;
 use ReflectionProperty;
 
 final class DashboardBranchCheckCacheTest extends TestCase {
-	/** @return list<array{bool}> */
+	/** @return list<array{bool, string}> */
 	public static function cache_write_provider(): array {
-		return array( array( false ), array( true ) );
+		return array( array( false, 'branch_unavailable' ), array( false, 'branch_redirected' ), array( true, 'branch_unavailable' ), array( true, 'branch_redirected' ) );
 	}
 
 	#[DataProvider( 'cache_write_provider' )]
-	public function test_cache_misses_and_failed_writes_require_fresh_verification( bool $write_failure ): void {
+	public function test_cache_misses_and_failed_writes_require_fresh_verification( bool $write_failure, string $outcome ): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Preserve the test request before exercising the real nonce-checked route.
 		$previous_get = $_GET;
 		$GLOBALS['ran_booster_test_capabilities']['manage_options']    = true;
@@ -77,6 +77,9 @@ final class DashboardBranchCheckCacheTest extends TestCase {
 			self::assertSame( 2, $checks, 'A cache miss must enter fresh verification even when writing its previous result failed.' );
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reconstruct the cache key from the fixture nonce already verified by the production route.
 			$marker = 'ran_booster_branch_check_' . hash( 'sha256', \RAN\get_current_user_id() . "\0" . PackageAdminController::repository_branch_check_action( $package, 'plugin' ) . "\0" . $_GET['_ran_booster_repository_branch_nonce'] . "\0current-access" );
+			$GLOBALS['ran_booster_dashboard_test_transients'][ $marker ] = $outcome;
+			self::assertSame( $outcome, $check->invoke( $dashboard, $package, 'plugin' ) );
+			self::assertSame( 2, $checks, 'A cached failure must not trigger another verification.' );
 			$GLOBALS['ran_booster_dashboard_test_transients'][ $marker ] = 'verified';
 			self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
 			self::assertSame( 3, $checks, 'Cached verified without stored evidence must not suppress fresh verification.' );

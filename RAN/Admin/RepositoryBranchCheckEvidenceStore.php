@@ -129,11 +129,16 @@ class RepositoryBranchCheckEvidenceStore {
 		);
 		$status = match ( $outcome ) {
 			'verified' => 'succeeded',
-			'subdirectory_unavailable' => 'rejected',
+			'subdirectory_unavailable', 'branch_unavailable', 'branch_redirected' => 'rejected',
 			default => 'failed',
 		};
 		$effect = in_array( $outcome, array( 'verified', 'subdirectory_unavailable' ), true ) ? 'established' : 'none';
-		$this->activity_store()->complete( $pending['id'], $status, $outcome, effect: $effect );
+		$reason = match ( $outcome ) {
+			'branch_unavailable' => 'ref_not_found',
+			'branch_redirected' => 'redirect_blocked',
+			default => $outcome,
+		};
+		$this->activity_store()->complete( $pending['id'], $status, $reason, effect: $effect );
 	}
 
 	/** Clear evidence when this managed package lifecycle ends. */

@@ -79,7 +79,9 @@ require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once dirname( __DIR__ ) . '/Logging/LoggingWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
-require_once dirname( __DIR__, 2 ) . '/RAN/Dashboard.php';
+if ( ! class_exists( \RAN\Dashboard::class, false ) ) {
+	require_once dirname( __DIR__, 2 ) . '/RAN/Dashboard.php';
+}
 
 final class DashboardIndexRoutingTest extends TestCase {
 	use \RAN\Tests\Support\QueuedSelectionFixture;

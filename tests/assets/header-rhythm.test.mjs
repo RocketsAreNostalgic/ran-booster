@@ -74,6 +74,72 @@ const nestedTrigger = withBody(
 const prominent = '[data-ran-booster-ui-disclosure-density="prominent"]';
 const depth = (r) => r.selector.split(',')[0].split(prominent).length - 1;
 
+test('the narrow advanced fallback grid outranks the generic fallback flex', () => {
+	const grid = rules.find(
+		(r) =>
+			r.selector.includes('package-advanced-settings') &&
+			r.body.includes('display: grid')
+	);
+	const flex = rules.find(
+		(r) =>
+			r.selector.endsWith('> summary') && r.body.includes('display: flex')
+	);
+	assert.ok(grid);
+	assert.ok(flex);
+	assert.ok(outranks(specificity(grid.selector), specificity(flex.selector)));
+	assert.match(
+		primitives,
+		/@media screen and \(max-width: 480px\)\s*\{[\s\S]*?display: grid/
+	);
+});
+
+test('advanced summary typography wins before and after mounting', () => {
+	const summary = rules.find(
+		(r) =>
+			r.selector.includes('package-advanced-settings') &&
+			r.selector.endsWith('.ran-booster-advanced-source-summary')
+	);
+	const fallback = parse(packageSettings).find(
+		(r) =>
+			r.selector.endsWith(
+				'.ran-booster-settings-disclosure > summary small'
+			) && r.body.includes('font-size:')
+	);
+	assert.ok(summary);
+	assert.ok(fallback);
+	assert.match(summary.body, /font-size: var\(--ran-booster-font-size-sm\)/);
+	assert.ok(
+		outranks(specificity(summary.selector), specificity(fallback.selector))
+	);
+});
+
+test('the narrow fallback title and metadata keep the mounted row geometry', () => {
+	const title = rules.find(
+		(r) =>
+			r.selector.includes('package-advanced-settings') &&
+			r.selector.endsWith('> .ran-booster-section__title')
+	);
+	const meta = rules.find(
+		(r) =>
+			r.selector.includes('package-advanced-settings') &&
+			r.selector.endsWith('> [data-ran-booster-ui-disclosure-meta]')
+	);
+	const small = parse(packageSettings).filter((r) =>
+		r.selector.endsWith('.ran-booster-settings-disclosure > summary small')
+	);
+	assert.ok(title);
+	assert.ok(meta);
+	assert.match(title.body, /line-height: inherit/);
+	assert.match(meta.body, /display: flex/);
+	assert.match(meta.body, /grid-column: 1;/);
+	assert.match(meta.body, /margin-block-start: 0/);
+	for (const rule of small) {
+		assert.ok(
+			outranks(specificity(meta.selector), specificity(rule.selector))
+		);
+	}
+});
+
 test('the header rhythm tokens are defined once, from the space scale', () => {
 	assert.equal(space('--ran-booster-header-inset-inline'), 24);
 	assert.equal(space('--ran-booster-header-trigger-inset-block'), 18);

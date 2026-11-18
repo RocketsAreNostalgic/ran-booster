@@ -2784,9 +2784,9 @@ final class AdminAssetContractTest extends TestCase {
 		}
 		self::assertStringContainsString( 'flex: 1 1 100%;', $narrow[1] );
 		self::assertStringContainsString( 'margin-inline: 0;', $narrow[1] );
-		// The native fallback keeps its chevron on the title row with a two-column grid.
+		// The native fallback keeps its chevron on the title row; the note wraps in the first column like the mounted header.
 		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr) auto;', $narrow[2] );
-		self::assertStringContainsString( 'grid-column: 1 / -1;', $narrow[2] );
+		self::assertStringContainsString( 'grid-column: 1;', $narrow[2] );
 		self::assertStringContainsString( 'grid-row: 1;', $narrow[2] );
 		self::assertDoesNotMatchRegularExpression( '/margin-(?:left|right)\s*:/', $narrow[0] );
 	}

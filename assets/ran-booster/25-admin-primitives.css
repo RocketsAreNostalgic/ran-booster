@@ -804,6 +804,12 @@
 	align-items: center;
 }
 
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="package-advanced-settings"]
+	.ran-booster-advanced-source-summary {
+	font-size: var(--ran-booster-font-size-sm);
+}
+
 .ran-booster-admin .ran-booster-advanced-source-summary__heading {
 	color: var(--ran-booster-text-muted);
 	font-size: var(--ran-booster-font-size-sm);
@@ -1181,6 +1187,14 @@
 	font-weight: 400;
 }
 
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="package-advanced-settings"]
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary
+	> .ran-booster-section__title {
+	line-height: inherit;
+}
+
 /*
  * A multi-part summary (title, then a status line of badges) stacks on narrow
  * screens: the title keeps its row with the chevron and the status line takes
@@ -1199,7 +1213,7 @@
 	}
 
 	.ran-booster-admin
-		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		[data-ran-booster-ui-disclosure="package-advanced-settings"][data-ran-booster-ui-disclosure-density][data-ran-booster-ui-disclosure]
 		> details[data-ran-booster-ui-disclosure-fallback]
 		> summary {
 		display: grid;
@@ -1221,7 +1235,9 @@
 		> details[data-ran-booster-ui-disclosure-fallback]
 		> summary
 		> [data-ran-booster-ui-disclosure-meta] {
-		grid-column: 1 / -1;
+		display: flex;
+		grid-column: 1;
+		margin-block-start: 0;
 		margin-inline: 0;
 	}
 }

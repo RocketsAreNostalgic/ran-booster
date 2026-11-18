@@ -350,6 +350,35 @@ test('switching credential identity cannot silently erase a dirty draft', () => 
 	assert.equal(state.opens, 1);
 });
 
+test('reopening a clean saved credential preserves its enhanced error', () => {
+	const state = fixture();
+	state.editor.hidden = true;
+	state.error.hidden = false;
+	state.errorText.textContent = 'Enhanced failure';
+	state.button.dispatchEvent(event('click'));
+	assert.equal(state.populations, 1);
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorText.textContent, 'Enhanced failure');
+	state.cancel.dispatchEvent(event('click'));
+	state.button.dispatchEvent(event('click'));
+	assert.equal(state.populations, 2);
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorText.textContent, 'Enhanced failure');
+});
+
+test('resetting a clean hidden Add form clears its error', () => {
+	const state = fixture();
+	state.editor.hidden = true;
+	state.form.elements['ran_booster[id]'].value = '';
+	state.button.getAttribute = () => '';
+	state.error.hidden = false;
+	state.errorText.textContent = 'Enhanced failure';
+	state.button.dispatchEvent(event('click'));
+	assert.equal(state.populations, 1);
+	assert.equal(state.error.hidden, true);
+	assert.equal(state.errorText.textContent, '');
+});
+
 for (const destination of ['different', '']) {
 	test(`native failure follows the draft until an accepted switch to ${destination || 'Add'}`, () => {
 		const state = fixture();

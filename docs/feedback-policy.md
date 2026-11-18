@@ -256,7 +256,7 @@ helper is counted once. The Disposition column states where each category goes.
 | --- | --- | --- | --- |
 | A | Dashboard message queue (`Dashboard::add_message`, `add_failure_message`, `add_message_with_context`, rendered by `views/notices.php`) | 31 call sites in 6 files | Success moves to the snackbar. Errors, warnings, `already-managed`, storage and provider unavailable stay inline. A user-action failure or non-success result also gets a pointer. |
 | A1 | Package install, update, edit, unlink, delete success (`add_success_notice`) | within A | Moves to the snackbar. |
-| A2 | Bulk update summary (`add_bulk_notice`) | within A | Moves; R8, links to Activity. |
+| A2 | Bulk update summary (`add_bulk_notice`) | within A | Queue acceptance moves (R8, links to Activity); the notice stays as the progress region. The final result stays a known deviation (R9). |
 | B | Global `admin_notices` registrations | 9 registrations plus the signed-outcome fallback | Stay as notices (R10), except the release operation notice, which is user-initiated: its success moves and its failure becomes inline. |
 | C | Signed operation outcomes (`SignedAdminInteractionFlow`, Admin Interaction API 3) | 1 flow; kinds SUCCESS, ACCEPTED, VALIDATION_FAILURE, UNEXPECTED_FAILURE | SUCCESS and ACCEPTED move. Failures stay in the declared inline region. Message text leaves the URL (R16). Add-ons get this through `respond()` with no new API. |
 | D | Redirect-with-query-arg results | 6 producers, 5 query vocabularies | Success moves, failures stay inline. Transport is decided: per-user one-shot flash (see Server-to-page transport). |
@@ -435,13 +435,17 @@ use today, and the owner is told.
 
 ## Known deviations
 
-- **Bulk update queue summary and Activity link (R8, R9).** The queue summary
-  stays the live update progress notice (`ran-booster-packages.js`). Its final
-  result is announced through the existing `ran-booster:admin-mutation-success`
-  event, which reaches the host only for General and provider saves, so a
-  finished bulk update does not produce a snackbar and no Activity link is
-  emitted. This deviates from R8 and R9 and is a named follow-up awaiting an
-  owner decision; P3 does not change the behaviour.
+- **Bulk update final result (R9).** The queue summary stays the live update
+  progress notice (`ran-booster-packages.js`). Queue acceptance is covered
+  (#955): the notice carries the key `bulk_update_queue`, so the host shows the
+  existing "Queued ... Skipped: N." sentence as a success snackbar with a View
+  Activity action, or as a warning pointer when anything was skipped (R12). The
+  notice stays because it is the progress region, and the poller rewrites its
+  sentence as soon as the page loads. The final result of a finished bulk update
+  is still announced through the `ran-booster:admin-mutation-success` event,
+  which reaches the host only for General and provider saves, so a finished bulk
+  update produces no snackbar. That deviates from R9 and awaits an owner decision
+  and #755 P7.
 - **Failure records last until the next load (narrows R3 and R4).** Because the
   result address is stripped on first render, the inline failure or warning
   record lasts only until the next reload or navigation, not until the person

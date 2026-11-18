@@ -226,7 +226,7 @@ function build(options = {}) {
 			};
 		},
 		// A coded inline notice: it carries its own key and intent, and the host reads its first paragraph.
-		notice({ key, intent, text, connected = true }) {
+		notice({ key, intent, text, link = null, connected = true }) {
 			const marks = new Set();
 			const node = {
 				isConnected: connected,
@@ -238,10 +238,15 @@ function build(options = {}) {
 						'data-feedback-key': key,
 						'data-ran-booster-ui-notice-intent': intent,
 					})[name] ?? null,
-				querySelector: (selector) =>
-					selector.includes('notice-content')
-						? { textContent: text }
-						: null,
+				querySelector: (selector) => {
+					if (selector.includes('notice-content')) {
+						return { textContent: text };
+					}
+					return link &&
+						selector === 'a.ran-booster-feedback__activity'
+						? { textContent: link.text, ...resolve(link.href) }
+						: null;
+				},
 			};
 			noticeNodes.push(node);
 			return node;
@@ -899,6 +904,34 @@ test('a coded failure notice becomes only a pointer to itself and stays in the p
 	assert.equal(env.notices[0].actions[0].label, 'Show details');
 	assert.equal(notice.hasAttribute('data-ran-booster-feedback-taken'), true);
 	// A later pass does not take the same notice again.
+	assert.equal(env.feedback.consume(), 0);
+	assert.equal(env.notices.length, 1);
+});
+
+test('a queue summary notice stays in the page while the host shows its sentence with the Activity link', () => {
+	const env = boot();
+	const notice = env.notice({
+		key: 'bulk_update_queue',
+		intent: 'success',
+		text: 'Queued 2 plugins for sequential branch reinstall. Skipped: 0.',
+		link: {
+			text: 'View Activity',
+			href: '/wp-admin/admin.php?page=ran-booster&tab=troubleshooting&panel=activity',
+		},
+	});
+	assert.equal(env.feedback.consume(), 1);
+	assert.equal(
+		env.notices[0].content,
+		'Queued 2 plugins for sequential branch reinstall. Skipped: 0.'
+	);
+	assert.match(env.notices[0].className, /--success/);
+	assert.equal(env.notices[0].actions[0].label, 'View Activity');
+	assert.match(env.notices[0].actions[0].url, /panel=activity$/);
+	// The progress notice is not a duplicate to remove: it stays, visible.
+	assert.equal(notice.isConnected, true);
+	assert.notEqual(notice.hidden, true);
+	assert.equal(notice.hasAttribute('data-ran-booster-feedback-taken'), true);
+	// A later pass does not show it again.
 	assert.equal(env.feedback.consume(), 0);
 	assert.equal(env.notices.length, 1);
 });

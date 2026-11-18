@@ -169,6 +169,15 @@ final class CredentialEditorFallbackTest extends TestCase {
 		);
 	}
 
+	public function test_error_region_precedes_fields_for_add_and_edit(): void {
+		foreach ( array( array( 'open' => true ), array( 'id' => 'saved' ) ) as $request ) {
+			$xpath = $this->xpath( $this->render( $this->project( $request ), 'Save failed' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form/*[1][@id="ran-booster-access-profile-error"][not(@hidden)])' ) );
+			self::assertSame( 'Save failed', trim( (string) $xpath->evaluate( 'string(//*[@id="ran-booster-access-profile-error"])' ) ) );
+			self::assertSame( 'ran-booster-access-profile-error', $xpath->evaluate( 'string(//*[@id="ran-booster-credential-editor"]//form/@aria-describedby)' ) );
+		}
+	}
+
 	/**
 	 * Reads the current request globals through the production boundary.
 	 *
@@ -247,8 +256,8 @@ final class CredentialEditorFallbackTest extends TestCase {
 	}
 
 	/** @param array<string, mixed> $credential_form Safe form projection. */
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The included production view reads this local template binding.
-	private function render( array $credential_form ): string {
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The included production view reads both local template bindings.
+	private function render( array $credential_form, ?string $credential_form_error = null ): string {
 		$provider                = $this->provider();
 		$has_credential_settings = true;
 		$has_webhook_settings    = false;

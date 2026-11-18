@@ -10255,53 +10255,53 @@ msgstr ""
 msgid "Edit repository credential"
 msgstr ""
 
-#: views/provider/modals.php:55
+#: views/provider/modals.php:56
 #: views/provider/modals.php:158
 msgid "Label"
 msgstr ""
 
-#: views/provider/modals.php:55
+#: views/provider/modals.php:56
 msgid "e.g. Deployment access"
 msgstr ""
 
-#: views/provider/modals.php:56
+#: views/provider/modals.php:57
 msgid "Complete the fields for your chosen credential type. Other credential fields are ignored."
 msgstr ""
 
-#: views/provider/modals.php:58
+#: views/provider/modals.php:59
 msgid "Credential type"
 msgstr ""
 
-#: views/provider/modals.php:64
+#: views/provider/modals.php:65
 msgid "Expiry / removal date"
 msgstr ""
 
-#: views/provider/modals.php:87
+#: views/provider/modals.php:88
 msgid "Automatically remove this saved credential after this date"
 msgstr ""
 
-#: views/provider/modals.php:89
+#: views/provider/modals.php:90
 msgid "Enter the Git provider expiry date, or choose an earlier one. If automatic removal is enabled, Booster removes the saved credential after this date. A known Git provider expiry is the latest date allowed."
 msgstr ""
 
-#: views/provider/modals.php:91
+#: views/provider/modals.php:92
 #: assets/ran-booster-secure-inputs.js:1501
 msgid "Credential secret"
 msgstr ""
 
-#: views/provider/modals.php:94
+#: views/provider/modals.php:95
 msgid "Show credential secret"
 msgstr ""
 
-#: views/provider/modals.php:94
+#: views/provider/modals.php:95
 msgid "Hide credential secret"
 msgstr ""
 
-#: views/provider/modals.php:96
+#: views/provider/modals.php:97
 msgid "Required when adding."
 msgstr ""
 
-#: views/provider/modals.php:96
+#: views/provider/modals.php:97
 msgid "A credential secret is already saved. Leave this field unchanged to keep it, or enter a replacement."
 msgstr ""
 

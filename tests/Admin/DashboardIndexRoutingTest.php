@@ -1263,6 +1263,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 				libxml_use_internal_errors( $previous );
 				$xpath = new \DOMXPath( $document );
 				$error = '//*[@id="ran-booster-access-profile-error"]';
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form/*[1][@id="ran-booster-access-profile-error"])' ), $scenario );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//*[@id="ran-booster-access-modal-title"]/../following-sibling::form/*[1][@id="ran-booster-access-profile-error"])' ), $scenario );
 				self::assertSame( 'native' === $scenario ? 1.0 : 0.0, $xpath->evaluate( 'count(' . $error . '[not(@hidden)])' ), $scenario );
 				self::assertSame( 'native' === $scenario ? 'Enter a label & try again.' : '', trim( (string) $xpath->evaluate( 'string(' . $error . ')' ) ), $scenario );
 				self::assertSame( 'native' === $scenario ? 1.0 : 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form[@aria-describedby="ran-booster-access-profile-error"])' ), $scenario );

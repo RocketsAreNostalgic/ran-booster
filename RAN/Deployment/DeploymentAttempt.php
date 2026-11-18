@@ -6,6 +6,7 @@ namespace RAN\Deployment;
 
 use InvalidArgumentException;
 use RAN\AdoptionIdentity;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 
 /** A validated projection of the 22-column deployment-attempt row. */
 final readonly class DeploymentAttempt {
@@ -50,7 +51,7 @@ final readonly class DeploymentAttempt {
 			$source                  = self::one_of( $row['source'] ?? null, array( 'manual', 'webhook' ) );
 			$operation               = self::one_of( $row['operation'] ?? null, array( 'install', 'update' ) );
 			$package_type            = self::one_of( $row['package_type'] ?? null, array( 'plugin', 'theme' ) );
-			$package_slug            = self::identifier( $row['package_slug'] ?? null, 191 );
+			$package_slug            = self::safe_text( $row['package_slug'] ?? null, 191 );
 			$package_source          = self::one_of( $row['package_source'] ?? null, array( 'branch' ) );
 			$package_source_revision = self::non_negative_int( $row['package_source_revision'] ?? null );
 			$provider                = self::provider( $row['provider'] ?? null );
@@ -69,6 +70,9 @@ final readonly class DeploymentAttempt {
 			$resolved_at             = self::nullable_date( $row['resolved_at'] ?? null );
 			$resolved_by             = self::nullable_positive_int( $row['resolved_by'] ?? null );
 
+			if ( ! PackageDirectory::is_valid_name( $package_slug ) ) {
+				throw new InvalidArgumentException( 'The stored package folder is invalid.' );
+			}
 			if ( ( null === $delivery_id ) !== ( null === $delivery_digest ) || ( 'webhook' === $source ) !== ( null !== $delivery_id ) ) {
 				throw new InvalidArgumentException( 'The stored delivery identity is incomplete.' );
 			}

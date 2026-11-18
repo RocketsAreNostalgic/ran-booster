@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\RepositoryProvider;
 
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use InvalidArgumentException;
 
 /** Path-free evidence from inspection of one exact release archive. */
@@ -21,8 +22,8 @@ final readonly class RepositoryReleaseInspection {
 			|| ! $this->bounded_opaque_value( $tag, 100 )
 			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._+-]{0,63}\z/D', $version )
 			|| ! $this->bounded_opaque_value( $provider_commit_id, 191 )
-			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,99}\z/D', $package_root )
-			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z/D', $main_file )
+			|| ! PackageDirectory::is_valid_name( $package_root )
+			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(?:php|css)\z/D', $main_file )
 			|| ! $this->bounded_opaque_value( $fingerprint, 191 ) ) {
 			throw new InvalidArgumentException( 'The repository release inspection is invalid.' );
 		}

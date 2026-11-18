@@ -11,21 +11,15 @@ $ran_booster_wordpress_path = getenv( 'RAN_BOOSTER_WORDPRESS_PATH' );
 if ( ! is_string( $ran_booster_wordpress_path ) || '' === trim( $ran_booster_wordpress_path ) ) {
 	throw new RuntimeException( 'The non-cron installed runtime path is unavailable.' );
 }
-$ran_booster_shared_path = rtrim( $ran_booster_wordpress_path, '/\\' ) . '/wp-content/plugins/ran-booster/vendor/ran/updater-support/src/RepositoryRelativePath.php';
-if ( ! is_file( $ran_booster_shared_path ) ) {
-	throw new RuntimeException( 'The non-cron shared path dependency is unavailable.' );
-}
-require_once $ran_booster_shared_path;
+require_once rtrim( $ran_booster_wordpress_path, '/\\' ) . '/wp-content/plugins/ran-booster/RAN/WordPress/BranchUpdaterBootstrap.php';
+RAN\WordPress\BranchUpdaterBootstrap::register();
 require_once dirname( __DIR__, 2 ) . '/RAN/RepositoryProvider/RepositoryReleaseArtifactCustody.php';
-require_once dirname( __DIR__, 2 ) . '/RAN/PackageSubdirectory.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Deployment/PreparedArtifact.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Runtime/RuntimeSupport.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/WordPress/CorePackageExecutionFailure.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/WordPress/CorePackageExecutionResult.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/WordPress/CorePackageExecutor.php';
 
-require_once rtrim( $ran_booster_wordpress_path, '/\\' ) . '/wp-content/plugins/ran-booster/RAN/WordPress/BranchUpdaterBootstrap.php';
-RAN\WordPress\BranchUpdaterBootstrap::register();
 require_once __DIR__ . '/CorePackageSmokeArtifact.php';
 
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.

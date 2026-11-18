@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\AddOn\ReleaseTracking;
 
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Logging\BoosterLogger;
@@ -205,9 +206,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	): ReleaseTrackingStatus {
 		$package       = $this->package( $type, $identifier );
 		$eligibility   = $this->eligibility( $type, $identifier, $package );
-		$incompatible  = ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED === $eligibility->code();
+		$incompatible  = in_array( $eligibility->code(), array( ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED, ReleaseTrackingEligibility::INVALID_PACKAGE_IDENTITY ), true );
 		$configuration = null;
-		$failure_code  = $incompatible ? ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED : '';
+		$failure_code  = $incompatible ? $eligibility->code() : '';
 		if ( ! $incompatible && PackageSource::BRANCH === $package->get_source() ) {
 			$availability = $this->release_source_available( $type, $package );
 			if ( false === $availability ) {
@@ -1031,6 +1032,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	}
 
 	private function eligibility( string $type, string $identifier, Package $package ): ReleaseTrackingEligibility {
+		$parts = explode( '/', $identifier );
+		if ( $identifier !== (string) $package->get_identifier()
+			|| ( 'plugin' === $type && ( 2 !== count( $parts ) || strlen( $identifier ) > 255 || ! preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.php\z/D', $parts[1] ) ) )
+			|| ( 'theme' === $type && 1 !== count( $parts ) )
+			|| ! PackageDirectory::is_valid_name( $parts[0] ) ) {
+			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::INVALID_PACKAGE_IDENTITY );
+		}
 		if ( ! $this->release_source_supported( $package ) ) {
 			return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED );
 		}
@@ -1057,10 +1065,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			$package_root = $identifier;
 		} else {
-			$parts = explode( '/', $identifier );
-			if ( 2 !== count( $parts ) || '' === $parts[0] || '' === $parts[1] ) {
-				return new ReleaseTrackingEligibility( ReleaseTrackingEligibility::INVALID_PACKAGE_IDENTITY );
-			}
 			$package_root = $parts[0];
 		}
 

@@ -22,6 +22,21 @@ use RuntimeException;
 
 final class ManagedReleaseStoreTest extends TestCase {
 
+	public function test_configuration_folder_and_plugin_stem_boundaries(): void {
+		foreach ( array( 100, 101, 191 ) as $length ) {
+			$root = str_repeat( 'A', $length );
+			self::assertSame( $root, ( new ManagedReleaseConfiguration( $root, str_repeat( 'b', 100 ) . '.php' ) )->package_root() );
+		}
+		foreach ( array( array( str_repeat( 'A', 192 ), 'main.php' ), array( 'root', str_repeat( 'b', 101 ) . '.php' ) ) as $values ) {
+			try {
+				new ManagedReleaseConfiguration( $values[0], $values[1] );
+				self::fail( 'Invalid component accepted.' );
+			} catch ( \InvalidArgumentException ) {
+				self::addToAssertionCount( 1 );
+			}
+		}
+	}
+
 	public function test_read_only_connection_can_read_release_configuration_without_write_methods(): void {
 		$database = $this->createMock( \RAN\Storage\SqlReadConnection::class );
 		$database->expects( self::once() )->method( 'prepare' )->willReturn( 'prepared fixture query' );

@@ -6,7 +6,7 @@ namespace RAN\WordPress;
 
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\PackageMutationGuard;
-use RAN\PackageSubdirectory;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\PackageSource;
 use RAN\Storage\Database;
 use RAN\Storage\SqlReadConnection;
@@ -304,7 +304,7 @@ class ManagedReleaseStore {
 
 	private function assert_release_subdirectory( object $row ): void {
 		try {
-			$subdirectory = PackageSubdirectory::normalize( $row->subdirectory ?? null );
+			$subdirectory = PackageDirectory::normalize( $row->subdirectory ?? null );
 		} catch ( \InvalidArgumentException $exception ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The prior exception remains internal to the typed storage failure.
 			throw new RuntimeException( 'The managed release package subdirectory is invalid.', 0, $exception );

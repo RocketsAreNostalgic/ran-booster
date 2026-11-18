@@ -1297,6 +1297,45 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, ProspectiveRepositoryProvider::$metadata_calls );
 	}
 
+	public function test_inspection_bounds_the_complete_type_specific_identity_before_readiness(): void {
+		foreach ( array( array( 'plugin', 150, str_repeat( 'b', 100 ) . '.php', true ), array( 'plugin', 151, str_repeat( 'b', 100 ) . '.php', false ), array( 'plugin', 100, 'style.css', false ), array( 'theme', 191, 'style.css', true ), array( 'theme', 100, 'example.php', false ) ) as [$type, $root_length, $main_file, $accepted] ) {
+			$inspection = new RepositoryReleaseInspection( '42', 'v1.2.3', '1.2.3', str_repeat( 'a', 40 ), str_repeat( 'A', $root_length ), $main_file, self::FINGERPRINT );
+			$provider   = new ProspectiveRepositoryProvider( inspection: $inspection );
+			$facade     = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor(), provider: $provider );
+			$result     = $facade->inspect( $type, $this->repository_request(), '42', 'v1.2.3', 'stable', 'valid-nonce' );
+			self::assertSame( $accepted, $result->successful(), $type . ':' . strlen( $inspection->package_root . '/' . $main_file ) );
+			self::assertSame( $accepted ? 'release_ready' : 'release_invalid', $result->code() );
+			self::assertSame( $accepted ? 1 : 0, ProspectiveRepositoryProvider::$metadata_calls );
+			ProspectiveRepositoryProvider::$metadata_calls = 0;
+		}
+		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisition_calls );
+	}
+
+	public function test_acquired_type_and_complete_identity_are_checked_without_an_expected_identifier(): void {
+		foreach ( array( array( 'plugin', 150, str_repeat( 'b', 100 ) . '.php', true ), array( 'plugin', 151, str_repeat( 'b', 100 ) . '.php', false ), array( 'plugin', 100, 'style.css', false ), array( 'theme', 191, 'style.css', true ), array( 'theme', 100, 'example.php', false ) ) as [$type, $root_length, $main_file, $accepted] ) {
+			$plugins  = new ProspectivePluginRepository();
+			$executor = new ProspectiveExecutor();
+			$lock     = new ProspectiveUpdaterLock();
+			$facade   = $this->facade( $plugins, $executor, updater_lock: $lock );
+			$this->set_ready_release();
+			self::assertNotNull( $this->artifact_path );
+			$acquisition                                = new ProspectiveRepositoryReleaseArtifact( $this->artifact_path, '1.2.3', str_repeat( 'a', 40 ), str_repeat( 'A', $root_length ), $main_file );
+			ProspectiveRepositoryProvider::$acquisition = $acquisition;
+			$result                                     = $facade->install( $type, $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ) );
+			if ( $accepted ) {
+				self::assertNotSame( 'package_identity_mismatch', $result->code() );
+				self::assertSame( 1, $lock->acquire_calls );
+			} else {
+				self::assertSame( 'package_identity_mismatch', $result->code() );
+				self::assertSame( 0, $lock->acquire_calls );
+				self::assertSame( 0, $executor->install_calls );
+				self::assertSame( 0, $plugins->adoption_calls );
+				self::assertSame( 0, $acquisition->handoff_calls );
+				self::assertSame( 1, $acquisition->discard_calls );
+			}
+		}
+	}
+
 	public function test_fingerprint_mismatch_cannot_reach_core(): void {
 		$plugins  = new ProspectivePluginRepository();
 		$executor = new ProspectiveExecutor();
@@ -1916,6 +1955,25 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, $executor->install_calls );
 	}
 
+	public function test_acquired_identity_mismatch_is_discarded_before_lock_or_handoff(): void {
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$lock     = new ProspectiveUpdaterLock();
+		$facade   = $this->facade( $plugins, $executor, updater_lock: $lock );
+		foreach ( array( 'Example/example.php', 'different/example.php', str_repeat( 'a', 151 ) . '/' . str_repeat( 'b', 100 ) . '.php' ) as $identity ) {
+			$this->set_ready_release();
+			$acquisition = $this->acquisition;
+			self::assertNotNull( $acquisition );
+			$acquisition->identifier_override = $identity;
+			$result                           = $facade->install( 'plugin', $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ) );
+			self::assertSame( 'package_identity_mismatch', $result->code() );
+			self::assertSame( 0, $lock->acquire_calls );
+			self::assertSame( 0, $executor->install_calls );
+			self::assertSame( 0, $acquisition->handoff_calls );
+			self::assertSame( 1, $acquisition->discard_calls );
+		}
+	}
+
 	public function test_install_intent_nonce_changes_and_invalid_intent_refuses_before_provider_reads(): void {
 		$facade  = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor() );
 		$context = $this->expectation_for( $this->repository_request() );
@@ -1930,6 +1988,18 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisition_calls );
 		$this->expectException( \InvalidArgumentException::class );
 		$facade->nonce_action( 'inspect', 'plugin', null, 'example/example.php', DeploymentPolicy::DISABLED );
+	}
+
+	public function test_install_intent_bounds_complete_plugin_identifier(): void {
+		$facade  = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor() );
+		$context = $this->expectation_for( $this->repository_request() );
+		foreach ( array( 195, 255 ) as $length ) {
+			$identity = 195 === $length ? str_repeat( 'A', 100 ) . '/' . str_repeat( 'b', 90 ) . '.php' : str_repeat( 'A', 150 ) . '/' . str_repeat( 'b', 100 ) . '.php';
+			self::assertSame( $length, strlen( $identity ) );
+			self::assertNotSame( '', $facade->nonce_action( 'install', 'plugin', $context, $identity, DeploymentPolicy::MANUAL ) );
+		}
+		$this->expectException( \InvalidArgumentException::class );
+		$facade->nonce_action( 'install', 'plugin', $context, str_repeat( 'A', 151 ) . '/' . str_repeat( 'b', 100 ) . '.php', DeploymentPolicy::MANUAL );
 	}
 
 	public function test_changed_install_intent_nonce_refuses_before_repository_resolution(): void {
@@ -2450,13 +2520,14 @@ final class ProspectiveRepositoryProviderWithoutListing implements RepositoryPro
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArtifact {
-	public int $handoff_calls          = 0;
-	public int $discard_calls          = 0;
-	public bool $discard_result        = true;
-	public ?Throwable $handoff_failure = null;
-	public ?\Closure $on_handoff       = null;
-	private bool $handed_off           = false;
-	private bool $discarded            = false;
+	public ?string $identifier_override = null;
+	public int $handoff_calls           = 0;
+	public int $discard_calls           = 0;
+	public bool $discard_result         = true;
+	public ?Throwable $handoff_failure  = null;
+	public ?\Closure $on_handoff        = null;
+	private bool $handed_off            = false;
+	private bool $discarded             = false;
 
 	public function __construct(
 		private string $path,
@@ -2534,6 +2605,9 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 	}
 
 	public function identifier( string $package_type ): string {
+		if ( null !== $this->identifier_override ) {
+			return $this->identifier_override;
+		}
 		return match ( $package_type ) {
 			'plugin' => $this->root . '/' . $this->metadata_file,
 			'theme' => $this->root,

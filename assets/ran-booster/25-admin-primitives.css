@@ -1199,7 +1199,29 @@
 	}
 
 	.ran-booster-admin
+		.ran-booster-package-settings--create
 		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		.ran-booster-advanced-source-summary {
+		font-size: var(--ran-booster-font-size-sm);
+		overflow-wrap: anywhere;
+	}
+
+	.ran-booster-admin
+		.ran-booster-package-settings--create
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary
+		> .ran-booster-section__title {
+		line-height: inherit;
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary,
+	.ran-booster-admin
+		.ran-booster-package-settings--create
+		[data-ran-booster-ui-disclosure="package-advanced-settings"][data-ran-booster-ui-disclosure-density][data-ran-booster-ui-disclosure]
 		> details[data-ran-booster-ui-disclosure-fallback]
 		> summary {
 		display: grid;
@@ -1223,6 +1245,17 @@
 		> [data-ran-booster-ui-disclosure-meta] {
 		grid-column: 1 / -1;
 		margin-inline: 0;
+	}
+
+	.ran-booster-admin
+		.ran-booster-package-settings--create
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary
+		> [data-ran-booster-ui-disclosure-meta] {
+		display: flex;
+		grid-column: 1;
+		margin-block-start: 0;
 	}
 }
 

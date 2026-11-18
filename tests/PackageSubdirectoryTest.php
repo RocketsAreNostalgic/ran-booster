@@ -71,7 +71,7 @@ final class PackageSubdirectoryTest extends TestCase {
 	}
 
 	public function test_it_preserves_shared_path_failure(): void {
-		$this->expectException( InvalidPackageDirectory::class );
+		$this->expectException( InvalidArgumentException::class );
 		$this->expectExceptionMessage( 'The package subdirectory must be a normalized relative path.' );
 
 		PackageDirectory::normalize( 'C%3A/packages/example' );

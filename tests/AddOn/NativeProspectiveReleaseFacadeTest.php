@@ -1957,7 +1957,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			self::assertSame( $length, strlen( $identity ) );
 			self::assertNotSame( '', $facade->nonce_action( 'install', 'plugin', $context, $identity, DeploymentPolicy::MANUAL ) );
 		}
-		$this->expectException( InvalidArgumentException::class );
+		$this->expectException( \InvalidArgumentException::class );
 		$facade->nonce_action( 'install', 'plugin', $context, str_repeat( 'A', 151 ) . '/' . str_repeat( 'b', 100 ) . '.php', DeploymentPolicy::MANUAL );
 	}
 

@@ -1182,39 +1182,49 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		}
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider( 'source_observation_cases' )]
-	public function test_source_fact_requires_current_authority_and_the_observed_attempt( string $change ): void {
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'source_completion_cases' )]
+	public function test_provider_source_fact_finishes_without_authority_refinement( string $scenario ): void {
 		$had_previous = array_key_exists( 'ran_booster_activity_options', $GLOBALS );
 		$previous     = $GLOBALS['ran_booster_activity_options'] ?? null;
 		try {
 			$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
-			$this->repository                        = new DeploymentAttemptRepository( $this->database, 'wp_ran_booster_deployment_attempts', clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-17 00:00:00 UTC' ), database_lifecycle: $this->database_lifecycle, activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ), selection: $this->queued_selection( $this->database ) );
-			$this->webhook( 'example' );
-			$running = $this->repository->claim_next();
-			self::assertNotNull( $running );
-			if ( 'selection' === $change ) {
-				$this->database->selection->active_bytes = 'a:0:{}';
-			} elseif ( 'adoption' === $change ) {
-				$this->database->management_rows['example']['repository'] = 'org/changed';
-			} elseif ( 'request' === $change ) {
-				$request                      = json_decode( $this->database->rows[0]['request_json'], true );
-				$request['configured_branch'] = 'changed';
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact persisted test snapshot.
-				$this->database->rows[0]['request_json'] = json_encode( $request, JSON_UNESCAPED_SLASHES );
+			$this->repository                        = new DeploymentAttemptRepository( $this->database, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->database_lifecycle, activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ), selection: $this->queued_selection( $this->database ) );
+			if ( 'install' === $scenario ) {
+				$running = $this->manual( 'example' );
+			} else {
+				$this->webhook( 'example' );
+				$running = $this->repository->claim_next();
 			}
-			$this->database->fail_commit         = 'commit' === $change;
-			$this->database->fail_query_contains = 'activity' === $change ? "SET status = 'failed'" : null;
+			self::assertNotNull( $running );
+			$this->database->authority_reads               = 0;
+			$this->database->queries                       = array();
+			$this->database->selection->selection->queries = array();
+			if ( 'selection throw' === $scenario ) {
+				$this->database->selection->on_active_read = static function (): void {
+					throw new \RuntimeException( 'Selection read must not run during provider settlement.' );
+				};
+			} elseif ( 'adoption throw' === $scenario ) {
+				$this->database->on_management_read = static function (): void {
+					throw new \RuntimeException( 'Adoption read must not run during provider settlement.' );
+				};
+			}
+			$this->database->fail_commit         = 'commit' === $scenario;
+			$this->database->fail_query_contains = 'activity' === $scenario ? "SET status = 'failed'" : null;
 			$failure                             = new \RAN\RepositoryProvider\ProviderFailure( 'http_4xx_other', source_code: 'abuse_detected' );
 			$outcome                             = DeploymentOutcome::from_provider_failure( new \RAN\RepositoryProvider\ProviderRequestFailed( $failure ) );
 			try {
-				$this->repository->finish( $running->get_id(), $outcome, working_copy_observation: 'missing' === $change ? null : $running );
-				self::assertNotContains( $change, array( 'commit', 'activity' ) );
+				$terminal = $this->repository->finish( $running->get_id(), $outcome, working_copy_observation: 'unobserved' === $scenario ? null : $running );
+				self::assertNotContains( $scenario, array( 'commit', 'activity' ) );
+				self::assertSame( DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID, $terminal->get_outcome()?->get_code() );
 			} catch ( DeploymentStorageFailure ) {
-				self::assertContains( $change, array( 'commit', 'activity' ) );
+				self::assertContains( $scenario, array( 'commit', 'activity' ) );
 				self::assertSame( 'running', $this->database->rows[0]['state'] );
 			}
 			$facts = json_decode( (string) $this->database->activity_rows[0]['facts'], true );
-			self::assertSame( 'valid' === $change ? 'abuse_detected' : null, $facts['source_code'] ?? null );
+			self::assertSame( in_array( $scenario, array( 'commit', 'activity' ), true ) ? null : 'abuse_detected', $facts['source_code'] ?? null );
+			self::assertSame( 0, $this->database->authority_reads );
+			self::assertSame( array(), array_values( array_filter( $this->database->selection->selection->queries, static fn ( string $sql ): bool => str_contains( $sql, 'SELECT' ) ) ) );
+			self::assertSame( array(), array_values( array_filter( $this->database->queries, static fn ( string $sql ): bool => str_starts_with( $sql, 'SELECT' ) && str_contains( $sql, '`wp_ran_booster`' ) ) ) );
 			self::assertStringNotContainsString( 'abuse_detected', (string) $this->database->rows[0]['request_json'] );
 		} finally {
 			if ( ! $had_previous ) {
@@ -1226,9 +1236,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 	}
 
 	/** @return iterable<string,array{string}> */
-	public static function source_observation_cases(): iterable {
-		foreach ( array( 'valid', 'selection', 'adoption', 'request', 'missing', 'commit', 'activity' ) as $case ) {
-			yield $case => array( $case );
+	public static function source_completion_cases(): iterable {
+		foreach ( array( 'update', 'install', 'unobserved', 'selection throw', 'adoption throw', 'commit', 'activity' ) as $scenario ) {
+			yield $scenario => array( $scenario );
 		}
 	}
 

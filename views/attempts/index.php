@@ -204,14 +204,14 @@ $origin_labels = array(
 											<div><dt><?php echo esc_html( $fact_label ); ?></dt><dd><?php echo esc_html( $fact_value ); ?></dd></div>
 										<?php } ?>
 										<?php if ( is_string( $item['source_reference'] ?? null ) ) { ?>
-											<div><dt><?php esc_html_e( 'Source code', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) $item['source_label'] ); ?>: <code><?php echo esc_html( $item['source_reference'] ); ?></code></dd></div>
+											<div><dt><?php echo esc_html( (string) ( $deployment_activity['failure_reference_label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) $item['source_label'] ); ?>: <code><?php echo esc_html( $item['source_reference'] ); ?></code></dd></div>
 										<?php } ?>
 									</dl>
 								<?php } else { ?>
 								<dl class="ran-booster-activity__details">
 									<div><dt><?php echo esc_html( in_array( $state, array( 'failed', 'needs_attention' ), true ) ? __( 'Failure reason', 'ran-booster' ) : __( 'Outcome', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( $summary ); ?></dd></div>
 									<?php if ( is_string( $item['source_reference'] ?? null ) ) { ?>
-										<div><dt><?php esc_html_e( 'Source code', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) $item['source_label'] ); ?>: <code><?php echo esc_html( $item['source_reference'] ); ?></code></dd></div>
+										<div><dt><?php echo esc_html( (string) ( $deployment_activity['failure_reference_label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) $item['source_label'] ); ?>: <code><?php echo esc_html( $item['source_reference'] ); ?></code></dd></div>
 									<?php } ?>
 									<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['correlation_id'] ?? '' ) ); ?></code></dd></div>
 									<div><dt><?php esc_html_e( 'Package', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $project_label ); ?> (<?php echo esc_html( (string) ( $item['package_type'] ?? '' ) ); ?>)</dd></div>

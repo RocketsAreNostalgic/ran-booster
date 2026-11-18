@@ -1524,7 +1524,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( 'deployed', $this->database->rows[0]['outcome_code'] );
 	}
 
-	public function test_failed_authority_read_reconciles_without_the_original_code(): void {
+	public function test_armed_authority_read_failure_cannot_replace_the_provider_outcome(): void {
 		$this->enable_activity();
 		$provider                  = new ParityRepositoryProvider( null );
 		$provider->on_prepare      = function (): void {
@@ -1532,9 +1532,11 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		};
 		$provider->prepare_failure = new \RAN\RepositoryProvider\ProviderRequestFailed( new \RAN\RepositoryProvider\ProviderFailure( 'http_4xx_other', source_code: 'abuse_detected' ) );
 		$outcome                   = $this->coordinator( $provider )->execute_claimed( $this->running_update() );
-		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $outcome->get_code() );
-		self::assertSame( 'runner_throw', $this->activity_facts()['deployment_settled_by'] ?? null );
-		self::assertArrayNotHasKey( 'source_code', $this->activity_facts() );
+		self::assertSame( DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID, $outcome->get_code() );
+		self::assertArrayNotHasKey( 'deployment_settled_by', $this->activity_facts() );
+		self::assertSame( 'abuse_detected', $this->activity_facts()['source_code'] ?? null );
+		self::assertNotNull( $this->database->abort_authority_read );
+		self::assertSame( 0, $this->database->automatic_rollbacks );
 	}
 
 	#[DataProvider( 'cleanup_failure_cases' )]

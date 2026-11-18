@@ -92,7 +92,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 	private ?string $mutation_lock_token               = null;
 	private bool $provider_archive_cleaned             = false;
 	private ?DeploymentOutcome $provider_observation   = null;
-	private ?DeploymentAttempt $observed_attempt       = null;
 
 	public function __construct(
 		private DeploymentAttempt $attempt,
@@ -203,7 +202,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 		try {
 			$observed      = $this->provider_observation;
 			$outcome       = null !== $observed && $observed->get_code() === $code ? $observed : DeploymentOutcome::from_code( $code );
-			$this->attempt = $this->attempts->finish( $this->attempt->get_id(), $outcome, working_copy_observation: $working_copy_observation ?? ( $outcome === $observed ? $this->observed_attempt : null ) );
+			$this->attempt = $this->attempts->finish( $this->attempt->get_id(), $outcome, working_copy_observation: $working_copy_observation );
 		} catch ( DeploymentStorageFailure $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
@@ -786,14 +785,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 
 	private function stage( string $code ): never {
 		$this->provider_observation = null;
-		$this->observed_attempt     = null;
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 		throw new AdmittedBranchStageFailure( $code );
 	}
 
 	private function stage_provider_failure( Throwable $failure ): never {
 		$this->provider_observation = DeploymentOutcome::from_provider_failure( $failure );
-		$this->observed_attempt     = $this->attempt;
 		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Only the closed outcome is transported to the runner.
 		throw new AdmittedBranchStageFailure( $this->provider_observation->get_code() );
 	}

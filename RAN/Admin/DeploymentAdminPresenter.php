@@ -131,6 +131,11 @@ final class DeploymentAdminPresenter {
 			&& is_array( $facts ) ? ProviderFailure::normalize_source_code( $facts['source_code'] ?? null ) : null;
 	}
 
+	/** @param array<string,string> $labels */
+	private function provider_label( string $provider, array $labels, ?string $fallback = null ): string {
+		return $labels[ $provider ] ?? ( 'gh' === $provider ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $provider ? __( 'Bitbucket', 'ran-booster' ) : ( $fallback ?? __( 'Unknown', 'ran-booster' ) ) ) );
+	}
+
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */
 	public function active_deployment( DeploymentStorageFailure $failure, string $operation ): ?array {
 		$attempt = $failure->get_active_attempt();
@@ -189,6 +194,8 @@ final class DeploymentAdminPresenter {
 		$has_attempt            = $this->query_has_key( 'attempt' );
 		$has_ref                = $this->query_has_key( 'reference' );
 		$base['mode']           = $has_attempt || $has_ref ? 'detail' : 'list';
+
+		$base['failure_reference_label'] = __( 'Failure reference', 'ran-booster' );
 		if ( null === $this->attempts ) {
 			return $base;
 		}
@@ -215,7 +222,7 @@ final class DeploymentAdminPresenter {
 					$data                     = $base['detail']->safe_data();
 					$base['outcome_facts']    = null !== $page && $page['available'] && 1 === count( $page['records'] ) && 'policy_blocked' === $data['outcome_code'] ? $this->retained_branch_facts( $reference, $attempt_id, record: $page['records'][0], attempt_data: $data ) : null;
 					$base['source_reference'] = null !== $page && $page['available'] && 1 === count( $page['records'] ) ? $this->source_reference( $page['records'][0] ) : null;
-					$base['source_label']     = $provider_labels[ $data['provider'] ] ?? ( 'gh' === $data['provider'] ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $data['provider'] ? __( 'Bitbucket', 'ran-booster' ) : __( 'Unknown', 'ran-booster' ) ) );
+					$base['source_label']     = $this->provider_label( $data['provider'], $provider_labels );
 				}
 				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->get_outcome()?->get_code() ) {
 					$data    = $base['detail']->safe_data();
@@ -316,9 +323,9 @@ final class DeploymentAdminPresenter {
 						'outcome_facts'       => $this->branch_facts( $record, (string) $record['correlation'], $attempt_id ),
 						'resolved_at'         => $resolved_at,
 						'resolved_by'         => $resolved_by,
-						'provider_label'      => $provider_labels[ (string) ( $record['provider'] ?? '' ) ] ?? ( 'gh' === ( $record['provider'] ?? '' ) ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === ( $record['provider'] ?? '' ) ? __( 'Bitbucket', 'ran-booster' ) : (string) ( $record['provider'] ?? '' ) ) ),
+						'provider_label'      => $this->provider_label( (string) ( $record['provider'] ?? '' ), $provider_labels, (string) ( $record['provider'] ?? '' ) ),
 						'source_reference'    => $this->source_reference( $record ),
-						'source_label'        => $provider_labels[ (string) ( $record['provider'] ?? '' ) ] ?? ( 'gh' === ( $record['provider'] ?? '' ) ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === ( $record['provider'] ?? '' ) ? __( 'Bitbucket', 'ran-booster' ) : __( 'Unknown', 'ran-booster' ) ) ),
+						'source_label'        => $this->provider_label( (string) ( $record['provider'] ?? '' ), $provider_labels ),
 					)
 				);
 			}
@@ -354,7 +361,7 @@ final class DeploymentAdminPresenter {
 		foreach ( $providers as $provider ) {
 			$provider_options[] = array(
 				'value' => $provider['provider'],
-				'label' => $provider_labels[ $provider['provider'] ] ?? ( 'gh' === $provider['provider'] ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $provider['provider'] ? __( 'Bitbucket', 'ran-booster' ) : $provider['provider'] ) ),
+				'label' => $this->provider_label( $provider['provider'], $provider_labels, $provider['provider'] ),
 			);
 		}
 		$package_options = array();
@@ -368,7 +375,7 @@ final class DeploymentAdminPresenter {
 				'provider'         => $package['provider'],
 				'subject_type'     => $package['subject_type'],
 				'subject_identity' => $package['subject_identity'],
-				'label'            => sprintf( '%1$s · %2$s: %3$s', $provider_labels[ $package['provider'] ] ?? ( 'gh' === $package['provider'] ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $package['provider'] ? __( 'Bitbucket', 'ran-booster' ) : $package['provider'] ) ), 'theme' === $package['subject_type'] ? __( 'Theme', 'ran-booster' ) : __( 'Plugin', 'ran-booster' ), $package_labels[ $package['provider'] . "\0" . $package['subject_type'] . "\0" . $package['subject_identity'] ] ?? $package['subject_identity'] ),
+				'label'            => sprintf( '%1$s · %2$s: %3$s', $this->provider_label( $package['provider'], $provider_labels, $package['provider'] ), 'theme' === $package['subject_type'] ? __( 'Theme', 'ran-booster' ) : __( 'Plugin', 'ran-booster' ), $package_labels[ $package['provider'] . "\0" . $package['subject_type'] . "\0" . $package['subject_identity'] ] ?? $package['subject_identity'] ),
 			);
 		}
 		$provider = $this->activity_filter_value( 'activity_provider' );

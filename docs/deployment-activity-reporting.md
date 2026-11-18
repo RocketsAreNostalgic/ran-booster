@@ -171,9 +171,11 @@ Attempt JSON, email/filter data and support exports omit the optional reason.
 
 Credential validation and branch archive or head failures may record the original
 provider failure's screened `source_code` as a diagnostic Activity fact. It never
-selects an outcome or sentence. Branch settlement retains it only for the observed
-running attempt when selection, adoption and the stored snapshot still match in the
-terminal transaction. Cleanup supersession and runner-throw reconciliation omit it.
+selects an outcome or sentence. Branch settlement copies it from that attempt's
+carried failure only when the runner reports the same outcome. Recording the
+reference adds no selection or adoption reads or locks. The working-copy fact
+retains its independent authority checks. Cleanup supersession and runner-throw
+reconciliation omit the reference.
 Rendering re-screens the stored reference for Core failed or rejected install,
 update and credential-validation rows. It does not re-prove the writer's attempt
 binding or interpret the code as an outcome or provider identity.

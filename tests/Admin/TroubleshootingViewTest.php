@@ -1424,6 +1424,8 @@ final class TroubleshootingViewTest extends TestCase {
 				$detail = (string) ob_get_clean();
 				foreach ( array( $index, $detail ) as $html ) {
 					if ( 'core' === $provenance ) {
+						self::assertSame( 1, substr_count( $html, '<dt>Failure reference</dt>' ) );
+						self::assertStringNotContainsString( '<dt>Source code</dt>', $html );
 						self::assertStringContainsString( 'api.abuse_detected', $html );
 						self::assertStringContainsString( 'GitHub', $html );
 					} else {
@@ -1588,7 +1590,7 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertStringContainsString( 'Unknown: <code>api.abuse_detected</code>', (string) ob_get_clean() );
 			$translations = $GLOBALS['ran_booster_admin_test_translations'];
 			try {
-				$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Source code']       = 'Same label';
+				$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Failure reference'] = 'Same label';
 				$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Credential expiry'] = 'Same label';
 				foreach ( array( null, 'secret_orchid', "api.error\n", 'api%2eerror', 123, array( 'api.error' ), 'api.abuse_detected' ) as $value ) {
 					$record['facts']     = wp_json_encode(

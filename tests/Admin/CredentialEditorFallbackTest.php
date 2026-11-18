@@ -143,6 +143,8 @@ final class CredentialEditorFallbackTest extends TestCase {
 			self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"][@hidden])' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form[@novalidate])' ) );
 			self::assertSame( 'post', $xpath->evaluate( 'string(//*[@id="ran-booster-credential-editor"]//form/@method)' ) );
+			self::assertSame( '#ran-booster-credential-editor', $xpath->evaluate( 'string(//*[@id="ran-booster-credential-editor"]//form/@action)' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//form[@hx-post=""])' ) );
 			self::assertSame( 'save-access-profile', $xpath->evaluate( 'string(//*[@id="ran-booster-credential-editor"]//input[@name="ran_booster[action]"]/@value)' ) );
 			self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//select/option)' ) );
 			self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-credential-editor"]//input[contains(@name,"configuration")][@disabled or @required])' ) );

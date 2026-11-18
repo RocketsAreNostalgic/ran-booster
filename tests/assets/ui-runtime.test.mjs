@@ -53,7 +53,7 @@ test('manifest identifies two canonical assets and separate page budgets', () =>
 		gzipSync(foundation).length + gzipSync(adapter).length <= 29780,
 		'foundation and adapter gzip sum'
 	);
-	assert.ok(overlay.length <= 320000, 'overlay raw');
+	assert.ok(overlay.length <= 345000, 'overlay raw');
 	assert.ok(gzipSync(overlay).length <= 90000, 'overlay gzip');
 	assert.ok(
 		overlay.toString('utf8').includes(`./${entries.foundation}`),
@@ -106,6 +106,11 @@ test('host React loads the foundation once and overlay extends the same object',
 		);
 		assert.equal(globalThis.window.ranBoosterUI, ui);
 		assert.equal(ui.CardRoot, undefined);
+		assert.deepEqual(Object.keys(ui.AlertDialog).sort(), [
+			'Popup',
+			'Portal',
+			'Root',
+		]);
 		assert.deepEqual(Object.keys(ui.Dialog).sort(), [
 			'CloseIconButton',
 			'Content',

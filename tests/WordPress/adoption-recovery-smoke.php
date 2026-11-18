@@ -42,6 +42,7 @@ if ( false === $ran_booster_recovery_root || $ran_booster_recovery_root !== $ran
 	throw new RuntimeException( 'The exact disposable site boundaries could not be verified.' );
 }
 
+require_once __DIR__ . '/RecoveryHttpDiagnostic.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 require_once ABSPATH . 'wp-admin/includes/theme.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
@@ -388,8 +389,12 @@ final class RAN_Booster_AdoptionRecoveryProof {
 				} else {
 					$query['package'] = $id;
 				}
-				$response = wp_remote_get( add_query_arg( $query, $origin . '/wp-admin/admin.php' ), $options );
-				$this->report_http_failure( $response, $type, $source, $damaged, $recovery );
+				$url      = add_query_arg( $query, $origin . '/wp-admin/admin.php' );
+				$response = wp_remote_get( $url, $options );
+				if ( '1' === getenv( 'RAN_BOOSTER_RECOVERY_HTTP_DIAGNOSTICS' ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable CLI diagnostic goes to the CI log.
+					fwrite( STDERR, \RAN\Tests\WordPress\RecoveryHttpDiagnostic::format( $response, $url, $type, $source, $damaged, $recovery ) );
+				}
 				$this->check( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ), 'real authenticated package/recovery GET remains available' );
 				$this->assert_admin_html( wp_remote_retrieve_body( $response ), $type, $id, $damaged, $recovery, $blocked );
 			}
@@ -401,81 +406,6 @@ final class RAN_Booster_AdoptionRecoveryProof {
 				$_COOKIE[ LOGGED_IN_COOKIE ] = $original_cookie;
 			}
 		}
-	}
-
-	private function report_http_failure( mixed $response, string $type, string $source, bool $damaged, bool $recovery ): void {
-		if ( '1' !== getenv( 'RAN_BOOSTER_RECOVERY_HTTP_DIAGNOSTICS' ) || ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) ) {
-			return;
-		}
-
-		$diagnostic = array(
-			'type'    => $type,
-			'source'  => $source,
-			'state'   => $damaged ? 'damaged' : 'healthy',
-			'view'    => $recovery ? 'recovery' : 'package',
-			'outcome' => is_wp_error( $response ) ? 'wp_error' : 'http_response',
-		);
-		if ( is_wp_error( $response ) ) {
-			$diagnostic['error_code']    = $this->safe_http_error_code( $response->get_error_code() );
-			$diagnostic['error_message'] = $this->safe_http_error_message( $response->get_error_message() );
-		} else {
-			$location                    = wp_remote_retrieve_header( $response, 'location' );
-			$content_type                = wp_remote_retrieve_header( $response, 'content-type' );
-			$diagnostic['status']        = $this->safe_http_status( wp_remote_retrieve_response_code( $response ) );
-			$diagnostic['reason']        = '' === wp_remote_retrieve_response_message( $response ) ? 'absent' : 'present';
-			$diagnostic['location_path'] = $this->safe_http_location_path( $location );
-			$diagnostic['content_type']  = $this->safe_http_content_type( $content_type );
-		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable WP-CLI diagnostic must reach the CI log without creating a runtime artifact.
-		fwrite( STDERR, '[RAN_RECOVERY_HTTP_DIAGNOSTIC] ' . wp_json_encode( $diagnostic ) . PHP_EOL );
-	}
-
-	private function safe_http_error_code( mixed $code ): string {
-		return is_string( $code ) && in_array( $code, array( 'http_api_curl', 'http_api_failed', 'http_request_failed', 'http_request_not_executed' ), true ) ? $code : 'redacted';
-	}
-
-	private function safe_http_error_message( mixed $message ): string {
-		if ( ! is_string( $message ) || 256 < strlen( $message ) ) {
-			return 'redacted';
-		}
-
-		if ( 1 === preg_match( '/\AcURL error ([0-9]{1,3}):/D', $message, $matches ) ) {
-			return 'cURL error ' . $matches[1];
-		}
-
-		return '' === $message ? 'absent' : 'redacted';
-	}
-
-	private function safe_http_location_path( mixed $location ): string {
-		if ( ! is_string( $location ) || 2048 < strlen( $location ) ) {
-			return 'redacted';
-		}
-
-		if ( '' === $location ) {
-			return 'absent';
-		}
-
-		$path = wp_parse_url( $location, PHP_URL_PATH );
-
-		return is_string( $path ) && in_array( $path, array( '/wp-login.php', '/wp-admin/', '/wp-admin/admin.php' ), true ) ? $path : 'redacted';
-	}
-
-	private function safe_http_content_type( mixed $content_type ): string {
-		if ( ! is_string( $content_type ) || 256 < strlen( $content_type ) ) {
-			return 'redacted';
-		}
-
-		$type = strtok( $content_type, ';' );
-		if ( false === $type ) {
-			return 'absent';
-		}
-		$type = strtolower( trim( $type ) );
-
-		return in_array( $type, array( 'application/json', 'text/html', 'text/plain', 'application/xhtml+xml', 'application/xml' ), true ) ? $type : ( '' === $type ? 'absent' : 'redacted' );
-	}
-
-	private function safe_http_status( mixed $status ): int|string {
-		return is_int( $status ) && 100 <= $status && 599 >= $status ? $status : 'redacted';
 	}
 
 	private function adopt( string $type, string $id, string $slug ): void {

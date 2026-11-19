@@ -559,7 +559,7 @@ final class RepositoryDetailRenderer {
 			<?php } elseif ( 'link' === ( $action['type'] ?? null ) ) { ?>
 				<?php $webhooks_link = 'core:provider-webhooks' === ( $action['key'] ?? null ) && true === ( $action['external'] ?? false ); ?>
 				<?php /* translators: %s: repository provider name. */ ?>
-				<a<?php echo $webhooks_link ? '' : ' class="' . esc_attr( ButtonClasses::secondary( false, true ) ) . '"'; ?> href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( $webhooks_link ? sprintf( __( 'Manage repo webhooks on %s', 'ran-booster' ), 'GitHub' === $provider_label ? 'Github' : $provider_label ) : (string) ( $action['label'] ?? '' ) ); ?>
+				<a<?php echo $webhooks_link ? '' : ' class="' . esc_attr( ButtonClasses::secondary( false, true ) ) . '"'; ?> href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( $webhooks_link ? sprintf( __( 'Manage repo webhooks on %s', 'ran-booster' ), $provider_label ) : (string) ( $action['label'] ?? '' ) ); ?>
 				<?php if ( $webhooks_link ) { ?>
 					<?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?>
 				<?php } ?></a>

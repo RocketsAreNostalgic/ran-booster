@@ -3077,6 +3077,12 @@ final class TroubleshootingViewTest extends TestCase {
 		foreach ( array( 'status', 'repositories', 'webhook-receiver' ) as $panel_name ) {
 			$provider_task      = $panel_name;
 			$provider_view_data = $this->provider_view_data( get_defined_vars() );
+			// The receiver offers Automated setup only for a provider with complete webhook management.
+			$provider_view_data['webhook_management'] = new class() {
+				public function supports_provider( string $provider_code ): bool {
+					return 'gh' === $provider_code;
+				}
+			};
 			if ( null !== $mutate_view_data ) {
 				$provider_view_data = $mutate_view_data( $provider_view_data );
 			}
@@ -3165,7 +3171,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'name="repository_view" value="branch"', $form[1] );
 		self::assertStringContainsString( '<option value="">Choose a repository</option>', $form[1] );
 		self::assertMatchesRegularExpression( '~<option value="branch-1" data-ran-booster-webhook-set="false">\s*owner/branch-repo\s*</option>~', $form[1] );
-		self::assertMatchesRegularExpression( '~<option value="release-1" data-ran-booster-webhook-set="false">\s*owner/release-repo\s*</option>~', $form[1] );
+		// Owner decision (2026-11-16): releases-only repositories are listed but not selectable.
+		self::assertMatchesRegularExpression( '~<option value="release-1" data-ran-booster-webhook-set="false" disabled>\s*owner/release-repo — Push-to-Deploy ineligible\s*</option>~u', $form[1] );
 		self::assertStringNotContainsString( '🟢', $form[1] );
 		self::assertMatchesRegularExpression( '~<button type="submit" [^>]*data-ran-booster-receiver-submit>Manage webhook</button>~', $form[1] );
 		self::assertStringNotContainsString( 'Pushes are ignored', $html );
@@ -3206,11 +3213,22 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 		self::assertStringContainsString( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', $html );
 
-		$empty = $this->render_provider_panels( $ready, array() )['webhook-receiver'];
-		self::assertStringNotContainsString( 'role="tablist"', $empty );
-		self::assertStringNotContainsString( 'Automated setup', $empty );
-		self::assertStringNotContainsString( 'Manage webhook', $empty );
-		self::assertStringContainsString( 'Payload URL', $empty );
+		$empty       = $this->render_provider_panels( $ready, array() )['webhook-receiver'];
+		$unsupported = $this->render_provider_panels(
+			$ready,
+			$this->branch_and_release_repositories(),
+			static function ( array $data ): array {
+				$data['webhook_management'] = null;
+
+				return $data;
+			}
+		)['webhook-receiver'];
+		foreach ( array( $empty, $unsupported ) as $manual_only ) {
+			self::assertStringNotContainsString( 'role="tablist"', $manual_only );
+			self::assertStringNotContainsString( 'Automated setup', $manual_only );
+			self::assertStringNotContainsString( 'Manage webhook', $manual_only );
+			self::assertStringContainsString( 'Payload URL', $manual_only );
+		}
 	}
 
 	public function test_receiver_marks_repositories_with_a_recorded_identified_webhook(): void {
@@ -3249,7 +3267,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringContainsString( 'data-ran-booster-webhook-set="true">', $html );
 		self::assertMatchesRegularExpression( '~<option value="branch-1" data-ran-booster-webhook-set="true">\s*🟢 owner/branch-repo — webhook set up\s*</option>~u', $html );
-		self::assertMatchesRegularExpression( '~<option value="release-1" data-ran-booster-webhook-set="false">\s*owner/release-repo\s*</option>~', $html );
+		self::assertMatchesRegularExpression( '~<option value="release-1" data-ran-booster-webhook-set="false" disabled>\s*owner/release-repo — Push-to-Deploy ineligible\s*</option>~u', $html );
 		self::assertSame( 1, substr_count( $html, '🟢' ) );
 	}
 
@@ -3531,7 +3549,7 @@ final class TroubleshootingViewTest extends TestCase {
 				$xpath = new \DOMXPath( $document );
 				self::assertSame( in_array( $mode, array( 'no_link', 'empty', 'throws', 'absent' ), true ) ? 0.0 : 1.0, $xpath->evaluate( 'count(//div[@data-test-webhook-controls]/a)' ) );
 				if ( in_array( $mode, array( 'no_link', 'empty', 'throws', 'absent', 'different' ), true ) ) {
-					self::assertStringContainsString( 'Manage repo webhooks on ' . ( 'gh' === $provider_code ? 'Github' : $provider['label'] ), $html );
+					self::assertStringContainsString( 'Manage repo webhooks on ' . $provider['label'], $html );
 					self::assertStringContainsString( '<span aria-hidden="true">↗</span>', $html );
 					self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 				}

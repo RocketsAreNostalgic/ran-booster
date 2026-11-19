@@ -15,10 +15,12 @@
 
 declare(strict_types=1);
 
-// PHP caches the temp directory on the first sys_get_temp_dir() call, so read the environment instead.
+// PHP caches the temp directory on the first sys_get_temp_dir() call, so that call must not happen before
+// `putenv()` below. Resolve the base from the environment, then the ini setting, then `/tmp`, without it.
 ( static function (): void {
 	$base = getenv( 'TMPDIR' );
-	$base = false === $base || '' === $base ? sys_get_temp_dir() : $base;
+	$base = false === $base || '' === $base ? ini_get( 'sys_temp_dir' ) : $base;
+	$base = false === $base || '' === $base ? '/tmp' : $base;
 	$base = realpath( $base );
 	if ( false === $base ) {
 		return;

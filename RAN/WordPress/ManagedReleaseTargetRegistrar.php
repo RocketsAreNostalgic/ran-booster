@@ -794,6 +794,10 @@ final class ManagedReleaseTargetRegistrar {
 				continue;
 			}
 			$identifier = (string) $package->get_identifier();
+			// Removing this offer is the loop's only effect, so a package without one needs no authority read.
+			if ( ! array_key_exists( $identifier, $transient->response ) ) {
+				continue;
+			}
 			if ( PackageSource::RELEASE_ASSET !== $package->get_source() ) {
 				unset( $transient->response[ $identifier ] );
 

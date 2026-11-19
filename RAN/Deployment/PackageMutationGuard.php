@@ -76,7 +76,8 @@ final class PackageMutationGuard {
 					'event' => 'file_mods_disabled',
 				)
 			);
-			throw new RuntimeException( 'WordPress file modifications are disabled for this site.' );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; presentation owns escaping.
+			throw new DeploymentCheckFailure( DeploymentOutcome::CODE_DEPLOYMENT_FILE_MODS_DISABLED, 'WordPress file modifications are disabled for this site.' );
 		}
 	}
 

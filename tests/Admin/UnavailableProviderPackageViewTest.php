@@ -81,10 +81,11 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 				$packages,
 				$package_providers,
 				array(
-					'search'   => '',
-					'provider' => '',
-					'source'   => '',
-					'policy'   => '',
+					'search'    => '',
+					'provider'  => '',
+					'source'    => '',
+					'policy'    => '',
+					'attention' => '',
 				),
 				new \RAN\Admin\DeploymentAdminPresenter()
 			);

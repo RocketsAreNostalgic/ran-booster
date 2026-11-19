@@ -3240,10 +3240,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 	#[DataProvider( 'package_list_filter_provider' )]
 	public function test_package_indexes_apply_combined_normalized_filters_for_both_package_types( string $type, string $release_name ): void {
 		$_GET    = array(
-			's'        => ' release ',
-			'provider' => 'BB',
-			'source'   => 'release_asset',
-			'policy'   => 'automatic',
+			's'         => ' release ',
+			'provider'  => 'BB',
+			'source'    => 'release_asset',
+			'policy'    => 'automatic',
+			'attention' => 'paused',
 		);
 		$branch  = $this->managed_package(
 			'plugin' === $type ? 'alpha/alpha.php' : 'alpha-theme',
@@ -3283,10 +3284,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 3, $data['package_list_total'] );
 		self::assertSame(
 			array(
-				'search'   => 'release',
-				'provider' => 'bb',
-				'source'   => 'release_asset',
-				'policy'   => 'automatic',
+				'search'    => 'release',
+				'provider'  => 'bb',
+				'source'    => 'release_asset',
+				'policy'    => 'automatic',
+				'attention' => '',
 			),
 			$data['package_list_state']
 		);
@@ -3314,10 +3316,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function test_package_indexes_discard_malformed_and_unsupported_filter_values( string $type, string $release_name ): void {
 		unset( $release_name );
 		$_GET    = array(
-			's'        => array( 'not-scalar' ),
-			'provider' => 'missing-provider',
-			'source'   => 'archive',
-			'policy'   => 'sometimes',
+			's'         => array( 'not-scalar' ),
+			'provider'  => 'missing-provider',
+			'source'    => 'archive',
+			'policy'    => 'sometimes',
+			'attention' => array( 'failed' ),
 		);
 		$package = $this->managed_package(
 			'plugin' === $type ? 'example/example.php' : 'example-theme',
@@ -3338,10 +3341,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame(
 			array(
-				'search'   => '',
-				'provider' => '',
-				'source'   => '',
-				'policy'   => '',
+				'search'    => '',
+				'provider'  => '',
+				'source'    => '',
+				'policy'    => '',
+				'attention' => '',
 			),
 			$data['package_list_state']
 		);
@@ -3636,11 +3640,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function test_bulk_package_redirect_preserves_only_normalized_list_filters(): void {
 		$_GET = array(
-			's'        => ' release ',
-			'provider' => 'BB',
-			'source'   => 'release_asset',
-			'policy'   => 'automatic',
-			'unsafe'   => '<script>',
+			's'         => ' release ',
+			'provider'  => 'BB',
+			'source'    => 'release_asset',
+			'policy'    => 'automatic',
+			'attention' => 'Failed',
+			'unsafe'    => '<script>',
 		);
 
 		$url = $this->dashboard( $this->throwing_secrets() )->bulk_package_redirect(
@@ -3662,6 +3667,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'bb', $query['provider'] );
 		self::assertSame( 'release_asset', $query['source'] );
 		self::assertSame( 'automatic', $query['policy'] );
+		self::assertSame( 'failed', $query['attention'] );
 		self::assertArrayNotHasKey( 'unsafe', $query );
 		self::assertArrayHasKey( '_ran_booster_bulk_notice_nonce', $query );
 	}

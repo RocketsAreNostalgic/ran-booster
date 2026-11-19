@@ -85,7 +85,7 @@ final class PackagePagePresenter {
 	/**
 	 * @param array<string, Package>|list<Package> $packages
 	 * @param list<array<string, mixed>> $package_providers
-	 * @param array{search: string, provider: string, source: string, policy: string} $package_list_state
+	 * @param array{search: string, provider: string, source: string, policy: string, attention: string} $package_list_state
 	 * @return array<string, mixed>
 	 */
 	public function index(
@@ -100,12 +100,18 @@ final class PackagePagePresenter {
 		) {
 			$package_list_state['provider'] = '';
 		}
-		$filtered_packages = $this->filter_packages( $packages, $package_list_state, $package_provider_options );
+		$failed = $deployments->failed_update_identifiers( array_values( array_filter( $packages, static fn ( mixed $package ): bool => $package instanceof Package ) ), $this->type );
+		if ( null === $failed ) {
+			// Unreadable Activity is never "none failed": the control is disabled and the filter dropped.
+			$package_list_state['attention'] = '';
+		}
+		$filtered_packages = $this->filter_packages( $packages, $package_list_state, $package_provider_options, $failed ?? array() );
 
 		return array(
 			'packages'                  => $filtered_packages,
 			'package_list_total'        => count( $packages ),
 			'package_list_state'        => $package_list_state,
+			'package_attention_enabled' => null !== $failed,
 			'package_provider_options'  => $package_provider_options,
 			'package_view'              => $this,
 			'package_providers'         => $package_providers,
@@ -219,18 +225,19 @@ final class PackagePagePresenter {
 
 	/**
 	 * @param array<string, Package>|list<Package> $packages
-	 * @param array{search: string, provider: string, source: string, policy: string} $state
+	 * @param array{search: string, provider: string, source: string, policy: string, attention: string} $state
 	 * @param list<array{code: string, label: string}> $provider_options
+	 * @param list<string> $failed Identifiers whose decisive update outcome is failed or needs review.
 	 * @return list<Package>
 	 */
-	private function filter_packages( array $packages, array $state, array $provider_options ): array {
+	private function filter_packages( array $packages, array $state, array $provider_options, array $failed ): array {
 		$provider_labels = array_column( $provider_options, 'label', 'code' );
 		$search          = strtolower( $state['search'] );
 
 		return array_values(
 			array_filter(
 				$packages,
-				static function ( mixed $package ) use ( $state, $provider_labels, $search ): bool {
+				static function ( mixed $package ) use ( $state, $provider_labels, $search, $failed ): bool {
 					if ( ! $package instanceof Package ) {
 						return false;
 					}
@@ -243,6 +250,9 @@ final class PackagePagePresenter {
 						return false;
 					}
 					if ( '' !== $state['policy'] && $package->get_deployment_policy()->value !== $state['policy'] ) {
+						return false;
+					}
+					if ( '' !== $state['attention'] && ! in_array( $package->get_identifier(), $failed, true ) ) {
 						return false;
 					}
 					if ( '' === $search ) {

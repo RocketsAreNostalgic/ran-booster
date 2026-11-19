@@ -7,6 +7,7 @@ namespace RAN\Admin;
 use InvalidArgumentException;
 use LogicException;
 use RAN\Dashboard;
+use RAN\Deployment\DeploymentCheckFailure;
 use RAN\Deployment\DeploymentStorageFailure;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\InvalidPackageSubdirectory;
@@ -268,6 +269,9 @@ final class PackageAdminController {
 				)
 			);
 			return false;
+		} catch ( DeploymentCheckFailure $failure ) {
+			// Refused before admission with a closed code whose copy exists; nothing was recorded.
+			return $this->coded_refusal( $action, $failure->outcome_code, $add_context_message );
 		} catch ( Throwable $failure ) {
 
 			return $this->manual_failure( $dashboard, $add_context_message, $failure, $action );
@@ -333,6 +337,9 @@ final class PackageAdminController {
 			return $this->terminal_deployment_failure( $dashboard, $add_context_message, $result, $action );
 		}
 		if ( 'failed' === $status && is_string( $result['outcome_code'] ?? null ) ) {
+			if ( 'install' === $operation->operation ) {
+				return $this->coded_refusal( $action, $result['outcome_code'], $add_context_message );
+			}
 
 			$this->removal_failure( $operation, $result['outcome_code'], $add_context_message );
 			return false;
@@ -871,6 +878,28 @@ final class PackageAdminController {
 		return false;
 	}
 
+	/**
+	 * Show the existing copy for a closed refusal code that no attempt recorded.
+	 *
+	 * @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $add_context_message
+	 */
+	private function coded_refusal( string $action, string $code, \Closure $add_context_message ): bool {
+		status_header( 400 );
+		$add_context_message(
+			new WP_Error(
+				'ran_booster_refused_' . $code,
+				'package_already_exists' === $code
+					? __( 'That plugin or theme is already installed or managed. No package was overwritten.', 'ran-booster' )
+					: DeploymentOutcomeMessage::for_code( $code )
+			),
+			array(
+				'operation' => $action,
+				'step'      => 'manual_package_operation',
+			)
+		);
+		return false;
+	}
+
 	/** @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $add_context_message */
 	private function removal_failure( PackageOperation $operation, string $code, \Closure $add_context_message ): void {
 		$type    = 'plugin' === $operation->package_type
@@ -894,7 +923,6 @@ final class PackageAdminController {
 				__( '%s removal could not be verified. Review its files and Booster management before retrying.', 'ran-booster' ),
 				$type
 			),
-			'package_already_exists' => __( 'That plugin or theme is already installed or managed. No package was overwritten.', 'ran-booster' ),
 			'operation_in_progress' => sprintf(
 				/* translators: %s: package type, such as Plugin or Theme. */
 				__( '%s was not removed because another Booster operation still owns it.', 'ran-booster' ),

@@ -14,8 +14,9 @@ pnpm check
 Full CI runs `Repository quality` and `Development analysis` in parallel after
 `Runtime archive`, both at its exact source commit. Repository quality runs
 `composer check:repository`, immutable template-pack verification and unchanged
-`pnpm check`. Both `check` and `check:repository` run `i18n:check` first, then the
-shared `check:common` stages; the former ends with complete `analyze`, the latter
+`pnpm check`. Both `check` and `check:repository` run `i18n:check` first, which checks that
+the strings extract cleanly (the translation template is generated in the release build and is
+not committed), then the shared `check:common` stages; the former ends with complete `analyze`, the latter
 with `analyze:production`. Development analysis runs `composer analyze:development` with four
 workers and no cache, as two matrix legs: `PHPSTAN_DEVELOPMENT_SHARD` set to `1/2` or `2/2`
 gives each leg a disjoint half of the complete analysis groups, keeping the batched group and

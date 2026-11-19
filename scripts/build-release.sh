@@ -44,7 +44,6 @@ committed_entries=(
 	'assets'
 	'autoload.php'
 	'index.php'
-	'languages'
 	'license.txt'
 	'ran-booster.php'
 	'readme.txt'
@@ -52,6 +51,7 @@ committed_entries=(
 	'views'
 )
 generated_entries=(
+	'languages'
 	'ran-booster-packages.json'
 	'ran-booster-release.json'
 )
@@ -291,6 +291,11 @@ for index in "${!package_roots[@]}"; do
 		esac
 	done
 done
+
+# The translation template is generated from the staged sources, not committed.
+# The verifier regenerates it from the release commit and compares the bytes.
+bash "$script_dir/make-pot.sh" --source "$stage_root" --output "$stage_root/languages/ran-booster.pot"
+chmod 0755 "$stage_root/languages"
 
 # This positive provenance marker exists only inside an official staged archive.
 # Source checkouts therefore fail closed unless an operator explicitly enables

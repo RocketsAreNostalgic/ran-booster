@@ -52,9 +52,6 @@ the owner named a lane does not make one.
   the quality tests and breaks the gates for every lane.
 - A lane touches only the files it was given. Two lanes never edit the same
   file. If a lane needs a file another lane owns, stop and ask the owner.
-- `languages/ran-booster.pot` belongs to no lane. Regenerate it as the last
-  step, after merging the latest `origin/main` into the branch and before
-  asking for a merge. Resolve a conflict in it by regenerating, never by hand.
 - No stacked pull requests and no integration branch between lanes. Each lane
   opens its own pull request against `main`.
 - Merging follows the batching rule under Pull requests: file-disjoint pull

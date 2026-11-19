@@ -6,9 +6,10 @@
 # install of the same commit's composer.json and composer.lock.
 # ran-booster-release.json is generated only in the temporary archive stage from
 # the selected version and immutable commit. ran-booster-packages.json is
-# generated there too, from the locked runtime package versions. The build and
-# verification scripts reject every path outside these two declarative
-# allowlists.
+# generated there too, from the locked runtime package versions. languages/
+# holds the translation template, generated there by scripts/make-pot.sh from
+# the staged sources; it is not committed. The build and verification scripts
+# reject every path outside these two declarative allowlists.
 NOTICE.md
 RAN
 assets

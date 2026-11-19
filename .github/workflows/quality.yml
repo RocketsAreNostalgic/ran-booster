@@ -155,7 +155,7 @@ jobs:
             '{schema:"ran-profile-b-promotion",schema_version:1,repository:$repository,quality_commit:$quality_commit,source_commit:$source_commit,tag:$tag,assets:[{name:$archive_name,sha256:$archive_sha256},{name:$checksum_name,sha256:$checksum_sha256}]}' \
             > build/ran-profile-b-promotion.json
 
-          wordpress_matrix='{"include":[{"wordpress":"7.0.3","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"critical","plugin_check":true},{"wordpress":"7.0.3","database":"MariaDB 10.11","database_image":"mariadb:10.11","suite":"critical","plugin_check":false}]}'
+          wordpress_matrix='{"include":[{"wordpress":"7.0","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"compatibility","plugin_check":false},{"wordpress":"7.0.3","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"critical","plugin_check":true},{"wordpress":"7.0.3","database":"MariaDB 10.11","database_image":"mariadb:10.11","suite":"critical","plugin_check":false},{"wordpress":"7.0.3","database":"MySQL 8.0 floor","database_image":"mysql:8.0","suite":"floor","plugin_check":false}]}'
           {
             printf 'artifact-name=ran-booster-runtime-%s-%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
             printf 'archive-sha256=%s\n' "$archive_sha256"
@@ -440,7 +440,7 @@ jobs:
       needs: runtime-archive
       if: ${{ needs.runtime-archive.outputs.lane == 'full' }}
       runs-on: ubuntu-24.04
-      timeout-minutes: 30
+      timeout-minutes: 10
       env:
           RAN_PRIVATE_MIGRATOR: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/integration/171-github-blueprint' && matrix.suite == 'critical' }}
       strategy:
@@ -807,31 +807,7 @@ jobs:
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
             run: |
                 printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
-                # Temporary #1087 diagnostic: same-runner A/B of commit durability; reverted before review.
-                db() { php -r '$m = new mysqli("127.0.0.1", "root", "root", "", 3306); foreach (array_slice($argv, 1) as $q) { $r = $m->query($q); if ($r instanceof mysqli_result) { while ($row = $r->fetch_row()) { echo implode("=", $row), "\n"; } } }' "$@"; }
-                db "SELECT VERSION()" "SHOW GLOBAL VARIABLES WHERE Variable_name IN ('log_bin','sync_binlog','binlog_format','innodb_flush_log_at_trx_commit','innodb_flush_method','innodb_doublewrite','transaction_isolation','innodb_buffer_pool_size','innodb_log_file_size','innodb_redo_log_capacity','performance_schema','innodb_use_native_aio','innodb_io_capacity')"
-                status() { db "SHOW GLOBAL STATUS WHERE Variable_name IN ('Questions','Com_commit','Handler_commit','Com_insert','Com_update','Com_delete','Com_select','Innodb_os_log_fsyncs','Innodb_data_fsyncs','Binlog_cache_use','Innodb_log_writes','Innodb_rows_inserted','Innodb_rows_updated','Innodb_rows_deleted')" | sort; }
-                pass() {
-                    label="$1"
-                    status > "$RUNNER_TEMP/before"
-                    start=$(date +%s.%N)
-                    rc=0
-                    composer test:release-capability-installed > "$RUNNER_TEMP/pass-$label.log" 2>&1 || rc=$?
-                    end=$(date +%s.%N)
-                    status > "$RUNNER_TEMP/after"
-                    ops=$(grep -o '"operation_seconds":[0-9.]*' "$RUNNER_TEMP/pass-$label.log" | cut -d: -f2 | awk '{s+=$1} END {printf "%.1f", s}')
-                    printf 'DIAG pass=%s exit=%s wall=%.1fs native_operation_sum=%ss\n' "$label" "$rc" "$(awk -v a="$start" -v b="$end" 'BEGIN {print b - a}')" "$ops"
-                    join -t= "$RUNNER_TEMP/before" "$RUNNER_TEMP/after" | awk -F= -v l="$label" '{printf "DIAG pass=%s %s=%d\n", l, $1, $3-$2}'
-                    if [[ "$rc" != 0 ]]; then tail -n 40 "$RUNNER_TEMP/pass-$label.log"; fi
-                }
-                pass A-default
-                db "SET GLOBAL sync_binlog=0"
-                pass B-sync_binlog0
-                db "SET GLOBAL innodb_flush_log_at_trx_commit=2"
-                pass C-sync_binlog0-trx2
-                db "SET GLOBAL sync_binlog=1" "SET GLOBAL innodb_flush_log_at_trx_commit=1"
-                pass D-default-again
-                db "SHOW GLOBAL VARIABLES WHERE Variable_name IN ('sync_binlog','innodb_flush_log_at_trx_commit')"
+                composer test:release-capability-installed
 
           - name: Prove installed corrupt-management recovery
             if: ${{ matrix.suite == 'critical' }}

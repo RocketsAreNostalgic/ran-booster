@@ -7,7 +7,7 @@ namespace RAN\Tests;
 use PHPUnit\Framework\TestCase;
 
 final class LocalisationCatalogContractTest extends TestCase {
-	public function test_catalogue_check_rejects_warnings_and_stale_output(): void {
+	public function test_catalogue_check_rejects_warnings_and_domain_drift(): void {
 		$composer = json_decode(
 			(string) file_get_contents( dirname( __DIR__ ) . '/composer.json' ), // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
 			true,
@@ -20,7 +20,10 @@ final class LocalisationCatalogContractTest extends TestCase {
 		self::assertSame( 'bash scripts/make-pot.sh --check', $composer['scripts']['i18n:check'] ?? null );
 		self::assertContains( '@i18n:check', $composer['scripts']['check'] ?? array() );
 		self::assertStringContainsString( "grep -q '^Warning:'", $script );
-		self::assertStringContainsString( 'cmp -s "$temporary_pot" "$pot"', $script );
+		self::assertStringNotContainsString( 'is stale', $script, 'The catalogue is generated, never compared with a committed copy.' );
+		self::assertStringContainsString( '--source) ', $script );
+		self::assertStringContainsString( '--output) ', $script );
+		self::assertStringContainsString( '[[ "$mode" == check ]] && exit 0', $script );
 		self::assertStringContainsString( '--ignore-domain', $script );
 		self::assertStringContainsString( 'cmp -s "$normalised_pot" "$normalised_all_domains_pot"', $script );
 		self::assertStringContainsString( 'domain-filtered and all-domain catalogues differ', $script );
@@ -36,7 +39,6 @@ final class LocalisationCatalogContractTest extends TestCase {
 		self::assertSame( 2, substr_count( $script, "--package-name='RAN Booster'" ) );
 		self::assertSame( 2, substr_count( $script, "--file-comment=\$'Copyright (C) 2026 Rockets Are Nostalgic\\nThis file is distributed under the GPL-2.0-only.'" ) );
 		self::assertSame( 2, substr_count( $script, '"Project-Id-Version":"RAN Booster"' ) );
-		self::assertStringContainsString( '"Project-Id-Version: RAN Booster\\n"', (string) file_get_contents( dirname( __DIR__ ) . '/languages/ran-booster.pot' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
 		self::assertStringContainsString( '--include=ran-booster.php,autoload.php,index.php,uninstall.php,RAN,views,assets', $script );
 		self::assertStringContainsString( '--exclude=assets/lib,tests,vendor,build,node_modules,ran-booster-workbench,.git,.github,.agents,.dex,scripts', $script );
 
@@ -51,27 +53,36 @@ final class LocalisationCatalogContractTest extends TestCase {
 		$workflow = file_get_contents( dirname( __DIR__ ) . '/.github/workflows/quality.yml' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
 		$readme   = file_get_contents( dirname( __DIR__ ) . '/README.md' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local catalogue contract.
 		self::assertIsString( $workflow );
-		self::assertSame( 3, substr_count( $workflow, 'tools: composer:v2, wp-cli:2.12.0' ) );
+		self::assertSame( 4, substr_count( $workflow, 'tools: composer:v2, wp-cli:2.12.0' ) );
 		self::assertIsString( $readme );
 		self::assertStringContainsString( 'WP-CLI 2.12.0', $readme );
 	}
 
-	public function test_release_allowlist_contains_only_the_runtime_catalogue(): void {
+	public function test_release_allowlist_generates_the_catalogue_instead_of_committing_it(): void {
 		$root     = dirname( __DIR__ );
 		$manifest = file( $root . '/release-files.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file -- Local release contract.
 		self::assertIsArray( $manifest );
 		self::assertContains( 'languages', $manifest );
-		self::assertFileExists( $root . '/languages/ran-booster.pot' );
-		$language_files = scandir( $root . '/languages' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_scandir -- Local release contract.
-		if ( false === $language_files ) {
-			self::fail( 'Could not list the release catalogue directory.' );
-		}
-		self::assertSame( array( 'ran-booster.pot' ), array_values( array_diff( $language_files, array( '.', '..' ) ) ) );
+		$ignore = file_get_contents( $root . '/.gitignore' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+		self::assertIsString( $ignore );
+		self::assertStringContainsString( "\n/languages/ran-booster.pot\n", $ignore );
 
 		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $script_name ) {
 			$script = file_get_contents( $root . '/scripts/' . $script_name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
 			self::assertIsString( $script );
-			self::assertStringContainsString( "'languages'", $script );
+			self::assertSame( 1, preg_match( '/^committed_entries=\((.*?)^\)/ms', $script, $committed ), $script_name );
+			self::assertSame( 1, preg_match( '/^generated_entries=\((.*?)^\)/ms', $script, $generated ), $script_name );
+			self::assertStringNotContainsString( "'languages'", $committed[1], $script_name . ' must not archive a committed languages directory.' );
+			self::assertStringContainsString( "'languages'", $generated[1], $script_name );
+			self::assertStringContainsString( 'make-pot.sh', $script, $script_name );
 		}
+		$builder = file_get_contents( $root . '/scripts/build-release.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+		self::assertIsString( $builder );
+		self::assertStringContainsString( '--source "$stage_root" --output "$stage_root/languages/ran-booster.pot"', $builder );
+		$verifier = file_get_contents( $root . '/scripts/verify-release.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+		self::assertIsString( $verifier );
+		self::assertStringContainsString( "'ran-booster/languages/ran-booster.pot'", $verifier );
+		self::assertStringContainsString( 'git archive --format=tar "$commit" -- "${committed_entries[@]}"', $verifier );
+		self::assertStringContainsString( 'archived translation template does not match one regenerated from the release ref.', $verifier );
 	}
 }

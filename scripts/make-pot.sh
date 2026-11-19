@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 
-# Generate, or verify, the source-complete RAN Booster gettext catalogue.
+# Generate, or check the extraction of, the source-complete RAN Booster gettext
+# catalogue. The catalogue is not committed. The release build generates it from
+# the staged archive tree and the release verifier regenerates it from the
+# release commit; both call this script so one flag set defines it.
 #
 # Usage: make-pot.sh [--check]
+#        make-pot.sh [--source DIR] [--output FILE]
+#
+# --check checks the extraction only and writes nothing. Without options the
+# checkout's catalogue is written to the git-ignored languages/ran-booster.pot.
 
 set -euo pipefail
 
@@ -16,9 +23,23 @@ repo_root=$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null) \
 	|| fail 'run this script from a Git checkout.'
 cd "$repo_root"
 
-mode=${1:-}
-[[ -z "$mode" || "$mode" == '--check' ]] \
-	|| fail 'usage: make-pot.sh [--check]'
+mode=generate
+source_dir=$repo_root
+pot="$repo_root/languages/ran-booster.pot"
+while (( $# > 0 )); do
+	case "$1" in
+		--check) mode=check ;;
+		--source) [[ $# -ge 2 ]] || fail 'usage: make-pot.sh [--check] [--source DIR] [--output FILE]'
+			source_dir=$2; shift ;;
+		--output) [[ $# -ge 2 ]] || fail 'usage: make-pot.sh [--check] [--source DIR] [--output FILE]'
+			pot=$2; shift ;;
+		*) fail 'usage: make-pot.sh [--check] [--source DIR] [--output FILE]' ;;
+	esac
+	shift
+done
+[[ -d "$source_dir" ]] || fail "source directory does not exist: $source_dir"
+[[ "$pot" == /* ]] || fail 'the output path must be absolute.'
+source_dir=$(CDPATH='' cd -- "$source_dir" && pwd)
 
 command -v php >/dev/null 2>&1 || fail 'php is required.'
 wp_cli=$(command -v wp 2>/dev/null) || fail 'WP-CLI is required.'
@@ -30,7 +51,7 @@ wp_cli_version="$("${php_runner[@]}" "$wp_cli" --version)" \
 	|| fail 'WP-CLI 2.12.0 is required.'
 grep -qx 'WP-CLI 2.12.0' <<< "$wp_cli_version" \
 	|| fail "WP-CLI 2.12.0 is required; found ${wp_cli_version}."
-pot='languages/ran-booster.pot'
+cd "$source_dir"
 temporary_pot=$(mktemp "${TMPDIR:-/tmp}/ran-booster.pot.XXXXXX") \
 	|| fail 'could not create a temporary catalogue.'
 temporary_all_domains_pot=$(mktemp "${TMPDIR:-/tmp}/ran-booster-all-domains.pot.XXXXXX") \
@@ -87,12 +108,8 @@ sed '/^"X-Domain: /d' "$temporary_all_domains_pot" > "$normalised_all_domains_po
 cmp -s "$normalised_pot" "$normalised_all_domains_pot" \
 	|| fail 'domain-filtered and all-domain catalogues differ; every runtime string must use ran-booster.'
 
-if [[ "$mode" == '--check' ]]; then
-	cmp -s "$temporary_pot" "$pot" \
-		|| fail 'languages/ran-booster.pot is stale; run scripts/make-pot.sh.'
-	exit 0
-fi
+[[ "$mode" == check ]] && exit 0
 
-mkdir -p languages
+mkdir -p "$(dirname -- "$pot")"
 chmod 0644 "$temporary_pot"
 mv "$temporary_pot" "$pot"

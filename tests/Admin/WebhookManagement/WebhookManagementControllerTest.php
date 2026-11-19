@@ -321,12 +321,13 @@ final class WebhookManagementControllerTest extends TestCase {
 		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
 		$gateway                                 = $this->createMock( WebhookAssistanceFacade::class );
 		$gateway->method( 'target' )->willReturn( $this->target() );
-		$gateway->expects( self::once() )->method( 'setup' )->willThrowException( new \RuntimeException( 'private remote response' ) );
+		$gateway->expects( self::once() )->method( 'setup' )->willThrowException( new \RuntimeException( 'private remote response sntl-cred-7c1d' ) );
 		$store  = new OperationStoreFixture();
 		$result = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'setup', 'gh', '1234', 'credential_1', null, 'valid' );
 		self::assertSame( 'operation_failed', $result['code'] );
 		self::assertNull( $store->record );
 		self::assertSame( 'incomplete', $connection->inserted[0]['status'] );
+		self::assertStringNotContainsString( 'sntl-cred', print_r( array( $result, $connection->inserted, $connection->queries ), true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Flattens the result and activity writes for the leak assertion.
 		self::assertSame( array(), array_values( array_filter( $connection->queries, static fn ( string $query ): bool => str_starts_with( $query, 'UPDATE ' ) ) ) );
 	}
 

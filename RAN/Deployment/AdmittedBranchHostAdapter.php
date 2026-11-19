@@ -519,7 +519,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			for ( $attempt = 1; $attempt <= self::DOWNLOAD_ATTEMPTS; ++$attempt ) {
 				for ( $redirect = 0; 3 >= $redirect; ++$redirect ) {
 					$this->assert_provider_current();
-					$guard = function ( mixed $preempt, array $arguments, string $request_url ) use ( $url, $destination ): mixed {
+					$guard = function ( mixed $preempt, #[\SensitiveParameter] array $arguments, string $request_url ) use ( $url, $destination ): mixed {
 						if ( $url === $request_url && true === ( $arguments['stream'] ?? null ) && ( $arguments['filename'] ?? null ) === $destination ) {
 							$this->assert_provider_current();
 						}

@@ -120,7 +120,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	 */
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- Requests before_redirect fixes all five positional arguments; retain the reference location and data/options slots before the original request.
-	public function strip_authentication_from_redirect( mixed &$location, array &$headers, mixed $data, mixed $options, mixed $original ): void {
+	public function strip_authentication_from_redirect( mixed &$location, #[\SensitiveParameter] array &$headers, mixed $data, mixed $options, mixed $original ): void {
 		$hooks       = is_array( $options ) ? ( $options['hooks'] ?? null ) : null;
 		$owned_chain = null !== $this->operation_guard && is_object( $hooks ) && $hooks === $this->redirect_hooks?->get();
 		if ( ! is_object( $original ) || ! isset( $original->url ) || ( $original->url !== $this->url && ! $owned_chain ) ) {
@@ -145,7 +145,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	/** @param array<string, mixed> $arguments
 	 * @return array<string, mixed>
 	 */
-	public function guard_request( array $arguments, mixed $url ): array {
+	public function guard_request( #[\SensitiveParameter] array $arguments, mixed $url ): array {
 		if ( is_string( $url ) && $url === $this->url ) {
 			$this->assert_operation_allowed();
 		}
@@ -216,7 +216,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 		return false;
 	}
 
-	private function has_valid_authorization( mixed $headers ): bool {
+	private function has_valid_authorization( #[\SensitiveParameter] mixed $headers ): bool {
 		if ( ! is_array( $headers ) ) {
 			return false;
 		}

@@ -399,6 +399,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		self::assertSame( 'unexpected', $result['failure_stage'] );
 		self::assertSame( 'unexpected_runtime_failure', $result['diagnostic_code'] );
 		self::assertSame( array(), $provider->calls );
+		self::assertStringNotContainsString( 'sntl-cred', print_r( array( $url, $result ), true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Flattens the redirect and result for the leak assertion.
 	}
 
 	public function test_workflow_result_falls_back_to_the_package_release_asset_settings_when_the_repository_cannot_be_resolved(): void {
@@ -710,6 +711,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		$url                          = $controller->process_workflow_request( $this->request( 'inspect' ) );
 		self::assertStringContainsString( 'workflow_remote_unavailable', $url );
 		self::assertCount( 1, $connection->inserted );
+		self::assertStringNotContainsString( 'sntl-cred', print_r( array( $url, $connection->inserted, $connection->queries ), true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Flattens the redirect and activity writes for the leak assertion.
 		self::assertSame( 'incomplete', $connection->inserted[0]['status'] );
 		self::assertSame( array(), array_values( array_filter( $connection->queries, static fn ( string $query ): bool => str_contains( $query, 'SET status = ' ) ) ) );
 	}

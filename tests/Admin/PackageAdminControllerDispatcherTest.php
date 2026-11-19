@@ -803,6 +803,27 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertFalse( $result );
 	}
 
+	#[DataProvider( 'definitive_lookup_failures' )]
+	public function test_a_provider_failure_notice_never_carries_the_provider_text( int $code ): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( $code, text: 'sntl-cred-7c1d https://signed.example.test/a.zip?token=sntl-cred-7c1d' ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'add_failure_message' )
+			->with(
+				self::callback( static fn ( \WP_Error $notice ): bool => ! str_contains( $notice->get_error_message() . print_r( $notice->get_error_data(), true ), 'sntl-cred' ) ), // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Flattens the notice data for the leak assertion.
+				self::anything(),
+				self::callback( static fn ( array $context ): bool => ! str_contains( implode( ' ', $context ), 'sntl-cred' ) )
+			);
+
+		( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: new EditBoundaryPluginRepository( $package ),
+			themes: new EditBoundaryThemeRepository( $package ),
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', $this->unchanged_edit_request(), true );
+	}
+
 	/** @return array<string, array{int}> */
 	public static function definitive_lookup_failures(): array {
 		return array(
@@ -968,7 +989,7 @@ final class FailingLookupProvider implements RepositoryProvider {
 
 	public int $lookups = 0;
 
-	public function __construct( private readonly int $code, private readonly ?\RAN\RepositoryProvider\ProviderFailure $failure = null, private readonly bool $after_lookup = false ) {
+	public function __construct( private readonly int $code, private readonly ?\RAN\RepositoryProvider\ProviderFailure $failure = null, private readonly bool $after_lookup = false, private readonly string $text = 'Provider lookup failed.' ) {
 	}
 
 	public function get_metadata(): ProviderMetadata {
@@ -983,13 +1004,13 @@ final class FailingLookupProvider implements RepositoryProvider {
 		}
 
 		throw null === $this->failure
-			? new \RuntimeException( 'Provider lookup failed.', $this->code )
+			? new \RuntimeException( $this->text, $this->code )
 			: new \RAN\RepositoryProvider\ProviderRequestFailed( $this->failure );
 	}
 
 	public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
 		unset( $request );
-		throw null === $this->failure ? new \RuntimeException( 'Provider lookup failed.', $this->code ) : new \RAN\RepositoryProvider\ProviderRequestFailed( $this->failure );
+		throw null === $this->failure ? new \RuntimeException( $this->text, $this->code ) : new \RAN\RepositoryProvider\ProviderRequestFailed( $this->failure );
 	}
 }
 

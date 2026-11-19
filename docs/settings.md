@@ -101,8 +101,9 @@ Package sources holds "Allow branch and pre-release sources". On a site that is
 not a development site, branch sources and pre-release (Preview) tracks are
 paused until it is on: manual and automatic updates, reinstalls, branch installs
 and switches into either source are refused, and a push is accepted and recorded
-as paused. Check now and Check releases still work, stable releases are never
-paused, and Booster's own updates are outside this setting. A development site
+as paused. Check now still works; Check releases on a paused Preview track reads
+as updates off. Stable releases are never paused, and Booster's own updates are
+outside this setting. A development site
 is an explicit `local` or `development` environment type, or a home host that is
 loopback, `localhost`, or ends in `.localhost`, `.test` or `.local`; nothing is
 paused there. `RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES` set to `true` or

@@ -108,6 +108,24 @@ final class NativePortabilityFacadeTest extends TestCase {
 		self::assertSame( PortabilityReviewResult::PROTECTED, $manual->action );
 	}
 
+	public function test_a_paused_site_blocks_a_branch_adoption_without_claiming_it(): void {
+		$facade = $this->facade( true );
+		$review = $facade->review( $this->candidate(), 'valid-nonce' );
+		self::assertSame( PortabilityReviewResult::ADOPT, $review->action );
+
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+		try {
+			$result = $facade->apply( $this->candidate(), $review->fingerprint, 'valid-nonce', $review->provider_expectation );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_test_home_url'] );
+		}
+		self::assertSame(
+			array( PortabilityApplyResult::BLOCKED, 'forbidden', 'Updates are paused by a site setting.', false ),
+			array( $result->status, $result->reason, $result->message, $result->target_verified )
+		);
+	}
+
 	public function test_apply_recomputes_and_rejects_a_changed_review(): void {
 		$facade = $this->facade( true, true, $this->managed_plugin( false ) );
 		$review = $facade->review( $this->candidate(), 'valid-nonce' );

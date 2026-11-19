@@ -236,6 +236,9 @@ final readonly class PortabilityApplicationService {
 			$reason = TargetPackageReason::from( $refusal );
 			return new PortabilityApplyResult( PortabilityApplyResult::BLOCKED, $refusal, $reason->message(), false );
 		}
+		if ( self::paused( $package ) ) {
+			return new PortabilityApplyResult( PortabilityApplyResult::BLOCKED, 'forbidden', __( 'Updates are paused by a site setting.', 'ran-booster' ), false );
+		}
 		$result = $this->apply_item(
 			$blueprint,
 			$item,
@@ -244,6 +247,9 @@ final readonly class PortabilityApplicationService {
 			$candidate->credential_id,
 			$context['private']
 		);
+		if ( 'adopted' !== $result['status'] ) {
+			return new PortabilityApplyResult( PortabilityApplyResult::FAILED, 'unexpected_failure', $result['message'], false );
+		}
 
 		return new PortabilityApplyResult(
 			PortabilityApplyResult::ADOPTED,
@@ -411,8 +417,7 @@ final readonly class PortabilityApplicationService {
 		if ( ! $this->is_actionable( $item ) ) {
 			return $this->result( 'skipped', __( 'This package changed or cannot be applied. Review the Blueprint again.', 'ran-booster' ) );
 		}
-		$release = $item->package->release_configuration;
-		if ( PackageSourceGate::pauses( null === $release ? PackageSource::BRANCH : PackageSource::RELEASE_ASSET, $release?->channel() ) ) {
+		if ( self::paused( $item->package ) ) {
 			return $this->result( 'skipped', __( 'Updates are paused by a site setting.', 'ran-booster' ) );
 		}
 		$credential_state = in_array( $source, array( 'import', 'target' ), true ) ? 'unavailable' : 'none';
@@ -461,6 +466,11 @@ final readonly class PortabilityApplicationService {
 				$credential_state
 			);
 		}
+	}
+
+	private static function paused( BlueprintPackage $package ): bool {
+		$release = $package->release_configuration;
+		return PackageSourceGate::pauses( null === $release ? PackageSource::BRANCH : PackageSource::RELEASE_ASSET, $release?->channel() );
 	}
 
 	/** @return array{status:string,message:string,credential_state:string} */

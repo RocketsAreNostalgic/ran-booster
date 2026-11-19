@@ -1234,7 +1234,10 @@ records exception messages or provider text. Logging happens only when
 `WP_DEBUG_LOG` or the Troubleshooting capture is on.
 
 For a deployment, Core maps the reason to its attempt outcome:
-`credential_*` to `provider_credential_rejected`, `permission_denied` to
+`credential_missing` and `credential_format_invalid` to `provider_request_invalid`,
+the other `credential_*` to `provider_credential_rejected`,
+`site_filesystem_unsupported` to `deployment_filesystem_unsupported`,
+`site_zip_unavailable` to `deployment_zip_extension_missing`, `permission_denied` to
 `provider_access_denied`, `repository_not_found*` and `owner_not_found` to
 `provider_repository_missing`, `ref_not_found` and `repository_no_default_branch`
 to `provider_reference_unavailable`, `rate_limited*` to

@@ -710,6 +710,16 @@ class Dashboard {
 			}
 		}
 		$result = $preferences->save( $token, $values, $this->github_visibility->with_management_admission_lock( ... ), $this->github_visibility->github_hide_eligible( ... ), $scope );
+		if ( in_array( $scope, array( 'branch_sources', 'prerelease_sources' ), true ) ) {
+			BoosterLogger::log(
+				'Package source setting save finished.',
+				array(
+					'operation'    => 'save_' . $scope,
+					'outcome_code' => $result,
+					'state'        => \RAN\Deployment\PackageSourceGate::allows( $scope ) ? 'allowed' : 'paused',
+				)
+			);
+		}
 		if ( in_array( $result, array( 'saved', 'unchanged' ), true ) ) {
 			// The live descriptor admission fence remains authoritative even if local offer removal fails.
 			if ( in_array( $scope, array( 'all', 'self_update_discovery' ), true ) && ! \RAN\WordPress\CoreSelfUpdatePolicy::detect( dirname( __DIR__ ) . '/ran-booster.php', (string) ( get_file_data( dirname( __DIR__ ) . '/ran-booster.php', array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' ), true )->allows_native_discovery() ) {

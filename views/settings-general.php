@@ -47,7 +47,8 @@ $value               = static function ( string $key ) use ( $general_attempted,
 $group_titles        = array(
 	'hide_github'           => __( 'Appearance', 'ran-booster' ),
 	'self_update_discovery' => __( 'Core updates', 'ran-booster' ),
-	'package_sources'       => __( 'Package sources', 'ran-booster' ),
+	'branch_sources'        => __( 'Branch sources', 'ran-booster' ),
+	'prerelease_sources'    => __( 'Preview tracks', 'ran-booster' ),
 	'history'               => __( 'History', 'ran-booster' ),
 	'download'              => __( 'Download limits', 'ran-booster' ),
 );
@@ -298,12 +299,6 @@ $source_scopes = array_filter(
 	static fn ( string $scope ): bool => 'all' === $general_scope || $scope === $general_scope,
 	ARRAY_FILTER_USE_KEY
 );
-if ( 'all' === $general_scope ) {
-	?>
-	<fieldset class="ran-booster-settings__group">
-		<legend><?php echo esc_html( $group_titles['package_sources'] ); ?></legend>
-	<?php
-}
 foreach ( $source_scopes as $source_scope => $source_label ) {
 	$source      = $field( $source_scope );
 	$source_id   = 'ran-booster-' . str_replace( '_', '-', $source_scope );
@@ -316,6 +311,10 @@ foreach ( $source_scopes as $source_scope => $source_label ) {
 	};
 	$source_described = trim( ( null === $source_help ? '' : $source_id . '-help' ) . ( null === $field_error( $source_scope ) ? '' : ' ' . $source_id . '-error' ) );
 	$open_scope( $source_scope );
+	?>
+	<fieldset class="ran-booster-settings__group">
+		<legend><?php echo esc_html( $group_titles[ $source_scope ] ); ?></legend>
+	<?php
 	if ( ! $source['locked'] ) {
 		?>
 		<input type="hidden" name="ran_booster[preferences][<?php echo esc_attr( $source_scope ); ?>]" value="0"><?php } ?>
@@ -336,6 +335,7 @@ foreach ( $source_scopes as $source_scope => $source_label ) {
 		<div id="<?php echo esc_attr( $source_id ); ?>-help" class="notice notice-info inline ran-booster-settings__reason ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $source_help ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 		<?php } ?>
 		<?php $render_configuration( array( $source_scope => 'RAN_BOOSTER_ALLOW_' . strtoupper( $source_scope ) ) ); ?>
+	</fieldset>
 	<div class="ran-booster-settings__toggle-actions">
 		<button id="ran-booster-save-<?php echo esc_attr( $source_scope ); ?>" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-toggle-save<?php disabled( $source['locked'] ); ?>><?php esc_html_e( 'Save setting', 'ran-booster' ); ?></button>
 	</div>
@@ -343,14 +343,11 @@ foreach ( $source_scopes as $source_scope => $source_label ) {
 	<?php
 }
 if ( 'all' === $general_scope ) {
-	?>
-	</fieldset>
-	<?php
 	$card_body        = (string) ob_get_clean();
 	$card_id          = 'ran-booster-general-heading';
 	$card_modifier    = 'ran-booster-settings__preferences';
 	$card_title       = esc_html__( 'General preferences', 'ran-booster' );
-	$card_description = esc_html( implode( ' · ', array( $group_titles['hide_github'], $group_titles['self_update_discovery'], $group_titles['package_sources'] ) ) );
+	$card_description = esc_html( implode( ' · ', array( $group_titles['hide_github'], $group_titles['self_update_discovery'], $group_titles['branch_sources'], $group_titles['prerelease_sources'] ) ) );
 	$card_badge       = '';
 	$card_label       = __( 'General preferences', 'ran-booster' );
 	$card_open        = true;

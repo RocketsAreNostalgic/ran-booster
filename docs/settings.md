@@ -119,8 +119,9 @@ scheme and a trailing slash, and lapses when that address changes, so a database
 copied to another site arrives with both off. Each has its own revision counter;
 a document saved before they existed reads those counters as 0. Turning either
 off clears cached plugin and theme update offers. General preferences shows them
-under Package sources as Allow branch sources and Allow Preview tracks, each saved
-on its own. An "on" switch names the address it is bound to, a lapsed one reads
+as Allow branch sources (Branch sources) and Allow Preview tracks (Preview
+tracks), each saved on its own, and each save writes one log line with its
+outcome. An "on" switch names the address it is bound to, a lapsed one reads
 "Turned off: the site address changed.", one set by its constant is locked and
 reads "Set in configuration.", and on a development site both read "Not needed
 on a development site."

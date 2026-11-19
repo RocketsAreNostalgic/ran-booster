@@ -140,6 +140,51 @@ final class SettingsPageTest extends TestCase {
 		self::assertStringContainsString( '<p>On for example.com:8443/wp</p>', $dashboard->render_general_settings_region( true, 'prerelease_sources' ), 'The line shows the address the setting is bound to, without its scheme.' );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_a_package_source_save_writes_one_log_line_with_its_outcome(): void {
+		$directory = sys_get_temp_dir() . '/ran-booster-settings-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/secrets.json', static fn (): int => strtotime( '2026-11-19T12:00:00Z' ) );
+		$capture->start();
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		unset( $GLOBALS['wpdb'] ); // No database: the save fails at its transaction.
+		$store     = new GeneralPreferenceStore();
+		$dashboard = $this->settings_dashboard( new SettingsPageStorageProvisioner( null ) );
+		( new ReflectionProperty( Dashboard::class, 'github_visibility' ) )->setValue( $dashboard, new \RAN\Admin\GitHubVisibility( $store, null, null, new \stdClass() ) );
+
+		self::assertFalse(
+			$dashboard->post_save_general_settings(
+				array(
+					'scope'       => 'prerelease_sources',
+					'token'       => 'token',
+					'preferences' => array( 'prerelease_sources' => '1' ),
+				)
+			)
+		);
+		self::assertFalse(
+			$dashboard->post_save_general_settings(
+				array(
+					'scope'       => 'hide_github',
+					'token'       => 'token',
+					'preferences' => array( 'hide_github' => '0' ),
+				)
+			),
+			'Other scopes are not logged here.'
+		);
+		$entries = array_column( $capture->snapshot()['entries'], 'line' );
+		\RAN\Logging\BoosterLogger::configure_capture( null );
+		foreach ( (array) glob( $directory . '/*' ) as $path ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+			unlink( (string) $path );
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+		rmdir( $directory );
+		self::assertSame( array( '[ran-booster] Package source setting save finished. {"operation":"save_prerelease_sources","outcome_code":"failed","state":"paused"}' ), $entries );
+	}
+
 	public function test_check_now_uses_its_own_nonce_and_never_calls_general_save(): void {
 		$_POST['ran_booster'] = array( 'action' => 'check-core-updates' );
 		$dashboard            = $this->createMock( Dashboard::class );
@@ -513,12 +558,12 @@ final class SettingsPageTest extends TestCase {
 
 		$xpath = $this->general_view( $bindings );
 		foreach ( array(
-			'branch_sources'     => array( 'ran-booster-branch-sources', 'Allow branch sources', 'branch-token' ),
-			'prerelease_sources' => array( 'ran-booster-prerelease-sources', 'Allow Preview tracks', 'preview-token' ),
-		) as $scope => [ $id, $label, $token ] ) {
-			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-general-heading"]//fieldset[legend="Package sources"]' . $form( $scope ) . ')' ), $scope );
-			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '[input[@name="ran_booster[action]" and @value="save-general-settings"] and input[@name="ran_booster[scope]" and @value="' . $scope . '"] and input[@name="ran_booster[token]" and @value="' . $token . '"] and input[@type="hidden" and @name="ran_booster[preferences][' . $scope . ']" and @value="0"]])' ), $scope );
-			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '/label[@id="' . $id . '-label" and @for="' . $id . '" and .="' . $label . '"]/following-sibling::div[1]/span[@data-ran-booster-ui-switch="general-preference"]/label[@data-ran-booster-ui-switch-fallback]/input[@id="' . $id . '" and @type="checkbox" and @role="switch" and @name="ran_booster[preferences][' . $scope . ']" and @value="1" and not(@disabled) and not(@aria-invalid) and @aria-describedby="' . $id . '-help"])' ), $scope );
+			'branch_sources'     => array( 'ran-booster-branch-sources', 'Allow branch sources', 'branch-token', 'Branch sources' ),
+			'prerelease_sources' => array( 'ran-booster-prerelease-sources', 'Allow Preview tracks', 'preview-token', 'Preview tracks' ),
+		) as $scope => [ $id, $label, $token, $legend ] ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-general-heading"]' . $form( $scope ) . '/fieldset[@class="ran-booster-settings__group" and legend="' . $legend . '"])' ), $scope . ': its own group inside its own form, as Appearance.' );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '[input[@name="ran_booster[action]" and @value="save-general-settings"] and input[@name="ran_booster[scope]" and @value="' . $scope . '"] and input[@name="ran_booster[token]" and @value="' . $token . '"] and fieldset/input[@type="hidden" and @name="ran_booster[preferences][' . $scope . ']" and @value="0"]])' ), $scope );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '/fieldset/label[@id="' . $id . '-label" and @for="' . $id . '" and .="' . $label . '"]/following-sibling::div[1]/span[@data-ran-booster-ui-switch="general-preference"]/label[@data-ran-booster-ui-switch-fallback]/input[@id="' . $id . '" and @type="checkbox" and @role="switch" and @name="ran_booster[preferences][' . $scope . ']" and @value="1" and not(@disabled) and not(@aria-invalid) and @aria-describedby="' . $id . '-help"])' ), $scope );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '//button[@id="ran-booster-save-' . $scope . '" and @type="submit" and @data-ran-booster-toggle-save and not(@disabled)])' ), $scope );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '/div[@data-ran-booster-admin-mutation-error and @hidden])' ), $scope . ' shows no error.' );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '//details//code[text()="RAN_BOOSTER_ALLOW_' . strtoupper( $scope ) . '"])' ), $scope );
@@ -558,7 +603,7 @@ final class SettingsPageTest extends TestCase {
 		$bindings['general_scope']                      = 'prerelease_sources';
 		$xpath = $this->general_view( $bindings );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( 'prerelease_sources' ) . ')' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(//fieldset[legend="Package sources"] | //*[@id="ran-booster-general-branch_sources"] | //*[@id="ran-booster-general-region"] | //*[@id="ran-booster-general-hide_github"])' ), 'A scoped response renders only its own switch.' );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//fieldset[legend="Branch sources"] | //*[@id="ran-booster-general-branch_sources"] | //*[@id="ran-booster-general-region"] | //*[@id="ran-booster-general-hide_github"])' ), 'A scoped response renders only its own switch.' );
 
 		$bindings['general_scope'] = 'branch_sources';
 		$xpath                     = $this->general_view( $bindings );
@@ -662,14 +707,14 @@ final class SettingsPageTest extends TestCase {
 		// General preferences: open by default, summary from the group legends, no badge in the header.
 		$general = '//div[@id="ran-booster-general-heading"]';
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $general . '/details[@open]/summary[@aria-label="General preferences"]/span[@data-ran-booster-ui-disclosure-heading="h3"]/span[@class="ran-booster-troubleshooting__entry-title" and .="General preferences"])' ) );
-		self::assertSame( 'Appearance · Core updates · Package sources', trim( (string) $xpath->evaluate( 'string(' . $general . '/details/summary//span[@class="ran-booster-troubleshooting__entry-description"])' ) ) );
+		self::assertSame( 'Appearance · Core updates · Branch sources · Preview tracks', trim( (string) $xpath->evaluate( 'string(' . $general . '/details/summary//span[@class="ran-booster-troubleshooting__entry-description"])' ) ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $general . '/details/summary//*[@data-ran-booster-ui-disclosure-meta or @data-ran-booster-badge])' ) );
 		$legends = array();
 		$count   = (int) $xpath->evaluate( 'count(' . $general . '//fieldset/legend)' );
 		for ( $index = 1; $index <= $count; ++$index ) {
 			$legends[] = trim( (string) $xpath->evaluate( 'string((' . $general . '//fieldset/legend)[' . $index . '])' ) );
 		}
-		self::assertSame( 'Appearance · Core updates · Package sources', implode( ' · ', $legends ), 'The summary is built from the group legends.' );
+		self::assertSame( 'Appearance · Core updates · Branch sources · Preview tracks', implode( ' · ', $legends ), 'The summary is built from the group legends.' );
 		// Switch badges stay in the body next to their switches.
 		self::assertSame( 4.0, $xpath->evaluate( 'count(' . $general . '/details/div[@data-ran-booster-ui-disclosure-content]//span[@data-ran-booster-toggle-status])' ) );
 

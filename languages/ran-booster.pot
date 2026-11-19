@@ -1554,8 +1554,16 @@ msgstr ""
 msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
+#: RAN/Admin/OnboardingPresenter.php:213
+msgid "Needs review"
+msgstr ""
+
+#: RAN/Admin/OnboardingPresenter.php:213
+msgid "Update failed"
+msgstr ""
+
 #: RAN/Admin/PackageAdminController.php:68
-#: RAN/Dashboard.php:1617
+#: RAN/Dashboard.php:1613
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1564,7 +1572,7 @@ msgid "Booster could not confirm safe management removal. Refresh this page and 
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:171
-#: RAN/Dashboard.php:903
+#: RAN/Dashboard.php:899
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -2470,8 +2478,8 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:777
 #: RAN/Booster.php:1045
 #: views/attempts/index.php:54
-#: views/onboarding.php:98
-#: views/onboarding.php:125
+#: views/onboarding.php:104
+#: views/onboarding.php:131
 #: views/overview-dashboard.php:32
 #: views/packages/branch-readiness.php:203
 #: views/packages/index.php:65
@@ -3808,7 +3816,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:288
 #: RAN/Troubleshooting/TroubleshootingService.php:357
 #: views/debug-capture.php:58
-#: views/onboarding.php:99
+#: views/onboarding.php:105
 #: views/settings-storage.php:26
 #: views/troubleshooting-installation.php:21
 #: views/troubleshooting-installation.php:171
@@ -4923,7 +4931,7 @@ msgid "Themes"
 msgstr ""
 
 #: RAN/Booster.php:264
-#: views/onboarding.php:200
+#: views/onboarding.php:214
 msgid "Transporter"
 msgstr ""
 
@@ -5106,101 +5114,101 @@ msgstr ""
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
-#: RAN/Dashboard.php:579
+#: RAN/Dashboard.php:575
 msgid "You cannot access Booster Settings."
 msgstr ""
 
-#: RAN/Dashboard.php:650
+#: RAN/Dashboard.php:646
 msgid "The saved Settings document is malformed. Runtime safety defaults remain in effect; no values were repaired."
 msgstr ""
 
-#: RAN/Dashboard.php:682
+#: RAN/Dashboard.php:678
 #: RAN/Dispatcher.php:677
 msgid "Settings saved."
 msgstr ""
 
-#: RAN/Dashboard.php:701
+#: RAN/Dashboard.php:697
 msgid "Settings could not be saved. Reload the page and try again."
 msgstr ""
 
-#: RAN/Dashboard.php:710
+#: RAN/Dashboard.php:706
 msgid "Enter a valid value within the displayed limits."
 msgstr ""
 
-#: RAN/Dashboard.php:721
+#: RAN/Dashboard.php:717
 msgid "Settings saved; cached update offers could not be cleared. Discovery remains disabled."
 msgstr ""
 
-#: RAN/Dashboard.php:730
+#: RAN/Dashboard.php:726
 msgid "Settings changed or GitHub eligibility changed. Review the current values and save again."
 msgstr ""
 
-#: RAN/Dashboard.php:731
+#: RAN/Dashboard.php:727
 msgid "Settings were not saved. Check the fields or reload the page and try again."
 msgstr ""
 
-#: RAN/Dashboard.php:741
+#: RAN/Dashboard.php:737
 msgid "The Core updates check completed."
 msgstr ""
 
-#: RAN/Dashboard.php:742
+#: RAN/Dashboard.php:738
 msgid "The Core updates check did not complete successfully. Review the check status below."
 msgstr ""
 
-#: RAN/Dashboard.php:755
+#: RAN/Dashboard.php:751
 #: views/settings.php:31
 msgid "Storage status is unavailable. No setup or recovery action has been performed."
 msgstr ""
 
-#: RAN/Dashboard.php:783
+#: RAN/Dashboard.php:779
 msgid "Storage health has not been checked in this request."
 msgstr ""
 
-#: RAN/Dashboard.php:913
+#: RAN/Dashboard.php:909
 msgid "Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package."
 msgstr ""
 
-#: RAN/Dashboard.php:932
+#: RAN/Dashboard.php:928
 msgid "Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it."
 msgstr ""
 
-#: RAN/Dashboard.php:947
+#: RAN/Dashboard.php:943
 msgid "Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:948
+#: RAN/Dashboard.php:944
 msgid "Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:953
+#: RAN/Dashboard.php:949
 msgid "Booster cannot verify this installed package and its management record. No management changes have been made."
 msgstr ""
 
-#: RAN/Dashboard.php:978
+#: RAN/Dashboard.php:974
 msgid "Booster’s saved update revision is invalid. It cannot safely use this package’s management settings."
 msgstr ""
 
-#: RAN/Dashboard.php:979
+#: RAN/Dashboard.php:975
 msgid "Booster’s saved update source is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:980
+#: RAN/Dashboard.php:976
 msgid "Booster’s saved deployment policy is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:981
+#: RAN/Dashboard.php:977
 msgid "Booster’s saved repository credential reference is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:982
+#: RAN/Dashboard.php:978
 msgid "Booster’s saved repository privacy setting is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:983
+#: RAN/Dashboard.php:979
 msgid "Booster’s saved management configuration for this package is invalid and cannot be opened safely."
 msgstr ""
 
-#: RAN/Dashboard.php:1299
+#: RAN/Dashboard.php:1295
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 
@@ -7025,7 +7033,7 @@ msgstr ""
 
 #: views/documentation.php:277
 #: views/documentation.php:420
-#: views/onboarding.php:208
+#: views/onboarding.php:222
 #: views/overview-dashboard.php:77
 #: views/provider.php:776
 msgid "Install a plugin"
@@ -7346,7 +7354,7 @@ msgid "Choose a Git provider, then search for a repository or enter its account 
 msgstr ""
 
 #: views/documentation.php:421
-#: views/onboarding.php:209
+#: views/onboarding.php:223
 #: views/overview-dashboard.php:84
 #: views/provider.php:777
 msgid "Install a theme"
@@ -7908,61 +7916,78 @@ msgstr ""
 msgid "Return to onboarding"
 msgstr ""
 
-#: views/onboarding.php:94
+#: views/onboarding.php:100
 #: views/settings-storage.php:21
 #: views/troubleshooting-installation.php:18
 msgid "Path configured"
 msgstr ""
 
-#: views/onboarding.php:95
+#: views/onboarding.php:101
 #: views/settings-storage.php:22
 #: views/troubleshooting-installation.php:17
 msgid "Storage healthy"
 msgstr ""
 
-#: views/onboarding.php:96
+#: views/onboarding.php:102
 #: views/settings-storage.php:23
 msgid "Storage needs attention"
 msgstr ""
 
-#: views/onboarding.php:97
+#: views/onboarding.php:103
 #: views/settings-storage.php:24
 msgid "Setup available"
 msgstr ""
 
-#: views/onboarding.php:100
+#: views/onboarding.php:106
 #: views/settings-storage.php:27
 msgid "Verification pending"
 msgstr ""
 
-#. translators: 1: displayed reminders, 2: total actionable reminders.
-#: views/onboarding.php:132
+#. translators: 1: displayed items, 2: total items.
+#: views/onboarding.php:137
 #, php-format
-msgid "Showing %1$d of %2$d actionable expiry reminders."
+msgid "Showing %1$d of %2$d items."
 msgstr ""
 
-#: views/onboarding.php:135
+#. translators: %d: hidden critical items.
+#: views/onboarding.php:140
+#, php-format
+msgid "%d more is critical."
+msgid_plural "%d more are critical."
+msgstr[0] ""
+msgstr[1] ""
+
+#: views/onboarding.php:145
+#: views/overview-dashboard.php:42
+msgid "Activity is unavailable."
+msgstr ""
+
+#: views/onboarding.php:148
 msgid "Credential expiry reminders are unavailable. Review credentials in provider settings."
 msgstr ""
 
-#: views/onboarding.php:144
+#: views/onboarding.php:157
 msgid "The managed package inventory is incomplete or unavailable."
 msgstr ""
 
-#: views/onboarding.php:147
+#: views/onboarding.php:160
 msgid "Secure credential storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:147
-#: views/onboarding.php:149
+#: views/onboarding.php:160
+#: views/onboarding.php:162
 msgid "Review storage"
 msgstr ""
 
-#: views/onboarding.php:167
+#: views/onboarding.php:164
+msgid "Release updates aren't shown here yet."
+msgstr ""
+
+#: views/onboarding.php:181
 msgid "1. Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:167
+#: views/onboarding.php:181
 #: views/settings-storage.php:303
 #: views/settings-storage.php:306
 #: views/settings.php:30
@@ -7972,63 +7997,59 @@ msgstr ""
 msgid "Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:168
+#: views/onboarding.php:182
 #: views/settings-storage.php:69
 msgid "Status unknown"
 msgstr ""
 
-#: views/onboarding.php:171
+#: views/onboarding.php:185
 #: views/troubleshooting-installation.php:64
 msgid "Storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:176
+#: views/onboarding.php:190
 #: views/settings-storage.php:81
 msgid "Set up default storage"
 msgstr ""
 
-#: views/onboarding.php:179
+#: views/onboarding.php:193
 msgid "Review secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:187
+#: views/onboarding.php:201
 msgid "2. Choose a Git provider"
 msgstr ""
 
-#: views/onboarding.php:188
+#: views/onboarding.php:202
 msgid "Add credentials on the provider’s page if needed."
 msgstr ""
 
-#: views/onboarding.php:193
+#: views/onboarding.php:207
 msgid "Install another provider"
 msgstr ""
 
-#: views/onboarding.php:197
+#: views/onboarding.php:211
 msgid "3. Import or migrate (optional)"
 msgstr ""
 
-#: views/onboarding.php:198
+#: views/onboarding.php:212
 msgid "Import a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions."
 msgstr ""
 
-#: views/onboarding.php:201
+#: views/onboarding.php:215
 msgid "Browse extensions"
 msgstr ""
 
-#: views/onboarding.php:205
+#: views/onboarding.php:219
 msgid "4. Install and manage packages"
 msgstr ""
 
-#: views/onboarding.php:206
+#: views/onboarding.php:220
 msgid "Install a plugin or theme from a Git repository, or link one already installed on this site."
 msgstr ""
 
 #: views/overview-dashboard.php:40
 msgid "Recent Activity"
-msgstr ""
-
-#: views/overview-dashboard.php:42
-msgid "Activity is unavailable."
 msgstr ""
 
 #: views/overview-dashboard.php:44

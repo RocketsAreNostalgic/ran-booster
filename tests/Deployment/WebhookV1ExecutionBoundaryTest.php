@@ -122,6 +122,8 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 			SignedWebhookVerifier::class,
 			new SignedWebhookVerifier( new WebhookV1BoundarySecretsFile( $this->operations ) )
 		);
+		// Constructing the store reads nothing; the receiver reads it only after a verified delivery.
+		$container->bind( \RAN\Admin\WebhookManagement\Installation\InstallationStore::class, new \RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore() );
 
 		return new Booster( $container );
 	}

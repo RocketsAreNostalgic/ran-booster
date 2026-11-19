@@ -970,6 +970,46 @@ final class OnboardingViewTest extends TestCase {
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-overview-attention"])' ) );
 	}
 
+	public function test_attention_renders_update_rows_the_bounded_count_and_coverage_lines(): void {
+		$row       = array(
+			'label'    => '<Failed plugin>',
+			'url'      => '/activity&activity_package=x',
+			'badge'    => 'Update failed',
+			'critical' => true,
+		);
+		$attention = array(
+			'updates_available' => true,
+			'items'             => array_fill( 0, 5, $row ),
+			'total'             => 8,
+			'hidden_critical'   => 2,
+		);
+		$extra     = array(
+			'storage_summary' => array( 'status' => 'storage_healthy' ),
+			'activity_url'    => '/activity',
+			'attention'       => $attention,
+		);
+		$html      = $this->render_view( null, null, $extra );
+		$xpath     = $this->storage_xpath( $html );
+		$card      = '//section[@aria-labelledby="ran-booster-overview-attention"]';
+		self::assertSame( 5.0, $xpath->evaluate( "count($card//a[@href=\"/activity&activity_package=x\"]/following-sibling::span[@data-ran-booster-badge-intent=\"high\"])" ) );
+		self::assertSame( 5, substr_count( $html, '&lt;Failed plugin&gt;' ) );
+		self::assertSame( 'Showing 5 of 8 items.', $xpath->evaluate( "string($card//a[@href=\"/activity\"])" ) );
+		self::assertStringContainsString( '2 more are critical.', $html );
+		self::assertStringContainsString( 'Release updates aren&#039;t shown here yet.', $html );
+		self::assertStringNotContainsString( 'Activity is unavailable.', $html );
+
+		$extra['attention'] = array(
+			'updates_available' => false,
+			'items'             => array(),
+			'total'             => 0,
+			'hidden_critical'   => 0,
+		);
+		$html               = $this->render_view( null, null, $extra );
+		self::assertStringContainsString( 'Activity is unavailable.', $html );
+		self::assertStringNotContainsString( 'Showing', $html );
+		self::assertStringNotContainsString( 'critical.', $html );
+	}
+
 	public function test_missing_storage_status_is_unavailable_even_with_complete_inventory(): void {
 		foreach ( array( 'onboarding', 'dashboard' ) as $view ) {
 			$extra = array(
@@ -1180,7 +1220,7 @@ final class OnboardingViewTest extends TestCase {
 					'credential_expiry' => array(
 						'status' => 'captured',
 						'total'  => 6,
-						'items'  => array_fill( 0, 5, $item ),
+						'items'  => array_fill( 0, 6, $item ),
 					),
 				)
 			);
@@ -1190,7 +1230,7 @@ final class OnboardingViewTest extends TestCase {
 			self::assertStringNotContainsString( 'Current credential expiry is unknown', $html );
 			self::assertSame( 5, substr_count( $html, '&lt;credential&gt;' ) );
 			if ( 'dashboard' === $view ) {
-				self::assertStringContainsString( 'Showing 5 of 6 actionable expiry reminders.', $html );
+				self::assertStringContainsString( 'Showing 5 of 6 items.', $html );
 				self::assertStringNotContainsString( '&lt;2026-11-02&gt;', $html );
 				self::assertStringNotContainsString( '&lt;provider&gt;', $html );
 				self::assertStringNotContainsString( '&lt;2026-10-31&gt;', $html );
@@ -1428,6 +1468,38 @@ final class OnboardingViewTest extends TestCase {
 	}
 
 	/**
+	 * The presenter's Needs attention list for credential reminders alone, with no managed packages.
+	 *
+	 * @param array{status:string,total:?int,items:list<array{provider_label:string,label:string,badge_label:string,stage:string,url:string}>} $credential_expiry
+	 * @return array<string, mixed>
+	 */
+	public static function attention_for( array $credential_expiry ): array {
+		$tabs = array();
+		foreach ( array( 'portability', 'documentation', 'troubleshooting' ) as $key ) {
+			$tabs[] = array(
+				'key'      => $key,
+				'label'    => $key,
+				'url'      => '/' . $key,
+				'active'   => false,
+				'provider' => false,
+			);
+		}
+		$plugins = new class() extends \RAN\Storage\PluginRepository {
+			public function __construct() {}
+			public function all_booster_plugins(): array {
+				return array();
+			}
+		};
+		$themes  = new class() extends \RAN\Storage\ThemeRepository {
+			public function __construct() {}
+			public function all_booster_themes(): array {
+				return array();
+			}
+		};
+		return ( new \RAN\Admin\OnboardingPresenter() )->build_overview( $tabs, '', '', $plugins, $themes, null, null, array(), $credential_expiry )['attention'];
+	}
+
+	/**
 	 * @param list<array{label: string, url: string}>|null $provider_links Provider settings links.
 	 * @param array<string, mixed>|null $secrets_storage Protected storage setup payload.
 	 * @param array<string, mixed> $extra Additional Overview fixture payload.
@@ -1451,6 +1523,9 @@ final class OnboardingViewTest extends TestCase {
 			'troubleshooting_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting',
 		);
 		$onboarding = array_merge( $onboarding, $extra );
+		if ( isset( $extra['credential_expiry'] ) && ! isset( $extra['attention'] ) ) {
+			$onboarding['attention'] = self::attention_for( $extra['credential_expiry'] );
+		}
 		if ( null !== $secrets_storage ) {
 			$onboarding['secrets_storage'] = $secrets_storage;
 		}

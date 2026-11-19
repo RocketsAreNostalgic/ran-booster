@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace RAN\Tests\Webhook;
 
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
+use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentStorageFailure;
 use RAN\BoosterGitHubProvider\V1\WebhookNormalizer as GitHubWebhookNormalizer;
@@ -1129,7 +1131,8 @@ final class WebhookProcessorTest extends TestCase {
 	private function processor(
 		ProviderRegistry $registry,
 		DeploymentCoordinator $coordinator,
-		?array $materials = null
+		?array $materials = null,
+		?InstallationStore $installations = null
 	): WebhookProcessor {
 		$secrets = new class($materials) extends SecretsFile {
 			/** @var array<string, array{scope: string, target: string, authority_id: string, secret: string}> */
@@ -1154,10 +1157,14 @@ final class WebhookProcessorTest extends TestCase {
 			}
 		};
 
-		return new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ), $this->queued_selection( new \RAN\Tests\Deployment\AttemptRepositoryDatabase(), $registry ) );
+		return new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ), $this->queued_selection( new \RAN\Tests\Deployment\AttemptRepositoryDatabase(), $registry ), $installations );
 	}
 
-	private function event_processor( WebhookProcessorCoordinator $coordinator ): WebhookProcessor {
+	private function installation( string $status, string $profile_id = 'test-profile' ): InstallationRecord {
+		return new InstallationRecord( 'gh', '4001', 'owner/example', '77', 'credential_1', $profile_id, 'owner', 1, 'reused', 'https://example.test/wp-json/ran-booster/v1/webhooks/gh', $status, '2026-07-23T16:00:00Z', '2026-07-23T17:00:00Z' );
+	}
+
+	private function event_processor( WebhookProcessorCoordinator $coordinator, ?InstallationStore $installations = null ): WebhookProcessor {
 		$event = new PushEvent(
 			ProviderCode::parse( 'gh' ),
 			'owner/example',
@@ -1171,8 +1178,48 @@ final class WebhookProcessorTest extends TestCase {
 			new ProviderRegistry(
 				array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ) ) )
 			),
-			$coordinator
+			$coordinator,
+			null,
+			$installations
 		);
+	}
+
+	public function test_a_signed_delivery_marks_only_its_own_pending_record_configured(): void {
+		$body    = '{"zen":"Keep it logically awesome."}';
+		$request = $this->request( $body, $this->signed_headers( $body ) );
+		$probe   = static fn ( ?string $repository_id ): ProviderRegistry => new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe( $repository_id ) ) ) );
+
+		$store = new WebhookProcessorInstallationStore( $this->installation( 'needs_verification' ) );
+		self::assertSame( 200, $this->processor( $probe( '4001' ), new WebhookProcessorCoordinator(), null, $store )->handle( 'gh', $request )->get_status() );
+		self::assertSame( 'configured', $store->record?->status() );
+		self::assertSame( 1, $store->saves );
+		// A replayed or repeated signed delivery finds the record already configured and writes nothing.
+		self::assertSame( 200, $this->processor( $probe( '4001' ), new WebhookProcessorCoordinator(), null, $store )->handle( 'gh', $request )->get_status() );
+		self::assertSame( 1, $store->saves );
+
+		$push = new WebhookProcessorInstallationStore( $this->installation( 'needs_verification' ) );
+		self::assertSame( 202, $this->event_processor( new WebhookProcessorCoordinator(), $push )->handle( 'gh', $request )->get_status() );
+		self::assertSame( 'configured', $push->record?->status() );
+
+		$unchanged = array(
+			'another repository secret' => array( $this->installation( 'needs_verification', 'other-profile' ), '4001', $request, 200 ),
+			'repository id mismatch'    => array( $this->installation( 'needs_verification' ), '4002', $request, 200 ),
+			'probe without repository'  => array( $this->installation( 'needs_verification' ), null, $request, 200 ),
+			'drift stays out'           => array( $this->installation( 'configuration_drift' ), '4001', $request, 200 ),
+			'unsigned delivery'         => array( $this->installation( 'needs_verification' ), '4001', $this->request( $body, array( 'X-Hub-Signature-256' => 'sha256=' . str_repeat( '0', 64 ) ) ), 401 ),
+		);
+		foreach ( $unchanged as $name => list( $record, $repository_id, $case_request, $status ) ) {
+			$case_store = new WebhookProcessorInstallationStore( $record );
+			self::assertSame( $status, $this->processor( $probe( $repository_id ), new WebhookProcessorCoordinator(), null, $case_store )->handle( 'gh', $case_request )->get_status(), $name );
+			self::assertSame( $record, $case_store->record, $name );
+			self::assertSame( 0, $case_store->saves, $name );
+		}
+
+		$failing = new WebhookProcessorInstallationStore( $this->installation( 'needs_verification' ), InstallationStore::WRITE_FAILED );
+		$failed  = $this->processor( $probe( '4001' ), new WebhookProcessorCoordinator(), null, $failing )->handle( 'gh', $request );
+		self::assertSame( 200, $failed->get_status() );
+		self::assertSame( array( 'message' => 'Webhook verified.' ), $failed->get_data() );
+		self::assertSame( 'needs_verification', $failing->record?->status() );
 	}
 
 	/**
@@ -1288,4 +1335,35 @@ final class WebhookProcessorCoordinatorSpy {
 	/** @var list<PushEvent> */
 	public array $events                     = array();
 	public string $authenticated_body_digest = '';
+}
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test that consumes it.
+final class WebhookProcessorInstallationStore implements InstallationStore {
+	public int $saves = 0;
+
+	/** @param self::WRITE_APPLIED|self::WRITE_UNCHANGED|self::WRITE_CONFLICT|self::WRITE_FAILED $write */
+	public function __construct( public ?InstallationRecord $record, private string $write = self::WRITE_APPLIED ) {
+	}
+
+	public function all(): array {
+		return null === $this->record ? array() : array( $this->record->storage_key() => $this->record );
+	}
+
+	public function find( string $provider_code, string $repository_id ): ?InstallationRecord {
+		return null !== $this->record && $this->record->storage_key() === InstallationRecord::key( $provider_code, $repository_id ) ? $this->record : null;
+	}
+
+	public function save_if_current( InstallationRecord $record, ?InstallationRecord $expected ): string {
+		++$this->saves;
+		if ( self::WRITE_APPLIED === $this->write && $expected === $this->record ) {
+			$this->record = $record;
+		}
+
+		return $this->write;
+	}
+
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The fixture never deletes; the processor must not call it.
+	public function delete_if_current( string $provider_code, string $repository_id, ?InstallationRecord $expected ): string {
+		throw new RuntimeException( 'The webhook receiver must never delete an installation record.' );
+	}
 }

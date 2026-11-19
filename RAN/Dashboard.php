@@ -242,7 +242,7 @@ class Dashboard {
 		}
 
 		if ( null !== $selected_tab && 'overview' === $selected_tab->get_key() ) {
-			$data['onboarding']                      = ( new OnboardingPresenter() )->build_overview(
+			$data['onboarding'] = ( new OnboardingPresenter() )->build_overview(
 				$tabs,
 				$admin_url . '?page=ran-booster-plugins-create',
 				$admin_url . '?page=ran-booster-themes-create',
@@ -250,12 +250,8 @@ class Dashboard {
 				$this->themes,
 				$this->overview_activity,
 				$this->storage_summary(),
-				$this->provider_settings->overview_provider_facts()
-			);
-			$data['onboarding']['credential_expiry'] = $this->credential_expiry_notice?->overview_summary() ?? array(
-				'status' => 'unknown',
-				'total'  => null,
-				'items'  => array(),
+				$this->provider_settings->overview_provider_facts(),
+				$this->credential_expiry_notice?->overview_summary()
 			);
 		}
 

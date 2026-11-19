@@ -23,7 +23,7 @@ final class ActivityStore {
 	public const SKIPPED_HEARTBEAT = 86400;
 	private const PURPOSES         = array( 'branch.check', 'release.check', 'workflow.assessment' );
 	/** Failed deployment reasons that neither show nor clear a failed update. */
-	private const UPDATE_REFUSALS = array( 'lock_unavailable', 'policy_blocked', 'provider_rate_limited', 'stale_event' );
+	private const UPDATE_REFUSALS = array( 'lock_unavailable', 'policy_blocked', 'provider_rate_limited', 'provider_selection_changed', 'stale_event' );
 	private const STATE           = "JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state'))";
 	private const UNRESOLVED      = "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_resolved_at')), 'null') = 'null'";
 	private string $table;

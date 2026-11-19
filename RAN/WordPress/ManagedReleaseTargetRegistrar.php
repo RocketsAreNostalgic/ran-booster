@@ -173,7 +173,7 @@ final class ManagedReleaseTargetRegistrar {
 			return $reply;
 		}
 		try {
-			$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'] );
+			$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'], true );
 		} catch ( PluginNotFound | ThemeNotFound ) {
 			return isset( $this->registered_authorities[ $key ] ) || isset( $this->targets[ $key ] )
 				? $this->native_update_error( 'authority_changed' )
@@ -248,7 +248,7 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		if ( null === $pending ) {
 			try {
-				$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'] );
+				$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'], true );
 			} catch ( PluginNotFound | ThemeNotFound ) {
 				return isset( $this->registered_authorities[ $key ] ) || isset( $this->targets[ $key ] )
 					? $this->native_update_error( 'authority_changed' )
@@ -274,7 +274,7 @@ final class ManagedReleaseTargetRegistrar {
 			} else {
 				$lock_token = $lock->acquire();
 			}
-			$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'] );
+			$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'], true );
 			$current  = $snapshot['authority'];
 			if ( ! $snapshot['release']
 				|| null === $current
@@ -312,7 +312,7 @@ final class ManagedReleaseTargetRegistrar {
 			|| ( $pending['automatic'] && ( ! function_exists( 'doing_action' ) || ! doing_action( 'wp_maybe_auto_update' ) ) ) ) {
 			throw new \RuntimeException( 'GitHub native authority is unavailable.' );
 		}
-		$snapshot = $this->native_authority_snapshot( $type, $identity );
+		$snapshot = $this->native_authority_snapshot( $type, $identity, true );
 		if ( ! $snapshot['release'] || $pending['authority'] !== $snapshot['authority'] || ! $this->native_target_is_active( $type, $identity ) ) {
 			throw new \RuntimeException( 'The managed release authority changed after staging.' );
 		}
@@ -689,8 +689,11 @@ final class ManagedReleaseTargetRegistrar {
 		return null;
 	}
 
-	/** @return array{release: bool, authority: array<string, int|string>|null} */
-	private function native_authority_snapshot( string $type, string $identifier ): array {
+	/**
+	 * @param bool $fresh Mutation fences read the source setting past the request's option cache.
+	 * @return array{release: bool, authority: array<string, int|string>|null}
+	 */
+	private function native_authority_snapshot( string $type, string $identifier, bool $fresh = false ): array {
 		$package = 'plugin' === $type
 			? $this->plugins->booster_plugin_from_file( $identifier )
 			: $this->themes->booster_theme_from_stylesheet( $identifier );
@@ -744,7 +747,7 @@ final class ManagedReleaseTargetRegistrar {
 
 		return array(
 			'release'   => true,
-			'authority' => $this->authority( $package, $configuration, true ),
+			'authority' => $this->authority( $package, $configuration, $fresh ),
 		);
 	}
 

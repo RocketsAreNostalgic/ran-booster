@@ -276,6 +276,7 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 	}
 
 	public function test_a_site_that_pauses_branch_sources_refuses_every_route_and_rechecks_at_execution(): void {
+		require_once __DIR__ . '/../Settings/GeneralPreferenceStoreWordPressFunctions.php';
 		$package    = $this->package( 'plugin', 'mypackage', 'packages/MyPackage' );
 		$identifier = (string) $package->get_identifier();
 		$this->inventory( 'plugin', $package );
@@ -327,11 +328,16 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		self::assertSame( array( 'delivery' ), array_column( $this->database->rows, 'requested_ref' ), 'Only the delivery record is kept.' );
 		$this->database->rows = array();
 
-		// Queued while allowed, then paused before the worker runs: the attempt fails as paused.
-		$GLOBALS['ran_booster_test_environment_type'] = 'local';
+		// Queued while the saved setting allowed it; another request then turns it off. This request's
+		// option cache still allows, so only the fresh read at the mutation fence sees the pause.
+		$GLOBALS['ran_booster_general_preference_cached_option'] = array(
+			'package_sources'         => true,
+			'package_sources_address' => 'example.com',
+		);
 		self::assertSame( 1, $bulk()->queued );
-		$GLOBALS['ran_booster_test_environment_type'] = 'production';
-		$attempt                                      = $this->attempts->claim_next();
+		$this->database->option_rows[ \RAN\Settings\GeneralPreferenceStore::OPTION_NAME ] = \RAN\Settings\maybe_serialize( array( 'package_sources' => false ) );
+		self::assertTrue( \RAN\Deployment\PackageSourceGate::allows(), 'The cached read still allows.' );
+		$attempt = $this->attempts->claim_next();
 		self::assertNotNull( $attempt );
 		$outcome = $coordinator->execute_claimed( $attempt );
 		self::assertSame( array( DeploymentState::FAILED, DeploymentOutcome::CODE_SOURCE_PAUSED ), array( $outcome->get_state(), $outcome->get_code() ) );

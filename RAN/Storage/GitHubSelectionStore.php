@@ -18,6 +18,7 @@ use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 final class GitHubSelectionStore {
 	public const OPTION            = 'ran_booster_github_selection';
 	private bool $commit_uncertain = false;
+	private bool $storage_verified = false;
 
 	public function __construct( private \wpdb|SchemaConnection $connection, private string $table ) {
 	}
@@ -33,7 +34,7 @@ final class GitHubSelectionStore {
 	 * @return list<string>
 	 */
 	public function active_plugins(): array {
-		( new Database( $this->connection ) )->require_selection_storage( $this->table );
+		$this->require_storage();
 		$this->connection->last_error = '';
 		$query                        = $this->connection->prepare( 'SELECT option_name, option_value FROM %i WHERE option_name = %s LIMIT 2 FOR UPDATE', $this->table, 'active_plugins' );
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared current read bypasses REPEATABLE READ snapshots as well as WordPress caches.
@@ -79,7 +80,7 @@ final class GitHubSelectionStore {
 
 	/** @return array<string, mixed> */
 	public function read( bool $for_update = false ): array {
-		( new Database( $this->connection ) )->require_selection_storage( $this->table );
+		$this->require_storage();
 		$this->connection->last_error = '';
 		$query                        = $this->connection->prepare(
 			'SELECT option_name, option_value, autoload FROM %i WHERE option_name = %s LIMIT 2' . ( $for_update ? ' FOR UPDATE' : '' ),
@@ -124,7 +125,7 @@ final class GitHubSelectionStore {
 			'approval'             => 'approved',
 			'approved_api_formats' => $declaration->api_credential_formats,
 		);
-		( new Database( $this->connection ) )->require_selection_storage( $this->table );
+		$this->require_storage();
 		$query = $this->connection->prepare( 'INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $this->table, self::OPTION, $this->encode( $initial ), 'no' );
 		try {
 			$this->connection->last_error = '';
@@ -154,7 +155,7 @@ final class GitHubSelectionStore {
 		$old = $this->encode( $expected );
 		$new = $this->encode( $next );
 		$this->validate_transition( $expected, $next );
-		( new Database( $this->connection ) )->require_selection_storage( $this->table );
+		$this->require_storage();
 		$query = $this->connection->prepare( 'UPDATE %i SET option_value = %s WHERE BINARY option_name = BINARY %s AND BINARY option_value = BINARY %s AND BINARY autoload = BINARY %s', $this->table, $new, self::OPTION, $old, 'no' );
 		try {
 			$this->connection->last_error = '';
@@ -269,6 +270,19 @@ final class GitHubSelectionStore {
 		if ( false === $this->connection->query( $statement ) || $this->read_failed() ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- DatabaseLifecycleFailure displays fixed REQUIREMENT text; this private caller supplies only internal reason codes.
 			throw new DatabaseLifecycleFailure( $reason );
+		}
+	}
+
+	/**
+	 * The options table's engine and whole-column unique option_name index are
+	 * request-stable, so one successful check per request is enough. A failed
+	 * check sets nothing and refuses again on the next call. The row itself is
+	 * always read fresh.
+	 */
+	private function require_storage(): void {
+		if ( ! $this->storage_verified ) {
+			( new Database( $this->connection ) )->require_selection_storage( $this->table );
+			$this->storage_verified = true;
 		}
 	}
 

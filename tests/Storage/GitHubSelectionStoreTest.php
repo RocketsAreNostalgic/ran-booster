@@ -112,6 +112,41 @@ final class GitHubSelectionStoreTest extends TestCase {
 		}
 	}
 
+	public function test_storage_shape_is_checked_once_per_request_but_the_row_is_read_every_call(): void {
+		$db      = new SelectionDatabase();
+		$store   = new GitHubSelectionStore( $db, 'wp_options' );
+		$initial = $store->initialize_bundled( $this->declaration() );
+		$count   = static fn ( string $sql ): int => count( array_filter( $db->queries, static fn ( string $query ): bool => str_contains( $query, $sql ) ) );
+		$next    = $initial;
+		++$next['selection_generation'];
+		// Another writer changes the row; this store must still see it.
+		self::assertTrue( ( new GitHubSelectionStore( $db, 'wp_options' ) )->compare_and_swap( $initial, $next ) );
+		$selects = $count( 'SELECT option_name, option_value, autoload' );
+		self::assertSame( $next, $store->read() );
+		self::assertSame( $next, $store->read( true ) );
+		self::assertSame( $selects + 2, $count( 'SELECT option_name, option_value, autoload' ) );
+		// One check by each store instance, none repeated by the reads.
+		self::assertSame( 2, $count( 'SHOW TABLE STATUS' ) );
+		self::assertSame( 2, $count( 'SHOW COLUMNS' ) );
+		self::assertSame( 2, $count( 'SHOW INDEX' ) );
+	}
+
+	public function test_failed_storage_shape_refuses_on_every_call(): void {
+		$db         = new SelectionDatabase();
+		$db->engine = 'MyISAM';
+		$store      = new GitHubSelectionStore( $db, 'wp_options' );
+		foreach ( array( 1, 2 ) as $attempt ) {
+			try {
+				$store->read();
+				self::fail( (string) $attempt );
+			} catch ( DatabaseLifecycleFailure $failure ) {
+				self::assertSame( 'wrong_storage_engine', $failure->reason() );
+			}
+			self::assertCount( $attempt, array_filter( $db->queries, static fn ( string $query ): bool => str_contains( $query, 'SHOW TABLE STATUS' ) ) );
+		}
+		self::assertSame( array(), array_filter( $db->queries, static fn ( string $query ): bool => str_contains( $query, 'SELECT' ) ) );
+	}
+
 	public function test_native_owner_cannot_be_overwritten_or_switched_but_revocation_retains_it(): void {
 		$db                         = new SelectionDatabase();
 		$store                      = new GitHubSelectionStore( $db, 'wp_options' );

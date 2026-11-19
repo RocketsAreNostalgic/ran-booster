@@ -18,12 +18,14 @@ final readonly class WebhookEnvelope {
 	private function __construct(
 		private string $type,
 		private array $events = array(),
-		private ?string $reason = null
+		private ?string $reason = null,
+		private ?string $repository_id = null
 	) {
 	}
 
-	public static function probe(): self {
-		return new self( self::PROBE );
+	/** @param string|null $repository_id The repository the provider's probe payload names, if any. */
+	public static function probe( ?string $repository_id = null ): self {
+		return new self( self::PROBE, array(), null, null === $repository_id || '' === trim( $repository_id ) ? null : $repository_id );
 	}
 
 	public static function ignored( ?string $reason = null ): self {
@@ -40,6 +42,10 @@ final readonly class WebhookEnvelope {
 
 	public function get_reason(): ?string {
 		return $this->reason;
+	}
+
+	public function get_repository_id(): ?string {
+		return $this->repository_id;
 	}
 
 	public function is_probe(): bool {

@@ -70,6 +70,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private const MAXIMUM_ARTIFACT_BYTES = 1048576;
+	private const URL_SENTINEL           = 'sntl-token-9f3a';
 
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
@@ -1098,6 +1099,91 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 		self::assertSame( array(), $GLOBALS['ran_booster_admitted_http_calls'] );
 		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
+	/** @return iterable<string, array{list<int|array<string, mixed>>, ?string, string}> */
+	public static function credentialed_download_failures(): iterable {
+		$signed    = 'https://cdn.example.test/signed.zip?token=' . self::URL_SENTINEL;
+		$redirect  = array(
+			'response' => array( 'code' => 302 ),
+			'headers'  => array( 'location' => $signed ),
+		);
+		$unsafe    = static fn ( string $location ): array => array(
+			'response' => array( 'code' => 302 ),
+			'headers'  => array( 'location' => $location ),
+		);
+		$invalid   = DeploymentOutcome::CODE_ARCHIVE_URL_INVALID;
+		$transport = array(
+			'ran_booster_test_wp_error' => true,
+			'response'                  => array( 'code' => 0 ),
+			'message'                   => 'cURL error 6: could not resolve ' . $signed,
+		);
+		yield 'WP_Error message carrying the signed URL' => array( array( $transport ), null, DeploymentOutcome::CODE_ARCHIVE_DOWNLOAD_FAILED );
+		yield '302 with a token query, then 404' => array( array( $redirect, 404 ), null, DeploymentOutcome::CODE_PROVIDER_REPOSITORY_MISSING );
+		yield '302 with a token query, then 503' => array( array( $redirect, 503 ), null, DeploymentOutcome::from_provider_failure( new RuntimeException( '', 503 ) )->get_code() );
+		yield 'redirects that never end' => array( array( $redirect, $redirect, $redirect, $redirect ), null, DeploymentOutcome::from_provider_failure( new RuntimeException( '', 302 ) )->get_code() );
+		yield 'redirect to plain HTTP with a token' => array( array( $unsafe( 'http://cdn.example.test/a.zip?token=' . self::URL_SENTINEL ) ), null, $invalid );
+		yield 'redirect with userinfo' => array( array( $unsafe( 'https://user:' . self::URL_SENTINEL . '@cdn.example.test/a.zip' ) ), null, $invalid );
+		yield 'initial URL with userinfo and a token' => array( array(), 'https://user:' . self::URL_SENTINEL . '@example.test/a.zip?token=' . self::URL_SENTINEL, $invalid );
+		yield '403 whose body and headers carry the sentinel' => array(
+			array(
+				array(
+					'response' => array( 'code' => 403 ),
+					'headers'  => array(
+						'x-ratelimit-remaining' => '12',
+						'x-detail'              => $signed,
+					),
+					'body'     => $signed,
+				),
+			),
+			null,
+			DeploymentOutcome::CODE_PROVIDER_ACCESS_DENIED,
+		);
+	}
+
+	/** @param list<int|array<string, mixed>> $responses */
+	#[DataProvider( 'credentialed_download_failures' )]
+	public function test_failed_download_keeps_credentialed_urls_out_of_every_sink( array $responses, ?string $url, string $code ): void {
+		$this->enable_activity();
+		$archive = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		if ( null !== $url ) {
+			$archive->url = $url;
+		}
+		$this->download_fixture( 'example' );
+		$GLOBALS['ran_booster_admitted_http_responses'] = $responses;
+		$outcome                                        = null;
+		$lines = $this->captured_logs(
+			function () use ( $archive, &$outcome ): void {
+				$outcome = $this->coordinator( new ParityRepositoryProvider( $archive ) )->execute_claimed( $this->running_update() );
+			}
+		);
+
+		self::assertInstanceOf( DeploymentOutcome::class, $outcome );
+		self::assertSame( $code, $outcome->get_code() );
+		self::assertSame( $code, $this->database->rows[0]['outcome_code'] );
+		$sinks = $lines . print_r( array( $outcome, $this->database->rows, $this->database->activity_rows, $this->database->option_rows ), true ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Collects every durable sink into one string for the leak assertion.
+		self::assertStringNotContainsString( self::URL_SENTINEL, $sinks );
+	}
+
+	/** @param list<int|array<string, mixed>> $responses */
+	#[DataProvider( 'credentialed_download_failures' )]
+	public function test_failed_download_exception_carries_only_the_closed_code( array $responses, ?string $url, string $code ): void {
+		$archive = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		if ( null !== $url ) {
+			$archive->url = $url;
+		}
+		$adapter = $this->adapter( $this->running_update(), new ParityRepositoryProvider( $archive ) );
+		$this->download_fixture( 'example' );
+		$GLOBALS['ran_booster_admitted_http_responses'] = $responses;
+
+		try {
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+			self::fail( 'The download must be refused.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( $code, $failure->outcome_code );
+			self::assertNull( $failure->getPrevious() );
+			self::assertStringNotContainsString( self::URL_SENTINEL, $failure->getMessage() . $failure->getTraceAsString() );
+		}
 	}
 
 	/** @return array<string, array{?string, string, string}> */

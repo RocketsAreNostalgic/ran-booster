@@ -217,6 +217,67 @@ final class OverviewPresenterTest extends TestCase {
 		);
 	}
 
+	public function test_attention_lists_failed_and_uncertain_updates_critical_first_within_one_cap(): void {
+		$connection                              = new ActivityConnection();
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$token                                   = 'gh:repository-1:11111111-1111-4111-8111-111111111111';
+		$plugins                                 = array();
+		foreach ( array( 'failed', 'review', 'clear', 'untracked' ) as $slug ) {
+			$plugin = Plugin::from_wp_array( "$slug/$slug.php", array_fill_keys( array( 'PluginURI', 'Version', 'Description', 'Author', 'AuthorURI', 'TextDomain', 'DomainPath', 'Title', 'AuthorName' ), '' ) + array( 'Name' => ucfirst( $slug ), 'Network' => false ) );
+			if ( 'untracked' !== $slug ) {
+				$plugin->set_adoption_token( $token );
+			}
+			$plugins[] = $plugin;
+		}
+		$row                      = static fn ( string $slug, string $status, string $facts ): object => (object) array(
+			'context_key'      => hash( 'sha256', "plugin\0$slug/$slug.php\0$token\0" ),
+			'provider'         => 'gh',
+			'subject_type'     => 'plugin',
+			'subject_identity' => "$slug/$slug.php",
+			'adoption_token'   => $token,
+			'correlation'      => "corr-$slug",
+			'status'           => $status,
+			'facts'            => $facts,
+		);
+		$connection->read_results = array(
+			array(),
+			array(
+				$row( 'review', 'incomplete', '{"deployment_attempt_id":41,"deployment_resolved_at":null}' ),
+				$row( 'failed', 'failed', '{"deployment_attempt_id":40}' ),
+				$row( 'clear', 'succeeded', '{"deployment_attempt_id":39}' ),
+			),
+		);
+		$credential               = static fn ( string $stage ): array => array(
+			'provider_label' => 'GitHub',
+			'label'          => $stage,
+			'badge_label'    => "badge-$stage",
+			'stage'          => $stage,
+			'url'            => "/credentials-$stage",
+		);
+		$credentials              = array(
+			'status' => 'captured',
+			'total'  => 5,
+			'items'  => array( $credential( 'warning' ), $credential( 'expired' ), $credential( 'urgent' ), $credential( 'expired' ), $credential( 'urgent' ) ),
+		);
+		$result                   = $this->present( $this->plugins( $plugins ), $this->themes( array() ), new ActivityStore( $connection ), $credentials );
+		$attention                = $result['attention'];
+		self::assertTrue( $attention['updates_available'] );
+		self::assertSame( 7, $attention['total'] );
+		self::assertSame( 1, $attention['hidden_critical'] );
+		self::assertSame( array( 'Failed', 'Review', 'GitHub: expired', 'GitHub: urgent', 'GitHub: expired' ), array_column( $attention['items'], 'label' ) );
+		self::assertSame( array( 'Update failed', 'Needs review', 'badge-expired', 'badge-urgent', 'badge-expired' ), array_column( $attention['items'], 'badge' ) );
+		self::assertSame( array( true, true, true, true, true ), array_column( $attention['items'], 'critical' ) );
+		self::assertSame( $result['activity_url'] . '&activity_package=' . rawurlencode( (string) wp_json_encode( array( 'gh', 'plugin', 'failed/failed.php' ) ) ), $attention['items'][0]['url'] );
+		self::assertSame( $result['activity_url'] . '&attempt=41&reference=corr-review', $attention['items'][1]['url'] );
+		self::assertSame( $credentials, $result['credential_expiry'] );
+		$keys = array_map( static fn ( string $slug ): string => hash( 'sha256', "plugin\0$slug/$slug.php\0$token\0" ), array( 'failed', 'review', 'clear' ) );
+		self::assertSame( $keys, $connection->prepared[ count( $connection->prepared ) - 1 ]['args'] ?? null );
+
+		$result = $this->present( $this->plugins( $plugins ), $this->themes( array() ), null, $credentials );
+		self::assertFalse( $result['attention']['updates_available'] );
+		self::assertSame( array( 'badge-expired', 'badge-urgent', 'badge-expired', 'badge-urgent', 'badge-warning' ), array_column( $result['attention']['items'], 'badge' ) );
+	}
+
 	/** @param list<Plugin>|null $packages */
 	private function plugins( ?array $packages ): PluginRepository {
 		$GLOBALS['ran_booster_overview_plugin_calls'] = 0;
@@ -255,8 +316,11 @@ final class OverviewPresenterTest extends TestCase {
 		};
 	}
 
-	/** @return array<string, mixed> */
-	private function present( PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity = null ): array {
+	/**
+	 * @param array{status:string,total:?int,items:list<array{provider_label:string,label:string,badge_label:string,stage:string,url:string}>}|null $credentials
+	 * @return array<string, mixed>
+	 */
+	private function present( PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity = null, ?array $credentials = null ): array {
 		$tabs = array();
 		foreach ( array( 'portability', 'documentation', 'troubleshooting' ) as $key ) {
 			$tabs[] = array(
@@ -267,6 +331,6 @@ final class OverviewPresenterTest extends TestCase {
 				'provider' => false,
 			);
 		}
-		return ( new OnboardingPresenter() )->build_overview( $tabs, '/install-plugin', '/install-theme', $plugins, $themes, $activity, array( 'ready' => true ) );
+		return ( new OnboardingPresenter() )->build_overview( $tabs, '/install-plugin', '/install-theme', $plugins, $themes, $activity, array( 'ready' => true ), array(), $credentials );
 	}
 }

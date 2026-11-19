@@ -6,6 +6,7 @@ namespace RAN\Admin;
 
 use LogicException;
 use RAN\Activity\ActivityStore;
+use RAN\AdoptionIdentity;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
@@ -66,20 +67,23 @@ final readonly class OnboardingPresenter {
 	 * @param list<array{key: string, label: string, url: string, active: bool, provider: bool}> $tabs Allowlisted admin navigation.
 	 * @param array<string, mixed>|null $storage_summary Previously inspected storage state.
 	 * @param array<string, array{admitted:bool,selection:?string,source_kind?:?string,source_name?:?string,replacement_detected?:bool}> $provider_facts Local admission and selection facts.
+	 * @param array{status:string,total:?int,items:list<array{provider_label:string,label:string,badge_label:string,stage:string,url:string}>}|null $credential_expiry This request's captured expiry reminders.
 	 * @return array<string, mixed>
 	 */
-	public function build_overview( array $tabs, string $install_plugin_url, string $install_theme_url, PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity, ?array $storage_summary = null, array $provider_facts = array() ): array {
+	public function build_overview( array $tabs, string $install_plugin_url, string $install_theme_url, PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity, ?array $storage_summary = null, array $provider_facts = array(), ?array $credential_expiry = null ): array {
 		$overview         = $this->build( $tabs, $install_plugin_url, $install_theme_url );
 		$choice           = get_option( self::PRESENTATION_OPTION );
 		$overview['view'] = 'onboarding' === $choice ? 'onboarding' : 'dashboard';
 		$plugin_count     = null;
 		$theme_count      = null;
 		$disabled         = 0;
+		$managed          = array();
 		try {
 			$managed_plugins = $plugins->all_booster_plugins();
 			$plugin_count    = count( $managed_plugins );
 			foreach ( $managed_plugins as $package ) {
 				$disabled += DeploymentPolicy::DISABLED === $package->get_deployment_policy() ? 1 : 0;
+				$managed[] = array( 'plugin', $package );
 			}
 		} catch ( Throwable $failure ) {
 			$plugin_count = null;
@@ -89,6 +93,7 @@ final readonly class OnboardingPresenter {
 			$theme_count    = count( $managed_themes );
 			foreach ( $managed_themes as $package ) {
 				$disabled += DeploymentPolicy::DISABLED === $package->get_deployment_policy() ? 1 : 0;
+				$managed[] = array( 'theme', $package );
 			}
 		} catch ( Throwable $failure ) {
 			$theme_count = null;
@@ -146,11 +151,83 @@ final readonly class OnboardingPresenter {
 				'replacement_detected' => $fact['replacement_detected'] ?? false,
 			);
 		}
-		$overview['storage_summary'] = $storage_summary;
-		$overview['overview_url']    = admin_url( 'admin.php?page=ran-booster&tab=overview' );
-		$overview['plugins_url']     = admin_url( 'admin.php?page=ran-booster-plugins' );
-		$overview['themes_url']      = admin_url( 'admin.php?page=ran-booster-themes' );
-		$overview['activity_url']    = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' );
+		$overview['storage_summary']   = $storage_summary;
+		$overview['overview_url']      = admin_url( 'admin.php?page=ran-booster&tab=overview' );
+		$overview['plugins_url']       = admin_url( 'admin.php?page=ran-booster-plugins' );
+		$overview['themes_url']        = admin_url( 'admin.php?page=ran-booster-themes' );
+		$overview['activity_url']      = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' );
+		$overview['credential_expiry'] = $credential_expiry ?? array(
+			'status' => 'unknown',
+			'total'  => null,
+			'items'  => array(),
+		);
+		$overview['attention']         = $this->attention( $managed, $activity, $overview['credential_expiry'], $overview['activity_url'] );
 		return $overview;
+	}
+
+	/**
+	 * Needs attention: each managed package's failed or uncertain Core update for its current adoption, then
+	 * credential reminders. Critical rows sort first; five are shown and the hidden ones are counted.
+	 *
+	 * @param list<array{0:'plugin'|'theme',1:\RAN\Package}> $managed
+	 * @param array{status:string,total:?int,items:list<array{provider_label:string,label:string,badge_label:string,stage:string,url:string}>} $credentials
+	 * @return array{updates_available:bool,items:list<array{label:string,url:string,badge:string,critical:bool}>,total:int,hidden_critical:int}
+	 */
+	private function attention( array $managed, ?ActivityStore $activity, array $credentials, string $activity_url ): array {
+		$packages = array();
+		$names    = array();
+		foreach ( $managed as list( $type, $package ) ) {
+			$token      = AdoptionIdentity::of( $package );
+			$identifier = $package->get_identifier();
+			if ( null !== $token && is_string( $identifier ) ) {
+				$packages[] = array(
+					'subject_type'     => $type,
+					'subject_identity' => $identifier,
+					'adoption_token'   => $token,
+				);
+				$names[]    = $package->get_display_name();
+			}
+		}
+		$read = array(
+			'available' => array() === $packages,
+			'outcomes'  => array(),
+		);
+		try {
+			$read = array() === $packages || null === $activity ? $read : $activity->decisive_update_outcomes( $packages );
+		} catch ( Throwable $failure ) {
+			$read['available'] = false;
+		}
+		$items = array();
+		foreach ( $read['outcomes'] as $index => $outcome ) {
+			$record = $outcome['record'];
+			if ( 'clear' === $outcome['state'] || null === $record ) {
+				continue;
+			}
+			$review  = 'needs_review' === $outcome['state'];
+			$facts   = json_decode( (string) $record['facts'], true );
+			$items[] = array(
+				'label'    => $names[ $index ],
+				'url'      => $review
+					? $activity_url . '&attempt=' . rawurlencode( (string) ( is_array( $facts ) ? $facts['deployment_attempt_id'] ?? '' : '' ) ) . '&reference=' . rawurlencode( (string) $record['correlation'] )
+					: $activity_url . '&activity_package=' . rawurlencode( (string) wp_json_encode( array( $record['provider'], $record['subject_type'], $record['subject_identity'] ) ) ),
+				'badge'    => $review ? __( 'Needs review', 'ran-booster' ) : __( 'Update failed', 'ran-booster' ),
+				'critical' => true,
+			);
+		}
+		foreach ( 'captured' === $credentials['status'] ? $credentials['items'] : array() as $item ) {
+			$items[] = array(
+				'label'    => $item['provider_label'] . ': ' . $item['label'],
+				'url'      => $item['url'],
+				'badge'    => $item['badge_label'],
+				'critical' => in_array( $item['stage'], array( 'expired', 'urgent' ), true ),
+			);
+		}
+		usort( $items, static fn ( array $a, array $b ): int => $b['critical'] <=> $a['critical'] );
+		return array(
+			'updates_available' => $read['available'],
+			'items'             => array_slice( $items, 0, 5 ),
+			'total'             => count( $items ),
+			'hidden_critical'   => count( array_filter( array_slice( $items, 5 ), static fn ( array $item ): bool => $item['critical'] ) ),
+		);
 	}
 }

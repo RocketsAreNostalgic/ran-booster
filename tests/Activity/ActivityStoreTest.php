@@ -697,7 +697,7 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertNull( $read['outcomes'][3]['record'] );
 		$query = (string) end( $this->connection->queries );
 		self::assertStringContainsString( 'ORDER BY completed_at DESC, id DESC', $query );
-		self::assertStringContainsString( "reason NOT IN ('lock_unavailable','policy_blocked','provider_rate_limited','stale_event')", $query );
+		self::assertStringContainsString( "reason NOT IN ('lock_unavailable','policy_blocked','provider_rate_limited','provider_selection_changed','stale_event')", $query );
 		self::assertStringContainsString( "status = 'succeeded' AND reason = 'deployed'", $query );
 		self::assertStringContainsString( 'completed_at IS NOT NULL', $query );
 

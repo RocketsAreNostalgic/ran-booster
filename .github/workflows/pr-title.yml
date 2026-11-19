@@ -1,0 +1,42 @@
+name: Pull request title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  title:
+    name: Conventional Commit title
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Check the pull-request title
+        shell: bash
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          # Types match release-please-config.json. The squash commit subject is the
+          # title plus " (#NNNN)", so the limit is 64 characters. AGENTS.md (commit
+          # messages) says dependency changes are build(deps), never fix(deps).
+          types='feat|fix|perf|revert|docs|style|refactor|test|build|ci|chore|deps|release'
+          pattern="^(${types})(\\([a-z0-9][a-z0-9._/-]*\\))?!?: [^[:space:]].*\$"
+          if [[ ! "$PR_TITLE" =~ $pattern ]]; then
+            echo "::error::The title must be '<type>[scope]: description' with a type from: ${types//|/, }."
+            exit 1
+          fi
+          if (( ${#PR_TITLE} > 64 )); then
+            echo "::error::The title is ${#PR_TITLE} characters; the limit is 64."
+            exit 1
+          fi
+          if [[ "$PR_TITLE" == 'fix(deps)'* ]]; then
+            echo "::error::Change fix(deps) to build(deps), because dependency updates are not user-visible fixes."
+            exit 1
+          fi

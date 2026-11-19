@@ -390,11 +390,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 					$query['package'] = $id;
 				}
 				$url      = add_query_arg( $query, $origin . '/wp-admin/admin.php' );
-				$response = wp_remote_get( $url, $options );
-				if ( '1' === getenv( 'RAN_BOOSTER_RECOVERY_HTTP_DIAGNOSTICS' ) ) {
-					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable CLI diagnostic goes to the CI log.
-					fwrite( STDERR, \RAN\Tests\WordPress\RecoveryHttpDiagnostic::format( $response, $url, $type, $source, $damaged, $recovery ) );
-				}
+				$response = $this->get_admin_page( $url, $options, $type, $source, $damaged, $recovery );
 				$this->check( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ), 'real authenticated package/recovery GET remains available' );
 				$this->assert_admin_html( wp_remote_retrieve_body( $response ), $type, $id, $damaged, $recovery, $blocked );
 			}
@@ -405,6 +401,32 @@ final class RAN_Booster_AdoptionRecoveryProof {
 			} else {
 				$_COOKIE[ LOGGED_IN_COOKIE ] = $original_cookie;
 			}
+		}
+	}
+
+	/**
+	 * GET an admin page, once more only when the first attempt received no HTTP response at all.
+	 *
+	 * cURL error 52 is an empty reply from the disposable PHP built-in server (#1063). The views are
+	 * read-only, so a second attempt proves the same thing. Any HTTP response, any other transport
+	 * error and a second empty reply all remain failures, and every attempt keeps its diagnostic.
+	 *
+	 * @param array<string, mixed> $options Request options.
+	 * @return array<string, mixed>|\WP_Error
+	 */
+	private function get_admin_page( string $url, array $options, string $type, string $source, bool $damaged, bool $recovery ): array|\WP_Error {
+		for ( $attempt = 1; ; ++$attempt ) {
+			$response = wp_remote_get( $url, $options );
+			if ( '1' === getenv( 'RAN_BOOSTER_RECOVERY_HTTP_DIAGNOSTICS' ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable CLI diagnostic goes to the CI log.
+				fwrite( STDERR, \RAN\Tests\WordPress\RecoveryHttpDiagnostic::format( $response, $url, $type, $source, $damaged, $recovery ) );
+			}
+			if ( 1 !== $attempt || ! $response instanceof \WP_Error || ! str_starts_with( $response->get_error_message(), 'cURL error 52:' ) ) {
+				return $response;
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable CLI diagnostic goes to the CI log.
+			fwrite( STDERR, '[RAN_RECOVERY_HTTP_RETRY] attempt=1 reason=curl_52 view=' . ( $recovery ? 'recovery' : 'package' ) . PHP_EOL );
+			usleep( 500000 );
 		}
 	}
 

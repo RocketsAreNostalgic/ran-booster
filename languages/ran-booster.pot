@@ -4487,7 +4487,7 @@ msgid "The Git provider rejected the webhook removal request. Validate or inspec
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:625
-msgid "The webhook operation completed, but Core could not release its coordination lock. Wait for the current request to end, then run Check before retrying."
+msgid "The webhook operation completed, but Core could not release its coordination lock. Wait for the current request to end, then Validate before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:626

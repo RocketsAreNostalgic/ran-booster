@@ -1572,7 +1572,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
 		$html = $this->render_panel( $gateway, $store );
 
-		self::assertStringContainsString( 'then run Check before retrying', $html );
+		self::assertStringContainsString( 'then Validate before retrying', $html );
 		self::assertStringContainsString( 'value="validate"', $html );
 		self::assertStringContainsString( 'value="reconfigure"', $html );
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Repair</button>', $html );

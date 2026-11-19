@@ -622,7 +622,7 @@ final class WebhookDisplayModel {
 			'hook_ownership_unavailable' => __( 'Webhook management could not confirm that the recorded hook belongs to this site. Validate or inspect the hook at the Git provider before retrying.', 'ran-booster' ),
 			'predelete_read_unavailable', 'remove_readback_unavailable', 'remove_outcome_unknown' => __( 'Webhook management could not confirm whether the remote hook was removed. Validate or inspect the hook at the Git provider before retrying removal.', 'ran-booster' ),
 			'remove_failed' => __( 'The Git provider rejected the webhook removal request. Validate or inspect the hook at the Git provider before retrying.', 'ran-booster' ),
-			'operation_lock_release_failed' => __( 'The webhook operation completed, but Core could not release its coordination lock. Wait for the current request to end, then run Check before retrying.', 'ran-booster' ),
+			'operation_lock_release_failed' => __( 'The webhook operation completed, but Core could not release its coordination lock. Wait for the current request to end, then Validate before retrying.', 'ran-booster' ),
 			'assessment_insufficient' => __( 'Core confirmed that the selected credential is insufficient for this repository webhook operation. Nothing was changed.', 'ran-booster' ),
 			'assessment_stale' => __( 'The credential fitness assessment is stale. Nothing was changed; assess again with current repository authority.', 'ran-booster' ),
 			'assessment_unsupported' => __( 'The bound Git provider does not support this fixed webhook operation. Nothing was changed.', 'ran-booster' ),

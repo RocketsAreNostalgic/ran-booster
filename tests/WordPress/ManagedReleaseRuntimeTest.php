@@ -1253,6 +1253,40 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertArrayHasKey( self::NATIVE_PLUGIN, $filtered->no_update );
 	}
 
+	public function test_absent_offer_costs_no_authority_read_but_present_unauthorized_offer_is_removed(): void {
+		$package = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$reads   = 0;
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $package ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturnCallback(
+			static function () use ( &$reads, $package ): Package {
+				++$reads;
+
+				return $package;
+			}
+		);
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
+		// No managed release configuration, so the package has no authority and its offer is unauthorized.
+		$registrar = $this->registrar( $plugins, $themes, new RuntimeReleaseStore(), new RuntimeUpdaterLock(), $this->release_metadata_registry() );
+
+		$absent = $registrar->suppress_unauthorized_plugin_offers( (object) array( 'response' => array( 'unmanaged/other.php' => (object) array() ) ) );
+		self::assertSame( 0, $reads );
+		self::assertArrayHasKey( 'unmanaged/other.php', $absent->response );
+
+		$present = $registrar->suppress_unauthorized_plugin_offers(
+			(object) array(
+				'response' => array(
+					self::NATIVE_PLUGIN   => (object) array(),
+					'unmanaged/other.php' => (object) array(),
+				),
+			)
+		);
+		self::assertSame( 1, $reads );
+		self::assertArrayNotHasKey( self::NATIVE_PLUGIN, $present->response );
+		self::assertArrayHasKey( 'unmanaged/other.php', $present->response );
+	}
+
 	public function test_repository_failure_suppresses_only_targets_registered_by_core_this_request(): void {
 		$package = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
 		$reads   = 0;

@@ -104,7 +104,7 @@ final class DeploymentAttemptRepository {
 		return $this->transaction(
 			function () use ( $operation, $package_type, $provider, $provider_repository_id, $request, $requested_ref, $package_source, $package_source_revision ): DeploymentAttempt {
 				$request = $this->bind_selection( $provider, $package_type, $request );
-				$this->lock_adoption( $operation, $package_type, $provider, $provider_repository_id, $request, $package_source, $package_source_revision );
+				$this->lock_adoption( $operation, $package_type, $provider, $provider_repository_id, $request, $package_source, $package_source_revision, true );
 				$active = $this->active_package_attempt( $package_type, $request->package_slug );
 				if ( null !== $active ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The failure stores a validated, whitelisted attempt projection; it does not render output.
@@ -1216,12 +1216,13 @@ final class DeploymentAttemptRepository {
 	}
 
 	/** Lock management before attempt rows, closing capture-before-admission races. */
-	private function lock_adoption( string $operation, string $type, string $provider, string $repository_id, DeploymentRequest $request, string $source, int $revision ): void {
+	private function lock_adoption( string $operation, string $type, string $provider, string $repository_id, DeploymentRequest $request, string $source, int $revision, bool $admitting = false ): void {
 		if ( 'install' === $operation && ( null !== $request->adoption_token || null !== $request->installed_identifier ) ) {
 			throw DeploymentStorageFailure::invalid_record();
 		}
 		if ( ! $this->adoption_matches( $operation, $type, $provider, $repository_id, $request, $source, $revision ) ) {
-			throw DeploymentStorageFailure::inconsistent();
+			// An install fails here only when a managed row has its folder; admission names that cause, later re-checks stay generic.
+			throw $admitting && 'install' === $operation ? DeploymentStorageFailure::folder_managed() : DeploymentStorageFailure::inconsistent();
 		}
 	}
 

@@ -1841,6 +1841,31 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
+	public function test_admission_refuses_an_install_into_a_managed_folder_with_its_own_signal_and_records_nothing(): void {
+		// The service answers a repeat install first; admission stays the atomic guard against a race.
+		$this->database->management_rows['install-plugin/install-plugin.php'] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_install_plugin',
+			'repository'             => 'owner/install-plugin',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
+
+		try {
+			$this->running_install( 'install-plugin' );
+			self::fail( 'Admission must refuse an install into a managed folder.' );
+		} catch ( DeploymentStorageFailure $failure ) {
+			self::assertTrue( $failure->is_folder_managed() );
+			self::assertSame( DeploymentStorageFailure::inconsistent()->getMessage(), $failure->getMessage() );
+			self::assertSame( array(), $this->database->rows );
+		}
+	}
+
 	private function running_install( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC, ?string $expected_identifier = null, bool $is_private = false, ?string $credential_id = null ): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/install-plugin',

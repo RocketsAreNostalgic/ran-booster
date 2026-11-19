@@ -917,6 +917,35 @@ final class DeploymentAttemptRepository {
 		);
 	}
 
+	/** Best effort: records that a signed push matched no managed package. The delivery is already admitted. */
+	public function record_unmatched_push( string $provider, string $repository, string $repository_id, string $reason ): void {
+		if ( null === $this->activity || ! in_array( $reason, DeploymentCoordinator::UNMATCHED_REASONS, true ) ) {
+			return;
+		}
+		$code = 'webhook.unmatched.' . $reason;
+		try {
+			$id = $this->activity->begin(
+				$provider,
+				new ActivityRequest( 'webhook.push' ),
+				array(
+					'subject_type'     => 'repository',
+					'subject_identity' => $repository,
+					'adoption_token'   => null,
+					// The debounce: with the clock hour in the context, the first push per repository, reason and hour
+					// starts a new context and is kept; discard_repeated_skip() drops the rest of that hour as repeats.
+					'context'          => hash( 'sha256', $repository_id . "\0" . $reason . "\0" . gmdate( 'YmdH' ) ),
+					'purpose'          => null,
+					'provenance'       => 'core',
+				)
+			);
+			if ( null !== $id && ! $this->activity->discard_repeated_skip( $id, $code ) ) {
+				$this->activity->complete( $id, 'skipped', $code );
+			}
+		} catch ( Throwable ) {
+			BoosterLogger::log( 'An unmatched webhook push could not be recorded in Activity.', array( 'reason' => $reason ) );
+		}
+	}
+
 	private function record_activity_start( DeploymentAttempt $attempt, string $stage ): void {
 		if ( null === $this->activity ) {
 			return;

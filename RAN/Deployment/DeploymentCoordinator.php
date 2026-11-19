@@ -31,6 +31,9 @@ use Throwable;
  */
 class DeploymentCoordinator {
 
+	/** Why a signed push matched no package: the closest candidate's first failing check, in check order. */
+	public const UNMATCHED_REASONS = array( 'no_candidate', 'release_source', 'policy_not_automatic', 'branch_mismatch', 'repository_id_mismatch' );
+
 	private WordPressCorePackageExecutor $branch_executor;
 
 	private RepositorySourceGuard $source_guard;
@@ -183,18 +186,22 @@ class DeploymentCoordinator {
 		$provider    = $first->provider->value;
 		$delivery_id = $first->delivery_id;
 		$targets     = array();
+		$unmatched   = array();
 
 		foreach ( $events as $event ) {
 			if ( ! $event instanceof PushEvent || $event->provider->value !== $provider || $event->delivery_id !== $delivery_id ) {
 				throw new RuntimeException( 'One webhook request must identify one provider delivery.' );
 			}
 			try {
-				$matches = $this->matching_packages( $event );
+				list( $matches, $reason ) = $this->matching_packages( $event );
 			} catch ( PackageStorageFailure $failure ) {
 				if ( $failure->is_database_unsupported() ) {
 					throw DeploymentStorageFailure::unsupported_database();
 				}
 				throw $failure;
+			}
+			if ( array() === $matches ) {
+				$unmatched[] = array( $event, $reason );
 			}
 			foreach ( $matches as $match ) {
 				$key = $match['type'] . "\0" . $match['package']->get_slug();
@@ -215,6 +222,10 @@ class DeploymentCoordinator {
 		PackageMutationGuard::assert_deployment_target_count( count( $targets ) );
 		if ( array() === $targets ) {
 			$this->attempts->admit_webhook_batch( $provider, $delivery_id, $authenticated_body_digest, array() );
+			foreach ( $unmatched as list( $event, $reason ) ) {
+				BoosterLogger::capture_webhook( $reason );
+				$this->attempts->record_unmatched_push( $provider, $event->repository, $event->provider_repository_id, $reason );
+			}
 			return $this->admission( 'accepted', substr( hash( 'sha256', $provider . "\0" . $delivery_id ), 0, 32 ), 0, 'not_required' );
 		}
 		$attempts = $this->attempts->admit_webhook_batch( $provider, $delivery_id, $authenticated_body_digest, array_values( $targets ) );
@@ -430,9 +441,13 @@ class DeploymentCoordinator {
 		);
 	}
 
-	/** @return list<array{type: string, package: Package}> */
+	/**
+	 * @return array{0: list<array{type: string, package: Package}>, 1: string} The matches, and when there are none
+	 *         the reason the closest candidate (same provider and repository) was rejected.
+	 */
 	private function matching_packages( PushEvent $event ): array {
 		$matches    = array();
+		$closest    = 0;
 		$normalizer = $this->providers->require_capability( $event->provider, WebhookNormalizer::class );
 		$policy     = $normalizer->get_webhook_policy();
 		foreach ( array(
@@ -440,22 +455,33 @@ class DeploymentCoordinator {
 			'theme'  => $this->themes->all_deployment_themes(),
 		) as $type => $packages ) {
 			foreach ( $packages as $package ) {
-				if ( PackageSource::BRANCH === $package->get_source()
-					&& $package->get_deployment_policy()->allows_webhook_mutation()
-					&& ! PackageMutationGuard::is_booster_plugin_file( $package->get_identifier() )
-					&& $package->get_provider_code() === $event->provider->value
-					&& $policy->repository_target_matches( $event->repository, (string) $package->get_repository() )
-					&& (string) $package->get_branch() === $event->branch
-					&& null !== $package->get_provider_repository_id()
-					&& hash_equals( (string) $package->get_provider_repository_id(), $event->provider_repository_id ) ) {
+				if ( PackageMutationGuard::is_booster_plugin_file( $package->get_identifier() )
+					|| $package->get_provider_code() !== $event->provider->value
+					|| ! $policy->repository_target_matches( $event->repository, (string) $package->get_repository() ) ) {
+					continue;
+				}
+				// Keys follow UNMATCHED_REASONS after no_candidate; the first false check rejects this candidate.
+				$failed = array_search(
+					false,
+					array(
+						1 => PackageSource::BRANCH === $package->get_source(),
+						2 => $package->get_deployment_policy()->allows_webhook_mutation(),
+						3 => (string) $package->get_branch() === $event->branch,
+						4 => null !== $package->get_provider_repository_id() && hash_equals( (string) $package->get_provider_repository_id(), $event->provider_repository_id ),
+					),
+					true
+				);
+				if ( false === $failed ) {
 					$matches[] = array(
 						'type'    => $type,
 						'package' => $package,
 					);
+					continue;
 				}
+				$closest = max( $closest, (int) $failed );
 			}
 		}
-		return $matches;
+		return array( $matches, self::UNMATCHED_REASONS[ $closest ] );
 	}
 
 	private function assert_branch_source( Package $package ): void {

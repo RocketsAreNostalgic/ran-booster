@@ -202,6 +202,10 @@ class ProviderProfileAdminController {
 				}
 			}
 		} catch ( \Throwable $exception ) {
+			if ( null === $result ) {
+				// A throwing validator must not leave its row in progress.
+				$this->complete_credential_activity( $activity_id, null );
+			}
 			$error  = $this->record_failure( $exception, 'validate-access-profile', 'credential_validation' );
 			$status = $exception instanceof CredentialRequestException ? 422 : 500;
 		}

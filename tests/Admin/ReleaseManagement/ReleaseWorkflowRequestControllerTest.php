@@ -33,6 +33,8 @@ use RAN\Tests\Admin\ReleaseManagement\Support\RepositoryReleaseWorkflowProviderD
 use RAN\Tests\Admin\ReleaseManagement\Support\PartialRepositoryReleaseWorkflowProviderDouble;
 
 final class ReleaseWorkflowRequestControllerTest extends TestCase {
+	use \RAN\Tests\Support\CapturesBoosterLog;
+
 	#[Before]
 	public function reset_word_press(): void {
 		ReleaseManagementFixture::reset_word_press(); }
@@ -703,15 +705,25 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		self::assertSame( array(), $provider->calls );
 	}
 
-	public function test_unexpected_workflow_failure_keeps_the_started_activity_incomplete(): void {
+	public function test_unexpected_workflow_failure_closes_the_started_activity_as_uncertain_and_logs_the_class(): void {
 		$provider                     = new RepositoryReleaseWorkflowProviderDouble();
 		$provider->throw_on_operation = true;
 		[$controller, , $connection]  = $this->activity_fixture( $provider );
-		$url                          = $controller->process_workflow_request( $this->request( 'inspect' ) );
+		$this->start_log_capture();
+		try {
+			$url   = $controller->process_workflow_request( $this->request( 'inspect' ) );
+			$lines = implode( "\n", $this->captured_log_lines() );
+		} finally {
+			$this->stop_log_capture();
+		}
 		self::assertStringContainsString( 'workflow_remote_unavailable', $url );
 		self::assertCount( 1, $connection->inserted );
-		self::assertSame( 'incomplete', $connection->inserted[0]['status'] );
-		self::assertSame( array(), array_values( array_filter( $connection->queries, static fn ( string $query ): bool => str_contains( $query, 'SET status = ' ) ) ) );
+		$completions = array_values( array_filter( $connection->prepared, static fn ( array $query ): bool => str_contains( $query['sql'], 'SET status = ' ) ) );
+		self::assertCount( 1, $completions );
+		self::assertSame( array( 'failed', 'workflow_remote_unavailable' ), array_slice( $completions[0]['args'], 0, 2 ) );
+		self::assertStringContainsString( '"diagnostic_code":"unexpected_runtime_failure"', $completions[0]['args'][4] );
+		self::assertStringContainsString( '"exception_class":"RuntimeException"', $lines );
+		self::assertStringNotContainsString( 'Workflow provider operation failure', $lines );
 	}
 
 	public function test_workflow_activity_captures_authenticated_pre_provider_failure_and_rejects_forgery(): void {

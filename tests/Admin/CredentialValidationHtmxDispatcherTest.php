@@ -331,7 +331,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		}
 	}
 
-	public function test_provider_exception_keeps_activity_incomplete_without_unwind_reporting(): void {
+	public function test_provider_exception_closes_activity_as_failed_without_its_text(): void {
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
 		$database                                = new \RAN\Tests\Activity\ActivityConnection();
 		$evidence                                = new class() extends \RAN\Admin\RepositoryBranchCheckEvidenceStore {
@@ -339,7 +339,8 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 				return array( 'generation' => 1 ); }
 		};
 		$dashboard                               = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		// The dashboard logs the exception's class and code for this failure notice.
+		$dashboard->expects( self::once() )->method( 'add_failure_message' )->with( self::anything(), self::isInstanceOf( \RuntimeException::class ) );
 		$dispatcher           = $this->dispatcher(
 			$dashboard,
 			CredentialValidationResult::valid(),
@@ -351,9 +352,10 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		);
 		$_POST['ran_booster'] = $this->request();
 		$dispatcher->dispatch_post_requests();
-		self::assertSame( 'incomplete', $database->inserted[0]['status'] );
-		self::assertSame( array(), array_values( array_filter( $database->queries, static fn ( string $query ): bool => str_contains( $query, 'SET status = ' ) ) ) );
-		self::assertStringNotContainsString( 'confidential', (string) \RAN\Activity\wp_json_encode( array( $database->inserted, $database->prepared ) ) );
+		$completions = array_values( array_filter( $database->prepared, static fn ( array $query ): bool => str_contains( $query['sql'], 'SET status = ' ) ) );
+		self::assertCount( 1, $completions );
+		self::assertSame( array( 'failed', 'credential.validation_failed' ), array_slice( $completions[0]['args'], 0, 2 ) );
+		self::assertStringNotContainsString( 'confidential', (string) \RAN\Activity\wp_json_encode( array( $database->inserted, $database->prepared, $this->captured_log_lines() ) ) );
 	}
 
 	public function test_later_expiry_persistence_failure_does_not_rewrite_validation_observation(): void {

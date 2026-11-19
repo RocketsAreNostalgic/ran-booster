@@ -175,7 +175,10 @@ final readonly class ProviderFailure {
 	public function deployment_outcome_code(): string {
 		return match ( true ) {
 			in_array( $this->reason, array( 'credential_missing', 'credential_format_invalid' ), true ) => 'provider_request_invalid',
+			'credential_store_unavailable' === $this->reason => 'provider_credential_unavailable',
 			in_array( $this->reason, self::CREDENTIAL, true ) && 'permission_denied' !== $this->reason => 'provider_credential_rejected',
+			'repository_identity_changed' === $this->reason => 'provider_repository_changed',
+			'redirect_blocked' === $this->reason => 'provider_redirected',
 			'site_filesystem_unsupported' === $this->reason => 'deployment_filesystem_unsupported',
 			'site_zip_unavailable' === $this->reason => 'deployment_zip_extension_missing',
 			'permission_denied' === $this->reason => 'provider_access_denied',

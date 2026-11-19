@@ -216,6 +216,7 @@ final readonly class PackageOperationService {
 		// The installed folder keeps its case; the source names the folder exactly or, for a new install, in lower case (PackageDirectory).
 		$folder = PackageDirectory::installed_slug( $operation->package_type, (string) $package->get_identifier() );
 		if ( ! in_array( $folder, array( $slug, PackageDirectory::deployment_slug( $slug, null ) ), true ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; the controller escapes each value when it builds the message.
 			throw new PackageFolderMismatch( $folder, $operation->subdirectory ?? (string) $operation->repository, $slug );
 		}
 		$this->apply_repository( $package, $operation );

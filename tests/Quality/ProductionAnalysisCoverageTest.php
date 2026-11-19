@@ -310,7 +310,9 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			$counts = array();
 			foreach ( array( '1/2', '2/2' ) as $shard ) {
 				list( $status, $output ) = $this->run_development_runner( $fixture, array(), 4, $shard );
-				self::assertSame( 1, preg_match( '~shard ' . preg_quote( $shard, '~' ) . ': (\d+) of (\d+) groups~', $output, $matches ), $output );
+				if ( 1 !== preg_match( '~shard ' . preg_quote( $shard, '~' ) . ': (\d+) of (\d+) groups~', $output, $matches ) ) {
+					self::fail( 'Expected the shard group count: ' . $output );
+				}
 				$counts[] = array( (int) $matches[1], (int) $matches[2] );
 				$found    = 0;
 				foreach ( array_keys( $errors ) as $error ) {

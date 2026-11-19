@@ -14,6 +14,17 @@ final class DeploymentOutcomeMessage {
 		if ( '' !== $message ) {
 			return $message;
 		}
+		$unmatched = match ( $reason ) {
+			'webhook.unmatched.no_candidate' => __( 'Push received; no managed package uses this repository.', 'ran-booster' ),
+			'webhook.unmatched.release_source' => __( 'Push received; the package updates from releases, not a branch.', 'ran-booster' ),
+			'webhook.unmatched.policy_not_automatic' => __( 'Push received; the package\'s updates are not set to Automatic.', 'ran-booster' ),
+			'webhook.unmatched.branch_mismatch' => __( 'Push received; the package follows another branch.', 'ran-booster' ),
+			'webhook.unmatched.repository_id_mismatch' => __( 'Push received; the repository ID does not match the package\'s.', 'ran-booster' ),
+			default => null,
+		};
+		if ( null !== $unmatched ) {
+			return $unmatched . ' ' . __( 'Repeats within an hour are not listed; turn on debug logging to see them.', 'ran-booster' );
+		}
 		return match ( $reason ) {
 			'diagnostics.partial' => __( 'Diagnostics returned a partial report.', 'ran-booster' ),
 			'diagnostics.passed' => __( 'Diagnostics passed.', 'ran-booster' ),

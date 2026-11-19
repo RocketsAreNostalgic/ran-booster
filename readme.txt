@@ -95,8 +95,9 @@ for timeouts and response status. GitHub does not automatically redeliver failed
 deliveries. Enable Bitbucket Request History in advance and use its request UUID
 only as a cross-reference; do not assume it is stable across automatic attempts.
 Compare the provider identifier with the Git provider request ID shown for webhook
-attempts in Booster Activity; absence from Activity is inconclusive for probes,
-ignored events, and zero targets.
+attempts in Booster Activity; absence from Activity is inconclusive for probes
+and ignored events. A push that matches no managed package is listed once per
+repository, reason and hour.
 
 Switching a package from Branch to Published releases does not remove an
 existing repository webhook or local signing-secret setup. The release-managed

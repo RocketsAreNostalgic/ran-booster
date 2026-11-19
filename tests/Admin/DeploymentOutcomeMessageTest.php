@@ -46,6 +46,19 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertSame( DeploymentOutcomeMessage::for_code( 'deployed' ), DeploymentOutcomeMessage::for_code( 'deployed', wp_json_encode( $facts ) ) );
 	}
 
+	public function test_each_unmatched_push_reason_has_its_own_sentence_and_the_shared_note(): void {
+		$note      = ' Repeats within an hour are not listed; turn on debug logging to see them.';
+		$sentences = array();
+		foreach ( \RAN\Deployment\DeploymentCoordinator::UNMATCHED_REASONS as $reason ) {
+			$copy = DeploymentOutcomeMessage::for_activity( 'skipped', 'webhook.unmatched.' . $reason );
+			self::assertStringStartsWith( 'Push received; ', $copy, $reason );
+			self::assertStringEndsWith( $note, $copy, $reason );
+			$sentences[] = $copy;
+		}
+		self::assertCount( 5, array_unique( $sentences ) );
+		self::assertStringNotContainsString( $note, DeploymentOutcomeMessage::for_activity( 'skipped', 'policy_disabled' ) );
+	}
+
 	public function test_uncertain_outcomes_do_not_claim_unrecorded_results(): void {
 		self::assertStringNotContainsString( 'completed the update', DeploymentOutcomeMessage::for_code( 'restoration_uncertain' ) );
 		self::assertStringNotContainsString( 'restore the plugin activation state', DeploymentOutcomeMessage::for_code( 'activation_failed' ) );

@@ -463,7 +463,8 @@ final class WebhookProcessorTest extends TestCase {
 				),
 				new WebhookProcessorCoordinator()
 			);
-			$cases[ 'rejected:' . ( $reason ?? 'legacy' ) ] = array( static fn () => $rejected->handle( 'gh', $request ), 400, 'Invalid webhook request.' );
+			$unavailable                                    = 'secret_store_unavailable' === $reason;
+			$cases[ 'rejected:' . ( $reason ?? 'legacy' ) ] = array( static fn () => $rejected->handle( 'gh', $request ), $unavailable ? 503 : 400, $unavailable ? 'Webhook processing is temporarily unavailable.' : 'Invalid webhook request.' );
 		}
 		$cases['verified probe'] = array( static fn () => $processor->handle( 'gh', $request ), 200, 'Webhook verified.' );
 
@@ -896,6 +897,45 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertSame( 0, $spy->calls );
 	}
 
+	public function test_only_operator_fixable_refusals_are_recorded_and_only_an_unreadable_store_answers503(): void {
+		$profile = static fn ( string $secret, string $scope = 'owner', string $target = 'owner' ): array => array(
+			'scope'        => $scope,
+			'target'       => $target,
+			'authority_id' => '',
+			'secret'       => $secret,
+		);
+		$event   = new PushEvent( ProviderCode::parse( 'gh' ), 'other/repository', 'other-id', 'main', str_repeat( 'a', 40 ), 'delivery-one' );
+		$signed  = $this->signed_headers( '{}' );
+		$cases   = array(
+			'secret_store_unavailable' => array( null, $signed, 503, 'Webhook processing is temporarily unavailable.', true ),
+			'profile_invalid'          => array( array( '' => $profile( self::WEBHOOK_SECRET ) ), $signed, 401, 'Webhook authentication failed.', true ),
+			'secret_invalid'           => array( array( 'short' => $profile( 'too-short' ) ), $signed, 401, 'Webhook authentication failed.', true ),
+			'profiles_missing'         => array( array(), $signed, 401, 'Webhook authentication failed.', false ),
+			'signature_mismatch'       => array( array( 'ok' => $profile( self::WEBHOOK_SECRET ) ), array( 'X-Hub-Signature-256' => 'sha256=' . str_repeat( '0', 64 ) ), 401, 'Webhook authentication failed.', false ),
+			'signature_missing'        => array( array( 'ok' => $profile( self::WEBHOOK_SECRET ) ), array(), 401, 'Webhook authentication failed.', false ),
+			'signature_malformed'      => array( array( 'ok' => $profile( self::WEBHOOK_SECRET ) ), array( 'X-Hub-Signature-256' => 'sha256=xyz' ), 401, 'Webhook authentication failed.', false ),
+			'scope_mismatch'           => array( array( 'ok' => $profile( self::WEBHOOK_SECRET, 'repository', 'owner/repository' ) ), $signed, 401, 'Webhook authentication failed.', false ),
+		);
+		foreach ( $cases as $reason => list( $materials, $headers, $status, $message, $recorded ) ) {
+			$registry    = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ) ) ) );
+			$spy         = new WebhookProcessorCoordinatorSpy();
+			$coordinator = new WebhookProcessorCoordinator( null, $spy );
+			if ( null === $materials ) {
+				$secrets = $this->createStub( SecretsFile::class );
+				$secrets->method( 'webhook_materials' )->willThrowException( new RuntimeException( 'secret-canary' ) );
+				$processor = new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ), $this->queued_selection( new \RAN\Tests\Deployment\AttemptRepositoryDatabase(), $registry ) );
+			} else {
+				$processor = $this->processor( $registry, $coordinator, $materials );
+			}
+
+			$response = $processor->handle( 'gh', $this->request( '{}', $headers ) );
+
+			self::assertSame( array( $status, array( 'message' => $message ) ), array( $response->get_status(), $response->get_data() ), $reason );
+			self::assertSame( $recorded ? array( array( 'gh', $reason ) ) : array(), $spy->rejected, $reason );
+			self::assertSame( 0, $spy->calls, $reason );
+		}
+	}
+
 	public function test_unavailable_runner_does_not_reject_an_already_accepted_delivery(): void {
 		$processor = $this->event_processor(
 			new WebhookProcessorCoordinator( self::admission_result( 'accepted', str_repeat( 'd', 32 ), 1, 'unavailable' ) )
@@ -1326,6 +1366,12 @@ final class WebhookProcessorCoordinator extends DeploymentCoordinator {
 
 		return $this->result ?? WebhookProcessorTest::admission_result( 'accepted', str_repeat( 'a', 32 ), 1, 'scheduled' );
 	}
+
+	public function record_rejected_delivery( string $provider, string $reason ): void {
+		if ( null !== $this->spy ) {
+			$this->spy->rejected[] = array( $provider, $reason );
+		}
+	}
 }
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
@@ -1335,6 +1381,8 @@ final class WebhookProcessorCoordinatorSpy {
 	/** @var list<PushEvent> */
 	public array $events                     = array();
 	public string $authenticated_body_digest = '';
+	/** @var list<array{string, string}> */
+	public array $rejected = array();
 }
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test that consumes it.

@@ -919,30 +919,42 @@ final class DeploymentAttemptRepository {
 
 	/** Best effort: records that a signed push matched no managed package. The delivery is already admitted. */
 	public function record_unmatched_push( string $provider, string $repository, string $repository_id, string $reason ): void {
-		if ( null === $this->activity || ! in_array( $reason, DeploymentCoordinator::UNMATCHED_REASONS, true ) ) {
+		if ( in_array( $reason, DeploymentCoordinator::UNMATCHED_REASONS, true ) ) {
+			$this->record_webhook_activity( $provider, 'webhook.push', 'repository', $repository, $repository_id . "\0" . $reason, 'skipped', 'webhook.unmatched.' . $reason );
+		}
+	}
+
+	/** Best effort: records a refused delivery the operator can fix. Its subject is the provider, never a repository named by an unauthenticated payload. */
+	public function record_rejected_delivery( string $provider, string $reason ): void {
+		if ( in_array( $reason, DeploymentCoordinator::REJECTED_DELIVERY_REASONS, true ) ) {
+			$this->record_webhook_activity( $provider, 'webhook.delivery', 'provider', $provider, $provider . "\0" . $reason, 'rejected', 'webhook.rejected.' . $reason );
+		}
+	}
+
+	private function record_webhook_activity( string $provider, string $operation, string $subject_type, string $subject, string $key, string $status, string $code ): void {
+		if ( null === $this->activity ) {
 			return;
 		}
-		$code = 'webhook.unmatched.' . $reason;
 		try {
 			$id = $this->activity->begin(
 				$provider,
-				new ActivityRequest( 'webhook.push' ),
+				new ActivityRequest( $operation ),
 				array(
-					'subject_type'     => 'repository',
-					'subject_identity' => $repository,
+					'subject_type'     => $subject_type,
+					'subject_identity' => $subject,
 					'adoption_token'   => null,
-					// The debounce: with the clock hour in the context, the first push per repository, reason and hour
-					// starts a new context and is kept; discard_repeated_skip() drops the rest of that hour as repeats.
-					'context'          => hash( 'sha256', $repository_id . "\0" . $reason . "\0" . gmdate( 'YmdH' ) ),
+					// The debounce: with the clock hour in the context, the first observation per key and hour starts a
+					// new context and is kept; discard_repeated_skip() drops the rest of that hour as repeats.
+					'context'          => hash( 'sha256', $key . "\0" . gmdate( 'YmdH' ) ),
 					'purpose'          => null,
 					'provenance'       => 'core',
 				)
 			);
-			if ( null !== $id && ! $this->activity->discard_repeated_skip( $id, $code ) ) {
-				$this->activity->complete( $id, 'skipped', $code );
+			if ( null !== $id && ! $this->activity->discard_repeated_skip( $id, $code, $status ) ) {
+				$this->activity->complete( $id, $status, $code );
 			}
 		} catch ( Throwable ) {
-			BoosterLogger::log( 'An unmatched webhook push could not be recorded in Activity.', array( 'reason' => $reason ) );
+			BoosterLogger::log( 'A webhook observation could not be recorded in Activity.', array( 'reason' => $code ) );
 		}
 	}
 

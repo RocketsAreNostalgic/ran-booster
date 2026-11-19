@@ -550,19 +550,36 @@ final class SupportReportTest extends TestCase {
 		self::assertSame( array_fill( 0, 5, 'update' ), array_column( $records, 'operation' ) );
 		self::assertStringNotContainsString( 'canary', $text );
 
+		$rejected                 = array_map( static fn ( string $reason ): string => 'webhook.rejected.' . $reason, \RAN\Deployment\DeploymentCoordinator::REJECTED_DELIVERY_REASONS );
 		$connection->read_results = array(
-			array(
-				(object) array(
-					'id'           => '3',
-					'subject_type' => 'repository',
-					'operation'    => 'webhook.push',
-					'reason'       => 'webhook.unmatched.branch_mismatch',
+			array_merge(
+				array(
+					(object) array(
+						'id'           => '3',
+						'subject_type' => 'repository',
+						'operation'    => 'webhook.push',
+						'reason'       => 'webhook.unmatched.branch_mismatch',
+					),
 				),
+				array_map(
+					static fn ( string $reason ): object => (object) array(
+						'id'               => '4',
+						'subject_type'     => 'provider',
+						'subject_identity' => 'gh',
+						'operation'        => 'webhook.delivery',
+						'status'           => 'rejected',
+						'reason'           => $reason,
+					),
+					$rejected
+				)
 			),
 		);
 		$text                     = ( new SupportReport( new InstallationFacts( new ProviderRegistry() ), activity: new ActivityStore( $connection ) ) )->generate( array() )['text'];
-		$record                   = json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['activity']['data']['records'][0];
-		self::assertSame( array( 'webhook.push', 'webhook.unmatched.branch_mismatch' ), array( $record['operation'], $record['reason'] ) );
+		$records                  = json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['activity']['data']['records'];
+		self::assertSame( array( 'webhook.push', 'webhook.unmatched.branch_mismatch' ), array( $records[0]['operation'], $records[0]['reason'] ) );
+		self::assertSame( array( 'webhook.delivery', 'webhook.delivery', 'webhook.delivery' ), array_column( array_slice( $records, 1 ), 'operation' ) );
+		self::assertSame( array( 'rejected', 'rejected', 'rejected' ), array_column( array_slice( $records, 1 ), 'status' ) );
+		self::assertSame( $rejected, array_column( array_slice( $records, 1 ), 'reason' ) );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]

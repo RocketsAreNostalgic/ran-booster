@@ -15,6 +15,8 @@
  * @var array<string,string> $general_tokens Scoped persistence fences.
  * @var ?string $general_failed_scope Optional native failed operation scope.
  * @var list<array{key:string,label:string,url:string,active:bool,provider:bool}> $general_navigation Optional confirmed navigation.
+ * @var bool $development_site Whether branch sources and Preview tracks need no override here.
+ * @var string $site_address The address a saved source override is bound to.
  */
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -34,6 +36,7 @@ $field_error         = static function ( string $key ) use ( $general_errors, $f
 		'invalid_code' => __( 'The configured value is invalid. Correct the named constant; runtime safety restrictions still apply.', 'ran-booster' ),
 		'invalid_saved' => __( 'The saved preference is invalid. Booster is using its safe fallback.', 'ran-booster' ),
 		'unavailable' => __( 'This preference is currently unavailable.', 'ran-booster' ),
+		'address_changed' => null,
 		default => is_string( $value ) && '' !== $value ? $value : null,
 	};
 };
@@ -44,6 +47,7 @@ $value               = static function ( string $key ) use ( $general_attempted,
 $group_titles        = array(
 	'hide_github'           => __( 'Appearance', 'ran-booster' ),
 	'self_update_discovery' => __( 'Core updates', 'ran-booster' ),
+	'package_sources'       => __( 'Package sources', 'ran-booster' ),
 	'history'               => __( 'History', 'ran-booster' ),
 	'download'              => __( 'Download limits', 'ran-booster' ),
 );
@@ -135,6 +139,8 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 	$fields = match ( $scope ) {
 		'hide_github' => array( 'hide_github' => array( 'ran-booster-hide-github-error', __( 'Hide GitHub UI', 'ran-booster' ) ) ),
 		'self_update_discovery' => array( 'self_update_discovery' => array( 'ran-booster-self-update-discovery-error', __( 'Check for Core updates', 'ran-booster' ) ) ),
+		'branch_sources' => array( 'branch_sources' => array( 'ran-booster-branch-sources-error', __( 'Allow branch sources', 'ran-booster' ) ) ),
+		'prerelease_sources' => array( 'prerelease_sources' => array( 'ran-booster-prerelease-sources-error', __( 'Allow Preview tracks', 'ran-booster' ) ) ),
 		default => array(
 			'history_rows'       => array( 'ran-booster-history-rows-error', __( 'Maximum records', 'ran-booster' ) ),
 			'history_days'       => array( 'ran-booster-history-days-error', __( 'Retention days', 'ran-booster' ) ),
@@ -284,12 +290,67 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 </form></div>
 <?php } ?>
 <?php
+$source_scopes = array_filter(
+	array(
+		'branch_sources'     => __( 'Allow branch sources', 'ran-booster' ),
+		'prerelease_sources' => __( 'Allow Preview tracks', 'ran-booster' ),
+	),
+	static fn ( string $scope ): bool => 'all' === $general_scope || $scope === $general_scope,
+	ARRAY_FILTER_USE_KEY
+);
 if ( 'all' === $general_scope ) {
+	?>
+	<fieldset class="ran-booster-settings__group">
+		<legend><?php echo esc_html( $group_titles['package_sources'] ); ?></legend>
+	<?php
+}
+foreach ( $source_scopes as $source_scope => $source_label ) {
+	$source      = $field( $source_scope );
+	$source_id   = 'ran-booster-' . str_replace( '_', '-', $source_scope );
+	$source_help = match ( true ) {
+		$development_site => __( 'Not needed on a development site.', 'ran-booster' ),
+		'code' === $source['source'] => $source_labels['code'] . '.',
+		'address_changed' === $source['error'] => __( 'Turned off: the site address changed.', 'ran-booster' ),
+		true === $source['value'] => sprintf( /* translators: %s: site address. */ __( 'On for %s', 'ran-booster' ), $site_address ),
+		default => null,
+	};
+	$source_described = trim( ( null === $source_help ? '' : $source_id . '-help' ) . ( null === $field_error( $source_scope ) ? '' : ' ' . $source_id . '-error' ) );
+	$open_scope( $source_scope );
+	if ( ! $source['locked'] ) {
+		?>
+		<input type="hidden" name="ran_booster[preferences][<?php echo esc_attr( $source_scope ); ?>]" value="0"><?php } ?>
+		<label id="<?php echo esc_attr( $source_id ); ?>-label" class="ran-booster-settings__switch-label" for="<?php echo esc_attr( $source_id ); ?>"><?php echo esc_html( $source_label ); ?></label>
+		<div class="ran-booster-settings__switch-row"><span data-ran-booster-ui-switch="general-preference"><label class="ran-booster-settings__switch" data-ran-booster-ui-switch-fallback for="<?php echo esc_attr( $source_id ); ?>"><input id="<?php echo esc_attr( $source_id ); ?>" type="checkbox" role="switch" aria-labelledby="<?php echo esc_attr( $source_id ); ?>-label"<?php echo '' === $source_described ? '' : ' aria-describedby="' . esc_attr( $source_described ) . '"'; ?> name="ran_booster[preferences][<?php echo esc_attr( $source_scope ); ?>]" value="1"<?php checked( '1', $general_attempted[ $source_scope ] ?? ( $source['value'] ? '1' : '0' ) ); ?><?php disabled( $source['locked'] ); ?><?php echo null === $field_error( $source_scope ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span></label><span data-ran-booster-ui-switch-mount></span></span>
+		<?php
+		\RAN\Admin\Component\StatusBadge::print_intent(
+			$source['value'] ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ),
+			$source['value'] ? 'stable' : 'none',
+			array(
+				'data-ran-booster-toggle-status' => '',
+				'role'                           => 'status',
+			)
+		);
+		?>
+		</div>
+		<?php if ( null !== $source_help ) { ?>
+		<div id="<?php echo esc_attr( $source_id ); ?>-help" class="notice notice-info inline ran-booster-settings__reason ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $source_help ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
+		<?php } ?>
+		<?php $render_configuration( array( $source_scope => 'RAN_BOOSTER_ALLOW_' . strtoupper( $source_scope ) ) ); ?>
+	<div class="ran-booster-settings__toggle-actions">
+		<button id="ran-booster-save-<?php echo esc_attr( $source_scope ); ?>" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-toggle-save<?php disabled( $source['locked'] ); ?>><?php esc_html_e( 'Save setting', 'ran-booster' ); ?></button>
+	</div>
+	</form></div>
+	<?php
+}
+if ( 'all' === $general_scope ) {
+	?>
+	</fieldset>
+	<?php
 	$card_body        = (string) ob_get_clean();
 	$card_id          = 'ran-booster-general-heading';
 	$card_modifier    = 'ran-booster-settings__preferences';
 	$card_title       = esc_html__( 'General preferences', 'ran-booster' );
-	$card_description = esc_html( implode( ' · ', array( $group_titles['hide_github'], $group_titles['self_update_discovery'] ) ) );
+	$card_description = esc_html( implode( ' · ', array( $group_titles['hide_github'], $group_titles['self_update_discovery'], $group_titles['package_sources'] ) ) );
 	$card_badge       = '';
 	$card_label       = __( 'General preferences', 'ran-booster' );
 	$card_open        = true;

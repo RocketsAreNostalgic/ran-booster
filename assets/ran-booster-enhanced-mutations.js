@@ -334,6 +334,8 @@
 						'ran-booster-general-region',
 						'ran-booster-general-hide_github',
 						'ran-booster-general-self_update_discovery',
+						'ran-booster-general-branch_sources',
+						'ran-booster-general-prerelease_sources',
 						'ran-booster-general-numeric',
 					].includes(detail.target.id)) ||
 				(packageType &&
@@ -542,6 +544,8 @@
 			const switchScope = [
 				'hide_github',
 				'self_update_discovery',
+				'branch_sources',
+				'prerelease_sources',
 			].includes(form.dataset?.ranBoosterSettingsScope);
 			const controls = Array.from(form.elements || [submitter])
 				.filter(

@@ -1776,7 +1776,13 @@ test('General busy state keeps switches and their fieldsets usable while protect
 });
 
 test('General busy state leaves only the mounted switch subtree operable', () => {
-	for (const scope of ['hide_github', 'self_update_discovery', 'numeric']) {
+	for (const scope of [
+		'hide_github',
+		'self_update_discovery',
+		'branch_sources',
+		'prerelease_sources',
+		'numeric',
+	]) {
 		const state = fixture();
 		state.form.dataset.ranBoosterSettingsScope = scope;
 		const control = (disabled, mounted) => ({

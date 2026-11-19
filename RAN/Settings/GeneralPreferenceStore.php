@@ -412,7 +412,7 @@ final class GeneralPreferenceStore {
 	}
 
 	/** The home address without its scheme or trailing slash, so a move to HTTPS keeps the setting. */
-	private static function site_address(): string {
+	public static function site_address(): string {
 		$parts = wp_parse_url( home_url() );
 		if ( ! is_array( $parts ) || ! is_string( $parts['host'] ?? null ) || '' === $parts['host'] ) {
 			return '';

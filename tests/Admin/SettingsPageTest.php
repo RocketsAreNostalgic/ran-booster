@@ -23,6 +23,8 @@ use ReflectionProperty;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/PackageSourceGateWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Settings/GeneralPreferenceStoreWordPressFunctions.php';
 
 final class SettingsPageTest extends TestCase {
 
@@ -61,6 +63,8 @@ final class SettingsPageTest extends TestCase {
 			public bool $enabled      = false;
 			public int $reads         = 0;
 			public bool $fail_policy  = false;
+			/** @var array<string,mixed> */
+			public array $document = array();
 			public function prepare( string $sql, mixed ...$arguments ): string {
 				unset( $arguments );
 				return $sql;
@@ -71,7 +75,7 @@ final class SettingsPageTest extends TestCase {
 				if ( $this->fail_policy && 2 === $this->reads ) {
 					$this->last_error = 'controlled';
 				}
-				return serialize( array( 'self_update_discovery' => $this->enabled ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Controlled option fixture.
+				return serialize( array( 'self_update_discovery' => $this->enabled ) + $this->document ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Controlled option fixture.
 			}
 		};
 		$dashboard       = $this->settings_dashboard( new SettingsPageStorageProvisioner( null ) );
@@ -122,6 +126,18 @@ final class SettingsPageTest extends TestCase {
 		$unauthorized                             = $dashboard->render_general_settings_region( false );
 		self::assertStringContainsString( 'id="ran-booster-core-development-notice-slot" hx-swap-oob="true"', $unauthorized );
 		self::assertStringNotContainsString( 'data-ran-booster-core-development-notice', $unauthorized );
+		$branch = $dashboard->render_general_settings_region( true, 'branch_sources' );
+		self::assertStringContainsString( 'hx-target="#ran-booster-general-branch_sources"', $branch );
+		self::assertStringContainsString( '<p>Not needed on a development site.</p>', $branch );
+		self::assertStringNotContainsString( 'ran-booster-general-prerelease_sources', $branch );
+		self::assertStringNotContainsString( 'hx-swap-oob', $branch );
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://Example.COM:8443/wp/';
+		$GLOBALS['wpdb']->document                    = array(
+			'prerelease_sources'         => true,
+			'prerelease_sources_address' => 'example.com:8443/wp',
+		);
+		self::assertStringContainsString( '<p>On for example.com:8443/wp</p>', $dashboard->render_general_settings_region( true, 'prerelease_sources' ), 'The line shows the address the setting is bound to, without its scheme.' );
 	}
 
 	public function test_check_now_uses_its_own_nonce_and_never_calls_general_save(): void {
@@ -198,6 +214,18 @@ final class SettingsPageTest extends TestCase {
 				'locked' => true,
 				'error'  => null,
 			),
+			'branch_sources'        => array(
+				'value'  => true,
+				'source' => 'saved',
+				'locked' => false,
+				'error'  => null,
+			),
+			'prerelease_sources'    => array(
+				'value'  => false,
+				'source' => 'saved',
+				'locked' => false,
+				'error'  => 'address_changed',
+			),
 			'max_download_bytes'    => array(
 				'value'  => PHP_INT_MAX,
 				'source' => 'default',
@@ -217,6 +245,8 @@ final class SettingsPageTest extends TestCase {
 		$core_update_status = array();
 		$check_available    = false;
 		$native_update_url  = null;
+		$development_site   = false;
+		$site_address       = 'example.com/wp';
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/settings.php';
 		$html     = (string) ob_get_clean();
@@ -291,11 +321,11 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/div[@data-ran-booster-ui-disclosure="settings-card" and @data-ran-booster-ui-disclosure-density="prominent"]/details[@data-ran-booster-ui-disclosure-fallback and @open]/div[contains(@class, "ran-booster-settings__card-body") and @data-ran-booster-ui-disclosure-content])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]//*[@data-ran-booster-card or contains(@class, "ran-booster-panel")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region" and @data-ran-booster-card])' ) );
-		self::assertSame( 3.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope]/div[@data-ran-booster-ui-notice and @data-ran-booster-admin-mutation-error]/div[@data-ran-booster-ui-notice-content][p[@data-ran-booster-ui-notice-primary] and p[@data-ran-booster-ui-notice-detail]])' ) );
+		self::assertSame( 5.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope]/div[@data-ran-booster-ui-notice and @data-ran-booster-admin-mutation-error]/div[@data-ran-booster-ui-notice-content][p[@data-ran-booster-ui-notice-primary] and p[@data-ran-booster-ui-notice-detail]])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-notice-mount])' ) );
 		// Each scope error host is a static public Notice: core's notice classes stay, the content host is the
 		// Notice description, and the decorative error icon follows it. Nothing announces through Notice.List.
-		self::assertSame( 3.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope]/div[@data-ran-booster-admin-mutation-error and @class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error"][count(*)=2]/*[1][self::div and @class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" and @data-ran-booster-ui-notice-content]/following-sibling::*[1][local-name()="svg" and @class="ran-wp-ui-notice__icon" and @aria-hidden="true" and @focusable="false"])' ) );
+		self::assertSame( 5.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope]/div[@data-ran-booster-admin-mutation-error and @class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error"][count(*)=2]/*[1][self::div and @class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" and @data-ran-booster-ui-notice-content]/following-sibling::*[1][local-name()="svg" and @class="ran-wp-ui-notice__icon" and @aria-hidden="true" and @focusable="false"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-wp-ui-notice-politeness or @data-wp-ui-notice-list])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]/div[not(@role) and not(@data-ran-booster-general-failed)]//p[@id="ran-booster-hide-github-error" and @data-ran-booster-ui-notice-field and @data-ran-booster-ui-notice-request-field and text()="Hide GitHub UI: Invalid selection."])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//*[@role="alert"])' ) );
@@ -320,7 +350,7 @@ final class SettingsPageTest extends TestCase {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset/div[@id="' . $help_id . '" and @class="notice notice-' . $expected[0] . ' inline ran-booster-settings__reason ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $expected[0] . '" and @data-ran-booster-ui-notice and @data-ran-booster-ui-notice-intent="' . $expected[0] . '" and not(@role) and not(@aria-live)][count(*)=2]/*[1][self::div and @class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" and @data-ran-booster-ui-notice-content and p="' . $expected[1] . '"]/following-sibling::*[1][local-name()="svg" and @aria-hidden="true"])' ), $help_id );
 		}
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@role="switch" and @aria-checked])' ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status and @data-ran-booster-badge and @data-ran-booster-badge-intent and @role="status" and contains(@class, "ran-wp-ui-badge") and not(*)])' ) );
+		self::assertSame( 4.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status and @data-ran-booster-badge and @data-ran-booster-badge-intent and @role="status" and contains(@class, "ran-wp-ui-badge") and not(*)])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status]/span)' ) );
 		foreach ( array( 'ran-booster-hide-github', 'ran-booster-self-update-discovery' ) as $switch_id ) {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//label[@id="' . $switch_id . '-label" and @for="' . $switch_id . '"]/following-sibling::div[contains(@class, "ran-booster-settings__switch-row")][1]/span[@data-ran-booster-ui-switch="general-preference"]/label[@data-ran-booster-ui-switch-fallback and not(@hidden)]/input[@id="' . $switch_id . '" and @aria-labelledby="' . $switch_id . '-label"])' ) );
@@ -374,7 +404,7 @@ final class SettingsPageTest extends TestCase {
 				self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="' . $legend . '"]/div[@class="ran-booster-settings__configuration" and @data-ran-booster-ui-disclosure="settings-configuration" and @data-ran-booster-ui-disclosure-density="compact"]/details//code[text()="' . $constant . '"])' ) );
 			}
 		}
-		self::assertSame( 4.0, $xpath->evaluate( 'count(//div[@class="ran-booster-settings__configuration" and @data-ran-booster-ui-disclosure="settings-configuration" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open) and summary="Configuration constants" and div[@data-ran-booster-ui-disclosure-content]])' ) );
+		self::assertSame( 6.0, $xpath->evaluate( 'count(//div[@class="ran-booster-settings__configuration" and @data-ran-booster-ui-disclosure="settings-configuration" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open) and summary="Configuration constants" and div[@data-ran-booster-ui-disclosure-content]])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Core updates"]//button[@form="ran-booster-check-core-updates" and @disabled and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@id="ran-booster-check-core-updates"]//input[@name="ran_booster[action]" and @value="check-core-updates"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-check-updates-unavailable"])' ) );
@@ -444,6 +474,112 @@ final class SettingsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-admin-mutation-error role="alert" tabindex="-1"', $fallback );
 	}
 
+	public function test_package_source_switches_save_on_their_own_scopes_and_explain_their_state(): void {
+		$switch   = static fn ( bool $value, string $source = 'saved', ?string $error = null ): array => array(
+			'value'  => $value,
+			'source' => $source,
+			'locked' => 'code' === $source,
+			'error'  => $error,
+		);
+		$bindings = array(
+			'general_settings'   => array(
+				'hide_github'           => $switch( false, 'default' ),
+				'self_update_discovery' => $switch( false, 'default' ),
+				'branch_sources'        => $switch( true ),
+				'prerelease_sources'    => $switch( false, 'saved', 'address_changed' ),
+			),
+			'general_tokens'     => array(
+				'branch_sources'     => 'branch-token',
+				'prerelease_sources' => 'preview-token',
+			),
+			'development_site'   => false,
+			'site_address'       => 'example.com:8443/wp',
+			'general_scope'      => 'all',
+			'general_token'      => 'token',
+			'general_feedback'   => null,
+			'general_errors'     => array(),
+			'general_attempted'  => array(),
+			'github_visibility'  => array(
+				'eligible' => true,
+				'hidden'   => false,
+				'reason'   => '',
+			),
+			'core_update_status' => array(),
+			'check_available'    => false,
+			'native_update_url'  => null,
+		);
+		$form     = static fn ( string $scope ): string => '//div[@id="ran-booster-general-' . $scope . '"]/form[@data-ran-booster-settings-scope="' . $scope . '" and @hx-target="#ran-booster-general-' . $scope . '"]';
+		$help     = static fn ( \DOMXPath $xpath, string $id ): string => trim( (string) $xpath->evaluate( 'string(//div[@id="' . $id . '-help"]//p)' ) );
+
+		$xpath = $this->general_view( $bindings );
+		foreach ( array(
+			'branch_sources'     => array( 'ran-booster-branch-sources', 'Allow branch sources', 'branch-token' ),
+			'prerelease_sources' => array( 'ran-booster-prerelease-sources', 'Allow Preview tracks', 'preview-token' ),
+		) as $scope => [ $id, $label, $token ] ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-general-heading"]//fieldset[legend="Package sources"]' . $form( $scope ) . ')' ), $scope );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '[input[@name="ran_booster[action]" and @value="save-general-settings"] and input[@name="ran_booster[scope]" and @value="' . $scope . '"] and input[@name="ran_booster[token]" and @value="' . $token . '"] and input[@type="hidden" and @name="ran_booster[preferences][' . $scope . ']" and @value="0"]])' ), $scope );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '/label[@id="' . $id . '-label" and @for="' . $id . '" and .="' . $label . '"]/following-sibling::div[1]/span[@data-ran-booster-ui-switch="general-preference"]/label[@data-ran-booster-ui-switch-fallback]/input[@id="' . $id . '" and @type="checkbox" and @role="switch" and @name="ran_booster[preferences][' . $scope . ']" and @value="1" and not(@disabled) and not(@aria-invalid) and @aria-describedby="' . $id . '-help"])' ), $scope );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '//button[@id="ran-booster-save-' . $scope . '" and @type="submit" and @data-ran-booster-toggle-save and not(@disabled)])' ), $scope );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '/div[@data-ran-booster-admin-mutation-error and @hidden])' ), $scope . ' shows no error.' );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '//details//code[text()="RAN_BOOSTER_ALLOW_' . strtoupper( $scope ) . '"])' ), $scope );
+		}
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="ran-booster-branch-sources" and @checked])' ) );
+		self::assertSame( 'On for example.com:8443/wp', $help( $xpath, 'ran-booster-branch-sources' ) );
+		self::assertSame( 'Enabled', trim( (string) $xpath->evaluate( 'string(' . $form( 'branch_sources' ) . '//span[@data-ran-booster-toggle-status])' ) ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="ran-booster-prerelease-sources" and not(@checked)])' ) );
+		self::assertSame( 'Turned off: the site address changed.', $help( $xpath, 'ran-booster-prerelease-sources' ), 'A copied database explains itself instead of raising an error.' );
+		self::assertSame( 'Disabled', trim( (string) $xpath->evaluate( 'string(' . $form( 'prerelease_sources' ) . '//span[@data-ran-booster-toggle-status])' ) ) );
+
+		$bindings['development_site'] = true;
+		$xpath                        = $this->general_view( $bindings );
+		foreach ( array( 'ran-booster-branch-sources', 'ran-booster-prerelease-sources' ) as $id ) {
+			self::assertSame( 'Not needed on a development site.', $help( $xpath, $id ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $id . '" and not(@disabled)])' ), 'The switch still saves on a development site.' );
+		}
+
+		$bindings['development_site']                       = false;
+		$bindings['general_settings']['branch_sources']     = $switch( true, 'code' );
+		$bindings['general_settings']['prerelease_sources'] = $switch( false, 'code', 'invalid_code' );
+		$xpath = $this->general_view( $bindings );
+		foreach ( array(
+			'branch_sources'     => 'ran-booster-branch-sources',
+			'prerelease_sources' => 'ran-booster-prerelease-sources',
+		) as $scope => $id ) {
+			self::assertSame( 'Set in configuration.', $help( $xpath, $id ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $id . '" and @disabled])' ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][' . $scope . ']"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//button[@id="ran-booster-save-' . $scope . '" and @disabled])' ) );
+		}
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( 'prerelease_sources' ) . '/div[@data-ran-booster-admin-mutation-error and not(@hidden)]//p[@id="ran-booster-prerelease-sources-error" and .="Allow Preview tracks: The configured value is invalid. Correct the named constant; runtime safety restrictions still apply."])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="ran-booster-prerelease-sources" and @aria-invalid="true" and @aria-describedby="ran-booster-prerelease-sources-help ran-booster-prerelease-sources-error"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( 'branch_sources' ) . '/div[@data-ran-booster-admin-mutation-error and @hidden])' ) );
+
+		$bindings['general_settings']['branch_sources'] = $switch( false );
+		$bindings['general_scope']                      = 'prerelease_sources';
+		$xpath = $this->general_view( $bindings );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( 'prerelease_sources' ) . ')' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//fieldset[legend="Package sources"] | //*[@id="ran-booster-general-branch_sources"] | //*[@id="ran-booster-general-region"] | //*[@id="ran-booster-general-hide_github"])' ), 'A scoped response renders only its own switch.' );
+
+		$bindings['general_scope'] = 'branch_sources';
+		$xpath                     = $this->general_view( $bindings );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//div[@id="ran-booster-branch-sources-help"])' ), 'A switch that is simply off needs no line.' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="ran-booster-branch-sources" and not(@checked) and not(@aria-describedby)])' ) );
+	}
+
+	/** @param array<string,mixed> $bindings */
+	private function general_view( array $bindings ): \DOMXPath {
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Binds the caller-supplied view variables as Dashboard does.
+		extract( $bindings );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
+		$dom             = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		$dom->loadHTML( '<?xml encoding="UTF-8">' . (string) ob_get_clean() );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_errors );
+		return new \DOMXPath( $dom );
+	}
+
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	public function test_preference_cards_are_open_collapsible_cards_with_group_name_summaries_and_a_history_footer(): void {
 		$secrets_storage    = null;
@@ -457,6 +593,18 @@ final class SettingsPageTest extends TestCase {
 			'self_update_discovery' => array(
 				'value'  => true,
 				'source' => 'saved',
+				'locked' => false,
+				'error'  => null,
+			),
+			'branch_sources'        => array(
+				'value'  => false,
+				'source' => 'default',
+				'locked' => false,
+				'error'  => null,
+			),
+			'prerelease_sources'    => array(
+				'value'  => false,
+				'source' => 'default',
 				'locked' => false,
 				'error'  => null,
 			),
@@ -491,6 +639,8 @@ final class SettingsPageTest extends TestCase {
 		$core_update_status = array();
 		$check_available    = false;
 		$native_update_url  = null;
+		$development_site   = false;
+		$site_address       = 'example.com/wp';
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/settings.php';
 		$html            = (string) ob_get_clean();
@@ -512,16 +662,16 @@ final class SettingsPageTest extends TestCase {
 		// General preferences: open by default, summary from the group legends, no badge in the header.
 		$general = '//div[@id="ran-booster-general-heading"]';
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $general . '/details[@open]/summary[@aria-label="General preferences"]/span[@data-ran-booster-ui-disclosure-heading="h3"]/span[@class="ran-booster-troubleshooting__entry-title" and .="General preferences"])' ) );
-		self::assertSame( 'Appearance · Core updates', trim( (string) $xpath->evaluate( 'string(' . $general . '/details/summary//span[@class="ran-booster-troubleshooting__entry-description"])' ) ) );
+		self::assertSame( 'Appearance · Core updates · Package sources', trim( (string) $xpath->evaluate( 'string(' . $general . '/details/summary//span[@class="ran-booster-troubleshooting__entry-description"])' ) ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $general . '/details/summary//*[@data-ran-booster-ui-disclosure-meta or @data-ran-booster-badge])' ) );
 		$legends = array();
 		$count   = (int) $xpath->evaluate( 'count(' . $general . '//fieldset/legend)' );
 		for ( $index = 1; $index <= $count; ++$index ) {
 			$legends[] = trim( (string) $xpath->evaluate( 'string((' . $general . '//fieldset/legend)[' . $index . '])' ) );
 		}
-		self::assertSame( 'Appearance · Core updates', implode( ' · ', $legends ), 'The summary is built from the group legends.' );
+		self::assertSame( 'Appearance · Core updates · Package sources', implode( ' · ', $legends ), 'The summary is built from the group legends.' );
 		// Switch badges stay in the body next to their switches.
-		self::assertSame( 2.0, $xpath->evaluate( 'count(' . $general . '/details/div[@data-ran-booster-ui-disclosure-content]//span[@data-ran-booster-toggle-status])' ) );
+		self::assertSame( 4.0, $xpath->evaluate( 'count(' . $general . '/details/div[@data-ran-booster-ui-disclosure-content]//span[@data-ran-booster-toggle-status])' ) );
 
 		// History and download limits: open by default, summary from group legends, no badge.
 		$limits = '//div[@id="ran-booster-limits-heading"]';

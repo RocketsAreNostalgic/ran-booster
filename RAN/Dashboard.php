@@ -683,6 +683,8 @@ class Dashboard {
 			'core_update_status'   => $status,
 			'check_available'      => null !== $this->core_updates && $this->core_updates->can_check() && current_user_can( 'update_plugins' ),
 			'native_update_url'    => $url,
+			'development_site'     => \RAN\Deployment\PackageSourceGate::is_development_site(),
+			'site_address'         => \RAN\Settings\GeneralPreferenceStore::site_address(),
 		);
 	}
 

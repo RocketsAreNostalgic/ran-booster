@@ -326,9 +326,12 @@ The terminal outcome codes are defined in `DeploymentOutcome`:
 - `provider_failed`
 - `provider_request_invalid`
 - `provider_credential_rejected`
+- `provider_credential_unavailable`
 - `provider_access_denied`
 - `provider_repository_missing`
 - `provider_reference_unavailable`
+- `provider_repository_changed`
+- `provider_redirected`
 - `provider_rate_limited`
 - `provider_unavailable`
 - `archive_compressed_too_large`

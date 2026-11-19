@@ -6,6 +6,7 @@ namespace RAN\Troubleshooting;
 
 use Closure;
 use RAN\Activity\ActivityStore;
+use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Storage\PluginRepository;
@@ -16,7 +17,7 @@ use Throwable;
 final class SupportReport {
 
 	public const MAX_BYTES   = 1048576;
-	private const OPERATIONS = array( 'install', 'update', 'diagnostics.run', 'credential.validate', 'branch.check', 'release.check', 'workflow.assessment', 'webhook.install', 'webhook.update', 'webhook.delete', 'webhook.reconcile', 'deployment.manual', 'deployment.webhook', 'deployment.batch' );
+	private const OPERATIONS = array( 'install', 'update', 'diagnostics.run', 'credential.validate', 'branch.check', 'release.check', 'workflow.assessment', 'webhook.install', 'webhook.update', 'webhook.delete', 'webhook.reconcile', 'deployment.manual', 'deployment.webhook', 'deployment.batch', 'webhook.push' );
 	private const PARTIAL    = array( 'local_incomplete', 'deadline_exhausted', 'remote_calls_exhausted', 'provider_unavailable', 'provider_results_invalid', 'result_limit_exhausted' );
 	/** Fixed codes emitted by Booster's native targets and the GitHub provider: 'github_updater_' plus the release updater's inactive codes, its bare failure codes, and Booster's own. */
 	private const UPDATER_CODES = array(
@@ -615,8 +616,9 @@ final class SupportReport {
 	}
 
 	private static function reason( mixed $value ): string {
-		$codes = array_values( array_filter( ( new \ReflectionClass( DeploymentOutcome::class ) )->getConstants(), 'is_string' ) );
-		return self::choice( $value, array_merge( $codes, array( 'diagnostics.passed', 'diagnostics.failed', 'diagnostics.partial', 'diagnostics.warning', 'diagnostics.not_configured', 'webhook.operation_succeeded', 'webhook.operation_failed', 'webhook.remote_unconfirmed', 'webhook.local_persistence_conflict', 'webhook.local_persistence_unconfirmed' ) ) );
+		$codes     = array_values( array_filter( ( new \ReflectionClass( DeploymentOutcome::class ) )->getConstants(), 'is_string' ) );
+		$unmatched = array_map( static fn ( string $code ): string => 'webhook.unmatched.' . $code, DeploymentCoordinator::UNMATCHED_REASONS );
+		return self::choice( $value, array_merge( $codes, $unmatched, array( 'diagnostics.passed', 'diagnostics.failed', 'diagnostics.partial', 'diagnostics.warning', 'diagnostics.not_configured', 'webhook.operation_succeeded', 'webhook.operation_failed', 'webhook.remote_unconfirmed', 'webhook.local_persistence_conflict', 'webhook.local_persistence_unconfirmed' ) ) );
 	}
 
 	private function now(): float {

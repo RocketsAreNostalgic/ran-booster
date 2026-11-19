@@ -251,8 +251,11 @@ migrated and should be discarded when resetting a pre-release installation.
 
 Core does not retain the raw webhook body, signature headers, or provider-side
 duration. A provider timeout can occur after durable admission, so GitHub or
-Bitbucket delivery history remains authoritative for status and timing. Probes,
-ignored events, and zero-target deliveries may create no attempt; absence from
+Bitbucket delivery history remains authoritative for status and timing. Probes
+and ignored events create no attempt and no Activity entry. A signed push that
+matches no managed package creates no attempt, and Activity keeps one entry per
+repository, reason and clock hour naming why it matched nothing; temporary debug
+logging records each such delivery, subject to its webhook sampling. Absence from
 Activity is therefore inconclusive.
 
 ## Webhook operations for administrators

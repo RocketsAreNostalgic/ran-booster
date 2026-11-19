@@ -11,6 +11,8 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 	private const EXPLICIT_CORE_HOST_INTEGRATIONS = array(
 		// Exercises the real guarded provider through Core's admitted host and shared runner.
 		'tests/Deployment/AdmittedBranchHostAdapterParityTest.php',
+		// The real normalizer's tag, deletion and non-push results must stop before Core's admission.
+		'tests/Deployment/UnmatchedPushTest.php',
 		'tests/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php',
 		'tests/Uninstall/LocalDataRemoverTest.php',
 		'tests/Admin/Support/ExpiryReminderProvider.php',

@@ -68,6 +68,37 @@ final class PackageSourceGateTest extends TestCase {
 		}
 	}
 
+	public function test_a_pause_committed_after_admission_is_seen_by_the_mutation_recheck(): void {
+		$this->site( 'production', 'https://example.com' );
+		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize(
+			array(
+				'package_sources'         => true,
+				'package_sources_address' => 'example.com',
+			)
+		);
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Controlled test-only database boundary.
+		$GLOBALS['wpdb'] = new class() {
+			public string $options    = 'wp_options';
+			public string $last_error = '';
+			public function prepare( string $query ): string {
+				return $query;
+			}
+			public function get_var(): ?string {
+				return $GLOBALS['ran_booster_general_preference_raw'];
+			}
+		};
+		self::assertFalse( PackageSourceGate::pauses( PackageSource::BRANCH ), 'Admission reads the cached option.' );
+
+		// Another request turns the setting off; this request's option cache still holds the old value.
+		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( array( 'package_sources' => false ) );
+		self::assertFalse( PackageSourceGate::pauses( PackageSource::BRANCH ) );
+		self::assertTrue( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ) );
+		self::assertTrue( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, 'prerelease', true ) );
+
+		unset( $GLOBALS['wpdb'] );
+		self::assertTrue( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ), 'A fence that cannot read the setting stays paused.' );
+	}
+
 	public function test_the_constant_allows_gated_sources_on_any_site(): void {
 		define( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', true );
 		$this->site( 'production', 'https://example.com' );

@@ -744,7 +744,7 @@ final class ManagedReleaseTargetRegistrar {
 
 		return array(
 			'release'   => true,
-			'authority' => $this->authority( $package, $configuration ),
+			'authority' => $this->authority( $package, $configuration, true ),
 		);
 	}
 
@@ -815,7 +815,7 @@ final class ManagedReleaseTargetRegistrar {
 	}
 
 	/** @return array<string, int|string> */
-	private function authority( Package $package, ManagedReleaseConfiguration $configuration ): array {
+	private function authority( Package $package, ManagedReleaseConfiguration $configuration, bool $fresh = false ): array {
 		return array(
 			'adoption_token'         => \RAN\AdoptionIdentity::of( $package ) ?? throw new \RuntimeException( 'The adoption identity is unavailable.' ),
 			'provider'               => (string) $package->get_provider_code(),
@@ -825,16 +825,17 @@ final class ManagedReleaseTargetRegistrar {
 			'credential_id'          => $package->get_credential_id(),
 			'private'                => $package->get_private() ? 1 : 0,
 			'configuration'          => $configuration->to_json(),
-			'deployment_policy'      => self::effective_policy( $package, $configuration ),
+			'deployment_policy'      => self::effective_policy( $package, $configuration, $fresh ),
 		);
 	}
 
 	/**
 	 * A paused pre-release track is carried to the updater as disabled, not forced-off, so the
 	 * read-only Check releases still answers. The saved policy is untouched and returns with the override.
+	 * The download-time snapshot reads fresh, so a pause saved after registration fails its authority match.
 	 */
-	private static function effective_policy( Package $package, ManagedReleaseConfiguration $configuration ): string {
-		return PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $configuration->channel() )
+	private static function effective_policy( Package $package, ManagedReleaseConfiguration $configuration, bool $fresh = false ): string {
+		return PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $configuration->channel(), $fresh )
 			? DeploymentPolicy::DISABLED->value
 			: $package->get_deployment_policy()->value;
 	}

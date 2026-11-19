@@ -117,8 +117,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 		}
 		if ( null === $this->attempt->safe_data()['mutation_started_at'] ) {
 			$this->assert_provider_current();
-			// The site may have paused branch sources after this attempt was queued.
-			if ( PackageSourceGate::pauses( PackageSource::BRANCH ) ) {
+			// The site may have paused branch sources after admission, possibly from another request.
+			if ( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ) ) {
 				$this->stage( DeploymentOutcome::CODE_SOURCE_PAUSED );
 			}
 		}

@@ -38,8 +38,8 @@ final class GeneralPreferenceStore {
 	}
 
 	/** @return array<string,array{value:bool|int,source:'default'|'saved'|'code',locked:bool,error:?string}> */
-	public function projection(): array {
-		return $this->projection_for_state( $this->read_option() );
+	public function projection( bool $fresh = false ): array {
+		return $this->projection_for_state( $this->read_option( $fresh ) );
 	}
 
 	/** @return array{fields:array<string,array{value:bool|int,source:'default'|'saved'|'code',locked:bool,error:?string}>,token:string,tokens:array<string,string>,malformed:bool} */

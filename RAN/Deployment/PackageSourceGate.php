@@ -34,14 +34,21 @@ final class PackageSourceGate {
 			|| str_ends_with( $host, '.local' );
 	}
 
-	public static function allows(): bool {
-		return self::is_development_site()
-			|| true === ( new GeneralPreferenceStore() )->projection()['package_sources']['value'];
+	/** @param bool $fresh Read the saved setting past this request's option cache; a mutation fence passes true. */
+	public static function allows( bool $fresh = false ): bool {
+		if ( self::is_development_site() ) {
+			return true;
+		}
+		try {
+			return true === ( new GeneralPreferenceStore() )->projection( $fresh )['package_sources']['value'];
+		} catch ( \RuntimeException ) {
+			return false;
+		}
 	}
 
 	/** @param string|null $channel A release package's track, 'stable' or 'prerelease'; null for a branch source. */
-	public static function pauses( PackageSource $source, ?string $channel = null ): bool {
-		return ( PackageSource::BRANCH === $source || 'prerelease' === $channel ) && ! self::allows();
+	public static function pauses( PackageSource $source, ?string $channel = null, bool $fresh = false ): bool {
+		return ( PackageSource::BRANCH === $source || 'prerelease' === $channel ) && ! self::allows( $fresh );
 	}
 
 	/** @param string|null $channel A release package's track; null for a branch source. */

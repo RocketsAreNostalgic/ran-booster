@@ -251,7 +251,7 @@ final class ProviderFailureTest extends TestCase {
 		return array(
 			'credential missing' => array( 'credential_missing', 'provider_request_invalid' ),
 			'credential format'  => array( 'credential_format_invalid', 'provider_request_invalid' ),
-			'credential store'   => array( 'credential_store_unavailable', 'provider_credential_rejected' ),
+			'credential store'   => array( 'credential_store_unavailable', 'provider_credential_unavailable' ),
 			'rejected'           => array( 'credential_rejected', 'provider_credential_rejected' ),
 			'credential expired' => array( 'credential_expired', 'provider_credential_rejected' ),
 			'permission'         => array( 'permission_denied', 'provider_access_denied' ),
@@ -267,7 +267,8 @@ final class ProviderFailureTest extends TestCase {
 			'filesystem'         => array( 'site_filesystem_unsupported', 'deployment_filesystem_unsupported' ),
 			'zip'                => array( 'site_zip_unavailable', 'deployment_zip_extension_missing' ),
 			'superseded'         => array( 'operation_superseded', 'provider_failed' ),
-			'identity'           => array( 'repository_identity_changed', 'provider_failed' ),
+			'identity'           => array( 'repository_identity_changed', 'provider_repository_changed' ),
+			'redirect'           => array( 'redirect_blocked', 'provider_redirected' ),
 		);
 	}
 

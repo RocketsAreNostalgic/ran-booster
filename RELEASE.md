@@ -27,7 +27,7 @@ Before a release proposal is merged:
 
 1. review the Release Please pull request, including `CHANGELOG.md`, plugin header, `readme.txt`, and manifest version;
 2. run `composer check` and `pnpm check` on the exact candidate;
-3. build and verify the exact runtime archive with:
+3. build and verify the exact runtime archive (it generates the translation template, so WP-CLI 2.12.0 must be on `PATH`) with:
    ```sh
    version="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p' ran-booster.php)"
    bash scripts/build-release.sh HEAD "$version"

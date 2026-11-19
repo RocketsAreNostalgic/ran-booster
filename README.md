@@ -260,7 +260,7 @@ the existing localisation/generated-state and Admin Shell checks. Use
 `composer standards:fix` only when intentionally applying PHPCBF fixes.
 
 Build and verify the runtime-only deployment archive from the exact committed
-tree:
+tree. The build generates the translation template, so it needs WP-CLI 2.12.0:
 
 ```sh
 version="$(sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p' ran-booster.php)"

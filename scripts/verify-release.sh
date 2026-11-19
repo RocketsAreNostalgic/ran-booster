@@ -47,7 +47,6 @@ committed_entries=(
 	'assets'
 	'autoload.php'
 	'index.php'
-	'languages'
 	'license.txt'
 	'ran-booster.php'
 	'readme.txt'
@@ -55,6 +54,7 @@ committed_entries=(
 	'views'
 )
 generated_entries=(
+	'languages'
 	'ran-booster-packages.json'
 	'ran-booster-release.json'
 )
@@ -391,7 +391,7 @@ for index in "${!package_roots[@]}"; do
 		"${package_roots[$index]}" \
 		"${package_surface_specs[$index]}"
 done
-printf '%s\n' 'ran-booster/ran-booster-packages.json' 'ran-booster/ran-booster-release.json' >> "$expected_files"
+printf '%s\n' 'ran-booster/languages/ran-booster.pot' 'ran-booster/ran-booster-packages.json' 'ran-booster/ran-booster-release.json' >> "$expected_files"
 LC_ALL=C sort -o "$expected_files" "$expected_files"
 grep -v '/$' "$archive_paths" | LC_ALL=C sort > "$archive_files"
 
@@ -414,6 +414,7 @@ diff -u "$expected_paths" "$archive_paths" >/dev/null \
 
 for required_path in \
 	'ran-booster/NOTICE.md' \
+	'ran-booster/languages/ran-booster.pot' \
 	'ran-booster/license.txt' \
 	'ran-booster/ran-booster-packages.json' \
 	'ran-booster/ran-booster-release.json' \
@@ -437,6 +438,15 @@ archive_stable_tag=$(
 extract_dir="$tmp_dir/extracted"
 mkdir -p "$extract_dir"
 unzip -q "$archive" -d "$extract_dir"
+
+# The translation template is generated, not committed. Regenerate it from the
+# release commit's own files and compare the bytes with the archived copy.
+pot_source="$tmp_dir/pot-source"
+mkdir -p "$pot_source"
+git archive --format=tar "$commit" -- "${committed_entries[@]}" | tar -xf - -C "$pot_source"
+bash "$script_dir/make-pot.sh" --source "$pot_source" --output "$tmp_dir/expected.pot"
+cmp -s "$tmp_dir/expected.pot" "$extract_dir/ran-booster/languages/ran-booster.pot" \
+	|| fail 'archived translation template does not match one regenerated from the release ref.'
 
 # The installed marker is a strict build-provenance signal, not an authenticity
 # signature. Exact release identity and the locally calculated ZIP digest remain

@@ -40,6 +40,8 @@ final class DeploymentOutcomeMessage {
 			'webhook.local_persistence_conflict', 'webhook.local_persistence_unconfirmed' => __( 'Remote webhook work completed; local persistence is unconfirmed.', 'ran-booster' ),
 			'subdirectory_unavailable' => __( 'The configured package subdirectory could not be found or inspected in the repository archive.', 'ran-booster' ),
 			'subdirectory_unverified' => __( 'The configured repository subdirectory could not be verified.', 'ran-booster' ),
+			'ref_not_found' => __( 'The saved branch could not be found. Check the branch name on the provider.', 'ran-booster' ),
+			'redirect_blocked' => __( 'The branch lookup was redirected. The branch may have been renamed or the repository moved. Check the current name on the provider.', 'ran-booster' ),
 			'unable_to_check' => __( 'The branch check could not complete. Review the package settings and try again.', 'ran-booster' ),
 			'provider_unavailable' => self::for_code( 'provider_unavailable' ),
 			'verified' => __( 'Repository branch and archive verified.', 'ran-booster' ),

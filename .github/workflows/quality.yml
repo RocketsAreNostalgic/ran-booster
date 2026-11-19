@@ -155,7 +155,7 @@ jobs:
             '{schema:"ran-profile-b-promotion",schema_version:1,repository:$repository,quality_commit:$quality_commit,source_commit:$source_commit,tag:$tag,assets:[{name:$archive_name,sha256:$archive_sha256},{name:$checksum_name,sha256:$checksum_sha256}]}' \
             > build/ran-profile-b-promotion.json
 
-          wordpress_matrix='{"include":[{"wordpress":"7.0","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"compatibility","plugin_check":false},{"wordpress":"7.0.3","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"critical","plugin_check":true},{"wordpress":"7.0.3","database":"MariaDB 10.11","database_image":"mariadb:10.11","suite":"critical","plugin_check":false},{"wordpress":"7.0.3","database":"MySQL 8.0 floor","database_image":"mysql:8.0","suite":"floor","plugin_check":false}]}'
+          wordpress_matrix='{"include":[{"wordpress":"7.0","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"compatibility","plugin_check":false},{"wordpress":"7.0.3","database":"MySQL 8.4","database_image":"mysql:8.4","suite":"critical","plugin_check":false},{"wordpress":"7.0.3","database":"MariaDB 10.11","database_image":"mariadb:10.11","suite":"critical","plugin_check":false},{"wordpress":"7.0.3","database":"MySQL 8.0 floor","database_image":"mysql:8.0","suite":"floor","plugin_check":true}]}'
           {
             printf 'artifact-name=ran-booster-runtime-%s-%s\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT"
             printf 'archive-sha256=%s\n' "$archive_sha256"
@@ -264,11 +264,16 @@ jobs:
 
 
   development-analysis:
-    name: Development analysis
+    name: Development analysis ${{ matrix.shard }}
+    # Each leg analyses a disjoint half of the complete groups; the final Quality job requires both.
     needs: runtime-archive
     if: ${{ needs.runtime-archive.outputs.lane == 'full' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ['1/2', '2/2']
     permissions:
       contents: read
     steps:
@@ -300,6 +305,7 @@ jobs:
       - name: Run complete development analysis
         env:
           PHPSTAN_DEVELOPMENT_PROCESSES: '4'
+          PHPSTAN_DEVELOPMENT_SHARD: ${{ matrix.shard }}
         run: composer analyze:development
 
   wordpress-release-candidate:

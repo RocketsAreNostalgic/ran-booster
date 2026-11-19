@@ -258,13 +258,14 @@ final class ActivityStore {
 	}
 
 	/**
-	 * Drops this still-unfinished row when the context's newest earlier row is the same skip inside the heartbeat window.
+	 * Drops this still-unfinished row when the context's newest earlier row is the same outcome (a skip unless
+	 * $status says otherwise) inside the heartbeat window.
 	 * An unreadable history counts as a repeat, so the row is dropped when the delete still works (best effort).
 	 */
-	public function discard_repeated_skip( int $id, string $reason ): bool {
+	public function discard_repeated_skip( int $id, string $reason, string $status = 'skipped' ): bool {
 		$rows = $this->rows( $this->prepare( "SELECT status,reason,started_at FROM {$this->table} WHERE context_key = (SELECT context_key FROM {$this->table} AS own WHERE own.id = %d) AND id < %d ORDER BY id DESC LIMIT 1", $id, $id ) );
 		$last = $rows[0] ?? null;
-		if ( null !== $rows && ( null === $last || 'skipped' !== $last['status'] || $reason !== $last['reason'] || strtotime( (string) $last['started_at'] . ' UTC' ) <= time() - self::SKIPPED_HEARTBEAT ) ) {
+		if ( null !== $rows && ( null === $last || $status !== $last['status'] || $reason !== $last['reason'] || strtotime( (string) $last['started_at'] . ' UTC' ) <= time() - self::SKIPPED_HEARTBEAT ) ) {
 			return false;
 		}
 		return 1 === $this->query( $this->prepare( "DELETE FROM {$this->table} WHERE id = %d AND status = 'incomplete'", $id ) );

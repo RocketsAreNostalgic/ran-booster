@@ -301,6 +301,37 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 				self::assertStringContainsString( 'partition_consumer()', $output );
 				self::assertStringContainsString( 'return.type', $output );
 			}
+			// CI shards must be disjoint and complete, and each must fail on the errors of its own groups.
+			$errors = array(
+				'BatchAdded::body_error()'     => 0,
+				'BatchInstalled::body_error()' => 0,
+				'partition_consumer()'         => 0,
+			);
+			$counts = array();
+			foreach ( array( '1/2', '2/2' ) as $shard ) {
+				list( $status, $output ) = $this->run_development_runner( $fixture, array(), 4, $shard );
+				if ( 1 !== preg_match( '~shard ' . preg_quote( $shard, '~' ) . ': (\d+) of (\d+) groups~', $output, $matches ) ) {
+					self::fail( 'Expected the shard group count: ' . $output );
+				}
+				$counts[] = array( (int) $matches[1], (int) $matches[2] );
+				$found    = 0;
+				foreach ( array_keys( $errors ) as $error ) {
+					if ( str_contains( $output, $error ) ) {
+						++$errors[ $error ];
+						++$found;
+					}
+				}
+				self::assertSame( $found > 0 ? 1 : 0, $status, $output );
+			}
+			self::assertSame( array( 1, 1, 1 ), array_values( $errors ), 'Each body error must be reported by exactly one shard.' );
+			self::assertSame( $counts[0][1], $counts[1][1] );
+			self::assertSame( $counts[0][1], $counts[0][0] + $counts[1][0] );
+			self::assertGreaterThan( 0, $counts[1][0] );
+			foreach ( array( '0/2', '3/2', '1', '1/0', '10/10', 'a/b', ' 1/2' ) as $shard ) {
+				list( $status, $output ) = $this->run_development_runner( $fixture, array(), 4, $shard );
+				self::assertSame( 2, $status, $shard . ': ' . $output );
+				self::assertStringContainsString( 'PHPSTAN_DEVELOPMENT_SHARD must be N/M', $output );
+			}
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Correct the consumer while retaining the deliberately incompatible fixture declarations.
 			file_put_contents( $fixture . '/tests/FunctionB.php', $prefix . 'function PARTITION_SYMBOL(): string { return "valid"; } function partition_consumer(): string { return PARTITION_SYMBOL(); }' );
 			foreach ( array(
@@ -562,7 +593,15 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 	/** @param list<string> $arguments
 	 * @return array{int, string}
 	 */
-	private function run_development_runner( string $root, array $arguments, ?int $workers = null ): array {
+	private function run_development_runner( string $root, array $arguments, ?int $workers = null, ?string $shard = null ): array {
+		$environment = getenv();
+		unset( $environment['PHPSTAN_DEVELOPMENT_SHARD'] );
+		if ( null !== $workers ) {
+			$environment['PHPSTAN_DEVELOPMENT_PROCESSES'] = (string) $workers;
+		}
+		if ( null !== $shard ) {
+			$environment['PHPSTAN_DEVELOPMENT_SHARD'] = $shard;
+		}
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Query only the maintained runner's real selection; do not execute analyzed fixtures.
 		$process = proc_open(
 			array( PHP_BINARY, $root . '/scripts/analyze-development.php', ...$arguments ),
@@ -572,7 +611,7 @@ final class ProductionAnalysisCoverageTest extends TestCase {
 			),
 			$pipes,
 			$root,
-			null === $workers ? null : array_merge( getenv(), array( 'PHPSTAN_DEVELOPMENT_PROCESSES' => (string) $workers ) )
+			$environment
 		);
 		self::assertIsResource( $process );
 		$output = stream_get_contents( $pipes[1] ) . stream_get_contents( $pipes[2] );

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Webhook;
 
 use InvalidArgumentException;
+use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 use RAN\Deployment\CredentialShapedRef;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Logging\BoosterLogger;
@@ -14,6 +15,7 @@ use RAN\Deployment\DeploymentStorageFailure;
 use RAN\RepositoryProvider\InvalidProviderCode;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\SignedWebhookVerification;
 use RAN\RepositoryProvider\UnknownProvider;
 use RAN\RepositoryProvider\UnsupportedProviderCapability;
 use RAN\RepositoryProvider\WebhookNormalizer;
@@ -28,7 +30,8 @@ final readonly class WebhookProcessor {
 		private ProviderRegistry $providers,
 		private DeploymentCoordinator $coordinator,
 		private SignedWebhookVerifier $verifier,
-		private ?GitHubProviderSelection $selection = null
+		private ?GitHubProviderSelection $selection = null,
+		private ?InstallationStore $installations = null
 	) {
 	}
 
@@ -61,6 +64,7 @@ final readonly class WebhookProcessor {
 
 			if ( $envelope->is_probe() ) {
 				BoosterLogger::capture_webhook( 'probe_verified' );
+				$this->mark_delivery_verified( $verification, $envelope->get_repository_id() );
 
 				return $this->response( 200, 'Webhook verified.' );
 			}
@@ -78,6 +82,9 @@ final readonly class WebhookProcessor {
 				if ( ! $authorized ) {
 					throw new WebhookRejected( 401, 'Webhook authentication failed.', 'scope_mismatch' );
 				}
+			}
+			foreach ( $envelope->get_events() as $event ) {
+				$this->mark_delivery_verified( $verification, $event->provider_repository_id );
 			}
 			$result = $this->coordinator->accept_webhook(
 				$envelope->get_events(),
@@ -140,6 +147,33 @@ final readonly class WebhookProcessor {
 			BoosterLogger::capture_webhook( 'processing_failure' );
 			return $this->response( 500, 'Webhook processing failed.' );
 		}
+	}
+
+	/**
+	 * A signed delivery proves a Booster-recorded webhook works only when that
+	 * record's own signing profile verified it for the record's repository.
+	 * It never creates a record, never overrides another status and writes
+	 * only the needs_verification to configured transition.
+	 */
+	private function mark_delivery_verified( SignedWebhookVerification $verification, ?string $repository_id ): void {
+		if ( null === $this->installations || null === $repository_id ) {
+			return;
+		}
+		try {
+			$record = $this->installations->find( $verification->get_provider()->value, $repository_id );
+			if ( null === $record || 'needs_verification' !== $record->status() || $record->requires_hook_identification()
+				|| ! in_array( $record->webhook_profile_id(), array_column( $verification->get_profiles(), 'id' ), true ) ) {
+				return;
+			}
+			$write = $this->installations->save_if_current( $record->with_check( 'configured', gmdate( 'Y-m-d\TH:i:s\Z' ) ), $record );
+		} catch ( Throwable ) {
+			// Recording is best effort; the delivery response never depends on it.
+			$write = InstallationStore::WRITE_FAILED;
+		}
+		if ( in_array( $write, array( InstallationStore::WRITE_APPLIED, InstallationStore::WRITE_UNCHANGED ), true ) ) {
+			return;
+		}
+		BoosterLogger::log( 'Webhook delivery verification could not be recorded.', array( 'provider' => $verification->get_provider()->value ) );
 	}
 
 	private function available( string $provider ): bool {

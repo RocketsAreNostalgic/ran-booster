@@ -272,6 +272,8 @@ final class WebhookOperationCoordinator {
 			'succeeded' === $state && 'verified' === $delivery => 'configured',
 			'profile_revision_stale' === $code => 'profile_revision_stale',
 			'local_profile_missing' === $code => 'local_profile_missing',
+			// A signed delivery already verified this hook; a clean check keeps that.
+			'succeeded' === $state && 'configured' === $record->status() => 'configured',
 			default => 'needs_verification',
 		};
 		$next        = 'succeeded' === $state
@@ -357,8 +359,12 @@ final class WebhookOperationCoordinator {
 			return $code;
 		}
 
-		$status = 'needs_verification';
+		$status = 'succeeded' === $state && 'configured' === $record->status() ? 'configured' : 'needs_verification';
 		$code   = 'ping_verified' === $code ? 'ping_requested' : $code;
+		if ( $status === $record->status() && hash_equals( $record->management_credential_id(), $management_credential_id ) ) {
+			// Nothing changes, and a write could race the ping's own signed delivery.
+			return $code;
+		}
 
 		return $this->write_result_code(
 			$this->records->save_if_current( $record->with_management_credential( $management_credential_id, $status, $observed ), $record ),

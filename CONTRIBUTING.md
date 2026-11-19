@@ -1,6 +1,6 @@
 # Contributing
 
-Use a Conventional Commit pull-request title (`feat:`, `fix:`, `docs:`, `test:`, `chore:`) so the squash commit subject consumed by Release Please truthfully represents the change.
+Use a Conventional Commit pull-request title (`feat:`, `fix:`, `docs:`, `test:`, `chore:`) so the squash commit subject consumed by Release Please truthfully represents the change. The `Pull request title` workflow checks the format and the 64-character limit.
 
 Before proposing a change, install the locked Composer and pnpm dependencies, then run:
 

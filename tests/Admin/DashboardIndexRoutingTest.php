@@ -3316,10 +3316,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function test_package_indexes_discard_malformed_and_unsupported_filter_values( string $type, string $release_name ): void {
 		unset( $release_name );
 		$_GET    = array(
-			's'        => array( 'not-scalar' ),
-			'provider' => 'missing-provider',
-			'source'   => 'archive',
-			'policy'   => 'sometimes',
+			's'         => array( 'not-scalar' ),
+			'provider'  => 'missing-provider',
+			'source'    => 'archive',
+			'policy'    => 'sometimes',
+			'attention' => array( 'failed' ),
 		);
 		$package = $this->managed_package(
 			'plugin' === $type ? 'example/example.php' : 'example-theme',
@@ -3340,10 +3341,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame(
 			array(
-				'search'   => '',
-				'provider' => '',
-				'source'   => '',
-				'policy'   => '',
+				'search'    => '',
+				'provider'  => '',
+				'source'    => '',
+				'policy'    => '',
+				'attention' => '',
 			),
 			$data['package_list_state']
 		);

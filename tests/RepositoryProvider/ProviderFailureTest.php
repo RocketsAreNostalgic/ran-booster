@@ -249,8 +249,10 @@ final class ProviderFailureTest extends TestCase {
 	/** @return array<string, array{string, string}> */
 	public static function deployment_outcome_provider(): array {
 		return array(
-			'credential missing' => array( 'credential_missing', 'provider_credential_rejected' ),
+			'credential missing' => array( 'credential_missing', 'provider_request_invalid' ),
+			'credential format'  => array( 'credential_format_invalid', 'provider_request_invalid' ),
 			'credential store'   => array( 'credential_store_unavailable', 'provider_credential_rejected' ),
+			'rejected'           => array( 'credential_rejected', 'provider_credential_rejected' ),
 			'credential expired' => array( 'credential_expired', 'provider_credential_rejected' ),
 			'permission'         => array( 'permission_denied', 'provider_access_denied' ),
 			'not found'          => array( 'repository_not_found_or_no_access', 'provider_repository_missing' ),
@@ -262,7 +264,8 @@ final class ProviderFailureTest extends TestCase {
 			'5xx'                => array( 'http_5xx', 'provider_unavailable' ),
 			'too large'          => array( 'response_too_large', 'provider_unavailable' ),
 			'4xx'                => array( 'http_4xx_other', 'provider_request_invalid' ),
-			'zip'                => array( 'site_zip_unavailable', 'provider_failed' ),
+			'filesystem'         => array( 'site_filesystem_unsupported', 'deployment_filesystem_unsupported' ),
+			'zip'                => array( 'site_zip_unavailable', 'deployment_zip_extension_missing' ),
 			'superseded'         => array( 'operation_superseded', 'provider_failed' ),
 			'identity'           => array( 'repository_identity_changed', 'provider_failed' ),
 		);

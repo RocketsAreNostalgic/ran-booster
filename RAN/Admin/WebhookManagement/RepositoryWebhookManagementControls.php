@@ -458,10 +458,10 @@ final class RepositoryWebhookManagementControls {
 					: ( $record_healthy
 						? sprintf(
 							/* translators: %s: UTC timestamp of the last recorded webhook check. */
-							__( 'Configured at the last recorded check on %s. Run Check to confirm current Git provider state.', 'ran-booster' ),
+							__( 'Configured at the last recorded check on %s. Validate to confirm current Git provider state.', 'ran-booster' ),
 							$record->checked_at()
 						)
-						: __( 'The recorded remote webhook needs review. Run Check or inspect it at the Git provider.', 'ran-booster' ) ),
+						: __( 'The recorded remote webhook needs review. Validate or inspect it at the Git provider.', 'ran-booster' ) ),
 				'state'   => $record_healthy ? 'is-ok' : ( null === $record ? ( null === $manual_at ? 'is-pending' : 'is-ok' ) : 'is-warning' ),
 			),
 		);

@@ -1834,6 +1834,56 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertStringNotContainsString( 'ran_booster_manual_action_failed', $dashboard->messages[0]['message'] );
 	}
 
+	public function test_a_repeat_install_refused_at_admission_names_the_folder_already_managed_from_the_same_repository(): void {
+		$coordinator          = new OperationCoordinator();
+		$coordinator->failure = DeploymentStorageFailure::inconsistent();
+		$service              = $this->service(
+			new OperationPluginRepository( $this->plugin() ),
+			new OperationThemeRepository( new OperationTheme( 'example' ) ),
+			$coordinator
+		);
+
+		$result = $service->execute( PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin' ) ) );
+
+		self::assertSame( 'already-managed', $result['status'] );
+		self::assertInstanceOf( Package::class, $result['package'] ?? null );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_a_repeat_install_refused_at_admission_for_another_repository_is_refused_as_already_installed_or_managed(): void {
+		require_once __DIR__ . '/Admin/AdminViewWordPressFunctions.php';
+		$coordinator          = new OperationCoordinator();
+		$coordinator->failure = DeploymentStorageFailure::inconsistent();
+		$dashboard            = $this->dashboard( $coordinator, $this->plugin( 'example/example.php', 'R_other' ) );
+
+		self::assertFalse( $dashboard->post_package_operation( 'install-plugin', $this->input( 'install-plugin' ) ) );
+		self::assertSame( 400, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( 'That plugin or theme is already installed or managed. No package was overwritten.', $dashboard->messages[0]['message'] );
+		self::assertStringNotContainsString( 'ran_booster_manual_action_failed', $dashboard->messages[0]['message'] );
+		unset( $GLOBALS['ran_booster_test_status_header'] );
+	}
+
+	public function test_an_admission_refusal_that_is_not_a_repeat_install_is_rethrown_unchanged(): void {
+		foreach ( array( 'unmanaged folder', 'update' ) as $case ) {
+			$plugins              = new OperationPluginRepository( $this->plugin() );
+			$plugins->unmanaged   = 'unmanaged folder' === $case;
+			$coordinator          = new OperationCoordinator();
+			$failure              = DeploymentStorageFailure::inconsistent();
+			$coordinator->failure = $failure;
+			$service              = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), $coordinator );
+			$action               = 'unmanaged folder' === $case ? 'install-plugin' : 'update-plugin';
+
+			try {
+				$service->execute( PackageOperation::from_input( $action, $this->input( $action ) ) );
+				self::fail( $case );
+			} catch ( DeploymentStorageFailure $caught ) {
+				self::assertSame( $failure, $caught, $case );
+			}
+		}
+	}
+
 	/**
 	 * @param array<string, mixed> $overrides
 	 * @return array<string, mixed>
@@ -2056,6 +2106,7 @@ final class OperationPluginRepository extends PluginRepository {
 	public ?Plugin $stored                                = null;
 	/** @var array<string, mixed> */ public array $edited = array();
 	public bool $installed                                = true;
+	public bool $unmanaged                                = false;
 	public ?string $unlinked                              = null;
 	public ?string $requested_slug                        = null;
 	public ?\Throwable $unlink_failure                    = null;
@@ -2081,6 +2132,9 @@ final class OperationPluginRepository extends PluginRepository {
 	}
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_plugin_from_file retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_plugin_from_file( $file ) {
+		if ( $this->unmanaged ) {
+			throw $this->not_found_exception();
+		}
 		return null !== $this->fresh_after_mutation && ( null !== $this->stored || array() !== $this->edited )
 			? $this->fresh_after_mutation
 			: $this->package; }

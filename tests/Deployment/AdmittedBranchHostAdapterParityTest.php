@@ -1693,6 +1693,29 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
+	public function test_admission_still_refuses_an_install_into_a_managed_folder_and_records_nothing(): void {
+		// The service answers a repeat install first; admission stays the atomic guard against a race.
+		$this->database->management_rows['install-plugin/install-plugin.php'] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_install_plugin',
+			'repository'             => 'owner/install-plugin',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
+
+		$this->expectException( DeploymentStorageFailure::class );
+		try {
+			$this->running_install( 'install-plugin' );
+		} finally {
+			self::assertSame( array(), $this->database->rows );
+		}
+	}
+
 	private function running_install( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC, ?string $expected_identifier = null, bool $is_private = false, ?string $credential_id = null ): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/install-plugin',

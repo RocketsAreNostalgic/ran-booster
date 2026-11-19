@@ -6,6 +6,7 @@ namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonP
 
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\DeploymentStorageFailure;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\PackageRemoval\PackageRemovalService;
@@ -41,7 +42,12 @@ final readonly class PackageOperationService {
 	public function execute( PackageOperation $operation ): array {
 		PackageMutationGuard::assert_package_mutation_allowed();
 		if ( $operation->is_deployment() ) {
-			return $this->deploy( $operation );
+			try {
+				return $this->deploy( $operation );
+			} catch ( DeploymentStorageFailure $failure ) {
+				// Admission refuses a repeat install into a managed folder without a record; name that cause. Any other refusal stands.
+				return ( 'install' === $operation->operation && null === $failure->get_active_correlation_id() ? $this->managed_folder_answer( $operation ) : null ) ?? throw $failure;
+			}
 		}
 
 		return match ( $operation->operation ) {
@@ -115,6 +121,31 @@ final readonly class PackageOperationService {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * The answer for an install that admission refused because the folder is already managed.
+	 *
+	 * @return array{status: 'already-managed', package: Package}|array{status: 'failed', outcome_code: 'package_already_exists'}|null
+	 */
+	private function managed_folder_answer( PackageOperation $operation ): ?array {
+		try {
+			$slug      = (string) $operation->package_slug;
+			$installed = 'plugin' === $operation->package_type ? $this->plugins->from_slug( $slug ) : $this->themes->from_slug( $slug );
+			$existing  = $this->find( $operation->package_type, (string) $installed->get_identifier() );
+		} catch ( \Throwable ) {
+			return null; // Not installed or not managed: the refusal had another cause.
+		}
+
+		return null !== $this->matching_existing_target( $operation, $existing )
+			? array(
+				'status'  => 'already-managed',
+				'package' => $existing,
+			)
+			: array(
+				'status'       => 'failed',
+				'outcome_code' => 'package_already_exists',
+			);
 	}
 
 	/** @return array{status: 'succeeded'|'already-managed'|'failed', package?: Package, correlation_id: string, outcome_code: string} */

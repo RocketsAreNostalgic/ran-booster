@@ -894,6 +894,7 @@ final class PackageAdminController {
 				__( '%s removal could not be verified. Review its files and Booster management before retrying.', 'ran-booster' ),
 				$type
 			),
+			'package_already_exists' => __( 'That plugin or theme is already installed or managed. No package was overwritten.', 'ran-booster' ),
 			'operation_in_progress' => sprintf(
 				/* translators: %s: package type, such as Plugin or Theme. */
 				__( '%s was not removed because another Booster operation still owns it.', 'ran-booster' ),

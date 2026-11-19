@@ -1693,7 +1693,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	public function test_admission_still_refuses_an_install_into_a_managed_folder_and_records_nothing(): void {
+	public function test_admission_refuses_an_install_into_a_managed_folder_with_its_own_signal_and_records_nothing(): void {
 		// The service answers a repeat install first; admission stays the atomic guard against a race.
 		$this->database->management_rows['install-plugin/install-plugin.php'] = array(
 			'provider'               => 'gh',
@@ -1708,10 +1708,12 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			'source_revision'        => 1,
 		);
 
-		$this->expectException( DeploymentStorageFailure::class );
 		try {
 			$this->running_install( 'install-plugin' );
-		} finally {
+			self::fail( 'Admission must refuse an install into a managed folder.' );
+		} catch ( DeploymentStorageFailure $failure ) {
+			self::assertTrue( $failure->is_folder_managed() );
+			self::assertSame( DeploymentStorageFailure::inconsistent()->getMessage(), $failure->getMessage() );
 			self::assertSame( array(), $this->database->rows );
 		}
 	}

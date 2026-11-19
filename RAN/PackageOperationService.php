@@ -45,8 +45,8 @@ final readonly class PackageOperationService {
 			try {
 				return $this->deploy( $operation );
 			} catch ( DeploymentStorageFailure $failure ) {
-				// Admission refuses a repeat install into a managed folder without a record; name that cause. Any other refusal stands.
-				return ( 'install' === $operation->operation && null === $failure->get_active_correlation_id() ? $this->managed_folder_answer( $operation ) : null ) ?? throw $failure;
+				// Admission refused a repeat install into a managed folder, with no record; name that cause. Any other failure stands.
+				return ( $failure->is_folder_managed() ? $this->managed_folder_answer( $operation ) : null ) ?? throw $failure;
 			}
 		}
 

@@ -8,6 +8,8 @@ require_once __DIR__ . '/PackageMutationGuardWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Portability/WpPusherCoexistenceWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
+use RAN\Deployment\DeploymentCheckFailure;
+use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\PackageMutationGuard;
 use RuntimeException;
 
@@ -97,7 +99,13 @@ final class PackageMutationGuardTest extends TestCase {
 		self::assertSame( array( 'ran-booster' ), $GLOBALS['ran_booster_package_mutation_guard_contexts'] );
 
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
-		$this->expectException( RuntimeException::class );
-		PackageMutationGuard::assert_filesystem_mutation_allowed();
+		try {
+			PackageMutationGuard::assert_filesystem_mutation_allowed();
+			self::fail( 'Disabled WordPress file modifications must refuse the mutation.' );
+		} catch ( DeploymentCheckFailure $failure ) {
+			// A closed code, so the administrator sees its copy instead of the generic notice.
+			self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_FILE_MODS_DISABLED, $failure->outcome_code );
+			self::assertInstanceOf( RuntimeException::class, $failure );
+		}
 	}
 }

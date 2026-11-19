@@ -46,7 +46,7 @@ final readonly class PackageOperationService {
 				return $this->deploy( $operation );
 			} catch ( DeploymentStorageFailure $failure ) {
 				// Admission refused a repeat install into a managed folder, with no record; name that cause. Any other failure stands.
-				return ( $failure->is_folder_managed() ? $this->managed_folder_answer( $operation ) : null ) ?? throw $failure;
+				return $failure->is_folder_managed() ? $this->managed_folder_answer( $operation ) : throw $failure;
 			}
 		}
 
@@ -126,18 +126,18 @@ final readonly class PackageOperationService {
 	/**
 	 * The answer for an install that admission refused because the folder is already managed.
 	 *
-	 * @return array{status: 'already-managed', package: Package}|array{status: 'failed', outcome_code: 'package_already_exists'}|null
+	 * @return array{status: 'already-managed', package: Package}|array{status: 'failed', outcome_code: 'package_already_exists'}
 	 */
-	private function managed_folder_answer( PackageOperation $operation ): ?array {
+	private function managed_folder_answer( PackageOperation $operation ): array {
 		try {
 			$slug      = (string) $operation->package_slug;
 			$installed = 'plugin' === $operation->package_type ? $this->plugins->from_slug( $slug ) : $this->themes->from_slug( $slug );
 			$existing  = $this->find( $operation->package_type, (string) $installed->get_identifier() );
 		} catch ( \Throwable ) {
-			return null; // Not installed or not managed: the refusal had another cause.
+			$existing = null; // A managed row has the folder but its package cannot be read, for example because the files are gone.
 		}
 
-		return null !== $this->matching_existing_target( $operation, $existing )
+		return null !== $existing && null !== $this->matching_existing_target( $operation, $existing )
 			? array(
 				'status'  => 'already-managed',
 				'package' => $existing,

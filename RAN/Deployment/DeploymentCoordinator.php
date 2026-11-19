@@ -107,7 +107,8 @@ class DeploymentCoordinator {
 			$this->assert_submitted_snapshot( $command, $package );
 			$this->assert_branch_source( $package );
 			if ( ! $package->get_deployment_policy()->allows_manual_mutation() ) {
-				throw new RuntimeException( 'The package is disabled for Booster deployments.' );
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; presentation owns escaping.
+				throw new DeploymentCheckFailure( DeploymentOutcome::CODE_POLICY_BLOCKED, 'The package is disabled for Booster deployments.' );
 			}
 			$request       = $this->request_from_package( $package, $user_id > 0 ? $user_id : null, $command->selected_commit );
 			$requested_ref = $command->selected_commit ?? $command->ref ?? $request->configured_branch;
@@ -154,7 +155,8 @@ class DeploymentCoordinator {
 
 	private function assert_submitted_snapshot( PackageOperation $command, Package $package ): void {
 		if ( ! $command->has_expected_package() ) {
-			throw new RuntimeException( 'The managed package changed after this form was opened.' );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; presentation owns escaping.
+			throw new DeploymentCheckFailure( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, 'The managed package changed after this form was opened.' );
 		}
 		$expected = $command->expected_package;
 		if ( null === AdoptionIdentity::of( $package ) || AdoptionIdentity::of( $package ) !== $expected['adoption_token']
@@ -169,7 +171,8 @@ class DeploymentCoordinator {
 			|| $package->get_deployment_policy() !== $expected['deployment_policy']
 			|| $package->get_source() !== $expected['source']
 			|| $package->get_source_revision() !== $expected['source_revision'] ) {
-			throw new RuntimeException( 'The managed package changed after this form was opened.' );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; presentation owns escaping.
+			throw new DeploymentCheckFailure( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, 'The managed package changed after this form was opened.' );
 		}
 	}
 

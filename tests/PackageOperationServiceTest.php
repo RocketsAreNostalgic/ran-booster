@@ -18,6 +18,7 @@ use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Admin\PackageAdminController;
 use RAN\Booster;
 use RAN\Dashboard;
+use RAN\Deployment\DeploymentCheckFailure;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentStorageFailure;
@@ -1865,23 +1866,61 @@ final class PackageOperationServiceTest extends TestCase {
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
-	public function test_a_failure_that_is_not_the_admission_refusal_is_rethrown_unchanged(): void {
-		// The second case is a first install that ran and adopted the package, then failed its journal check: the folder is managed now, but this is not a harmless repeat.
-		foreach ( array( 'unmanaged folder', 'journal check after the install' ) as $case ) {
-			$plugins              = new OperationPluginRepository( $this->plugin() );
-			$plugins->unmanaged   = 'unmanaged folder' === $case;
-			$coordinator          = new OperationCoordinator();
-			$failure              = 'unmanaged folder' === $case ? DeploymentStorageFailure::folder_managed() : DeploymentStorageFailure::inconsistent();
-			$coordinator->failure = $failure;
-			$service              = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), $coordinator );
+	public function test_a_managed_row_whose_package_cannot_be_read_is_still_named_already_installed_or_managed(): void {
+		// The refusal says a managed row has the folder; the files may be gone, so there is no package to compare.
+		$plugins              = new OperationPluginRepository( $this->plugin() );
+		$plugins->unmanaged   = true;
+		$coordinator          = new OperationCoordinator();
+		$coordinator->failure = DeploymentStorageFailure::folder_managed();
+		$service              = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), $coordinator );
 
-			try {
-				$service->execute( PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin' ) ) );
-				self::fail( $case );
-			} catch ( DeploymentStorageFailure $caught ) {
-				self::assertSame( $failure, $caught, $case );
-			}
+		$result = $service->execute( PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin' ) ) );
+
+		self::assertSame( 'failed', $result['status'] );
+		self::assertSame( 'package_already_exists', $result['outcome_code'] ?? null );
+	}
+
+	public function test_a_failure_that_is_not_the_admission_refusal_is_rethrown_unchanged(): void {
+		// A first install that ran and adopted the package, then failed its journal check: the folder is managed now, but this is not a harmless repeat.
+		$coordinator          = new OperationCoordinator();
+		$failure              = DeploymentStorageFailure::inconsistent();
+		$coordinator->failure = $failure;
+		$service              = $this->service( new OperationPluginRepository( $this->plugin() ), new OperationThemeRepository( new OperationTheme( 'example' ) ), $coordinator );
+
+		try {
+			$service->execute( PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin' ) ) );
+			self::fail( 'An uncertain outcome must not be answered.' );
+		} catch ( DeploymentStorageFailure $caught ) {
+			self::assertSame( $failure, $caught );
 		}
+	}
+
+	/** @return iterable<string, array{string}> */
+	public static function check_refusal_codes(): iterable {
+		foreach ( array( 'deployment_file_mods_disabled', 'policy_blocked', 'deployment_snapshot_changed', 'deployment_release_source_blocked' ) as $code ) {
+			yield $code => array( $code );
+		}
+	}
+
+	#[DataProvider( 'check_refusal_codes' )]
+	public function test_a_deployment_check_refusal_shows_its_own_copy_and_any_other_exception_stays_generic( string $code ): void {
+		$coordinator          = new OperationCoordinator();
+		$coordinator->failure = new DeploymentCheckFailure( $code, 'Internal detail that is never shown.' );
+		$dashboard            = $this->dashboard( $coordinator );
+
+		self::assertFalse( $dashboard->post_package_operation( 'update-plugin', $this->input( 'update-plugin' ) ) );
+		self::assertSame( 400, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( \RAN\Admin\DeploymentOutcomeMessage::for_code( $code ), $dashboard->messages[0]['message'] );
+		self::assertStringNotContainsString( 'Internal detail', $dashboard->messages[0]['message'] );
+		self::assertStringNotContainsString( 'ran_booster_manual_action_failed', $dashboard->messages[0]['message'] );
+
+		$other          = new OperationCoordinator();
+		$other->failure = new \RuntimeException( 'Internal detail that is never shown.' );
+		$generic        = $this->dashboard( $other );
+		self::assertFalse( $generic->post_package_operation( 'update-plugin', $this->input( 'update-plugin' ) ) );
+		self::assertStringContainsString( 'Reference: ran_booster_manual_action_failed.', $generic->messages[0]['message'] );
+		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
 	/**

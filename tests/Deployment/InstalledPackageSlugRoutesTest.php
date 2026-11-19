@@ -11,12 +11,15 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\BulkPackageAction;
 use RAN\Admin\BulkPackageActionService;
 use RAN\Deployment\DeploymentAttemptRepository;
+use RAN\Deployment\DeploymentCheckFailure;
 use RAN\Deployment\DeploymentCoordinator;
+use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 use RAN\Deployment\DeploymentState;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\ManagedRepository;
+use RAN\PackageSource;
 use RAN\Package;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
@@ -117,6 +120,39 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$this->remove_tree( $this->directory );
+	}
+
+	/** @return iterable<string, array{string, string}> */
+	public static function manual_update_refusals(): iterable {
+		yield 'stale form' => array( 'stale', DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
+		yield 'package disabled for deployments' => array( 'disabled', DeploymentOutcome::CODE_POLICY_BLOCKED );
+		yield 'release-managed package' => array( 'release', DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED );
+	}
+
+	#[DataProvider( 'manual_update_refusals' )]
+	public function test_a_manual_update_refused_before_admission_carries_its_closed_code( string $scenario, string $code ): void {
+		$package = $this->package( 'plugin', 'mypackage', 'packages/MyPackage' );
+		$this->inventory( 'plugin', $package );
+		$expected = array();
+		if ( 'disabled' === $scenario ) {
+			$package->set_deployment_policy( DeploymentPolicy::DISABLED );
+			$expected = array( 'expected_deployment_policy' => 'disabled' );
+		} elseif ( 'release' === $scenario ) {
+			$package->set_source( PackageSource::RELEASE_ASSET, 1 );
+			$expected = array( 'expected_source' => 'release_asset' );
+		}
+		$command = $this->update_command( 'plugin', $package, $expected );
+		if ( 'stale' === $scenario ) {
+			$package->set_deployment_policy( DeploymentPolicy::MANUAL );
+		}
+
+		try {
+			$this->coordinator( $this->createMock( WordPressCorePackageExecutor::class ) )->execute_manual( $command );
+			self::fail( $scenario );
+		} catch ( DeploymentCheckFailure $failure ) {
+			self::assertSame( $code, $failure->outcome_code, $scenario );
+		}
+		self::assertSame( array(), $this->database->rows, 'Nothing is admitted or recorded.' );
 	}
 
 	/** @return iterable<string, array{string, string, string, string}> */
@@ -397,10 +433,11 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		return $package;
 	}
 
-	private function update_command( string $type, Package $package ): PackageOperation {
+	/** @param array<string, string> $expected Overrides for the submitted snapshot. */
+	private function update_command( string $type, Package $package, array $expected = array() ): PackageOperation {
 		return PackageOperation::from_input(
 			'update-' . $type,
-			array(
+			$expected + array(
 				'plugin' === $type ? 'file' : 'stylesheet' => $package->get_identifier(),
 				'repository'                               => 'owner/example',
 				'expected_provider'                        => 'gh',

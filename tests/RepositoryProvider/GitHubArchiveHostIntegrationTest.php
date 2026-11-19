@@ -211,6 +211,13 @@ final class GitHubArchiveHostIntegrationTest extends TestCase {
 			self::assertSame( 'The repository provider request failed.', $exception->getMessage() );
 			self::assertStringNotContainsString( self::TOKEN, $exception->getMessage() );
 			self::assertStringNotContainsString( 'upstream-response-canary', $exception->getMessage() );
+			// A trace prints string arguments cut to 15 characters, so the prefix is what a leaked argument would show.
+			$chain = '';
+			for ( $link = $exception; null !== $link; $link = $link->getPrevious() ) {
+				$chain .= $link->getMessage() . $link->getTraceAsString();
+			}
+			self::assertStringNotContainsString( substr( self::TOKEN, 0, 12 ), $chain );
+			self::assertStringNotContainsString( 'upstream-resp', $chain );
 		}
 
 		$requests = \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests();

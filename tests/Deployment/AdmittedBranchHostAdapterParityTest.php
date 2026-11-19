@@ -70,6 +70,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private const MAXIMUM_ARTIFACT_BYTES = 1048576;
+	private const TOKEN_SENTINEL         = 'sntl-cred-7c1d';
 
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
@@ -1554,6 +1555,80 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertStringContainsString( '"step":"verify_current_head"', $lines );
 	}
 
+	/** @return iterable<string, array{list<mixed>, string}> */
+	public static function failed_private_provider_calls(): iterable {
+		$private = array(
+			'response' => array( 'code' => 200 ),
+			'body'     => '{"id":"R_install_plugin","full_name":"owner/install-plugin","private":true,"default_branch":"main"}',
+		);
+		$failure = static fn ( int $status ): array => array(
+			'response' => array( 'code' => $status ),
+			'headers'  => array( 'x-detail' => self::TOKEN_SENTINEL ),
+			'body'     => '{"message":"' . self::TOKEN_SENTINEL . '"}',
+		);
+		yield 'identity rejected with 401' => array( array( $failure( 401 ) ), DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED );
+		yield 'identity denied with 403' => array( array( $failure( 403 ) ), DeploymentOutcome::CODE_PROVIDER_ACCESS_DENIED );
+		yield 'identity fails with 500' => array( array( $failure( 500 ) ), DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
+		yield 'branch lookup fails with 502' => array( array( $private, $failure( 502 ) ), DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
+		yield 'transport error' => array( array( new \RAN\BoosterGitHubProvider\V1\RepositoryResolverWpError( 'http_request_failed' ) ), DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
+	}
+
+	/** @param list<mixed> $responses */
+	#[DataProvider( 'failed_private_provider_calls' )]
+	public function test_failed_private_provider_call_keeps_the_token_out_of_every_sink( array $responses, string $code ): void {
+		$this->enable_activity();
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue( $responses );
+		$provider = $this->guarded_github_provider( array( 'private-profile' => self::TOKEN_SENTINEL ) );
+		$notifier = new ParityFailureNotifier( $this->database );
+		$outcome  = null;
+		$lines    = $this->captured_logs(
+			function () use ( $provider, $notifier, &$outcome ): void {
+				$outcome = $this->coordinator( $provider, $notifier )->execute_claimed( $this->running_install( 'example', is_private: true, credential_id: 'private-profile' ) );
+			}
+		);
+
+		self::assertInstanceOf( DeploymentOutcome::class, $outcome );
+		self::assertSame( $code, $outcome->get_code() );
+		self::assertSame( 'Bearer ' . self::TOKEN_SENTINEL, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests()[0]['arguments']['headers']['Authorization'] );
+		$sinks = $lines . print_r( array( $outcome, $this->database->rows, $this->database->activity_rows, $this->database->option_rows, $notifier->attempts ), true ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Collects every durable sink into one string for the leak assertion.
+		self::assertStringNotContainsString( self::TOKEN_SENTINEL, $sinks );
+	}
+
+	/** @return iterable<string, array{bool, int}> */
+	public static function throwing_provider_stages(): iterable {
+		yield 'archive request, status 401' => array( false, 401 );
+		yield 'archive request, no status' => array( false, 0 );
+		yield 'head verification, status 502' => array( true, 502 );
+	}
+
+	#[DataProvider( 'throwing_provider_stages' )]
+	public function test_a_provider_exception_message_never_reaches_a_sink( bool $at_verification, int $status ): void {
+		$this->enable_activity();
+		$message  = 'provider said ' . self::TOKEN_SENTINEL . ' and https://signed.example.test/a.zip?token=' . self::TOKEN_SENTINEL;
+		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive );
+		if ( $at_verification ) {
+			$archive->on_verify = static function () use ( $message, $status ): never {
+				throw new RuntimeException( $message, $status );
+			};
+			$this->download_fixture( 'example' );
+		} else {
+			$provider->prepare_failure = new RuntimeException( $message, $status );
+		}
+		$notifier = new ParityFailureNotifier( $this->database );
+		$outcome  = null;
+		$lines    = $this->captured_logs(
+			function () use ( $provider, $notifier, &$outcome ): void {
+				$outcome = $this->coordinator( $provider, $notifier )->execute_claimed( $this->running_update() );
+			}
+		);
+
+		self::assertInstanceOf( DeploymentOutcome::class, $outcome );
+		self::assertSame( DeploymentState::FAILED, $outcome->get_state() );
+		$sinks = $lines . print_r( array( $outcome, $this->database->rows, $this->database->activity_rows, $this->database->option_rows, $notifier->attempts ), true ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Collects every durable sink into one string for the leak assertion.
+		self::assertStringNotContainsString( self::TOKEN_SENTINEL, $sinks );
+	}
+
 	/** @param callable(): void $operation */
 	private function captured_logs( callable $operation ): string {
 		$directory = sys_get_temp_dir() . '/ran-booster-left-running-' . bin2hex( random_bytes( 8 ) );
@@ -1723,7 +1798,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		return $facts;
 	}
 
-	private function coordinator( ParityRepositoryProvider $provider, ?DeploymentFailureNotifier $notifier = null, ?WordPressCorePackageExecutor $executor = null ): DeploymentCoordinator {
+	private function coordinator( RepositoryProvider $provider, ?DeploymentFailureNotifier $notifier = null, ?WordPressCorePackageExecutor $executor = null ): DeploymentCoordinator {
 		return new DeploymentCoordinator(
 			$this->attempts,
 			$this->plugins,

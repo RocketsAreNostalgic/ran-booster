@@ -50,7 +50,7 @@ final class CredentialExpiryNotice {
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
 		$items    = array();
-		foreach ( array_slice( $this->affected, 0, 5 ) as $row ) {
+		foreach ( $this->affected as $row ) {
 			$url     = ProviderTabLinks::link( $this->links, $base_url, $row['provider'], '&view=credentials' . ( $row['editable'] && '' !== $row['id'] ? '&replace_credential=' . rawurlencode( $row['id'] ) : '' ) );
 			$items[] = array(
 				'provider'             => $row['provider'],

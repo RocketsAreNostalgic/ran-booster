@@ -6,6 +6,7 @@ use RAN\Activity\ActivityRequest;
 use RAN\Activity\ActivityStore;
 use RAN\AdoptionIdentity;
 use RAN\Admin\DeploymentAdminPresenter;
+use RAN\Admin\OnboardingPresenter;
 use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentOutcome;
@@ -14,10 +15,13 @@ use RAN\Deployment\DeploymentRequest;
 use RAN\Deployment\DeploymentState;
 use RAN\Deployment\DeploymentStorageFailure;
 use RAN\Internal\CoreContainer;
+use RAN\Plugin;
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseLifecycleFailure;
+use RAN\Storage\PluginRepository;
+use RAN\Storage\ThemeRepository;
 
 // Exercise optional reporting SQL on the existing installed-archive database matrix.
 return static function ( wpdb $database ): void {
@@ -739,6 +743,61 @@ return static function ( wpdb $database ): void {
 		$retained = $database->get_col( $database->prepare( 'SELECT correlation FROM %i ORDER BY id', $table ) );
 		$expect( $raced && array( $uncertain->get_correlation_id(), $racer->get_correlation_id() ) === $retained && ! in_array( $refusal->get_correlation_id(), $retained, true ), 'the racing batch keeps the old and the new deciding rows' );
 		$expect( array( 'failed', $racer->get_correlation_id() ) === $decide(), 'the new failure decides' );
+		// Overview lists the failure outside the five-row preview, first within one cap of five.
+		$unrelated = new DeploymentRequest( 'ran/other-proof', null, false, 'main', 'other-proof', null, DeploymentPolicy::MANUAL, 1 );
+		for ( $index = 0; $index < 6; ++$index ) {
+			$journal->finish( $journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'other-proof', $unrelated, 'main', 'branch', 1 )->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
+		}
+		$plugin = Plugin::from_wp_array( 'activity-proof', array_fill_keys( array( 'Name', 'PluginURI', 'Version', 'Description', 'Author', 'AuthorURI', 'TextDomain', 'DomainPath', 'Title', 'AuthorName' ), '' ) + array( 'Network' => false ) );
+		$plugin->set_adoption_token( $token );
+		$tabs     = array_map(
+			static fn ( string $key ): array => array(
+				'key'      => $key,
+				'label'    => $key,
+				'url'      => '/',
+				'active'   => false,
+				'provider' => false,
+			),
+			array( 'portability', 'documentation', 'troubleshooting' )
+		);
+		$overview = ( new OnboardingPresenter() )->build_overview(
+			$tabs,
+			'',
+			'',
+			new class( $plugin ) extends PluginRepository {
+				public function __construct( private Plugin $plugin ) {}
+				public function all_booster_plugins(): array {
+					return array( $this->plugin );
+				}
+			},
+			new class() extends ThemeRepository {
+				public function __construct() {}
+				public function all_booster_themes(): array {
+					return array();
+				}
+			},
+			$store,
+			null,
+			array(),
+			array(
+				'status' => 'captured',
+				'total'  => 5,
+				'items'  => array_fill(
+					0,
+					5,
+					array(
+						'provider_label' => 'GitHub',
+						'label'          => 'credential',
+						'badge_label'    => 'Expires soon',
+						'stage'          => 'warning',
+						'url'            => '/',
+					)
+				),
+			)
+		);
+		$expect( array( 'succeeded' ) === array_values( array_unique( array_column( $overview['activity']['records'], 'status' ) ) ) && 5 === count( $overview['activity']['records'] ), 'the failure is outside the five-row preview' );
+		$expect( $overview['attention']['updates_available'] && 6 === $overview['attention']['total'] && 5 === count( $overview['attention']['items'] ) && array( 'activity-proof', 'Update failed' ) === array( $overview['attention']['items'][0]['label'], $overview['attention']['items'][0]['badge'] ), 'Needs attention lists the failure first within one cap' );
+		$query( $database->prepare( "DELETE FROM %i WHERE subject_identity = 'other-proof'", $table ) );
 		$expect( 1 === $store->prune( array( $capture ) ) && array( 'failed', $racer->get_correlation_id() ) === $decide(), 'the next batch removes the superseded failure' );
 		$expect( array( 'clear', null ) === $decide( AdoptionIdentity::create( 'gh', 'activity-proof' ) ), 're-adoption inherits no failure' );
 		$expect( array( 'unavailable', null ) === $decide( 'invalid' ), 'an invalid adoption is unavailable, not clear' );

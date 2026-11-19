@@ -276,12 +276,54 @@ final class OverviewPresenterTest extends TestCase {
 		self::assertSame( $result['activity_url'] . '&activity_package=' . rawurlencode( (string) wp_json_encode( array( 'gh', 'plugin', 'failed/failed.php' ) ) ), $attention['items'][0]['url'] );
 		self::assertSame( $result['activity_url'] . '&attempt=41&reference=corr-review', $attention['items'][1]['url'] );
 		self::assertSame( $credentials, $result['credential_expiry'] );
+		self::assertSame( $result['activity_url'], $attention['more_url'], 'Hidden credential rows alone keep Activity.' );
 		$keys = array_map( static fn ( string $slug ): string => hash( 'sha256', "plugin\0$slug/$slug.php\0$token\0" ), array( 'failed', 'review', 'clear' ) );
 		self::assertSame( $keys, $connection->prepared[ count( $connection->prepared ) - 1 ]['args'] ?? null );
 
 		$result = $this->present( $this->plugins( $plugins ), $this->themes( array() ), null, $credentials );
 		self::assertFalse( $result['attention']['updates_available'] );
 		self::assertSame( array( 'badge-expired', 'badge-urgent', 'badge-expired', 'badge-urgent', 'badge-warning' ), array_column( $result['attention']['items'], 'badge' ) );
+	}
+
+	public function test_the_count_opens_the_filtered_list_of_hidden_updates_plugins_first(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$token                                   = 'gh:repository-1:11111111-1111-4111-8111-111111111111';
+		$fields                                  = array_fill_keys( array( 'Name', 'PluginURI', 'Version', 'Description', 'Author', 'AuthorURI', 'TextDomain', 'DomainPath', 'Title', 'AuthorName' ), '' ) + array( 'Network' => false );
+		$failed                                  = static function ( string $type, string $identity ) use ( $token ): object {
+			return (object) array(
+				'context_key'      => hash( 'sha256', "$type\0$identity\0$token\0" ),
+				'subject_type'     => $type,
+				'subject_identity' => $identity,
+				'adoption_token'   => $token,
+				'provider'         => 'gh',
+				'correlation'      => $identity,
+				'status'           => 'failed',
+				'facts'            => '{"deployment_attempt_id":1}',
+			);
+		};
+		$theme                                   = new class() extends Theme {
+			public function get_identifier(): mixed {
+				return 'failing-theme';
+			}
+		};
+		$theme->set_adoption_token( $token );
+		foreach ( array(
+			5 => 'admin.php?page=ran-booster-themes&attention=failed',
+			6 => 'admin.php?page=ran-booster-plugins&attention=failed',
+		) as $count => $expected ) {
+			$plugins = array();
+			$rows    = array( $failed( 'theme', 'failing-theme' ) );
+			for ( $index = 0; $index < $count; ++$index ) {
+				$plugins[] = Plugin::from_wp_array( "p$index/p$index.php", $fields );
+				$plugins[ $index ]->set_adoption_token( $token );
+				$rows[] = $failed( 'plugin', "p$index/p$index.php" );
+			}
+			$connection               = new ActivityConnection();
+			$connection->read_results = array( array(), $rows );
+			$attention                = $this->present( $this->plugins( $plugins ), $this->themes( array( $theme ) ), new ActivityStore( $connection ) )['attention'];
+			self::assertSame( $count + 1, $attention['total'] );
+			self::assertStringEndsWith( $expected, $attention['more_url'] );
+		}
 	}
 
 	/** @param list<Plugin>|null $packages */

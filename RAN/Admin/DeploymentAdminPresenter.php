@@ -517,6 +517,44 @@ final class DeploymentAdminPresenter {
 		return $this->package_activity_result( $items, false );
 	}
 
+	/**
+	 * Identifiers whose decisive update outcome is failed or needs review, from one read; null when Activity cannot answer.
+	 *
+	 * @param list<Package> $packages
+	 * @return list<string>|null
+	 */
+	public function failed_update_identifiers( array $packages, string $type ): ?array {
+		$adopted = array();
+		$read    = array();
+		foreach ( $packages as $package ) {
+			$token = \RAN\AdoptionIdentity::of( $package );
+			if ( null !== $token && is_string( $package->get_identifier() ) ) {
+				$adopted[] = $package->get_identifier();
+				$read[]    = array(
+					'subject_type'     => $type,
+					'subject_identity' => $package->get_identifier(),
+					'adoption_token'   => $token,
+				);
+			}
+		}
+		try {
+			$outcomes = $this->activity_store?->decisive_update_outcomes( $read );
+		} catch ( Throwable $failure ) {
+			$this->log_read_failure( 'package update outcomes unavailable', $failure, 'decisive_update_outcomes', 'read-' . $type . '-package-attention' );
+			return null;
+		}
+		if ( null === $outcomes || ! $outcomes['available'] ) {
+			return null;
+		}
+		$failed = array();
+		foreach ( $outcomes['outcomes'] as $index => $outcome ) {
+			if ( 'clear' !== $outcome['state'] ) {
+				$failed[] = $adopted[ $index ];
+			}
+		}
+		return $failed;
+	}
+
 	/** @param array<string, int|string|null> $failure */
 	private function activity_url( array $failure ): string {
 		return admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity&attempt=' . rawurlencode( (string) $failure['attempt_id'] ) . '&reference=' . rawurlencode( (string) $failure['correlation_id'] ) );

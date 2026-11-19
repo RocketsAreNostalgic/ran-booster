@@ -40,6 +40,26 @@ final class PackageIndexFilterControlsTest extends TestCase {
 	}
 
 	#[DataProvider( 'package_types' )]
+	public function test_status_filter_keeps_its_value_and_is_disabled_without_activity( PackagePagePresenter $package_view, string $page_slug, string $type ): void {
+		$state = array(
+			'search'    => 'Release',
+			'provider'  => '',
+			'source'    => '',
+			'policy'    => '',
+			'attention' => 'failed',
+		);
+		$html  = $this->render( $package_view, $state, 4, array(), array(), false, true );
+		self::assertStringContainsString( '<label class="screen-reader-text" for="ran-booster-' . $type . '-attention-filter">Filter by status</label>', $html );
+		self::assertMatchesRegularExpression( '/name="attention">\s*<option value="">All statuses<\/option>\s*<option value="failed"\s+selected="selected">Update failed<\/option>/', $html );
+		self::assertStringContainsString( 'type="hidden" name="attention" value="failed"', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=' . $page_slug . '">Clear filters</a>', $html );
+
+		$html = $this->render( $package_view, array( 'attention' => '' ) + $state, 4, array(), array(), false, false );
+		self::assertStringContainsString( 'name="attention" disabled="disabled">', $html );
+		self::assertStringNotContainsString( 'name="attention" value=', $html );
+	}
+
+	#[DataProvider( 'package_types' )]
 	public function test_it_renders_the_shared_selected_query_contract(
 		PackagePagePresenter $package_view,
 		string $page_slug,
@@ -307,7 +327,8 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		int $package_list_total,
 		array $package_provider_options,
 		array $package_return_args = array(),
-		bool $package_list_unavailable = false
+		bool $package_list_unavailable = false,
+		bool $package_attention_enabled = false
 	): string {
 		$packages                  = array();
 		$package_providers         = array();

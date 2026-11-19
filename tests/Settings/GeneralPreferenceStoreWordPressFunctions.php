@@ -34,3 +34,11 @@ function wp_cache_delete( string $key, string $group = '' ): bool {
 	$GLOBALS['ran_booster_general_preference_cache'][] = array( $key, $group );
 	return true;
 }
+
+function home_url(): string {
+	return (string) ( $GLOBALS['ran_booster_test_home_url'] ?? 'http://localhost' );
+}
+
+function wp_parse_url( string $url, int $component = -1 ): mixed {
+	return parse_url( $url, $component ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- This is the test stand-in for wp_parse_url().
+}

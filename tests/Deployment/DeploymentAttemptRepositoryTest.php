@@ -65,7 +65,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			self::assertSame( array( 'skipped', 'webhook.unmatched.' . $reason ), array_slice( $complete['args'], 0, 2 ), $reason );
 			$keys[ $reason ] = $row['context_key'];
 		}
-		self::assertCount( 5, array_unique( $keys ) );
+		self::assertCount( 6, array_unique( $keys ) );
 
 		// A second push in the same hour finds the first entry's skip in its context and is dropped.
 		$hours                    = array( gmdate( 'YmdH' ) );
@@ -83,10 +83,10 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$repeat  = $connection->inserted[ count( $connection->inserted ) - 1 ];
 		self::assertContains( $repeat['context_key'], array_map( static fn ( string $hour ): string => hash( 'sha256', "repository\0owner/example\0\0" . hash( 'sha256', "R_example\0branch_mismatch\0" . $hour ) ), $hours ) );
 		self::assertStringStartsWith( 'DELETE FROM', $connection->queries[ count( $connection->queries ) - 1 ] );
-		self::assertCount( 6, $connection->inserted );
+		self::assertCount( 7, $connection->inserted );
 
 		$repository->record_unmatched_push( 'gh', 'owner/example', 'R_example', 'not_a_reason' );
-		self::assertCount( 6, $connection->inserted );
+		self::assertCount( 7, $connection->inserted );
 	}
 
 	public function test_an_operator_fixable_delivery_refusal_is_recorded_once_per_provider_reason_and_hour(): void {

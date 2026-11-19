@@ -75,7 +75,7 @@ observed in the download filter or upgrader skin.
 | Killed current update / `kill-current` | Executed runtime | SIGKILL exit 137; installed 3.0.0 and old 1.0.0 backup remain | One point after installation result, before completion |
 | Killed chosen update / `kill-newer` | Executed runtime | Same point: installed 2.0.0 and old 1.0.0 backup remain | No mid-copy/backup-move sweep or overall recovery equivalence established |
 | Branch to release | Source-only; runtime not exercised | Gate incomplete: current native registration admits only release-source rows | No request-local Branch authority bridge exists or was invented |
-| #888 environment admission / site-address binding | Source-only; runtime not exercised | Gate incomplete: no production reader of `RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES` | Declaring it cannot prove unimplemented policy |
+| #888 environment admission / site-address binding | Source-only; runtime not exercised | Gate incomplete at the recorded revision: no production reader of the override, now `RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES` | Declaring it cannot prove unimplemented policy |
 
 Branch source evidence is `ManagedReleaseTargetRegistrar::register_packages()`;
 `RAN/`, `views/` and `assets/` contain no reader of the #888 constant at the

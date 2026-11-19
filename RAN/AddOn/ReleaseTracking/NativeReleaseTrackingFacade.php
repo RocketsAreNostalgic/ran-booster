@@ -6,7 +6,9 @@ namespace RAN\AddOn\ReleaseTracking;
 
 use RAN\UpdaterSupport\V1\PackageDirectory;
 use InvalidArgumentException;
+use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\PackageSourceGate;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
@@ -611,6 +613,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			|| null === $package ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'Release tracking could not be enabled.' );
 		}
+		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) ) {
+			return self::source_paused();
+		}
 		try {
 			$availability = $this->release_source_available( $type, $package );
 			if ( false === $availability ) {
@@ -753,6 +758,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 			|| null === $package ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'The release track could not be changed.' );
+		}
+		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) ) {
+			return self::source_paused();
 		}
 		try {
 			if ( ! $this->release_source_supported( $package ) ) {
@@ -955,6 +963,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		if ( null === $package ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'The package source could not be changed.' );
 		}
+		if ( PackageSourceGate::pauses( PackageSource::BRANCH ) ) {
+			return self::source_paused();
+		}
 		try {
 			if ( PackageSource::RELEASE_ASSET !== $package->get_source()
 
@@ -1138,6 +1149,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		} catch ( Throwable ) {
 			return null;
 		}
+	}
+
+	private static function source_paused(): ReleaseTrackingResult {
+		return ReleaseTrackingResult::failed( DeploymentOutcome::CODE_SOURCE_PAUSED, 'Updates are paused by a site setting.' );
 	}
 
 	private function subdirectory_not_supported(): ReleaseTrackingResult {

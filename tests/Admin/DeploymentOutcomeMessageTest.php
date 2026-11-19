@@ -55,7 +55,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			self::assertStringEndsWith( $note, $copy, $reason );
 			$sentences[] = $copy;
 		}
-		self::assertCount( 5, array_unique( $sentences ) );
+		self::assertCount( 6, array_unique( $sentences ) );
 		self::assertStringNotContainsString( $note, DeploymentOutcomeMessage::for_activity( 'skipped', 'policy_disabled' ) );
 	}
 
@@ -164,6 +164,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'deployment_self_update_blocked'    => 'Update Booster separately',
 			'deployment_release_source_blocked' => 'Use Published releases or WordPress Updates',
 			'deployment_maintenance_active'     => 'Check whether an update is still running',
+			'source_paused'                     => 'paused by a site setting',
 		);
 		$defined_failed_codes = array_filter(
 			( new \ReflectionClass( DeploymentOutcome::class ) )->getConstants(),

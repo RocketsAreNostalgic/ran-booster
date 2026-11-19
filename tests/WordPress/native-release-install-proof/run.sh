@@ -17,7 +17,7 @@ for package_type in ${RAN_NATIVE_RELEASE_INSTALL_PROOF_TYPES:-plugin theme}; do
         for phase in seed run readback; do
             export RAN_NATIVE_RELEASE_INSTALL_PROOF_PHASE="$phase"
             status=0
-            "$PHP_BIN" -d memory_limit=512M "$(command -v "$wp_cli")" eval-file "$proof" --exec="define('RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', $override);" --path="$RAN_NATIVE_RELEASE_INSTALL_PROOF_SITE" --user=proof || status=$?
+            "$PHP_BIN" -d memory_limit=512M "$(command -v "$wp_cli")" eval-file "$proof" --exec="define('RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', $override);" --path="$RAN_NATIVE_RELEASE_INSTALL_PROOF_SITE" --user=proof || status=$?
             if [[ "$phase" == run && "$scenario" == kill-* ]]; then
                 [[ "$status" == 137 ]] || { echo "Expected SIGKILL exit 137, got $status" >&2; exit 1; }
             elif [[ "$status" != 0 ]]; then

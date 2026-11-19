@@ -11,6 +11,7 @@ use RAN\AddOn\Portability\PortabilityReviewResult;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\PackageSourceGate;
 use RAN\Package;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
@@ -200,6 +201,10 @@ final readonly class PortabilityApplicationService {
 		}
 		$context = $this->candidate_context( $candidate );
 		$review  = $context['review'];
+		// Paused since review: say so rather than asking for a review that would only say it again.
+		if ( PortabilityReviewResult::BLOCKED === $review->action && 'forbidden' === $review->reason ) {
+			return new PortabilityApplyResult( PortabilityApplyResult::BLOCKED, 'forbidden', $review->message, false );
+		}
 		if ( ! hash_equals( $review->fingerprint, $expected_fingerprint ) ) {
 			return new PortabilityApplyResult(
 				PortabilityApplyResult::BLOCKED,
@@ -243,6 +248,9 @@ final readonly class PortabilityApplicationService {
 			$candidate->credential_id,
 			$context['private']
 		);
+		if ( 'adopted' !== $result['status'] ) {
+			return new PortabilityApplyResult( PortabilityApplyResult::FAILED, 'unexpected_failure', $result['message'], false );
+		}
 
 		return new PortabilityApplyResult(
 			PortabilityApplyResult::ADOPTED,
@@ -410,6 +418,9 @@ final readonly class PortabilityApplicationService {
 		if ( ! $this->is_actionable( $item ) ) {
 			return $this->result( 'skipped', __( 'This package changed or cannot be applied. Review the Blueprint again.', 'ran-booster' ) );
 		}
+		if ( self::paused( $item->package ) ) {
+			return $this->result( 'skipped', __( 'Updates are paused by a site setting.', 'ran-booster' ) );
+		}
 		$credential_state = in_array( $source, array( 'import', 'target' ), true ) ? 'unavailable' : 'none';
 		try {
 			$credential_id    = $this->credential_id( $blueprint, $credential, $source, $target_credential_id );
@@ -456,6 +467,11 @@ final readonly class PortabilityApplicationService {
 				$credential_state
 			);
 		}
+	}
+
+	private static function paused( BlueprintPackage $package ): bool {
+		$release = $package->release_configuration;
+		return PackageSourceGate::pauses( null === $release ? PackageSource::BRANCH : PackageSource::RELEASE_ASSET, $release?->channel() );
 	}
 
 	/** @return array{status:string,message:string,credential_state:string} */
@@ -663,12 +679,13 @@ final readonly class PortabilityApplicationService {
 			$item = new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::from( $refusal ) );
 		}
 
+		$paused = TargetPackageAction::ADOPT === $item->action && self::paused( $package );
 		return array(
 			'review'  => PortabilityReviewResult::from_resolved(
 				$candidate,
-				$item->action->value,
-				$item->reason->value,
-				$item->reason->message(),
+				$paused ? PortabilityReviewResult::BLOCKED : $item->action->value,
+				$paused ? 'forbidden' : $item->reason->value,
+				$paused ? __( 'Updates are paused by a site setting.', 'ran-booster' ) : $item->reason->message(),
 				$package->provider_repository_id,
 				$private,
 				$expectation

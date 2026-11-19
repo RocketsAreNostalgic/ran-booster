@@ -187,6 +187,30 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		self::assertSame( 'unknown', $service->compare_local( $package )['installed_equality'] );
 	}
 
+	public function test_a_paused_site_skips_a_branch_blueprint_package_before_installing(): void {
+		$plugins  = $this->createStub( PluginRepository::class );
+		$themes   = $this->createStub( ThemeRepository::class );
+		$provider = $this->createStub( RepositoryProvider::class );
+		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'Provider', 'https://provider.example.test/', 'Owner', archive_api_version: 2 ) );
+		$provider->method( 'resolve_repository' )->willReturn( new RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'owner/repository', 'example', 'repository-id', false, 'main', null ) );
+		$coordinator = $this->createMock( DeploymentCoordinator::class );
+		$coordinator->expects( self::never() )->method( 'execute_manual' );
+		$operations = new PackageOperationService( $plugins, $themes, $coordinator, ( new ReflectionClass( PackageRemovalService::class ) )->newInstanceWithoutConstructor(), $this->createStub( WordPressUpdaterLock::class ), new RepositorySourceGuard( new \stdClass(), $this->createStub( Database::class ) ) );
+		$service    = $this->service( $plugins, $themes, $provider, $operations );
+		$blueprint  = new PackageBlueprint( array( new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', 40 ) ) ) ) );
+		$review     = $service->review( $blueprint )[0];
+		self::assertSame( 'install', $review->action->value );
+
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+		try {
+			$result = $service->apply( $blueprint, 0, 'install', array(), null, false, true, null, $review->provider_expectation ?? $this->provider_expectation );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_test_home_url'] );
+		}
+		self::assertSame( array( 'skipped', 'Updates are paused by a site setting.' ), array( $result['status'], $result['message'] ) );
+	}
+
 	/** @return iterable<string,array{string,string,int}> */
 	public static function selected_initial_packages(): iterable {
 		yield 'GitHub plugin' => array( 'plugin', 'gh', 40 );

@@ -82,6 +82,21 @@ final class UnmatchedPushTest extends TestCase {
 		self::assertSame( array( 0, 'no_candidate' ), $this->match( array(), $event ) );
 	}
 
+	public function test_a_push_that_would_deploy_on_a_paused_site_is_recorded_as_paused(): void {
+		$event                                        = new PushEvent( ProviderCode::parse( 'gh' ), 'owner/example', 'R_example', 'main', str_repeat( 'a', 40 ), 'delivery-paused' );
+		$matching                                     = $this->package( 'example/example.php', PackageSource::BRANCH, DeploymentPolicy::AUTOMATIC, new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$elsewhere                                    = $this->package( 'other/other.php', PackageSource::BRANCH, DeploymentPolicy::AUTOMATIC, new ManagedRepository( 'gh', 'owner/example', 'R_example', 'develop' ) );
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+		try {
+			self::assertSame( array( 0, 'paused' ), $this->match( array( $matching ), $event ) );
+			self::assertSame( array( 0, 'branch_mismatch' ), $this->match( array( $elsewhere ), $event ), 'Paused is named only for a push that would otherwise deploy.' );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_test_home_url'] );
+		}
+		self::assertSame( 1, $this->match( array( $matching ), $event )[0], 'The same push deploys on a development site.' );
+	}
+
 	public function test_tag_pushes_branch_deletions_and_other_events_never_reach_admission(): void {
 		$secrets = $this->createStub( SecretsFile::class );
 		$secrets->method( 'webhook_materials' )->willReturn(

@@ -108,6 +108,32 @@ final class NativePortabilityFacadeTest extends TestCase {
 		self::assertSame( PortabilityReviewResult::PROTECTED, $manual->action );
 	}
 
+	public function test_a_paused_site_blocks_branch_adoption_at_review_and_apply(): void {
+		$facade = $this->facade( true );
+		$review = $facade->review( $this->candidate(), 'valid-nonce' );
+		self::assertSame( PortabilityReviewResult::ADOPT, $review->action );
+
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+		try {
+			$result = $facade->apply( $this->candidate(), $review->fingerprint, 'valid-nonce', $review->provider_expectation );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_test_home_url'] );
+		}
+		self::assertSame(
+			array( PortabilityApplyResult::BLOCKED, 'forbidden', 'Updates are paused by a site setting.', false ),
+			array( $result->status, $result->reason, $result->message, $result->target_verified )
+		);
+
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		try {
+			$paused = $facade->review( $this->candidate(), 'valid-nonce' );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_environment_type'] );
+		}
+		self::assertSame( array( PortabilityReviewResult::BLOCKED, 'forbidden', 'Updates are paused by a site setting.' ), array( $paused->action, $paused->reason, $paused->message ) );
+	}
+
 	public function test_apply_recomputes_and_rejects_a_changed_review(): void {
 		$facade = $this->facade( true, true, $this->managed_plugin( false ) );
 		$review = $facade->review( $this->candidate(), 'valid-nonce' );

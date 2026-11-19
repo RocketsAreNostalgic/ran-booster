@@ -223,7 +223,13 @@ final class OverviewPresenterTest extends TestCase {
 		$token                                   = 'gh:repository-1:11111111-1111-4111-8111-111111111111';
 		$plugins                                 = array();
 		foreach ( array( 'failed', 'review', 'clear', 'untracked' ) as $slug ) {
-			$plugin = Plugin::from_wp_array( "$slug/$slug.php", array_fill_keys( array( 'PluginURI', 'Version', 'Description', 'Author', 'AuthorURI', 'TextDomain', 'DomainPath', 'Title', 'AuthorName' ), '' ) + array( 'Name' => ucfirst( $slug ), 'Network' => false ) );
+			$plugin = Plugin::from_wp_array(
+				"$slug/$slug.php",
+				array_fill_keys( array( 'PluginURI', 'Version', 'Description', 'Author', 'AuthorURI', 'TextDomain', 'DomainPath', 'Title', 'AuthorName' ), '' ) + array(
+					'Name'    => ucfirst( $slug ),
+					'Network' => false,
+				)
+			);
 			if ( 'untracked' !== $slug ) {
 				$plugin->set_adoption_token( $token );
 			}

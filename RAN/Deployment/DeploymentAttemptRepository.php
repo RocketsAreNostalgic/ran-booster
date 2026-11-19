@@ -933,7 +933,7 @@ final class DeploymentAttemptRepository {
 					'adoption_token'   => null,
 					// The debounce: with the clock hour in the context, the first push per repository, reason and hour
 					// starts a new context and is kept; discard_repeated_skip() drops the rest of that hour as repeats.
-					'context'          => $repository_id . "\0" . $reason . "\0" . gmdate( 'YmdH' ),
+					'context'          => hash( 'sha256', $repository_id . "\0" . $reason . "\0" . gmdate( 'YmdH' ) ),
 					'purpose'          => null,
 					'provenance'       => 'core',
 				)

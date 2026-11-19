@@ -81,7 +81,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$repository->record_unmatched_push( 'gh', 'owner/example', 'R_example', 'branch_mismatch' );
 		$hours[] = gmdate( 'YmdH' );
 		$repeat  = $connection->inserted[ count( $connection->inserted ) - 1 ];
-		self::assertContains( $repeat['context_key'], array_map( static fn ( string $hour ): string => hash( 'sha256', "repository\0owner/example\0\0R_example\0branch_mismatch\0" . $hour ), $hours ) );
+		self::assertContains( $repeat['context_key'], array_map( static fn ( string $hour ): string => hash( 'sha256', "repository\0owner/example\0\0" . hash( 'sha256', "R_example\0branch_mismatch\0" . $hour ) ), $hours ) );
 		self::assertStringStartsWith( 'DELETE FROM', $connection->queries[ count( $connection->queries ) - 1 ] );
 		self::assertCount( 6, $connection->inserted );
 

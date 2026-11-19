@@ -549,6 +549,20 @@ final class SupportReportTest extends TestCase {
 		self::assertSame( array( 'Package 1', 'Package 1', 'Repository 1', 'Provider 1', 'Subject 1' ), array_column( $records, 'subject' ) );
 		self::assertSame( array_fill( 0, 5, 'update' ), array_column( $records, 'operation' ) );
 		self::assertStringNotContainsString( 'canary', $text );
+
+		$connection->read_results = array(
+			array(
+				(object) array(
+					'id'           => '3',
+					'subject_type' => 'repository',
+					'operation'    => 'webhook.push',
+					'reason'       => 'webhook.unmatched.branch_mismatch',
+				),
+			),
+		);
+		$text                     = ( new SupportReport( new InstallationFacts( new ProviderRegistry() ), activity: new ActivityStore( $connection ) ) )->generate( array() )['text'];
+		$record                   = json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['activity']['data']['records'][0];
+		self::assertSame( array( 'webhook.push', 'webhook.unmatched.branch_mismatch' ), array( $record['operation'], $record['reason'] ) );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]

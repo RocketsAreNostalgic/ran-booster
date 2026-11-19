@@ -11,6 +11,7 @@ use RAN\AddOn\Portability\PortabilityReviewResult;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\PackageSourceGate;
 use RAN\Package;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
@@ -409,6 +410,10 @@ final readonly class PortabilityApplicationService {
 		}
 		if ( ! $this->is_actionable( $item ) ) {
 			return $this->result( 'skipped', __( 'This package changed or cannot be applied. Review the Blueprint again.', 'ran-booster' ) );
+		}
+		$release = $item->package->release_configuration;
+		if ( PackageSourceGate::pauses( null === $release ? PackageSource::BRANCH : PackageSource::RELEASE_ASSET, $release?->channel() ) ) {
+			return $this->result( 'skipped', __( 'Updates are paused by a site setting.', 'ran-booster' ) );
 		}
 		$credential_state = in_array( $source, array( 'import', 'target' ), true ) ? 'unavailable' : 'none';
 		try {

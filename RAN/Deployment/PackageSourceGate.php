@@ -14,8 +14,8 @@ use RAN\Settings\GeneralPreferenceStore;
  * A development site gates nothing. Any other site pauses both until
  * RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES, or the saved setting bound to
  * this site's address, allows them. Stable releases and Booster's own updates
- * never reach this gate. The environment comes from configuration and the
- * server, never the database, so a copied database cannot loosen it.
+ * never reach this gate. The saved setting is bound to the home address, so a
+ * database copied to another address arrives paused.
  */
 final class PackageSourceGate {
 

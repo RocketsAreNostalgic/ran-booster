@@ -720,8 +720,13 @@ class Dashboard {
 			}
 			if ( 'package_sources' === $scope && ! \RAN\Deployment\PackageSourceGate::allows() ) {
 				// Paused downloads stay blocked regardless; this only removes offers made before the pause.
-				delete_site_transient( 'update_plugins' );
-				delete_site_transient( 'update_themes' );
+				try {
+					delete_site_transient( 'update_plugins' );
+					delete_site_transient( 'update_themes' );
+				} catch ( Throwable ) {
+					$this->general_feedback = __( 'Settings saved; cached update offers could not be cleared. Updates remain paused.', 'ran-booster' );
+					return false;
+				}
 			}
 			$this->general_attempted    = array();
 			$this->general_failed_scope = null;

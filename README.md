@@ -200,8 +200,8 @@ The old `RAN_BOOSTER_MAX_ATTEMPT_ROWS` setting is retired for clean-start rollou
 
 Outside a development site, Booster pauses packages that follow a branch or a
 pre-release (Preview) track until the site allows them. A development site has an
-explicit `local` or `development` environment type, or a loopback, `.test` or
-`.local` home host. To allow them on any other site:
+explicit `local` or `development` environment type, or a loopback, `.localhost`,
+`.test` or `.local` home host. To allow them on any other site:
 
 ```php
 define( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', true );

@@ -1449,7 +1449,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( 'notice notice-error inline ran-booster-repository-webhook-management__notice', $html );
-		self::assertStringContainsString( 'Run Check or inspect the hook at the Git provider before retrying an update', $html );
+		self::assertStringContainsString( 'Validate or inspect the hook at the Git provider before retrying an update', $html );
 		self::assertStringContainsString( 'value="validate"', $html );
 		self::assertStringContainsString( 'value="reconfigure"', $html );
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Repair</button>', $html );
@@ -1572,7 +1572,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
 		$html = $this->render_panel( $gateway, $store );
 
-		self::assertStringContainsString( 'then run Check before retrying', $html );
+		self::assertStringContainsString( 'then Validate before retrying', $html );
 		self::assertStringContainsString( 'value="validate"', $html );
 		self::assertStringContainsString( 'value="reconfigure"', $html );
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Repair</button>', $html );

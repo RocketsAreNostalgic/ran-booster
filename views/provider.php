@@ -623,7 +623,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 										static fn ( array $receiver_row ): bool => '' !== ( is_string( $receiver_row['detail_url'] ?? null ) ? $receiver_row['detail_url'] : '' ) && empty( $receiver_row['historical'] ) && '' !== ( is_string( $receiver_row['repository_id'] ?? null ) ? $receiver_row['repository_id'] : '' )
 									)
 								);
-								$receiver_tabs = array() !== $receiver_rows;
+								$receiver_tabs = array() !== $receiver_rows && null !== $webhook_management && $webhook_management->supports_provider( $provider['code'] );
 								$receiver_form = array();
 								parse_str( substr( (string) strstr( $overview_url, '?' ), 1 ), $receiver_form );
 								unset( $receiver_form['repository'], $receiver_form['repository_view'], $receiver_form['panel'] );
@@ -654,6 +654,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 												foreach ( $receiver_rows as $receiver_row ) {
 													$receiver_name = is_string( $receiver_row['repository'] ?? null ) ? $receiver_row['repository'] : '';
 													$receiver_set  = false;
+													$receiver_open = ! empty( $receiver_row['has_branch_consumer'] );
 													foreach ( is_array( $receiver_row['details'] ?? null ) ? $receiver_row['details'] : array() as $receiver_detail ) {
 														if ( is_array( $receiver_detail ) && 'core:webhook-recorded-status' === ( $receiver_detail['key'] ?? null ) ) {
 															$receiver_set = true === ( $receiver_detail['recorded'] ?? false ) && false !== ( $receiver_detail['identified'] ?? true );
@@ -661,14 +662,19 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 														}
 													}
 													?>
-													<option value="<?php echo esc_attr( (string) $receiver_row['repository_id'] ); ?>" data-ran-booster-webhook-set="<?php echo $receiver_set ? 'true' : 'false'; ?>">
+													<option value="<?php echo esc_attr( (string) $receiver_row['repository_id'] ); ?>" data-ran-booster-webhook-set="<?php echo $receiver_set ? 'true' : 'false'; ?>"<?php echo $receiver_open ? '' : ' disabled'; ?>>
 														<?php
-														echo esc_html(
-															$receiver_set
-																/* translators: %s: repository name. */
-																? sprintf( __( '🟢 %s — webhook set up', 'ran-booster' ), $receiver_name )
-																: $receiver_name
-														);
+														if ( ! $receiver_open ) {
+															/* translators: %s: repository name. */
+															echo esc_html( sprintf( __( '%s — Push-to-Deploy ineligible', 'ran-booster' ), $receiver_name ) );
+														} else {
+															echo esc_html(
+																$receiver_set
+																	/* translators: %s: repository name. */
+																	? sprintf( __( '🟢 %s — webhook set up', 'ran-booster' ), $receiver_name )
+																	: $receiver_name
+															);
+														}
 														?>
 													</option>
 												<?php } ?>

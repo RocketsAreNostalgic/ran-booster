@@ -203,14 +203,16 @@ pre-release (Preview) track until the site allows them. When `WP_ENVIRONMENT_TYP
 is set, as a constant or an environment variable, only `local` or `development`
 makes a development site; `production` or `staging` overrides the home address.
 When it is not set, a loopback, `.localhost`, `.test` or `.local` home host makes
-a development site. To allow them on any other site:
+a development site. Branch sources and Preview tracks have separate overrides;
+to allow either on any other site:
 
 ```php
-define( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', true );
+define( 'RAN_BOOSTER_ALLOW_BRANCH_SOURCES', true );
+define( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', true );
 ```
 
 Stable releases and Booster's own updates are never paused. See
-[Settings](docs/settings.md) for the saved setting and its address binding.
+[Settings](docs/settings.md) for the saved settings and their address binding.
 
 ### Repository download limits
 

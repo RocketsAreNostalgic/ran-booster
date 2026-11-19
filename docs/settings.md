@@ -38,7 +38,7 @@ than automatically overwriting that administrator's value. Confirmed current
 state does not identify which uncertain request committed.
 
 The existing nonautoloaded General option contains one revision per fixed scope
-(four today). Every accepted save advances the affected revision, including an
+(five today). Every accepted save advances the affected revision, including an
 unchanged request, and creates the option on a site that has never saved. This is
 a deliberate simplicity trade-off, not an ABA defence: a no-op write cannot
 overwrite another change, and its fence is advanced only so that every committed
@@ -52,8 +52,8 @@ the first save. Settings never saves on load, blur or a timer, so these costs
 occur only when someone presses Save or flips a switch. Skipping no-op writes was
 considered and left out because it changes the "one accepted save, one revision
 step" contract without a user-visible gain.
-Legacy full-form submissions advance every known scope except Package sources,
-which is saved only on its own. Confirmed management
+Legacy full-form submissions advance every known scope except the two source
+overrides, each of which is saved only on its own. Confirmed management
 clearing writes and advances only when a saved GitHub-hide request exists, and
 then advances that scope. Scope tokens preserve
 raw value presence/type. The existing management and option locks, strict input
@@ -97,9 +97,10 @@ expansion limit may be stricter. GitHub release inspection, installation and
 managed updates also receive the compressed limit. Extension and Blueprint archive limits remain
 independent.
 
-Package sources holds "Allow branch and pre-release sources". On a site that is
-not a development site, branch sources and pre-release (Preview) tracks are
-paused until it is on: manual and automatic updates, reinstalls, branch installs
+Two source overrides, one for branch sources and one for the pre-release
+(Preview) track, each in its own scope. On a site that is not a development site,
+each source is paused until its own override is on: manual and automatic updates,
+reinstalls, branch installs
 and switches into either source, including Blueprint imports and Portability
 adoptions, are refused, and a push is accepted and recorded
 as paused. Check now still works; Check releases on a paused Preview track reads
@@ -110,14 +111,16 @@ sources `wp_get_environment_type()` reads), it decides alone: `local` or
 `development` is a development site, and `production`, `staging` or any other
 value is not, whatever the home address. When it is not set, a home host that is
 loopback, `localhost`, or ends in `.localhost`, `.test` or `.local` is a
-development site. `RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES` set to `true` or
-`false` wins over the saved value. A saved "on" records the home address it was
-turned on for, ignoring the scheme and a trailing slash, and lapses when that
-address changes, so a database copied to another site arrives with it off. Its
-counter is the fourth scope; a document saved before it existed reads that
-counter as 0. Turning it off clears cached plugin and theme update offers. The
-Settings control for it follows separately; until then the constant is the only
-way to turn it on outside a development site.
+development site. `RAN_BOOSTER_ALLOW_BRANCH_SOURCES` and
+`RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES`, set to `true` or `false`, each win over
+their own saved value and lock only that setting; any other value counts as off.
+Each saved "on" records the home address it was turned on for, ignoring the
+scheme and a trailing slash, and lapses when that address changes, so a database
+copied to another site arrives with both off. Each has its own revision counter;
+a document saved before they existed reads those counters as 0. Turning either
+off clears cached plugin and theme update offers. The Settings controls follow
+separately; until then the constants are the only way to turn them on outside a
+development site.
 
 Hide GitHub UI requires another locally admitted provider, no managed GitHub
 packages (including Disabled/release/branch records), no active custom replacement

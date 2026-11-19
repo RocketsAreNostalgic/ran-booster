@@ -48,20 +48,32 @@ final class PackageSourceGateTest extends TestCase {
 		self::assertFalse( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, 'stable' ), 'Stable releases are never paused.' );
 	}
 
-	public function test_the_saved_setting_allows_gated_sources_only_at_its_site_address(): void {
+	/** @return iterable<string, array{list<string>, bool, bool}> Saved overrides, then whether branch and Preview are paused. */
+	public static function saved_overrides(): iterable {
+		yield 'neither' => array( array(), true, true );
+		yield 'branch only' => array( array( 'branch_sources' ), false, true );
+		yield 'pre-release only' => array( array( 'prerelease_sources' ), true, false );
+		yield 'both' => array( array( 'branch_sources', 'prerelease_sources' ), false, false );
+	}
+
+	/** @param list<string> $saved */
+	#[DataProvider( 'saved_overrides' )]
+	public function test_each_saved_override_allows_only_its_own_source_at_its_address( array $saved, bool $branch, bool $preview ): void {
 		$this->site( 'production', 'https://example.com/' );
-		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize(
-			array(
-				'package_sources'         => true,
-				'package_sources_address' => 'example.com',
-			)
-		);
-		self::assertTrue( PackageSourceGate::allows() );
-		self::assertFalse( PackageSourceGate::pauses( PackageSource::BRANCH ) );
+		$document = array();
+		foreach ( $saved as $key ) {
+			$document += array(
+				$key              => true,
+				$key . '_address' => 'example.com',
+			);
+		}
+		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( $document );
+		self::assertSame( array( $branch, $preview ), array( PackageSourceGate::pauses( PackageSource::BRANCH ), PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, 'prerelease' ) ) );
+		self::assertFalse( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, 'stable' ) );
 
 		$GLOBALS['ran_booster_test_home_url'] = 'https://copy.example.com';
 		unset( $GLOBALS['ran_booster_general_preference_cached_option'] );
-		self::assertTrue( PackageSourceGate::pauses( PackageSource::BRANCH ), 'A copied database arrives paused.' );
+		self::assertSame( array( true, true ), array( PackageSourceGate::pauses( PackageSource::BRANCH ), PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, 'prerelease' ) ), 'A copied database arrives paused.' );
 		try {
 			PackageSourceGate::assert_allowed( PackageSource::RELEASE_ASSET, 'prerelease' );
 			self::fail( 'A paused Preview track must be refused.' );
@@ -74,8 +86,10 @@ final class PackageSourceGateTest extends TestCase {
 		$this->site( 'production', 'https://example.com' );
 		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize(
 			array(
-				'package_sources'         => true,
-				'package_sources_address' => 'example.com',
+				'branch_sources'             => true,
+				'branch_sources_address'     => 'example.com',
+				'prerelease_sources'         => true,
+				'prerelease_sources_address' => 'example.com',
 			)
 		);
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Controlled test-only database boundary.
@@ -91,8 +105,8 @@ final class PackageSourceGateTest extends TestCase {
 		};
 		self::assertFalse( PackageSourceGate::pauses( PackageSource::BRANCH ), 'Admission reads the cached option.' );
 
-		// Another request turns the setting off; this request's option cache still holds the old value.
-		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( array( 'package_sources' => false ) );
+		// Another request turns both off; this request's option cache still holds the old values.
+		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( array() );
 		self::assertFalse( PackageSourceGate::pauses( PackageSource::BRANCH ) );
 		self::assertTrue( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ) );
 		self::assertTrue( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, 'prerelease', true ) );
@@ -101,14 +115,21 @@ final class PackageSourceGateTest extends TestCase {
 		self::assertTrue( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ), 'A fence that cannot read the setting stays paused.' );
 	}
 
-	public function test_the_constant_allows_gated_sources_on_any_site(): void {
-		define( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', true );
+	/** @return iterable<string, array{string, bool}> The constant, then whether it allows branch sources rather than Preview. */
+	public static function source_constants(): iterable {
+		yield 'branch' => array( 'RAN_BOOSTER_ALLOW_BRANCH_SOURCES', true );
+		yield 'pre-release' => array( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', false );
+	}
+
+	#[DataProvider( 'source_constants' )]
+	public function test_each_constant_allows_only_its_own_source_on_any_site( string $constant, bool $branch ): void {
+		'RAN_BOOSTER_ALLOW_BRANCH_SOURCES' === $constant ? define( 'RAN_BOOSTER_ALLOW_BRANCH_SOURCES', true ) : define( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', true );
 		$this->site( 'production', 'https://example.com' );
 
-		self::assertFalse( PackageSourceGate::pauses( PackageSource::BRANCH ) );
-		PackageSourceGate::assert_allowed( PackageSource::RELEASE_ASSET, 'prerelease' );
+		$paused = static fn ( bool $fresh ): array => array( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: $fresh ), PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, 'prerelease', $fresh ) );
+		self::assertSame( array( ! $branch, $branch ), $paused( false ) );
 		unset( $GLOBALS['wpdb'] );
-		self::assertFalse( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ), 'A fence reads the constant before the database.' );
+		self::assertSame( array( ! $branch, $branch ), $paused( true ), 'A fence reads its own constant before the database.' );
 	}
 
 	private function site( ?string $environment, string $home ): void {

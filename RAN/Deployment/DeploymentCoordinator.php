@@ -463,7 +463,7 @@ class DeploymentCoordinator {
 		$closest    = 0;
 		$normalizer = $this->providers->require_capability( $event->provider, WebhookNormalizer::class );
 		$policy     = $normalizer->get_webhook_policy();
-		$allowed    = PackageSourceGate::allows();
+		$allowed    = PackageSourceGate::allows( 'branch_sources' );
 		foreach ( array(
 			'plugin' => $this->plugins->all_deployment_plugins(),
 			'theme'  => $this->themes->all_deployment_themes(),

@@ -13,7 +13,8 @@ final class GeneralPreferenceStore {
 		'hide_github'           => array( 'hide_github' ),
 		'self_update_discovery' => array( 'self_update_discovery' ),
 		'numeric'               => array( 'history_rows', 'history_days', 'max_download_bytes' ),
-		'package_sources'       => array( 'package_sources' ),
+		'branch_sources'        => array( 'branch_sources' ),
+		'prerelease_sources'    => array( 'prerelease_sources' ),
 	);
 
 	/**
@@ -21,7 +22,7 @@ final class GeneralPreferenceStore {
 	 * saved only on its own, never by an all-fields save. A document without its counter is still
 	 * valid: the counter starts at zero.
 	 */
-	private const LATER_SCOPES = array( 'package_sources' );
+	private const LATER_SCOPES = array( 'branch_sources', 'prerelease_sources' );
 
 	private const DEFAULTS = array(
 		'hide_github'           => false,
@@ -29,7 +30,8 @@ final class GeneralPreferenceStore {
 		'history_rows'          => 2000,
 		'history_days'          => 30,
 		'max_download_bytes'    => 52428800,
-		'package_sources'       => false,
+		'branch_sources'        => false,
+		'prerelease_sources'    => false,
 	);
 
 	/** @return array{exists:bool,token:string,malformed:bool} */
@@ -216,14 +218,14 @@ final class GeneralPreferenceStore {
 				$replacement[ $key ] = $value;
 			}
 		}
-		if ( array_key_exists( 'package_sources', $values ) ) {
-			unset( $replacement['package_sources_address'] );
-			if ( true === $values['package_sources'] ) {
+		foreach ( array_intersect( self::LATER_SCOPES, array_keys( $values ) ) as $key ) {
+			unset( $replacement[ $key . '_address' ] );
+			if ( true === $values[ $key ] ) {
 				$address = self::site_address();
 				if ( '' === $address ) {
 					return $this->finish( $wpdb, false, 'failed' );
 				}
-				$replacement['package_sources_address'] = $address;
+				$replacement[ $key . '_address' ] = $address;
 			}
 		}
 		foreach ( 'all' === $scope ? array_diff( array_keys( self::SCOPES ), self::LATER_SCOPES ) : array( $scope ) as $changed_scope ) {
@@ -294,7 +296,7 @@ final class GeneralPreferenceStore {
 		$parsed = array();
 		foreach ( $editable as $key ) {
 			$value = $submitted[ $key ];
-			if ( in_array( $key, array( 'hide_github', 'self_update_discovery', 'package_sources' ), true ) ) {
+			if ( in_array( $key, array( 'hide_github', 'self_update_discovery', 'branch_sources', 'prerelease_sources' ), true ) ) {
 				if ( ! is_string( $value ) || ! in_array( $value, array( '0', '1' ), true ) ) {
 					return null;
 				}
@@ -371,20 +373,24 @@ final class GeneralPreferenceStore {
 			'history_rows'          => $this->integer_projection( $document, 'history_rows', 'RAN_BOOSTER_HISTORY_ROWS', 200, 100000 ),
 			'history_days'          => $this->integer_projection( $document, 'history_days', 'RAN_BOOSTER_HISTORY_DAYS', 1, 365 ),
 			'max_download_bytes'    => $this->integer_projection( $document, 'max_download_bytes', 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 1048576, 536870911 ),
-			'package_sources'       => $this->package_sources_projection( $document ),
+			'branch_sources'        => $this->source_override_projection( $document, 'branch_sources' ),
+			'prerelease_sources'    => $this->source_override_projection( $document, 'prerelease_sources' ),
 		);
 	}
 
 	/**
-	 * The constant wins. A saved "on" holds only for the site address it was turned on for,
-	 * so a database copied to another site arrives with it off ('address_changed').
+	 * Its own constant (RAN_BOOSTER_ALLOW_BRANCH_SOURCES or RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES)
+	 * wins. A saved "on" holds only for the site address it was turned on for, so a database
+	 * copied to another site arrives with it off ('address_changed').
 	 *
 	 * @param array<string,mixed> $document
+	 * @param 'branch_sources'|'prerelease_sources' $key
 	 * @return array{value:bool,source:'default'|'saved'|'code',locked:bool,error:?string}
 	 */
-	private function package_sources_projection( array $document ): array {
-		if ( defined( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' ) ) {
-			$value = constant( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' );
+	private function source_override_projection( array $document, string $key ): array {
+		$constant = 'RAN_BOOSTER_ALLOW_' . strtoupper( $key );
+		if ( defined( $constant ) ) {
+			$value = constant( $constant );
 			return array(
 				'value'  => true === $value,
 				'source' => 'code',
@@ -392,8 +398,8 @@ final class GeneralPreferenceStore {
 				'error'  => is_bool( $value ) ? null : 'invalid_code',
 			);
 		}
-		$field   = $this->boolean_projection( $document, 'package_sources' );
-		$address = $document['package_sources_address'] ?? null;
+		$field   = $this->boolean_projection( $document, $key );
+		$address = $document[ $key . '_address' ] ?? null;
 		if ( true === $field['value'] && ( ! is_string( $address ) || '' === $address || ! hash_equals( $address, self::site_address() ) ) ) {
 			return array(
 				'value'  => false,
@@ -525,7 +531,7 @@ final class GeneralPreferenceStore {
 		return match ( $key ) {
 			'hide_github' => false,
 			'self_update_discovery' => true,
-			'package_sources' => false,
+			'branch_sources', 'prerelease_sources' => false,
 			default => throw new \LogicException( 'Unknown boolean preference.' ),
 		};
 	}

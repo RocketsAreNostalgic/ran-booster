@@ -20,9 +20,10 @@ final class InstallationFactsTest extends TestCase {
 		define( 'RAN_BOOSTER_GITHUB_TOKEN', 'github-private-token-canary' );
 		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/path-canary' );
 		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 1 );
-		define( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', true );
+		define( 'RAN_BOOSTER_ALLOW_BRANCH_SOURCES', true );
 		$rows = ( new InstallationFacts( new ProviderRegistry() ) )->core_configuration();
-		self::assertSame( 'Enabled; source=code; locked', $rows['RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES'] );
+		self::assertSame( 'Enabled; source=code; locked', $rows['RAN_BOOSTER_ALLOW_BRANCH_SOURCES'] );
+		self::assertSame( 'Disabled; source=default', $rows['RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES'], 'Each override has its own row.' );
 		self::assertSame( 'Configured; value withheld', $rows['RAN_BOOSTER_GITHUB_TOKEN'] );
 		self::assertSame( 'Configured; value withheld', $rows['RAN_BOOSTER_ENCRYPTED_SECRETS_DIR'] );
 		self::assertSame( 'Invalid code value; archive admission refused', $rows['RAN_BOOSTER_MAX_DOWNLOAD_BYTES'] );

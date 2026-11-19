@@ -409,7 +409,7 @@ final class RAN_Booster_NativeReleaseInstallProof {
 	private function report( string $outcome, string $version ): void {
 		echo wp_json_encode(
 			array(
-				'source_override_declared' => defined( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' ) ? constant( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' ) : null,
+				'source_override_declared' => defined( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES' ) ? constant( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES' ) : null,
 				'type'                     => $this->kind,
 				'case'                     => $this->scenario,
 				'phase'                    => getenv( 'RAN_NATIVE_RELEASE_INSTALL_PROOF_PHASE' ),

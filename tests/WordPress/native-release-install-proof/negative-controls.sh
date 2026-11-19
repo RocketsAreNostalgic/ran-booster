@@ -27,7 +27,7 @@ for package_type in plugin theme; do
                 proof="$directory/NativeReleaseInstallProofNegativeControl.php"
             fi
             status=0
-            "$PHP_BIN" -d memory_limit=512M "$(command -v "$wp_cli")" eval-file "$proof" --exec="define('RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', true);" --path="$RAN_NATIVE_RELEASE_INSTALL_PROOF_SITE" --user=proof >"$log" 2>&1 || status=$?
+            "$PHP_BIN" -d memory_limit=512M "$(command -v "$wp_cli")" eval-file "$proof" --exec="define('RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', true);" --path="$RAN_NATIVE_RELEASE_INSTALL_PROOF_SITE" --user=proof >"$log" 2>&1 || status=$?
             if [[ "$proof" == */NativeReleaseInstallProofNegativeControl.php ]]; then
                 if [[ "$status" == 0 || "$(<"$log")" != *"$expected"* ]]; then
                     cat "$log" >&2

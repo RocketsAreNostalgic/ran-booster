@@ -11,11 +11,12 @@ use RAN\Settings\GeneralPreferenceStore;
  * The one answer every install and update path reads before acting on a branch
  * source or a pre-release track.
  *
- * A development site gates nothing. Any other site pauses both until
- * RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES, or the saved setting bound to
- * this site's address, allows them. Stable releases are never paused by it, and
- * Booster's own updates never reach it. The saved setting is bound to the home
- * address, so a database copied to another address arrives paused.
+ * A development site gates nothing. Any other site pauses each until its own
+ * override allows it: RAN_BOOSTER_ALLOW_BRANCH_SOURCES or the saved branch setting
+ * for branch sources, RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES or the saved pre-release
+ * setting for the Preview track. Each saved setting is bound to this site's address. Stable releases are never paused by it, and
+ * Booster's own updates never reach it. A database copied to another address
+ * arrives paused.
  */
 final class PackageSourceGate {
 
@@ -40,17 +41,21 @@ final class PackageSourceGate {
 			|| str_ends_with( $host, '.local' );
 	}
 
-	/** @param bool $fresh Read the saved setting past this request's option cache; a mutation fence passes true. */
-	public static function allows( bool $fresh = false ): bool {
+	/**
+	 * @param 'branch_sources'|'prerelease_sources' $override Which override to read.
+	 * @param bool $fresh Read the saved setting past this request's option cache; a mutation fence passes true.
+	 */
+	public static function allows( string $override, bool $fresh = false ): bool {
 		if ( self::is_development_site() ) {
 			return true;
 		}
 		// The constant wins over the saved value, so a fence never needs the database when it is set.
-		if ( defined( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' ) ) {
-			return true === constant( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' );
+		$constant = 'RAN_BOOSTER_ALLOW_' . strtoupper( $override );
+		if ( defined( $constant ) ) {
+			return true === constant( $constant );
 		}
 		try {
-			return true === ( new GeneralPreferenceStore() )->projection( $fresh )['package_sources']['value'];
+			return true === ( new GeneralPreferenceStore() )->projection( $fresh )[ $override ]['value'];
 		} catch ( \RuntimeException ) {
 			return false;
 		}
@@ -58,7 +63,8 @@ final class PackageSourceGate {
 
 	/** @param string|null $channel A release package's track, 'stable' or 'prerelease'; null for a branch source. */
 	public static function pauses( PackageSource $source, ?string $channel = null, bool $fresh = false ): bool {
-		return ( PackageSource::BRANCH === $source || 'prerelease' === $channel ) && ! self::allows( $fresh );
+		$override = PackageSource::BRANCH === $source ? 'branch_sources' : ( 'prerelease' === $channel ? 'prerelease_sources' : null );
+		return null !== $override && ! self::allows( $override, $fresh );
 	}
 
 	/** @param string|null $channel A release package's track; null for a branch source. */

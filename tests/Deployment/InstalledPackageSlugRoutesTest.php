@@ -331,12 +331,12 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		// Queued while the saved setting allowed it; another request then turns it off. This request's
 		// option cache still allows, so only the fresh read at the mutation fence sees the pause.
 		$GLOBALS['ran_booster_general_preference_cached_option'] = array(
-			'package_sources'         => true,
-			'package_sources_address' => 'example.com',
+			'branch_sources'         => true,
+			'branch_sources_address' => 'example.com',
 		);
 		self::assertSame( 1, $bulk()->queued );
-		$this->database->option_rows[ \RAN\Settings\GeneralPreferenceStore::OPTION_NAME ] = \RAN\Settings\maybe_serialize( array( 'package_sources' => false ) );
-		self::assertTrue( \RAN\Deployment\PackageSourceGate::allows(), 'The cached read still allows.' );
+		$this->database->option_rows[ \RAN\Settings\GeneralPreferenceStore::OPTION_NAME ] = \RAN\Settings\maybe_serialize( array() );
+		self::assertTrue( \RAN\Deployment\PackageSourceGate::allows( 'branch_sources' ), 'The cached read still allows.' );
 		$attempt = $this->attempts->claim_next();
 		self::assertNotNull( $attempt );
 		$outcome = $coordinator->execute_claimed( $attempt );

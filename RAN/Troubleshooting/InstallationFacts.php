@@ -187,7 +187,8 @@ final class InstallationFacts {
 					'history_rows'          => 'RAN_BOOSTER_HISTORY_ROWS',
 					'history_days'          => 'RAN_BOOSTER_HISTORY_DAYS',
 					'max_download_bytes'    => 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES',
-					'package_sources'       => 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES',
+					'branch_sources'        => 'RAN_BOOSTER_ALLOW_BRANCH_SOURCES',
+					'prerelease_sources'    => 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES',
 				)[ $key ];
 				$value = is_bool( $field['value'] ) ? ( $field['value'] ? 'Enabled' : 'Disabled' ) : (string) $field['value'];
 				if ( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' === $name && 'invalid_code' === ( $field['error'] ?? null ) ) {
@@ -210,7 +211,7 @@ final class InstallationFacts {
 				$rows[ $name ] = ( $field['error'] ?? null ) ? 'Invalid; effective default ' . $value : $value . '; source=' . $field['source'] . ( $field['locked'] ? '; locked' : '' );
 			}
 		} catch ( \Throwable ) {
-			$rows += array_fill_keys( array( 'RAN_BOOSTER_HIDE_GITHUB_UI', 'RAN_BOOSTER_SELF_UPDATE_MODE', 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS', 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' ), 'Unavailable' );
+			$rows += array_fill_keys( array( 'RAN_BOOSTER_HIDE_GITHUB_UI', 'RAN_BOOSTER_SELF_UPDATE_MODE', 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS', 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 'RAN_BOOSTER_ALLOW_BRANCH_SOURCES', 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES' ), 'Unavailable' );
 		}
 		if ( defined( 'RAN_BOOSTER_SELF_UPDATE_MODE' ) ) {
 			$raw                                  = constant( 'RAN_BOOSTER_SELF_UPDATE_MODE' );

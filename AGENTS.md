@@ -59,9 +59,9 @@ the owner named a lane does not make one.
   opens its own pull request against `main`.
 - Merging follows the batching rule under Pull requests: file-disjoint pull
   requests may merge back to back, and `main`'s Quality run must be green before
-  the next batch. A lane whose base has moved merges the latest `origin/main`
-  into its branch and reruns the gates before it is merged. It never rewrites
-  pushed history.
+  the next batch. A lane that shares a file with a pull request merged ahead of
+  it merges the latest `origin/main` into its branch and reruns the gates before
+  it is merged. It never rewrites pushed history.
 - A lane worktree does not run in a local site. Before a merge its evidence
   is the local gates and CI, including CI's archive and install proofs. After
   a release, runtime checks use the release ZIP on the release-only test site.

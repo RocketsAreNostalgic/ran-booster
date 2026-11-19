@@ -7817,6 +7817,12 @@ msgstr ""
 msgid "This Booster add-on could not render its tab. Check the plugin compatibility and error log."
 msgstr ""
 
+#: views/notices.php:51
+#: views/overview-dashboard.php:58
+#: views/provider.php:604
+msgid "View Activity"
+msgstr ""
+
 #: views/onboarding.php:28
 msgid "Selection available"
 msgstr ""
@@ -8002,11 +8008,6 @@ msgstr ""
 
 #: views/overview-dashboard.php:44
 msgid "No recent activity."
-msgstr ""
-
-#: views/overview-dashboard.php:58
-#: views/provider.php:604
-msgid "View Activity"
 msgstr ""
 
 #: views/overview-dashboard.php:71

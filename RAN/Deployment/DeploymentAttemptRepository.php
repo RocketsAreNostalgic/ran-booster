@@ -104,7 +104,7 @@ final class DeploymentAttemptRepository {
 		return $this->transaction(
 			function () use ( $operation, $package_type, $provider, $provider_repository_id, $request, $requested_ref, $package_source, $package_source_revision ): DeploymentAttempt {
 				$request = $this->bind_selection( $provider, $package_type, $request );
-				$this->lock_adoption( $operation, $package_type, $provider, $provider_repository_id, $request, $package_source, $package_source_revision );
+				$this->lock_adoption( $operation, $package_type, $provider, $provider_repository_id, $request, $package_source, $package_source_revision, true );
 				$active = $this->active_package_attempt( $package_type, $request->package_slug );
 				if ( null !== $active ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The failure stores a validated, whitelisted attempt projection; it does not render output.
@@ -917,6 +917,35 @@ final class DeploymentAttemptRepository {
 		);
 	}
 
+	/** Best effort: records that a signed push matched no managed package. The delivery is already admitted. */
+	public function record_unmatched_push( string $provider, string $repository, string $repository_id, string $reason ): void {
+		if ( null === $this->activity || ! in_array( $reason, DeploymentCoordinator::UNMATCHED_REASONS, true ) ) {
+			return;
+		}
+		$code = 'webhook.unmatched.' . $reason;
+		try {
+			$id = $this->activity->begin(
+				$provider,
+				new ActivityRequest( 'webhook.push' ),
+				array(
+					'subject_type'     => 'repository',
+					'subject_identity' => $repository,
+					'adoption_token'   => null,
+					// The debounce: with the clock hour in the context, the first push per repository, reason and hour
+					// starts a new context and is kept; discard_repeated_skip() drops the rest of that hour as repeats.
+					'context'          => hash( 'sha256', $repository_id . "\0" . $reason . "\0" . gmdate( 'YmdH' ) ),
+					'purpose'          => null,
+					'provenance'       => 'core',
+				)
+			);
+			if ( null !== $id && ! $this->activity->discard_repeated_skip( $id, $code ) ) {
+				$this->activity->complete( $id, 'skipped', $code );
+			}
+		} catch ( Throwable ) {
+			BoosterLogger::log( 'An unmatched webhook push could not be recorded in Activity.', array( 'reason' => $reason ) );
+		}
+	}
+
 	private function record_activity_start( DeploymentAttempt $attempt, string $stage ): void {
 		if ( null === $this->activity ) {
 			return;
@@ -1187,12 +1216,13 @@ final class DeploymentAttemptRepository {
 	}
 
 	/** Lock management before attempt rows, closing capture-before-admission races. */
-	private function lock_adoption( string $operation, string $type, string $provider, string $repository_id, DeploymentRequest $request, string $source, int $revision ): void {
+	private function lock_adoption( string $operation, string $type, string $provider, string $repository_id, DeploymentRequest $request, string $source, int $revision, bool $admitting = false ): void {
 		if ( 'install' === $operation && ( null !== $request->adoption_token || null !== $request->installed_identifier ) ) {
 			throw DeploymentStorageFailure::invalid_record();
 		}
 		if ( ! $this->adoption_matches( $operation, $type, $provider, $repository_id, $request, $source, $revision ) ) {
-			throw DeploymentStorageFailure::inconsistent();
+			// An install fails here only when a managed row has its folder; admission names that cause, later re-checks stay generic.
+			throw $admitting && 'install' === $operation ? DeploymentStorageFailure::folder_managed() : DeploymentStorageFailure::inconsistent();
 		}
 	}
 

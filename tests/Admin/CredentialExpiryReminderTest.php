@@ -257,6 +257,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		$onboarding = array(
 			'view'                => 'dashboard',
 			'credential_expiry'   => $notice->overview_summary(),
+			'attention'           => OnboardingViewTest::attention_for( $notice->overview_summary() ),
 			'provider_links'      => array(
 				array(
 					'label' => 'GitHub',
@@ -355,7 +356,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertTrue( $notice->should_load_dismissal_script() );
 		$summary = $notice->overview_summary();
 		self::assertSame( 7, $summary['total'] );
-		self::assertCount( 5, $summary['items'] );
+		self::assertCount( 7, $summary['items'] );
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
 		self::assertSame( 'unavailable', $notice->overview_summary()['status'] );
 		$GLOBALS['ran_booster_repository_admin_allowed'] = true;

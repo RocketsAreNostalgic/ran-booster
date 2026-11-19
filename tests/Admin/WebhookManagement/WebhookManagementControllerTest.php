@@ -75,7 +75,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$gateway                                 = $this->gateway();
 		$gateway->result                         = $this->operation_result( 'succeeded', 'ping_verified', '77' );
 		$store                                   = new OperationStoreFixture();
-		$store->record                           = $this->record();
+		$store->record                           = $this->record( status: 'needs_verification' );
 		$result                                  = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'test', 'gh', '1234', 'credential_1', null, 'valid' );
 		self::assertSame( 'ping_requested', $result['code'] );
 		self::assertSame( 'needs_verification', $store->record->status() );
@@ -162,7 +162,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$gateway                                 = $this->gateway();
 		$gateway->result                         = $this->operation_result( 'succeeded', 'configuration_confirmed', '77', delivery: 'unknown' );
 		$store                                   = new OperationStoreFixture();
-		$store->record                           = $this->record();
+		$store->record                           = $this->record( status: 'needs_verification' );
 		$result                                  = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'check', 'gh', '1234', 'credential_1', null, 'valid' );
 		self::assertSame( 'configuration_confirmed', $result['code'] );
 		self::assertSame( 'needs_verification', $store->record->status() );
@@ -1267,7 +1267,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operation_result( 'succeeded', 'ping_requested', '77' );
 		$store           = new OperationStoreFixture();
-		$store->record   = $this->record( status: 'configured' );
+		$store->record   = $this->record( status: 'needs_verification' );
 		$redirect        = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
 			$this->request( array( 'repository_webhook_management_operation' => 'test' ) ),
 			'valid'
@@ -1794,7 +1794,8 @@ final class WebhookManagementControllerTest extends TestCase {
 			array(
 				'check' => $this->confirmed_check(),
 				'test'  => $this->operation_result( 'succeeded', 'ping_requested' ),
-			)
+			),
+			'needs_verification'
 		);
 		$redirect                                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store, activity: new \RAN\Activity\ActivityStore( $connection ) )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
 
@@ -1805,6 +1806,43 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 'ping_requested', $redirect['webhook_management_ping'] );
 		self::assertSame( 'needs_verification', $this->stored_status( $store ) );
 		self::assertSame( array( 'webhook.check', 'webhook.test' ), array_column( $connection->inserted, 'operation' ) );
+	}
+
+	public function test_a_record_verified_by_a_signed_delivery_stays_configured_until_contradicted(): void {
+		$drift = array(
+			'endpoint'     => 'mismatched',
+			'events'       => 'matched',
+			'content_type' => 'matched',
+			'active'       => 'matched',
+		);
+		$cases = array(
+			'clean check'          => array( 'check', $this->confirmed_check(), 'configured' ),
+			'check finds drift'    => array( 'check', $this->operation_result( 'succeeded', 'configured_pending_delivery', configuration: $drift ), 'configuration_drift' ),
+			'check finds no hook'  => array( 'check', $this->operation_result( 'succeeded', 'hook_absent' ), 'remote_missing' ),
+			'check uncertain'      => array( 'check', $this->operation_result( 'ambiguous', 'hook_inventory_incomplete' ), 'needs_verification' ),
+			'ping requested'       => array( 'test', $this->operation_result( 'succeeded', 'ping_requested' ), 'configured' ),
+			'ping finds drift'     => array( 'test', $this->operation_result( 'succeeded', 'ping_requested', configuration: $drift ), 'configuration_drift' ),
+			'ping delivery failed' => array( 'test', $this->operation_result( 'failed', 'ping_delivery_failed' ), 'needs_verification' ),
+		);
+		foreach ( $cases as $name => list( $operation, $result, $status ) ) {
+			$gateway         = $this->gateway();
+			$gateway->result = $result;
+			$store           = new OperationStoreFixture();
+			$store->record   = $this->record();
+			( new WebhookOperationCoordinator( $gateway, $store ) )->execute( $operation, 'gh', '1234', 'credential_1', null, 'valid' );
+			self::assertSame( $status, $this->stored_status( $store ), $name );
+		}
+
+		// A ping that changes nothing writes nothing, so it cannot race the ping's own signed delivery.
+		foreach ( array( 'configured', 'needs_verification' ) as $status ) {
+			$gateway         = $this->gateway();
+			$gateway->result = $this->operation_result( 'succeeded', 'ping_requested' );
+			$store           = new OperationStoreFixture();
+			$store->record   = $this->record( status: $status );
+			$result          = ( new WebhookOperationCoordinator( $gateway, $store ) )->execute( 'test', 'gh', '1234', 'credential_1', null, 'valid' );
+			self::assertSame( 'ping_requested', $result['code'], $status );
+			self::assertSame( 0, $store->save_attempts, $status );
+		}
 	}
 
 	public function test_validate_second_operation_reads_the_record_the_first_one_wrote(): void {

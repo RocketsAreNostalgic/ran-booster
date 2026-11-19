@@ -95,6 +95,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = true;
 		$GLOBALS['ran_booster_admitted_filesystem_method']       = 'direct';
 		$GLOBALS['ran_booster_admitted_http_calls']              = array();
+		$GLOBALS['ran_booster_admitted_sleeps']                  = array();
 		$GLOBALS['ran_booster_admitted_http_responses']          = array( 200 );
 		$GLOBALS['ran_booster_admitted_temp_root']               = sys_get_temp_dir() . '/ran-booster-admitted-parity-temp';
 		$this->ensure_directory( ABSPATH . 'wp-admin/includes' );
@@ -891,13 +892,160 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$provider = new ParityRepositoryProvider( $archive );
 		$adapter  = $this->adapter( $this->running_update(), $provider );
 		$this->download_fixture( 'example' );
-		$GLOBALS['ran_booster_admitted_http_responses'] = array( 503, 200 );
+		$GLOBALS['ran_booster_admitted_http_responses'] = array( $this->status_with_retry_after( 503, '2' ), 200 );
 
 		$artifact = $adapter->prepare( $adapter->declaration(), $this->update_baseline() );
 
 		self::assertCount( 2, $GLOBALS['ran_booster_admitted_http_calls'] );
+		self::assertSame( array( 2 ), $GLOBALS['ran_booster_admitted_sleeps'] );
 		self::assertSame( 1, $archive->cleanup_calls );
 		$artifact->cleanup();
+	}
+
+	/** @return iterable<string, array{list<int|array<string, mixed>>, string, int, list<int>}> */
+	public static function download_refusals(): iterable {
+		$limited = DeploymentOutcome::CODE_PROVIDER_RATE_LIMITED;
+		yield 'rate limit: 403 with an exhausted quota' => array(
+			array(
+				array(
+					'response' => array( 'code' => 403 ),
+					'headers'  => array( 'x-ratelimit-remaining' => '0' ),
+				),
+			),
+			$limited,
+			1,
+			array(),
+		);
+		yield 'rate limit: 403 with Retry-After' => array(
+			array(
+				array(
+					'response' => array( 'code' => 403 ),
+					'headers'  => array( 'retry-after' => '30' ),
+				),
+			),
+			$limited,
+			1,
+			array(),
+		);
+		yield 'plain 403 stays access denied' => array(
+			array(
+				array(
+					'response' => array( 'code' => 403 ),
+					'headers'  => array( 'x-ratelimit-remaining' => '12' ),
+				),
+			),
+			DeploymentOutcome::CODE_PROVIDER_ACCESS_DENIED,
+			1,
+			array(),
+		);
+		yield '429 beyond the cap is not waited for' => array(
+			array(
+				array(
+					'response' => array( 'code' => 429 ),
+					'headers'  => array( 'retry-after' => '60' ),
+				),
+			),
+			$limited,
+			1,
+			array(),
+		);
+		yield '429 with no header is not retried' => array( array( 429 ), $limited, 1, array() );
+		yield '503 with no header is not retried' => array( array( 503 ), DeploymentOutcome::from_provider_failure( new RuntimeException( '', 503 ) )->get_code(), 1, array() );
+		yield '503 with a non-numeric Retry-After is not retried' => array(
+			array(
+				array(
+					'response' => array( 'code' => 503 ),
+					'headers'  => array( 'retry-after' => 'Wed, 21 Oct 2026 07:28:00 GMT' ),
+				),
+			),
+			DeploymentOutcome::from_provider_failure( new RuntimeException( '', 503 ) )->get_code(),
+			1,
+			array(),
+		);
+		yield '429 retried once at the cap, then refused' => array(
+			array(
+				array(
+					'response' => array( 'code' => 429 ),
+					'headers'  => array( 'retry-after' => '5' ),
+				),
+				array(
+					'response' => array( 'code' => 429 ),
+					'headers'  => array( 'retry-after' => '5' ),
+				),
+			),
+			$limited,
+			2,
+			array( 5 ),
+		);
+	}
+
+	/**
+	 * @param list<int|array<string, mixed>> $responses
+	 * @param list<int>                      $sleeps
+	 */
+	#[DataProvider( 'download_refusals' )]
+	public function test_concrete_provider_download_refuses_rate_limits_and_unbounded_retries( array $responses, string $code, int $calls, array $sleeps ): void {
+		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive );
+		$adapter  = $this->adapter( $this->running_update(), $provider );
+		$this->download_fixture( 'example' );
+		$GLOBALS['ran_booster_admitted_http_responses'] = $responses;
+
+		try {
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+			self::fail( 'The download must be refused.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( $code, $failure->outcome_code );
+		}
+
+		self::assertCount( $calls, $GLOBALS['ran_booster_admitted_http_calls'] );
+		self::assertSame( $sleeps, $GLOBALS['ran_booster_admitted_sleeps'] );
+		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
+	public function test_concrete_provider_download_waits_a_bounded_retry_after_on_429_before_the_single_retry(): void {
+		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive );
+		$adapter  = $this->adapter( $this->running_update(), $provider );
+		$this->download_fixture( 'example' );
+		$GLOBALS['ran_booster_admitted_http_responses'] = array( $this->status_with_retry_after( 429, '5' ), 200 );
+
+		$artifact = $adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+
+		self::assertCount( 2, $GLOBALS['ran_booster_admitted_http_calls'] );
+		self::assertSame( array( 5 ), $GLOBALS['ran_booster_admitted_sleeps'] );
+		$artifact->cleanup();
+	}
+
+	public function test_concrete_provider_download_over_the_size_limit_is_too_large_not_corrupt(): void {
+		foreach ( array(
+			'over the limit' => array( self::MAXIMUM_ARTIFACT_BYTES + 1, DeploymentOutcome::CODE_ARCHIVE_COMPRESSED_TOO_LARGE ),
+			'at the limit'   => array( self::MAXIMUM_ARTIFACT_BYTES, DeploymentOutcome::CODE_ARCHIVE_ZIP_INVALID ),
+		) as $case => list( $bytes, $code ) ) {
+			$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+			$provider = new ParityRepositoryProvider( $archive );
+			$adapter  = $this->adapter( $this->running_update(), $provider );
+			$path     = $this->download_fixture( 'example' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+			file_put_contents( $path, str_repeat( 'a', $bytes ) );
+
+			try {
+				$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+				self::fail( $case );
+			} catch ( AdmittedBranchStageFailure $failure ) {
+				// An at-limit file passes the size check and then fails as an invalid ZIP, never as too large.
+				self::assertSame( $code, $failure->outcome_code, $case );
+			}
+			$this->database->rows = array();
+		}
+	}
+
+	/** @return array<string, mixed> */
+	private function status_with_retry_after( int $status, string $seconds ): array {
+		return array(
+			'response' => array( 'code' => $status ),
+			'headers'  => array( 'retry-after' => $seconds ),
+		);
 	}
 
 	public function test_concrete_provider_download_maps_wp_error_and_cleans(): void {
@@ -1691,6 +1839,31 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			PackageSource::BRANCH->value,
 			1
 		);
+	}
+
+	public function test_admission_refuses_an_install_into_a_managed_folder_with_its_own_signal_and_records_nothing(): void {
+		// The service answers a repeat install first; admission stays the atomic guard against a race.
+		$this->database->management_rows['install-plugin/install-plugin.php'] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_install_plugin',
+			'repository'             => 'owner/install-plugin',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
+
+		try {
+			$this->running_install( 'install-plugin' );
+			self::fail( 'Admission must refuse an install into a managed folder.' );
+		} catch ( DeploymentStorageFailure $failure ) {
+			self::assertTrue( $failure->is_folder_managed() );
+			self::assertSame( DeploymentStorageFailure::inconsistent()->getMessage(), $failure->getMessage() );
+			self::assertSame( array(), $this->database->rows );
+		}
 	}
 
 	private function running_install( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC, ?string $expected_identifier = null, bool $is_private = false, ?string $credential_id = null ): DeploymentAttempt {

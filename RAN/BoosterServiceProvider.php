@@ -183,6 +183,7 @@ final class BoosterServiceProvider {
 		$container->bind( BlueprintArchive::class, new BlueprintArchive() );
 		$container->bind( CredentialUsageReader::class, new CredentialUsageReader( null, null, $database ) );
 		$container->bind( SignedWebhookVerifier::class, new SignedWebhookVerifier( $secrets ) );
+		$container->bind( \RAN\Admin\WebhookManagement\Installation\InstallationStore::class, new \RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore() );
 		$container->bind(
 			DeploymentAttemptRepository::class,
 			static function ( CoreContainer $container ): DeploymentAttemptRepository {

@@ -16,6 +16,7 @@ final class DeploymentStorageFailure extends RuntimeException {
 	private const DATABASE_UNSUPPORTED_CODE = 3;
 	private const CAPACITY_EXHAUSTED_CODE   = 4;
 	private const LEFT_RUNNING_CODE         = 5;
+	private const FOLDER_MANAGED_CODE       = 6;
 
 	/** @var array<string, bool|int|string|null>|null */
 	private ?array $active_attempt = null;
@@ -26,6 +27,11 @@ final class DeploymentStorageFailure extends RuntimeException {
 
 	public static function inconsistent(): self {
 		return new self( 'RAN Booster could not verify persisted deployment state.' );
+	}
+
+	/** Admission refused an install because Booster already manages the folder; the message is the generic one. */
+	public static function folder_managed(): self {
+		return new self( self::inconsistent()->getMessage(), self::FOLDER_MANAGED_CODE );
 	}
 
 	/** @param array<string, bool|int|string|null> $active_attempt */
@@ -104,6 +110,10 @@ final class DeploymentStorageFailure extends RuntimeException {
 
 	public function is_capacity_exhausted(): bool {
 		return self::CAPACITY_EXHAUSTED_CODE === $this->getCode();
+	}
+
+	public function is_folder_managed(): bool {
+		return self::FOLDER_MANAGED_CODE === $this->getCode();
 	}
 
 	public function get_active_correlation_id(): ?string {

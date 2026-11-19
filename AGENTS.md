@@ -284,7 +284,8 @@ them.
 - Title: a Conventional Commit of at most 64 characters. A squash merge uses the
   title as the commit subject and appends ` (#NNNN)` (up to 8 characters), so a
   longer title pushes the default-branch subject past 72. The title type is what
-  Release Please reads, so classify it truthfully.
+  Release Please reads, so classify it truthfully. The `Pull request title`
+  workflow checks the format and length; it is advisory, not a required check.
 - Body: follow `.github/pull_request_template.md` (Summary, Why, Verification,
   Checklist) and state the intended merge method. For a squash merge, put
   `Closes #NNN` in the PR body: this repository's squash commit carries only the

@@ -65,6 +65,9 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'run: pnpm check', $workflow );
 		self::assertStringContainsString( 'fromJSON(needs.runtime-archive.outputs.wordpress-matrix)', $workflow );
 		self::assertSame( 1, substr_count( $workflow, 'bash scripts/build-release.sh' ) );
+		// Plugin Check runs once, on WordPress 7.0.3 and PHP 8.2, outside the slower critical database jobs.
+		self::assertSame( 1, substr_count( $workflow, '"plugin_check":true' ) );
+		self::assertStringContainsString( '{"wordpress":"7.0.3","database":"MySQL 8.0 floor","database_image":"mysql:8.0","suite":"floor","plugin_check":true}', $workflow ); // phpcs:ignore WordPress.WP.CapitalPDangit.MisspelledInText -- JSON matrix key is lowercase.
 		// Repository, development analysis, candidate readback and WordPress each verify the archive's exact source SHA.
 		self::assertSame( 4, substr_count( $workflow, 'name: Verify exact source checkout' ) );
 	}
@@ -98,6 +101,10 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		self::assertStringContainsString( 'test "$(git rev-parse HEAD)" = "$RAN_SOURCE_COMMIT"', $development );
 		self::assertStringContainsString( "PHPSTAN_DEVELOPMENT_PROCESSES: '4'", $development );
 		self::assertSame( 1, substr_count( $workflow, 'PHPSTAN_DEVELOPMENT_PROCESSES:' ) );
+		// Two legs cover the complete development analysis; neither may cancel the other.
+		self::assertStringContainsString( "strategy:\n      fail-fast: false\n      matrix:\n        shard: ['1/2', '2/2']\n", $development );
+		self::assertStringContainsString( 'PHPSTAN_DEVELOPMENT_SHARD: ${{ matrix.shard }}', $development );
+		self::assertSame( 1, substr_count( $workflow, 'PHPSTAN_DEVELOPMENT_SHARD:' ) );
 		self::assertStringContainsString( 'run: composer analyze:development', $development );
 		self::assertStringContainsString( 'run: composer check:repository', $jobs['repository-quality'] );
 		self::assertStringContainsString( 'run: composer test:published-template-pack', $jobs['repository-quality'] );

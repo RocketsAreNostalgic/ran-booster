@@ -440,6 +440,31 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		$provider->remove_state = 'succeeded';
 		self::assertTrue( $facade->remove( $target, 'profile_1', '55', $profile_id, 1, 'good' )->confirms_absence() );
 		self::assertArrayNotHasKey( $profile_id, $secrets->profiles );
+
+		$secrets->profiles[ $profile_id ] = array( 'origin' => 'manual' ) + $secrets->profile( $profile_id, 1 );
+		self::assertTrue( $facade->remove( $target, 'profile_1', '55', $profile_id, 1, 'good' )->confirms_absence() );
+		self::assertArrayHasKey( $profile_id, $secrets->profiles, 'A reused secret outlives the hook.' );
+	}
+
+	public function test_forget_releases_only_the_unchanged_created_secret_and_never_calls_the_provider(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$created                       = 'wh_' . str_repeat( 'a', 24 );
+		$reused                        = 'wh_' . str_repeat( 'b', 24 );
+		$secrets->profiles[ $created ] = $secrets->profile( $created, 1 );
+		$secrets->profiles[ $reused ]  = array( 'origin' => 'manual' ) + $secrets->profile( $reused, 1 );
+
+		self::assertSame( 'operation_unauthorized', $facade->forget( $target, $created, 1, 'bad' )->code() );
+		self::assertSame( 'forgotten', $facade->forget( $target, $created, 2, 'good' )->code() );
+		self::assertSame( 'forgotten', $facade->forget( $target, $reused, 1, 'good' )->code() );
+		self::assertSame( array( $created, $reused ), array_keys( $secrets->profiles ), 'A changed or reused secret stays.' );
+
+		self::assertSame( 'forgotten', $facade->forget( $target, $created, 1, 'good' )->code() );
+		self::assertSame( array( $reused ), array_keys( $secrets->profiles ) );
+		self::assertSame( 0, $provider->calls );
 	}
 
 	public function test_remove_does_not_delete_a_profile_rotated_while_the_provider_request_was_in_flight(): void {

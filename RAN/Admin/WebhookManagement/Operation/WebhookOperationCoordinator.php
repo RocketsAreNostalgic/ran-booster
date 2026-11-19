@@ -9,6 +9,7 @@ use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\AddOn\WebhookAssistance\WebhookProfileMetadata;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\Installation\InstallationStore;
+use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 
 /** Owns one authorized webhook operation and its local recovery transition. */
@@ -45,7 +46,7 @@ final class WebhookOperationCoordinator {
 
 		$record = $this->records->find( $provider_code, $repository_id );
 		if ( null !== $record && $record->requires_hook_identification() ) {
-			return $this->outcome( 'manual_recovery_required' );
+			return 'remove' === $operation ? $this->forget( $target, $record, $nonce ) : $this->outcome( 'manual_recovery_required' );
 		}
 		if ( null === $credential_id
 			|| ( 'setup' === $operation && null !== $record )
@@ -86,6 +87,39 @@ final class WebhookOperationCoordinator {
 		$outcome = $this->apply_result( $operation, $target, $record, $credential_id, $result );
 		$this->complete_activity( $activity_id, $operation, $outcome['code'], $outcome['successful'], $result );
 		return $outcome;
+	}
+
+	/**
+	 * A record without a hook ID can't be checked on the provider, so Remove clears it locally.
+	 *
+	 * @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool}
+	 */
+	private function forget( AssistanceTarget $target, InstallationRecord $record, string $nonce ): array {
+		$activity_id = $this->begin_activity( 'remove', $target );
+		try {
+			$result = $this->facade->forget( $target, $record->webhook_profile_id(), $record->webhook_profile_revision(), $nonce );
+		} catch ( \Throwable ) {
+			$result = null;
+		}
+		$code = null === $result ? 'operation_failed' : $this->safe_code( $result->to_array()['code'] ?? null, 'operation_failed' );
+		if ( 'forgotten' === $code ) {
+			$code = 'succeeded' !== $result?->state() ? 'operation_failed' : match ( $this->records->delete_if_current( $record->provider_code(), $record->repository_id(), $record ) ) {
+				InstallationStore::WRITE_APPLIED, InstallationStore::WRITE_UNCHANGED => 'forgotten',
+				InstallationStore::WRITE_CONFLICT => 'record_conflict',
+				default => 'record_update_failed',
+			};
+		}
+		$this->complete_activity( $activity_id, 'remove', $code, 'forgotten' === $code, $result );
+		BoosterLogger::log(
+			'Webhook record forget finished.',
+			array(
+				'operation'    => 'forget',
+				'outcome_code' => $code,
+				'provider'     => $record->provider_code(),
+			)
+		);
+
+		return $this->outcome( $code, successful: 'forgotten' === $code, inline_safe: true );
 	}
 
 	private function begin_activity( string $operation, AssistanceTarget $target ): ?int {

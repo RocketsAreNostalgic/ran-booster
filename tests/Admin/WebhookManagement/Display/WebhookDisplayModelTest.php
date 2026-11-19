@@ -86,6 +86,13 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame( $remediation, $this->display()->notice( 'unknown_result', null, $remediation ) );
 	}
 
+	public function test_an_existing_hook_is_core_copy_not_the_provider_remediation(): void {
+		self::assertSame(
+			'A webhook for this site already exists on the Git provider. Remove it there, then set up again.',
+			$this->display()->notice( 'existing_hook_requires_reconfigure', null, 'An existing endpoint cannot prove the stored signing secret; inspect it and use explicit reconfiguration.' )
+		);
+	}
+
 	public function test_recorded_history_keeps_its_status_and_timestamp_beside_a_current_warning(): void {
 		$method  = new ReflectionMethod( WebhookDisplayModel::class, 'history_details' );
 		$details = array_column( $method->invoke( $this->display(), 'profile_revision_stale', $this->record() ), null, 'key' );

@@ -286,6 +286,26 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		);
 	}
 
+	public function forget( AssistanceTarget $target, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult {
+		return $this->with_target_lock(
+			$target,
+			function () use ( $target, $profile_id, $profile_revision, $nonce ): RepositoryWebhookOperationResult {
+				$current = $this->authorize( 'remove', $target, $nonce, true );
+				if ( null === $current ) {
+					return $this->failed( 'operation_unauthorized' );
+				}
+				// Only the exact secret Booster created for the attempt goes; a reused, changed or missing one stays as it is.
+				$profile = $this->profile_record( $current->provider_code(), $profile_id )[0] ?? null;
+				if ( null !== $profile && $profile_revision === $profile->revision() && 'created' === $profile->disposition() && $this->applies_metadata( $current, $profile )
+					&& ! $this->delete_profile_if_revision( $current->provider_code(), $profile->id(), $profile->revision() ) ) {
+					return $this->failed( 'operation_failed' );
+				}
+
+				return $this->unknown_result( 'succeeded', 'forgotten', null, 'Set up the webhook again.' );
+			}
+		);
+	}
+
 	/** @param 'setup'|'check'|'reconfigure'|'remove'|'test' $action */
 	private function assess( string $action, AssistanceTarget $target, ?string $credential_id, ?string $hook_id, ?string $profile_id, ?int $profile_revision, string $nonce, bool $allow_cleanup ): RepositoryWebhookFitnessResult {
 		$current = $this->authorize( $action, $target, $nonce, $allow_cleanup );

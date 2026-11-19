@@ -36,4 +36,7 @@ interface WebhookAssistanceFacade {
 	public function remove( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult;
 
 	public function test( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult;
+
+	/** Releases a signing secret Booster created for a setup that returned no hook ID; never contacts the provider. */
+	public function forget( AssistanceTarget $target, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult;
 }

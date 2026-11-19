@@ -96,6 +96,11 @@ final class WebhookDisplayModel {
 		return $times;
 	}
 
+	/** A setup that ended without a hook ID: the only way on is to forget it. */
+	private static function unconfirmed_setup_message(): string {
+		return __( 'Booster couldn\'t confirm this setup. Forget it, then set up again.', 'ran-booster' );
+	}
+
 	/** Shared wording for the delivery-evidence state: what is known, not that a webhook exists. */
 	public static function manual_status_label(): string {
 		return __( 'Signed delivery received', 'ran-booster' );
@@ -251,7 +256,8 @@ final class WebhookDisplayModel {
 		$operations               = null === $recovery ? $this->available_operations( $target, $record, $status, array() !== $credentials ) : array();
 		$manual_at                = $this->manual_delivery_time( $provider_code, $repository_id );
 		$manual                   = null !== $manual_at;
-		$operation_models         = $this->operation_models( $operations, $provider_code, $provider_label, $repository_id, null !== $record && ! $record->requires_hook_identification(), $this->disabled_reasons( $record, $status, array() !== $credentials, null !== $recovery, $provider_label, $manual ) );
+		$unidentified             = null !== $record && $record->requires_hook_identification();
+		$operation_models         = $this->operation_models( $operations, $provider_code, $provider_label, $repository_id, null !== $record && ! $unidentified, $this->disabled_reasons( $record, $status, array() !== $credentials, null !== $recovery, $manual ), $unidentified );
 
 		$help = null;
 		if ( null !== $record && 'local_profile_missing' === $status ) {
@@ -259,19 +265,15 @@ final class WebhookDisplayModel {
 			$help = sprintf( __( 'The recorded secret is no longer available. Repair the %s webhook to use the current applicable secret; Booster creates a repository secret when none applies.', 'ran-booster' ), $provider_label );
 		} elseif ( null !== $record && 'remote_missing' === $status ) {
 			/* translators: %s: repository provider name. */
-			$help = sprintf( __( 'Managed removal is unavailable because the recorded %1$s hook cannot be confirmed. Inspect %1$s manually before continuing.', 'ran-booster' ), $provider_label );
+			$help = sprintf( __( 'This webhook was deleted on %s.', 'ran-booster' ), $provider_label );
 		}
 		$recovery_warning = null;
-		if ( null !== $record && $record->requires_hook_identification() ) {
-			/* translators: %s: repository provider name. */
+		if ( $unidentified ) {
 			$recovery_warning = array(
 				'class'   => 'notice-warning',
-				'heading' => __( 'Manual webhook recovery required', 'ran-booster' ),
-				'message' => __( 'Managed operations are disabled for this repository. Do not retry Setup until both sides are reconciled.', 'ran-booster' ),
-				'details' => array(
-					/* translators: %s: repository provider name. */
-					sprintf( __( 'The Git provider state changed without a stable hook ID. Inspect its %s webhooks and the recorded Core signing profile manually.', 'ran-booster' ), $provider_label ),
-				),
+				'heading' => __( 'Setup not confirmed', 'ran-booster' ),
+				'message' => self::unconfirmed_setup_message(),
+				'details' => array(),
 			);
 		} elseif ( null !== $recovery ) {
 			/* translators: %s: repository provider name. */
@@ -330,9 +332,10 @@ final class WebhookDisplayModel {
 	 *
 	 * @param array<string,true> $available
 	 * @param array<string,string> $reasons Why each operation is disabled, keyed by operation.
+	 * @param bool $forget The third slot forgets a record without a hook ID instead of removing a webhook.
 	 * @return list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,busy_label:string,busy_message:string,disabled:bool,disabled_reason:string}>
 	 */
-	private function operation_models( array $available, string $provider_code, string $provider_label, string $repository_id, bool $recorded, array $reasons ): array {
+	private function operation_models( array $available, string $provider_code, string $provider_label, string $repository_id, bool $recorded, array $reasons, bool $forget = false ): array {
 		$first = ( $recorded || isset( $available['reconfigure'] ) ) ? 'reconfigure' : 'setup';
 		/* translators: %s: repository provider name. */
 		$setup_description = sprintf( __( 'Create the webhook on %s.', 'ran-booster' ), $provider_label );
@@ -352,10 +355,24 @@ final class WebhookDisplayModel {
 			'validate'    => array( __( 'Validating…', 'ran-booster' ), $validate_busy ),
 			'remove'      => array( __( 'Removing…', 'ran-booster' ), __( 'Deleting the webhook and clearing its local record. This can take a few seconds.', 'ran-booster' ) ),
 		);
-		$slots         = array(
+		$remove        = array( __( 'Remove', 'ran-booster' ), $remove_description );
+		if ( $forget ) {
+			$remove         = array(
+				__( 'Forget', 'ran-booster' ),
+				/* translators: %s: repository provider name. */
+				sprintf( __( 'Clear Booster\'s record. Nothing is changed on %s.', 'ran-booster' ), $provider_label ),
+			);
+			$remove_confirm = sprintf(
+				/* translators: %s: repository provider name. */
+				__( 'Forget this webhook? Booster clears its record and any signing secret it created. A webhook on %s stays until you remove it there.', 'ran-booster' ),
+				$provider_label
+			);
+			$busy['remove'] = array( __( 'Forgetting…', 'ran-booster' ), __( 'Clearing Booster\'s record.', 'ran-booster' ) );
+		}
+		$slots = array(
 			array( $first, 'setup' === $first ? __( 'Set up', 'ran-booster' ) : __( 'Repair', 'ran-booster' ), 'setup' === $first ? $setup_description : $repair_description ),
 			array( 'validate', __( 'Validate', 'ran-booster' ), $validate_description ),
-			array( 'remove', __( 'Remove', 'ran-booster' ), $remove_description ),
+			array( 'remove', $remove[0], $remove[1] ),
 		);
 		// Validate needs both of its operations; an unavailable one supplies the reason.
 		if ( isset( $available['check'], $available['test'] ) ) {
@@ -595,7 +612,7 @@ final class WebhookDisplayModel {
 					);
 		}
 		if ( 'manual_recovery_required' === $code ) {
-			return __( 'Managed operations are disabled because the prior setup did not return a stable hook ID. Inspect the Git provider and Core manually before retrying.', 'ran-booster' );
+			return self::unconfirmed_setup_message();
 		}
 
 		return match ( $code ) {
@@ -604,6 +621,8 @@ final class WebhookDisplayModel {
 			'configured_pending_delivery' => __( 'Webhook management configured the remote hook. Signed delivery verification is still pending.', 'ran-booster' ),
 			'verified', 'configuration_confirmed' => __( 'Webhook management confirmed the recorded remote configuration. Correlate Git provider delivery history with the Git provider request ID in Booster Activity before treating signed delivery as established.', 'ran-booster' ),
 			'removed' => __( 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.', 'ran-booster' ),
+			'forgotten' => __( 'Webhook record cleared.', 'ran-booster' ),
+			'existing_hook_requires_reconfigure' => __( 'A webhook for this site already exists on the Git provider. Remove it there, then set up again.', 'ran-booster' ),
 			'forbidden' => __( 'You are not permitted to manage this repository webhook. Nothing was changed.', 'ran-booster' ),
 			'invalid_request' => __( 'The webhook request was invalid or expired. Nothing was changed; reload this repository and try again.', 'ran-booster' ),
 			'invalid_token' => __( 'Select one saved credential, then try again.', 'ran-booster' ),
@@ -615,7 +634,7 @@ final class WebhookDisplayModel {
 			'setup_compensated' => __( 'Webhook management could not verify the new remote hook, so it removed it. No webhook was established; setup may be tried again.', 'ran-booster' ),
 			'setup_compensation_incomplete' => __( 'Webhook management could not verify or safely remove the new remote hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
 			'setup_outcome_unknown' => __( 'Webhook management could not confirm whether setup changed the remote hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
-			'hook_inventory_unavailable', 'hook_inventory_invalid', 'hook_inventory_incomplete', 'matching_hooks_ambiguous' => __( 'Webhook management could not establish the current remote hook state. Nothing should be treated as successful; inspect the Git provider before retrying.', 'ran-booster' ),
+			'hook_inventory_unavailable', 'hook_inventory_invalid', 'hook_inventory_incomplete', 'matching_hooks_ambiguous' => __( 'Couldn\'t list this repository\'s webhooks on the Git provider.', 'ran-booster' ),
 			'setup_response_invalid' => __( 'The Git provider response did not identify the new hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
 			'preconfiguration_read_unavailable', 'reconfigure_readback_unavailable', 'reconfigure_outcome_unknown' => __( 'Webhook management could not confirm the remote hook state after the update request. Validate or inspect the hook at the Git provider before retrying an update.', 'ran-booster' ),
 			'reconfigure_failed' => __( 'The Git provider rejected the webhook update request. Validate or inspect the hook at the Git provider before retrying.', 'ran-booster' ),
@@ -634,7 +653,7 @@ final class WebhookDisplayModel {
 	}
 
 	public function is_successful_result( string $code ): bool {
-		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'configuration_confirmed', 'removed' ), true );
+		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'configuration_confirmed', 'removed', 'forgotten' ), true );
 	}
 
 	private function result_notice_class( string $code ): string {
@@ -914,13 +933,13 @@ final class WebhookDisplayModel {
 	 *
 	 * @return array<string,string>
 	 */
-	private function disabled_reasons( ?InstallationRecord $record, ?string $status, bool $has_credential, bool $recovery_view, string $provider_label, bool $manual = false ): array {
+	private function disabled_reasons( ?InstallationRecord $record, ?string $status, bool $has_credential, bool $recovery_view, bool $manual = false ): array {
 		$keys = array( 'setup', 'reconfigure', 'check', 'test', 'remove' );
 		if ( $recovery_view ) {
 			return array_fill_keys( $keys, __( 'Manual webhook recovery required', 'ran-booster' ) );
 		}
 		if ( null !== $record && $record->requires_hook_identification() ) {
-			return array_fill_keys( $keys, __( 'Managed operations are disabled for this repository. Do not retry Setup until both sides are reconciled.', 'ran-booster' ) );
+			return array_fill_keys( $keys, self::unconfirmed_setup_message() );
 		}
 		if ( ! $has_credential ) {
 			return array_fill_keys( $keys, __( 'Choose a saved credential', 'ran-booster' ) );
@@ -937,11 +956,6 @@ final class WebhookDisplayModel {
 			);
 		}
 		$remove = match ( $status ) {
-			'remote_missing'        => sprintf(
-				/* translators: %s: repository provider name. */
-				__( 'The webhook is already missing from %s.', 'ran-booster' ),
-				$provider_label
-			),
 			'removal_pending'       => __( 'Removal is already pending.', 'ran-booster' ),
 			'local_profile_missing' => __( 'Recorded signing secret is unavailable', 'ran-booster' ),
 			default                 => '',
@@ -962,7 +976,8 @@ final class WebhookDisplayModel {
 			return array( 'setup' => true );
 		}
 		if ( $record->requires_hook_identification() ) {
-			return array();
+			// Remove becomes Forget: without a hook ID there is nothing to ask the provider about.
+			return array( 'remove' => true );
 		}
 		$operations = array();
 		if ( in_array( $status, array( 'profile_revision_stale', 'configuration_drift', 'local_profile_missing' ), true ) || ( 'needs_verification' !== $status && ! hash_equals( $record->endpoint(), $target->endpoint() ) ) ) {
@@ -970,7 +985,8 @@ final class WebhookDisplayModel {
 		}
 		$operations['check'] = true;
 		$operations['test']  = true;
-		if ( ! in_array( $status, array( 'local_profile_missing', 'remote_missing', 'removal_pending' ), true ) ) {
+		// A hook deleted on the provider is removed here too: the provider confirms its absence, then Set up returns.
+		if ( ! in_array( $status, array( 'local_profile_missing', 'removal_pending' ), true ) ) {
 			$operations['remove'] = true;
 		}
 

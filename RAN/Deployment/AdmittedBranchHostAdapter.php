@@ -87,6 +87,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 
 	private const DOWNLOAD_TIMEOUT  = 120;
 	private const DOWNLOAD_ATTEMPTS = 2;
+	private const RETRY_AFTER_CAP   = 5;
 
 	private ?ProviderPreparedArchive $provider_archive = null;
 	private ?string $mutation_lock_token               = null;
@@ -556,15 +557,28 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 				if ( is_wp_error( $response ) ) {
 					$this->stage( DeploymentOutcome::CODE_ARCHIVE_DOWNLOAD_FAILED );
 				}
-				$status = (int) wp_remote_retrieve_response_code( $response );
+				$status      = (int) wp_remote_retrieve_response_code( $response );
+				$retry_after = wp_remote_retrieve_header( $response, 'retry-after' );
+				$retry_after = is_string( $retry_after ) ? $retry_after : '';
+				// A rate limit on the archive request arrives as 403 with an exhausted quota or a Retry-After header.
+				if ( 403 === $status && ( '' !== $retry_after || '0' === wp_remote_retrieve_header( $response, 'x-ratelimit-remaining' ) ) ) {
+					$this->stage( DeploymentOutcome::CODE_PROVIDER_RATE_LIMITED );
+				}
 				if ( 429 === $status || in_array( $status, array( 502, 503, 504 ), true ) ) {
-					if ( $attempt < self::DOWNLOAD_ATTEMPTS ) {
+					// One retry, only after a numeric Retry-After no longer than the cap; any other answer is not waited for.
+					if ( $attempt < self::DOWNLOAD_ATTEMPTS && 1 === preg_match( '/\A[0-9]{1,3}\z/', $retry_after ) && (int) $retry_after <= self::RETRY_AFTER_CAP ) {
+						sleep( (int) $retry_after );
 						continue;
 					}
 					$this->stage( DeploymentOutcome::from_provider_failure( new RuntimeException( '', $status ) )->get_code() );
 				}
 				if ( $status < 200 || $status >= 300 ) {
 					$this->stage( DeploymentOutcome::from_provider_failure( new RuntimeException( '', $status ) )->get_code() );
+				}
+				// The size limit truncates a longer response silently, so a file past the limit is over-size, not corrupt.
+				clearstatcache( true, $destination );
+				if ( filesize( $destination ) > $maximum_artifact_bytes ) {
+					$this->stage( DeploymentOutcome::CODE_ARCHIVE_COMPRESSED_TOO_LARGE );
 				}
 				return;
 			}

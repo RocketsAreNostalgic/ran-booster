@@ -76,6 +76,14 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_safe_remote_get' ) ) {
 	}
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\sleep' ) ) {
+	/** Record the wait the adapter asked for instead of sleeping. */
+	function sleep( int $seconds ): int {
+		$GLOBALS['ran_booster_admitted_sleeps'][] = $seconds;
+		return 0;
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\is_wp_error' ) ) {
 	function is_wp_error( mixed $response ): bool {
 		return is_array( $response ) && true === ( $response['ran_booster_test_wp_error'] ?? false );

@@ -1235,16 +1235,20 @@ records exception messages or provider text. Logging happens only when
 
 For a deployment, Core maps the reason to its attempt outcome:
 `credential_missing` and `credential_format_invalid` to `provider_request_invalid`,
-the other `credential_*` to `provider_credential_rejected`,
-`site_filesystem_unsupported` to `deployment_filesystem_unsupported`,
-`site_zip_unavailable` to `deployment_zip_extension_missing`, `permission_denied` to
+`credential_store_unavailable` to `provider_credential_unavailable`, the other
+`credential_*` to `provider_credential_rejected`, `permission_denied` to
 `provider_access_denied`, `repository_not_found*` and `owner_not_found` to
 `provider_repository_missing`, `ref_not_found` and `repository_no_default_branch`
-to `provider_reference_unavailable`, `rate_limited*` to
-`provider_rate_limited`, transport, `http_5xx` and `response_*` to
-`provider_unavailable`, `http_4xx_other` to `provider_request_invalid`, and
-anything else to `provider_failed`. `StaleDeployment` is `stale_event`. The
-attempt record, Activity and the support report carry the outcome code only.
+to `provider_reference_unavailable`, `repository_identity_changed` to
+`provider_repository_changed`, `redirect_blocked` to `provider_redirected`,
+`rate_limited*` to `provider_rate_limited`, the other transport reasons,
+`http_5xx` and `response_*` to `provider_unavailable`,
+`site_filesystem_unsupported` to `deployment_filesystem_unsupported`,
+`site_zip_unavailable` to `deployment_zip_extension_missing`,
+`http_4xx_other` to `provider_request_invalid`, and anything else to
+`provider_failed`. An unreadable saved credential is a failed update, not a
+refusal. `StaleDeployment` is `stale_event`. The attempt record, Activity and
+the support report carry the outcome code only.
 
 #### Legacy codes
 

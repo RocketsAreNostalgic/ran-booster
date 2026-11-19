@@ -491,7 +491,7 @@ final readonly class ProviderSettingsPresenter {
 		}
 	}
 
-	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected' */
+	/** @return 'verified'|'subdirectory_deferred'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected' */
 	public function check_package_repository_branch( string $type, Package $package ): string {
 		if ( PackageSource::BRANCH !== $package->get_source() ) {
 			return 'unable_to_check';
@@ -517,7 +517,7 @@ final readonly class ProviderSettingsPresenter {
 		return $began ? $this->record_package_repository_branch_check( $type, $package, $profile_id, $result, $profile_fingerprint ) : 'unable_to_check';
 	}
 
-	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected' */
+	/** @return 'verified'|'subdirectory_deferred'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected' */
 	private function check_package_repository_branch_while_locked( Package $package, ?string $profile_id, \RAN\Activity\ActivityProgress $progress ): string {
 		try {
 			$provider = $this->providers->get( (string) $package->get_provider_code() );
@@ -563,7 +563,7 @@ final readonly class ProviderSettingsPresenter {
 						$result = 'subdirectory_unverified';
 					}
 				} elseif ( is_string( $subdirectory ) && '' !== $subdirectory ) {
-					$result = 'subdirectory_unverified';
+					$result = 'subdirectory_deferred';
 				} else {
 					$result = 'verified';
 				}
@@ -588,8 +588,8 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
-	 * @param 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected' $outcome
-	 * @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected'
+	 * @param 'verified'|'subdirectory_deferred'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected' $outcome
+	 * @return 'verified'|'subdirectory_deferred'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected'
 	 */
 	private function record_package_repository_branch_check(
 		string $type,

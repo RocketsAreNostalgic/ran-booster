@@ -96,14 +96,34 @@ $ran_booster_analysis_status = ( static function (): int {
 		fwrite( STDERR, "PHPSTAN_DEVELOPMENT_PROCESSES must be 1, 2 or 4.\n" );
 		return 2;
 	}
-	$status = 0;
-	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Report numeric CLI coverage and process counts, not HTML.
-	printf( "Development analysis: %d files; %d batched; %d isolated; %s processes.\n", count( $files ), count( $batch ), count( $files ) - count( $batch ), $workers );
+	// CI may divide the complete group list between jobs; every group stays whole and unset runs all of them.
+	$shard = getenv( 'PHPSTAN_DEVELOPMENT_SHARD' );
+	$shard = false === $shard || '' === $shard ? '1/1' : $shard;
+	if ( 1 !== preg_match( '~\A([1-9])/([1-9])\z~D', $shard, $part ) || (int) $part[1] > (int) $part[2] ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Report invalid CLI configuration to standard error.
+		fwrite( STDERR, "PHPSTAN_DEVELOPMENT_SHARD must be N/M with 1 <= N <= M <= 9.\n" );
+		return 2;
+	}
+	$all = array();
 	foreach ( $profiles as $profile => $selected ) {
 		$groups = array_map( static fn( string $file ): array => array( $file ), array_values( array_diff( $selected, $batch ) ) );
 		if ( 'phpstan-development.neon' === $profile && array() !== $batch ) {
 			array_unshift( $groups, $batch );
 		}
+		foreach ( $groups as $group ) {
+			$all[] = array( $profile, $group );
+		}
+	}
+	$assigned = array();
+	foreach ( $all as $index => list( $profile, $group ) ) {
+		if ( (int) $part[1] - 1 === $index % (int) $part[2] ) {
+			$assigned[ $profile ][] = $group;
+		}
+	}
+	$status = 0;
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Report numeric CLI coverage and process counts, not HTML.
+	printf( "Development analysis: %d files; %d batched; %d isolated; %s processes; shard %s: %d of %d groups.\n", count( $files ), count( $batch ), count( $files ) - count( $batch ), $workers, $shard, array_sum( array_map( 'count', $assigned ) ), count( $all ) );
+	foreach ( $assigned as $profile => $groups ) {
 		foreach ( array_chunk( $groups, (int) $workers ) as $wave ) {
 			$running = array();
 			foreach ( $wave as $group ) {

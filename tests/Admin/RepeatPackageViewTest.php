@@ -380,7 +380,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'The installed folder name must match the repository package name.', $html );
 		self::assertStringContainsString( 'Leave blank for the repository root.', $html );
 		self::assertStringNotContainsString( 'lives below the repository root', $html );
-		self::assertStringContainsString( 'Blank uses the default branch.', $html );
+		self::assertStringContainsString( 'Leave empty to use the repository&#039;s default branch.', $html );
 		self::assertStringNotContainsString( 'Leave blank to use the repository', $html );
 		self::assertMatchesRegularExpression( '/class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" aria-describedby="ran-booster-link-installed-help"/', $html );
 		self::assertSame(

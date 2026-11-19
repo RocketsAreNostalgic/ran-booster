@@ -216,6 +216,22 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		self::assertNull( $store->find( 'plugin', $package, 'anonymous' ) );
 	}
 
+	public function test_deferred_subdirectory_check_records_the_branch_as_verified(): void {
+		$store    = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package  = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
+		$activity = new \RAN\Activity\ActivityStore( $store->database, 'test_activity' );
+		$capture  = $store->activity_context( 'plugin', $package, 'branch.check' );
+		self::assertNotNull( $capture['adoption_token'] );
+
+		$store->begin_check( 'plugin', $package, 'profile-a' );
+		$store->record( 'plugin', $package, 'profile-a', 'subdirectory_deferred' );
+		$summary = $activity->summary( 'plugin', $capture['subject_identity'], $capture['adoption_token'], $capture['context'], 'branch.check' );
+
+		self::assertNotNull( $store->find( 'plugin', $package, 'profile-a' ) );
+		self::assertSame( 'verified', $summary['latest']['reason'] ?? null );
+		self::assertSame( 'succeeded', $summary['observation']['status'] ?? null );
+	}
+
 	public function test_confirmed_missing_path_replaces_positive_observation_across_later_uncertain_checks(): void {
 		$store    = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package  = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );

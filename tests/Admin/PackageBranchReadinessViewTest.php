@@ -347,6 +347,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	public static function subdirectory_checklist_provider(): array {
 		return array(
 			'not checked'       => array( null, 'is-pending', 'The subdirectory <code>packages/example</code> will be checked when Booster prepares the deployment archive.' ),
+			'deferred'          => array( 'subdirectory_deferred', 'is-pending', 'The subdirectory <code>packages/example</code> will be checked when Booster prepares the deployment archive.' ),
 			'accessed'          => array( 'verified', 'is-ok', 'The subdirectory <code>packages/example</code> is accessible at this branch.' ),
 			'not found'         => array( 'subdirectory_unavailable', 'is-warning', 'The subdirectory <code>packages/example</code> was not found at this branch.' ),
 			'check unavailable' => array( 'subdirectory_unverified', 'is-warning', 'The subdirectory <code>packages/example</code> could not be checked.' ),
@@ -570,11 +571,12 @@ final class PackageBranchReadinessViewTest extends TestCase {
 	/** @return array<string, array{string, string, string}> */
 	public static function repository_branch_check_outcome_provider(): array {
 		return array(
-			'verified'             => array( 'verified', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
-			'unable to check'      => array( 'unable_to_check', 'is-warning', 'The branch <code>test</code> is saved, but access could not be verified.' ),
-			'provider unavailable' => array( 'provider_unavailable', 'is-warning', 'The branch <code>test</code> is saved, but the Git provider is unavailable.' ),
-			'subdirectory missing' => array( 'subdirectory_unavailable', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
-			'subdirectory unknown' => array( 'subdirectory_unverified', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
+			'verified'              => array( 'verified', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
+			'unable to check'       => array( 'unable_to_check', 'is-warning', 'The branch <code>test</code> is saved, but access could not be verified.' ),
+			'provider unavailable'  => array( 'provider_unavailable', 'is-warning', 'The branch <code>test</code> is saved, but the Git provider is unavailable.' ),
+			'subdirectory missing'  => array( 'subdirectory_unavailable', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
+			'subdirectory unknown'  => array( 'subdirectory_unverified', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
+			'subdirectory deferred' => array( 'subdirectory_deferred', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
 		);
 	}
 
@@ -722,6 +724,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			'subdirectory_unavailable' => 'The saved branch is accessible, but Booster could not find the configured subdirectory. Check the path and try again.',
 			'subdirectory_unverified'  => 'The saved branch is accessible, but Booster could not check the configured subdirectory. Try again later.',
 			'verified'                 => '',
+			'subdirectory_deferred'    => '',
 			'unknown'                  => '',
 		);
 		foreach ( array( 'plugin', 'theme' ) as $type ) {

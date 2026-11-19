@@ -106,6 +106,9 @@ class RepositoryBranchCheckEvidenceStore {
 			throw new RuntimeException( 'The repository branch check was not started.' );
 		}
 		$pending = $this->pending[ $key ];
+		if ( 'subdirectory_deferred' === $outcome ) {
+			$outcome = 'verified'; // The branch is verified; the folder is checked when the archive is prepared.
+		}
 		unset( $profile_id ); // The pre-work capture remains authoritative.
 		unset( $this->pending[ $key ] );
 		$this->mutate(

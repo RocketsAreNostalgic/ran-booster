@@ -980,7 +980,7 @@ class Dashboard {
 		};
 	}
 
-	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected'|null */
+	/** @return 'verified'|'subdirectory_deferred'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected'|null */
 	private function requested_package_repository_branch_check( Package $package, string $type ): ?string {
 		if ( ! isset( $_GET['ran_booster_repository_branch_check'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This request flag is followed by capability and action-specific nonce verification before the provider check.
@@ -1002,8 +1002,8 @@ class Dashboard {
 			. $this->provider_settings->package_repository_branch_check_access_fingerprint( $package )
 		);
 		$completed = get_transient( $marker );
-		if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable', 'branch_unavailable', 'branch_redirected' ), true ) ) {
-			if ( 'verified' !== $completed || null !== $this->provider_settings->package_repository_branch_evidence( $type, $package ) ) {
+		if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'subdirectory_deferred', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable', 'branch_unavailable', 'branch_redirected' ), true ) ) {
+			if ( ! in_array( $completed, array( 'verified', 'subdirectory_deferred' ), true ) || null !== $this->provider_settings->package_repository_branch_evidence( $type, $package ) ) {
 				return $completed;
 			}
 		}

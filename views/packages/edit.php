@@ -124,7 +124,7 @@ $package_branch_readiness   = isset( $package_branch_readiness ) && is_array( $p
 	: null;
 
 $repository_branch_check_outcome = isset( $repository_branch_check_outcome ) && is_string( $repository_branch_check_outcome )
-	&& in_array( $repository_branch_check_outcome, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable', 'branch_unavailable', 'branch_redirected' ), true )
+	&& in_array( $repository_branch_check_outcome, array( 'verified', 'subdirectory_deferred', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable', 'branch_unavailable', 'branch_redirected' ), true )
 	? $repository_branch_check_outcome
 	: null;
 $package_source_choices          = is_array( $package_source['choices'] ?? null ) ? $package_source['choices'] : array();

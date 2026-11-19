@@ -141,7 +141,10 @@ shows the snackbar. An error or warning snackbar is only a pointer to the notice
 - **Left alone.** Edit saves keep the enhanced save path, which already shows
   through the host and still marks `data-ran-booster-package-saved`. The bulk
   update queue summary is the live update progress region (R9) and keeps its
-  notice. Webhook results and add-on outcomes use the signed outcome flow (P4).
+  notice, which also carries the key `bulk_update_queue` and a View Activity
+  link, so the host shows the queue sentence as a snackbar (success) or a
+  pointer (warning). Its first paragraph is a live region, so it takes no extra
+  `role`. Webhook results and add-on outcomes use the signed outcome flow (P4).
   Release workflow results still carry text in the URL (R16). Package operation
   failures reach the page through region swaps that rebuild the notice, so they
   keep the inline record without a pointer until a coded notice survives the swap.

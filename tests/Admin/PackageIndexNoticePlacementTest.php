@@ -207,6 +207,46 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-feedback', $html );
 	}
 
+	public function test_the_bulk_queue_summary_stays_the_progress_notice_with_its_key_and_activity_link(): void {
+		$activity = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' );
+
+		foreach ( array( 'success', 'warning' ) as $type ) {
+			$html = $this->notices(
+				array(
+					array(
+						'type'            => $type,
+						'message'         => 'Queued 2 plugins for sequential branch reinstall. Skipped: ' . ( 'warning' === $type ? '1' : '0' ) . '.',
+						'code'            => 'bulk_update_queue',
+						'queued_updates'  => 2,
+						'skipped_updates' => 'warning' === $type ? 1 : 0,
+					),
+				)
+			);
+
+			// One element: the progress notice carries the key; no container item repeats it and no second live region is added.
+			self::assertStringContainsString( 'data-feedback-key="bulk_update_queue" class="notice notice-' . $type . ' inline is-dismissible', $html, $type );
+			self::assertStringContainsString( 'data-ran-booster-update-summary', $html, $type );
+			self::assertStringContainsString( '<p><a class="ran-booster-feedback__activity" href="' . esc_url( $activity ) . '">View Activity</a></p>', $html, $type );
+			self::assertSame( 1, substr_count( $html, 'Queued 2 plugins' ), $type );
+			self::assertStringNotContainsString( 'data-ran-booster-feedback>', $html, $type );
+			self::assertStringNotContainsString( 'role=', $html, $type );
+			self::assertStringNotContainsString( 'data-ran-booster-confirmed-package-result', $html, $type );
+		}
+
+		// A message that only borrows the code, without the closed counts, is an ordinary notice.
+		$plain = $this->notices(
+			array(
+				array(
+					'type'    => 'success',
+					'message' => 'Queued 1 plugin.',
+					'code'    => 'bulk_update_queue',
+				),
+			)
+		);
+		self::assertStringNotContainsString( 'data-feedback-key', $plain );
+		self::assertStringNotContainsString( 'ran-booster-feedback__activity', $plain );
+	}
+
 	public function test_a_message_without_a_closed_feedback_code_keeps_its_notice_and_adds_no_item(): void {
 		$html = $this->notices(
 			array(

@@ -13,7 +13,15 @@ final class GeneralPreferenceStore {
 		'hide_github'           => array( 'hide_github' ),
 		'self_update_discovery' => array( 'self_update_discovery' ),
 		'numeric'               => array( 'history_rows', 'history_days', 'max_download_bytes' ),
+		'package_sources'       => array( 'package_sources' ),
 	);
+
+	/**
+	 * Scopes added after documents were already saved. Each holds one field of the same name and is
+	 * saved only on its own, never by an all-fields save. A document without its counter is still
+	 * valid: the counter starts at zero.
+	 */
+	private const LATER_SCOPES = array( 'package_sources' );
 
 	private const DEFAULTS = array(
 		'hide_github'           => false,
@@ -21,6 +29,7 @@ final class GeneralPreferenceStore {
 		'history_rows'          => 2000,
 		'history_days'          => 30,
 		'max_download_bytes'    => 52428800,
+		'package_sources'       => false,
 	);
 
 	/** @return array{exists:bool,token:string,malformed:bool} */
@@ -99,11 +108,12 @@ final class GeneralPreferenceStore {
 	 * @return array<string,int>|null
 	 */
 	private function revisions( array $document ): ?array {
+		$required = array_diff_key( self::SCOPES, array_flip( self::LATER_SCOPES ) );
 		if ( ! array_key_exists( '_revisions', $document ) ) {
-			return array_fill_keys( array_keys( self::SCOPES ), 0 );
+			return array_fill_keys( array_keys( $required ), 0 );
 		}
 		$revisions = $document['_revisions'];
-		if ( ! is_array( $revisions ) || array_diff_key( self::SCOPES, $revisions ) ) {
+		if ( ! is_array( $revisions ) || array_diff_key( $required, $revisions ) ) {
 			return null;
 		}
 		foreach ( $revisions as $scope => $revision ) {
@@ -186,7 +196,9 @@ final class GeneralPreferenceStore {
 				return $this->finish( $wpdb, false, 'stale' );
 			}
 		}
-		if ( 'all' !== $scope ) {
+		if ( 'all' === $scope ) {
+			$editable = array_values( array_diff( $editable, self::LATER_SCOPES ) );
+		} else {
 			$editable = array_values( array_intersect( $editable, self::SCOPES[ $scope ] ) );
 			if ( 'numeric' !== $scope && 1 !== count( $editable ) ) {
 				return $this->finish( $wpdb, false, 'invalid' );
@@ -204,11 +216,22 @@ final class GeneralPreferenceStore {
 				$replacement[ $key ] = $value;
 			}
 		}
-		foreach ( 'all' === $scope ? array_keys( self::SCOPES ) : array( $scope ) as $changed_scope ) {
-			if ( PHP_INT_MAX === $revisions[ $changed_scope ] ) {
+		if ( array_key_exists( 'package_sources', $values ) ) {
+			unset( $replacement['package_sources_address'] );
+			if ( true === $values['package_sources'] ) {
+				$address = self::site_address();
+				if ( '' === $address ) {
+					return $this->finish( $wpdb, false, 'failed' );
+				}
+				$replacement['package_sources_address'] = $address;
+			}
+		}
+		foreach ( 'all' === $scope ? array_diff( array_keys( self::SCOPES ), self::LATER_SCOPES ) : array( $scope ) as $changed_scope ) {
+			$revision = $revisions[ $changed_scope ] ?? 0;
+			if ( PHP_INT_MAX === $revision ) {
 				return $this->finish( $wpdb, false, 'failed' );
 			}
-			++$revisions[ $changed_scope ];
+			$revisions[ $changed_scope ] = $revision + 1;
 		}
 		$replacement['_revisions'] = $revisions;
 		if ( ! $this->write_locked_option( $wpdb, $state, $replacement ) ) {
@@ -271,7 +294,7 @@ final class GeneralPreferenceStore {
 		$parsed = array();
 		foreach ( $editable as $key ) {
 			$value = $submitted[ $key ];
-			if ( in_array( $key, array( 'hide_github', 'self_update_discovery' ), true ) ) {
+			if ( in_array( $key, array( 'hide_github', 'self_update_discovery', 'package_sources' ), true ) ) {
 				if ( ! is_string( $value ) || ! in_array( $value, array( '0', '1' ), true ) ) {
 					return null;
 				}
@@ -348,7 +371,47 @@ final class GeneralPreferenceStore {
 			'history_rows'          => $this->integer_projection( $document, 'history_rows', 'RAN_BOOSTER_HISTORY_ROWS', 200, 100000 ),
 			'history_days'          => $this->integer_projection( $document, 'history_days', 'RAN_BOOSTER_HISTORY_DAYS', 1, 365 ),
 			'max_download_bytes'    => $this->integer_projection( $document, 'max_download_bytes', 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 1048576, 536870911 ),
+			'package_sources'       => $this->package_sources_projection( $document ),
 		);
+	}
+
+	/**
+	 * The constant wins. A saved "on" holds only for the site address it was turned on for,
+	 * so a database copied to another site arrives with it off ('address_changed').
+	 *
+	 * @param array<string,mixed> $document
+	 * @return array{value:bool,source:'default'|'saved'|'code',locked:bool,error:?string}
+	 */
+	private function package_sources_projection( array $document ): array {
+		if ( defined( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' ) ) {
+			$value = constant( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES' );
+			return array(
+				'value'  => true === $value,
+				'source' => 'code',
+				'locked' => true,
+				'error'  => is_bool( $value ) ? null : 'invalid_code',
+			);
+		}
+		$field   = $this->boolean_projection( $document, 'package_sources' );
+		$address = $document['package_sources_address'] ?? null;
+		if ( true === $field['value'] && ( ! is_string( $address ) || '' === $address || ! hash_equals( $address, self::site_address() ) ) ) {
+			return array(
+				'value'  => false,
+				'source' => 'saved',
+				'locked' => false,
+				'error'  => 'address_changed',
+			);
+		}
+		return $field;
+	}
+
+	/** The home address without its scheme or trailing slash, so a move to HTTPS keeps the setting. */
+	private static function site_address(): string {
+		$parts = wp_parse_url( home_url() );
+		if ( ! is_array( $parts ) || ! is_string( $parts['host'] ?? null ) || '' === $parts['host'] ) {
+			return '';
+		}
+		return strtolower( $parts['host'] ) . ( isset( $parts['port'] ) ? ':' . $parts['port'] : '' ) . rtrim( (string) ( $parts['path'] ?? '' ), '/' );
 	}
 
 	/**
@@ -462,6 +525,7 @@ final class GeneralPreferenceStore {
 		return match ( $key ) {
 			'hide_github' => false,
 			'self_update_discovery' => true,
+			'package_sources' => false,
 			default => throw new \LogicException( 'Unknown boolean preference.' ),
 		};
 	}

@@ -693,7 +693,7 @@ class Dashboard {
 		$token                      = $request['token'] ?? null;
 		$scope                      = $request['scope'] ?? 'all';
 		$this->general_failed_scope = is_string( $scope ) ? $scope : 'all';
-		if ( ! is_array( $values ) || ! is_string( $token ) || ! is_string( $scope ) || ! in_array( $scope, array( 'all', 'hide_github', 'self_update_discovery', 'numeric' ), true ) || null === $this->github_visibility ) {
+		if ( ! is_array( $values ) || ! is_string( $token ) || ! is_string( $scope ) || ! in_array( $scope, array( 'all', 'hide_github', 'self_update_discovery', 'numeric', 'package_sources' ), true ) || null === $this->github_visibility ) {
 			$this->general_feedback = __( 'Settings could not be saved. Reload the page and try again.', 'ran-booster' );
 			return false;
 		}
@@ -717,6 +717,11 @@ class Dashboard {
 					$this->general_feedback = __( 'Settings saved; cached update offers could not be cleared. Discovery remains disabled.', 'ran-booster' );
 					return false;
 				}
+			}
+			if ( 'package_sources' === $scope && ! \RAN\Deployment\PackageSourceGate::allows() ) {
+				// Paused downloads stay blocked regardless; this only removes offers made before the pause.
+				delete_site_transient( 'update_plugins' );
+				delete_site_transient( 'update_themes' );
 			}
 			$this->general_attempted    = array();
 			$this->general_failed_scope = null;

@@ -9,6 +9,7 @@ use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 use RAN\Deployment\PackageMutationGuard;
+use RAN\Deployment\PackageSourceGate;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -228,6 +229,10 @@ final readonly class BulkPackageActionService {
 			}
 			if ( PackageSource::BRANCH !== $package->get_source() ) {
 				$this->increment( $skipped, 'release_source' );
+				continue;
+			}
+			if ( PackageSourceGate::pauses( PackageSource::BRANCH ) ) {
+				$this->increment( $skipped, 'paused' );
 				continue;
 			}
 			try {

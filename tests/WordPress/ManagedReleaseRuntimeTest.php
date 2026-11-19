@@ -356,6 +356,47 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 4, $pre_download[0]['acceptedArgs'] );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_registrar_carries_a_paused_preview_track_as_disabled_and_leaves_stable_alone(): void {
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+		$GLOBALS['ran_booster_storage_test_options']  = array();
+		$plugin                                       = $this->package( 'plugin', 'stable/stable.php', 'stable', DeploymentPolicy::MANUAL, repository_id: 'stable-repository' );
+		$theme                                        = $this->package( 'theme', 'preview-theme', 'preview-theme', DeploymentPolicy::AUTOMATIC, repository_id: 'preview-repository' );
+		$plugins                                      = $this->createStub( PluginRepository::class );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'stable/stable.php' => $plugin ) );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'all_deployment_themes' )->willReturn( array( 'preview-theme' => $theme ) );
+		$store     = new RuntimeReleaseStore(
+			array(
+				"plugin\0stable/stable.php" => new ManagedReleaseConfiguration( 'stable', 'stable.php' ),
+				"theme\0preview-theme"      => new ManagedReleaseConfiguration( 'preview-theme', 'style.css', 'prerelease' ),
+			)
+		);
+		$targets   = array();
+		$registrar = $this->registrar(
+			$plugins,
+			$themes,
+			$store,
+			new RuntimeUpdaterLock(),
+			$this->release_metadata_registry(
+				target_factory: static function ( mixed ...$options ) use ( &$targets ): object {
+					$targets[] = $options;
+
+					return new RuntimeUpdaterFacade();
+				}
+			)
+		);
+
+		$registrar->register();
+
+		self::assertSame( '', $registrar->failure_code( 'theme', 'preview-theme' ) );
+		self::assertSame( array( 'manual', 'disabled' ), array_column( $targets, 'autoUpdatePolicy' ) );
+		self::assertSame( array( 'stable', 'prerelease' ), array_column( $targets, 'channel' ) );
+		self::assertSame( DeploymentPolicy::AUTOMATIC, $theme->get_deployment_policy(), 'The saved policy is untouched.' );
+	}
+
 	public function test_registrar_quarantines_every_legacy_release_target_for_one_repository(): void {
 		$plugin  = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::DISABLED );
 		$theme   = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::DISABLED );
@@ -2949,6 +2990,46 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'subdirectory_not_supported', $status->failure_code() );
 		self::assertSame( array(), $store->channel_changes );
 		self::assertSame( 0, $lock->acquires );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_a_paused_site_refuses_switching_into_preview_or_a_branch(): void {
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+		$GLOBALS['ran_booster_storage_test_options']  = array();
+		$package                                      = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL );
+		$plugins                                      = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore(
+			array( "plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ) )
+		);
+		$lock      = new RuntimeUpdaterLock();
+		$providers = $this->release_metadata_registry();
+		$facade    = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadata_eligible: static fn (): bool => true
+		);
+
+		self::assertSame(
+			array( 'source_paused', 'source_paused', 'source_paused', 'release_channel_current' ),
+			array(
+				$facade->change_channel( 'plugin', 'example/example.php', 1, 'prerelease', 'nonce' )->code(),
+				$facade->enable( 'plugin', 'example/example.php', 1, 'prerelease', 'nonce' )->code(),
+				$facade->return_to_branch( 'plugin', 'example/example.php', 1, 'nonce' )->code(),
+				$facade->change_channel( 'plugin', 'example/example.php', 1, 'stable', 'nonce' )->code(),
+			)
+		);
+		self::assertSame( array(), $store->channel_changes );
+		self::assertSame( array(), $store->transitions );
 	}
 
 	public function test_facade_projects_native_diagnostics_and_refreshes_only_exact_release_revision(): void {

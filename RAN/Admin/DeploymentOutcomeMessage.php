@@ -20,6 +20,7 @@ final class DeploymentOutcomeMessage {
 			'webhook.unmatched.policy_not_automatic' => __( 'Push received; the package\'s updates are not set to Automatic.', 'ran-booster' ),
 			'webhook.unmatched.branch_mismatch' => __( 'Push received; the package follows another branch.', 'ran-booster' ),
 			'webhook.unmatched.repository_id_mismatch' => __( 'Push received; the repository ID does not match the package\'s.', 'ran-booster' ),
+			'webhook.unmatched.paused' => __( 'Push received; updates are paused by a site setting.', 'ran-booster' ),
 			default => null,
 		};
 		if ( null !== $unmatched ) {
@@ -179,6 +180,7 @@ final class DeploymentOutcomeMessage {
 			'deployment_destination_exists'  => __( 'The package destination already exists and cannot be replaced safely. Link the installed plugin or theme in Booster if it is correct; otherwise inspect it and Activity before retrying.', 'ran-booster' ),
 			'deployment_self_update_blocked' => __( 'Booster cannot update itself during this deployment. Update Booster separately before retrying the managed package.', 'ran-booster' ),
 			'deployment_release_source_blocked' => __( 'Branch deployment is unavailable for this release-managed package. Use Published releases or WordPress Updates for the release source, or explicitly switch the package source back to Branch.', 'ran-booster' ),
+			'source_paused'                  => __( 'Updates are paused by a site setting.', 'ran-booster' ),
 			'deployment_maintenance_active'  => __( 'A maintenance file is present. Check whether an update is still running and inspect the maintenance state and Activity before retrying.', 'ran-booster' ),
 			default                          => __( 'Booster recorded an unavailable deployment outcome. Open Troubleshooting, verify the package state before retrying, and submit a redacted report if it repeats.', 'ran-booster' ),
 		};

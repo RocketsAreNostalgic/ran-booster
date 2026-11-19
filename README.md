@@ -196,6 +196,20 @@ refuse new work when protected records exhaust capacity; resolving attention
 never invents a successful deployment. Activity pages render at most 25 rows.
 The old `RAN_BOOSTER_MAX_ATTEMPT_ROWS` setting is retired for clean-start rollout.
 
+### Branch and pre-release sources
+
+Outside a development site, Booster pauses packages that follow a branch or a
+pre-release (Preview) track until the site allows them. A development site has an
+explicit `local` or `development` environment type, or a loopback, `.test` or
+`.local` home host. To allow them on any other site:
+
+```php
+define( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', true );
+```
+
+Stable releases and Booster's own updates are never paused. See
+[Settings](docs/settings.md) for the saved setting and its address binding.
+
 ### Repository download limits
 
 Git provider deployments download a ZIP of the whole repository; selecting a

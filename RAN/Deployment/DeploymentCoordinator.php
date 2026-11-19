@@ -32,7 +32,7 @@ use Throwable;
 class DeploymentCoordinator {
 
 	/** Why a signed push matched no package: the closest candidate's first failing check, in check order. */
-	public const UNMATCHED_REASONS = array( 'no_candidate', 'release_source', 'policy_not_automatic', 'branch_mismatch', 'repository_id_mismatch' );
+	public const UNMATCHED_REASONS = array( 'no_candidate', 'release_source', 'policy_not_automatic', 'branch_mismatch', 'repository_id_mismatch', 'paused' );
 
 	private WordPressCorePackageExecutor $branch_executor;
 
@@ -76,6 +76,7 @@ class DeploymentCoordinator {
 			if ( null !== $command->expected_identifier && ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || ! in_array( constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 3, 4 ), true ) ) ) {
 				throw new RuntimeException( 'The branch updater cannot verify the expected initial package identity.' );
 			}
+			PackageSourceGate::assert_allowed( PackageSource::BRANCH );
 			$this->source_guard->assert_allowed( $command->provider_code, $provider_id, 'plugin' === $type ? 1 : 2, $command->identifier ?? $command->package_slug, PackageSource::BRANCH );
 			$this->providers->get( ProviderCode::parse( $command->provider_code ) );
 			$request = new DeploymentRequest(
@@ -110,6 +111,7 @@ class DeploymentCoordinator {
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; presentation owns escaping.
 				throw new DeploymentCheckFailure( DeploymentOutcome::CODE_POLICY_BLOCKED, 'The package is disabled for Booster deployments.' );
 			}
+			PackageSourceGate::assert_allowed( $package->get_source() );
 			$request       = $this->request_from_package( $package, $user_id > 0 ? $user_id : null, $command->selected_commit );
 			$requested_ref = $command->selected_commit ?? $command->ref ?? $request->configured_branch;
 			$attempt       = $this->attempts->admit_and_claim_manual(
@@ -453,6 +455,7 @@ class DeploymentCoordinator {
 		$closest    = 0;
 		$normalizer = $this->providers->require_capability( $event->provider, WebhookNormalizer::class );
 		$policy     = $normalizer->get_webhook_policy();
+		$allowed    = PackageSourceGate::allows();
 		foreach ( array(
 			'plugin' => $this->plugins->all_deployment_plugins(),
 			'theme'  => $this->themes->all_deployment_themes(),
@@ -471,6 +474,7 @@ class DeploymentCoordinator {
 						2 => $package->get_deployment_policy()->allows_webhook_mutation(),
 						3 => (string) $package->get_branch() === $event->branch,
 						4 => null !== $package->get_provider_repository_id() && hash_equals( (string) $package->get_provider_repository_id(), $event->provider_repository_id ),
+						5 => $allowed,
 					),
 					true
 				);

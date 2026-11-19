@@ -275,6 +275,68 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		self::assertSame( $subdirectory, $request->subdirectory );
 	}
 
+	public function test_a_site_that_pauses_branch_sources_refuses_every_route_and_rechecks_at_execution(): void {
+		$package    = $this->package( 'plugin', 'mypackage', 'packages/MyPackage' );
+		$identifier = (string) $package->get_identifier();
+		$this->inventory( 'plugin', $package );
+		$this->database->management[ $identifier ]      = (string) $package->get_adoption_token();
+		$this->database->management_rows[ $identifier ] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_example',
+			'repository'             => 'owner/example',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => 'packages/MyPackage',
+			'deployment_policy'      => 'automatic',
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
+		$executor                                       = $this->createMock( WordPressCorePackageExecutor::class );
+		$executor->expects( self::never() )->method( self::anything() );
+		$coordinator = $this->coordinator( $executor );
+		$bulk        = fn (): \RAN\Admin\BulkPackageResult => ( new BulkPackageActionService( $this->plugins, $this->themes, $this->providers, new SecretsFile(), $coordinator, new WordPressUpdaterLock() ) )->execute(
+			BulkPackageAction::from_input(
+				'plugin',
+				array(
+					'bulk_action'     => BulkPackageAction::QUEUE_UPDATE,
+					'identifiers'     => array( $identifier ),
+					'adoption_tokens' => array( hash( 'sha256', $identifier ) => $package->get_adoption_token() ),
+				)
+			)
+		);
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+
+		foreach ( array(
+			'install' => PackageOperation::from_input( 'install-plugin', $this->install_input() ),
+			'update'  => $this->update_command( 'plugin', $package ),
+		) as $route => $command ) {
+			try {
+				$coordinator->execute_manual( $command );
+				self::fail( $route );
+			} catch ( DeploymentCheckFailure $failure ) {
+				self::assertSame( DeploymentOutcome::CODE_SOURCE_PAUSED, $failure->outcome_code, $route );
+			}
+		}
+		$skipped = $bulk();
+		self::assertSame( array( 0, array( 'paused' => 1 ) ), array( $skipped->queued, $skipped->skipped_by_reason ) );
+		self::assertSame( array(), $this->database->rows, 'Nothing is admitted while paused.' );
+		$push = new PushEvent( ProviderCode::parse( 'gh' ), 'owner/example', 'R_example', 'main', str_repeat( 'a', 40 ), 'paused-delivery' );
+		self::assertSame( 0, $coordinator->accept_webhook( array( $push ), str_repeat( 'b', 64 ) )['accepted_targets'], 'A push to a paused package is accepted with nothing to run.' );
+		self::assertSame( array( 'delivery' ), array_column( $this->database->rows, 'requested_ref' ), 'Only the delivery record is kept.' );
+		$this->database->rows = array();
+
+		// Queued while allowed, then paused before the worker runs: the attempt fails as paused.
+		$GLOBALS['ran_booster_test_environment_type'] = 'local';
+		self::assertSame( 1, $bulk()->queued );
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		$attempt                                      = $this->attempts->claim_next();
+		self::assertNotNull( $attempt );
+		$outcome = $coordinator->execute_claimed( $attempt );
+		self::assertSame( array( DeploymentState::FAILED, DeploymentOutcome::CODE_SOURCE_PAUSED ), array( $outcome->get_state(), $outcome->get_code() ) );
+	}
+
 	/** @return iterable<string, array{string, bool, bool}> */
 	public static function link_targets(): iterable {
 		foreach ( array( 'plugin', 'theme' ) as $type ) {

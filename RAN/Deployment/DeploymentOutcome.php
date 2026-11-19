@@ -81,6 +81,7 @@ final readonly class DeploymentOutcome {
 	public const CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED    = 'deployment_self_update_blocked';
 	public const CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED = 'deployment_release_source_blocked';
 	public const CODE_DEPLOYMENT_MAINTENANCE_ACTIVE     = 'deployment_maintenance_active';
+	public const CODE_SOURCE_PAUSED                     = 'source_paused';
 
 	/** @var array<string, DeploymentState> */
 	private const STATES = array(
@@ -153,6 +154,7 @@ final readonly class DeploymentOutcome {
 		self::CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED    => DeploymentState::FAILED,
 		self::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED => DeploymentState::FAILED,
 		self::CODE_DEPLOYMENT_MAINTENANCE_ACTIVE     => DeploymentState::FAILED,
+		self::CODE_SOURCE_PAUSED                     => DeploymentState::FAILED,
 	);
 
 	private function __construct( private string $code, private DeploymentState $state, private ?ProviderFailure $provider_failure = null ) {

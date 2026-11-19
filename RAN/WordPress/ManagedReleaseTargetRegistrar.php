@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace RAN\WordPress;
 
+use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\PackageMutationGuard;
+use RAN\Deployment\PackageSourceGate;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
@@ -626,7 +628,7 @@ final class ManagedReleaseTargetRegistrar {
 			$configuration->package_root(),
 			$identifier,
 			$configuration->channel(),
-			$package->get_deployment_policy()->value
+			self::effective_policy( $package, $configuration )
 		);
 		if ( ! $target->register() ) {
 			throw new \RuntimeException( 'The managed release target could not be registered.' );
@@ -823,8 +825,18 @@ final class ManagedReleaseTargetRegistrar {
 			'credential_id'          => $package->get_credential_id(),
 			'private'                => $package->get_private() ? 1 : 0,
 			'configuration'          => $configuration->to_json(),
-			'deployment_policy'      => $package->get_deployment_policy()->value,
+			'deployment_policy'      => self::effective_policy( $package, $configuration ),
 		);
+	}
+
+	/**
+	 * A paused pre-release track is carried to the updater as disabled, not forced-off, so the
+	 * read-only Check releases still answers. The saved policy is untouched and returns with the override.
+	 */
+	private static function effective_policy( Package $package, ManagedReleaseConfiguration $configuration ): string {
+		return PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $configuration->channel() )
+			? DeploymentPolicy::DISABLED->value
+			: $package->get_deployment_policy()->value;
 	}
 
 	private function native_update_error( string $reason ): \WP_Error {

@@ -658,6 +658,94 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		self::assertSame( $original, $GLOBALS['ran_booster_general_preference_raw'] );
 	}
 
+	public function test_package_sources_saves_alone_binds_the_site_address_and_lapses_when_it_changes(): void {
+		$store                                = new GeneralPreferenceStore();
+		$lock                                 = static fn ( callable $operation ): string => $operation();
+		$eligible                             = static fn (): bool => true;
+		$read                                 = static fn (): array => \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] );
+		$GLOBALS['ran_booster_test_home_url'] = 'http://Example.com/site/';
+		self::assertSame( array( false, 'default' ), array( $store->projection()['package_sources']['value'], $store->projection()['package_sources']['source'] ) );
+		self::assertSame( 'invalid', $store->save( $store->snapshot()['token'], array_merge( $this->submission(), array( 'package_sources' => '1' ) ), $lock, $eligible ), 'An all-fields save never carries it.' );
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens']['package_sources'], array( 'package_sources' => '1' ), $lock, $eligible, 'package_sources' ) );
+		self::assertSame( array( true, 'example.com/site' ), array( $read()['package_sources'], $read()['package_sources_address'] ) );
+		self::assertSame(
+			array(
+				'hide_github'           => 0,
+				'self_update_discovery' => 0,
+				'numeric'               => 0,
+				'package_sources'       => 1,
+			),
+			$read()['_revisions']
+		);
+
+		$GLOBALS['ran_booster_test_home_url'] = 'https://example.com/site';
+		self::assertTrue( $store->projection()['package_sources']['value'], 'A move to HTTPS keeps it.' );
+		$GLOBALS['ran_booster_test_home_url'] = 'https://copy.example.com/site';
+		self::assertSame(
+			array(
+				'value'  => false,
+				'source' => 'saved',
+				'locked' => false,
+				'error'  => 'address_changed',
+			),
+			$store->projection()['package_sources']
+		);
+		self::assertSame( 'saved', $store->save( $store->snapshot()['token'], $this->submission(), $lock, $eligible ) );
+		self::assertSame( 1, $read()['_revisions']['package_sources'], 'An all-fields save leaves it alone.' );
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens']['package_sources'], array( 'package_sources' => '0' ), $lock, $eligible, 'package_sources' ) );
+		self::assertArrayNotHasKey( 'package_sources', $read() );
+		self::assertArrayNotHasKey( 'package_sources_address', $read() );
+	}
+
+	public function test_a_document_saved_before_package_sources_existed_stays_valid(): void {
+		$store    = new GeneralPreferenceStore();
+		$lock     = static fn ( callable $operation ): string => $operation();
+		$eligible = static fn (): bool => true;
+		$this->seed(
+			array(
+				'history_rows' => 300,
+				'_revisions'   => array(
+					'hide_github'           => 2,
+					'self_update_discovery' => 1,
+					'numeric'               => 4,
+				),
+			)
+		);
+		self::assertFalse( $store->snapshot()['malformed'] );
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens']['numeric'], array_slice( $this->submission(), 2 ), $lock, $eligible, 'numeric' ) );
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens']['package_sources'], array( 'package_sources' => '1' ), $lock, $eligible, 'package_sources' ) );
+		self::assertSame(
+			array(
+				'hide_github'           => 2,
+				'self_update_discovery' => 1,
+				'numeric'               => 5,
+				'package_sources'       => 1,
+			),
+			\RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['_revisions']
+		);
+	}
+
+	public function test_the_package_sources_constant_wins_and_locks_the_setting(): void {
+		define( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', true );
+		$this->seed( array( 'package_sources' => false ) );
+		$store = new GeneralPreferenceStore();
+		self::assertSame(
+			array(
+				'value'  => true,
+				'source' => 'code',
+				'locked' => true,
+				'error'  => null,
+			),
+			$store->projection()['package_sources']
+		);
+		self::assertSame( 'invalid', $store->save( $store->view_snapshot()['tokens']['package_sources'], array( 'package_sources' => '0' ), static fn ( callable $operation ): string => $operation(), static fn (): bool => true, 'package_sources' ) );
+	}
+
+	public function test_an_invalid_package_sources_constant_counts_as_off(): void {
+		define( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', 'yes' );
+		self::assertSame( array( false, 'invalid_code' ), array_values( array_intersect_key( ( new GeneralPreferenceStore() )->projection()['package_sources'], array_flip( array( 'value', 'error' ) ) ) ) );
+	}
+
 	/** @param array<string,mixed> $value */
 	private function seed( array $value ): void {
 		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( $value );

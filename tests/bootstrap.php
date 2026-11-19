@@ -20,3 +20,6 @@ if ( false !== $ran_booster_tmpdir ) {
 unset( $ran_booster_tmpdir );
 
 require dirname( __DIR__ ) . '/vendor/autoload.php';
+
+// Unit tests run on a development site unless a test of the package source gate says otherwise.
+require __DIR__ . '/Support/PackageSourceGateWordPressFunctions.php';

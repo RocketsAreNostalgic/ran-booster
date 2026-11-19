@@ -186,6 +186,13 @@ and current Activity observations. Retention targets can therefore be exceeded;
 the journal refuses new work when safe capacity is unavailable. Activity pages
 display at most 25 records, with Load older activity pagination.
 
+Outside a development site, packages that follow a branch or a pre-release
+(Preview) track are paused until `RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES`
+is set to `true` in `wp-config.php` or the site's saved setting allows them. A
+development site has an explicit `local` or `development` environment type, or a
+loopback, `.test` or `.local` home host. Stable releases and Booster's own
+updates are never paused.
+
 Git provider deployments download the whole repository ZIP, even when a package
 subdirectory is selected. The target-site default is 50 MiB compressed and
 200 MiB expanded. Operators can set a site-wide compressed limit from 1 MiB

@@ -304,6 +304,7 @@ final class ProspectiveReleaseOperations {
 			'wordpress_restored',
 			'wordpress_uncertain',
 			'operation_mismatch',
+			'source_paused',
 		);
 		if ( ! $successful ) {
 			if ( ! in_array( $code, $failure_codes, true )

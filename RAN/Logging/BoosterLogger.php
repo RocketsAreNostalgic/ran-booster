@@ -127,7 +127,7 @@ final class BoosterLogger {
 
 	/** Sample a closed intake observation only in an explicitly configured active capture. */
 	public static function capture_webhook( string $reason ): bool {
-		if ( ! in_array( $reason, WebhookRejected::REASONS, true ) ) {
+		if ( ! in_array( $reason, WebhookRejected::REASONS, true ) && ! in_array( $reason, \RAN\Deployment\DeploymentCoordinator::UNMATCHED_REASONS, true ) ) {
 			return false;
 		}
 

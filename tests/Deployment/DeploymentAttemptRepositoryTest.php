@@ -51,6 +51,44 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 	}
 
+	public function test_an_unmatched_push_is_recorded_once_per_repository_reason_and_hour(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$repository                              = new DeploymentAttemptRepository( $this->database, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->database_lifecycle, activity: new ActivityStore( $connection, 'wp_ran_booster_activity' ) );
+		$keys                                    = array();
+		foreach ( \RAN\Deployment\DeploymentCoordinator::UNMATCHED_REASONS as $reason ) {
+			$repository->record_unmatched_push( 'gh', 'owner/example', 'R_example', $reason );
+			$row      = $connection->inserted[ count( $connection->inserted ) - 1 ];
+			$complete = $connection->prepared[ count( $connection->prepared ) - 1 ];
+			self::assertSame( array( 'repository', 'owner/example', null, null, 'webhook.push' ), array( $row['subject_type'], $row['subject_identity'], $row['adoption_token'], $row['purpose'], $row['operation'] ), $reason );
+			self::assertStringContainsString( 'SET status = %s, reason = %s', $complete['sql'], $reason );
+			self::assertSame( array( 'skipped', 'webhook.unmatched.' . $reason ), array_slice( $complete['args'], 0, 2 ), $reason );
+			$keys[ $reason ] = $row['context_key'];
+		}
+		self::assertCount( 5, array_unique( $keys ) );
+
+		// A second push in the same hour finds the first entry's skip in its context and is dropped.
+		$hours                    = array( gmdate( 'YmdH' ) );
+		$connection->read_results = array(
+			array(
+				(object) array(
+					'status'     => 'skipped',
+					'reason'     => 'webhook.unmatched.branch_mismatch',
+					'started_at' => gmdate( 'Y-m-d H:i:s' ),
+				),
+			),
+		);
+		$repository->record_unmatched_push( 'gh', 'owner/example', 'R_example', 'branch_mismatch' );
+		$hours[] = gmdate( 'YmdH' );
+		$repeat  = $connection->inserted[ count( $connection->inserted ) - 1 ];
+		self::assertContains( $repeat['context_key'], array_map( static fn ( string $hour ): string => hash( 'sha256', "repository\0owner/example\0\0R_example\0branch_mismatch\0" . $hour ), $hours ) );
+		self::assertStringStartsWith( 'DELETE FROM', $connection->queries[ count( $connection->queries ) - 1 ] );
+		self::assertCount( 6, $connection->inserted );
+
+		$repository->record_unmatched_push( 'gh', 'owner/example', 'R_example', 'not_a_reason' );
+		self::assertCount( 6, $connection->inserted );
+	}
+
 	public function test_read_only_connection_cannot_start_a_deployment_transaction(): void {
 		$database   = new class( $this->database ) implements \RAN\Storage\SqlReadConnection {
 			public string $last_error = '';

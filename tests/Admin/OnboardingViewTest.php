@@ -982,6 +982,7 @@ final class OnboardingViewTest extends TestCase {
 			'items'             => array_fill( 0, 5, $row ),
 			'total'             => 8,
 			'hidden_critical'   => 2,
+			'more_url'          => '/plugins&attention=failed',
 		);
 		$extra     = array(
 			'storage_summary' => array( 'status' => 'storage_healthy' ),
@@ -993,7 +994,7 @@ final class OnboardingViewTest extends TestCase {
 		$card      = '//section[@aria-labelledby="ran-booster-overview-attention"]';
 		self::assertSame( 5.0, $xpath->evaluate( "count($card//a[@href=\"/activity&activity_package=x\"]/following-sibling::span[@data-ran-booster-badge-intent=\"high\"])" ) );
 		self::assertSame( 5, substr_count( $html, '&lt;Failed plugin&gt;' ) );
-		self::assertSame( 'Showing 5 of 8 items.', $xpath->evaluate( "string($card//a[@href=\"/activity\"])" ) );
+		self::assertSame( 'Showing 5 of 8 items.', $xpath->evaluate( "string($card//a[@href=\"/plugins&attention=failed\"])" ) );
 		self::assertStringContainsString( '2 more are critical.', $html );
 		self::assertStringContainsString( 'Release updates aren&#039;t shown here yet.', $html );
 		self::assertStringNotContainsString( 'Activity is unavailable.', $html );

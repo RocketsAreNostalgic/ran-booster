@@ -28,19 +28,22 @@ $package_extension_actions    = isset( $package_extension_actions ) && is_array(
 $package_list_state           = isset( $package_list_state ) && is_array( $package_list_state )
 	? array_merge(
 		array(
-			'search'   => '',
-			'provider' => '',
-			'source'   => '',
-			'policy'   => '',
+			'search'    => '',
+			'provider'  => '',
+			'source'    => '',
+			'policy'    => '',
+			'attention' => '',
 		),
 		$package_list_state
 	)
 	: array(
-		'search'   => '',
-		'provider' => '',
-		'source'   => '',
-		'policy'   => '',
+		'search'    => '',
+		'provider'  => '',
+		'source'    => '',
+		'policy'    => '',
+		'attention' => '',
 	);
+$package_attention_enabled    = true === ( $package_attention_enabled ?? false );
 $package_list_total           = isset( $package_list_total ) && is_int( $package_list_total )
 	? max( count( $packages ), $package_list_total )
 	: count( $packages );
@@ -166,6 +169,11 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				<option value="manual" <?php selected( 'manual', $package_list_state['policy'] ); ?>><?php esc_html_e( 'Manual', 'ran-booster' ); ?></option>
 				<option value="disabled" <?php selected( 'disabled', $package_list_state['policy'] ); ?>><?php esc_html_e( 'Disabled', 'ran-booster' ); ?></option>
 			</select>
+			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-attention-filter"><?php esc_html_e( 'Filter by status', 'ran-booster' ); ?></label>
+			<select id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-attention-filter" name="attention"<?php disabled( ! $package_attention_enabled ); ?>>
+				<option value=""><?php esc_html_e( 'All statuses', 'ran-booster' ); ?></option>
+				<option value="failed" <?php selected( 'failed', $package_list_state['attention'] ); ?>><?php esc_html_e( 'Update failed', 'ran-booster' ); ?></option>
+			</select>
 			<button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
 			<?php if ( $has_package_list_filters ) { ?>
 				<a class="ran-booster-package-list-filters__clear" href="<?php echo esc_url( $clear_filters_url ); ?>"><?php esc_html_e( 'Clear filters', 'ran-booster' ); ?></a>
@@ -174,7 +182,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 
 		<form class="ran-booster-package-list-search search-form" method="get" action="<?php echo esc_url( $package_admin_url ); ?>">
 			<input type="hidden" name="page" value="<?php echo esc_attr( $package_view->get_page_slug() ); ?>">
-			<?php foreach ( array( 'provider', 'source', 'policy' ) as $filter_key ) { ?>
+			<?php foreach ( array( 'provider', 'source', 'policy', 'attention' ) as $filter_key ) { ?>
 				<?php if ( '' !== $package_list_state[ $filter_key ] ) { ?>
 					<input type="hidden" name="<?php echo esc_attr( $filter_key ); ?>" value="<?php echo esc_attr( $package_list_state[ $filter_key ] ); ?>">
 				<?php } ?>

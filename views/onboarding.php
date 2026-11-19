@@ -91,6 +91,7 @@ $provider_attention         = array_filter(
 		'items'             => array(),
 		'total'             => 0,
 		'hidden_critical'   => 0,
+		'more_url'          => '',
 	);
 	$overview_inventory_incomplete = isset( $onboarding['inventory'] ) && empty( $onboarding['inventory']['complete'] );
 	$overview_storage_summary      = $onboarding['storage_summary'] ?? null;
@@ -134,7 +135,7 @@ $provider_attention         = array_filter(
 			<?php } ?>
 			<?php if ( $overview_attention['total'] > count( $overview_attention['items'] ) ) { ?>
 				<?php // translators: 1: displayed items, 2: total items. ?>
-				<p><a href="<?php echo esc_url( $onboarding['activity_url'] ?? '' ); ?>"><?php echo esc_html( sprintf( __( 'Showing %1$d of %2$d items.', 'ran-booster' ), count( $overview_attention['items'] ), $overview_attention['total'] ) ); ?></a>
+				<p><a href="<?php echo esc_url( $overview_attention['more_url'] ); ?>"><?php echo esc_html( sprintf( __( 'Showing %1$d of %2$d items.', 'ran-booster' ), count( $overview_attention['items'] ), $overview_attention['total'] ) ); ?></a>
 				<?php if ( $overview_attention['hidden_critical'] > 0 ) { ?>
 					<?php // translators: %d: hidden critical items. ?>
 					<?php echo esc_html( sprintf( _n( '%d more is critical.', '%d more are critical.', $overview_attention['hidden_critical'], 'ran-booster' ), $overview_attention['hidden_critical'] ) ); ?>

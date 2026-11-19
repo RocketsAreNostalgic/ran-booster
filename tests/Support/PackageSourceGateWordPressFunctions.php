@@ -2,10 +2,10 @@
 /**
  * The site facts PackageSourceGate reads, for unit tests that run without WordPress.
  *
- * The bootstrap loads this for every test, so unit tests run on a development site where the gate
- * pauses nothing, as they did before the gate existed. A test of the gate sets
- * `ran_booster_test_environment_type` and `ran_booster_test_home_url` to make a site that is not
- * a development site.
+ * The bootstrap loads this for every test. With nothing set the site has no explicit environment
+ * type and a localhost home, so it is a development site and the gate pauses nothing, as before
+ * the gate existed. `ran_booster_test_environment_type` stands for an explicitly set
+ * WP_ENVIRONMENT_TYPE and `ran_booster_test_home_url` for the home address.
  *
  * @package RAN\Booster\Tests
  */
@@ -14,8 +14,16 @@ declare(strict_types=1);
 
 namespace RAN\Deployment;
 
+function getenv( string $name ): string|false {
+	if ( 'WP_ENVIRONMENT_TYPE' === $name ) {
+		return isset( $GLOBALS['ran_booster_test_environment_type'] ) ? (string) $GLOBALS['ran_booster_test_environment_type'] : false;
+	}
+	return \getenv( $name );
+}
+
 function wp_get_environment_type(): string {
-	return (string) ( $GLOBALS['ran_booster_test_environment_type'] ?? 'local' );
+	$type = getenv( 'WP_ENVIRONMENT_TYPE' );
+	return in_array( $type, array( 'local', 'development', 'staging', 'production' ), true ) ? $type : 'production';
 }
 
 function home_url(): string {

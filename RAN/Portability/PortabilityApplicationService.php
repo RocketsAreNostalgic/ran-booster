@@ -201,6 +201,10 @@ final readonly class PortabilityApplicationService {
 		}
 		$context = $this->candidate_context( $candidate );
 		$review  = $context['review'];
+		// Paused since review: say so rather than asking for a review that would only say it again.
+		if ( PortabilityReviewResult::BLOCKED === $review->action && 'forbidden' === $review->reason ) {
+			return new PortabilityApplyResult( PortabilityApplyResult::BLOCKED, 'forbidden', $review->message, false );
+		}
 		if ( ! hash_equals( $review->fingerprint, $expected_fingerprint ) ) {
 			return new PortabilityApplyResult(
 				PortabilityApplyResult::BLOCKED,
@@ -235,9 +239,6 @@ final readonly class PortabilityApplicationService {
 		if ( null !== $refusal ) {
 			$reason = TargetPackageReason::from( $refusal );
 			return new PortabilityApplyResult( PortabilityApplyResult::BLOCKED, $refusal, $reason->message(), false );
-		}
-		if ( self::paused( $package ) ) {
-			return new PortabilityApplyResult( PortabilityApplyResult::BLOCKED, 'forbidden', __( 'Updates are paused by a site setting.', 'ran-booster' ), false );
 		}
 		$result = $this->apply_item(
 			$blueprint,
@@ -678,12 +679,13 @@ final readonly class PortabilityApplicationService {
 			$item = new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::from( $refusal ) );
 		}
 
+		$paused = TargetPackageAction::ADOPT === $item->action && self::paused( $package );
 		return array(
 			'review'  => PortabilityReviewResult::from_resolved(
 				$candidate,
-				$item->action->value,
-				$item->reason->value,
-				$item->reason->message(),
+				$paused ? PortabilityReviewResult::BLOCKED : $item->action->value,
+				$paused ? 'forbidden' : $item->reason->value,
+				$paused ? __( 'Updates are paused by a site setting.', 'ran-booster' ) : $item->reason->message(),
 				$package->provider_repository_id,
 				$private,
 				$expectation

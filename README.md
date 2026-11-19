@@ -199,9 +199,11 @@ The old `RAN_BOOSTER_MAX_ATTEMPT_ROWS` setting is retired for clean-start rollou
 ### Branch and pre-release sources
 
 Outside a development site, Booster pauses packages that follow a branch or a
-pre-release (Preview) track until the site allows them. A development site has an
-explicit `local` or `development` environment type, or a loopback, `.localhost`,
-`.test` or `.local` home host. To allow them on any other site:
+pre-release (Preview) track until the site allows them. When `WP_ENVIRONMENT_TYPE`
+is set, as a constant or an environment variable, only `local` or `development`
+makes a development site; `production` or `staging` overrides the home address.
+When it is not set, a loopback, `.localhost`, `.test` or `.local` home host makes
+a development site. To allow them on any other site:
 
 ```php
 define( 'RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES', true );

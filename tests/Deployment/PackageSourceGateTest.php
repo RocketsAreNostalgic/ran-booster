@@ -19,25 +19,27 @@ require_once __DIR__ . '/../Settings/GeneralPreferenceStoreWordPressFunctions.ph
 #[PreserveGlobalState( false )]
 final class PackageSourceGateTest extends TestCase {
 
-	/** @return iterable<string, array{string, string, bool}> */
+	/** @return iterable<string, array{?string, string, bool}> A null environment type is one not set explicitly. */
 	public static function sites(): iterable {
-		yield 'local environment' => array( 'local', 'https://example.com', true );
-		yield 'development environment' => array( 'development', 'https://example.com', true );
-		yield 'localhost' => array( 'production', 'http://localhost:8080', true );
-		yield 'IPv4 loopback' => array( 'production', 'http://127.0.0.1', true );
-		yield 'IPv6 loopback' => array( 'production', 'http://[::1]/wp', true );
-		yield '.localhost host' => array( 'production', 'https://site.localhost', true );
-		yield '.test host' => array( 'production', 'https://site.test', true );
-		yield '.local host' => array( 'production', 'https://Site.Local/', true );
-		yield 'production' => array( 'production', 'https://example.com', false );
-		yield 'staging' => array( 'staging', 'https://staging.example.com', false );
-		yield 'loopback-looking name' => array( 'production', 'https://127.example.com', false );
-		yield 'test subdomain' => array( 'production', 'https://test.example.com', false );
-		yield 'local in the path only' => array( 'production', 'https://example.com/site.local', false );
+		yield 'explicit local' => array( 'local', 'https://example.com', true );
+		yield 'explicit development' => array( 'development', 'https://example.com', true );
+		yield 'explicit production overrides a .test host' => array( 'production', 'https://site.test', false );
+		yield 'explicit staging overrides localhost' => array( 'staging', 'http://localhost', false );
+		yield 'an unknown explicit value reads as production' => array( 'qa', 'https://site.local', false );
+		yield 'unset with a .test host' => array( null, 'https://site.test', true );
+		yield 'unset with localhost' => array( null, 'http://localhost:8080', true );
+		yield 'unset with IPv4 loopback' => array( null, 'http://127.0.0.1', true );
+		yield 'unset with IPv6 loopback' => array( null, 'http://[::1]/wp', true );
+		yield 'unset with a .localhost host' => array( null, 'https://site.localhost', true );
+		yield 'unset with a .local host' => array( null, 'https://Site.Local/', true );
+		yield 'unset with a public host' => array( null, 'https://example.com', false );
+		yield 'unset with a loopback-looking name' => array( null, 'https://127.example.com', false );
+		yield 'unset with a test subdomain' => array( null, 'https://test.example.com', false );
+		yield 'unset with local in the path only' => array( null, 'https://example.com/site.local', false );
 	}
 
 	#[DataProvider( 'sites' )]
-	public function test_only_a_development_site_gates_nothing( string $environment, string $home, bool $development ): void {
+	public function test_only_a_development_site_gates_nothing( ?string $environment, string $home, bool $development ): void {
 		$this->site( $environment, $home );
 
 		self::assertSame( $development, PackageSourceGate::is_development_site() );
@@ -105,10 +107,15 @@ final class PackageSourceGateTest extends TestCase {
 
 		self::assertFalse( PackageSourceGate::pauses( PackageSource::BRANCH ) );
 		PackageSourceGate::assert_allowed( PackageSource::RELEASE_ASSET, 'prerelease' );
+		unset( $GLOBALS['wpdb'] );
+		self::assertFalse( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ), 'A fence reads the constant before the database.' );
 	}
 
-	private function site( string $environment, string $home ): void {
-		$GLOBALS['ran_booster_test_environment_type'] = $environment;
-		$GLOBALS['ran_booster_test_home_url']         = $home;
+	private function site( ?string $environment, string $home ): void {
+		unset( $GLOBALS['ran_booster_test_environment_type'] );
+		if ( null !== $environment ) {
+			$GLOBALS['ran_booster_test_environment_type'] = $environment;
+		}
+		$GLOBALS['ran_booster_test_home_url'] = $home;
 	}
 }

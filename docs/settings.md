@@ -100,13 +100,17 @@ independent.
 Package sources holds "Allow branch and pre-release sources". On a site that is
 not a development site, branch sources and pre-release (Preview) tracks are
 paused until it is on: manual and automatic updates, reinstalls, branch installs
-and switches into either source are refused, and a push is accepted and recorded
+and switches into either source, including Blueprint imports and Portability
+adoptions, are refused, and a push is accepted and recorded
 as paused. Check now still works; Check releases on a paused Preview track reads
 as updates off. Stable releases are never paused, and Booster's own updates are
-outside this setting. A development site
-is an explicit `local` or `development` environment type, or a home host that is
-loopback, `localhost`, or ends in `.localhost`, `.test` or `.local`; nothing is
-paused there. `RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES` set to `true` or
+outside this setting. Nothing is paused on a development site. When
+`WP_ENVIRONMENT_TYPE` is set, as a constant or an environment variable (the two
+sources `wp_get_environment_type()` reads), it decides alone: `local` or
+`development` is a development site, and `production`, `staging` or any other
+value is not, whatever the home address. When it is not set, a home host that is
+loopback, `localhost`, or ends in `.localhost`, `.test` or `.local` is a
+development site. `RAN_BOOSTER_ALLOW_BRANCH_AND_PRERELEASE_SOURCES` set to `true` or
 `false` wins over the saved value. A saved "on" records the home address it was
 turned on for, ignoring the scheme and a trailing slash, and lapses when that
 address changes, so a database copied to another site arrives with it off. Its

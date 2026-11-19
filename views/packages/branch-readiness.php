@@ -106,7 +106,7 @@ $needs_attention                  = ! $published_release_source
 $repository_branch_check_evidence = is_array( $repository_branch_check_evidence ?? null )
 	? $repository_branch_check_evidence
 	: null;
-$repository_branch_verified       = in_array( $repository_branch_check_outcome ?? null, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true )
+$repository_branch_verified       = in_array( $repository_branch_check_outcome ?? null, array( 'verified', 'subdirectory_deferred', 'subdirectory_unavailable', 'subdirectory_unverified' ), true )
 	|| ( null === $repository_branch_check_outcome && 'verified' === ( $repository_branch_check_evidence['outcome'] ?? null ) );
 $saved_subdirectory_value         = isset( $saved_subdirectory_value ) && is_string( $saved_subdirectory_value )
 	? trim( $saved_subdirectory_value )
@@ -128,7 +128,7 @@ $repository_state_class         = match ( true ) {
 	null !== $repository_branch_check_outcome   => 'is-warning',
 	default                                  => 'is-pending',
 };
-if ( in_array( $repository_branch_check_outcome ?? null, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true ) ) {
+if ( in_array( $repository_branch_check_outcome ?? null, array( 'verified', 'subdirectory_deferred', 'subdirectory_unavailable', 'subdirectory_unverified' ), true ) ) {
 	$saved_repository_label = __( 'is accessible with the saved repository settings.', 'ran-booster' );
 } elseif ( $repository_branch_verified ) {
 	$saved_repository_label = __( 'was accessible at the last check.', 'ran-booster' );

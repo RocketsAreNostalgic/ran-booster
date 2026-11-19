@@ -552,7 +552,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->path_calls );
 	}
 
-	public function test_repository_branch_check_does_not_claim_an_uninspected_subdirectory_is_verified(): void {
+	public function test_repository_branch_check_defers_the_subdirectory_when_the_provider_cannot_inspect_folders(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProviderWithoutPathInspector();
 		$dashboard = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry( array( $provider ) ) );
@@ -562,7 +562,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
 		);
 
-		self::assertSame( 'subdirectory_unverified', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 'subdirectory_deferred', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 0, $provider->path_calls );
 	}
 

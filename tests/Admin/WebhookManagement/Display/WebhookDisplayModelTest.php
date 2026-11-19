@@ -41,6 +41,23 @@ final class WebhookDisplayModelTest extends TestCase {
 		);
 	}
 
+	public function test_webhook_copy_names_the_validate_button_not_check(): void {
+		$root  = dirname( __DIR__, 4 ) . '/RAN/Admin/WebhookManagement';
+		$files = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root, \FilesystemIterator::SKIP_DOTS ) );
+		$seen  = 0;
+		foreach ( $files as $file ) {
+			if ( ! $file instanceof \SplFileInfo || 'php' !== $file->getExtension() ) {
+				continue;
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads a local maintained source file, never a URL.
+			$source = (string) file_get_contents( $file->getPathname() );
+			$seen  += substr_count( $source, 'Validate' );
+			self::assertDoesNotMatchRegularExpression( '~\b[Rr]un Check\b~', $source, $file->getPathname() );
+		}
+		self::assertGreaterThan( 0, $seen );
+		self::assertStringContainsString( 'then Validate before retrying.', $this->display()->notice( 'operation_lock_release_failed' ) );
+	}
+
 	public function test_it_translates_formatted_recovery_copy_without_changing_reference_ids(): void {
 		$GLOBALS['ran_booster_webhook_display_test_translations']['ran-booster'] = array(
 			'Git provider state may have changed, but the current webhook-management record was not overwritten. Inspect Git provider hook reference %1$s and Core signing profile %2$s before retrying.' => 'Profil Core %2$s et reference de webhook %1$s a inspecter.',

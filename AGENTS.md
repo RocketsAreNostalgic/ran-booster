@@ -57,10 +57,11 @@ the owner named a lane does not make one.
   asking for a merge. Resolve a conflict in it by regenerating, never by hand.
 - No stacked pull requests and no integration branch between lanes. Each lane
   opens its own pull request against `main`.
-- Merging stays serial, as set out under Pull requests: one pull request at a
-  time, with `main`'s Quality run green before the next. A lane whose base has
-  moved merges the latest `origin/main` into its branch and reruns the gates
-  before it is merged. It never rewrites pushed history.
+- Merging follows the batching rule under Pull requests: file-disjoint pull
+  requests may merge back to back, and `main`'s Quality run must be green before
+  the next batch. A lane that shares a file with a pull request merged ahead of
+  it merges the latest `origin/main` into its branch and reruns the gates before
+  it is merged. It never rewrites pushed history.
 - A lane worktree does not run in a local site. Before a merge its evidence
   is the local gates and CI, including CI's archive and install proofs. After
   a release, runtime checks use the release ZIP on the release-only test site.
@@ -298,16 +299,19 @@ them.
   with `main`, and a PR's checks test only that PR's own head, so two PRs that
   each pass can still break `main` together. `main`'s own Quality run, which
   uses the same full pipeline, is the check for the combination. These checks
-  add to the owner's authorisation and never replace it. Before merging, check
-  `main`'s latest run
+  add to the owner's authorisation and never replace it. Before the first merge
+  of a batch, check `main`'s latest run
   (`gh run list --workflow quality.yml --event push --branch main --limit 1
   --json status,conclusion,headSha`). It is green only when `status` is
   `completed`, `conclusion` is `success` and `headSha` equals current
   `origin/main`. Queued or in progress means wait. Failed, cancelled or timed
   out is red. Do not merge onto a red `main`, except the PR that fixes it, which
-  the owner authorises by name. After merging, watch that run, and if it goes
-  red stop merging and report to the owner. Merge one PR at a time and let its
-  `main` run finish before the next.
+  the owner authorises by name. Pull requests that change no file in common may
+  merge back to back, each on the owner's explicit authorisation at its reviewed
+  head. `main`'s next Quality run then covers the batch and must be green before
+  the next batch. A PR that shares a file with one merged ahead of it merges the
+  latest `main` and reruns the gates first. If a batch turns `main` red, stop
+  merging, report to the owner, and find the cause before anything else merges.
 - Auto-merge is not enabled for this repository. If the owner enables it, turn
   it on only for a PR the owner has authorised, naming its head SHA. Do not push
   to that PR afterwards without switching auto-merge off first and getting the

@@ -360,7 +360,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
 		$no_help = (string) ob_get_clean();
 		self::assertStringNotContainsString( 'Test webhook is disabled until', $no_help );
-		self::assertStringContainsString( 'Manage repo webhooks on Github <span aria-hidden="true">↗</span>', $no_help );
+		self::assertStringContainsString( 'Manage repo webhooks on GitHub <span aria-hidden="true">↗</span>', $no_help );
 		$document->loadHTML( $no_help, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form/p/a[@target="_blank"])' ) );

@@ -14,6 +14,9 @@ use RAN\RepositoryProvider\GitHubReplacementDeclaration;
  * Inside an existing transaction, authority reads require read(true), because
  * nonlocking reads can inherit an older REPEATABLE READ snapshot.
  * Native-marker clearing requires the caller's exact verified completion or protected recovery.
+ * The options table's shape (InnoDB, whole-column unique option_name) is verified before the
+ * first read or write and again after every invalidate_cache(), so after every write made
+ * through this store: exact locking and compare-and-swap depend on that shape at a write.
  */
 final class GitHubSelectionStore {
 	public const OPTION            = 'ran_booster_github_selection';
@@ -274,10 +277,9 @@ final class GitHubSelectionStore {
 	}
 
 	/**
-	 * The options table's engine and whole-column unique option_name index are
-	 * request-stable, so one successful check per request is enough. A failed
-	 * check sets nothing and refuses again on the next call. The row itself is
-	 * always read fresh.
+	 * Verify the options table's shape unless it has passed since the last
+	 * invalidate_cache(). A failed check sets nothing and refuses again on the
+	 * next call. The row itself is always read fresh.
 	 */
 	private function require_storage(): void {
 		if ( ! $this->storage_verified ) {
@@ -291,10 +293,15 @@ final class GitHubSelectionStore {
 		return '' !== $this->connection->last_error;
 	}
 
-	/** Evict again after the caller finishes its transaction, including uncertain outcomes. */
+	/**
+	 * Evict again after the caller finishes its transaction, including uncertain outcomes.
+	 * Invalidating also forces the next read or write to verify the options table's shape
+	 * again: a write is where exactness depends on that shape, so it is re-checked after each.
+	 */
 	public function invalidate_cache(): void {
 		wp_cache_delete( self::OPTION, 'options' );
 		wp_cache_delete( 'alloptions', 'options' );
 		wp_cache_delete( 'notoptions', 'options' );
+		$this->storage_verified = false;
 	}
 }

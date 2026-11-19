@@ -112,23 +112,42 @@ final class GitHubSelectionStoreTest extends TestCase {
 		}
 	}
 
-	public function test_storage_shape_is_checked_once_per_request_but_the_row_is_read_every_call(): void {
+	public function test_storage_shape_is_checked_once_until_invalidated_but_the_row_is_read_every_call(): void {
 		$db      = new SelectionDatabase();
+		$writer  = new GitHubSelectionStore( $db, 'wp_options' );
+		$initial = $writer->initialize_bundled( $this->declaration() );
 		$store   = new GitHubSelectionStore( $db, 'wp_options' );
-		$initial = $store->initialize_bundled( $this->declaration() );
 		$count   = static fn ( string $sql ): int => count( array_filter( $db->queries, static fn ( string $query ): bool => str_contains( $query, $sql ) ) );
+		$checks  = static fn (): array => array( $count( 'SHOW TABLE STATUS' ), $count( 'SHOW COLUMNS' ), $count( 'SHOW INDEX' ) );
 		$next    = $initial;
 		++$next['selection_generation'];
-		// Another writer changes the row; this store must still see it.
-		self::assertTrue( ( new GitHubSelectionStore( $db, 'wp_options' ) )->compare_and_swap( $initial, $next ) );
-		$selects = $count( 'SELECT option_name, option_value, autoload' );
+
+		$db->queries = array();
+		self::assertSame( $initial, $store->read() );
+		self::assertSame( $initial, $store->read( true ) );
+		self::assertSame( array( 1, 1, 1 ), $checks() );
+		self::assertSame( 2, $count( 'SELECT option_name, option_value, autoload' ) );
+
+		// Another writer changes the row; this store reads it fresh without checking the shape again.
+		self::assertTrue( $writer->compare_and_swap( $initial, $next ) );
+		$db->queries = array();
+		self::assertSame( $next, $store->read() );
+		self::assertSame( array( 0, 0, 0 ), $checks() );
+		self::assertSame( 1, $count( 'SELECT option_name, option_value, autoload' ) );
+
+		$store->invalidate_cache();
+		$db->queries = array();
 		self::assertSame( $next, $store->read() );
 		self::assertSame( $next, $store->read( true ) );
-		self::assertSame( $selects + 2, $count( 'SELECT option_name, option_value, autoload' ) );
-		// One check by each store instance, none repeated by the reads.
-		self::assertSame( 2, $count( 'SHOW TABLE STATUS' ) );
-		self::assertSame( 2, $count( 'SHOW COLUMNS' ) );
-		self::assertSame( 2, $count( 'SHOW INDEX' ) );
+		self::assertSame( array( 1, 1, 1 ), $checks() );
+
+		// A write through this store invalidates, so the next call verifies the shape again.
+		$last = $next;
+		++$last['selection_generation'];
+		self::assertTrue( $store->compare_and_swap( $next, $last ) );
+		$db->queries = array();
+		self::assertSame( $last, $store->read() );
+		self::assertSame( array( 1, 1, 1 ), $checks() );
 	}
 
 	public function test_failed_storage_shape_refuses_on_every_call(): void {

@@ -377,11 +377,14 @@ return static function ( wpdb $database ): void {
 		$reject( static fn () => $store->read(), 'autoloaded state refuses' );
 		$query( $database->prepare( "UPDATE %i SET autoload = 'no'", $table ) );
 		$query( $database->prepare( 'ALTER TABLE %i ENGINE=MyISAM', $table ) );
+		$store->invalidate_cache();
 		$reject( static fn () => $store->read(), 'nontransactional options storage refuses' );
 		$query( $database->prepare( 'ALTER TABLE %i ENGINE=InnoDB', $table ) );
 		$query( $database->prepare( 'ALTER TABLE %i DROP INDEX option_name', $table ) );
+		$store->invalidate_cache();
 		$reject( static fn () => $store->read(), 'missing unique option-name key refuses' );
 		$query( $database->prepare( 'ALTER TABLE %i ADD UNIQUE KEY option_name (option_name(10))', $table ) );
+		$store->invalidate_cache();
 		$reject( static fn () => $store->read(), 'prefix-only unique option-name key refuses' );
 	} finally {
 		$database->query( 'ROLLBACK' );

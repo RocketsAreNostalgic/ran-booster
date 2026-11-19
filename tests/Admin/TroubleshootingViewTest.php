@@ -1113,6 +1113,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 'Check could not complete.', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'unknown_vendor_code' ) );
 		self::assertStringContainsString( 'configured package subdirectory', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'subdirectory_unavailable' ) );
 		self::assertSame( 'The configured repository subdirectory could not be verified.', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'subdirectory_unverified' ) );
+		self::assertSame( 'The saved branch could not be found. Check the branch name on the provider.', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'rejected', 'ref_not_found' ) );
+		self::assertSame( 'The branch lookup was redirected. The branch may have been renamed or the repository moved. Check the current name on the provider.', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'rejected', 'redirect_blocked' ) );
 		self::assertStringContainsString( 'Review the package settings', \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'unable_to_check' ) );
 		self::assertSame( \RAN\Admin\DeploymentOutcomeMessage::for_code( 'provider_unavailable' ), \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'provider_unavailable' ) );
 	}

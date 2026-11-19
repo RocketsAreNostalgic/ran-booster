@@ -72,6 +72,9 @@ final class LocalisationCatalogContractTest extends TestCase {
 			self::assertIsString( $script );
 			self::assertSame( 1, preg_match( '/^committed_entries=\((.*?)^\)/ms', $script, $committed ), $script_name );
 			self::assertSame( 1, preg_match( '/^generated_entries=\((.*?)^\)/ms', $script, $generated ), $script_name );
+			if ( ! isset( $committed[1], $generated[1] ) ) {
+				self::fail( 'Could not read the entry lists of ' . $script_name . '.' );
+			}
 			self::assertStringNotContainsString( "'languages'", $committed[1], $script_name . ' must not archive a committed languages directory.' );
 			self::assertStringContainsString( "'languages'", $generated[1], $script_name );
 			self::assertStringContainsString( 'make-pot.sh', $script, $script_name );

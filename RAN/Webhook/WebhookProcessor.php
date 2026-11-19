@@ -97,8 +97,13 @@ final readonly class WebhookProcessor {
 				BoosterLogger::capture_webhook( 'selection_unavailable' );
 				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
 			}
-			$status = $this->rejection_status( $exception->get_status_code() );
-			BoosterLogger::capture_webhook( $exception->get_reason() ?? 'rejected' );
+			$reason = $exception->get_reason() ?? 'rejected';
+			// An unreadable secrets store is Booster's fault, so the provider may retry; every other refusal stays 401.
+			$status = 'secret_store_unavailable' === $reason ? 503 : $this->rejection_status( $exception->get_status_code() );
+			BoosterLogger::capture_webhook( $reason );
+			if ( in_array( $reason, DeploymentCoordinator::REJECTED_DELIVERY_REASONS, true ) ) {
+				$this->coordinator->record_rejected_delivery( $provider, $reason );
+			}
 
 			return $this->response(
 				$status,
@@ -197,6 +202,7 @@ final readonly class WebhookProcessor {
 			400 => 'Invalid webhook request.',
 			401 => 'Webhook authentication failed.',
 			413 => 'Webhook request is too large.',
+			503 => 'Webhook processing is temporarily unavailable.',
 			default => 'Webhook request rejected.',
 		};
 	}

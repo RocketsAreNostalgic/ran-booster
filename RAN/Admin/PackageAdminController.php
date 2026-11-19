@@ -12,6 +12,7 @@ use RAN\Deployment\DeploymentStorageFailure;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\InvalidPackageSubdirectory;
 use RAN\Package;
+use RAN\PackageFolderMismatch;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
 use RAN\PackageRepositoryChangeRejected;
@@ -269,6 +270,8 @@ final class PackageAdminController {
 				)
 			);
 			return false;
+		} catch ( PackageFolderMismatch $failure ) {
+			return $this->folder_mismatch( $action, $failure, $add_context_message );
 		} catch ( DeploymentCheckFailure $failure ) {
 			// Refused before admission with a closed code whose copy exists; nothing was recorded.
 			return $this->coded_refusal( $action, $failure->outcome_code, $add_context_message );
@@ -876,6 +879,27 @@ final class PackageAdminController {
 		} else {
 			$dashboard->add_failure_message( $message, $failure, $context );
 		}
+		return false;
+	}
+
+	/** @param \Closure(WP_Error|array<string, mixed>, array<string, string>): void $add_context_message */
+	private function folder_mismatch( string $action, PackageFolderMismatch $failure, \Closure $add_context_message ): bool {
+		status_header( 400 );
+		$values = array( esc_html( $failure->folder ), esc_html( $failure->source ), esc_html( $failure->slug ) );
+		$add_context_message(
+			new WP_Error(
+				'ran_booster_package_folder_mismatch',
+				str_ends_with( $action, '-plugin' )
+					/* translators: 1: folder the installed plugin is in, 2: repository path of the package source, 3: folder that source would install as. */
+					? sprintf( __( 'This plugin is in the folder %1$s, but %2$s would install as %3$s.', 'ran-booster' ), ...$values )
+					/* translators: 1: folder the installed theme is in, 2: repository path of the package source, 3: folder that source would install as. */
+					: sprintf( __( 'This theme is in the folder %1$s, but %2$s would install as %3$s.', 'ran-booster' ), ...$values )
+			),
+			array(
+				'operation' => $action,
+				'step'      => 'package_folder_check',
+			)
+		);
 		return false;
 	}
 

@@ -21,6 +21,8 @@ final class DeploymentOutcomeMessage {
 			'webhook.unmatched.branch_mismatch' => __( 'Push received; the package follows another branch.', 'ran-booster' ),
 			'webhook.unmatched.repository_id_mismatch' => __( 'Push received; the repository ID does not match the package\'s.', 'ran-booster' ),
 			'webhook.unmatched.paused' => __( 'Push received; updates are paused by a site setting.', 'ran-booster' ),
+			'webhook.rejected.secret_store_unavailable' => __( 'Delivery refused; Booster could not read its signing secrets.', 'ran-booster' ),
+			'webhook.rejected.profile_invalid', 'webhook.rejected.secret_invalid' => __( 'Delivery refused; a saved signing secret is not valid. Save it again.', 'ran-booster' ),
 			default => null,
 		};
 		if ( null !== $unmatched ) {

@@ -89,6 +89,39 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertCount( 7, $connection->inserted );
 	}
 
+	public function test_an_operator_fixable_delivery_refusal_is_recorded_once_per_provider_reason_and_hour(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$repository                              = new DeploymentAttemptRepository( $this->database, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->database_lifecycle, activity: new ActivityStore( $connection, 'wp_ran_booster_activity' ) );
+		foreach ( \RAN\Deployment\DeploymentCoordinator::REJECTED_DELIVERY_REASONS as $reason ) {
+			$repository->record_rejected_delivery( 'gh', $reason );
+			$row      = $connection->inserted[ count( $connection->inserted ) - 1 ];
+			$complete = $connection->prepared[ count( $connection->prepared ) - 1 ];
+			self::assertSame( array( 'provider', 'gh', null, null, 'webhook.delivery' ), array( $row['subject_type'], $row['subject_identity'], $row['adoption_token'], $row['purpose'], $row['operation'] ), $reason );
+			self::assertSame( array( 'rejected', 'webhook.rejected.' . $reason ), array_slice( $complete['args'], 0, 2 ), $reason );
+		}
+		self::assertCount( 3, $connection->inserted );
+
+		// A repeat in the same hour finds the first refusal in its context and is dropped.
+		$connection->read_results = array(
+			array(
+				(object) array(
+					'status'     => 'rejected',
+					'reason'     => 'webhook.rejected.secret_invalid',
+					'started_at' => gmdate( 'Y-m-d H:i:s' ),
+				),
+			),
+		);
+		$repository->record_rejected_delivery( 'gh', 'secret_invalid' );
+		self::assertStringStartsWith( 'DELETE FROM', $connection->queries[ count( $connection->queries ) - 1 ] );
+
+		// Any sender can cause these, so they never reach Activity.
+		foreach ( array( 'signature_mismatch', 'signature_missing', 'signature_malformed', 'scope_mismatch', 'profiles_missing' ) as $reason ) {
+			$repository->record_rejected_delivery( 'gh', $reason );
+		}
+		self::assertCount( 4, $connection->inserted );
+	}
+
 	public function test_read_only_connection_cannot_start_a_deployment_transaction(): void {
 		$database   = new class( $this->database ) implements \RAN\Storage\SqlReadConnection {
 			public string $last_error = '';

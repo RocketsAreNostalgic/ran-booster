@@ -59,6 +59,22 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertStringNotContainsString( $note, DeploymentOutcomeMessage::for_activity( 'skipped', 'policy_disabled' ) );
 	}
 
+	public function test_each_recorded_delivery_refusal_has_its_approved_sentence_and_the_shared_note(): void {
+		$note = ' Repeats within an hour are not listed; turn on debug logging to see them.';
+		$copy = array();
+		foreach ( \RAN\Deployment\DeploymentCoordinator::REJECTED_DELIVERY_REASONS as $reason ) {
+			$copy[ $reason ] = DeploymentOutcomeMessage::for_activity( 'rejected', 'webhook.rejected.' . $reason );
+		}
+		self::assertSame(
+			array(
+				'secret_store_unavailable' => 'Delivery refused; Booster could not read its signing secrets.' . $note,
+				'profile_invalid'          => 'Delivery refused; a saved signing secret is not valid. Save it again.' . $note,
+				'secret_invalid'           => 'Delivery refused; a saved signing secret is not valid. Save it again.' . $note,
+			),
+			$copy
+		);
+	}
+
 	public function test_uncertain_outcomes_do_not_claim_unrecorded_results(): void {
 		self::assertStringNotContainsString( 'completed the update', DeploymentOutcomeMessage::for_code( 'restoration_uncertain' ) );
 		self::assertStringNotContainsString( 'restore the plugin activation state', DeploymentOutcomeMessage::for_code( 'activation_failed' ) );

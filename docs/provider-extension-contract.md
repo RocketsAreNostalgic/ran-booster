@@ -394,7 +394,9 @@ codes are separate from the frozen `ProviderFailure` vocabulary.
 
 Only the processor's final response boundary emits the diagnostic, after current
 selection checks. Revocation suppresses any pending verification/normalization
-cause. HTTP status/body, signing, scope and admission authority are unchanged.
+cause. HTTP status/body, signing, scope and admission authority are unchanged,
+except that `secret_store_unavailable` answers 503 `Webhook processing is
+temporarily unavailable.` so the host retries.
 Core also observes `provider_not_found`, `selection_unavailable`,
 `event_fanout_exceeded`, `delivery_conflict`, `database_unsupported`,
 `capacity_exhausted`, `storage_failure`, `configured_ref_refused`,
@@ -405,8 +407,14 @@ Configured refs and other request details never enter the observation.
 
 Observations require an already active temporary capture and are sampled at
 most once per five seconds, shared with ordinary capture writes. They do not
-start capture or enter the native PHP log. Durable store-failure diagnostics
-and any change to verifier authentication status remain separate work.
+start capture or enter the native PHP log.
+
+Activity records only the refusals an operator can fix:
+`secret_store_unavailable`, `profile_invalid` and `secret_invalid`, as a
+`webhook.delivery` entry with status `rejected`, reason
+`webhook.rejected.<code>` and the provider as its subject, at most once per
+provider, reason and UTC hour. Any sender can cause the other refusals, so they
+never reach Activity, and a payload's repository is never recorded.
 
 ## Required provider surface
 

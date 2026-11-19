@@ -14,6 +14,7 @@ use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\ReleaseRecheck;
@@ -211,6 +212,12 @@ final readonly class PackageOperationService {
 			: ( null === $operation->identifier ? $this->themes->from_slug( $slug ) : $this->themes->installed_theme_from_stylesheet( $operation->identifier ) );
 		if ( $package instanceof Plugin ) {
 			PackageMutationGuard::assert_plugin_file_allowed( $package->get_identifier() );
+		}
+		// The installed folder keeps its case; the source names the folder exactly or, for a new install, in lower case (PackageDirectory).
+		$folder = PackageDirectory::installed_slug( $operation->package_type, (string) $package->get_identifier() );
+		if ( ! in_array( $folder, array( $slug, PackageDirectory::deployment_slug( $slug, null ) ), true ) ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; the controller escapes each value when it builds the message.
+			throw new PackageFolderMismatch( $folder, $operation->subdirectory ?? (string) $operation->repository, $slug );
 		}
 		$this->apply_repository( $package, $operation );
 		$this->source_guard->assert_allowed( (string) $package->get_provider_code(), (string) $package->get_provider_repository_id(), 'plugin' === $operation->package_type ? 1 : 2, (string) $package->get_identifier(), PackageSource::BRANCH );

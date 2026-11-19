@@ -34,6 +34,9 @@ class DeploymentCoordinator {
 	/** Why a signed push matched no package: the closest candidate's first failing check, in check order. */
 	public const UNMATCHED_REASONS = array( 'no_candidate', 'release_source', 'policy_not_automatic', 'branch_mismatch', 'repository_id_mismatch', 'paused' );
 
+	/** Refused-delivery causes an operator can fix; any sender can cause the others, so they are never recorded. */
+	public const REJECTED_DELIVERY_REASONS = array( 'secret_store_unavailable', 'profile_invalid', 'secret_invalid' );
+
 	private WordPressCorePackageExecutor $branch_executor;
 
 	private RepositorySourceGuard $source_guard;
@@ -239,6 +242,11 @@ class DeploymentCoordinator {
 		}
 		$status = count( array_filter( $attempts, static fn ( DeploymentAttempt $attempt ): bool => DeploymentState::QUEUED === $attempt->get_state() ) ) > 0 ? 'accepted' : 'duplicate';
 		return $this->admission( $status, $attempts[0]->get_correlation_id(), count( $attempts ), $this->request_worker() );
+	}
+
+	/** Best effort: records a refused delivery whose cause the operator can fix. */
+	public function record_rejected_delivery( string $provider, string $reason ): void {
+		$this->attempts->record_rejected_delivery( $provider, $reason );
 	}
 
 	/** Execute one queued row claimed by the real WordPress cron worker. */

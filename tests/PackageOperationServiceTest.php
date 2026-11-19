@@ -12,6 +12,8 @@ require_once __DIR__ . '/Support/ProviderProfileAdminControllerWordPressFunction
 require_once __DIR__ . '/Deployment/AttemptRepositoryDatabase.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use InvalidArgumentException;
 use RAN\Admin\ProviderSettingsPresenter;
@@ -24,6 +26,7 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentStorageFailure;
 use RAN\ManagedRepository;
 use RAN\Package;
+use RAN\PackageFolderMismatch;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
 use RAN\PackageRepositoryChangeRejected;
@@ -1021,8 +1024,102 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( $plugins->stored, $result['package'] );
 	}
 
-	public function test_link_only_preserves_mixed_case_installed_package_slugs(): void {
+	/** @return iterable<string, array{string, string, string, ?string}> Type, package slug input, subdirectory, the source named in the refusal (null when the folder matches). */
+	public static function connected_folder_checks(): iterable {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			yield $type . ' at the repository root, same folder' => array( $type, 'example', '', null );
+			yield $type . ' in a subfolder, same folder' => array( $type, 'example', 'plugins/example', null );
+			yield $type . ' in a subfolder, same folder in another case' => array( $type, 'example', 'plugins/Example', null );
+			yield $type . ' at the repository root, another folder' => array( $type, 'forms', '', 'owner/example' );
+			yield $type . ' in a subfolder, another folder' => array( $type, 'example', 'plugins/forms-v2', 'plugins/forms-v2' );
+		}
+	}
+
+	#[DataProvider( 'connected_folder_checks' )]
+	public function test_connecting_an_installed_package_checks_the_folder_its_source_installs_as( string $type, string $slug, string $subdirectory, ?string $source ): void {
 		$plugins = new OperationPluginRepository( $this->plugin() );
+		$themes  = new OperationThemeRepository( new OperationTheme( 'example' ) );
+		$service = $this->service( $plugins, $themes, new OperationCoordinator() );
+		$action  = 'install-' . $type;
+		$input   = $this->input(
+			$action,
+			array(
+				'dry-run'          => '1',
+				'exact_identifier' => '1',
+				'package_slug'     => $slug,
+				'subdirectory'     => $subdirectory,
+				'file'             => 'example/example.php',
+				'stylesheet'       => 'example',
+			)
+		);
+
+		try {
+			$result = $service->execute( PackageOperation::from_input( $action, $input ) );
+			self::assertNull( $source, 'A mismatched folder must be refused.' );
+			self::assertSame( 'linked', $result['status'] );
+		} catch ( PackageFolderMismatch $failure ) {
+			self::assertSame( array( 'example', $source, 'forms' === $slug ? 'forms' : basename( $subdirectory ) ), array( $failure->folder, $failure->source, $failure->slug ) );
+			// Nothing is stored for a refused connection.
+			self::assertNull( 'plugin' === $type ? $plugins->stored : $themes->stored );
+		}
+	}
+
+	public function test_an_installed_folder_that_keeps_its_case_matches_its_exact_source_name_only(): void {
+		// PackageDirectory compares admitted names exactly: a source names the installed folder as it is, or in the lower case a new install would use.
+		foreach ( array(
+			'tnyGmaps' => true,
+			'tnygmaps' => false,
+		) as $source => $linked ) {
+			$plugins = new OperationPluginRepository( $this->plugin( 'tnyGmaps/tnyGmaps.php' ) );
+			$service = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() );
+			$input   = $this->input(
+				'install-plugin',
+				array(
+					'dry-run'          => '1',
+					'exact_identifier' => '1',
+					'file'             => 'tnyGmaps/tnyGmaps.php',
+					'package_slug'     => 'tnyGmaps',
+					'subdirectory'     => 'plugins/' . $source,
+				)
+			);
+			try {
+				$service->execute( PackageOperation::from_input( 'install-plugin', $input ) );
+				self::assertTrue( $linked, $source );
+			} catch ( PackageFolderMismatch $failure ) {
+				self::assertFalse( $linked, $source );
+				self::assertSame( array( 'tnyGmaps', 'plugins/tnygmaps', 'tnygmaps' ), array( $failure->folder, $failure->source, $failure->slug ) );
+			}
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_a_folder_mismatch_shows_its_sentence_for_a_plugin_and_for_a_theme(): void {
+		require_once __DIR__ . '/Admin/AdminViewWordPressFunctions.php';
+		foreach ( array(
+			'plugin' => 'This plugin is in the folder example, but plugins/forms-v2 would install as forms-v2.',
+			'theme'  => 'This theme is in the folder example, but plugins/forms-v2 would install as forms-v2.',
+		) as $type => $sentence ) {
+			$dashboard = $this->dashboard( new OperationCoordinator() );
+			$input     = $this->input(
+				'install-' . $type,
+				array(
+					'dry-run'          => '1',
+					'exact_identifier' => '1',
+					'subdirectory'     => 'plugins/forms-v2',
+				)
+			);
+
+			self::assertFalse( $dashboard->post_package_operation( 'install-' . $type, $input ), $type );
+			self::assertSame( 400, $GLOBALS['ran_booster_test_status_header'], $type );
+			self::assertCount( 1, $dashboard->messages, $type );
+			self::assertSame( $sentence, $dashboard->messages[0]['message'], $type );
+			unset( $GLOBALS['ran_booster_test_status_header'] );
+		}
+	}
+
+	public function test_link_only_preserves_mixed_case_installed_package_slugs(): void {
+		$plugins = new OperationPluginRepository( $this->plugin( 'tnyGmaps/tnyGmaps.php' ) );
 		$themes  = new OperationThemeRepository( new OperationTheme( 'tnyGmaps' ) );
 		$service = $this->service( $plugins, $themes, new OperationCoordinator() );
 

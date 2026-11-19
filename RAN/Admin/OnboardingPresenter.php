@@ -167,15 +167,16 @@ final readonly class OnboardingPresenter {
 
 	/**
 	 * Needs attention: each managed package's failed or uncertain Core update for its current adoption, then
-	 * credential reminders. Critical rows sort first; five are shown and the hidden ones are counted.
+	 * credential reminders. Critical rows sort first; five are shown, and the count opens the hidden updates' filtered list.
 	 *
 	 * @param list<array{0:'plugin'|'theme',1:\RAN\Package}> $managed
 	 * @param array{status:string,total:?int,items:list<array{provider_label:string,label:string,badge_label:string,stage:string,url:string}>} $credentials
-	 * @return array{updates_available:bool,items:list<array{label:string,url:string,badge:string,critical:bool}>,total:int,hidden_critical:int}
+	 * @return array{updates_available:bool,items:list<array{label:string,url:string,badge:string,critical:bool,type:string}>,total:int,hidden_critical:int,more_url:string}
 	 */
 	private function attention( array $managed, ?ActivityStore $activity, array $credentials, string $activity_url ): array {
 		$packages = array();
 		$names    = array();
+		$types    = array();
 		foreach ( $managed as list( $type, $package ) ) {
 			$token      = AdoptionIdentity::of( $package );
 			$identifier = $package->get_identifier();
@@ -186,6 +187,7 @@ final readonly class OnboardingPresenter {
 					'adoption_token'   => $token,
 				);
 				$names[]    = $package->get_display_name();
+				$types[]    = $type;
 			}
 		}
 		$read = array(
@@ -212,6 +214,7 @@ final readonly class OnboardingPresenter {
 					: $activity_url . '&activity_package=' . rawurlencode( (string) wp_json_encode( array( $record['provider'], $record['subject_type'], $record['subject_identity'] ) ) ),
 				'badge'    => $review ? __( 'Needs review', 'ran-booster' ) : __( 'Update failed', 'ran-booster' ),
 				'critical' => true,
+				'type'     => $types[ $index ],
 			);
 		}
 		foreach ( 'captured' === $credentials['status'] ? $credentials['items'] : array() as $item ) {
@@ -220,14 +223,18 @@ final readonly class OnboardingPresenter {
 				'url'      => $item['url'],
 				'badge'    => $item['badge_label'],
 				'critical' => in_array( $item['stage'], array( 'expired', 'urgent' ), true ),
+				'type'     => '',
 			);
 		}
 		usort( $items, static fn ( array $a, array $b ): int => $b['critical'] <=> $a['critical'] );
+		$hidden = array_column( array_slice( $items, 5 ), 'type' );
 		return array(
 			'updates_available' => $read['available'],
 			'items'             => array_slice( $items, 0, 5 ),
 			'total'             => count( $items ),
 			'hidden_critical'   => count( array_filter( array_slice( $items, 5 ), static fn ( array $item ): bool => $item['critical'] ) ),
+			// One list can be opened: plugins first, then themes; hidden credential rows alone keep Activity.
+			'more_url'          => in_array( 'plugin', $hidden, true ) ? admin_url( 'admin.php?page=ran-booster-plugins&attention=failed' ) : ( in_array( 'theme', $hidden, true ) ? admin_url( 'admin.php?page=ran-booster-themes&attention=failed' ) : $activity_url ),
 		);
 	}
 }

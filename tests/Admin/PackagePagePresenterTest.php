@@ -20,6 +20,64 @@ final class PackagePagePresenterTest extends TestCase {
 	}
 
 
+	public function test_status_filter_keeps_failed_and_review_updates_from_one_read(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		require_once __DIR__ . '/../Activity/ActivityConnection.php';
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$token                                   = 'gh:repository-1:11111111-1111-4111-8111-111111111111';
+		$packages                                = array();
+		foreach ( array( 'failed', 'review', 'clear', 'untracked' ) as $slug ) {
+			$plugin = \RAN\Plugin::from_wp_array(
+				"$slug/$slug.php",
+				array_fill_keys( array( 'Name', 'PluginURI', 'Version', 'Description', 'Author', 'AuthorURI', 'TextDomain', 'DomainPath', 'Title', 'AuthorName' ), '' ) + array( 'Network' => false )
+			);
+			$plugin->set_repository( new \RAN\ManagedRepository( 'gh', 'owner/' . $slug, 'repository-1', 'main' ) );
+			$plugin->set_deployment_policy( 'review' === $slug ? \RAN\Deployment\DeploymentPolicy::MANUAL : \RAN\Deployment\DeploymentPolicy::AUTOMATIC );
+			if ( 'untracked' !== $slug ) {
+				$plugin->set_adoption_token( $token );
+			}
+			$packages[] = $plugin;
+		}
+		$row        = static fn ( string $slug, string $status, string $facts ): object => (object) array(
+			'context_key'      => hash( 'sha256', "plugin\0$slug/$slug.php\0$token\0" ),
+			'subject_type'     => 'plugin',
+			'subject_identity' => "$slug/$slug.php",
+			'adoption_token'   => $token,
+			'status'           => $status,
+			'facts'            => $facts,
+		);
+		$rows       = array(
+			$row( 'review', 'incomplete', '{"deployment_attempt_id":2,"deployment_resolved_at":null}' ),
+			$row( 'failed', 'failed', '{"deployment_attempt_id":1}' ),
+			$row( 'clear', 'succeeded', '{"deployment_attempt_id":3}' ),
+		);
+		$connection = new \RAN\Tests\Activity\ActivityConnection();
+		$view       = new \RAN\Admin\DeploymentAdminPresenter( activity_store: new \RAN\Activity\ActivityStore( $connection ) );
+		$state      = array(
+			'search'    => '',
+			'provider'  => '',
+			'source'    => '',
+			'policy'    => '',
+			'attention' => 'failed',
+		);
+		$names      = static fn ( array $index ): array => array_map( static fn ( \RAN\Package $package ): mixed => $package->get_identifier(), $index['packages'] );
+
+		$connection->read_results = array( $rows, $rows, $rows );
+		$index                    = PackagePagePresenter::plugin()->index( $packages, array(), $state, $view );
+		self::assertSame( array( 'failed/failed.php', 'review/review.php' ), $names( $index ) );
+		self::assertTrue( $index['package_attention_enabled'] );
+		self::assertSame( 'failed', $index['package_list_state']['attention'] );
+		self::assertCount( 1, $connection->queries, 'One decisive read serves the whole list.' );
+		self::assertSame( array( 'review/review.php' ), $names( PackagePagePresenter::plugin()->index( $packages, array(), array( 'policy' => 'manual' ) + $state, $view ) ) );
+		self::assertSame( array(), $names( PackagePagePresenter::plugin()->index( $packages, array(), array( 'search' => 'clear' ) + $state, $view ) ) );
+
+		$GLOBALS['ran_booster_activity_options'] = array();
+		$index                                   = PackagePagePresenter::plugin()->index( $packages, array(), $state, $view );
+		self::assertFalse( $index['package_attention_enabled'] );
+		self::assertSame( '', $index['package_list_state']['attention'] );
+		self::assertCount( 4, $index['packages'], 'Unreadable Activity drops the filter instead of claiming none failed.' );
+	}
+
 	public function test_plugin_configuration_preserves_plugin_routing(): void {
 		$config = PackagePagePresenter::plugin();
 

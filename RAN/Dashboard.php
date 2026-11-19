@@ -1042,7 +1042,7 @@ class Dashboard {
 	 * Normalize read-only package-list filters without granting mutation authority.
 	 *
 	 * @param array<string, mixed>|null $input Read-only query values.
-	 * @return array{search: string, provider: string, source: string, policy: string}
+	 * @return array{search: string, provider: string, source: string, policy: string, attention: string}
 	 */
 	private function requested_package_list_state( ?array $input = null ): array {
 		$input ??= $_GET; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation state.
@@ -1066,16 +1066,20 @@ class Dashboard {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			? sanitize_key( wp_unslash( $input['policy'] ) )
 			: '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
+		$attention = isset( $input['attention'] ) && is_string( $input['attention'] ) ? sanitize_key( wp_unslash( $input['attention'] ) ) : '';
 
 		return array(
-			'search'   => substr( trim( $search ), 0, 100 ),
-			'provider' => substr( $provider, 0, 64 ),
-			'source'   => in_array( $source, array( PackageSource::BRANCH->value, PackageSource::RELEASE_ASSET->value ), true )
+			'search'    => substr( trim( $search ), 0, 100 ),
+			'provider'  => substr( $provider, 0, 64 ),
+			'source'    => in_array( $source, array( PackageSource::BRANCH->value, PackageSource::RELEASE_ASSET->value ), true )
 				? $source
 				: '',
-			'policy'   => in_array( $policy, array( DeploymentPolicy::AUTOMATIC->value, DeploymentPolicy::MANUAL->value, DeploymentPolicy::DISABLED->value ), true )
+			'policy'    => in_array( $policy, array( DeploymentPolicy::AUTOMATIC->value, DeploymentPolicy::MANUAL->value, DeploymentPolicy::DISABLED->value ), true )
 				? $policy
 				: '',
+			// The decisive update outcome is failed or needs review (#948); derived at render, never a package list.
+			'attention' => 'failed' === $attention ? $attention : '',
 		);
 	}
 
@@ -1088,10 +1092,11 @@ class Dashboard {
 
 		return array_filter(
 			array(
-				's'        => $state['search'],
-				'provider' => $state['provider'],
-				'source'   => $state['source'],
-				'policy'   => $state['policy'],
+				's'         => $state['search'],
+				'provider'  => $state['provider'],
+				'source'    => $state['source'],
+				'policy'    => $state['policy'],
+				'attention' => $state['attention'],
 			),
 			static fn ( string $value ): bool => '' !== $value
 		);
@@ -1104,7 +1109,7 @@ class Dashboard {
 			return array();
 		}
 		$input = array();
-		foreach ( array( 's', 'provider', 'source', 'policy' ) as $key ) {
+		foreach ( array( 's', 'provider', 'source', 'policy', 'attention' ) as $key ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded navigation context.
 			$input[ $key ] = $_GET[ 'return_' . $key ] ?? '';
 		}

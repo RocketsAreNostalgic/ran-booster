@@ -103,7 +103,7 @@ jobs:
           php-version: '8.2'
           coverage: none
           extensions: zip
-          tools: composer:v2
+          tools: composer:v2, wp-cli:2.12.0
 
       - name: Build and verify exact runtime archive
         id: archive

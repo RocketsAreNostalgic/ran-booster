@@ -36,7 +36,16 @@ final class SecretsRuntimeAvailabilityNotice {
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster encrypted credentials are unavailable:', 'ran-booster' ); ?></strong>
 				<?php echo esc_html( $this->availability->message() ); ?>
-				<?php esc_html_e( 'Public repositories and package-only Transporter Blueprints remain available; credential-backed operations and webhooks are paused.', 'ran-booster' ); ?>
+				<?php
+				echo wp_kses_post(
+					sprintf(
+						/* translators: 1: opening link tag to Secure credential storage in Settings; 2: closing link tag. */
+						esc_html__( 'Public repositories and package-only Transporter Blueprints remain available; %1$scredential-backed operations%2$s and webhooks are paused.', 'ran-booster' ),
+						'<a href="' . esc_url( ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster-settings#ran-booster-storage' ) . '">',
+						'</a>'
+					)
+				);
+				?>
 			</p>
 		</div><?php NoticeIcon::print_intent( 'error' ); ?></div>
 		<?php

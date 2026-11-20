@@ -484,6 +484,21 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		}
 	}
 
+	public function test_an_unexpected_failure_asks_only_for_a_retry(): void {
+		$html = ( new ReleaseWorkflowDisplay() )->workflow(
+			array(
+				'result_code'       => 'workflow_invalid_request',
+				'result_successful' => false,
+				'failure_stage'     => 'unexpected',
+				'diagnostic_code'   => 'unrecognised_diagnostic',
+			)
+		);
+
+		self::assertStringContainsString( 'Booster stopped before it could verify the release-workflow request. Retry the assessment.', $html );
+		self::assertStringNotContainsString( 'failure reference', $html );
+		self::assertStringNotContainsString( 'seeking support', $html );
+	}
+
 	public function test_repository_source_diagnostics_remain_actionable_in_workflow_failure_details(): void {
 		$display = new ReleaseWorkflowDisplay();
 		foreach ( array(

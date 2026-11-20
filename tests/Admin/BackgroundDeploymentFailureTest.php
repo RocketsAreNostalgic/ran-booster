@@ -244,7 +244,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertSame( 'admin@example.test', $sent['to'] );
 		self::assertStringContainsString( 'Example & Site', $sent['subject'] );
 		self::assertStringContainsString( 'Git provider rejected', $sent['message'] );
-		self::assertStringContainsString( 'Support reference:', $sent['message'] );
+		self::assertStringContainsString( 'Reference:', $sent['message'] );
 		self::assertStringNotContainsString( 'profile_123', $sent['message'] );
 		self::assertStringNotContainsString( 'secret-canary', $sent['message'] );
 

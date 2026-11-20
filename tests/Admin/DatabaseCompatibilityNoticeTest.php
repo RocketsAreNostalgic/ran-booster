@@ -35,7 +35,8 @@ final class DatabaseCompatibilityNoticeTest extends TestCase {
 
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-database-compatibility-notice' ) );
 		self::assertStringContainsString( DatabaseCompatibilityFailure::REQUIREMENT, $html );
-		self::assertStringContainsString( 'Existing Booster data was left unchanged', $html );
+		self::assertStringContainsString( 'Existing Booster data was left unchanged. Review <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting">Troubleshooting</a> before re-enabling deployments.', $html );
+		self::assertSame( 1, substr_count( wp_strip_all_tags( $html ), 'Troubleshooting' ) );
 		self::assertStringNotContainsString( 'is-dismissible', $html );
 	}
 
@@ -46,8 +47,10 @@ final class DatabaseCompatibilityNoticeTest extends TestCase {
 		$notice->render();
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( DatabaseLifecycleFailure::REQUIREMENT, $html );
-		self::assertStringContainsString( 'Existing Booster data was left unchanged', $html );
+		self::assertMatchesRegularExpression( '/' . preg_quote( DatabaseLifecycleFailure::SUMMARY, '/' ) . '\s+Existing Booster data was left unchanged\./', $html );
+		self::assertStringNotContainsString( 'before trying again', $html );
+		self::assertSame( 1, substr_count( wp_strip_all_tags( $html ), 'Troubleshooting' ) );
+		self::assertSame( 1, substr_count( $html, '>Troubleshooting</a>' ) );
 		self::assertStringNotContainsString( 'schema_operation_failed', $html );
 	}
 

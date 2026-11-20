@@ -46,6 +46,7 @@ $package_list_state           = isset( $package_list_state ) && is_array( $packa
 $package_attention_enabled    = true === ( $package_attention_enabled ?? false );
 $package_paused               = isset( $package_paused ) && is_array( $package_paused ) ? $package_paused : array();
 $package_settings_linked      = current_user_can( 'manage_options' );
+$status_link_tags             = static fn ( string $url ): array => $package_settings_linked ? array( '<a href="' . esc_url( $url ) . '">', '</a>' ) : array( '', '' );
 $package_list_total           = isset( $package_list_total ) && is_int( $package_list_total )
 	? max( count( $packages ), $package_list_total )
 	: count( $packages );
@@ -62,34 +63,36 @@ $activity_detail_base_url     = add_query_arg(
 	),
 	$package_admin_url
 );
-$activity_state_labels        = array(
+// Activity filters by package through `activity_package`, a JSON triple of provider, type and identity; the older subject keys are ignored with a notice.
+$package_activity_url     = static fn ( string $provider, string $type, string $identifier ): string => $activity_detail_base_url . '&activity_package=' . rawurlencode( (string) wp_json_encode( array( $provider, $type, $identifier ) ) );
+$activity_state_labels    = array(
 	'queued'          => __( 'Queued', 'ran-booster' ),
 	'running'         => __( 'Running', 'ran-booster' ),
 	'succeeded'       => __( 'Succeeded', 'ran-booster' ),
 	'failed'          => __( 'Failed', 'ran-booster' ),
 	'needs_attention' => __( 'Needs attention', 'ran-booster' ),
 );
-$activity_badge_variants      = array(
+$activity_badge_variants  = array(
 	'queued'          => 'pending',
 	'running'         => 'pending',
 	'succeeded'       => 'ok',
 	'failed'          => 'error',
 	'needs_attention' => 'error',
 );
-$bulk_form_id                 = 'ran-booster-' . $package_view->get_type() . '-bulk-form';
-$bulk_action_id               = 'ran-booster-' . $package_view->get_type() . '-bulk-action';
-$bulk_select_all_id           = 'ran-booster-' . $package_view->get_type() . '-select-all';
-$bulk_type_label              = strtolower( $package_view->get_plural_label() );
-$bulk_type_singular           = strtolower( $package_view->get_singular_label() );
-$is_plugin_list               = 'plugin' === $package_view->get_type();
-$install_another_url          = add_query_arg( array( 'page' => $package_view->get_create_page_slug() ) + array_map( 'rawurlencode', $package_return_args ?? array() ), $package_admin_url );
-$clear_filters_url            = add_query_arg( 'page', $package_view->get_page_slug(), $package_admin_url );
-$has_package_list_filters     = array() !== array_filter(
+$bulk_form_id             = 'ran-booster-' . $package_view->get_type() . '-bulk-form';
+$bulk_action_id           = 'ran-booster-' . $package_view->get_type() . '-bulk-action';
+$bulk_select_all_id       = 'ran-booster-' . $package_view->get_type() . '-select-all';
+$bulk_type_label          = strtolower( $package_view->get_plural_label() );
+$bulk_type_singular       = strtolower( $package_view->get_singular_label() );
+$is_plugin_list           = 'plugin' === $package_view->get_type();
+$install_another_url      = add_query_arg( array( 'page' => $package_view->get_create_page_slug() ) + array_map( 'rawurlencode', $package_return_args ?? array() ), $package_admin_url );
+$clear_filters_url        = add_query_arg( 'page', $package_view->get_page_slug(), $package_admin_url );
+$has_package_list_filters = array() !== array_filter(
 	$package_list_state,
 	static fn ( mixed $value ): bool => is_string( $value ) && '' !== $value
 );
-$filtered_package_count       = count( $packages );
-$package_list_count_label     = $has_package_list_filters
+$filtered_package_count   = count( $packages );
+$package_list_count_label = $has_package_list_filters
 	? sprintf(
 		/* translators: 1: filtered item count, 2: total item count. */
 		_n( '%1$d of %2$d item', '%1$d of %2$d items', $package_list_total, 'ran-booster' ),
@@ -446,9 +449,33 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				);
 			$status_line_html = false;
 			if ( $provider_unavailable ) {
-				$status_line = __( 'The saved Git provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
+				// An unavailable provider has no page of its own; Extensions lists a first-party provider that is not installed or not active with its Install or Activate action. Every link here uses the presenter's admin base, which is the network admin on multisite.
+				[ $link_open, $link_close ] = $status_link_tags( add_query_arg( 'page', 'ran-booster-extensions', $package_admin_url ) );
+				$status_line                = sprintf(
+					/* translators: 1: opening link tag to Extensions, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'The saved Git provider is unavailable. %1$sRestore it%2$s before deploying this package.', 'ran-booster' ),
+					$link_open,
+					$link_close
+				);
+				$status_line_html = true;
 			} elseif ( ! $credential_available ) {
-				$status_line = __( 'The saved repository credential is unavailable.', 'ran-booster' );
+				[ $link_open, $link_close ] = $status_link_tags(
+					add_query_arg(
+						array(
+							'page' => 'ran-booster',
+							'tab'  => $provider_code,
+							'view' => 'credentials',
+						),
+						$package_admin_url
+					)
+				);
+				$status_line                = sprintf(
+					/* translators: 1: opening link tag to the provider's credentials, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'The saved repository %1$scredential%2$s is unavailable.', 'ran-booster' ),
+					$link_open,
+					$link_close
+				);
+				$status_line_html = true;
 			} elseif ( $package_is_paused
 				&& ! ( $prominent_status_activity && ( $update_needs_attention || 'failed' === $latest_activity_state ) )
 				&& ! in_array( 'error', array_column( array_filter( (array) ( $package_extension_row['badges'] ?? array() ), 'is_array' ), 'tone' ), true )
@@ -463,6 +490,11 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				$status_line_html = true;
 			} elseif ( '' !== ( $package_extension_row['status'] ?? '' ) ) {
 				$status_line = (string) $package_extension_row['status'];
+				// A release failure sentence is linked whole to the package page's open Advanced settings, where its explanation sits; informational status stays plain.
+				if ( in_array( 'error', array_column( array_filter( (array) ( $package_extension_row['badges'] ?? array() ), 'is_array' ), 'tone' ), true ) && $package_settings_linked ) {
+					$status_line      = '<a href="' . esc_url( add_query_arg( 'ran_booster_open_advanced', '1', $edit_url ) . '#ran-booster-advanced-source-settings' ) . '">' . esc_html( $status_line ) . '</a>';
+					$status_line_html = true;
+				}
 			} elseif ( $policy_disabled ) {
 				$status_line = __( 'Booster will not overwrite this package or respond to repository pushes.', 'ran-booster' );
 			} elseif ( $release_managed ) {
@@ -470,9 +502,27 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					? __( 'WordPress controls when validated published releases are installed.', 'ran-booster' )
 					: __( 'Installed package is current. Release checks run only when requested.', 'ran-booster' );
 			} elseif ( $update_needs_attention ) {
-				$status_line = __( 'A prior branch deployment is awaiting operator review. It is not running. Open deployment activity and record the review before retrying.', 'ran-booster' );
+				[ $link_open, $link_close ] = $status_link_tags(
+					$latest_activity_id > 0 && '' !== $latest_activity_reference
+						? $activity_detail_base_url . '&attempt=' . rawurlencode( (string) $latest_activity_id ) . '&reference=' . rawurlencode( $latest_activity_reference )
+						: $package_activity_url( $provider_code, $package_view->get_type(), $package_identifier )
+				);
+				$status_line                = sprintf(
+					/* translators: 1: opening link tag to the deployment's Activity record, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'A prior branch deployment is awaiting operator review. It is not running. Open %1$sdeployment activity%2$s and record the review before retrying.', 'ran-booster' ),
+					$link_open,
+					$link_close
+				);
+				$status_line_html = true;
 			} elseif ( 'failed' === $latest_activity_state ) {
-				$status_line = __( 'The latest branch deployment failed. Open deployment activity for details before retrying.', 'ran-booster' );
+				[ $link_open, $link_close ] = $status_link_tags( $package_activity_url( $provider_code, $package_view->get_type(), $package_identifier ) );
+				$status_line                = sprintf(
+					/* translators: 1: opening link tag to this package's Activity, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'The latest branch deployment failed. Open %1$sdeployment activity%2$s for details before retrying.', 'ran-booster' ),
+					$link_open,
+					$link_close
+				);
+				$status_line_html = true;
 			} elseif ( \RAN\Deployment\DeploymentPolicy::AUTOMATIC === $deployment_policy ) {
 				$status_line = __( 'Signed repository pushes deploy automatically. Review setup if pushes are not arriving.', 'ran-booster' );
 			} else {
@@ -597,15 +647,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 									<?php } ?>
 									<a href="
 									<?php
-									echo esc_url(
-										add_query_arg(
-											array(
-												'activity_subject_type'     => $package_view->get_type(),
-												'activity_subject_identity' => $package_identifier,
-											),
-											$activity_detail_base_url
-										)
-									);
+									echo esc_url( $package_activity_url( $provider_code, $package_view->get_type(), $package_identifier ) );
 									?>
 												"><?php esc_html_e( 'View activity', 'ran-booster' ); ?><span class="screen-reader-text">: <?php echo esc_html( $package->name ); ?></span></a>
 								</dd>

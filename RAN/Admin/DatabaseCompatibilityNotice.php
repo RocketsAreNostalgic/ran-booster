@@ -38,7 +38,16 @@ final class DatabaseCompatibilityNotice {
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster database operations are paused:', 'ran-booster' ); ?></strong>
 				<?php echo esc_html( $this->message() ?? '' ); ?>
-				<?php esc_html_e( 'Existing Booster data was left unchanged. Review Troubleshooting before re-enabling deployments.', 'ran-booster' ); ?>
+				<?php
+				echo wp_kses_post(
+					sprintf(
+						/* translators: 1: opening link tag to Troubleshooting; 2: closing link tag. */
+						esc_html__( 'Existing Booster data was left unchanged. Review %1$sTroubleshooting%2$s before re-enabling deployments.', 'ran-booster' ),
+						'<a href="' . esc_url( ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster&tab=troubleshooting' ) . '">',
+						'</a>'
+					)
+				);
+				?>
 			</p>
 		</div><?php NoticeIcon::print_intent( 'error' ); ?></div>
 		<?php
@@ -49,6 +58,7 @@ final class DatabaseCompatibilityNotice {
 			return DatabaseCompatibilityFailure::REQUIREMENT;
 		}
 
-		return $this->database->is_ready() ? null : DatabaseLifecycleFailure::REQUIREMENT;
+		// The notice names Troubleshooting once, in its own linked sentence, so it omits the exception text's pointer.
+		return $this->database->is_ready() ? null : DatabaseLifecycleFailure::SUMMARY;
 	}
 }

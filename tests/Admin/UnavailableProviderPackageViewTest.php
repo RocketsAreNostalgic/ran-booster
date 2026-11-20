@@ -22,13 +22,14 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$_GET                                       = array();
 		$_POST                                      = array();
 		$GLOBALS['ran_booster_bulk_active_plugins'] = array();
+		$GLOBALS['ran_booster_test_capabilities']   = array( 'manage_options' => true );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_GET  = array();
 		$_POST = array();
-		unset( $GLOBALS['ran_booster_bulk_active_plugins'] );
+		unset( $GLOBALS['ran_booster_bulk_active_plugins'], $GLOBALS['ran_booster_test_capabilities'] );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
@@ -172,6 +173,23 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( '<script>', $html );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_a_detached_warning_link_uses_the_network_admin_on_multisite(): void {
+		// Booster's pages exist only in the network admin on multisite; the row links share the presenter's base.
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+		$packages                                      = array( $this->package() );
+		$package_view                                  = PackagePagePresenter::plugin();
+		$package_providers                             = array();
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster-extensions">Restore it</a>', $html );
+		self::assertStringNotContainsString( 'https://example.test/wp-admin/admin.php?page=ran-booster-extensions', $html );
+	}
+
 	public function test_list_view_labels_unavailable_provider_and_disables_only_deployment_action(): void {
 		$GLOBALS['ran_booster_bulk_active_plugins'] = array( 'exact/exact.php' );
 		$packages                                   = array( $this->package() );
@@ -233,7 +251,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( '>Automatic</span>', $html );
 		self::assertStringContainsString( 'Branch · release', $html );
 		self::assertStringNotContainsString( 'Branch · release · Push-to-Deploy', $html );
-		self::assertStringContainsString( 'The saved Git provider is unavailable.', $html );
+		self::assertStringContainsString( 'The saved Git provider is unavailable. <a href="https://example.test/wp-admin/admin.php?page=ran-booster-extensions">Restore it</a> before deploying this package.', $html );
 		self::assertSame( 1, $this->status_badge_count( $html ) );
 		self::assertSame( 0, substr_count( $html, 'data-ran-booster-ui-badge' ) );
 		self::assertStringContainsString( 'Review package health, deploy saved branches', $html );
@@ -287,7 +305,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-badge-intent="high">Credential unavailable</span>', $html );
 		self::assertSame( 1, $this->status_badge_count( $html ) );
 		self::assertSame( 0, substr_count( $html, 'data-ran-booster-ui-badge' ) );
-		self::assertStringContainsString( 'The saved repository credential is unavailable.', $html );
+		self::assertMatchesRegularExpression( '#The saved repository <a href="https://example\.test/wp-admin/admin\.php\?page=ran-booster&amp;tab=[a-z0-9_-]+&amp;view=credentials">credential</a> is unavailable\.#', $html );
 		self::assertStringContainsString( 'data-ran-booster-update-label>Reinstall</span>', $html );
 		self::assertStringContainsString( 'button-update-package"  disabled="disabled"', $html );
 		self::assertMatchesRegularExpression( '/ran-booster-package-row__wordpress-state">\\s*<span class="ran-booster-package-row__state-label">WordPress<\\/span>\\s*<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none">Disabled<\\/span>/', $html );
@@ -392,7 +410,9 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 		$pill    = '/ran-booster-package-row__update-state">\s*<span class="ran-booster-package-row__state-label">Updates<\/span>\s*<span [^>]*>Automatic<\/span>\s*<span [^>]*data-ran-booster-badge-intent="medium">Paused<\/span>\s*<\/p>/';
 		$summary = static fn ( string $html ): string => preg_match( '/ran-booster-package-row__summary">(.*?)<p class="ran-booster-package-row__management">/s', $html, $matches ) ? $matches[1] : '';
-		$paused  = '<p class="ran-booster-package-row__status-line">Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>.</p>';
+		// The package's own Activity filter: the current `activity_package` triple, never the legacy subject keys Activity clears with a notice.
+		$package_filter = 'activity_package=' . rawurlencode( (string) wp_json_encode( array( (string) $package->get_provider_code(), $package_view->get_type(), (string) $package->get_identifier() ) ) );
+		$paused         = '<p class="ran-booster-package-row__status-line">Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>.</p>';
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
@@ -414,7 +434,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertMatchesRegularExpression( $pill, $html );
 		self::assertStringContainsString( 'data-ran-booster-activity-badge>Failed</span>', $summary( $html ) );
-		self::assertStringContainsString( 'The latest branch deployment failed.', $html );
+		self::assertMatchesRegularExpression( '#The latest branch deployment failed\. Open <a href="[^"]*panel=activity[^"]*' . preg_quote( $package_filter, '#' ) . '">deployment activity</a> for details#', $html );
+		self::assertStringNotContainsString( 'activity_subject', $html );
 
 		// A deployment awaiting review keeps its own badge and guidance; the pill stays.
 		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 2, 'needs_attention', null );
@@ -423,7 +444,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertMatchesRegularExpression( $pill, $html );
 		self::assertStringContainsString( 'data-ran-booster-activity-badge>', $summary( $html ) );
-		self::assertStringContainsString( 'awaiting operator review', $html );
+		self::assertMatchesRegularExpression( '#awaiting operator review\. It is not running\. Open <a href="[^"]*panel=activity[^"]*">deployment activity</a> and record#', $html );
 		self::assertStringNotContainsString( $paused, $html );
 
 		// A run the pause itself refused does not show Failed.
@@ -448,7 +469,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		// A release badge keeps the status slot; a release failure also keeps its guidance.
 		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		foreach ( array(
-			'error'   => array( 'Needs attention', 'The release assets are invalid.' ),
+			'error'   => array( 'Needs attention', '<a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&amp;package=' . rawurlencode( (string) $package->get_identifier() ) . '&amp;ran_booster_open_advanced=1#ran-booster-advanced-source-settings">The release assets are invalid.</a>' ),
 			'pending' => array( 'Update available', 'Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-prerelease_sources">site setting</a>.' ),
 		) as $tone => [ $badge, $line ] ) {
 			$package_extension_rows = array(
@@ -467,6 +488,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 			self::assertMatchesRegularExpression( $pill, $html, $tone );
 			self::assertStringContainsString( '>' . $badge . '</span>', $summary( $html ), $tone );
+			self::assertStringNotContainsString( 'activity_subject', $html, $tone );
 			self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">' . $line . '</p>', $html, $tone );
 		}
 		$package->set_source( PackageSource::BRANCH, 3 );

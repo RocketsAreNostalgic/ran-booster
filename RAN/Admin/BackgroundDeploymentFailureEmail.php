@@ -53,8 +53,8 @@ class BackgroundDeploymentFailureEmail implements DeploymentFailureNotifier {
 				),
 				DeploymentOutcomeMessage::for_code( (string) $data['outcome_code'] ),
 				sprintf(
-					/* translators: %s is a random support reference. */
-					__( 'Support reference: %s', 'ran-booster' ),
+					/* translators: %s is a random reference. */
+					__( 'Reference: %s', 'ran-booster' ),
 					(string) $data['correlation_id']
 				),
 				sprintf(

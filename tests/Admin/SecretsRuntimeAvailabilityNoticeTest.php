@@ -37,7 +37,7 @@ final class SecretsRuntimeAvailabilityNoticeTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-secrets-runtime-notice' ) );
 		self::assertStringContainsString( 'class="notice notice-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-secrets-runtime-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>', $html );
 		self::assertStringContainsString( 'PHP Sodium extension is missing', $html );
-		self::assertStringContainsString( 'Public repositories and package-only Transporter Blueprints remain available', $html );
+		self::assertStringContainsString( 'Public repositories and package-only Transporter Blueprints remain available; <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage">credential-backed operations</a> and webhooks are paused.', $html );
 		self::assertStringNotContainsString( 'is-dismissible', $html );
 		self::assertStringNotContainsString( '/srv/', $html );
 	}

@@ -999,7 +999,7 @@ final class OnboardingViewTest extends TestCase {
 				'activity_url'    => '/activity',
 			);
 			$html  = $this->render_view( null, null, $extra );
-			self::assertStringContainsString( 'inventory is incomplete or unavailable', $html );
+			self::assertStringContainsString( 'inventory is <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting">incomplete or unavailable</a>.', $html );
 			self::assertStringContainsString( '&lt;storage failure&gt;', $html );
 			self::assertStringContainsString( 'Review storage', $html );
 			$xpath = $this->storage_xpath( $html );

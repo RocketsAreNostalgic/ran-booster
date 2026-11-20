@@ -159,7 +159,7 @@ final readonly class PackageOperation {
 				: PackageDirectory::deployment_slug( $input['package_slug'] ?? '', $subdirectory ) )
 			: null;
 
-		if ( null !== $expected_identifier && ( strlen( $expected_identifier ) > 191 || explode( '/', $expected_identifier )[0] !== $package_slug ) ) {
+		if ( null !== $expected_identifier && ( strlen( $expected_identifier ) > 191 || ! PackageDirectory::installed_folder_matches( explode( '/', $expected_identifier )[0], (string) $package_slug ) ) ) {
 			throw new InvalidArgumentException( 'The expected package identity must match its installation slug.' );
 		}
 

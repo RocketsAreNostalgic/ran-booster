@@ -25,6 +25,7 @@ final readonly class SecretsRuntimeAvailability {
 		$expected = function_exists( 'plugin_basename' )
 			? plugin_basename( $plugin_file )
 			: basename( dirname( $plugin_file ) ) . '/' . basename( $plugin_file );
+		// Folds as PackageDirectory::collision_key() does, written out: uninstall.php does not load updater-support.
 		if ( ! is_string( $plugin )
 			|| ! is_string( $expected )
 			|| '' === $expected

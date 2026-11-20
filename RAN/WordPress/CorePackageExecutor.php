@@ -175,6 +175,7 @@ class CorePackageExecutor {
 			}
 
 			$destination = $remote_root . DIRECTORY_SEPARATOR . $slug;
+			// Full filesystem paths: the filesystem decides, not the PackageDirectory folder-name rule.
 			if ( hash_equals( $selected_source, $destination ) ) {
 				return trailingslashit( $selected_source );
 			}
@@ -200,7 +201,7 @@ class CorePackageExecutor {
 		if ( null === $parent_path ) {
 			return true;
 		}
-		if ( $slug === $parent_path || ! function_exists( 'wp_get_theme' ) ) {
+		if ( PackageDirectory::names_collide( $slug, $parent_path ) || ! function_exists( 'wp_get_theme' ) ) {
 			return false;
 		}
 
@@ -265,6 +266,7 @@ class CorePackageExecutor {
 	}
 
 	private static function is_canonical_child( string $path, string $parent_path ): bool {
+		// Full filesystem paths: the filesystem decides, not the PackageDirectory folder-name rule.
 		return $path !== $parent_path && str_starts_with( $path . DIRECTORY_SEPARATOR, $parent_path . DIRECTORY_SEPARATOR );
 	}
 

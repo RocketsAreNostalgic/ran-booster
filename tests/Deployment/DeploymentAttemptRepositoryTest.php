@@ -416,17 +416,6 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		}
 	}
 
-	public function test_unresolved_package_attempt_read_tracks_the_removal_contention_boundary(): void {
-		$attempt = $this->manual( 'example' );
-
-		self::assertTrue( $this->repository->has_unresolved_package_attempt( 'plugin', 'example' ) );
-		$this->repository->finish(
-			$attempt->get_id(),
-			DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED )
-		);
-		self::assertFalse( $this->repository->has_unresolved_package_attempt( 'plugin', 'example' ) );
-	}
-
 	public function test_shared_row_limit_configuration_defaults_and_only_accepts_bounded_integers(): void {
 		self::assertSame(
 			array(

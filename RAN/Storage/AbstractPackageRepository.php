@@ -127,19 +127,26 @@ abstract class AbstractPackageRepository {
 		new PackageModel( array( 'package' => $identifier ) );
 		global $wpdb;
 		// A plugin directory can contain more than one main file. Never unlink an unreviewed sibling.
-		$scope  = strtolower( 1 === $this->package_type() ? explode( '/', $identifier )[0] : $identifier );
-		$query  = $wpdb->prepare(
-			'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND (LOWER(package) = %s OR LOWER(package) LIKE %s) LIMIT 2',
-			ran_booster_table_name(),
-			$this->package_type(),
-			$scope,
-			$wpdb->esc_like( $scope . '/' ) . '%'
-		);
+		$scope  = 1 === $this->package_type() ? explode( '/', $identifier )[0] : $identifier;
+		$query  = $wpdb->prepare( 'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d', ran_booster_table_name(), $this->package_type() );
 		$query .= $for_update ? ' FOR UPDATE' : '';
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared bounded directory scope; locking suffix is a closed boolean choice.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared package-type scope; locking suffix is a closed boolean choice.
 		$rows  = $wpdb->get_results( $query );
 		$error = property_exists( $wpdb, 'last_error' ) ? trim( (string) $wpdb->last_error ) : '';
-		if ( '' !== $error || ! is_array( $rows ) || count( $rows ) > 1 ) {
+		if ( '' !== $error || ! is_array( $rows ) ) {
+			throw PackageStorageFailure::query_failed();
+		}
+		// Decided in PHP, not by LOWER(package): a Turkish or Azeri collation could miss a row and let recovery remove a folder still managed.
+		// The nested-path prefix folds a whole identifier, the documented collision_key() exception.
+		$rows = array_values(
+			array_filter(
+				$rows,
+				static fn ( mixed $row ): bool => ! is_object( $row ) || ! is_string( $row->package ?? null )
+					|| PackageDirectory::names_collide( $row->package, $scope )
+					|| str_starts_with( PackageDirectory::collision_key( $row->package ), PackageDirectory::collision_key( $scope ) . '/' )
+			)
+		);
+		if ( count( $rows ) > 1 ) {
 			throw PackageStorageFailure::query_failed();
 		}
 		if ( array() === $rows ) {

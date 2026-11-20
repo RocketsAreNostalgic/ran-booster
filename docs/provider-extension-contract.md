@@ -1349,6 +1349,19 @@ It does not guarantee that screened text is safe. The shape screen is a safety
 net against common token, header, URL and path shapes. Core cannot see inside a
 provider, its own logging or text it shows on its own screens.
 
+### Credentials in stack traces
+
+Core marks the frames it owns that hold an injected request header
+(`AuthenticatedPreparedArchive` and the archive download guard) with
+`#[\SensitiveParameter]`, and a reflection test fails when one loses it. It
+cannot mark WordPress's own HTTP frames (`WP_Http`, `WpOrg\Requests`), which
+hold the same request array for any plugin that sends a bearer header. When
+`zend.exception_ignore_args` is Off, a trace shows each argument string cut to
+`zend.exception_string_param_max_len` characters, and `getTrace()` returns
+the full values to an error handler. Keep `zend.exception_ignore_args=On`, the
+`php.ini-production` default, on a production host, and do not raise the string
+length. Booster itself never prints or stores a trace.
+
 ## Durable activity reporting
 
 Provider API15 adds bounded activity reporting without changing the three-argument

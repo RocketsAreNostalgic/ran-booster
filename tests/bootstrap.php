@@ -38,8 +38,9 @@ declare(strict_types=1);
 			if ( getmypid() !== $owner ) {
 				return;
 			}
-			// Only the directory this process created is removed, and links are unlinked, never followed.
-			$entries = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $directory, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST );
+			// Only the directory this process created is removed, and links are unlinked, never followed. A directory
+			// a fixture left unreadable is skipped and left behind rather than failing the process at exit.
+			$entries = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $directory, FilesystemIterator::SKIP_DOTS ), RecursiveIteratorIterator::CHILD_FIRST, RecursiveIteratorIterator::CATCH_GET_CHILD );
 			foreach ( $entries as $entry ) {
 				if ( $entry->isDir() && ! $entry->isLink() ) {
 					@chmod( $entry->getPathname(), 0700 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Fixtures may leave unreadable directories; removal is best effort.

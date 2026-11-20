@@ -144,7 +144,7 @@ final class SettingsPageTest extends TestCase {
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
-	public function test_a_package_source_save_writes_one_log_line_with_its_outcome(): void {
+	public function test_each_general_settings_save_writes_one_log_line_with_its_outcome(): void {
 		$directory = sys_get_temp_dir() . '/ran-booster-settings-log-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
@@ -173,9 +173,9 @@ final class SettingsPageTest extends TestCase {
 					'token'       => 'token',
 					'preferences' => array( 'hide_github' => '0' ),
 				)
-			),
-			'Other scopes are not logged here.'
+			)
 		);
+		self::assertFalse( $dashboard->post_save_general_settings( array( 'scope' => 'marker-unknown-scope' ) ) );
 		$entries = array_column( $capture->snapshot()['entries'], 'line' );
 		\RAN\Logging\BoosterLogger::configure_capture( null );
 		foreach ( (array) glob( $directory . '/*' ) as $path ) {
@@ -184,7 +184,14 @@ final class SettingsPageTest extends TestCase {
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
 		rmdir( $directory );
-		self::assertSame( array( '[ran-booster] Package source setting save finished. {"operation":"save_prerelease_sources","outcome_code":"failed","state":"paused"}' ), $entries );
+		self::assertSame(
+			array(
+				'[ran-booster] General Settings save finished. {"operation":"save_prerelease_sources","outcome_code":"failed","state":"paused"}',
+				'[ran-booster] General Settings save finished. {"operation":"save_hide_github","outcome_code":"failed"}',
+				'[ran-booster] General Settings save finished. {"operation":"save_settings","outcome_code":"invalid_request"}',
+			),
+			$entries
+		);
 	}
 
 	public function test_check_now_uses_its_own_nonce_and_never_calls_general_save(): void {

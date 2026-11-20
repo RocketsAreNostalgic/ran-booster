@@ -10,6 +10,7 @@ use RAN\AddOn\WebhookAssistance\AssistanceReadiness;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
+use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Package;
 use RAN\PackageSource;
@@ -432,6 +433,45 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Validate</button>', $html );
 		self::assertStringContainsString( 'Manage credentials</a>', $html );
 		self::assertStringContainsString( 'Manage signing secrets</a>', $html );
+	}
+
+	public function test_remote_hook_step_for_an_unconfirmed_setup_uses_the_panel_sentence(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options']                           = true;
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
+			'fixture-provider:1234' => array(
+				'schema_version'              => 4,
+				'provider_code'               => 'fixture-provider',
+				'repository_id'               => '1234',
+				'repository'                  => 'owner/example',
+				'hook_id'                     => InstallationRecord::unknown_hook_id(),
+				'management_credential_id'    => 'credential_1',
+				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+				'webhook_profile_scope'       => 'repository',
+				'webhook_profile_revision'    => 1,
+				'webhook_profile_disposition' => 'created',
+				'endpoint'                    => 'https://example.test/webhook',
+				'status'                      => 'orphaned',
+				'created_at'                  => '2026-08-20T01:02:03Z',
+				'checked_at'                  => '2026-08-20T01:02:03Z',
+			),
+		);
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array(), 'https://example.test/webhook', array() ) );
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->package_authorities()
+		);
+		$controls->register();
+
+		ob_start();
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', false );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<p>Booster couldn&#039;t confirm this setup. Forget it, then set up again.</p>', $html );
 	}
 
 	public function test_branch_tab_shows_manual_webhook_only_for_a_verified_delivery_without_a_record(): void {

@@ -97,7 +97,7 @@ final class WebhookDisplayModel {
 	}
 
 	/** A setup that ended without a hook ID: the only way on is to forget it. */
-	private static function unconfirmed_setup_message(): string {
+	public static function unconfirmed_setup_message(): string {
 		return __( 'Booster couldn\'t confirm this setup. Forget it, then set up again.', 'ran-booster' );
 	}
 

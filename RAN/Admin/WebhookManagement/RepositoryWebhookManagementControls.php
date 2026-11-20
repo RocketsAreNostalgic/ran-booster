@@ -461,7 +461,9 @@ final class RepositoryWebhookManagementControls {
 							__( 'Configured at the last recorded check on %s. Validate to confirm current Git provider state.', 'ran-booster' ),
 							$record->checked_at()
 						)
-						: __( 'The recorded remote webhook needs review. Validate or inspect it at the Git provider.', 'ran-booster' ) ),
+						: ( $record->requires_hook_identification()
+							? WebhookDisplayModel::unconfirmed_setup_message()
+							: __( 'The recorded remote webhook needs review. Validate or inspect it at the Git provider.', 'ran-booster' ) ) ),
 				'state'   => $record_healthy ? 'is-ok' : ( null === $record ? ( null === $manual_at ? 'is-pending' : 'is-ok' ) : 'is-warning' ),
 			),
 		);

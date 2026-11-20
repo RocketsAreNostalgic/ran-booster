@@ -478,6 +478,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertNull( $facade->target( 'gh', '101' ) );
 		$target = $facade->forget_target( 'gh', '101' );
 		self::assertNotNull( $target );
+		self::assertNotNull( $facade->profile( 'gh', '101', $created ), 'The recorded secret is still found while the provider cannot reach the site.' );
 		self::assertSame( 'forgotten', $facade->forget( $target, $created, 1, 'good' )->code() );
 		self::assertSame( array(), $secrets->profiles );
 		self::assertSame( 0, $provider->calls );

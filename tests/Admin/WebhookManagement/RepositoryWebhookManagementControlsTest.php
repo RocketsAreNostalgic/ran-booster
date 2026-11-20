@@ -479,6 +479,53 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( '<p>This webhook was deleted on Fixture Forge.</p>', (string) ob_get_clean() );
 	}
 
+	public function test_setup_opens_when_forget_is_the_available_action_on_an_unreachable_site(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options']                           = true;
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
+			'fixture-provider:1234' => array(
+				'schema_version'              => 4,
+				'provider_code'               => 'fixture-provider',
+				'repository_id'               => '1234',
+				'repository'                  => 'owner/example',
+				'hook_id'                     => '77',
+				'management_credential_id'    => 'credential_1',
+				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+				'webhook_profile_scope'       => 'repository',
+				'webhook_profile_revision'    => 1,
+				'webhook_profile_disposition' => 'created',
+				'endpoint'                    => 'https://example.test/webhook',
+				'status'                      => 'configured',
+				'created_at'                  => '2026-08-20T01:02:03Z',
+				'checked_at'                  => '2026-08-20T01:02:03Z',
+			),
+		);
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array( 'callback_requires_public_https' ), 'http://example.local/webhook', array() ) );
+		$facade->method( 'target' )->willReturn( null );
+		$facade->method( 'forget_target' )->willReturn(
+			new AssistanceTarget(
+				'fixture-provider',
+				'1234',
+				'owner/example',
+				'Example',
+				array( 'example/example.php' ),
+				array(
+					'automatic' => 0,
+					'manual'    => 1,
+					'disabled'  => 0,
+				),
+				'http://example.local/webhook'
+			)
+		);
+		$controls = new RepositoryWebhookManagementControls( $facade, $this->createMock( AdminInteractionFacade::class ), new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ), dirname( __DIR__, 3 ) . '/', 'https://example.test/wp-content/plugins/ran-booster/', $this->package_authorities() );
+		$controls->register();
+
+		ob_start();
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
+
+		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup ran-booster-disclosure" open>', (string) ob_get_clean() );
+	}
+
 	public function test_branch_tab_shows_manual_webhook_only_for_a_verified_delivery_without_a_record(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
 		$render = function ( array $deliveries ): string {

@@ -176,8 +176,9 @@ final class RepositoryWebhookManagementControls {
 				$model['manual_notice'] = WebhookDisplayModel::manual_notice( $manual_at );
 			}
 			$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $model['repository'] );
-			// The panel renders the operation result directly under the Webhook group; the section only keeps the disclosure open for it.
-			$operation_notice = is_array( $model['result'] ?? null ) || is_array( $model['recovery_warning'] ?? null );
+			// The panel renders the operation result directly under the Webhook group; the section only keeps the disclosure open for it,
+			// and for any available action, such as Forget on a site the provider cannot reach.
+			$operation_notice = is_array( $model['result'] ?? null ) || is_array( $model['recovery_warning'] ?? null ) || in_array( false, array_column( $model['operations'], 'disabled' ), true );
 		}
 
 		// The webhook actions are the footer band of the Webhook setup disclosure, after the management form, so they span the disclosure body.

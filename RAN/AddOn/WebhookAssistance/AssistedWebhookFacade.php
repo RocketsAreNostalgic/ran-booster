@@ -145,7 +145,8 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 			return null;
 		}
 		try {
-			$target  = $this->current_target( $provider_code, $repository_id, true );
+			// A local metadata read: it still answers while the provider cannot reach this site.
+			$target  = $this->current_target( $provider_code, $repository_id, true, true );
 			$profile = null === $target ? null : ( $this->secrets->webhook_profiles( $provider_code )[ $profile_id ] ?? null );
 
 			return is_array( $profile ) && $this->applies_to( $target, $profile ) ? $this->metadata( $provider_code, $profile_id, $profile ) : null;

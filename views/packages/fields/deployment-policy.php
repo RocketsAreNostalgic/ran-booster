@@ -33,7 +33,7 @@ $render_development_safety_notice = static function () use ( $show_development_s
 	<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-local-development-warning<?php echo $hide_development_safety_notice ? ' hidden' : ''; ?>>
 		<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 		<p>
-			<strong><?php esc_html_e( 'Editing this package’s files here? Choose Disabled.', 'ran-booster' ); ?></strong><br/>
+			<strong><?php esc_html_e( 'Making local edits? Choose Disabled.', 'ran-booster' ); ?></strong><br/>
 			<?php esc_html_e( 'Manual and Automatic can overwrite local changes when an update or reinstall runs.', 'ran-booster' ); ?>
 			<?php if ( ! $release_automation && $provider_webhook_available ) { ?>
 				<br/><a href="<?php echo esc_url( $push_to_deploy_provider_url ); ?>"><?php esc_html_e( 'Push-to-Deploy setting', 'ran-booster' ); ?></a> | <a href="<?php echo esc_url( $push_to_deploy_documentation_url ); ?>"><?php esc_html_e( 'Docs', 'ran-booster' ); ?></a>

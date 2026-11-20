@@ -830,7 +830,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/value="automatic"[^>]*disabled="disabled"/', $html );
 		self::assertStringContainsString( 'Automatic deployment is unavailable', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-local-development-warning', $html );
-		self::assertStringNotContainsString( 'Editing this package’s files here? Choose Disabled.', $html );
+		self::assertStringNotContainsString( 'Making local edits? Choose Disabled.', $html );
 	}
 
 	public function test_deployment_policy_enables_automatic_for_webhook_providers(): void {
@@ -847,7 +847,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/value="automatic"[^>]*disabled="disabled"/', $html );
 		self::assertStringContainsString( 'class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $html );
 		self::assertStringContainsString( 'data-ran-booster-local-development-warning', $html );
-		self::assertStringContainsString( 'Editing this package’s files here? Choose Disabled.', $html );
+		self::assertStringContainsString( 'Making local edits? Choose Disabled.', $html );
 		self::assertStringContainsString( 'Push-to-Deploy setting', $html );
 		self::assertStringContainsString( 'Manual and Automatic can overwrite local changes when an update or reinstall runs.', $html );
 		self::assertStringContainsString( 'tab=gh#ran-booster-webhook-secrets-heading', $html );
@@ -864,7 +864,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-local-development-warning hidden', $html );
-		self::assertStringContainsString( 'Editing this package’s files here? Choose Disabled.', $html );
+		self::assertStringContainsString( 'Making local edits? Choose Disabled.', $html );
 	}
 
 	/**

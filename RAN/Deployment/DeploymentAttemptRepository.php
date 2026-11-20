@@ -591,23 +591,6 @@ final class DeploymentAttemptRepository {
 
 		return $result;
 	}
-	public function has_unresolved_package_attempt( string $package_type, string $package_slug ): bool {
-		$this->assert_package_type( $package_type );
-		$this->assert_safe_text( $package_slug, 191 );
-		$rows = $this->read_rows(
-			$this->prepare(
-				"SELECT id FROM %i WHERE package_type = %s AND package_slug = %s AND (state IN ('queued','running') OR (state = 'needs_attention' AND resolved_at IS NULL AND resolved_by IS NULL)) LIMIT 2",
-				$this->table_name,
-				$package_type,
-				$package_slug
-			)
-		);
-		if ( count( $rows ) > 1 ) {
-			throw DeploymentStorageFailure::inconsistent();
-		}
-
-		return array() !== $rows;
-	}
 	public function latest_authenticated_delivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
 		$rows = $this->read_rows(
 			$this->prepare(

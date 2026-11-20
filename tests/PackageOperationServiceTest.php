@@ -40,9 +40,11 @@ use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\Database;
 use RAN\Storage\GitHubSelectionStore;
+use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Tests\Support\RepositorySourceGuardDatabase;
+use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use RAN\Troubleshooting\TroubleshootingService;
@@ -1142,6 +1144,37 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'linked', $service->execute( PackageOperation::from_input( 'install-theme', $theme_input ) )['status'] );
 		self::assertSame( 'tnyGmaps', $plugins->requested_slug );
 		self::assertSame( 'tnyGmaps', $themes->requested_slug );
+	}
+
+	public function test_connecting_by_name_finds_the_lower_case_folder_its_source_installs_as(): void {
+		// Connecting by name applies installed_folder_matches(): the source name exactly, else its lower-case new-install form.
+		foreach ( array(
+			'myplugin'   => array( 'MyPlugin', 'myplugin' ),
+			'MyPlugin'   => array( 'MyPlugin', 'MyPlugin' ),
+			'other-name' => array( 'MyPlugin', null ),
+		) as $installed => [ $source, $found ] ) {
+			$plugins             = new OperationPluginRepository( $this->plugin( $installed . '/' . $installed . '.php' ) );
+			$themes              = new OperationThemeRepository( new OperationTheme( $installed ) );
+			$plugins->exact_slug = true;
+			$themes->exact_slug  = true;
+			$service             = $this->service( $plugins, $themes, new OperationCoordinator() );
+			foreach ( array( 'plugin' => $plugins, 'theme' => $themes ) as $type => $repository ) {
+				$input = $this->input(
+					'install-' . $type,
+					array(
+						'dry-run'      => '1',
+						'package_slug' => $source,
+					)
+				);
+				try {
+					self::assertSame( 'linked', $service->execute( PackageOperation::from_input( 'install-' . $type, $input ) )['status'], $type . ' ' . $installed );
+					self::assertSame( $found, $repository->requested_slug, $type . ' ' . $installed );
+				} catch ( PluginNotFound | ThemeNotFound ) {
+					self::assertNull( $found, $type . ' ' . $installed );
+					self::assertNull( $repository->stored, $type . ' ' . $installed );
+				}
+			}
+		}
 	}
 
 	public function test_actual_install_and_update_use_only_the_coordinator(): void {
@@ -2245,6 +2278,7 @@ final class OperationPluginRepository extends PluginRepository {
 	public bool $unmanaged                                = false;
 	public ?string $unlinked                              = null;
 	public ?string $requested_slug                        = null;
+	public bool $exact_slug                               = false;
 	public ?\Throwable $unlink_failure                    = null;
 	public ?Plugin $fresh_after_mutation                  = null;
 	public ?PackageMutationResult $adoption_result        = null;
@@ -2252,6 +2286,9 @@ final class OperationPluginRepository extends PluginRepository {
 	public function __construct( public Plugin $package ) {}
 	public function from_slug( $slug ) {
 		$this->requested_slug = (string) $slug;
+		if ( $this->exact_slug && $this->package->get_slug() !== $slug ) {
+			throw new PluginNotFound( 'Couldn\'t find plugin.' );
+		}
 		return $this->package; }
 	public function installed_plugin_from_file( string $file ): Plugin {
 		unset( $file );
@@ -2336,11 +2373,15 @@ final class OperationThemeRepository extends ThemeRepository {
 	public bool $installed                                = true;
 	public ?string $unlinked                              = null;
 	public ?string $requested_slug                        = null;
+	public bool $exact_slug                               = false;
 	public ?Theme $fresh_after_mutation                   = null;
 	public int $release_adoptions                         = 0;
 	public function __construct( public Theme $package ) {}
 	public function from_slug( $slug ) {
 		$this->requested_slug = (string) $slug;
+		if ( $this->exact_slug && $this->package->get_slug() !== $slug ) {
+			throw new ThemeNotFound( 'Couldn\'t find theme.' );
+		}
 		return $this->package; }
 	public function installed_theme_from_stylesheet( string $stylesheet ): Theme {
 		unset( $stylesheet );

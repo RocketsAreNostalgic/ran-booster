@@ -96,8 +96,73 @@ final class WebhookDisplayModel {
 		return $times;
 	}
 
-	public static function receiver_unavailable_message(): string {
-		return __( 'This site needs a public HTTPS URL to receive webhooks.', 'ran-booster' );
+	/** With $linked, escaped HTML whose link leads to the site address setting for a user who can change it. */
+	public static function receiver_unavailable_message( bool $linked = false ): string {
+		$url = null;
+		if ( $linked && is_multisite() ) {
+			$url = current_user_can( 'manage_sites' ) ? network_admin_url( 'site-info.php?id=' . get_current_blog_id() ) : null;
+		} elseif ( $linked ) {
+			$url = current_user_can( 'manage_options' ) ? admin_url( 'options-general.php' ) : null;
+		}
+
+		/* translators: 1: opening link tag to the site address setting; 2: closing link tag. */
+		return self::link_sentence( __( 'This site needs a %1$spublic HTTPS URL%2$s to receive webhooks; manual updates still work.', 'ran-booster' ), $url, $linked );
+	}
+
+	/**
+	 * The one site reason a webhook screen shows, most blocking first.
+	 *
+	 * The database comes first. The package inventory outranks secure storage,
+	 * whose sentence says public repositories still update manually. Every
+	 * failure outranks the address, whose sentence says manual updates still work.
+	 *
+	 * @param array<array-key, mixed> $codes
+	 */
+	public static function primary_site_reason( array $codes ): ?string {
+		foreach ( array( 'database_unavailable', 'managed_packages_unavailable', 'secrets_storage_unavailable', 'callback_requires_public_https' ) as $code ) {
+			if ( in_array( $code, $codes, true ) ) {
+				return $code;
+			}
+		}
+
+		return null;
+	}
+
+	/** One sentence per site readiness code, shared by every webhook screen; null for a code without one. */
+	public static function site_reason_message( string $code, bool $linked = false ): ?string {
+		return match ( $code ) {
+			'callback_requires_public_https' => self::receiver_unavailable_message( $linked ),
+			'database_unavailable' => self::link_sentence(
+				/* translators: 1: opening link tag to Troubleshooting; 2: closing link tag. */
+				__( 'Webhook setup is paused while Booster\'s %1$sdatabase storage%2$s needs attention.', 'ran-booster' ),
+				WebhookManagementAdminUrl::for_path( 'admin.php?page=ran-booster&tab=troubleshooting' ),
+				$linked
+			),
+			'secrets_storage_unavailable' => self::link_sentence(
+				/* translators: 1: opening link tag to secure credential storage in Settings; 2: closing link tag. */
+				__( 'Webhook setup is paused while %1$ssecure credential storage%2$s is unavailable; public repositories still update manually.', 'ran-booster' ),
+				WebhookManagementAdminUrl::for_path( 'admin.php?page=ran-booster-settings' ) . '#ran-booster-storage',
+				$linked
+			),
+			'managed_packages_unavailable' => self::link_sentence(
+				/* translators: 1: opening link tag to the managed plugin list; 2: closing link tag. */
+				__( 'Webhook setup is paused because Booster couldn\'t read its %1$smanaged packages%2$s.', 'ran-booster' ),
+				WebhookManagementAdminUrl::for_path( 'admin.php?page=ran-booster-plugins' ),
+				$linked
+			),
+			default => null,
+		};
+	}
+
+	/** Fill a sentence's %1$s and %2$s link slots: plain text, or escaped HTML with one link when $linked and a URL is known. */
+	public static function link_sentence( string $sentence, ?string $url, bool $linked ): string {
+		if ( ! $linked ) {
+			return sprintf( $sentence, '', '' );
+		}
+
+		return null === $url
+			? sprintf( esc_html( $sentence ), '', '' )
+			: sprintf( esc_html( $sentence ), '<a href="' . esc_url( $url ) . '">', '</a>' );
 	}
 
 	/** A setup that ended without a hook ID: the only way on is to forget it. */
@@ -630,8 +695,8 @@ final class WebhookDisplayModel {
 		}
 
 		return match ( $code ) {
-			'ping_requested', 'ping_verified' => __( 'GitHub accepted the ping request for the recorded hook. This does not prove an authenticated inbound delivery or verify the signing secret; recorded status remains needs verification.', 'ran-booster' ),
-			'ping_delivery_failed' => __( 'GitHub recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the Git provider delivery details.', 'ran-booster' ),
+			'ping_requested', 'ping_verified' => __( 'The Git provider accepted the ping request for the recorded hook. This does not prove an authenticated inbound delivery or verify the signing secret; recorded status remains needs verification.', 'ran-booster' ),
+			'ping_delivery_failed' => __( 'The Git provider recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the Git provider delivery details.', 'ran-booster' ),
 			'configured_pending_delivery' => __( 'Webhook management configured the remote hook. Signed delivery verification is still pending.', 'ran-booster' ),
 			'verified', 'configuration_confirmed' => __( 'Webhook management confirmed the recorded remote configuration. Correlate Git provider delivery history with the Git provider request ID in Booster Activity before treating signed delivery as established.', 'ran-booster' ),
 			'removed' => __( 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.', 'ran-booster' ),
@@ -647,7 +712,7 @@ final class WebhookDisplayModel {
 			'operation_failed' => __( 'Webhook management could not confirm the operation outcome. Inspect the Git provider and recorded status before retrying.', 'ran-booster' ),
 			'setup_failed' => __( 'The Git provider rejected the webhook setup request. No remote hook was established.', 'ran-booster' ),
 			'setup_compensated' => __( 'Webhook management could not verify the new remote hook, so it removed it. No webhook was established; setup may be tried again.', 'ran-booster' ),
-			'setup_compensation_incomplete' => __( 'Webhook management could not verify or safely remove the new remote hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
+			'setup_compensation_incomplete' => __( 'Webhook management could not verify or safely remove the new remote hook. Check the webhook on the Git provider, then Validate.', 'ran-booster' ),
 			'setup_outcome_unknown' => __( 'Webhook management could not confirm whether setup changed the remote hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
 			'hook_inventory_unavailable', 'hook_inventory_invalid', 'hook_inventory_incomplete' => __( 'Couldn\'t list this repository\'s webhooks on the Git provider. Nothing was changed. Try again.', 'ran-booster' ),
 			'setup_response_invalid' => __( 'The Git provider response did not identify the new hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
@@ -839,7 +904,7 @@ final class WebhookDisplayModel {
 				),
 			),
 			'status_message'  => __( 'This retained record no longer matches a managed repository in Booster.', 'ran-booster' ),
-			'action_message'  => __( 'Managed actions are unavailable. Inspect and remove the recorded hook manually if necessary.', 'ran-booster' ),
+			'action_message'  => __( 'Remove this webhook on the Git provider if it still exists.', 'ran-booster' ),
 			'actions'         => $actions,
 			'details'         => $this->history_details( $this->projected_status( $record ), $record ),
 		);
@@ -1025,7 +1090,7 @@ final class WebhookDisplayModel {
 		return 'ran_booster_repository_webhook_' . implode( '_', array( $operation, $provider_code, $repository_id ) );
 	}
 
-	private function provider_settings_url( string $provider_code, string $view ): string {
+	public function provider_settings_url( string $provider_code, string $view ): string {
 		return WebhookManagementAdminUrl::for_path( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) . '&view=' . rawurlencode( $view ) );
 	}
 

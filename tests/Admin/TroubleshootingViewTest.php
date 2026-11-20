@@ -15,6 +15,7 @@ use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Deployment\DeploymentAttempt;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+require_once __DIR__ . '/WebhookManagement/Display/WebhookDisplayModelWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 require_once dirname( __DIR__ ) . '/Activity/ActivityConnection.php';
 require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
@@ -2942,14 +2943,20 @@ final class TroubleshootingViewTest extends TestCase {
 		$credential_profiles                  = array();
 		$webhook_profiles                     = array();
 		$provider_task                        = 'status';
-		$cases                                = array(
-			array( array( 'database_unavailable' ), 'https://example.test/hook', 'warning', 'Booster database storage must be healthy before Push-to-Deploy can run.' ),
-			array( array( 'secrets_storage_unavailable' ), 'https://example.test/hook', 'warning', 'Encrypted credential storage must be healthy before Push-to-Deploy can verify signed deliveries.' ),
-			array( array( 'managed_packages_unavailable' ), 'https://example.test/hook', 'warning', 'Booster could not read the managed package inventory needed for Push-to-Deploy.' ),
-			array( array( 'callback_requires_public_https' ), 'http://localhost/hook', 'info', 'This site needs a public HTTPS URL to receive webhooks.' ),
+		// Each reason is the shared webhook-screen sentence carrying its own one link; no trailing link follows.
+		$https    = 'This site needs a <a href="[^"]*options-general\.php">public HTTPS URL</a> to receive webhooks; manual updates still work\.';
+		$database = 'Webhook setup is paused while Booster&#039;s <a href="[^"]*page=ran-booster&amp;tab=troubleshooting">database storage</a> needs attention\.';
+		$cases    = array(
+			array( array( 'database_unavailable' ), 'https://example.test/hook', 'warning', $database ),
+			array( array( 'secrets_storage_unavailable' ), 'https://example.test/hook', 'warning', 'Webhook setup is paused while <a href="[^"]*page=ran-booster-settings\#ran-booster-storage">secure credential storage</a> is unavailable; public repositories still update manually\.' ),
+			array( array( 'managed_packages_unavailable' ), 'https://example.test/hook', 'warning', 'Webhook setup is paused because Booster couldn&#039;t read its <a href="[^"]*page=ran-booster-plugins">managed packages</a>\.' ),
+			array( array( 'callback_requires_public_https' ), 'http://localhost/hook', 'info', $https ),
 			array( array( 'unknown-canary' ), 'https://example.test/hook', 'info', '' ),
-			array( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://example.test/hook', 'warning', 'This site needs a public HTTPS URL to receive webhooks. Booster database storage must be healthy before Push-to-Deploy can run.' ),
+			// A storage failure outranks the address, whose sentence would claim manual updates still work.
+			array( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://example.test/hook', 'warning', $database ),
 		);
+		$GLOBALS['ran_booster_webhook_display_test_capabilities'] = array( 'manage_options' => true );
+		$GLOBALS['ran_booster_webhook_display_test_multisite']    = false;
 		foreach ( array( 'gh', 'bb', 'other' ) as $code ) {
 			$provider['code'] = $code;
 			foreach ( $cases as list( $codes, $endpoint, $intent, $reason ) ) {
@@ -2966,10 +2973,11 @@ final class TroubleshootingViewTest extends TestCase {
 				ob_start();
 				require dirname( __DIR__, 2 ) . '/views/provider.php';
 				$html = (string) ob_get_clean();
-				self::assertMatchesRegularExpression( '~<div class="notice notice-' . $intent . ' inline ran-booster-push-deploy__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent . '" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . $intent . '">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p><strong>Webhook delivery is not ready\.</strong> ' . preg_quote( $reason, '~' ) . ' ?<a href="[^"]*options-general\.php">Review WordPress URLs</a></p>\s*</div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg>\s*</div>~', $html );
+				self::assertMatchesRegularExpression( '~<div class="notice notice-' . $intent . ' inline ran-booster-push-deploy__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent . '" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . $intent . '">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p><strong>Webhook delivery is not ready\.</strong> ' . $reason . '</p>\s*</div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg>\s*</div>~', $html );
 				self::assertStringNotContainsString( 'unknown-canary', $html );
 			}
 		}
+		unset( $GLOBALS['ran_booster_webhook_display_test_capabilities'], $GLOBALS['ran_booster_webhook_display_test_multisite'] );
 		$webhook_assistance_readiness = array(
 			'site' => array(
 				'status'       => 'blocked',
@@ -2980,11 +2988,6 @@ final class TroubleshootingViewTest extends TestCase {
 		$provider_view_data           = $this->provider_view_data( get_defined_vars() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 		extract( $provider_view_data );
-		$webhook_site_reasons = array( '<unsafe & reason>' );
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/provider.php';
-		$html = (string) ob_get_clean();
-		self::assertStringContainsString( '&lt;unsafe &amp; reason&gt;', $html );
 		$delivery_notices = array();
 		foreach ( array( 'status', 'webhook-receiver', 'repositories' ) as $delivery_task ) {
 			$provider_task = $delivery_task;
@@ -2997,7 +3000,7 @@ final class TroubleshootingViewTest extends TestCase {
 				continue;
 			}
 			self::assertSame( 1, substr_count( $html, 'data-ran-booster-assistance-site-notice' ), $delivery_task );
-			self::assertSame( 1, substr_count( $html, 'Review WordPress URLs' ), $delivery_task );
+			self::assertSame( 1, substr_count( $html, '>database storage</a>' ), $delivery_task );
 			if ( 1 !== preg_match( '~<div class="notice [^"]*" data-ran-booster-assistance-site-notice.*?</svg>\s*</div>~s', $html, $notice ) ) {
 				self::fail( 'The shared delivery notice is missing from ' . $delivery_task . '.' );
 			}
@@ -3295,12 +3298,13 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-wp-ui-button', $after_rows[0] );
 		// View Activity is one plain text link after the summary rows.
 		self::assertMatchesRegularExpression( '~</dl>\s*<p class="ran-booster-standalone-link-row"><a href="[^"]*">View Activity</a></p>~', $html );
-		// Review WordPress URLs lives only inside the notice.
-		self::assertSame( 1, substr_count( $html, 'Review WordPress URLs' ) );
+		// The receiver sentence lives only inside the notice, with its one link; the separate URL link is gone.
+		self::assertSame( 1, substr_count( $html, 'public HTTPS URL' ) );
 		if ( 1 !== preg_match( '~data-ran-booster-assistance-site-notice.*?</svg>\s*</div>~s', $html, $notice ) ) {
 			self::fail( 'The notice is missing.' );
 		}
-		self::assertStringContainsString( 'Review WordPress URLs', $notice[0] );
+		self::assertStringContainsString( 'This site needs a ', $notice[0] );
+		self::assertStringNotContainsString( 'Review WordPress URLs', $html );
 
 		$ready_html = $this->render_provider_panels(
 			array(
@@ -3312,7 +3316,7 @@ final class TroubleshootingViewTest extends TestCase {
 			),
 			$this->branch_and_release_repositories()
 		)['status'];
-		self::assertStringNotContainsString( 'Review WordPress URLs', $ready_html );
+		self::assertStringNotContainsString( 'public HTTPS URL', $ready_html );
 		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $ready_html );
 		self::assertMatchesRegularExpression( '~</dl>\s*<p class="ran-booster-standalone-link-row"><a href="[^"]*">View Activity</a></p>~', $ready_html );
 	}
@@ -3414,7 +3418,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$repository_html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '>Push-to-deploy</h3>', $repository_html );
-		self::assertStringContainsString( 'Assisted webhook management is unavailable in this view. Receiver readiness has not been established.', $repository_html );
+		self::assertMatchesRegularExpression( '~<p>This site needs a (?:<a href="[^"]*">)?public HTTPS URL(?:</a>)? to receive webhooks; manual updates still work\.</p>~', $repository_html );
 		self::assertStringContainsString( 'disabled aria-disabled="true">Manage repository webhook</button>', $repository_html );
 
 		$webhook_assistance_readiness = null;
@@ -3424,7 +3428,8 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$unknown_readiness_html = (string) ob_get_clean();
-		self::assertStringContainsString( 'Receiver readiness has not been established.', $unknown_readiness_html );
+		self::assertStringContainsString( '<p>Booster can&#039;t manage this webhook here.</p>', $unknown_readiness_html );
+		self::assertStringNotContainsString( 'public HTTPS URL', $unknown_readiness_html );
 		self::assertStringNotContainsString( 'This site is not ready to receive Git provider deliveries.', $unknown_readiness_html );
 	}
 
@@ -3702,7 +3707,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-provider-storage-notice', $html );
 		self::assertStringContainsString( 'data-ran-booster-assistance-site-notice', $html );
 		self::assertStringContainsString( 'notice-error', $html );
-		self::assertStringContainsString( 'Encrypted credential storage must be healthy before Push-to-Deploy', $html );
+		self::assertStringContainsString( 'Webhook setup is paused while <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage">secure credential storage</a> is unavailable', $html );
 		self::assertStringContainsString( 'Saved credentials are unavailable.', $html );
 		self::assertStringContainsString( 'page=ran-booster-settings#ran-booster-storage', $html );
 		self::assertStringContainsString( 'Review Secure credential storage in Settings', $html );

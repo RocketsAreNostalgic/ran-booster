@@ -133,7 +133,7 @@ final class RepositoryWebhookManagementControls {
 					array(
 						'class'   => 'notice-warning',
 						/* translators: %s: provider name. */
-						'message' => sprintf( __( '%s webhook configuration is incomplete. Webhook setup is unavailable until the Git provider supplies its complete management capability.', 'ran-booster' ), $claimed_metadata->label ),
+						'message' => sprintf( __( '%s doesn\'t support webhook setup yet.', 'ran-booster' ), $claimed_metadata->label ),
 					),
 				),
 				false,
@@ -148,10 +148,11 @@ final class RepositoryWebhookManagementControls {
 		$model           = $has_branch_consumer ? $this->repository_webhook_panel_model( $provider_code, $repository_id, $return_url ) : null;
 		$notices         = array();
 		if ( ! is_array( $model ) && $metadata instanceof ProviderMetadata ) {
-			$reason = ! $has_branch_consumer
-				? __( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', 'ran-booster' )
+			// The Branch demand step already says no Branch package uses this webhook, so that reason titles the buttons without a notice.
+			list( $reason, $notice ) = ! $has_branch_consumer
+				? array( __( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', 'ran-booster' ), null )
 				: $this->repository_webhook_unavailable_reason( $provider_code, $repository_id );
-			$model  = $this->display->unavailable_panel(
+			$model                   = $this->display->unavailable_panel(
 				$provider_code,
 				$metadata->label,
 				$repository_id,
@@ -160,11 +161,12 @@ final class RepositoryWebhookManagementControls {
 				$reason,
 				$this->repository_webhook_settings_url( $provider_code, ( '' !== trim( $repository ) ) ? $repository : null )
 			);
-			// Step 1 (Site receiver) already says a public HTTPS URL is missing; repeat only other reasons.
-			if ( 'is-ok' === ( $readiness_items[2]['state'] ?? '' ) || WebhookDisplayModel::receiver_unavailable_message() !== $reason ) {
+			// The receiver step already names the site's primary reason; the notice adds only a different one.
+			if ( null !== $notice && ( 'is-ok' === ( $readiness_items[2]['state'] ?? '' ) || ( $readiness_items[2]['message'] ?? '' ) !== $notice ) ) {
 				$notices[] = array(
-					'class'   => 'notice-warning',
-					'message' => $reason,
+					'class'        => 'notice-warning',
+					'message'      => $reason,
+					'message_html' => $notice,
 				);
 			}
 		}
@@ -206,17 +208,24 @@ final class RepositoryWebhookManagementControls {
 		}
 	}
 
-	/** Explain a failed local readiness projection without probing a provider. */
-	private function repository_webhook_unavailable_reason( string $provider_code, string $repository_id ): string {
+	/**
+	 * Explain a failed local readiness projection without probing a provider.
+	 *
+	 * @return array{0:string,1:string} Plain text for button titles, and escaped HTML with its one link for the notice.
+	 */
+	private function repository_webhook_unavailable_reason( string $provider_code, string $repository_id ): array {
+		// Identity problems are fixed in package settings, reached from this repository's package table.
+		$packages = WebhookManagementAdminUrl::for_path( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) . '&panel=repositories&repository=' . rawurlencode( $repository_id ) . '&repository_view=status' ) . '#ran-booster-repository-packages-heading';
 		$messages = array(
-			'callback_requires_public_https'  => WebhookDisplayModel::receiver_unavailable_message(),
-			'database_unavailable'            => __( 'Webhook setup is unavailable because Booster database storage is unavailable.', 'ran-booster' ),
-			'secrets_storage_unavailable'     => __( 'Webhook setup is unavailable because encrypted signing-secret storage is unavailable.', 'ran-booster' ),
-			'managed_packages_unavailable'    => __( 'Webhook setup is unavailable because Booster could not read managed packages.', 'ran-booster' ),
-			'repository_identity_unavailable' => __( 'Webhook setup is unavailable because this repository has no stable Git provider identity.', 'ran-booster' ),
-			'repository_identity_conflict'    => __( 'Webhook setup is unavailable because managed packages disagree about this repository identity.', 'ran-booster' ),
-			'repository_locator_invalid'      => __( 'Webhook setup is unavailable because the saved repository address is invalid.', 'ran-booster' ),
+			/* translators: 1: opening link tag to this repository's packages; 2: closing link tag. */
+			'repository_identity_unavailable' => __( 'Webhook setup is unavailable because this repository has no stable %1$sGit provider identity%2$s.', 'ran-booster' ),
+			/* translators: 1: opening link tag to this repository's packages; 2: closing link tag. */
+			'repository_identity_conflict'    => __( 'Webhook setup is unavailable because %1$smanaged packages%2$s disagree about this repository identity.', 'ran-booster' ),
+			/* translators: 1: opening link tag to this repository's packages; 2: closing link tag. */
+			'repository_locator_invalid'      => __( 'Webhook setup is unavailable because the saved %1$srepository address%2$s is invalid.', 'ran-booster' ),
 		);
+		// No destination gives a next step for this state yet, so it stays unlinked.
+		$fallback = __( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
 		try {
 			$readiness = $this->assistance->readiness( $provider_code )->to_array();
 			$codes     = $readiness['site']['reason_codes'] ?? array();
@@ -228,16 +237,20 @@ final class RepositoryWebhookManagementControls {
 					$codes = array_merge( $codes, is_array( $repository['reason_codes'] ?? null ) ? $repository['reason_codes'] : array() );
 				}
 			}
+			$site = WebhookDisplayModel::primary_site_reason( $codes );
+			if ( null !== $site ) {
+				return array( (string) WebhookDisplayModel::site_reason_message( $site ), (string) WebhookDisplayModel::site_reason_message( $site, true ) );
+			}
 			foreach ( $codes as $code ) {
 				if ( is_string( $code ) && isset( $messages[ $code ] ) ) {
-					return $messages[ $code ];
+					return array( WebhookDisplayModel::link_sentence( $messages[ $code ], $packages, false ), WebhookDisplayModel::link_sentence( $messages[ $code ], $packages, true ) );
 				}
 			}
 		} catch ( \Throwable ) {
-			return __( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
+			return array( $fallback, esc_html( $fallback ) );
 		}
 
-		return __( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
+		return array( $fallback, esc_html( $fallback ) );
 	}
 
 	private function render_repository_webhook_setup_region( string $panel, string $actions = '' ): void {
@@ -251,7 +264,7 @@ final class RepositoryWebhookManagementControls {
 
 	/**
 	 * @param list<array{label:string,message:string,state:string}> $items
-	 * @param list<array{class:string,message:string,heading?:string,details?:list<string>}> $notices
+	 * @param list<array{class:string,message:string,message_html?:string,heading?:string,details?:list<string>}> $notices Plain text, except Core's own escaped message_html with its one link.
 	 * @param array<array-key, mixed> $row Repository row carrying package_summaries.
 	 */
 	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true, bool $operation_notice = false, array $row = array(), bool $manual = false, string $actions = '' ): void {
@@ -276,7 +289,7 @@ final class RepositoryWebhookManagementControls {
 							if ( isset( $notice['heading'] ) ) :
 								?>
 								<p><strong><?php echo esc_html( $notice['heading'] ); ?></strong></p><?php endif; ?>
-							<p><?php echo esc_html( $notice['message'] ); ?></p>
+							<p><?php echo isset( $notice['message_html'] ) ? wp_kses_post( $notice['message_html'] ) : esc_html( $notice['message'] ); ?></p>
 							<?php
 							foreach ( $notice['details'] ?? array() as $detail ) :
 								?>
@@ -410,6 +423,7 @@ final class RepositoryWebhookManagementControls {
 			? $repository['local_secret_coverage']
 			: ( null === $record ? 'unknown' : 'recorded-' . $record->webhook_profile_scope() );
 		$receiver_ready  = 'ready' === ( $site['status'] ?? null );
+		$site_reason     = WebhookDisplayModel::primary_site_reason( is_array( $site['reason_codes'] ?? null ) ? $site['reason_codes'] : array() );
 		$provider_label  = $this->controller->provider_metadata( $provider_code )?->label;
 		$record_healthy  = null !== $record
 			&& 'configured' === $record->status()
@@ -435,8 +449,10 @@ final class RepositoryWebhookManagementControls {
 				'message' => match ( $secret_coverage ) {
 					'repository', 'shared' => __( 'A signing secret is ready for this repository.', 'ran-booster' ),
 					'recorded-repository', 'recorded-owner' => __( 'A signing secret was available when Booster last checked.', 'ran-booster' ),
-					'none' => __( 'This repository needs a signing secret.', 'ran-booster' ),
-					default => __( 'Booster could not confirm the signing secret.', 'ran-booster' ),
+					/* translators: 1: opening link tag to the provider's signing secrets; 2: closing link tag. */
+					'none' => WebhookDisplayModel::link_sentence( __( 'This repository needs a %1$ssigning secret%2$s.', 'ran-booster' ), $this->display->provider_settings_url( $provider_code, 'signing-secrets' ), true ),
+					/* translators: 1: opening link tag to the provider's signing secrets; 2: closing link tag. */
+					default => WebhookDisplayModel::link_sentence( __( 'Booster could not confirm the %1$ssigning secret%2$s.', 'ran-booster' ), $this->display->provider_settings_url( $provider_code, 'signing-secrets' ), true ),
 				},
 				'state'   => in_array( $secret_coverage, array( 'repository', 'shared', 'recorded-repository', 'recorded-owner' ), true ) ? 'is-ok' : ( 'none' === $secret_coverage ? 'is-warning' : 'is-pending' ),
 			),
@@ -444,7 +460,8 @@ final class RepositoryWebhookManagementControls {
 				'label'   => __( 'Git provider receiver', 'ran-booster' ),
 				'message' => $receiver_ready
 					? __( 'This site can receive webhook deliveries.', 'ran-booster' )
-					: WebhookDisplayModel::receiver_unavailable_message(),
+					// An unknown cause has no destination yet, so it keeps the unlinked confirmation sentence.
+					: ( null !== $site_reason ? (string) WebhookDisplayModel::site_reason_message( $site_reason, true ) : esc_html__( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' ) ),
 				'state'   => $receiver_ready ? 'is-ok' : ( null === $site ? 'is-pending' : 'is-warning' ),
 			),
 			array(
@@ -457,13 +474,13 @@ final class RepositoryWebhookManagementControls {
 						? sprintf(
 							/* translators: %s: UTC timestamp of the last recorded webhook check. */
 							__( 'Configured at the last recorded check on %s. Validate to confirm current Git provider state.', 'ran-booster' ),
-							$record->checked_at()
+							esc_html( $record->checked_at() )
 						)
 						: match ( true ) {
 							// The step names the state; the operational panel's warning, when it renders, says what to do.
 							$record->requires_hook_identification() => __( 'Setup not confirmed', 'ran-booster' ),
 							/* translators: %s: repository provider name. */
-							'remote_missing' === $record->status() && null !== $provider_label => sprintf( __( 'This webhook was deleted on %s.', 'ran-booster' ), $provider_label ),
+							'remote_missing' === $record->status() && null !== $provider_label => sprintf( __( 'This webhook was deleted on %s.', 'ran-booster' ), esc_html( $provider_label ) ),
 							// Nothing can be validated while the provider cannot reach this site; Forget stays available.
 							! $receiver_ready => __( 'Booster has a record of this webhook.', 'ran-booster' ),
 							default => __( 'The recorded remote webhook needs review. Validate or inspect it at the Git provider.', 'ran-booster' ),
@@ -503,7 +520,8 @@ final class RepositoryWebhookManagementControls {
 				<li class="ran-booster-webhook-step <?php echo esc_attr( $state ); ?>">
 					<span aria-hidden="true"></span>
 					<strong><?php echo esc_html( $step['label'] ); ?></strong>
-					<p><?php echo esc_html( is_array( $item ) && is_string( $item['message'] ?? null ) ? $item['message'] : __( 'Booster could not confirm this step.', 'ran-booster' ) ); ?></p>
+					<?php // Interpolated values are escaped where step messages are built; kses keeps only safe markup, their one link. ?>
+					<p><?php echo wp_kses_post( is_array( $item ) && is_string( $item['message'] ?? null ) ? $item['message'] : __( 'Booster could not confirm this step.', 'ran-booster' ) ); ?></p>
 				</li>
 		<?php } ?>
 		</ol>

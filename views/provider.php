@@ -30,7 +30,6 @@
  * @var string $secrets_url
  * @var string $webhook_endpoint
  * @var string $webhook_operations_url
- * @var string $wordpress_urls_url
  * @var bool $has_credential_settings
  * @var bool $has_webhook_settings
  * @var bool $provider_has_webhook_settings
@@ -226,7 +225,7 @@ $provider_is_card     = in_array( $provider_view, \RAN\Admin\AdminRoutes::PROVID
  * encrypted credential storage or the managed package inventory unavailable)
  * is a genuine error, so it is warning.
  */
-$render_webhook_delivery_notice = static function () use ( $webhook_assistance_provider_capable, $webhook_assistance_site_ready, $webhook_has_hard_failure, $webhook_site_reasons, $wordpress_urls_url ): void {
+$render_webhook_delivery_notice = static function () use ( $webhook_assistance_provider_capable, $webhook_assistance_site_ready, $webhook_has_hard_failure, $webhook_site_reasons ): void {
 	if ( ! $webhook_assistance_provider_capable || $webhook_assistance_site_ready ) {
 		return;
 	}
@@ -234,7 +233,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 	?>
 	<div class="notice notice-<?php echo esc_attr( $intent ); ?> inline ran-booster-push-deploy__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $intent ); ?>" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( $intent ); ?>">
 		<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
-			<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( implode( ' ', $webhook_site_reasons ) ); ?> <a href="<?php echo esc_url( $wordpress_urls_url ); ?>"><?php esc_html_e( 'Review WordPress URLs', 'ran-booster' ); ?></a></p>
+			<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo wp_kses_post( implode( ' ', $webhook_site_reasons ) ); ?></p>
 		</div>
 		<?php \RAN\Admin\Component\NoticeIcon::print_intent( $intent ); ?>
 	</div>

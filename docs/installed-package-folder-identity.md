@@ -34,7 +34,7 @@ A value checked against its own stored or WordPress-reported spelling, such as
 an adoption row, an attempt record or a native-mutation completion, stays an
 exact comparison, as the library documents.
 
-Exceptions, each commented where it is made:
+Exceptions, commented where they are made unless noted:
 
 - Full identifiers keep their separator handling, then fold whole with
   `collision_key()`: release-target keys and the nested-path prefix of the
@@ -47,7 +47,7 @@ Exceptions, each commented where it is made:
 - Full filesystem paths, such as destination existence and child-path checks,
   are decided by the filesystem.
 - Database lookups take the table collation's case rule, as the next section
-  describes; the unfinished-attempt lock is commented where it is made.
+  describes. Only the unfinished-attempt lock carries a comment.
 
 ## Database lookups
 
@@ -56,7 +56,9 @@ plain `=` take the table collation's case rule, which ignores case on a default
 WordPress install. They keep their indexes, including the `FOR UPDATE` lock that
 admits one unfinished attempt per package; the batch de-duplication keys in
 front of that lock are exact. The safeguard is the exact comparison in PHP after
-the read, or the token a write is bound to. `package_slug` is admitted as an
-ASCII-only name (`is_valid_name()`) before it is stored, so accent folding cannot
-apply. The tables are assumed to use a case-insensitive collation; nothing
-verifies it.
+the read, or the token a write is bound to; where neither applies, such as a
+management-record preflight or the attempt lock, a wider match only widens a
+refusal, a lock or a display. `package_slug` is admitted as an ASCII-only name
+(`is_valid_name()`) before it is stored, so accent folding cannot apply to it;
+package identifiers may contain other bytes and rely on the PHP check. The tables
+are assumed to use a case-insensitive collation; nothing verifies it.

@@ -20,6 +20,7 @@ require_once dirname( __DIR__ ) . '/Support/PackageSourceGateWordPressFunctions.
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
 final class GeneralPreferenceStoreTest extends TestCase {
+	use \RAN\Tests\Support\CapturesBoosterLog;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override.
 	protected function setUp(): void {
@@ -645,6 +646,27 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		$document['hide_github'] = false;
 		$this->seed( $document );
 		self::assertSame( $after, $store->view_snapshot()['tokens']['hide_github'], 'Older writers do not advance the counter; ABA protection does not extend across them.' );
+	}
+
+	public function test_a_throwing_save_logs_only_its_class_and_code(): void {
+		$store = new GeneralPreferenceStore();
+		$this->start_log_capture();
+		try {
+			$result = $store->save(
+				$store->snapshot()['token'],
+				$this->submission(),
+				static function (): never {
+					throw new \RuntimeException( 'marker-private-text', 7 );
+				},
+				static fn (): bool => true,
+				'numeric'
+			);
+			$lines  = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+		self::assertSame( 'failed', $result );
+		self::assertSame( array( '[ran-booster] General Settings could not be saved. {"operation":"save_numeric","step":"settings_save","exception_class":"RuntimeException","exception_code":"7"}' ), $lines );
 	}
 
 	public function test_failed_write_or_commit_does_not_advance_metadata_in_rollback_fixture(): void {

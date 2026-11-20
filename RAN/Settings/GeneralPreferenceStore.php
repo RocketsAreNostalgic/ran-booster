@@ -162,7 +162,15 @@ final class GeneralPreferenceStore {
 		}
 		try {
 			return $this->outcome( $with_management_admission_lock( fn (): string => $this->save_locked( $wpdb, $expected_token, $submitted, $github_hide_eligible, $scope ) ) );
-		} catch ( \Throwable ) {
+		} catch ( \Throwable $exception ) {
+			\RAN\Logging\BoosterLogger::log_exception(
+				'General Settings could not be saved.',
+				$exception,
+				array(
+					'operation' => 'save_' . $scope,
+					'step'      => 'settings_save',
+				)
+			);
 			return $this->finish( $wpdb, false, 'failed' );
 		}
 	}

@@ -397,6 +397,74 @@ test('enhanced mutation feedback is opt-in and restores the submitter after a re
 	);
 });
 
+test('the settings Save stays busy through its redirect request until that request ends', () => {
+	const state = fixture();
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	init();
+	// What htmx 2 sends for a redirect: no successful flag before HX-Location.
+	const redirected = () => ({
+		elt: state.form,
+		xhr: {
+			status: 200,
+			getResponseHeader: (name) =>
+				name === 'HX-Location'
+					? '{"path":"/wp-admin/admin.php"}'
+					: null,
+		},
+	});
+	const busy = () => state.formAttributes.get('aria-busy') === 'true';
+	const answer = (detail, followUp = () => {}) => {
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		state.listeners.get('htmx:beforeOnLoad')({ detail });
+		// htmx issues the follow-up request here, before the save's afterRequest.
+		followUp();
+		state.listeners.get('htmx:afterRequest')({ detail });
+	};
+
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-package-settings-save';
+	answer(redirected());
+	assert.equal(busy(), true);
+	assert.equal(state.button.disabled, true);
+	// The follow-up ends, here as a failure; htmx sends afterRequest for a load,
+	// an error, an abort and a timeout alike.
+	state.listeners.get('htmx:afterRequest')({
+		detail: { elt: null, xhr: { status: 0 } },
+	});
+	assert.equal(busy(), false);
+	assert.equal(state.button.disabled, false);
+
+	// A follow-up that cannot start raises its error before the save's afterRequest.
+	answer(redirected(), () =>
+		state.listeners.get('htmx:targetError')({ detail: { elt: null } })
+	);
+	assert.equal(busy(), false);
+	assert.equal(state.button.disabled, false);
+
+	// A stale save whose load is cancelled issues no follow-up, so it resets.
+	const stale = redirected();
+	state.listeners.get('htmx:beforeRequest')({ detail: stale });
+	state.listeners.get('htmx:beforeOnLoad')({
+		defaultPrevented: true,
+		detail: stale,
+	});
+	state.listeners.get('htmx:afterRequest')({ detail: stale });
+	assert.equal(busy(), false);
+
+	// A refused save and every other enhanced save that redirects reset at once.
+	answer({
+		...redirected(),
+		xhr: { status: 409, getResponseHeader: () => null },
+	});
+	assert.equal(busy(), false);
+	state.form.hasAttribute = () => false;
+	answer(redirected());
+	assert.equal(busy(), false);
+});
+
 test('enhanced source links use the same busy and restore lifecycle', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {

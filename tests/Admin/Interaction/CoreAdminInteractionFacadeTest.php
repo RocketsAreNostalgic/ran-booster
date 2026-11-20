@@ -115,7 +115,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		self::assertStringContainsString( ' data-ran-booster-enhanced-mutation', $attributes );
 		self::assertStringContainsString( ' data-ran-booster-error-target="#repository-webhook-management-error"', $attributes );
 		self::assertStringContainsString( ' hx-post="/wp-admin/admin-post.php"', $attributes );
-		self::assertSame( 2, substr_count( $attributes, '#ran-booster-provider-task-panel' ) );
+		self::assertSame( 2, substr_count( $attributes, '#ran-booster-provider-profile-region' ) );
 		self::assertStringContainsString( ' hx-sync="this:drop"', $attributes );
 		self::assertStringContainsString( '&quot;repository-webhook-management:manage-webhook&quot;', $attributes );
 
@@ -133,7 +133,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$facade                           = $this->facade();
 		$request                          = $this->request();
 		$_SERVER['HTTP_HX_REQUEST']       = 'true';
-		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
 		$_POST['ran_booster_interaction'] = array(
 			'operation' => 'repository-webhook-management:manage-webhook',
 			'target'    => 'provider_repositories',
@@ -279,9 +279,10 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		}
 	}
 
-	public function test_enhanced_success_uses_core_location_and_signed_feedback(): void {
+	public function test_enhanced_success_reloads_the_provider_view_with_signed_feedback(): void {
 		$facade = $this->facade();
 		$this->set_enhanced_request();
+		$GLOBALS['ran_booster_interaction_test_actions'] = array();
 
 		$this->capture_termination(
 			fn () => $facade->respond(
@@ -289,29 +290,25 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			)
 		);
 
+		// A located swap would carry the message only on its follow-up request, where nothing shows it.
 		self::assertSame( array( 200 ), $this->statuses );
-		$location = $this->header( 'HX-Location' );
-		self::assertNotNull( $location );
-		self::assertNull( $this->header( 'HX-Redirect' ) );
-		$decoded = json_decode( $location, true );
-		self::assertIsArray( $decoded );
-		self::assertSame( '#ran-booster-provider-task-panel', $decoded['target'] );
-		self::assertStringStartsWith( '/wp-admin/', $decoded['path'] );
-		self::assertStringNotContainsString( 'https://example.test', $decoded['path'] );
-		self::assertStringNotContainsString( 'message', $decoded['path'] );
-		self::assertStringNotContainsString( 'configured', rawurldecode( $decoded['path'] ) );
+		$redirect = $this->header( 'HX-Redirect' );
+		self::assertNotNull( $redirect );
+		self::assertNull( $this->header( 'HX-Location' ) );
+		self::assertNull( $this->header( 'HX-Trigger-After-Swap' ) );
+		self::assertSame( array(), $this->redirects );
+		self::assertStringNotContainsString( 'configured', rawurldecode( $redirect ) );
 
-		$this->load_query_from_url( $decoded['path'] );
-		$_SERVER['HTTP_HX_REQUEST'] = 'true';
-		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-task-panel';
-		$this->headers              = array();
+		$this->load_query_from_url( $redirect );
+		$this->headers = array();
+		$_POST         = array();
+		unset( $_SERVER['HTTP_HX_REQUEST'], $_SERVER['HTTP_HX_TARGET'] );
 		$facade->prepare_pending_feedback();
-
-		self::assertStringContainsString(
-			'GitHub webhook configured.',
-			(string) $this->header( 'HX-Trigger-After-Swap' )
-		);
-		self::assertSame( wp_make_link_relative( $this->canonical_url() ), $this->header( 'HX-Replace-Url' ) );
+		$notices = $GLOBALS['ran_booster_interaction_test_actions']['admin_notices'] ?? array();
+		self::assertCount( 1, $notices );
+		ob_start();
+		$notices[0]['callback']();
+		self::assertStringContainsString( 'GitHub webhook configured.', (string) ob_get_clean() );
 	}
 
 	public function test_tampered_pending_feedback_is_ignored(): void {
@@ -322,12 +319,10 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 				AdminInteractionOutcome::success( $this->request(), 'Original success.' )
 			)
 		);
-		$location = json_decode( (string) $this->header( 'HX-Location' ), true );
-		self::assertIsArray( $location );
-		$this->load_query_from_url( $location['path'] );
+		$this->load_query_from_url( (string) $this->header( 'HX-Redirect' ) );
 		$_GET['ran_booster_interaction_outcome'] = 'validation_failure';
 		$_SERVER['HTTP_HX_REQUEST']              = 'true';
-		$_SERVER['HTTP_HX_TARGET']               = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']               = 'ran-booster-provider-profile-region';
 		$this->headers                           = array();
 
 		$facade->prepare_pending_feedback();
@@ -343,12 +338,10 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 				AdminInteractionOutcome::success( $this->request(), 'Original success.' )
 			)
 		);
-		$location = json_decode( (string) $this->header( 'HX-Location' ), true );
-		self::assertIsArray( $location );
-		$this->load_query_from_url( $location['path'] );
+		$this->load_query_from_url( (string) $this->header( 'HX-Redirect' ) );
 		$_GET['repository']         = '202';
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
-		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-profile-region';
 		$this->headers              = array();
 
 		$facade->prepare_pending_feedback();
@@ -373,6 +366,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 
 		self::assertSame( array( 422 ), $this->statuses );
 		self::assertSame( '#repository-webhook-management-error', $this->header( 'HX-Retarget' ) );
+		self::assertNull( $this->header( 'HX-Redirect' ), 'A failure stays in the panel; only a success reloads the provider view.' );
 		self::assertSame( 'unset', $this->header( 'HX-Reselect' ) );
 		self::assertSame( 'outerHTML', $this->header( 'HX-Reswap' ) );
 		self::assertStringContainsString( 'Could not verify &lt;the hook&gt;.', $html );
@@ -571,7 +565,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$GLOBALS['ran_booster_interaction_test_meta'] = array();
 		$this->load_query_from_url( $url );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
-		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-profile-region';
 		$this->headers              = array();
 		$this->facade()->prepare_pending_feedback();
 
@@ -918,7 +912,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 
 	private function set_enhanced_request(): void {
 		$_SERVER['HTTP_HX_REQUEST']       = 'true';
-		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
 		$_POST['ran_booster_interaction'] = array(
 			'operation' => 'repository-webhook-management:manage-webhook',
 			'target'    => 'provider_repositories',

@@ -135,8 +135,16 @@ final class DeploymentOutcomeMessage {
 			'provider_rate_limited'          => __( 'The Git provider rate limit was reached. Wait for its quota to reset or use an authenticated credential.', 'ran-booster' ),
 			'provider_selection_changed'     => __( 'The GitHub implementation changed after this deployment was requested. Review the current Git provider and submit a new deployment.', 'ran-booster' ),
 			'provider_unavailable'           => __( 'The Git provider could not be reached or returned an invalid response. Try again later.', 'ran-booster' ),
-			'archive_compressed_too_large'   => __( 'The repository ZIP exceeds this site\'s configured archive download limit. Reduce the repository size or review Download limits in Booster Settings; configuration overrides may lock the value.', 'ran-booster' ),
-			'archive_expanded_too_large'     => __( 'The repository ZIP expands beyond this site\'s configured archive safety limit. Reduce the repository contents or review Download limits in Booster Settings; stricter extraction safeguards still apply.', 'ran-booster' ),
+			'archive_compressed_too_large'   => sprintf(
+				/* translators: %s: the Download limits control in Booster Settings. */
+				__( 'The repository ZIP exceeds this site\'s configured archive download limit. Reduce the repository size or review %s; configuration overrides may lock the value.', 'ran-booster' ),
+				self::download_limits_label()
+			),
+			'archive_expanded_too_large'     => sprintf(
+				/* translators: %s: the Download limits control in Booster Settings. */
+				__( 'The repository ZIP expands beyond this site\'s configured archive safety limit. Reduce the repository contents or review %s; stricter extraction safeguards still apply.', 'ran-booster' ),
+				self::download_limits_label()
+			),
 			'archive_limit_invalid'          => __( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES is invalid. Set the configured constant to an integer between 1 MiB and 536,870,911 bytes (just under 512 MiB).', 'ran-booster' ),
 			'preflight_failed'               => sprintf(
 				/* translators: %s: the Troubleshooting logging control. */
@@ -206,17 +214,28 @@ final class DeploymentOutcomeMessage {
 	}
 
 	/**
-	 * The same copy as for_code() as escaped HTML, with the one Troubleshooting logging phrase linked to its control.
+	 * The same copy as for_code() as escaped HTML, with a control's phrase linked to it: Troubleshooting logging, or Download limits in Booster Settings.
 	 *
 	 * Only HTML surfaces call this. Plain-text surfaces keep for_code(), and a reader who cannot open the control gets the phrase unlinked.
 	 */
 	public static function for_code_html( string $code, mixed $encoded_facts = null ): string {
-		$text  = esc_html( self::for_code( $code, $encoded_facts ) );
-		$label = esc_html( self::logging_label() );
+		$text = esc_html( self::for_code( $code, $encoded_facts ) );
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return $text;
 		}
-		return str_replace( $label, '<a href="' . esc_url( ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster&tab=troubleshooting&panel=logging' ) . '">' . $label . '</a>', $text );
+		$admin_url = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+		foreach ( array(
+			self::logging_label()         => '?page=ran-booster&tab=troubleshooting&panel=logging',
+			self::download_limits_label() => '?page=ran-booster-settings#ran-booster-general-numeric',
+		) as $label => $query ) {
+			$text = str_replace( esc_html( $label ), '<a href="' . esc_url( $admin_url . $query ) . '">' . esc_html( $label ) . '</a>', $text );
+		}
+
+		return $text;
+	}
+
+	private static function download_limits_label(): string {
+		return __( 'Download limits in Booster Settings', 'ran-booster' );
 	}
 
 	private static function logging_label(): string {

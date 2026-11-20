@@ -223,6 +223,12 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			self::assertStringNotContainsString( 'secret-canary', $html );
 		}
 		self::assertStringNotContainsString( '<a ', DeploymentOutcomeMessage::for_code_html( 'lock_unavailable' ) );
+		foreach ( array( 'archive_compressed_too_large', 'archive_expanded_too_large' ) as $code ) {
+			$html = DeploymentOutcomeMessage::for_code_html( $code );
+			self::assertSame( 1, substr_count( $html, '<a ' ), $code );
+			self::assertStringContainsString( 'review <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-numeric">Download limits in Booster Settings</a>;', $html, $code );
+			self::assertStringNotContainsString( '<a ', DeploymentOutcomeMessage::for_code( $code ) );
+		}
 
 		$capabilities = $GLOBALS['ran_booster_test_capabilities'] ?? null;
 
@@ -249,6 +255,10 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertStringContainsString(
 			'<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=logging">Troubleshooting logging</a>',
 			DeploymentOutcomeMessage::for_code_html( 'provider_failed' )
+		);
+		self::assertStringContainsString(
+			'<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster-settings#ran-booster-general-numeric">Download limits in Booster Settings</a>',
+			DeploymentOutcomeMessage::for_code_html( 'archive_compressed_too_large' )
 		);
 	}
 

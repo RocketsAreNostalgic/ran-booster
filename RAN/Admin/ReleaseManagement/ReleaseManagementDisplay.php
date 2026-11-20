@@ -979,7 +979,7 @@ final class ReleaseManagementDisplay {
 			'refresh_rejected',
 			'refresh_check_failed' => FeedbackFlash::check_result( $code, $detail )[1] ?? '',
 			'source_changed' => __( 'Package settings changed after this browser page was opened. Refresh the page, review the current settings, then try again.', 'ran-booster' ),
-			'source_paused' => __( 'Updates are paused by a site setting.', 'ran-booster' ),
+			'source_paused' => __( 'Updates are paused by a site setting. No files were changed.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'This package already registers its own release updater. Use one release owner only.', 'ran-booster' ),
 			'forbidden' => __( 'You are not authorized to perform this published release operation. No package was installed or adopted.', 'ran-booster' ),
 			'unsupported_provider' => __( 'Published releases are not available for this Git provider. Use Branch tracking instead.', 'ran-booster' ),

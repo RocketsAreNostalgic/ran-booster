@@ -324,6 +324,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		return array(
 			'release changed'        => array( 'release_changed', 'The release changed after it was inspected. No package was installed. Use Check releases and try again.' ),
 			'release invalid'        => array( 'release_invalid', 'The selected release does not satisfy the selected channel requirements. No package was installed.' ),
+			'source paused'          => array( 'source_paused', 'Updates are paused by a site setting. No files were changed.' ),
 			'package already exists' => array( 'package_already_exists', 'That plugin or theme is already installed or managed. No package was overwritten.' ),
 		);
 	}

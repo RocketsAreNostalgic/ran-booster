@@ -472,12 +472,21 @@ final class PackageAdminController {
 			return;
 		}
 
-		$plural = 'plugin' === $type ? __( 'plugins', 'ran-booster' ) : __( 'themes', 'ran-booster' );
+		$plural     = 'plugin' === $type ? __( 'plugins', 'ran-booster' ) : __( 'themes', 'ran-booster' );
+		$admin_url  = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+		$can_follow = current_user_can( 'manage_options' );
+		$link_tags  = static fn ( string $query ): array => $can_follow ? array( '<a href="' . esc_url( $admin_url . '?' . $query ) . '">', '</a>' ) : array( '', '' );
 		if ( '' !== $result->error_code ) {
-			$errors = array(
+			[ $provider_open, $provider_close ] = $link_tags( 'page=ran-booster-extensions' );
+			$errors                             = array(
 				'credential_unavailable' => __( 'A selected package does not have its required repository credential.', 'ran-booster' ),
 				'invalid_request'        => __( 'Choose a bulk action and a supported number of managed packages.', 'ran-booster' ),
-				'provider_unavailable'   => __( 'A selected package uses an unavailable Git provider.', 'ran-booster' ),
+				'provider_unavailable'   => sprintf(
+					/* translators: 1: opening link tag to Extensions, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'A selected package uses an unavailable %1$sGit provider%2$s.', 'ran-booster' ),
+					$provider_open,
+					$provider_close
+				),
 				'stale'                  => __( 'A selected managed package changed or is no longer available. Refresh and try again.', 'ran-booster' ),
 				'unavailable'            => __( 'Booster could not safely complete this bulk action. No success was reported.', 'ran-booster' ),
 				'webhook_unavailable'    => __( 'A selected package Git provider does not support Automatic deployment.', 'ran-booster' ),
@@ -521,7 +530,14 @@ final class PackageAdminController {
 				)
 			);
 			if ( 'unavailable' === $result->runner_status && $result->queued > 0 ) {
-				$message .= ' ' . __( 'The updates remain queued, but WordPress could not schedule the deployment runner. Open Troubleshooting to request it.', 'ran-booster' );
+				// The Request deployment runner button sits on Activity and shows while updates are queued.
+				[ $runner_open, $runner_close ] = $link_tags( 'page=ran-booster&tab=troubleshooting&panel=activity' );
+				$message                       .= ' ' . sprintf(
+					/* translators: 1: opening link tag to Activity, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'The updates remain queued, but WordPress could not schedule the deployment runner. Open %1$sTroubleshooting%2$s to request it.', 'ran-booster' ),
+					$runner_open,
+					$runner_close
+				);
 			}
 
 			$add_context_message(
@@ -910,16 +926,18 @@ final class PackageAdminController {
 	 */
 	private function coded_refusal( string $action, string $code, \Closure $add_context_message ): bool {
 		status_header( 400 );
+		// The pause gate runs before any file is touched; Save and reinstall has already saved the settings, so the notice speaks of files.
+		$message = match ( $code ) {
+			'package_already_exists' => __( 'That plugin or theme is already installed or managed. No package was overwritten.', 'ran-booster' ),
+			'source_paused' => __( 'Updates are paused by a site setting. No files were changed.', 'ran-booster' ),
+			default => DeploymentOutcomeMessage::for_code_html( $code ),
+		};
 		$add_context_message(
-			new WP_Error(
-				'ran_booster_refused_' . $code,
-				'package_already_exists' === $code
-					? __( 'That plugin or theme is already installed or managed. No package was overwritten.', 'ran-booster' )
-					: DeploymentOutcomeMessage::for_code_html( $code )
-			),
+			new WP_Error( 'ran_booster_refused_' . $code, $message ),
 			array(
-				'operation' => $action,
-				'step'      => 'manual_package_operation',
+				'operation'    => $action,
+				'outcome_code' => $code,
+				'step'         => 'manual_package_operation',
 			)
 		);
 		return false;

@@ -956,8 +956,9 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//nav/a[@aria-current="page" and contains(@href, "panel=' . $troubleshooting_panel . '")])' ) );
 			foreach ( \RAN\Admin\AdminRoutes::TROUBLESHOOTING_PANELS as $index => $key ) {
 				self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//nav/a[' . ( $index + 1 ) . '][contains(@href, "panel=' . $key . '")])' ) );
-				// Contract: each slug is its visible label, lowercased and hyphenated.
-				self::assertSame( $key, strtolower( str_replace( ' ', '-', trim( (string) $xpath->evaluate( 'string(' . $region . '//nav/a[' . ( $index + 1 ) . '])' ) ) ) ) );
+				// Contract: each slug is its visible label, lowercased and hyphenated. The report panel keeps its original slug under its renamed label.
+				$label_slug = strtolower( str_replace( ' ', '-', trim( (string) $xpath->evaluate( 'string(' . $region . '//nav/a[' . ( $index + 1 ) . '])' ) ) ) );
+				self::assertSame( $key, 'diagnostic-report' === $label_slug ? 'support-report' : $label_slug );
 			}
 			if ( 'diagnostics' === $troubleshooting_panel ) {
 				self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//form[@hx-target="#ran-booster-troubleshooting-diagnostics-region"])' ) );
@@ -2442,7 +2443,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $content . '/form[@data-support-report-tools])' ) );
 		$tools = $content . '/form[@data-support-report-tools]';
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/div[last()][' . $cls( 'ran-booster-card-footer' ) . '])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/div[last()]/button[1][@type="submit"][normalize-space(.)="Generate support report"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/div[last()]/button[1][@type="submit"][normalize-space(.)="Generate diagnostic report"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/div[last()]/button[2][@data-support-report-download][not(@disabled)])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(' . $tools . '/div[last()]/button)' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/p/label[@for="ran-booster-troubleshooting-report"]/strong[normalize-space(.)="Sanitized JSON preview"])' ) );

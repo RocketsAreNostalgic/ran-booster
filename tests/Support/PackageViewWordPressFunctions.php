@@ -267,9 +267,7 @@ if ( ! function_exists( 'wp_parse_url' ) ) {
 if ( ! function_exists( 'current_user_can' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function current_user_can( string $capability ): bool {
-		unset( $capability );
-
-		return true;
+		return $GLOBALS['ran_booster_test_capabilities'][ $capability ] ?? true;
 	}
 }
 

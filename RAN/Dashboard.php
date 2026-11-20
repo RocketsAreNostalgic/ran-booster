@@ -1697,7 +1697,7 @@ class Dashboard {
 
 		$data['development_environment_detected'] = $development_environment_detected;
 
-		$data['local_development_overview'] = $this->is_local_development_overview( $view, $data, DevelopmentEnvironmentDetector::is_local() );
+		$data['local_development_overview'] = $this->is_local_development_overview( $view, $data );
 		$data['development_safety_notice']  = $this->should_show_development_safety_notice( $data['local_development_overview'] );
 		if ( isset( $data['package_view'] ) && $data['package_view'] instanceof PackagePagePresenter ) {
 			$type                        = $data['package_view']->get_type();
@@ -1723,9 +1723,9 @@ class Dashboard {
 	}
 
 	/** @param array<string, mixed> $data Canonical view projection. */
-	private function is_local_development_overview( string $view, array $data, bool $is_local ): bool {
+	private function is_local_development_overview( string $view, array $data ): bool {
 		return 'index' === $view && 'overview' === ( $data['tab'] ?? null )
-			&& isset( $data['onboarding'] ) && $is_local;
+			&& isset( $data['onboarding'] ) && \RAN\Deployment\PackageSourceGate::is_development_site();
 	}
 
 	private function should_show_development_safety_notice( bool $local_development_overview ): bool {

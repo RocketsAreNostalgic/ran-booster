@@ -309,6 +309,53 @@ final class RepeatPackageViewTest extends TestCase {
 		);
 	}
 
+	// A separate process keeps the package-view capability and multisite doubles in charge whatever loaded first.
+	#[DataProvider( 'create_view_matrix' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_create_view_warns_under_updates_when_branch_installs_are_paused( PackagePagePresenter $package_view, bool $explicit_provider, bool $open_repository_picker ): void {
+		$package_provider_settings = $this->provider_settings( true );
+		$notice                    = '/id="ran-booster-package-operation-heading".*id="ran-booster-deployment-policy".*<\/p>\s*<\/div>\s*<div class="notice notice-warning inline ran-wp-ui-notice [^"]*"[^>]*data-ran-booster-policy-source="branch" id="ran-booster-branch-paused-warning"><div [^>]*><p>\s*Branch installs are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\. You can still link an installed ' . $package_view->get_type() . '\.\s*<\/p><\/div><svg\b[^>]*>.*?<\/svg><\/div>\s*<div class="notice[^"]*"[^>]*data-ran-booster-local-development-warning[^>]*>\s*<div [^>]*>\s*<p>\s*<strong>Making local edits\? Choose Disabled\.<\/strong>.*<div data-ran-booster-branch-install-actions>\s*<fieldset class="ran-booster-package-link-choice"[^>]*>\s*<div class="ran-booster-settings-fields">\s*<div class="ran-booster-settings-field ran-booster-settings-field--wide">.*name="ran_booster\[dry-run\]".*id="ran-booster-link-installed-help"[^<]*<\/p>\s*<\/div>\s*<\/div>\s*<\/fieldset>\s*<span[^>]*data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-card-footer ran-booster-package-install-actions"/s';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+		$unpaused = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'Branch installs are paused', $unpaused );
+		self::assertStringNotContainsString( 'ran-booster-branch-paused-warning', $unpaused, 'Without a pause no button points at the warning.' );
+
+		// Whichever capability double loads first serves the suite; the shared explicit map wins in each.
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => false );
+		try {
+			$package_branch_paused = true;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+			self::assertStringContainsString( 'Branch installs are paused by a site setting. You can still link an installed ' . $package_view->get_type() . '.', (string) ob_get_clean(), 'A user who cannot open Settings gets the sentences without a link.' );
+
+			$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => true );
+			$development_environment_detected         = true;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+			$html = (string) ob_get_clean();
+
+			// On multisite Booster's pages live in the network admin, so the link follows them there.
+			$GLOBALS['ran_booster_package_view_multisite'] = true;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+			self::assertStringContainsString( 'Branch installs are paused by a <a href="https://example.test/wp-admin/network/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">', (string) ob_get_clean() );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_package_view_multisite'] );
+		}
+		self::assertMatchesRegularExpression( $notice, $html, 'One linked warning right under the Updates description, above the local edits notice; the link choice group holds only its checkbox.' );
+		self::assertSame( 1, substr_count( $html, 'Branch installs are paused' ) );
+		// Each Install button names the warning, so a screen reader can tell why the script disabled it.
+		self::assertSame( 2, preg_match_all( '/<button type="submit"[^>]*aria-describedby="[^"]*\bran-booster-branch-paused-warning"/', $html ) );
+		self::assertStringContainsString( 'aria-describedby="ran-booster-link-installed-help ran-booster-branch-paused-warning"', $html );
+		self::assertStringContainsString( 'Install New ' . $package_view->get_singular_label(), $html );
+		self::assertStringContainsString( 'data-ran-booster-source-choice="branch"', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-source-choice="branch" aria-disabled', $html, 'The cards stay as they are.' );
+		unset( $explicit_provider, $open_repository_picker );
+	}
+
 	#[DataProvider( 'create_view_matrix' )]
 	public function test_create_view_keeps_primary_install_and_adds_explicit_repeat_action(
 		PackagePagePresenter $package_view,

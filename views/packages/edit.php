@@ -334,6 +334,7 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 					$package_automation_source      = $package_current_source;
 					$package_operation_layout       = true;
 					$package_operation_actions_html = '';
+					$package_operation_notice_html  = '';
 					ob_start();
 					if ( $release_managed ) {
 						/**
@@ -361,10 +362,10 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 						$package_operation_actions_html = (string) ob_get_clean();
 					}
 					if ( $package_paused ) {
-						$package_operation_actions_html = '<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>' . wp_kses_post( $package_paused_text ) . '</p></div>' . \RAN\Admin\Component\NoticeIcon::markup( 'warning' ) . '</div>' . $package_operation_actions_html;
+						$package_operation_notice_html = '<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>' . wp_kses_post( $package_paused_text ) . ' ' . esc_html__( 'Changes here are saved and apply only when re-enabled.', 'ran-booster' ) . '</p></div>' . \RAN\Admin\Component\NoticeIcon::markup( 'warning' ) . '</div>';
 					}
 					require __DIR__ . '/fields/deployment-policy.php';
-					unset( $package_field_form, $package_operation_layout, $package_operation_actions_html, $package_add_on_operation_actions );
+					unset( $package_field_form, $package_operation_layout, $package_operation_actions_html, $package_operation_notice_html, $package_add_on_operation_actions );
 					?>
 				</div>
 			</div></div></section>

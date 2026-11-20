@@ -440,6 +440,54 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		$provider->remove_state = 'succeeded';
 		self::assertTrue( $facade->remove( $target, 'profile_1', '55', $profile_id, 1, 'good' )->confirms_absence() );
 		self::assertArrayNotHasKey( $profile_id, $secrets->profiles );
+
+		$secrets->profiles[ $profile_id ] = array( 'origin' => 'manual' ) + $secrets->profile( $profile_id, 1 );
+		self::assertTrue( $facade->remove( $target, 'profile_1', '55', $profile_id, 1, 'good' )->confirms_absence() );
+		self::assertArrayHasKey( $profile_id, $secrets->profiles, 'A reused secret outlives the hook.' );
+	}
+
+	public function test_forget_releases_only_the_unchanged_created_secret_and_never_calls_the_provider(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$facade   = $this->facade( $secrets, $provider );
+		$target   = $facade->target( 'gh', '101' );
+		self::assertNotNull( $target );
+		$created                       = 'wh_' . str_repeat( 'a', 24 );
+		$reused                        = 'wh_' . str_repeat( 'b', 24 );
+		$secrets->profiles[ $created ] = $secrets->profile( $created, 1 );
+		$secrets->profiles[ $reused ]  = array( 'origin' => 'manual' ) + $secrets->profile( $reused, 1 );
+
+		self::assertSame( 'operation_unauthorized', $facade->forget( $target, $created, 1, 'bad' )->code() );
+		self::assertSame( 'forgotten', $facade->forget( $target, $created, 2, 'good' )->code() );
+		self::assertSame( 'forgotten', $facade->forget( $target, $reused, 1, 'good' )->code() );
+		self::assertSame( array( $created, $reused ), array_keys( $secrets->profiles ), 'A changed or reused secret stays.' );
+
+		self::assertSame( 'forgotten', $facade->forget( $target, $created, 1, 'good' )->code() );
+		self::assertSame( array( $reused ), array_keys( $secrets->profiles ) );
+		self::assertSame( 0, $provider->calls );
+	}
+
+	public function test_forget_target_survives_only_an_unreachable_site_and_forget_has_its_own_nonce(): void {
+		$secrets  = new FixedFacadeSecretsFile();
+		$provider = new FixedWebhookProvider();
+		$verify   = static fn ( string $nonce, string $action ): bool => 'good' === $nonce && 'ran_booster_repository_webhook_forget_gh_101' === $action;
+		$facade   = $this->facade( $secrets, $provider, endpoint: 'https://site.local/wp-json/ran-booster/v1/webhooks/gh', verify_nonce: $verify );
+		$created  = 'wh_' . str_repeat( 'a', 24 );
+
+		$secrets->profiles[ $created ] = $secrets->profile( $created, 1 );
+		self::assertNull( $facade->target( 'gh', '101' ) );
+		$target = $facade->forget_target( 'gh', '101' );
+		self::assertNotNull( $target );
+		self::assertNotNull( $facade->profile( 'gh', '101', $created ), 'The recorded secret is still found while the provider cannot reach the site.' );
+		self::assertSame( 'forgotten', $facade->forget( $target, $created, 1, 'good' )->code() );
+		self::assertSame( array(), $secrets->profiles );
+		self::assertSame( 0, $provider->calls );
+
+		// Any blocker besides reachability still refuses, and a ready site gets its ordinary target.
+		$secrets->storage_unavailable = true;
+		self::assertNull( $facade->forget_target( 'gh', '101' ) );
+		$secrets->storage_unavailable = false;
+		self::assertEquals( $this->facade( $secrets, $provider )->target( 'gh', '101' ), $this->facade( $secrets, $provider )->forget_target( 'gh', '101' ) );
 	}
 
 	public function test_remove_does_not_delete_a_profile_rotated_while_the_provider_request_was_in_flight(): void {
@@ -510,7 +558,7 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertSame( 0, $provider->provider_operation_calls );
 	}
 
-	private function facade( FixedFacadeSecretsFile $secrets, RepositoryProvider $provider, ?callable $acquire_lock = null, ?callable $release_lock = null, string $repository = 'owner/example' ): AssistedWebhookFacade {
+	private function facade( FixedFacadeSecretsFile $secrets, RepositoryProvider $provider, ?callable $acquire_lock = null, ?callable $release_lock = null, string $repository = 'owner/example', string $endpoint = 'https://site.example/wp-json/ran-booster/v1/webhooks/gh', ?callable $verify_nonce = null ): AssistedWebhookFacade {
 		$registry = new ProviderRegistry( array( $provider ) );
 		$package  = new FixedFacadePackage( new ManagedRepository( 'gh', $repository, '101', 'main' ) );
 
@@ -519,8 +567,8 @@ final class AssistedWebhookFacadeTest extends TestCase {
 			$secrets,
 			$registry,
 			static fn (): bool => true,
-			static fn (): string => 'https://site.example/wp-json/ran-booster/v1/webhooks/gh',
-			static fn ( string $nonce ): bool => 'good' === $nonce,
+			static fn (): string => $endpoint,
+			$verify_nonce ?? static fn ( string $nonce ): bool => 'good' === $nonce,
 			$acquire_lock ?? static fn (): bool => true,
 			$release_lock ?? static fn (): bool => true
 		);
@@ -696,8 +744,12 @@ final class FixedFacadeSecretsFile extends SecretsFile {
 	public array $materials                = array();
 	public string $saved_secret            = '';
 	public bool $throw_material_after_save = false;
+	public bool $storage_unavailable       = false;
 
 	public function assert_managed_storage_ready(): void {
+		if ( $this->storage_unavailable ) {
+			throw new \RuntimeException( 'Storage unavailable.' );
+		}
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of credential_profiles retains the production method contract; these inputs do not affect this controlled result.

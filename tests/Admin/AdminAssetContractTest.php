@@ -439,7 +439,7 @@ final class AdminAssetContractTest extends TestCase {
 		// The Card padding (four classes) must not beat the shared footed modifier on the Diagnostics Card.
 		self::assertMatchesRegularExpression( '/\[data-ran-booster-card="troubleshooting"\]\.ran-booster-card\s*\.ran-booster-card__content\.ran-booster-card__content--footed \{\s*padding-block-end: 0;/', $css );
 		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 782px\) \{[^@]*\.ran-booster-card__content\.ran-booster-card__content--footed \{\s*padding-block-end: 0;/', $css );
-		// The Support report Card takes the same footed override: its view marks the Card content footed and the disclosure keeps 16px above and 24px below.
+		// The Diagnostic report Card takes the same footed override: its view marks the Card content footed and the disclosure keeps 16px above and 24px below.
 		$view = file_get_contents( dirname( __DIR__, 2 ) . '/views/troubleshooting.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
 		if ( ! is_string( $view ) ) {
 			self::fail( 'The troubleshooting view is unreadable.' );
@@ -745,7 +745,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-attempt-row__details \{[^}]*margin-block/', $activity );
 		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-attempt-row__details-cell \{\s*padding: 0;/', $responsive );
 
-		// The support report disclosure keeps the logging disclosure's gap after its action.
+		// The diagnostic report disclosure keeps the logging disclosure's gap after its action.
 		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="troubleshooting-evidence"\]\s*\)\s*\{\s*margin-block-start: var\(--ran-booster-space-16\);/', $primitives );
 	}
 

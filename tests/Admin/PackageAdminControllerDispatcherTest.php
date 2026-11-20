@@ -142,6 +142,43 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		}
 	}
 
+	public function test_refusal_copy_with_a_link_reaches_the_notice_as_markup_and_keeps_the_log_context_free_of_it(): void {
+		$captured = array();
+		$result   = ( new \ReflectionMethod( PackageAdminController::class, 'coded_refusal' ) )->invoke(
+			new PackageAdminController(),
+			'install-plugin',
+			'provider_failed',
+			static function ( \WP_Error|array $message, array $context ) use ( &$captured ): void {
+				$captured = array( $message, $context );
+			}
+		);
+
+		self::assertFalse( $result );
+		self::assertInstanceOf( \WP_Error::class, $captured[0] );
+		self::assertSame( 'ran_booster_refused_provider_failed', $captured[0]->get_error_code() );
+		self::assertSame(
+			array(
+				'operation' => 'install-plugin',
+				'step'      => 'manual_package_operation',
+			),
+			$captured[1]
+		);
+
+		$messages = array(
+			array(
+				'type'    => 'error',
+				'code'    => $captured[0]->get_error_code(),
+				'message' => $captured[0]->get_error_message(),
+			),
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/notices.php';
+		$html = (string) ob_get_clean();
+
+		self::assertSame( 1, substr_count( $html, 'panel=logging">Troubleshooting logging</a>' ) );
+		self::assertStringNotContainsString( '&lt;a', $html );
+	}
+
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST                     = array();

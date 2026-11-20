@@ -116,7 +116,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			$this->dispatcher( $dashboard )->dispatch_post_requests();
 			self::fail( 'Invalid request must be rejected.' );
 		} catch ( \RuntimeException $exception ) {
-			self::assertStringContainsString( 'Invalid support report request', $exception->getMessage() );
+			self::assertStringContainsString( 'Invalid diagnostic report request', $exception->getMessage() );
 		}
 		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( 'ran-booster-generate-support-report' ), $GLOBALS['ran_booster_test_nonce_checks'] );

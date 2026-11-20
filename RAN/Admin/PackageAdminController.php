@@ -915,7 +915,7 @@ final class PackageAdminController {
 				'ran_booster_refused_' . $code,
 				'package_already_exists' === $code
 					? __( 'That plugin or theme is already installed or managed. No package was overwritten.', 'ran-booster' )
-					: DeploymentOutcomeMessage::for_code( $code )
+					: DeploymentOutcomeMessage::for_code_html( $code )
 			),
 			array(
 				'operation' => $action,

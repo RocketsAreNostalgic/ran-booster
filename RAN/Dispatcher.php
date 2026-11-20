@@ -606,13 +606,13 @@ class Dispatcher {
 			return;
 		}
 		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to generate a support report.', 'ran-booster' ) );
+			wp_die( esc_html__( 'You do not have sufficient permissions to generate a diagnostic report.', 'ran-booster' ) );
 		}
 		check_admin_referer( 'ran-booster-generate-support-report' );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Purpose nonce above protects this fixed POST route.
 		if ( ( $_GET['page'] ?? null ) !== 'ran-booster' || ( $_GET['tab'] ?? null ) !== 'troubleshooting' || ( $_GET['panel'] ?? null ) !== 'support-report'
 			|| array_keys( $request ) !== array( 'action' ) ) {
-			wp_die( esc_html__( 'Invalid support report request. Open Support report and try again.', 'ran-booster' ) );
+			wp_die( esc_html__( 'Invalid diagnostic report request. Open Diagnostic report and try again.', 'ran-booster' ) );
 		}
 		$this->dashboard->post_generate_support_report();
 	}

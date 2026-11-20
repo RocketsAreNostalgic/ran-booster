@@ -91,7 +91,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 
 	public function test_unknown_outcome_uses_safe_fallback_copy(): void {
 		self::assertSame(
-			'Booster recorded an unavailable deployment outcome. Open Troubleshooting, verify the package state before retrying, and submit a redacted report if it repeats.',
+			'Booster recorded an unavailable deployment outcome. Verify the package state before retrying. If it repeats, turn on Troubleshooting logging and retry to capture the cause.',
 			DeploymentOutcomeMessage::for_code( 'provider said Authorization: Bearer secret-canary' )
 		);
 	}
@@ -113,7 +113,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'archive_compressed_too_large'      => 'Reduce the repository size',
 			'archive_expanded_too_large'        => 'Reduce the repository contents',
 			'archive_limit_invalid'             => 'Set the configured constant',
-			'preflight_failed'                  => 'enable Troubleshooting logging',
+			'preflight_failed'                  => 'turn on Troubleshooting logging',
 			'downgrade_blocked'                 => 'Restore a full-site backup',
 			'lock_unavailable'                  => 'Wait for it to finish',
 			'policy_blocked'                    => 'Review the package Updates settings',
@@ -208,10 +208,36 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 
 		self::assertStringContainsString( 'no exact failed check was recorded', $preflight );
 		self::assertStringContainsString( 'Troubleshooting logging', $preflight );
-		self::assertStringContainsString( 'redacted report', $preflight );
-		self::assertStringContainsString( 'verify the package state', $unknown );
+		self::assertStringContainsString( 'retry to capture the cause', $preflight );
+		self::assertStringNotContainsString( 'report', $preflight );
+		self::assertStringContainsString( 'Verify the package state', $unknown );
 		self::assertStringNotContainsString( 'Authorization', $unknown );
 		self::assertStringNotContainsString( 'secret-canary', $unknown );
+	}
+
+	public function test_html_surfaces_link_only_troubleshooting_logging_and_only_for_those_who_can_open_it(): void {
+		foreach ( array( 'provider_failed', 'preflight_failed', 'Authorization: Bearer secret-canary' ) as $code ) {
+			$html = DeploymentOutcomeMessage::for_code_html( $code );
+			self::assertSame( 1, substr_count( $html, '<a ' ), $code );
+			self::assertStringContainsString( 'panel=logging">Troubleshooting logging</a>', $html, $code );
+			self::assertStringNotContainsString( 'secret-canary', $html );
+		}
+		self::assertStringNotContainsString( '<a ', DeploymentOutcomeMessage::for_code_html( 'lock_unavailable' ) );
+
+		$capabilities = $GLOBALS['ran_booster_test_capabilities'] ?? null;
+
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => false );
+		try {
+			$plain = DeploymentOutcomeMessage::for_code_html( 'provider_failed' );
+		} finally {
+			if ( null === $capabilities ) {
+				unset( $GLOBALS['ran_booster_test_capabilities'] );
+			} else {
+				$GLOBALS['ran_booster_test_capabilities'] = $capabilities;
+			}
+		}
+		self::assertStringNotContainsString( '<a ', $plain );
+		self::assertStringContainsString( 'turn on Troubleshooting logging and retry', $plain );
 	}
 
 	public function test_archive_limit_messages_explain_the_target_local_remedy(): void {

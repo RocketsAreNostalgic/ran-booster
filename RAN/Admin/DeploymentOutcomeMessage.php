@@ -119,7 +119,11 @@ final class DeploymentOutcomeMessage {
 			'deployed'                       => __( 'WordPress completed and Booster verified the package deployment.', 'ran-booster' ),
 			'no_change'                      => __( 'The requested package bytes were already installed.', 'ran-booster' ),
 			'already_managed'                => __( 'Booster already manages the installed package. Its existing package settings were left unchanged.', 'ran-booster' ),
-			'provider_failed'                => __( 'The Git provider could not prepare the deployment, but no exact cause was recorded. Check the repository and credential settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats.', 'ran-booster' ),
+			'provider_failed'                => sprintf(
+				/* translators: %s: the Troubleshooting logging control. */
+				__( 'The Git provider could not prepare the deployment, and no exact cause was recorded. Check the repository and credential settings, then retry once. If it repeats, turn on %s and retry to capture the cause.', 'ran-booster' ),
+				self::logging_label()
+			),
 			'provider_request_invalid'       => __( 'The repository or credential configuration is invalid. Review the managed package settings.', 'ran-booster' ),
 			'provider_credential_rejected'   => __( 'The Git provider rejected the selected credential. Replace or update it.', 'ran-booster' ),
 			'provider_credential_unavailable' => __( 'Booster could not read the saved credential.', 'ran-booster' ),
@@ -134,7 +138,11 @@ final class DeploymentOutcomeMessage {
 			'archive_compressed_too_large'   => __( 'The repository ZIP exceeds this site\'s configured archive download limit. Reduce the repository size or review Download limits in Booster Settings; configuration overrides may lock the value.', 'ran-booster' ),
 			'archive_expanded_too_large'     => __( 'The repository ZIP expands beyond this site\'s configured archive safety limit. Reduce the repository contents or review Download limits in Booster Settings; stricter extraction safeguards still apply.', 'ran-booster' ),
 			'archive_limit_invalid'          => __( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES is invalid. Set the configured constant to an integer between 1 MiB and 536,870,911 bytes (just under 512 MiB).', 'ran-booster' ),
-			'preflight_failed'               => __( 'Booster stopped the package before changing files, but no exact failed check was recorded. Check the package and settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats.', 'ran-booster' ),
+			'preflight_failed'               => sprintf(
+				/* translators: %s: the Troubleshooting logging control. */
+				__( 'Booster stopped the package before changing files, and no exact failed check was recorded. Check the package and settings, then retry once. If it repeats, turn on %s and retry to capture the cause.', 'ran-booster' ),
+				self::logging_label()
+			),
 			'downgrade_blocked'              => __( 'Booster blocked an older branch package before changing files. Restore a full-site backup or use a publisher-provided down-migration for intentional recovery.', 'ran-booster' ),
 			'lock_unavailable'               => __( 'Another deployment is using the WordPress package lock. Wait for it to finish, check Activity for a pending recovery, then retry.', 'ran-booster' ),
 			'policy_blocked'                 => __( 'A package update policy blocked this deployment. Review the package Updates settings and WordPress file modification configuration, then retry.', 'ran-booster' ),
@@ -189,7 +197,29 @@ final class DeploymentOutcomeMessage {
 			'deployment_release_source_blocked' => __( 'Branch deployment is unavailable for this release-managed package. Use Published releases or WordPress Updates for the release source, or explicitly switch the package source back to Branch.', 'ran-booster' ),
 			'source_paused'                  => __( 'Updates are paused by a site setting.', 'ran-booster' ),
 			'deployment_maintenance_active'  => __( 'A maintenance file is present. Check whether an update is still running and inspect the maintenance state and Activity before retrying.', 'ran-booster' ),
-			default                          => __( 'Booster recorded an unavailable deployment outcome. Open Troubleshooting, verify the package state before retrying, and submit a redacted report if it repeats.', 'ran-booster' ),
+			default                          => sprintf(
+				/* translators: %s: the Troubleshooting logging control. */
+				__( 'Booster recorded an unavailable deployment outcome. Verify the package state before retrying. If it repeats, turn on %s and retry to capture the cause.', 'ran-booster' ),
+				self::logging_label()
+			),
 		};
+	}
+
+	/**
+	 * The same copy as for_code() as escaped HTML, with the one Troubleshooting logging phrase linked to its control.
+	 *
+	 * Only HTML surfaces call this. Plain-text surfaces keep for_code(), and a reader who cannot open the control gets the phrase unlinked.
+	 */
+	public static function for_code_html( string $code, mixed $encoded_facts = null ): string {
+		$text  = esc_html( self::for_code( $code, $encoded_facts ) );
+		$label = esc_html( self::logging_label() );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return $text;
+		}
+		return str_replace( $label, '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=logging' ) ) . '">' . $label . '</a>', $text );
+	}
+
+	private static function logging_label(): string {
+		return __( 'Troubleshooting logging', 'ran-booster' );
 	}
 }

@@ -53,6 +53,8 @@ use WP_Error;
 
 final class PackageAdminControllerDispatcherTest extends TestCase {
 
+	use \RAN\Tests\Support\CapturesBoosterLog;
+
 	/** @return iterable<string,array{string,bool,string}> */
 	public static function unavailable_save_branches(): iterable {
 		foreach ( array( 'ref_not_found', 'redirect_blocked' ) as $reason ) {
@@ -97,6 +99,103 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$dashboard->expects( self::once() )->method( 'post_package_operation' )->willReturn( 'https://example.test/redirect' );
 		$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-plugin', $this->unchanged_edit_request(), true );
 		self::assertSame( 'https://example.test/redirect', $result );
+	}
+
+	/** @return array<string, array{string, string, int, ?string}> */
+	public static function disabled_unchanged_saves(): array {
+		return array(
+			'missing branch, plugin'          => array( 'plugin', 'branch', 404, 'ref_not_found' ),
+			'rejected credential, plugin'     => array( 'plugin', 'branch', 401, null ),
+			'missing repository, theme'       => array( 'theme', 'branch', 404, null ),
+			'rejected credential, on release' => array( 'plugin', 'release_asset', 401, null ),
+		);
+	}
+
+	#[DataProvider( 'disabled_unchanged_saves' )]
+	public function test_choosing_disabled_saves_an_unchanged_source_from_the_stored_record_without_asking_the_provider( string $type, string $source, int $code, ?string $reason ): void {
+		$package = EditBoundaryPackage::make( 'plugin' === $type ? 'fixture/fixture.php' : 'fixture', 'gh' );
+		if ( 'release_asset' === $source ) {
+			$package->set_source( \RAN\PackageSource::RELEASE_ASSET, 1 );
+		}
+		$provider  = new FailingLookupProvider( $code, null === $reason ? null : new \RAN\RepositoryProvider\ProviderFailure( $reason, $code ), 'ref_not_found' === $reason );
+		$providers = new ProviderRegistry( array( $provider ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
+		$dashboard->expects( self::once() )
+			->method( 'post_package_operation' )
+			->with(
+				'edit-' . $type,
+				self::callback(
+					static fn ( array $resolved ): bool => 'updates_disabled' === $resolved['repository_check_skipped']
+						&& 'disabled' === $resolved['deployment_policy']
+						&& 'repository-id' === $resolved['provider_repository_id']
+						&& 'main' === $resolved['branch']
+				)
+			)
+			->willReturn( 'https://example.test/redirect' );
+		$request = array_merge(
+			$this->unchanged_edit_request(),
+			array(
+				'action'            => 'edit-' . $type,
+				'stylesheet'        => 'fixture',
+				'deployment_policy' => 'disabled',
+			)
+		);
+
+		$this->start_log_capture();
+		try {
+			$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-' . $type, $request, true );
+			$lines  = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+
+		self::assertSame( 'https://example.test/redirect', $result );
+		self::assertSame( 0, $provider->lookups, 'A deleted branch or rejected credential cannot block choosing Disabled.' );
+		self::assertSame( array( '[ran-booster] package repository check skipped {"event":"package_repository_check_skipped","operation":"edit-' . $type . '","outcome_code":"updates_disabled","step":"package_repository_resolve"}' ), $lines );
+	}
+
+	/** @return array<string, array{array<string, string>}> */
+	public static function saves_that_still_check(): array {
+		return array(
+			'Disabled, changed branch'         => array( array( 'branch' => 'renamed' ) ),
+			'Disabled, changed repository'     => array( array( 'repository' => 'owner/other' ) ),
+			'Disabled, changed credential'     => array( array( 'credential_id' => 'other-profile' ) ),
+			'Disabled, changed subfolder'      => array( array( 'subdirectory' => 'packages/fixture' ) ),
+			'Disabled, branch check requested' => array( array( 'check_repository_branch_after_save' => '1' ) ),
+			'Disabled, reinstall requested'    => array( array( 'reinstall_after_save' => '1' ) ),
+			'Manual, unchanged'                => array( array( 'deployment_policy' => 'manual' ) ),
+		);
+	}
+
+	/** @param array<string, string> $change */
+	#[DataProvider( 'saves_that_still_check' )]
+	public function test_a_changed_source_or_another_policy_still_checks_the_provider( array $change ): void {
+		// A private package, so a requested branch check goes straight to the provider.
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', true, 'deployment-profile' );
+		$provider  = new FailingLookupProvider( 401 );
+		$providers = new ProviderRegistry( array( $provider ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+		$request = array_merge(
+			$this->unchanged_edit_request(),
+			array(
+				'credential_id'     => 'deployment-profile',
+				'deployment_policy' => 'disabled',
+			),
+			$change
+		);
+
+		$_POST['_ran_booster_reinstall_nonce'] = 'test-nonce'; // The reinstall form carries its own nonce field.
+		try {
+			$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-plugin', $request, true );
+		} finally {
+			unset( $_POST['_ran_booster_reinstall_nonce'] );
+		}
+
+		self::assertFalse( $result );
+		self::assertSame( 1, $provider->lookups );
 	}
 
 	public function test_manual_working_copy_copy_requires_one_exact_core_activity_record(): void {
@@ -777,15 +876,22 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			)
 			->willReturn( 'https://example.test/redirect' );
 
-		$result = ( new PackageAdminController(
-			repositories: new PackageRepositoryRequestResolver( $providers ),
-			plugins: new EditBoundaryPluginRepository( $package ),
-			themes: new EditBoundaryThemeRepository( $package ),
-			providers: $providers
-		) )->manage( $dashboard, 'edit-plugin', $this->unchanged_edit_request(), true );
+		$this->start_log_capture();
+		try {
+			$result = ( new PackageAdminController(
+				repositories: new PackageRepositoryRequestResolver( $providers ),
+				plugins: new EditBoundaryPluginRepository( $package ),
+				themes: new EditBoundaryThemeRepository( $package ),
+				providers: $providers
+			) )->manage( $dashboard, 'edit-plugin', $this->unchanged_edit_request(), true );
+			$lines  = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
 
 		self::assertSame( 'https://example.test/redirect', $result );
 		self::assertSame( 1, $provider->lookups, 'The provider is still asked first; only a failure falls back.' );
+		self::assertSame( array( '[ran-booster] package repository check skipped {"event":"package_repository_check_skipped","operation":"edit-plugin","outcome_code":"http_' . $code . '","step":"package_repository_resolve"}' ), $lines );
 	}
 
 	/** @return array<string, array{int}> */
@@ -964,7 +1070,9 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 	}
 
-	public function test_a_browser_supplied_skipped_check_marker_is_discarded(): void {
+	#[\PHPUnit\Framework\Attributes\TestWith( array( '1' ) )]
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'updates_disabled' ) )]
+	public function test_a_browser_supplied_skipped_check_marker_is_discarded( string $marker ): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
 		$provider  = new CapturingPublicLookupProvider();
 		$providers = new ProviderRegistry( array( $provider ) );
@@ -982,7 +1090,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			plugins: new EditBoundaryPluginRepository( $package ),
 			themes: new EditBoundaryThemeRepository( $package ),
 			providers: $providers
-		) )->manage( $dashboard, 'edit-plugin', array_merge( $this->unchanged_edit_request(), array( 'repository_check_skipped' => '1' ) ), true );
+		) )->manage( $dashboard, 'edit-plugin', array_merge( $this->unchanged_edit_request(), array( 'repository_check_skipped' => $marker ) ), true );
 	}
 
 	/** @return array<string, mixed> */

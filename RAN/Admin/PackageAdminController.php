@@ -311,9 +311,13 @@ final class PackageAdminController {
 		}
 		if ( in_array( $status, array( 'succeeded', 'edited', 'linked' ), true ) && ( $result['package'] ?? null ) instanceof Package ) {
 
-			$check_skipped = 'edited' === $status && '1' === ( $request['repository_check_skipped'] ?? null );
+			$check_skipped = 'edited' === $status ? match ( $request['repository_check_skipped'] ?? null ) {
+				'1' => 'edit-unverified',
+				'updates_disabled' => 'edit-unchecked',
+				default => null,
+			} : null;
 
-			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status, $check_skipped ? 'edit-unverified' : null );
+			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status, $check_skipped );
 		}
 		if ( in_array( $status, array( 'unlinked', 'deleted' ), true ) ) {
 
@@ -361,12 +365,13 @@ final class PackageAdminController {
 		$operation  = sanitize_key( wp_unslash( (string) $_GET['ran_booster_result'] ) );
 		$identifier = sanitize_text_field( wp_unslash( (string) $_GET['ran_booster_package'] ) );
 		$nonce      = wp_unslash( (string) $_GET['_ran_booster_notice_nonce'] );
-		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'edit-unverified', 'unlink', 'unlink-and-delete', 'already-managed' ), true )
+		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'edit-unverified', 'edit-unchecked', 'unlink', 'unlink-and-delete', 'already-managed' ), true )
 			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) ) {
 			return null;
 		}
 		$repository_check_skipped = 'edit-unverified' === $operation;
-		if ( $repository_check_skipped ) {
+		$repository_not_checked   = 'edit-unchecked' === $operation;
+		if ( $repository_check_skipped || $repository_not_checked ) {
 			$operation = 'edit';
 		}
 		if ( 'already-managed' === $operation ) {
@@ -400,6 +405,9 @@ final class PackageAdminController {
 				$completed
 			),
 		);
+		if ( $repository_not_checked ) {
+			$message['message'] = 'plugin' === $type ? __( 'Plugin was saved. The repository was not checked.', 'ran-booster' ) : __( 'Theme was saved. The repository was not checked.', 'ran-booster' );
+		}
 		if ( 'edit' === $operation ) {
 			// Saves already reach the snackbar through the enhanced save path, except a qualified one (R12).
 			if ( ! $repository_check_skipped ) {
@@ -644,6 +652,17 @@ final class PackageAdminController {
 	 * @return array<string, mixed>|null
 	 */
 	private function resolve( Dashboard $dashboard, array $request, ?array $trusted_public_lookup = null, ?Package $stored_package = null ): ?array {
+		// Disabled is the safer setting, so a deleted branch or rejected credential must not block it: an
+		// unchanged provider, repository, credential, subfolder and branch save without asking the provider.
+		if ( $stored_package instanceof Package
+			&& 'disabled' === ( $request['deployment_policy'] ?? null )
+			&& ! $this->enabled( $request, 'reinstall_after_save' )
+			&& ! $this->enabled( $request, 'check_repository_branch_after_save' ) ) {
+			$unchecked = $this->saved_from_stored( $request, $stored_package, 'updates_disabled', 'updates_disabled' );
+			if ( null !== $unchecked ) {
+				return $unchecked;
+			}
+		}
 		try {
 			// Only a branch-managed package or a new install deploys its branch, so only they verify it.
 			$resolved = ! $stored_package instanceof Package || PackageSource::BRANCH === $stored_package->get_source()
@@ -712,6 +731,18 @@ final class PackageAdminController {
 			|| ! ( ProviderFailure::carried( $failure )?->is_transient() ?? in_array( $failure->getCode(), self::TRANSIENT_LOOKUP_CODES, true ) ) ) {
 			return null;
 		}
+
+		return $this->saved_from_stored( $request, $stored_package, 'http_' . $failure->getCode(), '1' );
+	}
+
+	/**
+	 * Completes an unchanged edit from the stored record, logs the skipped check and marks the save
+	 * for its result message; null when any provider-dependent field changed.
+	 *
+	 * @param array<string, mixed> $request
+	 * @return array<string, mixed>|null
+	 */
+	private function saved_from_stored( array $request, Package $stored_package, string $outcome_code, string $marker ): ?array {
 		try {
 			$stored = $this->repositories?->resolve_unchanged( $request, $stored_package );
 		} catch ( Throwable ) {
@@ -725,11 +756,11 @@ final class PackageAdminController {
 			array(
 				'event'        => 'package_repository_check_skipped',
 				'operation'    => is_string( $request['action'] ?? null ) ? sanitize_key( wp_unslash( $request['action'] ) ) : '',
-				'outcome_code' => (string) $failure->getCode(),
+				'outcome_code' => $outcome_code,
 				'step'         => 'package_repository_resolve',
 			)
 		);
-		$stored['repository_check_skipped'] = '1';
+		$stored['repository_check_skipped'] = $marker;
 
 		return $stored;
 	}

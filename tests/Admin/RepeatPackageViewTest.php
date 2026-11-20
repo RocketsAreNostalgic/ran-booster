@@ -313,9 +313,9 @@ final class RepeatPackageViewTest extends TestCase {
 	#[DataProvider( 'create_view_matrix' )]
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_create_view_warns_above_the_install_button_when_branch_installs_are_paused( PackagePagePresenter $package_view, bool $explicit_provider, bool $open_repository_picker ): void {
+	public function test_create_view_warns_under_updates_when_branch_installs_are_paused( PackagePagePresenter $package_view, bool $explicit_provider, bool $open_repository_picker ): void {
 		$package_provider_settings = $this->provider_settings( true );
-		$notice                    = '/id="ran-booster-package-operation-heading".*<div data-ran-booster-branch-install-actions>\s*<fieldset class="ran-booster-package-link-choice"[^>]*>\s*<div class="ran-booster-settings-fields">.*name="ran_booster\[dry-run\]".*id="ran-booster-link-installed-help"[^<]*<\/p>\s*<\/div>\s*<div class="notice notice-warning inline ran-booster-settings-fields__notice [^"]*"[^>]*><div [^>]*><p>\s*Branch installs are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\.\s*<\/p><\/div><svg\b[^>]*>.*?<\/svg><\/div>\s*<\/div>\s*<\/fieldset>\s*<span[^>]*data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-card-footer ran-booster-package-install-actions"/s';
+		$notice                    = '/id="ran-booster-package-operation-heading".*id="ran-booster-deployment-policy".*<\/p>\s*<\/div>\s*<div class="notice notice-warning inline ran-wp-ui-notice [^"]*"[^>]*data-ran-booster-policy-source="branch"><div [^>]*><p>\s*Branch installs are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\.\s*<\/p><\/div><svg\b[^>]*>.*?<\/svg><\/div>\s*<div class="notice[^"]*"[^>]*data-ran-booster-local-development-warning[^>]*>\s*<div [^>]*>\s*<p>\s*<strong>Making local edits\? Choose Disabled\.<\/strong>.*<div data-ran-booster-branch-install-actions>\s*<fieldset class="ran-booster-package-link-choice"[^>]*>\s*<div class="ran-booster-settings-fields">\s*<div class="ran-booster-settings-field ran-booster-settings-field--wide">.*name="ran_booster\[dry-run\]".*id="ran-booster-link-installed-help"[^<]*<\/p>\s*<\/div>\s*<\/div>\s*<\/fieldset>\s*<span[^>]*data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-card-footer ran-booster-package-install-actions"/s';
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
@@ -330,6 +330,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringContainsString( 'Branch installs are paused by a site setting.', (string) ob_get_clean(), 'A user who cannot open Settings gets the sentence without a link.' );
 
 			$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => true );
+			$development_environment_detected         = true;
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/create.php';
 			$html = (string) ob_get_clean();
@@ -342,7 +343,7 @@ final class RepeatPackageViewTest extends TestCase {
 		} finally {
 			unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_package_view_multisite'] );
 		}
-		self::assertMatchesRegularExpression( $notice, $html, 'One linked warning as the last item of the link choice group, after its description and directly above the Install buttons.' );
+		self::assertMatchesRegularExpression( $notice, $html, 'One linked warning right under the Updates description, above the local edits notice; the link choice group holds only its checkbox.' );
 		self::assertSame( 1, substr_count( $html, 'Branch installs are paused' ) );
 		self::assertStringContainsString( 'Install New ' . $package_view->get_singular_label(), $html );
 		self::assertStringContainsString( 'data-ran-booster-source-choice="branch"', $html );

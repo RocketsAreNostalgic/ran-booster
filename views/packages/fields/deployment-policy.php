@@ -23,6 +23,9 @@ $policy_source_toggle             = ! empty( $package_policy_source_toggle );
 $operation_actions_html           = isset( $package_operation_actions_html ) && is_string( $package_operation_actions_html )
 	? $package_operation_actions_html
 	: '';
+$operation_notice_html            = isset( $package_operation_notice_html ) && is_string( $package_operation_notice_html )
+	? $package_operation_notice_html
+	: '';
 $branch_policy_description        = __( 'Manual waits for an administrator. Automatic deploys on push.', 'ran-booster' );
 $show_development_safety_notice   = ! empty( $development_environment_detected );
 $hide_development_safety_notice   = \RAN\Deployment\DeploymentPolicy::DISABLED->value === $deployment_policy;
@@ -93,6 +96,7 @@ $render_policy_description = static function () use ( $operation_layout, $policy
 			</div>
 			<?php $render_policy_description(); ?>
 		</div>
+		<?php echo $operation_notice_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured from escaped package templates in the including view. ?>
 		<?php $render_development_safety_notice(); ?>
 		<?php echo $operation_actions_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured from escaped package templates in the including view. ?>
 	</div>

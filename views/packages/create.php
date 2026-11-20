@@ -155,11 +155,31 @@ $managed_package_url        = '' === $managed_package_identifier
 					<fieldset <?php disabled( ! $package_mutation_available ); ?>>
 						<div class="ran-booster-settings-fields">
 							<?php
-							// The Updates field uses the same layout as the Edit Package operation card; the hint follows the active source.
-							$package_operation_layout     = true;
-							$package_policy_source_toggle = true;
+							// The Updates field uses the same layout as the Edit Package operation card; the hint and the pause warning follow the active source.
+							$package_operation_layout      = true;
+							$package_policy_source_toggle  = true;
+							$package_operation_notice_html = '';
+							if ( true === ( $package_branch_paused ?? false ) ) {
+								ob_start();
+								?>
+							<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-policy-source="branch"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
+								<?php
+								$package_settings_linked = current_user_can( 'manage_options' );
+								echo wp_kses_post(
+									sprintf(
+										/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing. */
+										esc_html__( 'Branch installs are paused by a %1$ssite setting%2$s.', 'ran-booster' ),
+										$package_settings_linked ? '<a href="' . esc_url( add_query_arg( 'page', 'ran-booster-settings', $package_view->get_admin_url() ) . '#ran-booster-general-branch_sources' ) . '">' : '',
+										$package_settings_linked ? '</a>' : ''
+									)
+								);
+								?>
+							</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
+								<?php
+								$package_operation_notice_html = (string) ob_get_clean();
+							}
 							require __DIR__ . '/fields/deployment-policy.php';
-							unset( $package_operation_layout, $package_policy_source_toggle );
+							unset( $package_operation_layout, $package_policy_source_toggle, $package_operation_notice_html );
 							?>
 						</div>
 					</fieldset>
@@ -173,21 +193,6 @@ $managed_package_url        = '' === $managed_package_identifier
 									</label>
 									<p class="description" id="ran-booster-link-installed-help"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage an installed %s without deploying it; its folder name must match the repository.', 'ran-booster' ), $package_view->get_type() ) ); ?></p>
 								</div>
-								<?php if ( true === ( $package_branch_paused ?? false ) ) { ?>
-								<div class="notice notice-warning inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
-									<?php
-									$package_settings_linked = current_user_can( 'manage_options' );
-									echo wp_kses_post(
-										sprintf(
-											/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing. */
-											esc_html__( 'Branch installs are paused by a %1$ssite setting%2$s.', 'ran-booster' ),
-											$package_settings_linked ? '<a href="' . esc_url( add_query_arg( 'page', 'ran-booster-settings', $package_view->get_admin_url() ) . '#ran-booster-general-branch_sources' ) . '">' : '',
-											$package_settings_linked ? '</a>' : ''
-										)
-									);
-									?>
-								</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
-								<?php } ?>
 							</div>
 						</fieldset>
 						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>

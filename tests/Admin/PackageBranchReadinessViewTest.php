@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
+require_once __DIR__ . '/WebhookManagement/Display/WebhookDisplayModelWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -616,20 +617,23 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
 
-	/** @param array<string, bool> $capabilities */
+	/**
+	 * @param string|list<string> $reason_codes
+	 * @param array<string, bool> $capabilities
+	 */
 	#[DataProvider( 'retained_receiver_reason_provider' )]
-	public function test_retained_receiver_row_states_the_shared_reason_with_one_link_to_its_fix( string $reason_code, string $pattern, array $capabilities = array(), bool $multisite = false ): void {
-		$provider_code              = 'gh';
-		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
-		$provider_webhook_available = true;
-		$branch_value               = 'main';
-		$deployment_policy          = DeploymentPolicy::MANUAL->value;
-		$is_package_edit            = true;
-		$package_branch_readiness   = array(
+	public function test_retained_receiver_row_states_the_shared_reason_with_one_link_to_its_fix( string|array $reason_codes, string $pattern, array $capabilities = array(), bool $multisite = false ): void {
+		$provider_code                                 = 'gh';
+		$settings_url                                  = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available                    = true;
+		$branch_value                                  = 'main';
+		$deployment_policy                             = DeploymentPolicy::MANUAL->value;
+		$is_package_edit                               = true;
+		$package_branch_readiness                      = array(
 			'retained'   => true,
 			'site'       => array(
 				'status'       => 'blocked',
-				'reason_codes' => array( $reason_code ),
+				'reason_codes' => (array) $reason_codes,
 			),
 			'repository' => array(
 				'repository_id'         => 'repo-42',
@@ -637,16 +641,17 @@ final class PackageBranchReadinessViewTest extends TestCase {
 				'local_secret_coverage' => 'none',
 			),
 		);
-		$GLOBALS['ran_booster_test_capabilities']      = $capabilities + array( 'manage_options' => true );
 		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
-		$GLOBALS['ran_booster_package_view_blog_id']   = 7;
+		$GLOBALS['ran_booster_webhook_display_test_multisite']    = $multisite;
+		$GLOBALS['ran_booster_webhook_display_test_capabilities'] = $capabilities + array( 'manage_options' => true );
+		$GLOBALS['ran_booster_webhook_display_test_blog_id']      = 7;
 
 		ob_start();
 		try {
 			require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		} finally {
 			$html = (string) ob_get_clean();
-			unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_package_view_blog_id'] );
+			unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_webhook_display_test_multisite'], $GLOBALS['ran_booster_webhook_display_test_capabilities'], $GLOBALS['ran_booster_webhook_display_test_blog_id'] );
 		}
 
 		self::assertMatchesRegularExpression( $pattern, $html );
@@ -659,16 +664,17 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Manage signing secrets', $html );
 	}
 
-	/** @return array<string, array{0:string,1:string,2?:array<string,bool>,3?:bool}> */
+	/** @return array<string, array{0:string|list<string>,1:string,2?:array<string,bool>,3?:bool}> */
 	public static function retained_receiver_reason_provider(): array {
 		return array(
 			'public HTTPS, linked'                => array( 'callback_requires_public_https', '~This site needs a <a href="https://example\.test/wp-admin/options-general\.php">public HTTPS URL</a> to receive webhooks; manual updates still work\.~' ),
 			'public HTTPS, no manage_options'     => array( 'callback_requires_public_https', '~This site needs a public HTTPS URL to receive webhooks; manual updates still work\.\s*</span>~', array( 'manage_options' => false ) ),
-			'public HTTPS, multisite'             => array( 'callback_requires_public_https', '~This site needs a <a href="https://example\.test/wp-admin/network/site-info\.php\?id=\d+">public HTTPS URL</a> to receive~', array( 'manage_sites' => true ), true ),
+			'public HTTPS, multisite'             => array( 'callback_requires_public_https', '~This site needs a <a href="https://example\.test/wp-admin/network/site-info\.php\?id=7">public HTTPS URL</a> to receive~', array( 'manage_sites' => true ), true ),
 			'database, no manual claim'           => array( 'database_unavailable', '~Webhook setup is paused while Booster&#039;s <a href="https://example\.test/wp-admin/admin\.php\?page=ran-booster&amp;tab=troubleshooting">database storage</a> needs attention\.\s*</span>~' ),
 			'database, multisite'                 => array( 'database_unavailable', '~<a href="https://example\.test/wp-admin/network/admin\.php\?page=ran-booster&amp;tab=troubleshooting">database storage</a>~', array(), true ),
 			'secure storage'                      => array( 'secrets_storage_unavailable', '~Webhook setup is paused while <a href="https://example\.test/wp-admin/admin\.php\?page=ran-booster-settings#ran-booster-storage">secure credential storage</a> is unavailable; public repositories still update manually\.~' ),
 			'package inventory, no manual claim'  => array( 'managed_packages_unavailable', '~Webhook setup is paused because Booster couldn&#039;t read its <a href="https://example\.test/wp-admin/admin\.php\?page=ran-booster-plugins">managed packages</a>\.\s*</span>~' ),
+			'address and database, database wins' => array( array( 'callback_requires_public_https', 'database_unavailable' ), '~<strong>Local receiver</strong>\\s*<span>\\s*Webhook setup is paused while Booster&#039;s <a href="[^"]*">database storage</a> needs attention\\.\\s*</span>~' ),
 			'unconfirmed, unlinked'               => array( 'unrecognized_reason', '~<strong>Local receiver</strong>\s*<span>\s*Webhook setup is unavailable until Booster can confirm this managed repository\.\s*</span>~' ),
 		);
 	}

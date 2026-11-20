@@ -34,14 +34,14 @@ final class WebhookDisplayModelTest extends TestCase {
 		$plain = 'This site needs a public HTTPS URL to receive webhooks; manual updates still work.';
 		self::assertSame( $plain, WebhookDisplayModel::receiver_unavailable_message() );
 
-		$GLOBALS['ran_booster_webhook_display_test_multisite']   = false;
+		$GLOBALS['ran_booster_webhook_display_test_multisite']    = false;
 		$GLOBALS['ran_booster_webhook_display_test_capabilities'] = array( 'manage_options' => true );
 		self::assertMatchesRegularExpression( '~^This site needs a <a href="[^"]*/wp-admin/options-general\.php">public HTTPS URL</a> to receive webhooks; manual updates still work\.$~', WebhookDisplayModel::receiver_unavailable_message( true ) );
 		$GLOBALS['ran_booster_webhook_display_test_capabilities'] = array( 'manage_options' => false );
 		self::assertSame( $plain, WebhookDisplayModel::receiver_unavailable_message( true ) );
 
 		// A subsite's General settings have no site address, so multisite links to the network's site edit screen.
-		$GLOBALS['ran_booster_webhook_display_test_multisite']   = true;
+		$GLOBALS['ran_booster_webhook_display_test_multisite']    = true;
 		$GLOBALS['ran_booster_webhook_display_test_blog_id']      = 7;
 		$GLOBALS['ran_booster_webhook_display_test_capabilities'] = array(
 			'manage_options' => true,
@@ -63,10 +63,15 @@ final class WebhookDisplayModelTest extends TestCase {
 			$html = (string) WebhookDisplayModel::site_reason_message( $code, true );
 			self::assertSame( 1, substr_count( $html, '<a ' ), $code );
 			self::assertMatchesRegularExpression( '~<a href="[^"]*' . preg_quote( $route, '~' ) . '">' . preg_quote( $words, '~' ) . '</a>~', $html, $code );
-			self::assertSame( $plain, html_entity_decode( strip_tags( $html ), ENT_QUOTES ), $code );
+			self::assertSame( $plain, html_entity_decode( (string) preg_replace( '~<[^>]+>~', '', $html ), ENT_QUOTES ), $code );
 			self::assertStringNotContainsString( "'", $html, $code );
 		}
 		self::assertNull( WebhookDisplayModel::site_reason_message( 'unrecognized_reason', true ) );
+		// Storage and inventory failures outrank the address, whose sentence says manual updates still work.
+		self::assertSame( 'database_unavailable', WebhookDisplayModel::primary_site_reason( array( 'callback_requires_public_https', 'managed_packages_unavailable', 'database_unavailable' ) ) );
+		self::assertSame( 'secrets_storage_unavailable', WebhookDisplayModel::primary_site_reason( array( 'callback_requires_public_https', 'secrets_storage_unavailable' ) ) );
+		self::assertSame( 'callback_requires_public_https', WebhookDisplayModel::primary_site_reason( array( 'unrecognized_reason', 'callback_requires_public_https' ) ) );
+		self::assertNull( WebhookDisplayModel::primary_site_reason( array( 'unrecognized_reason' ) ) );
 		// A translated sentence cannot add markup: only the link Core builds survives escaping.
 		$GLOBALS['ran_booster_webhook_display_test_translations']['ran-booster']['Webhook setup is paused because Booster couldn\'t read its %1$smanaged packages%2$s.'] = '<b>Paused</b> %1$spackages%2$s';
 		self::assertStringStartsWith( '&lt;b&gt;Paused&lt;/b&gt; <a href="', (string) WebhookDisplayModel::site_reason_message( 'managed_packages_unavailable', true ) );

@@ -15,6 +15,7 @@ use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Deployment\DeploymentAttempt;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+require_once __DIR__ . '/WebhookManagement/Display/WebhookDisplayModelWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 require_once dirname( __DIR__ ) . '/Activity/ActivityConnection.php';
 require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
@@ -2951,9 +2952,11 @@ final class TroubleshootingViewTest extends TestCase {
 			array( array( 'managed_packages_unavailable' ), 'https://example.test/hook', 'warning', 'Webhook setup is paused because Booster couldn&#039;t read its <a href="[^"]*page=ran-booster-plugins">managed packages</a>\.' ),
 			array( array( 'callback_requires_public_https' ), 'http://localhost/hook', 'info', $https ),
 			array( array( 'unknown-canary' ), 'https://example.test/hook', 'info', '' ),
-			array( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://example.test/hook', 'warning', $https . ' ' . $database ),
+			// A storage failure outranks the address, whose sentence would claim manual updates still work.
+			array( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://example.test/hook', 'warning', $database ),
 		);
-		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$GLOBALS['ran_booster_webhook_display_test_capabilities'] = array( 'manage_options' => true );
+		$GLOBALS['ran_booster_webhook_display_test_multisite']    = false;
 		foreach ( array( 'gh', 'bb', 'other' ) as $code ) {
 			$provider['code'] = $code;
 			foreach ( $cases as list( $codes, $endpoint, $intent, $reason ) ) {
@@ -2974,6 +2977,7 @@ final class TroubleshootingViewTest extends TestCase {
 				self::assertStringNotContainsString( 'unknown-canary', $html );
 			}
 		}
+		unset( $GLOBALS['ran_booster_webhook_display_test_capabilities'], $GLOBALS['ran_booster_webhook_display_test_multisite'] );
 		$webhook_assistance_readiness = array(
 			'site' => array(
 				'status'       => 'blocked',

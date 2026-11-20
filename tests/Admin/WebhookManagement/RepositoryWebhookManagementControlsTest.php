@@ -28,6 +28,7 @@ require_once __DIR__ . '/RepositoryWebhookManagementControlsWordPressFunctions.p
 require_once __DIR__ . '/WordPressInstallationStoreWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/Support/WebhookManagementCapabilityProviders.php';
 require_once dirname( __DIR__, 2 ) . '/Support/PackageViewWordPressFunctions.php';
+require_once __DIR__ . '/Display/WebhookDisplayModelWordPressFunctions.php';
 
 final class RepositoryWebhookManagementControlsTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
@@ -43,6 +44,11 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities'] = array();
 		$GLOBALS['ran_booster_repository_webhook_management_test_options'] = array();
 		$_GET = array();
+	}
+
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
+	protected function tearDown(): void {
+		unset( $GLOBALS['ran_booster_webhook_display_test_capabilities'], $GLOBALS['ran_booster_webhook_display_test_multisite'] );
 	}
 
 	public function test_missing_package_authority_is_rejected_at_the_controls_constructor(): void {
@@ -1094,10 +1100,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'Plugin settings', $mixed );
 	}
 
-	public function test_a_different_unavailable_reason_still_gets_its_notice_beside_the_receiver_step(): void {
+	public function test_a_storage_reason_is_named_once_by_the_receiver_step_without_the_address_sentence(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
-		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array( 'database_unavailable' ), 'http://localhost:10008/webhook', array() ) );
+		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://localhost:10008/webhook', array() ) );
 		$facade->method( 'target' )->willReturn( null );
 		$controls = new RepositoryWebhookManagementControls(
 			$facade,
@@ -1115,7 +1121,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 
 		self::assertSame( 1, preg_match_all( '~<p>Webhook setup is paused while Booster&#039;s <a href="[^"]*page=ran-booster&amp;tab=troubleshooting">database storage</a> needs attention\.</p>~', $html ) );
 		self::assertStringContainsString( 'disabled-reason-setup">Webhook setup is paused while Booster&#039;s database storage needs attention.</span>', $html );
-		self::assertStringContainsString( 'ran-booster-repository-webhook-management__notices', $html );
+		// The step names the storage failure, so no notice repeats it, and nothing claims manual updates still work.
+		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__notices', $html );
+		self::assertStringNotContainsString( 'public HTTPS URL', $html );
+		self::assertStringNotContainsString( 'manual updates still work', $html );
 		// An availability notice is not an operation result: the receiver step is not ok, so setup stays collapsed.
 		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup"[^>]*ran-booster-disclosure">/', $html ) );
 	}
@@ -1296,6 +1305,9 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 
 	public function test_repository_webhook_setup_region_remains_labelled_when_the_target_is_unavailable(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		// The receiver sentence links to General settings for a single-site user who can change the site address.
+		$GLOBALS['ran_booster_webhook_display_test_capabilities'] = array( 'manage_options' => true );
+		$GLOBALS['ran_booster_webhook_display_test_multisite']    = false;
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
 		$facade->expects( self::exactly( 2 ) )->method( 'readiness' )->with( 'fixture-provider' )->willReturn( new AssistanceReadiness( array( 'callback_requires_public_https' ), 'http://localhost:10008/webhook', array() ) );
 		$facade->expects( self::once() )->method( 'target' )->with( 'fixture-provider', '1315521150' )->willReturn( null );

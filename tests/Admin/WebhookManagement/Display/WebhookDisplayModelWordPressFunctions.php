@@ -26,6 +26,6 @@ if ( ! function_exists( __NAMESPACE__ . '\\current_user_can' ) ) {
 
 if ( ! function_exists( __NAMESPACE__ . '\\get_current_blog_id' ) ) {
 	function get_current_blog_id(): int {
-		return $GLOBALS['ran_booster_webhook_display_test_blog_id'] ?? 1;
+		return $GLOBALS['ran_booster_webhook_display_test_blog_id'] ?? ( function_exists( '\\get_current_blog_id' ) ? \get_current_blog_id() : 1 );
 	}
 }

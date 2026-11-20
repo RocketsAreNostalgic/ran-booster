@@ -161,8 +161,8 @@ final class RepositoryWebhookManagementControls {
 				$reason,
 				$this->repository_webhook_settings_url( $provider_code, ( '' !== trim( $repository ) ) ? $repository : null )
 			);
-			// Step 1 (Site receiver) already says a public HTTPS URL is missing; repeat only other reasons.
-			if ( null !== $notice && ( 'is-ok' === ( $readiness_items[2]['state'] ?? '' ) || WebhookDisplayModel::receiver_unavailable_message() !== $reason ) ) {
+			// The receiver step already names the site's primary reason; the notice adds only a different one.
+			if ( null !== $notice && ( 'is-ok' === ( $readiness_items[2]['state'] ?? '' ) || ( $readiness_items[2]['message'] ?? '' ) !== $notice ) ) {
 				$notices[] = array(
 					'class'        => 'notice-warning',
 					'message'      => $reason,
@@ -237,11 +237,11 @@ final class RepositoryWebhookManagementControls {
 					$codes = array_merge( $codes, is_array( $repository['reason_codes'] ?? null ) ? $repository['reason_codes'] : array() );
 				}
 			}
+			$site = WebhookDisplayModel::primary_site_reason( $codes );
+			if ( null !== $site ) {
+				return array( (string) WebhookDisplayModel::site_reason_message( $site ), (string) WebhookDisplayModel::site_reason_message( $site, true ) );
+			}
 			foreach ( $codes as $code ) {
-				$site = is_string( $code ) ? WebhookDisplayModel::site_reason_message( $code ) : null;
-				if ( null !== $site ) {
-					return array( $site, (string) WebhookDisplayModel::site_reason_message( $code, true ) );
-				}
 				if ( is_string( $code ) && isset( $messages[ $code ] ) ) {
 					return array( WebhookDisplayModel::link_sentence( $messages[ $code ], $packages, false ), WebhookDisplayModel::link_sentence( $messages[ $code ], $packages, true ) );
 				}
@@ -423,6 +423,7 @@ final class RepositoryWebhookManagementControls {
 			? $repository['local_secret_coverage']
 			: ( null === $record ? 'unknown' : 'recorded-' . $record->webhook_profile_scope() );
 		$receiver_ready  = 'ready' === ( $site['status'] ?? null );
+		$site_reason     = WebhookDisplayModel::primary_site_reason( is_array( $site['reason_codes'] ?? null ) ? $site['reason_codes'] : array() );
 		$provider_label  = $this->controller->provider_metadata( $provider_code )?->label;
 		$record_healthy  = null !== $record
 			&& 'configured' === $record->status()
@@ -459,7 +460,8 @@ final class RepositoryWebhookManagementControls {
 				'label'   => __( 'Git provider receiver', 'ran-booster' ),
 				'message' => $receiver_ready
 					? __( 'This site can receive webhook deliveries.', 'ran-booster' )
-					: WebhookDisplayModel::receiver_unavailable_message( true ),
+					// An unknown cause has no destination yet, so it keeps the unlinked confirmation sentence.
+					: ( null !== $site_reason ? (string) WebhookDisplayModel::site_reason_message( $site_reason, true ) : esc_html__( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' ) ),
 				'state'   => $receiver_ready ? 'is-ok' : ( null === $site ? 'is-pending' : 'is-warning' ),
 			),
 			array(

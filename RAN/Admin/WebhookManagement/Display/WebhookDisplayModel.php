@@ -109,6 +109,21 @@ final class WebhookDisplayModel {
 		return self::link_sentence( __( 'This site needs a %1$spublic HTTPS URL%2$s to receive webhooks; manual updates still work.', 'ran-booster' ), $url, $linked );
 	}
 
+	/**
+	 * The one site reason a webhook screen shows: a storage or inventory failure outranks the address, whose sentence says manual updates still work.
+	 *
+	 * @param array<array-key, mixed> $codes
+	 */
+	public static function primary_site_reason( array $codes ): ?string {
+		foreach ( array( 'database_unavailable', 'secrets_storage_unavailable', 'managed_packages_unavailable', 'callback_requires_public_https' ) as $code ) {
+			if ( in_array( $code, $codes, true ) ) {
+				return $code;
+			}
+		}
+
+		return null;
+	}
+
 	/** One sentence per site readiness code, shared by every webhook screen; null for a code without one. */
 	public static function site_reason_message( string $code, bool $linked = false ): ?string {
 		return match ( $code ) {

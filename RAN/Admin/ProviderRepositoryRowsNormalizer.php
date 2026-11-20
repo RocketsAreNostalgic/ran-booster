@@ -972,10 +972,12 @@ final class ProviderRepositoryRowsNormalizer {
 
 	/**
 	 * @param array<array-key, mixed> $codes
-	 * @return list<string> Escaped HTML sentences, each with the one link to its fix.
+	 * @return list<string> The primary reason's escaped HTML sentence with its one link, as on every webhook screen.
 	 */
 	private function site_reasons( array $codes ): array {
-		return array_values( array_filter( array_map( static fn ( mixed $code ): ?string => is_string( $code ) ? WebhookDisplayModel::site_reason_message( $code, true ) : null, $codes ) ) );
+		$code = WebhookDisplayModel::primary_site_reason( $codes );
+
+		return null === $code ? array() : array( (string) WebhookDisplayModel::site_reason_message( $code, true ) );
 	}
 
 	/**

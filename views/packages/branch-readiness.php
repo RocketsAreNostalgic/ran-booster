@@ -81,17 +81,13 @@ $secret_label = match ( $secret_coverage ) {
 	/* translators: 1: opening link tag to the repository's webhook setup; 2: closing link tag. */
 	default => \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::link_sentence( __( 'Local %1$ssigning-secret%2$s status is unavailable.', 'ran-booster' ), $secret_url, true ),
 };
-// The first known site reason, in the order the webhook screens list them; an unknown cause has no destination yet.
-$receiver_label = esc_html__( 'The site exposes a structurally valid HTTPS webhook endpoint.', 'ran-booster' );
-if ( ! $receiver_ready ) {
-	$receiver_label = esc_html__( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
-	foreach ( array( 'callback_requires_public_https', 'database_unavailable', 'secrets_storage_unavailable', 'managed_packages_unavailable' ) as $receiver_reason ) {
-		if ( in_array( $receiver_reason, $site_reasons, true ) ) {
-			$receiver_label = (string) \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::site_reason_message( $receiver_reason, true );
-			break;
-		}
-	}
-}
+// The webhook screens' primary site reason; an unknown cause has no destination yet.
+$receiver_reason = \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::primary_site_reason( $site_reasons );
+$receiver_label  = match ( true ) {
+	$receiver_ready           => esc_html__( 'The site exposes a structurally valid HTTPS webhook endpoint.', 'ran-booster' ),
+	null !== $receiver_reason => (string) \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::site_reason_message( $receiver_reason, true ),
+	default                   => esc_html__( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' ),
+};
 $needs_attention                  = ! $published_release_source
 	&& \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value === $deployment_policy
 	&& ( ! $receiver_ready || ! $identity_ready || ! $secret_ready );

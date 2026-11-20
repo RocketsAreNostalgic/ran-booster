@@ -361,6 +361,30 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		( new ProviderRepositoryRowsNormalizer() )->normalize( $core_rows, $presented, 'gh' );
 	}
 
+	public function test_rejects_core_detail_keys_on_provider_appended_historical_rows(): void {
+		$presented                              = $this->base_rows();
+		$presented['fixture:historical:abc123'] = array(
+			'provider_code'  => 'gh',
+			'provider_label' => 'GitHub',
+			'repository_id'  => 'old-42',
+			'repository'     => 'owner/historical',
+			'historical'     => true,
+			'details'        => array(
+				array(
+					'key'   => 'core:webhook-observation',
+					'label' => 'Forged',
+					'value' => 'Forged',
+				),
+			),
+			'actions'        => array(),
+		);
+
+		$this->expectException( LogicException::class );
+		$this->expectExceptionMessage( 'Provider filters may not append Core detail keys.' );
+
+		( new ProviderRepositoryRowsNormalizer() )->normalize( $this->base_rows(), $presented, 'gh' );
+	}
+
 	public function test_rejects_non_historical_or_wrong_provider_appends(): void {
 		$presented                      = $this->base_rows();
 		$presented['fixture:extra-row'] = array(

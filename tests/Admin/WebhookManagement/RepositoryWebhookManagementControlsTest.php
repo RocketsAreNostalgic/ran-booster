@@ -4,12 +4,14 @@ declare( strict_types = 1 );
 
 namespace RAN\Tests\Admin\WebhookManagement;
 
+use LogicException;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\AssistanceReadiness;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
+use RAN\Admin\ProviderRepositoryRowsNormalizer;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Package;
@@ -817,6 +819,56 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 'Signed delivery received', $status['value'] );
 		self::assertSame( 'ok', $status['tone'] );
 		self::assertFalse( $status['recorded'] );
+	}
+
+	public function test_retained_record_row_passes_core_normalization_but_refuses_provider_core_details(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
+			'fixture-provider:202' => array(
+				'schema_version'              => 4,
+				'provider_code'               => 'fixture-provider',
+				'repository_id'               => '202',
+				'repository'                  => 'owner/retired',
+				'hook_id'                     => '88',
+				'management_credential_id'    => 'credential_1',
+				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+				'webhook_profile_scope'       => 'repository',
+				'webhook_profile_revision'    => 1,
+				'webhook_profile_disposition' => 'created',
+				'endpoint'                    => 'https://example.test/webhook',
+				'status'                      => 'configured',
+				'created_at'                  => '2026-08-20T01:02:03Z',
+				'checked_at'                  => '2026-08-20T01:02:03Z',
+			),
+		);
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array(), 'https://example.test/webhook', array() ) );
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->package_authorities()
+		);
+		$controls->register();
+		$key        = 'ran-booster-repository-webhook-management:historical:' . substr( hash( 'sha256', 'fixture-provider:202' ), 0, 16 );
+		$normalizer = new ProviderRepositoryRowsNormalizer();
+
+		// The same Core pass ProviderRepositoryRowsNormalizer::project() runs on the webhook enrichment.
+		$core_rows = $normalizer->normalize( array(), $controls->enrich_repository_rows( array(), 'fixture-provider', array(), 'https://example.test/' ), 'fixture-provider', true );
+
+		self::assertTrue( $core_rows[ $key ]['historical'] );
+		self::assertSame( 'core:webhook-recorded-status', $core_rows[ $key ]['details'][0]['key'] );
+
+		$presented                      = $core_rows;
+		$presented[ $key ]['details'][] = array(
+			'key'   => 'core:webhook-observation',
+			'label' => 'Forged',
+			'value' => 'Forged',
+		);
+		$this->expectException( LogicException::class );
+		$this->expectExceptionMessage( 'Provider filters may not append Core detail keys.' );
+		$normalizer->normalize( $core_rows, $presented, 'fixture-provider' );
 	}
 
 	public function test_repository_webhook_shell_keeps_its_child_zones_and_control_labels_across_active_and_inactive_states(): void {

@@ -225,7 +225,7 @@ final class ProviderRepositoryRowsNormalizer {
 					throw new LogicException( 'Historical rows may contain link actions only.' );
 				}
 			}
-			$rows[ $key ] = $this->normalize_historical_row( $key, $row, $provider_code );
+			$rows[ $key ] = $this->normalize_historical_row( $key, $row, $provider_code, $allow_core_detail_append );
 		}
 
 		return $rows;
@@ -758,13 +758,15 @@ final class ProviderRepositoryRowsNormalizer {
 	}
 
 	/**
+	 * Core's own retained-record rows carry Core detail keys; a row a provider filter appends may not.
+	 *
 	 * @param array<string, mixed> $row
 	 * @return array<string, mixed>
 	 */
-	private function normalize_historical_row( string $key, array $row, string $provider_code ): array {
+	private function normalize_historical_row( string $key, array $row, string $provider_code, bool $allow_core_detail_append ): array {
 		$repository_id = $this->bounded_string( $row['repository_id'] ?? null, 191, false );
 		$details       = is_array( $row['details'] ?? null ) ? array_values( $row['details'] ) : array();
-		$this->assert_details( $details );
+		$this->assert_details( $details, 0, $allow_core_detail_append );
 
 		return array(
 			'key'                => $key,

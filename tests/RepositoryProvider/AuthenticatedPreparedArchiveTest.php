@@ -413,6 +413,53 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		}
 	}
 
+	public function test_a_refused_hook_carries_no_header_in_its_stack_frames(): void {
+		$sentinel = 'Bearer sntl-cred-7c1d';
+		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Turns argument capture on for this trace assertion and restores the previous value below.
+		$previous = ini_set( 'zend.exception_ignore_args', '0' );
+		try {
+			$allowed = true;
+			$url     = 'https://archives.example.test/trace-guard.zip';
+			$archive = new AuthenticatedPreparedArchive(
+				$url,
+				self::REF,
+				operation_guard: static function () use ( &$allowed ): bool {
+					return $allowed;
+				}
+			);
+			$headers = array( 'Authorization' => $sentinel );
+			$hooks   = new \stdClass();
+			$scrub   = $this->actions()[0]['callback'];
+			$first   = 'https://cdn.example.test/first';
+			$scrub( $first, $headers, null, array( 'hooks' => $hooks ), (object) array( 'url' => $url ) );
+			$headers  = array( 'Authorization' => $sentinel );
+			$allowed  = false;
+			$failures = array(
+				'filter'   => function () use ( $archive, $url, $sentinel ): void {
+					$archive->guard_request( array( 'headers' => array( 'Authorization' => $sentinel ) ), $url );
+				},
+				'redirect' => function () use ( $scrub, &$headers, $url ): void {
+					$other = 'https://cdn.example.test/other';
+					$scrub( $other, $headers, null, array( 'hooks' => new \stdClass() ), (object) array( 'url' => $url ) );
+				},
+			);
+			foreach ( $failures as $name => $operation ) {
+				try {
+					$operation();
+					self::fail( $name );
+				} catch ( RuntimeException $failure ) {
+					// A parameter marked sensitive is replaced in the structured trace, not just cut in the string form.
+					self::assertNotEmpty( $failure->getTrace(), $name );
+					self::assertStringNotContainsString( 'sntl-cred', print_r( $failure->getTrace(), true ) . $failure->getTraceAsString(), $name ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Flattens the structured trace for the leak assertion.
+				}
+			}
+			$archive->cleanup();
+		} finally {
+			// phpcs:ignore WordPress.PHP.IniSet.Risky -- Restores the value changed above.
+			ini_set( 'zend.exception_ignore_args', false === $previous ? '' : $previous );
+		}
+	}
+
 	private function assert_operation_refused( Closure $operation ): void {
 		try {
 			$operation();

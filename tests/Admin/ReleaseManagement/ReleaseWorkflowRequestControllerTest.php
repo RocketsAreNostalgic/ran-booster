@@ -401,6 +401,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		self::assertSame( 'unexpected', $result['failure_stage'] );
 		self::assertSame( 'unexpected_runtime_failure', $result['diagnostic_code'] );
 		self::assertSame( array(), $provider->calls );
+		self::assertStringNotContainsString( 'sntl-cred', print_r( array( $url, $result ), true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Flattens the redirect and result for the leak assertion.
 	}
 
 	public function test_workflow_result_falls_back_to_the_package_release_asset_settings_when_the_repository_cannot_be_resolved(): void {
@@ -724,6 +725,7 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		self::assertStringContainsString( '"diagnostic_code":"unexpected_runtime_failure"', $completions[0]['args'][4] );
 		self::assertStringContainsString( '"exception_class":"RuntimeException"', $lines );
 		self::assertStringNotContainsString( 'Workflow provider operation failure', $lines );
+		self::assertStringNotContainsString( 'sntl-cred', print_r( array( $url, $connection->inserted, $connection->prepared, $lines ), true ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Flattens the redirect, activity writes and log lines for the leak assertion.
 	}
 
 	public function test_workflow_activity_captures_authenticated_pre_provider_failure_and_rejects_forgery(): void {

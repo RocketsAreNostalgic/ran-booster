@@ -822,6 +822,25 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$artifact->cleanup();
 	}
 
+	public function test_the_download_guard_marks_its_request_arguments_sensitive(): void {
+		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive );
+		$adapter  = $this->adapter( $this->running_update(), $provider );
+		$this->download_fixture( 'example' );
+		$marked = array();
+		$GLOBALS['ran_booster_admitted_http_request_args'] = static function () use ( &$marked ): void {
+			// The guard sees the request arguments after the credential is injected, so a trace must not print them.
+			foreach ( $GLOBALS['ran_booster_admitted_http_guards'] ?? array() as $guard ) {
+				$parameter = ( new \ReflectionFunction( $guard ) )->getParameters()[1];
+				$marked[]  = array( $parameter->getName(), array() !== $parameter->getAttributes( \SensitiveParameter::class ) );
+			}
+		};
+
+		$adapter->prepare( $adapter->declaration(), $this->update_baseline() )->cleanup();
+
+		self::assertSame( array( array( 'arguments', true ) ), $marked );
+	}
+
 	public function test_redirect_argument_callback_revocation_refuses_second_transport_and_cleans(): void {
 		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
 		$provider = new ParityRepositoryProvider( $archive );

@@ -20,6 +20,7 @@ use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PackageStorageFailure;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use Throwable;
 
 /**
@@ -54,29 +55,29 @@ final readonly class PortabilityController {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- isAllowed validates this purpose-specific nonce before reading input.
 		try {
 			$credentials = $this->selected_credentials();
-		} catch ( InvalidArgumentException ) {
-			return $this->export_failure( __( 'The selected packages or repository credentials changed or are invalid. Reload this page and try again.', 'ran-booster' ), 400 );
+		} catch ( InvalidArgumentException $failure ) {
+			return $this->export_failure( __( 'The selected packages or repository credentials changed or are invalid. Reload this page and try again.', 'ran-booster' ), 400, 'selection', $failure );
 		}
 		$password       = $this->password_from_request( 'password' );
 		$confirmation   = $this->password_from_request( 'password_confirmation' );
 		$password_error = $this->export_password_error( array() !== $credentials, $password, $confirmation );
 
 		if ( null !== $password_error ) {
-			return $this->export_failure( $password_error, 400 );
+			return $this->export_failure( $password_error, 400, 'password' );
 		}
 
 		try {
 			$report    = array();
 			$blueprint = $this->exporter->export( $credentials, $this->selected_packages(), $report );
-		} catch ( LocalSecretStoreUnavailable ) {
-			return $this->export_failure( __( 'Encrypted credential storage is unavailable, so Booster did not export credentials.', 'ran-booster' ), 409 );
+		} catch ( LocalSecretStoreUnavailable $failure ) {
+			return $this->export_failure( __( 'Encrypted credential storage is unavailable, so Booster did not export credentials.', 'ran-booster' ), 409, 'export', $failure );
 		} catch ( PackageStorageFailure $failure ) {
-			return $this->export_failure( $failure->getMessage(), $failure->is_database_unsupported() ? 503 : 500 );
+			return $this->export_failure( $failure->getMessage(), $failure->is_database_unsupported() ? 503 : 500, 'export', $failure );
 
-		} catch ( InvalidArgumentException ) {
-			return $this->export_failure( __( 'The selected packages or repository credentials changed or are invalid. Reload this page and try again.', 'ran-booster' ), 400 );
-		} catch ( Throwable ) {
-			return $this->export_failure( __( 'Booster could not read the managed package selection. Try again.', 'ran-booster' ), 500 );
+		} catch ( InvalidArgumentException $failure ) {
+			return $this->export_failure( __( 'The selected packages or repository credentials changed or are invalid. Reload this page and try again.', 'ran-booster' ), 400, 'export', $failure );
+		} catch ( Throwable $failure ) {
+			return $this->export_failure( __( 'Booster could not read the managed package selection. Try again.', 'ran-booster' ), 500, 'export', $failure );
 		}
 
 		try {
@@ -88,8 +89,8 @@ final readonly class PortabilityController {
 				throw new InvalidArgumentException();
 			}
 			$this->archive->write_to( $path, $blueprint, $password );
-		} catch ( Throwable ) {
-			return $this->export_failure( __( 'Booster could not create the Blueprint ZIP. Try again.', 'ran-booster' ), 500 );
+		} catch ( Throwable $failure ) {
+			return $this->export_failure( __( 'Booster could not create the Blueprint ZIP. Try again.', 'ran-booster' ), 500, 'archive_write', $failure );
 		}
 
 		try {
@@ -100,8 +101,8 @@ final readonly class PortabilityController {
 			header( 'Content-Disposition: attachment; filename="' . $this->export_filename( home_url(), time() ) . '"' );
 			header( 'Content-Length: ' . (string) strlen( $bytes ) );
 			echo $bytes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Emits only the fully read, bounded ZIP after validation.
-		} catch ( Throwable ) {
-			return $this->export_failure( __( 'Booster could not read the Blueprint ZIP. Try again.', 'ran-booster' ), 500 );
+		} catch ( Throwable $failure ) {
+			return $this->export_failure( __( 'Booster could not read the Blueprint ZIP. Try again.', 'ran-booster' ), 500, 'archive_read', $failure );
 		} finally {
 			if ( is_file( $path ) ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only this request's generated ZIP.
@@ -109,6 +110,13 @@ final readonly class PortabilityController {
 			}
 		}
 
+		BoosterLogger::log(
+			'Blueprint export finished.',
+			array(
+				'operation'    => 'portability_export',
+				'outcome_code' => 'exported',
+			)
+		);
 		exit;
 	}
 
@@ -236,18 +244,28 @@ final readonly class PortabilityController {
 					$release_review = $this->release_review_from_request();
 					$expectation    = $this->provider_expectation();
 				} catch ( InvalidArgumentException ) {
-					return wp_send_json_success( $this->review_again() );
+					return wp_send_json_success( $this->review_again( $package ) );
 				}
 				if ( null === $release_review || ! $this->valid_release_review_nonce( $blueprint, $row, $release_review, $expectation, $target_credentials[ $row ] ?? null, $decisions ) ) {
-					return wp_send_json_success( $this->review_again() );
+					return wp_send_json_success( $this->review_again( $package ) );
 				}
 			}
 			$can_install = $package instanceof BlueprintPackage
 				&& current_user_can( 'plugin' === $package->type ? 'install_plugins' : 'install_themes' );
 
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle_apply validates its purpose-specific nonce before reading adopt.
-			return wp_send_json_success( $this->application->apply( $blueprint, $row, $this->requested_action(), $decisions, $target_credentials[ $row ] ?? null, ( '1' === (string) ( $_POST['adopt'] ?? '' ) ), $can_install, $this->selected_rows(), null !== $release_review ? $expectation : $this->provider_expectation(), $release_review ) );
+			$result = $this->application->apply( $blueprint, $row, $this->requested_action(), $decisions, $target_credentials[ $row ] ?? null, ( '1' === (string) ( $_POST['adopt'] ?? '' ) ), $can_install, $this->selected_rows(), null !== $release_review ? $expectation : $this->provider_expectation(), $release_review );
+			$this->log_apply_result( $package, $result['status'], $result['credential_state'] );
+			return wp_send_json_success( $result );
 		} catch ( PackageStorageFailure $failure ) {
+			BoosterLogger::log_exception(
+				'portability package apply failed',
+				$failure,
+				array(
+					'operation' => 'portability_apply',
+					'step'      => 'apply',
+				)
+			);
 			return wp_send_json_error( array( 'message' => $failure->getMessage() ), $failure->is_database_unsupported() ? 503 : 500 );
 		} catch ( Throwable $failure ) {
 			return wp_send_json_success( $this->apply_failure( $failure ) );
@@ -394,7 +412,8 @@ final readonly class PortabilityController {
 	}
 
 	/** @return array{status:string,message:string,credential_state:string} */
-	private function review_again(): array {
+	private function review_again( BlueprintPackage $package ): array {
+		$this->log_apply_result( $package, 'skipped', 'none' );
 		return array(
 			'status'           => 'skipped',
 			'message'          => __( 'The reviewed release evidence changed or expired. Review the Blueprint again.', 'ran-booster' ),
@@ -422,7 +441,20 @@ final readonly class PortabilityController {
 		return current_user_can( 'manage_options' ) && check_ajax_referer( $nonce_action, 'nonce', false );
 	}
 
-	private function export_failure( string $message, int $status ): mixed {
+	/** A step logs the failure, codes only; the session refusal, which any visitor can cause, passes none. */
+	private function export_failure( string $message, int $status, ?string $step = null, ?Throwable $failure = null ): mixed {
+		if ( null !== $step ) {
+			$context = array(
+				'operation'   => 'portability_export',
+				'step'        => $step,
+				'http_status' => (string) $status,
+			);
+			if ( null === $failure ) {
+				BoosterLogger::log( 'Blueprint export failed.', $context );
+			} else {
+				BoosterLogger::log_exception( 'Blueprint export failed.', $failure, $context );
+			}
+		}
 		if ( $this->is_inline_export_request() ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_send_json_error serialises the message and applies the integer HTTP status.
 			return wp_send_json_error( array( 'message' => $message ), $status );
@@ -656,6 +688,29 @@ final readonly class PortabilityController {
 		}
 
 		return $row;
+	}
+
+	/**
+	 * One codes-only line per applied row. The slug is derived as Core derives a stored package's slug, from an
+	 * identifier that passed Core's package-identifier validation when the Blueprint was read.
+	 */
+	private function log_apply_result( ?BlueprintPackage $package, string $status, string $credential_state ): void {
+		try {
+			$slug = null === $package ? null : PackageDirectory::installation_slug( PackageDirectory::installed_slug( $package->type, $package->identifier ), null );
+		} catch ( InvalidArgumentException ) {
+			$slug = null;
+		}
+		BoosterLogger::log(
+			'Blueprint package apply finished.',
+			array_filter(
+				array(
+					'operation'    => 'portability_apply',
+					'outcome_code' => $status,
+					'state'        => $credential_state,
+					'package_slug' => $slug,
+				)
+			)
+		);
 	}
 
 	/** @return array{status:string,message:string,category?:string} */

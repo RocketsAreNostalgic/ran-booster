@@ -53,6 +53,7 @@ require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PortabilityControllerTest extends TestCase {
+	use \RAN\Tests\Support\CapturesBoosterLog;
 
 	#[DataProvider( 'export_filename_sites' )]
 	public function test_export_filename_uses_the_site_host_and_utc( string $site_url, string $host ): void {
@@ -424,9 +425,12 @@ final class PortabilityControllerTest extends TestCase {
 			$_POST['release_review_nonce'] = $nonce;
 		}
 
+		$this->start_log_capture();
 		try {
 			$result = $this->preview_controller( $secrets, provider: $provider )->handle_apply();
+			$lines  = $this->captured_log_lines();
 		} finally {
+			$this->stop_log_capture();
 			$_POST = $previous;
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
 			unlink( $file );
@@ -435,6 +439,7 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertTrue( $result['success'] );
 		self::assertSame( 'skipped', $result['data']['status'] );
 		self::assertStringContainsString( 'reviewed release evidence changed or expired', $result['data']['message'] );
+		self::assertSame( array( '[ran-booster] Blueprint package apply finished. {"operation":"portability_apply","outcome_code":"skipped","state":"none","package_slug":"release"}' ), $lines );
 		self::assertNotNull( $provider );
 		self::assertSame( array(), $provider->credential_ids );
 	}
@@ -1036,14 +1041,22 @@ final class PortabilityControllerTest extends TestCase {
 		} elseif ( 'malformed' === $context ) {
 			$_POST['provider_expectation'] = '{broken';
 		}
+		$this->start_log_capture();
 		try {
 			$result = $controller->handle_apply();
+			$lines  = implode( "\n", $this->captured_log_lines() );
 		} finally {
+			$this->stop_log_capture();
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
 			unlink( $file );
 		}
 		self::assertTrue( $result['success'] );
 		self::assertSame( 'stale' === $context ? 'skipped' : 'failed', $result['data']['status'] );
+		// A thrown apply keeps its existing class-and-code line; a returned result gets the result line.
+		self::assertStringContainsString( 'stale' === $context ? '"operation":"portability_apply","outcome_code":"skipped","state":"none","package_slug":"' : '"operation":"portability_apply","step":"apply","exception_class":', $lines );
+		foreach ( array( 'correct-horse-battery-staple', 'owner/', 'repository-id' ) as $private ) {
+			self::assertStringNotContainsString( $private, $lines );
+		}
 		if ( 'stale' === $context ) {
 			self::assertSame( TargetPackageReason::PROVIDER_SELECTION_CHANGED->message(), $result['data']['message'] );
 		}
@@ -1250,8 +1263,15 @@ final class PortabilityControllerTest extends TestCase {
 		$_POST['response_format']                          = 'json';
 		$GLOBALS['ran_booster_repository_admin_file_read'] = false;
 
-		$result = $this->export_controller()->handle_export();
+		$this->start_log_capture();
+		try {
+			$result = $this->export_controller()->handle_export();
+			$lines  = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
 
+		self::assertSame( array( '[ran-booster] Blueprint export failed. {"operation":"portability_export","step":"archive_read","http_status":"500","exception_class":"InvalidArgumentException","exception_code":"0"}' ), $lines );
 		self::assertSame( false, $result['success'] );
 		self::assertSame( 500, $result['status'] );
 		self::assertSame( 'Booster could not read the Blueprint ZIP. Try again.', $result['data']['message'] );
@@ -1260,6 +1280,25 @@ final class PortabilityControllerTest extends TestCase {
 		foreach ( $paths as $path ) {
 			self::assertFileDoesNotExist( $path );
 		}
+	}
+
+	public function test_a_refused_export_password_logs_only_its_step(): void {
+		$_POST['packages']              = array( 'plugin' => array( 'example/example.php' ) );
+		$_POST['response_format']       = 'json';
+		$_POST['credentials']           = array( 'gh' => array( 'valid-profile' ) );
+		$_POST['password']              = 'marker-password-one';
+		$_POST['password_confirmation'] = 'marker-password-two';
+
+		$this->start_log_capture();
+		try {
+			$result = $this->export_controller()->handle_export();
+			$lines  = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+
+		self::assertSame( 400, $result['status'] );
+		self::assertSame( array( '[ran-booster] Blueprint export failed. {"operation":"portability_export","step":"password","http_status":"400"}' ), $lines );
 	}
 
 	#[DataProvider( 'invalid_credential_selections' )]

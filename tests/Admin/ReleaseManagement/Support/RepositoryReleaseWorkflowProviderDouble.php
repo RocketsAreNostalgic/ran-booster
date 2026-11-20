@@ -120,7 +120,7 @@ final class RepositoryReleaseWorkflowProviderDouble implements RepositoryProvide
 	private function result( string $operation, ?string $credential_id, array $detail = array() ): RepositoryReleaseWorkflowResult {
 		$this->throw_if_needed();
 		if ( $this->throw_on_operation ) {
-			throw new RuntimeException( 'Workflow provider operation failure.' ); }
+			throw new RuntimeException( 'Workflow provider operation failure sntl-cred-7c1d.' ); }
 		$this->calls[] = array(
 			'operation'     => $operation,
 			'credential_id' => $credential_id,

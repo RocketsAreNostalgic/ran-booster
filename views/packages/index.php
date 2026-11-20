@@ -44,6 +44,7 @@ $package_list_state           = isset( $package_list_state ) && is_array( $packa
 		'attention' => '',
 	);
 $package_attention_enabled    = true === ( $package_attention_enabled ?? false );
+$package_paused               = isset( $package_paused ) && is_array( $package_paused ) ? $package_paused : array();
 $package_list_total           = isset( $package_list_total ) && is_int( $package_list_total )
 	? max( count( $packages ), $package_list_total )
 	: count( $packages );
@@ -170,9 +171,10 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				<option value="disabled" <?php selected( 'disabled', $package_list_state['policy'] ); ?>><?php esc_html_e( 'Disabled', 'ran-booster' ); ?></option>
 			</select>
 			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-attention-filter"><?php esc_html_e( 'Filter by status', 'ran-booster' ); ?></label>
-			<select id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-attention-filter" name="attention"<?php disabled( ! $package_attention_enabled ); ?>>
+			<select id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-attention-filter" name="attention">
 				<option value=""><?php esc_html_e( 'All statuses', 'ran-booster' ); ?></option>
-				<option value="failed" <?php selected( 'failed', $package_list_state['attention'] ); ?>><?php esc_html_e( 'Update failed', 'ran-booster' ); ?></option>
+				<option value="failed" <?php selected( 'failed', $package_list_state['attention'] ); ?><?php disabled( ! $package_attention_enabled ); ?>><?php esc_html_e( 'Update failed', 'ran-booster' ); ?></option>
+				<option value="paused" <?php selected( 'paused', $package_list_state['attention'] ); ?>><?php esc_html_e( 'Paused', 'ran-booster' ); ?></option>
 			</select>
 			<button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
 			<?php if ( $has_package_list_filters ) { ?>
@@ -289,6 +291,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			$policy_disabled           = \RAN\Deployment\DeploymentPolicy::DISABLED === $deployment_policy;
 			$package_identifier        = (string) $package->get_identifier();
 			$release_managed           = \RAN\PackageSource::RELEASE_ASSET === $package->get_source();
+			$package_is_paused         = in_array( $package->get_identifier(), $package_paused, true );
 			$package_extension_row     = isset( $package_extension_rows[ $package_identifier ] ) && is_array( $package_extension_rows[ $package_identifier ] )
 				? $package_extension_rows[ $package_identifier ]
 				: array();
@@ -394,6 +397,11 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					'label' => __( 'Credential unavailable', 'ran-booster' ),
 					'tone'  => 'error',
 				);
+			} elseif ( $package_is_paused ) {
+				$prominent_status = array(
+					'label' => __( 'Paused', 'ran-booster' ),
+					'tone'  => 'warning',
+				);
 			} elseif ( ! $release_managed
 				&& ! $policy_disabled
 				&& ( in_array( $latest_activity_state, array( 'queued', 'running', 'failed' ), true ) || $update_needs_attention )
@@ -442,6 +450,8 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				$status_line = __( 'The saved Git provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
 			} elseif ( ! $credential_available ) {
 				$status_line = __( 'The saved repository credential is unavailable.', 'ran-booster' );
+			} elseif ( $package_is_paused ) {
+				$status_line = __( 'Updates are paused by a site setting.', 'ran-booster' );
 			} elseif ( '' !== ( $package_extension_row['status'] ?? '' ) ) {
 				$status_line = (string) $package_extension_row['status'];
 			} elseif ( $policy_disabled ) {

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace RAN\Deployment;
 
+use RAN\Logging\BoosterLogger;
+use RAN\Package;
 use RAN\PackageSource;
 use RAN\Settings\GeneralPreferenceStore;
+use RAN\WordPress\ManagedReleaseStore;
 
 /**
  * The one answer every install and update path reads before acting on a branch
@@ -19,6 +22,9 @@ use RAN\Settings\GeneralPreferenceStore;
  * arrives paused.
  */
 final class PackageSourceGate {
+
+	/** @var array<string, true> Overrides whose unreadable setting this request has already logged. */
+	private static array $logged_unreadable = array();
 
 	/**
 	 * An environment type set explicitly, through the WP_ENVIRONMENT_TYPE constant or
@@ -56,7 +62,50 @@ final class PackageSourceGate {
 		}
 		try {
 			return true === ( new GeneralPreferenceStore() )->projection( $fresh )[ $override ]['value'];
-		} catch ( \RuntimeException ) {
+		} catch ( \RuntimeException $failure ) {
+			if ( ! isset( self::$logged_unreadable[ $override ] ) ) {
+				self::$logged_unreadable[ $override ] = true;
+				BoosterLogger::log_exception(
+					'Package source setting unreadable; paused.',
+					$failure,
+					array(
+						'source' => $override,
+						'state'  => 'paused',
+					)
+				);
+			}
+			return false;
+		}
+	}
+
+	/**
+	 * Whether this managed package is paused here. A Disabled package never counts. The cheap
+	 * answers come first, so only a release package on a site that pauses Preview tracks reads
+	 * its stored channel; an unreadable channel counts as not paused.
+	 *
+	 * @param string $type The managed package type, plugin or theme.
+	 */
+	public static function pauses_package( Package $package, string $type ): bool {
+		if ( DeploymentPolicy::DISABLED === $package->get_deployment_policy() ) {
+			return false;
+		}
+		if ( PackageSource::BRANCH === $package->get_source() ) {
+			return self::pauses( PackageSource::BRANCH );
+		}
+		if ( self::allows( 'prerelease_sources' ) ) {
+			return false;
+		}
+		try {
+			return 'prerelease' === ( new ManagedReleaseStore() )->configuration( $type, (string) $package->get_identifier() )?->channel();
+		} catch ( \Throwable $failure ) {
+			BoosterLogger::log_exception(
+				'Package pause state unavailable.',
+				$failure,
+				array(
+					'operation'    => 'package_pause_state',
+					'outcome_code' => 'configuration_unavailable',
+				)
+			);
 			return false;
 		}
 	}

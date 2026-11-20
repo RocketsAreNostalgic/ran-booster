@@ -369,6 +369,36 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Branch · release · Manual', $html );
 	}
 
+	public function test_a_paused_package_shows_its_badge_status_and_settings_link(): void {
+		$package           = $this->package();
+		$packages          = array( $package );
+		$package_view      = PackagePagePresenter::plugin();
+		$package_providers = array( $this->package_list_provider() );
+		$package_activity  = array(
+			'items'       => array(),
+			'unavailable' => false,
+		);
+		$package_paused    = array( $package->get_identifier() );
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'data-ran-booster-badge-intent="medium">Paused</span>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a site setting.</p>', $html );
+
+		$package_provider_settings = array(
+			'default_provider' => 'gh',
+			'providers'        => array( $this->provider_option( 'gh', true ) ),
+		);
+		$package_paused            = true;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+
+		self::assertMatchesRegularExpression( '/data-ran-booster-ui-notice-intent="warning">.*<p>Updates are paused by a site setting\. <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">Settings<\/a><\/p>/s', $html );
+	}
+
 	public function test_theme_list_does_not_offer_or_display_plugin_activation_controls(): void {
 		$packages          = array( $this->package() );
 		$package_view      = PackagePagePresenter::theme();

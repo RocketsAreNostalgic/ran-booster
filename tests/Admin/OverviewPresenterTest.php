@@ -326,6 +326,42 @@ final class OverviewPresenterTest extends TestCase {
 		}
 	}
 
+	public function test_paused_packages_add_one_medium_row_per_type(): void {
+		require_once __DIR__ . '/../Support/PackageSourceGateWordPressFunctions.php';
+		require_once __DIR__ . '/../Settings/GeneralPreferenceStoreWordPressFunctions.php';
+		$GLOBALS['ran_booster_test_environment_type']  = 'production';
+		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( array() );
+		unset( $GLOBALS['ran_booster_general_preference_cached_option'] );
+		$fields  = array_fill_keys( array( 'PluginURI', 'Version', 'Description', 'Author', 'AuthorURI', 'TextDomain', 'DomainPath', 'Title', 'AuthorName' ), '' ) + array( 'Network' => false );
+		$plugin  = static fn ( string $slug ): Plugin => Plugin::from_wp_array( "$slug/$slug.php", array( 'Name' => ucfirst( $slug ) ) + $fields );
+		$plugins = array( $plugin( 'alpha' ), $plugin( 'off' ) );
+		$plugins[1]->set_deployment_policy( \RAN\Deployment\DeploymentPolicy::DISABLED );
+		$themes = array();
+		foreach ( array( 'one', 'two' ) as $slug ) {
+			$theme       = new class() extends Theme {
+				public string $slug = '';
+				public function get_identifier(): mixed {
+					return $this->slug;
+				}
+			};
+			$theme->slug = $slug;
+			$themes[]    = $theme;
+		}
+		try {
+			$attention = $this->present( $this->plugins( $plugins ), $this->themes( $themes ) )['attention'];
+			self::assertSame( array( 'Alpha', '2 themes' ), array_column( $attention['items'], 'label' ) );
+			self::assertSame( array( 'Paused', 'Paused' ), array_column( $attention['items'], 'badge' ) );
+			self::assertSame( array( false, false ), array_column( $attention['items'], 'critical' ) );
+			self::assertStringEndsWith( 'admin.php?page=ran-booster-plugins&attention=paused', $attention['items'][0]['url'] );
+			self::assertStringEndsWith( 'admin.php?page=ran-booster-themes&attention=paused', $attention['items'][1]['url'] );
+
+			$GLOBALS['ran_booster_test_environment_type'] = 'local';
+			self::assertSame( array(), $this->present( $this->plugins( $plugins ), $this->themes( $themes ) )['attention']['items'], 'A development site pauses nothing.' );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_general_preference_raw'], $GLOBALS['ran_booster_general_preference_cached_option'] );
+		}
+	}
+
 	/** @param list<Plugin>|null $packages */
 	private function plugins( ?array $packages ): PluginRepository {
 		$GLOBALS['ran_booster_overview_plugin_calls'] = 0;

@@ -17,6 +17,7 @@
  * @var list<array{key:string,label:string,url:string,active:bool,provider:bool}> $general_navigation Optional confirmed navigation.
  * @var bool $development_site Whether branch sources and Preview tracks need no override here.
  * @var string $site_address The address a saved source override is bound to.
+ * @var array{plugin:int,theme:int} $paused_counts Optional managed packages paused by these settings.
  */
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -335,6 +336,24 @@ foreach ( $source_scopes as $source_scope => $source_label ) {
 		<div id="<?php echo esc_attr( $source_id ); ?>-help" class="notice notice-info inline ran-booster-settings__reason ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $source_help ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 		<?php } ?>
 		<?php $render_configuration( array( $source_scope => 'RAN_BOOSTER_ALLOW_' . strtoupper( $source_scope ) ) ); ?>
+		<?php
+		$paused_plugins = (int) ( $paused_counts['plugin'] ?? 0 );
+		$paused_themes  = (int) ( $paused_counts['theme'] ?? 0 );
+		if ( 'prerelease_sources' === $source_scope && ! $development_site && $paused_plugins + $paused_themes > 0 ) {
+			?>
+		<p class="description">
+			<?php
+			echo wp_kses_post(
+				sprintf(
+					/* translators: 1: linked number of paused plugins, 2: linked number of paused themes. */
+					__( 'Paused: %1$s, %2$s', 'ran-booster' ),
+					'<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-plugins&attention=paused' ) ) . '">' . esc_html( sprintf( /* translators: %d: number of paused plugins or themes. */ _n( '%d plugin', '%d plugins', $paused_plugins, 'ran-booster' ), $paused_plugins ) ) . '</a>',
+					'<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-themes&attention=paused' ) ) . '">' . esc_html( sprintf( /* translators: %d: number of paused plugins or themes. */ _n( '%d theme', '%d themes', $paused_themes, 'ran-booster' ), $paused_themes ) ) . '</a>'
+				)
+			);
+			?>
+		</p>
+		<?php } ?>
 	</fieldset>
 	<div class="ran-booster-settings__toggle-actions">
 		<button id="ran-booster-save-<?php echo esc_attr( $source_scope ); ?>" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-toggle-save<?php disabled( $source['locked'] ); ?>><?php esc_html_e( 'Save setting', 'ran-booster' ); ?></button>

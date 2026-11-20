@@ -235,6 +235,7 @@ $source_summary                 = 'branch' === $package_current_source
 		'' !== (string) $package->get_branch() ? (string) $package->get_branch() : __( 'repository default', 'ran-booster' )
 	)
 	: (string) ( $package_source_choices[ $package_current_source ]['heading'] ?? __( 'Unavailable update source', 'ran-booster' ) );
+$package_paused     = true === ( $package_paused ?? false );
 $automation_summary = match ( $package->get_deployment_policy()->value ) {
 	\RAN\Deployment\DeploymentPolicy::DISABLED->value => __( 'Disabled', 'ran-booster' ),
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
@@ -256,6 +257,9 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 		</div>
 		<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?>
 	</div>
+<?php } ?>
+<?php if ( $package_paused ) { ?>
+	<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Updates are paused by a site setting.', 'ran-booster' ); ?> <a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-general-' . ( 'branch' === $package_current_source ? 'branch_sources' : 'prerelease_sources' ) ) ); ?>"><?php esc_html_e( 'Settings', 'ran-booster' ); ?></a></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 <?php } ?>
 
 <div class="ran-booster-package-settings">

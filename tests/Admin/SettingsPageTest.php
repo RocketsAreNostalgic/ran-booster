@@ -541,6 +541,10 @@ final class SettingsPageTest extends TestCase {
 			),
 			'development_site'   => false,
 			'site_address'       => 'example.com:8443/wp',
+			'paused_counts'      => array(
+				'plugin' => 1,
+				'theme'  => 2,
+			),
 			'general_scope'      => 'all',
 			'general_token'      => 'token',
 			'general_feedback'   => null,
@@ -576,6 +580,20 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="ran-booster-prerelease-sources" and not(@checked)])' ) );
 		self::assertSame( 'Turned off: the site address changed.', $help( $xpath, 'ran-booster-prerelease-sources' ), 'A copied database explains itself instead of raising an error.' );
 		self::assertSame( 'Disabled', trim( (string) $xpath->evaluate( 'string(' . $form( 'prerelease_sources' ) . '//span[@data-ran-booster-toggle-status])' ) ) );
+		$paused = '//p[@class="description" and contains(., "Paused:")]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $paused . ')' ), 'The pause count appears once.' );
+		self::assertSame( 'Paused: 1 plugin, 2 themes', preg_replace( '/\s+/', ' ', trim( (string) $xpath->evaluate( 'string(' . $form( 'prerelease_sources' ) . '/fieldset' . substr( $paused, 1 ) . ')' ) ) ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $paused . '/a[contains(@href, "page=ran-booster-plugins&attention=paused") and .="1 plugin"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $paused . '/a[contains(@href, "page=ran-booster-themes&attention=paused") and .="2 themes"])' ) );
+		$bindings['paused_counts'] = array(
+			'plugin' => 0,
+			'theme'  => 0,
+		);
+		self::assertSame( 0.0, $this->general_view( $bindings )->evaluate( 'count(' . $paused . ')' ), 'Nothing paused shows no count.' );
+		$bindings['paused_counts'] = array(
+			'plugin' => 1,
+			'theme'  => 2,
+		);
 
 		// The store reports both forced on and locked on a development site.
 		$bindings['development_site']                       = true;
@@ -597,6 +615,7 @@ final class SettingsPageTest extends TestCase {
 			self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][' . $scope . ']"])' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//button[@id="ran-booster-save-' . $scope . '" and @disabled])' ) );
 		}
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $paused . ')' ), 'A development site shows no pause count.' );
 
 		$bindings['development_site']                       = false;
 		$bindings['general_settings']['branch_sources']     = $switch( true, 'code' );

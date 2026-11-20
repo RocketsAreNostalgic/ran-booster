@@ -40,7 +40,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 	}
 
 	#[DataProvider( 'package_types' )]
-	public function test_status_filter_keeps_its_value_and_is_disabled_without_activity( PackagePagePresenter $package_view, string $page_slug, string $type ): void {
+	public function test_status_filter_keeps_its_value_and_disables_only_failed_without_activity( PackagePagePresenter $package_view, string $page_slug, string $type ): void {
 		$state = array(
 			'search'    => 'Release',
 			'provider'  => '',
@@ -50,13 +50,19 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		);
 		$html  = $this->render( $package_view, $state, 4, array(), array(), false, true );
 		self::assertStringContainsString( '<label class="screen-reader-text" for="ran-booster-' . $type . '-attention-filter">Filter by status</label>', $html );
-		self::assertMatchesRegularExpression( '/name="attention">\s*<option value="">All statuses<\/option>\s*<option value="failed"\s+selected="selected">Update failed<\/option>/', $html );
+		self::assertMatchesRegularExpression( '/name="attention">\s*<option value="">All statuses<\/option>\s*<option value="failed"\s+selected="selected">Update failed<\/option>\s*<option value="paused"\s*>Paused<\/option>/', $html );
 		self::assertStringContainsString( 'type="hidden" name="attention" value="failed"', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=' . $page_slug . '">Clear filters</a>', $html );
 
 		$html = $this->render( $package_view, array( 'attention' => '' ) + $state, 4, array(), array(), false, false );
-		self::assertStringContainsString( 'name="attention" disabled="disabled">', $html );
+		self::assertStringContainsString( 'name="attention">', $html );
+		self::assertMatchesRegularExpression( '/<option value="failed"\s*disabled="disabled">Update failed<\/option>/', $html );
 		self::assertStringNotContainsString( 'name="attention" value=', $html );
+
+		// Paused needs no Activity, so it stays selectable and kept.
+		$html = $this->render( $package_view, array( 'attention' => 'paused' ) + $state, 4, array(), array(), false, false );
+		self::assertMatchesRegularExpression( '/<option value="paused"\s+selected="selected">Paused<\/option>/', $html );
+		self::assertStringContainsString( 'type="hidden" name="attention" value="paused"', $html );
 	}
 
 	#[DataProvider( 'package_types' )]

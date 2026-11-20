@@ -8,6 +8,7 @@ use LogicException;
 use RAN\Activity\ActivityStore;
 use RAN\AdoptionIdentity;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\PackageSourceGate;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use Throwable;
@@ -216,6 +217,19 @@ final readonly class OnboardingPresenter {
 				'critical' => true,
 				'type'     => $types[ $index ],
 			);
+		}
+		foreach ( array( 'plugin', 'theme' ) as $paused_type ) {
+			$paused = array_values( array_filter( $managed, static fn ( array $entry ): bool => $paused_type === $entry[0] && PackageSourceGate::pauses_package( $entry[1], $paused_type ) ) );
+			if ( array() !== $paused ) {
+				$items[] = array(
+					/* translators: %d: number of paused plugins or themes. */
+					'label'    => 1 === count( $paused ) ? $paused[0][1]->get_display_name() : sprintf( 'plugin' === $paused_type ? _n( '%d plugin', '%d plugins', count( $paused ), 'ran-booster' ) : _n( '%d theme', '%d themes', count( $paused ), 'ran-booster' ), count( $paused ) ),
+					'url'      => admin_url( 'admin.php?page=ran-booster-' . $paused_type . 's&attention=paused' ),
+					'badge'    => __( 'Paused', 'ran-booster' ),
+					'critical' => false,
+					'type'     => '',
+				);
+			}
 		}
 		foreach ( 'captured' === $credentials['status'] ? $credentials['items'] : array() as $item ) {
 			$items[] = array(

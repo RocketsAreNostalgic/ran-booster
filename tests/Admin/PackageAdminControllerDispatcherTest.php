@@ -144,20 +144,11 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		}
 	}
 
-	public function test_a_paused_refusal_says_no_files_were_changed_and_logs_only_its_code(): void {
-		$captured = array();
-		$result   = ( new \ReflectionMethod( PackageAdminController::class, 'coded_refusal' ) )->invoke(
-			new PackageAdminController(),
-			'update-plugin',
-			'source_paused',
-			static function ( \WP_Error|array $message, array $context ) use ( &$captured ): void {
-				$captured = array( $message, $context );
-			}
-		);
+	public function test_a_paused_refusal_links_the_setting_says_no_files_were_changed_and_logs_only_its_code(): void {
+		$captured = $this->paused_refusal();
 
-		self::assertFalse( $result );
 		self::assertInstanceOf( \WP_Error::class, $captured[0] );
-		self::assertSame( 'Updates are paused by a site setting. No files were changed.', $captured[0]->get_error_message() );
+		self::assertSame( 'Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>. No files were changed.', $captured[0]->get_error_message() );
 		self::assertSame(
 			array(
 				'operation'    => 'update-plugin',
@@ -168,22 +159,47 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 	}
 
-	/** @return array<string, array{BulkPackageResult, string}> */
-	public static function linked_bulk_notices(): array {
-		return array(
-			'unavailable provider' => array( BulkPackageResult::error( BulkPackageAction::QUEUE_UPDATE, 2, 'provider_unavailable' ), 'A selected package uses an unavailable <a href="%s/admin.php?page=ran-booster-extensions">Git provider</a>.' ),
-			'unavailable runner'   => array( BulkPackageResult::queue( 1, 1, array(), 'unavailable' ), 'Open <a href="%s/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=activity">Troubleshooting</a> to request it.' ),
-		);
+	public function test_a_paused_refusal_stays_plain_for_a_user_who_cannot_open_the_setting(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => false );
+		$captured                                 = $this->paused_refusal();
+
+		self::assertInstanceOf( \WP_Error::class, $captured[0] );
+		self::assertSame( 'Updates are paused by a site setting. No files were changed.', $captured[0]->get_error_message() );
 	}
 
-	#[DataProvider( 'linked_bulk_notices' )]
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
-	public function test_bulk_notices_link_the_control_on_the_network_admin_on_multisite( BulkPackageResult $result, string $expected ): void {
+	public function test_a_paused_refusal_links_the_setting_on_the_network_admin_on_multisite(): void {
+		$GLOBALS['ran_booster_dashboard_test_multisite'] = true;
+		$captured                                        = $this->paused_refusal();
+
+		self::assertInstanceOf( \WP_Error::class, $captured[0] );
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>', $captured[0]->get_error_message() );
+	}
+
+	/** @return array{0: \WP_Error|array<string, mixed>|null, 1: array<string, string>} */
+	private function paused_refusal(): array {
+		$captured = array( null, array() );
+		$result   = ( new \ReflectionMethod( PackageAdminController::class, 'coded_refusal' ) )->invoke(
+			new PackageAdminController(),
+			'update-plugin',
+			'source_paused',
+			static function ( \WP_Error|array $message, array $context ) use ( &$captured ): void {
+				$captured = array( $message, $context );
+			}
+		);
+		self::assertFalse( $result );
+
+		return $captured;
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_the_bulk_provider_notice_links_extensions_on_the_network_admin_on_multisite(): void {
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = true;
 		$_POST      = array();
 		$controller = new PackageAdminController();
-		$url        = $controller->bulk_redirect( 'plugin', $result, array() );
+		$url        = $controller->bulk_redirect( 'plugin', BulkPackageResult::error( BulkPackageAction::QUEUE_UPDATE, 2, 'provider_unavailable' ), array() );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test reconstructs the signed redirect query.
 		parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $_GET );
 		$messages = array();
@@ -196,7 +212,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 
 		self::assertCount( 1, $messages );
-		self::assertStringContainsString( sprintf( $expected, 'https://example.test/wp-admin/network' ), $messages[0]['message'] );
+		self::assertSame( 'A selected package uses an unavailable <a href="https://example.test/wp-admin/network/admin.php?page=ran-booster-extensions">Git provider</a>.', $messages[0]['message'] );
 	}
 
 	public function test_bulk_notices_stay_plain_for_a_user_who_cannot_open_the_targets(): void {

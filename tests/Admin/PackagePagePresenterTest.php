@@ -124,6 +124,10 @@ final class PackagePagePresenterTest extends TestCase {
 			self::assertSame( 'Updates are paused by a site setting.', $edit['package_source']['choices']['branch']['description'] );
 			self::assertSame( 'release_asset', $edit['package_source']['selected'], 'A paused branch cannot be selected.' );
 			self::assertFalse( PackagePagePresenter::plugin()->edit( $packages[0], array(), null, 'branch' )['package_source']['choices']['branch']['disabled'], 'A branch package keeps its own card.' );
+			self::assertTrue( PackagePagePresenter::plugin()->create( array(), false, false, 'branch' )['package_branch_paused'] );
+			self::assertTrue( PackagePagePresenter::theme()->create( array(), false, false, 'branch' )['package_branch_paused'] );
+			$GLOBALS['ran_booster_test_environment_type'] = 'local';
+			self::assertFalse( PackagePagePresenter::plugin()->create( array(), false, false, 'branch' )['package_branch_paused'], 'A development site never warns.' );
 		} finally {
 			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_general_preference_raw'], $GLOBALS['ran_booster_general_preference_cached_option'] );
 			// The release read above fills the gate's request statics; later in-process tests start clean.

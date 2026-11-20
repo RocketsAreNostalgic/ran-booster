@@ -157,7 +157,8 @@ final class PackagePagePresenter {
 	 * @param TProviderSettings $package_provider_settings
 	 * @return array{
 	 *   package_provider_settings: TProviderSettings, package_view: self, explicit_provider: bool,
-	 *   open_repository_picker: bool, package_source: array<string, mixed>, managed_package_identifier: string|null
+	 *   open_repository_picker: bool, package_source: array<string, mixed>, managed_package_identifier: string|null,
+	 *   package_branch_paused: bool
 	 * }
 	 */
 	public function create(
@@ -175,6 +176,7 @@ final class PackagePagePresenter {
 			'open_repository_picker'     => $open_repository_picker,
 			'package_source'             => $this->source_composition( 'create', $requested_source_view, null, $open_advanced ),
 			'managed_package_identifier' => $managed_package_identifier,
+			'package_branch_paused'      => PackageSourceGate::pauses( PackageSource::BRANCH ),
 		);
 	}
 

@@ -310,6 +310,33 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	#[DataProvider( 'create_view_matrix' )]
+	public function test_create_view_warns_at_the_update_source_when_branch_installs_are_paused( PackagePagePresenter $package_view, bool $explicit_provider, bool $open_repository_picker ): void {
+		$package_provider_settings = $this->provider_settings( true );
+		$notice                    = '/id="ran-booster-package-source-heading".*data-ran-booster-ui-notice-intent="warning"><div [^>]*><p>\s*Branch installs are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\.\s*<\/p>.*data-ran-booster-source-choice="branch"/s';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+		self::assertStringNotContainsString( 'Branch installs are paused', (string) ob_get_clean() );
+
+		// Whichever capability double loads first serves the suite; the shared explicit grant wins in each.
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => true );
+		try {
+			$package_branch_paused = true;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+			$html = (string) ob_get_clean();
+		} finally {
+			unset( $GLOBALS['ran_booster_test_capabilities'] );
+		}
+		self::assertMatchesRegularExpression( $notice, $html, 'One linked warning at the top of the update source section, above the cards.' );
+		self::assertSame( 1, substr_count( $html, 'Branch installs are paused' ) );
+		self::assertStringContainsString( 'Install New ' . $package_view->get_singular_label(), $html );
+		self::assertStringContainsString( 'data-ran-booster-source-choice="branch"', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-source-choice="branch" aria-disabled', $html, 'The cards stay as they are.' );
+		unset( $explicit_provider, $open_repository_picker );
+	}
+
+	#[DataProvider( 'create_view_matrix' )]
 	public function test_create_view_keeps_primary_install_and_adds_explicit_repeat_action(
 		PackagePagePresenter $package_view,
 		bool $explicit_provider,

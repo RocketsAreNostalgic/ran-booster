@@ -166,6 +166,13 @@ $managed_package_url        = '' === $managed_package_identifier
 					<div data-ran-booster-branch-install-actions>
 						<fieldset class="ran-booster-package-link-choice" <?php disabled( ! $package_mutation_available ); ?>>
 							<div class="ran-booster-settings-fields">
+								<div class="ran-booster-settings-field ran-booster-settings-field--wide">
+									<label>
+										<input type="checkbox" name="ran_booster[dry-run]" aria-describedby="ran-booster-link-installed-help" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( '' !== $recovery_identifier || isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
+										<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Link an already installed %s', 'ran-booster' ), $package_view->get_type() ) ); ?>
+									</label>
+									<p class="description" id="ran-booster-link-installed-help"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage an installed %s without deploying it; its folder name must match the repository.', 'ran-booster' ), $package_view->get_type() ) ); ?></p>
+								</div>
 								<?php if ( true === ( $package_branch_paused ?? false ) ) { ?>
 								<div class="notice notice-warning inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
 									<?php
@@ -181,13 +188,6 @@ $managed_package_url        = '' === $managed_package_identifier
 									?>
 								</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 								<?php } ?>
-								<div class="ran-booster-settings-field ran-booster-settings-field--wide">
-									<label>
-										<input type="checkbox" name="ran_booster[dry-run]" aria-describedby="ran-booster-link-installed-help" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( '' !== $recovery_identifier || isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
-										<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Link an already installed %s', 'ran-booster' ), $package_view->get_type() ) ); ?>
-									</label>
-									<p class="description" id="ran-booster-link-installed-help"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage an installed %s without deploying it; its folder name must match the repository.', 'ran-booster' ), $package_view->get_type() ) ); ?></p>
-								</div>
 							</div>
 						</fieldset>
 						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>

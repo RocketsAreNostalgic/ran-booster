@@ -315,7 +315,7 @@ final class RepeatPackageViewTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_create_view_warns_above_the_install_button_when_branch_installs_are_paused( PackagePagePresenter $package_view, bool $explicit_provider, bool $open_repository_picker ): void {
 		$package_provider_settings = $this->provider_settings( true );
-		$notice                    = '/id="ran-booster-package-operation-heading".*<div data-ran-booster-branch-install-actions>\s*<fieldset class="ran-booster-package-link-choice"[^>]*>\s*<div class="ran-booster-settings-fields">\s*<div class="notice notice-warning inline ran-booster-settings-fields__notice [^"]*"[^>]*><div [^>]*><p>\s*Branch installs are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\.\s*<\/p>.*name="ran_booster\[dry-run\]".*class="ran-booster-card-footer ran-booster-package-install-actions"/s';
+		$notice                    = '/id="ran-booster-package-operation-heading".*<div data-ran-booster-branch-install-actions>\s*<fieldset class="ran-booster-package-link-choice"[^>]*>\s*<div class="ran-booster-settings-fields">.*name="ran_booster\[dry-run\]".*id="ran-booster-link-installed-help"[^<]*<\/p>\s*<\/div>\s*<div class="notice notice-warning inline ran-booster-settings-fields__notice [^"]*"[^>]*><div [^>]*><p>\s*Branch installs are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\.\s*<\/p><\/div><svg\b[^>]*>.*?<\/svg><\/div>\s*<\/div>\s*<\/fieldset>\s*<span[^>]*data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-card-footer ran-booster-package-install-actions"/s';
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
@@ -342,7 +342,7 @@ final class RepeatPackageViewTest extends TestCase {
 		} finally {
 			unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_package_view_multisite'] );
 		}
-		self::assertMatchesRegularExpression( $notice, $html, 'One linked warning in the Package operation card, inside the branch install actions and above the Install button.' );
+		self::assertMatchesRegularExpression( $notice, $html, 'One linked warning as the last item of the link choice group, after its description and directly above the Install buttons.' );
 		self::assertSame( 1, substr_count( $html, 'Branch installs are paused' ) );
 		self::assertStringContainsString( 'Install New ' . $package_view->get_singular_label(), $html );
 		self::assertStringContainsString( 'data-ran-booster-source-choice="branch"', $html );

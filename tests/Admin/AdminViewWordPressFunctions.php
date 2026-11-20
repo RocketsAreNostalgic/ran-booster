@@ -334,7 +334,7 @@ if ( ! function_exists( 'network_admin_url' ) ) {
 if ( ! function_exists( 'rest_url' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function rest_url( string $path = '' ): string {
-		return 'https://example.test/wp-json/' . ltrim( $path, '/' );
+		return 'https://example.com/wp-json/' . ltrim( $path, '/' );
 	}
 }
 

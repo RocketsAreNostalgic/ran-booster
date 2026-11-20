@@ -4457,7 +4457,7 @@ final class TroubleshootingViewTest extends TestCase {
 					'documentation_url'          => $documentation_url,
 					'delivery_documentation_url' => 'same' === $state ? $documentation_url : $delivery_url,
 				);
-				$payload_url                          = 'https://example.test/wp-json/ran-booster/v1/webhooks/' . $code;
+				$payload_url                          = 'https://example.com/wp-json/ran-booster/v1/webhooks/' . $code;
 				$provider_view_data                   = $this->provider_view_data(
 					array(
 						'provider'                     => $provider,

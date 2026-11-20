@@ -111,7 +111,9 @@ sources `wp_get_environment_type()` reads), it decides alone: `local` or
 `development` is a development site, and `production`, `staging` or any other
 value is not, whatever the home address. When it is not set, a home host that is
 loopback, `localhost`, or ends in `.localhost`, `.test` or `.local` is a
-development site. `RAN_BOOSTER_ALLOW_BRANCH_SOURCES` and
+development site. This decides only the pause; whether a Git provider can reach
+the site is decided by its webhook URL alone.
+`RAN_BOOSTER_ALLOW_BRANCH_SOURCES` and
 `RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES`, set to `true` or `false`, each win over
 their own saved value and lock only that setting; any other value counts as off.
 Each saved "on" records the home address it was turned on for, ignoring the

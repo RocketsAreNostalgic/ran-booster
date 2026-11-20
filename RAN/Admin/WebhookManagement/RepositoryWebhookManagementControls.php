@@ -453,7 +453,7 @@ final class RepositoryWebhookManagementControls {
 					? ( null === $manual_at
 						? __( 'Booster has not set up a webhook for this repository.', 'ran-booster' )
 						: __( 'Not recorded by Booster; a signed delivery was received.', 'ran-booster' ) )
-					: ( $record_healthy
+					: ( $record_healthy && $receiver_ready
 						? sprintf(
 							/* translators: %s: UTC timestamp of the last recorded webhook check. */
 							__( 'Configured at the last recorded check on %s. Validate to confirm current Git provider state.', 'ran-booster' ),
@@ -464,6 +464,8 @@ final class RepositoryWebhookManagementControls {
 							$record->requires_hook_identification() => __( 'Setup not confirmed', 'ran-booster' ),
 							/* translators: %s: repository provider name. */
 							'remote_missing' === $record->status() && null !== $provider_label => sprintf( __( 'This webhook was deleted on %s.', 'ran-booster' ), $provider_label ),
+							// Nothing can be validated while the provider cannot reach this site; Forget stays available.
+							! $receiver_ready => __( 'Booster has a record of this webhook.', 'ran-booster' ),
 							default => __( 'The recorded remote webhook needs review. Validate or inspect it at the Git provider.', 'ran-booster' ),
 						} ),
 				'state'   => $record_healthy ? 'is-ok' : ( null === $record ? ( null === $manual_at ? 'is-pending' : 'is-ok' ) : 'is-warning' ),

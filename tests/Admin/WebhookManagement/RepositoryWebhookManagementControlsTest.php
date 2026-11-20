@@ -479,7 +479,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( '<p>This webhook was deleted on Fixture Forge.</p>', (string) ob_get_clean() );
 	}
 
-	public function test_setup_opens_when_forget_is_the_available_action_on_an_unreachable_site(): void {
+	public function test_an_unreachable_site_with_a_record_opens_setup_for_forget_and_names_the_record(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options']                           = true;
 		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 			'fixture-provider:1234' => array(
@@ -500,7 +500,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			),
 		);
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
-		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array( 'callback_requires_public_https' ), 'http://example.local/webhook', array() ) );
+		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array( 'callback_requires_public_https' ), 'https://example.test/webhook', array() ) );
 		$facade->method( 'target' )->willReturn( null );
 		$facade->method( 'forget_target' )->willReturn(
 			new AssistanceTarget(
@@ -523,7 +523,11 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		ob_start();
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
 
-		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup ran-booster-disclosure" open>', (string) ob_get_clean() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup ran-booster-disclosure" open>', $html );
+		// The record matches the callback, so it would read as configured; nothing can be validated here, though.
+		self::assertStringContainsString( '<p>Booster has a record of this webhook.</p>', $html );
 	}
 
 	public function test_branch_tab_shows_manual_webhook_only_for_a_verified_delivery_without_a_record(): void {

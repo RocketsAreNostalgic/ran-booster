@@ -594,11 +594,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'tab'        => 'overview',
 			'onboarding' => array(),
 		);
-		self::assertTrue( $predicate->invoke( $dashboard, 'index', $overview, true ) );
-		self::assertFalse( $predicate->invoke( $dashboard, 'index', array( 'tab' => 'documentation' ), true ) );
-		self::assertFalse( $predicate->invoke( $dashboard, 'index', array( 'tab' => 'overview' ), true ) );
-		self::assertFalse( $predicate->invoke( $dashboard, 'packages/index', $overview, true ) );
-		self::assertFalse( $predicate->invoke( $dashboard, 'index', $overview, false ) );
+		try {
+			$GLOBALS['ran_booster_test_home_url'] = 'https://site.test';
+			self::assertTrue( $predicate->invoke( $dashboard, 'index', $overview ) );
+			self::assertFalse( $predicate->invoke( $dashboard, 'index', array( 'tab' => 'documentation' ) ) );
+			self::assertFalse( $predicate->invoke( $dashboard, 'index', array( 'tab' => 'overview' ) ) );
+			self::assertFalse( $predicate->invoke( $dashboard, 'packages/index', $overview ) );
+			$GLOBALS['ran_booster_test_environment_type'] = 'production';
+			self::assertFalse( $predicate->invoke( $dashboard, 'index', $overview ), 'An explicit environment type decides alone, as for the source gate.' );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_home_url'], $GLOBALS['ran_booster_test_environment_type'] );
+		}
 	}
 
 	public function test_old_acknowledgement_does_not_suppress_new_notice(): void {

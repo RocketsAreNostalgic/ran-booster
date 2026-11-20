@@ -12,6 +12,7 @@ use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Secrets\SecretsFile;
 
 final class CredentialSelfDestructPurgerTest extends TestCase {
+	use \RAN\Tests\Support\CapturesBoosterLog;
 
 	public function test_purger_uses_the_evidence_lock_without_an_outer_updater_lock(): void {
 		$original = $GLOBALS['wpdb'] ?? null;
@@ -69,8 +70,15 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 			$evidence
 		);
 
-		$purger->purge();
+		$this->start_log_capture();
+		try {
+			$purger->purge();
+			$lines = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
 
+		self::assertSame( array( '[ran-booster] Expired credential purged. {"operation":"credential_purge","provider":"gh"}' ), $lines );
 		self::assertSame( array( 'gh:expired-profile' ), $evidence->profiles );
 		self::assertSame( array( 'gh' ), $evidence->providers );
 		self::assertNull( $profiles->get( 'gh' ) );
@@ -86,9 +94,33 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 			new ThrowingPurgerEvidenceStore()
 		);
 
-		$purger->purge();
+		$this->start_log_capture();
+		try {
+			$purger->purge();
+			$lines = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
 
 		self::assertNull( $profiles->get( 'gh' ) );
+		$evidence = '[ran-booster] Expired credential evidence could not be invalidated. {"operation":"credential_purge","provider":"gh","exception_class":"RuntimeException","exception_code":"0"}';
+		self::assertSame( array( '[ran-booster] Expired credential purged. {"operation":"credential_purge","provider":"gh"}', $evidence, $evidence ), $lines );
+		self::assertStringNotContainsString( 'expired-profile', implode( "\n", $lines ) );
+	}
+
+	public function test_unavailable_storage_stays_silent_and_any_other_failure_logs_its_class(): void {
+		$lines = array();
+		foreach ( array( new \RAN\Secrets\SecretsStorageUnavailable( 'marker storage text' ), new \LogicException( 'marker failure text', 9 ) ) as $failure ) {
+			$this->start_log_capture();
+			try {
+				( new CredentialSelfDestructPurger( new PurgerSecretsFile( array(), $failure ), new PurgerObservations(), new PurgerLookupProfiles(), new PurgerEvidenceStore() ) )->purge();
+				$lines = array_merge( $lines, $this->captured_log_lines() );
+			} finally {
+				$this->stop_log_capture();
+			}
+		}
+
+		self::assertSame( array( '[ran-booster] Expired credential purge failed. {"operation":"credential_purge","exception_class":"LogicException","exception_code":"9"}' ), $lines );
 	}
 }
 
@@ -96,12 +128,15 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 final class PurgerSecretsFile extends SecretsFile {
 
 	/** @param array<string, list<string>> $removed */
-	public function __construct( private readonly array $removed ) {
+	public function __construct( private readonly array $removed, private readonly ?\Throwable $failure = null ) {
 		parent::__construct( null, array() );
 	}
 
 	/** @return array<string, list<string>> */
 	public function purge_expired_credentials(): array {
+		if ( null !== $this->failure ) {
+			throw $this->failure;
+		}
 		return $this->removed;
 	}
 }

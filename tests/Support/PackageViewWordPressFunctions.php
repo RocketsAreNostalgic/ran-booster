@@ -203,6 +203,13 @@ if ( ! function_exists( 'is_multisite' ) ) {
 	}
 }
 
+if ( ! function_exists( 'get_current_blog_id' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
+	function get_current_blog_id(): int {
+		return $GLOBALS['ran_booster_package_view_blog_id'] ?? 1;
+	}
+}
+
 if ( ! function_exists( 'add_query_arg' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function add_query_arg( mixed $key, mixed $value = null, mixed $url = null ): string {

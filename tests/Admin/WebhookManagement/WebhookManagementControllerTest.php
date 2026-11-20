@@ -538,6 +538,21 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 'Repository signing secret; current local profile metadata is available.', $result['1234']['details'][3]['value'] );
 	}
 
+	public function test_retained_row_and_result_sentences_name_the_git_provider_and_a_reachable_next_step(): void {
+		$display = new WebhookDisplayModel( $this->createMock( WebhookAssistanceFacade::class ), new OperationStoreFixture() );
+		$row     = ( new \ReflectionMethod( $display, 'retained_record_row' ) )->invoke( $display, '1234', $this->record(), 'GitHub', 'https://github.com' );
+		self::assertSame( 'Remove this webhook on the Git provider if it still exists.', $row['action_message'] );
+		foreach ( array( 'ping_requested', 'ping_delivery_failed' ) as $code ) {
+			self::assertStringStartsWith( 'The Git provider ', $display->notice( $code ), $code );
+		}
+		// The record keeps a hook ID here, so Validate is offered beside the result.
+		self::assertStringEndsWith( 'Check the webhook on the Git provider, then Validate.', $display->notice( 'setup_compensation_incomplete' ) );
+		// Without a hook ID or a saved record Validate is not offered, so these keep their inspect wording.
+		foreach ( array( 'setup_outcome_unknown', 'setup_response_invalid', 'recovery_record_failed' ) as $code ) {
+			self::assertStringNotContainsString( 'then Validate', $display->notice( $code ), $code );
+		}
+	}
+
 	public function test_unavailable_management_history_omits_profile_and_current_warning_details(): void {
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
 		$facade->expects( self::never() )->method( 'profile' );
@@ -1297,7 +1312,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		foreach ( array( 'Repair', 'Validate' ) as $label ) {
 			self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">' . $label . '</button>', $html );
 		}
-		self::assertSame( 2, substr_count( $html, '>This site needs a public HTTPS URL to receive webhooks.<' ) );
+		self::assertSame( 2, substr_count( $html, '>This site needs a public HTTPS URL to receive webhooks; manual updates still work.<' ) );
 
 		// Remove needs the provider to reach the site, and a Remove nonce never authorises Forget.
 		$remove = $controller->handle_admin_post( $this->request( array( 'repository_webhook_management_operation' => 'remove' ) ), 'valid' );

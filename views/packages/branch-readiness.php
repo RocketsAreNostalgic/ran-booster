@@ -14,7 +14,7 @@
 defined( 'WPINC' ) || die;
 
 $is_package_edit                 = true === ( $is_package_edit ?? false );
-$provider_base_url               = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) );
+$provider_base_url               = \RAN\Admin\WebhookManagement\WebhookManagementAdminUrl::for_path( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) );
 $repository_readiness            = is_array( $package_branch_readiness['repository'] ?? null )
 	? $package_branch_readiness['repository']
 	: null;
@@ -71,33 +71,25 @@ $published_release_source    = true === ( $release_managed ?? false )
 	|| 'release_asset' === ( $package_current_source ?? null )
 	|| 'release_asset' === ( $package_source_view ?? null );
 $retained_readiness          = true === ( $package_branch_readiness['retained'] ?? false );
-$secret_label                = match ( $secret_coverage ) {
-	'repository' => __( 'A repository-specific signing secret is saved.', 'ran-booster' ),
-	'shared' => __( 'A shared owner signing secret covers this repository.', 'ran-booster' ),
-	'none' => __( 'No matching local signing secret is saved.', 'ran-booster' ),
-	default => __( 'Local signing-secret status is unavailable.', 'ran-booster' ),
+// Labels are escaped HTML; only the signing-secret label carries a link, to the repository's webhook setup.
+$secret_url   = true === ( $provider_webhook_available ?? false ) ? $provider_settings_url : null;
+$secret_label = match ( $secret_coverage ) {
+	'repository' => esc_html__( 'A repository-specific signing secret is saved.', 'ran-booster' ),
+	'shared' => esc_html__( 'A shared owner signing secret covers this repository.', 'ran-booster' ),
+	/* translators: 1: opening link tag to the repository's webhook setup; 2: closing link tag. */
+	'none' => \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::link_sentence( __( 'No matching local %1$ssigning secret%2$s is saved.', 'ran-booster' ), $secret_url, true ),
+	/* translators: 1: opening link tag to the repository's webhook setup; 2: closing link tag. */
+	default => \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::link_sentence( __( 'Local %1$ssigning-secret%2$s status is unavailable.', 'ran-booster' ), $secret_url, true ),
 };
-$receiver_label        = __( 'The site exposes a structurally valid HTTPS webhook endpoint.', 'ran-booster' );
-$receiver_action_url   = null;
-$receiver_action_label = null;
+// The first known site reason, in the order the webhook screens list them; an unknown cause has no destination yet.
+$receiver_label = esc_html__( 'The site exposes a structurally valid HTTPS webhook endpoint.', 'ran-booster' );
 if ( ! $receiver_ready ) {
-	$receiver_action_url   = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting' );
-	$receiver_action_label = __( 'Review Booster diagnostics', 'ran-booster' );
-	$receiver_label        = match ( true ) {
-		in_array( 'callback_requires_public_https', $site_reasons, true )
-			=> __( 'This WordPress URL cannot receive Git provider webhooks. Use a public HTTPS WordPress URL or a secure tunnel. Manual deployments remain available.', 'ran-booster' ),
-		in_array( 'database_unavailable', $site_reasons, true )
-			=> __( 'Booster could not access the local data required for Push-to-Deploy. Manual deployments remain available.', 'ran-booster' ),
-		in_array( 'secrets_storage_unavailable', $site_reasons, true )
-			=> __( 'Booster could not access the saved signing setup required for Push-to-Deploy. Manual deployments remain available.', 'ran-booster' ),
-		in_array( 'managed_packages_unavailable', $site_reasons, true )
-			=> __( 'Booster could not check the managed packages required for Push-to-Deploy. Manual deployments remain available.', 'ran-booster' ),
-		default
-			=> __( 'Booster could not confirm the local webhook receiver. Manual deployments remain available.', 'ran-booster' ),
-	};
-	if ( in_array( 'callback_requires_public_https', $site_reasons, true ) ) {
-		$receiver_action_url   = admin_url( 'options-general.php' );
-		$receiver_action_label = __( 'Review WordPress URLs', 'ran-booster' );
+	$receiver_label = esc_html__( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
+	foreach ( array( 'callback_requires_public_https', 'database_unavailable', 'secrets_storage_unavailable', 'managed_packages_unavailable' ) as $receiver_reason ) {
+		if ( in_array( $receiver_reason, $site_reasons, true ) ) {
+			$receiver_label = (string) \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::site_reason_message( $receiver_reason, true );
+			break;
+		}
 	}
 }
 $needs_attention                  = ! $published_release_source
@@ -184,10 +176,12 @@ $webhook_state_class     = match ( true ) {
 	$automatic_updates_ready  => 'is-ok',
 	default                 => 'is-warning',
 };
+// Escaped HTML; the attention state links to the repository's webhook setup, which the Manage webhooks button also opens.
 $webhook_message = match ( true ) {
-	$published_release_source => __( 'Pushes are ignored while Releases is active.', 'ran-booster' ),
-	$automatic_updates_ready  => __( 'Local webhook requirements are ready.', 'ran-booster' ),
-	default                 => __( 'Local webhook requirements need attention.', 'ran-booster' ),
+	$published_release_source => esc_html__( 'Pushes are ignored while Releases is active.', 'ran-booster' ),
+	$automatic_updates_ready  => esc_html__( 'Local webhook requirements are ready.', 'ran-booster' ),
+	/* translators: 1: opening link tag to the repository's webhook setup; 2: closing link tag. */
+	default                 => \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::link_sentence( __( 'Local %1$swebhook requirements%2$s need attention.', 'ran-booster' ), $repository_detail_available ? $provider_settings_url : null, true ),
 };
 $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 
@@ -230,20 +224,14 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 					<strong><?php esc_html_e( 'Signing secret', 'ran-booster' ); ?></strong>
 					<span>
-						<?php echo esc_html( $secret_label ); ?>
-						<?php if ( 'none' === $secret_coverage && $provider_webhook_available ) { ?>
-							<br/><a href="<?php echo esc_url( $provider_settings_url ); ?>"><?php esc_html_e( 'Manage signing secrets', 'ran-booster' ); ?></a>
-						<?php } ?>
+						<?php echo wp_kses_post( $secret_label ); ?>
 					</span>
 				</li>
 				<li class="ran-booster-readiness-item <?php echo $receiver_ready ? 'is-ok' : 'is-warning'; ?>">
 					<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 					<strong><?php esc_html_e( 'Local receiver', 'ran-booster' ); ?></strong>
 					<span>
-						<?php echo esc_html( $receiver_label ); ?>
-						<?php if ( null !== $receiver_action_url && null !== $receiver_action_label ) { ?>
-							<br/><a href="<?php echo esc_url( $receiver_action_url ); ?>"><?php echo esc_html( $receiver_action_label ); ?></a>
-						<?php } ?>
+						<?php echo wp_kses_post( $receiver_label ); ?>
 					</span>
 				</li>
 				<?php } ?>
@@ -251,10 +239,7 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 					<strong><?php esc_html_e( 'Webhook health', 'ran-booster' ); ?></strong>
 					<span>
-						<?php echo esc_html( $webhook_message ); ?>
-						<?php if ( $repository_detail_available ) { ?>
-							<br/><a href="<?php echo esc_url( $provider_settings_url ); ?>"><?php echo esc_html( $webhook_action_label ); ?></a>
-						<?php } ?>
+						<?php echo wp_kses_post( $webhook_message ); ?>
 					</span>
 				</li>
 			</ul>

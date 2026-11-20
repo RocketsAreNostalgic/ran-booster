@@ -384,8 +384,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( '<strong>Saved repository</strong>', $html );
 		self::assertStringContainsString( 'The branch <code>main</code> is saved. Access has not been checked.', $html );
 		self::assertStringContainsString( '<strong>Webhook health</strong>', $html );
-		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
-		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42&amp;repository_view=branch', $html );
+		self::assertStringContainsString( 'Local <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh&amp;panel=repositories&amp;repository=repo-42&amp;repository_view=branch">webhook requirements</a> need attention.', $html );
 		self::assertStringContainsString( 'Manage webhooks', $html );
 		self::assertStringNotContainsString( 'Review WordPress URLs', $html );
 		self::assertStringNotContainsString( 'Manage signing secrets', $html );
@@ -615,6 +614,63 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( '<a href=', $html );
 		self::assertStringNotContainsString( 'Review Booster diagnostics', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
+	}
+
+	/** @param array<string, bool> $capabilities */
+	#[DataProvider( 'retained_receiver_reason_provider' )]
+	public function test_retained_receiver_row_states_the_shared_reason_with_one_link_to_its_fix( string $reason_code, string $pattern, array $capabilities = array(), bool $multisite = false ): void {
+		$provider_code              = 'gh';
+		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
+		$provider_webhook_available = true;
+		$branch_value               = 'main';
+		$deployment_policy          = DeploymentPolicy::MANUAL->value;
+		$is_package_edit            = true;
+		$package_branch_readiness   = array(
+			'retained'   => true,
+			'site'       => array(
+				'status'       => 'blocked',
+				'reason_codes' => array( $reason_code ),
+			),
+			'repository' => array(
+				'repository_id'         => 'repo-42',
+				'reason_codes'          => array(),
+				'local_secret_coverage' => 'none',
+			),
+		);
+		$GLOBALS['ran_booster_test_capabilities']      = $capabilities + array( 'manage_options' => true );
+		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
+		$GLOBALS['ran_booster_package_view_blog_id']   = 7;
+
+		ob_start();
+		try {
+			require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+		} finally {
+			$html = (string) ob_get_clean();
+			unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_package_view_blog_id'] );
+		}
+
+		self::assertMatchesRegularExpression( $pattern, $html );
+		self::assertStringNotContainsString( 'Manual deployments remain available', $html );
+		self::assertStringNotContainsString( 'Review WordPress URLs', $html );
+		self::assertStringNotContainsString( 'Review Booster diagnostics', $html );
+		// The signing-secret link sits inside its sentence and leads to the repository's webhook setup, network-aware.
+		$base = $multisite ? 'https://example.test/wp-admin/network/' : 'https://example.test/wp-admin/';
+		self::assertStringContainsString( 'No matching local <a href="' . $base . 'admin.php?page=ran-booster&amp;tab=gh&amp;panel=repositories&amp;repository=repo-42&amp;repository_view=branch">signing secret</a> is saved.', $html );
+		self::assertStringNotContainsString( 'Manage signing secrets', $html );
+	}
+
+	/** @return array<string, array{0:string,1:string,2?:array<string,bool>,3?:bool}> */
+	public static function retained_receiver_reason_provider(): array {
+		return array(
+			'public HTTPS, linked'                => array( 'callback_requires_public_https', '~This site needs a <a href="https://example\.test/wp-admin/options-general\.php">public HTTPS URL</a> to receive webhooks; manual updates still work\.~' ),
+			'public HTTPS, no manage_options'     => array( 'callback_requires_public_https', '~This site needs a public HTTPS URL to receive webhooks; manual updates still work\.\s*</span>~', array( 'manage_options' => false ) ),
+			'public HTTPS, multisite'             => array( 'callback_requires_public_https', '~This site needs a <a href="https://example\.test/wp-admin/network/site-info\.php\?id=\d+">public HTTPS URL</a> to receive~', array( 'manage_sites' => true ), true ),
+			'database, no manual claim'           => array( 'database_unavailable', '~Webhook setup is paused while Booster&#039;s <a href="https://example\.test/wp-admin/admin\.php\?page=ran-booster&amp;tab=troubleshooting">database storage</a> needs attention\.\s*</span>~' ),
+			'database, multisite'                 => array( 'database_unavailable', '~<a href="https://example\.test/wp-admin/network/admin\.php\?page=ran-booster&amp;tab=troubleshooting">database storage</a>~', array(), true ),
+			'secure storage'                      => array( 'secrets_storage_unavailable', '~Webhook setup is paused while <a href="https://example\.test/wp-admin/admin\.php\?page=ran-booster-settings#ran-booster-storage">secure credential storage</a> is unavailable; public repositories still update manually\.~' ),
+			'package inventory, no manual claim'  => array( 'managed_packages_unavailable', '~Webhook setup is paused because Booster couldn&#039;t read its <a href="https://example\.test/wp-admin/admin\.php\?page=ran-booster-plugins">managed packages</a>\.\s*</span>~' ),
+			'unconfirmed, unlinked'               => array( 'unrecognized_reason', '~<strong>Local receiver</strong>\s*<span>\s*Webhook setup is unavailable until Booster can confirm this managed repository\.\s*</span>~' ),
+		);
 	}
 
 	/** @return array<string, array{string}> */

@@ -169,7 +169,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
-		self::assertStringContainsString( 'Fitness only webhook configuration is incomplete.', $html );
+		self::assertStringContainsString( 'Fitness only doesn&#039;t support webhook setup yet.', $html );
 		self::assertStringContainsString( 'Branch packages can still be updated manually', $html );
 		// Without a setup form there is nothing to disclose; the notice and the steps say why.
 		self::assertStringNotContainsString( 'ran-booster-repository-webhook-setup', $html );
@@ -422,7 +422,9 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'This site can receive webhook deliveries.', $html );
 		self::assertStringContainsString( 'Configured at the last recorded check on 2026-08-20T01:02:03Z.', $html );
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
-		self::assertStringContainsString( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', $html );
+		// The Branch demand step says it; the reason titles the disabled buttons without repeating as a notice.
+		self::assertStringContainsString( 'disabled-reason-setup">Webhook operations are unavailable while no eligible Branch package uses this repository.</span>', $html );
+		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__notices', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup ran-booster-disclosure is-inactive" open>', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup__body ran-booster-disclosure__body" aria-disabled="true"', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-management__panel"', $html );
@@ -477,6 +479,63 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		ob_start();
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', false );
 		self::assertStringContainsString( '<p>This webhook was deleted on Fixture Forge.</p>', (string) ob_get_clean() );
+	}
+
+	public function test_step_and_notice_links_lead_to_their_fix_and_interpolated_values_stay_text(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options']                           = true;
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
+			'fixture-provider:1234' => array(
+				'schema_version'              => 4,
+				'provider_code'               => 'fixture-provider',
+				'repository_id'               => '1234',
+				'repository'                  => 'owner/example',
+				'hook_id'                     => '77',
+				'management_credential_id'    => 'credential_1',
+				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+				'webhook_profile_scope'       => 'repository',
+				'webhook_profile_revision'    => 1,
+				'webhook_profile_disposition' => 'created',
+				'endpoint'                    => 'https://example.test/webhook',
+				'status'                      => 'remote_missing',
+				'created_at'                  => '2026-08-20T01:02:03Z',
+				'checked_at'                  => '2026-08-20T01:02:03Z',
+			),
+		);
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->method( 'readiness' )->willReturn(
+			new AssistanceReadiness(
+				array(),
+				'https://example.test/webhook',
+				array(
+					array(
+						'provider_code'         => 'fixture-provider',
+						'repository_id'         => '1234',
+						'local_secret_coverage' => 'none',
+						'reason_codes'          => array( 'repository_identity_conflict' ),
+					),
+				)
+			)
+		);
+		$facade->method( 'target' )->willReturn( null );
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Forge <a href="https://attacker.test">x</a>' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->package_authorities()
+		);
+		$controls->register();
+
+		ob_start();
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<p>This repository needs a <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-provider&amp;view=signing-secrets">signing secret</a>.</p>', $html );
+		self::assertStringContainsString( 'Webhook setup is unavailable because <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-provider&amp;panel=repositories&amp;repository=1234&amp;repository_view=status#ran-booster-repository-packages-heading">managed packages</a> disagree about this repository identity.', $html );
+		// A provider label is data: it renders as text even where the step allows a link.
+		self::assertStringContainsString( '<p>This webhook was deleted on Forge &lt;a href=&quot;https://attacker.test&quot;&gt;x&lt;/a&gt;.</p>', $html );
+		self::assertStringNotContainsString( '<a href="https://attacker.test">', $html );
 	}
 
 	public function test_an_unreachable_site_with_a_record_opens_setup_for_forget_and_names_the_record(): void {
@@ -1054,7 +1113,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1315521150', 'https://example.test/repository' );
 		$html = (string) ob_get_clean();
 
-		self::assertSame( 1, substr_count( $html, '<p>Webhook setup is unavailable because Booster database storage is unavailable.</p>' ) );
+		self::assertSame( 1, preg_match_all( '~<p>Webhook setup is paused while Booster&#039;s <a href="[^"]*page=ran-booster&amp;tab=troubleshooting">database storage</a> needs attention\.</p>~', $html ) );
+		self::assertStringContainsString( 'disabled-reason-setup">Webhook setup is paused while Booster&#039;s database storage needs attention.</span>', $html );
 		self::assertStringContainsString( 'ran-booster-repository-webhook-management__notices', $html );
 		// An availability notice is not an operation result: the receiver step is not ok, so setup stays collapsed.
 		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup"[^>]*ran-booster-disclosure">/', $html ) );
@@ -1257,8 +1317,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'Webhook setup', $html );
 		// Step 1 states the missing public HTTPS URL, so the amber notice does not repeat it.
 		// The same sentence is the disabled-button reason (screen-reader text and title), but is visible once.
-		self::assertSame( 1, substr_count( $html, '<p>This site needs a public HTTPS URL to receive webhooks.</p>' ) );
-		self::assertStringContainsString( 'disabled-reason-setup">This site needs a public HTTPS URL to receive webhooks.</span>', $html );
+		self::assertSame( 1, preg_match_all( '~<p>This site needs a <a href="[^"]*options-general\.php">public HTTPS URL</a> to receive webhooks; manual updates still work\.</p>~', $html ) );
+		self::assertStringContainsString( 'disabled-reason-setup">This site needs a public HTTPS URL to receive webhooks; manual updates still work.</span>', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__notices', $html );
 		// With the receiver step not ok, setup starts collapsed.
 		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup"[^>]*ran-booster-disclosure">/', $html ) );

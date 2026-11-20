@@ -12,10 +12,14 @@ require_once __DIR__ . '/Support/PartialRepositoryReleaseWorkflowProviderDouble.
 require_once __DIR__ . '/GitHub/Support/PluginRepositoryDouble.php';
 require_once __DIR__ . '/GitHub/Support/ThemeRepositoryDouble.php';
 require_once __DIR__ . '/../../Storage/StorageTestEnvironment.php';
+require_once __DIR__ . '/../../Support/CapturesBoosterLog.php';
+require_once __DIR__ . '/../../Support/DocumentationHookWordPressFunctions.php';
+require_once __DIR__ . '/../../Support/PackageViewWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\ProviderRepositoryRowsNormalizer;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowPresenter;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowRequestController;
@@ -29,8 +33,11 @@ use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
 use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 use RAN\Tests\Admin\ReleaseManagement\Support\RepositoryReleaseWorkflowProviderDouble;
 use RAN\Tests\Admin\ReleaseManagement\Support\PartialRepositoryReleaseWorkflowProviderDouble;
+use RAN\Tests\Support\CapturesBoosterLog;
 
 final class ReleaseWorkflowControlsTest extends TestCase {
+	use CapturesBoosterLog;
+
 	#[Before]
 	public function reset_word_press(): void {
 		ReleaseManagementFixture::reset_word_press(); }
@@ -559,6 +566,31 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertNotSame( 'Ready to assess', $rows['101']['details'][0]['value'] );
 	}
 
+	public function test_a_release_row_failing_a_check_falls_back_to_the_rows_before_the_release_pass(): void {
+		$this->start_log_capture();
+		try {
+			$healthy       = $this->project_release_rows()[0];
+			$healthy_lines = $this->captured_log_lines();
+
+			// A translation longer than a detail label may be.
+			$GLOBALS['ran_booster_release_management_test_translations'] = array( 'Release workflow' => str_repeat( 'w', 120 ) );
+			$fallback = $this->project_release_rows()[0];
+			$lines    = $this->captured_log_lines();
+		} finally {
+			unset( $GLOBALS['ran_booster_release_management_test_translations'] );
+			$this->stop_log_capture();
+		}
+
+		self::assertSame( array(), $healthy_lines );
+		self::assertSame( 'release_workflow', $healthy['details'][0]['category'] );
+		self::assertSame( array(), $fallback['details'] );
+		self::assertSame( array_diff_key( $healthy, array_flip( array( 'details', 'actions' ) ) ), array_diff_key( $fallback, array_flip( array( 'details', 'actions' ) ) ) );
+		self::assertCount( 1, $lines );
+		self::assertStringContainsString( 'provider repository row enrichment unavailable', $lines[0] );
+		self::assertStringContainsString( '"step":"release_workflow_repository_row_enrichment"', $lines[0] );
+		self::assertStringNotContainsString( 'wwww', $lines[0] );
+	}
+
 	public function test_release_workflow_repository_enrichment_honours_remaining_row_capacity_for_full_rows(): void {
 		$rows           = $this->controls()->enrich_repository_rows(
 			array(
@@ -954,6 +986,53 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null ): ReleaseWorkflowRequestController {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
 		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( provider_code: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $source_guard ?? $this->source_guard() );
+	}
+
+	/** @return list<array<string, mixed>> The provider rows project() builds for one current release repository, with no webhook management. */
+	private function project_release_rows(): array {
+		return array_values(
+			( new ProviderRepositoryRowsNormalizer() )->project(
+				array(
+					array(
+						'target'              => 'example/example',
+						'repository_id'       => '101',
+						'source'              => 'branch',
+						'package_references'  => array( 'example/example.php' ),
+						'deployment_policies' => array(
+							'automatic' => 0,
+							'manual'    => 1,
+							'disabled'  => 0,
+						),
+						'package_summaries'   => array(
+							array(
+								'type'              => 'plugin',
+								'identifier'        => 'example/example.php',
+								'display_name'      => 'Example',
+								'settings_url'      => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+								'source'            => 'branch',
+								'source_revision'   => 3,
+								'deployment_policy' => 'manual',
+							),
+						),
+					),
+				),
+				'fixture',
+				'Fixture',
+				'Fixture webhooks',
+				'Owner secret',
+				'https://example.test/webhook',
+				true,
+				array(
+					'by_id'         => array(),
+					'by_repository' => array(),
+				),
+				null,
+				'',
+				static fn (): string => 'https://example.test/repositories',
+				'https://example.test/repositories',
+				$this->controls()
+			)['rows']
+		);
 	}
 
 	private function controls( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null, ?ProviderRegistry $providers = null ): ReleaseWorkflowControls {

@@ -26,7 +26,7 @@ final class PackageSourceGate {
 	/** @var array<string, true> Overrides, or the release channel, whose unreadable state this request has already logged. */
 	private static array $logged_unreadable = array();
 
-	/** One release store per request, so its storage checks run once rather than once per package. Tests that reach it run in separate processes. */
+	/** One release store per request, so its storage checks run once rather than once per package. */
 	private static ?ManagedReleaseStore $releases = null;
 
 	/**

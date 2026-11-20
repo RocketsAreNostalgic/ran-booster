@@ -450,8 +450,8 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				$status_line = __( 'The saved Git provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
 			} elseif ( ! $credential_available ) {
 				$status_line = __( 'The saved repository credential is unavailable.', 'ran-booster' );
-			} elseif ( $package_is_paused && ! $prominent_status_activity ) {
-				// A running, failed or review-needed deployment keeps its own guidance.
+			} elseif ( $package_is_paused && ! ( $prominent_status_activity && ( $update_needs_attention || 'failed' === $latest_activity_state ) ) ) {
+				// A failed or review-needed deployment keeps its own guidance.
 				$status_line = __( 'Updates are paused by a site setting.', 'ran-booster' );
 			} elseif ( '' !== ( $package_extension_row['status'] ?? '' ) ) {
 				$status_line = (string) $package_extension_row['status'];

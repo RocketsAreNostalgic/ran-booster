@@ -397,6 +397,14 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertStringNotContainsString( '>Paused</span>', $html );
 		self::assertStringContainsString( 'The latest branch deployment failed.', $html );
+
+		// A queued deployment shows its badge, and the row still says why it will not run.
+		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 3, 'queued', null );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( '>Paused</span>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a site setting.</p>', $html );
 		$package_activity['items'] = array();
 
 		$package_provider_settings = array(

@@ -126,6 +126,9 @@ final class PackagePagePresenterTest extends TestCase {
 			self::assertFalse( PackagePagePresenter::plugin()->edit( $packages[0], array(), null, 'branch' )['package_source']['choices']['branch']['disabled'], 'A branch package keeps its own card.' );
 		} finally {
 			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_general_preference_raw'], $GLOBALS['ran_booster_general_preference_cached_option'] );
+			// The release read above fills the gate's request statics; later in-process tests start clean.
+			( new \ReflectionProperty( \RAN\Deployment\PackageSourceGate::class, 'releases' ) )->setValue( null, null );
+			( new \ReflectionProperty( \RAN\Deployment\PackageSourceGate::class, 'logged_unreadable' ) )->setValue( null, array() );
 		}
 	}
 

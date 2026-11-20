@@ -33,6 +33,14 @@ configured on the site. An exact replay with the same provider delivery ID and
 body digest reuses the existing admission instead of deploying the same push
 twice; a provider retry with a new delivery ID is a new delivery.
 
+The Git provider must reach the site's webhook URL over public HTTPS on port 443.
+Booster reads `localhost`, private addresses and `.local`, `.localhost` or `.test`
+hosts as unreachable, whatever the environment type. A URL that passes can still
+be blocked, so a verified delivery is the proof. Using a tunnel? Set the site's
+address to the tunnel's HTTPS address and Booster's webhook buttons work.
+Otherwise create the webhook by hand under Manual setup, with the tunnel's
+address in place of the site's in the payload URL.
+
 #### Guided GitHub webhook setup
 
 Setting up webhooks can be a bit daunting, so Booster brings the callback

@@ -297,6 +297,11 @@ final class WebhookAssistanceReadinessEvaluator {
 		}
 	}
 
+	/**
+	 * The callback URL alone decides whether a provider can reach this site; the
+	 * environment type never does (PackageSourceGate::is_development_site() answers that).
+	 * A URL that passes can still be unreachable, so delivery evidence remains the proof.
+	 */
 	private function is_structurally_public_https( string $callback_url ): bool {
 		$parts = wp_parse_url( $callback_url );
 
@@ -312,11 +317,13 @@ final class WebhookAssistanceReadinessEvaluator {
 			return false;
 		}
 
-		$host    = strtolower( $parts['host'] );
+		$host    = rtrim( strtolower( $parts['host'] ), '.' );
 		$ip_host = trim( $host, '[]' );
 
 		return ! in_array( $ip_host, array( 'localhost', '::1' ), true )
 			&& ! str_ends_with( $host, '.local' )
+			&& ! str_ends_with( $host, '.localhost' )
+			&& ! str_ends_with( $host, '.test' )
 			&& ( ! filter_var( $ip_host, FILTER_VALIDATE_IP ) || false !== filter_var( $ip_host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) );
 	}
 }

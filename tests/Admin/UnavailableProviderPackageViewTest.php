@@ -398,6 +398,14 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( '>Paused</span>', $html );
 		self::assertStringContainsString( 'The latest branch deployment failed.', $html );
 
+		// A run the pause itself refused stays Paused.
+		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 2, 'failed', null, outcome_code: 'source_paused' );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'data-ran-booster-badge-intent="medium">Paused</span>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a site setting.</p>', $html );
+
 		// A queued deployment shows its badge, and the row still says why it will not run.
 		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 3, 'queued', null );
 		ob_start();
@@ -1051,9 +1059,9 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		);
 	}
 
-	private function attempt( int $id, string $state, ?string $resolved_ref, bool $resolved = false ): DeploymentAttempt {
+	private function attempt( int $id, string $state, ?string $resolved_ref, bool $resolved = false, ?string $outcome_code = null ): DeploymentAttempt {
 		$terminal = in_array( $state, array( 'succeeded', 'failed', 'needs_attention' ), true );
-		$outcome  = match ( $state ) {
+		$outcome  = $outcome_code ?? match ( $state ) {
 			'succeeded' => 'deployed',
 			'failed' => 'preflight_failed',
 			'needs_attention' => 'interrupted',

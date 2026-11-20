@@ -401,6 +401,8 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			} elseif ( ! $release_managed
 				&& ! $policy_disabled
 				&& ( in_array( $latest_activity_state, array( 'queued', 'running', 'failed' ), true ) || $update_needs_attention )
+				// A run the pause itself refused is not a failure to show above Paused.
+				&& ! ( $package_is_paused && \RAN\Deployment\DeploymentOutcome::CODE_SOURCE_PAUSED === ( $latest_activity['outcome_code'] ?? null ) )
 			) {
 				$prominent_status          = array(
 					'label' => $activity_state_labels[ $latest_activity_state ] ?? $latest_activity_state,

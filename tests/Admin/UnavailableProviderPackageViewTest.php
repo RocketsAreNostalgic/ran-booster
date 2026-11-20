@@ -370,6 +370,16 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 	}
 
 	public function test_a_paused_package_shows_its_badge_status_and_settings_link(): void {
+		// Whichever capability double loads first serves the suite; the shared explicit grant wins in each.
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => true );
+		try {
+			$this->assert_paused_package_views();
+		} finally {
+			unset( $GLOBALS['ran_booster_test_capabilities'] );
+		}
+	}
+
+	private function assert_paused_package_views(): void {
 		$package           = $this->package();
 		$packages          = array( $package );
 		$package_view      = PackagePagePresenter::plugin();
@@ -385,7 +395,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-badge-intent="medium">Paused</span>', $html );
-		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a site setting.</p>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>.</p>', $html );
 
 		// A failed deployment keeps its own badge and guidance while paused.
 		$package_activity['items'][ (string) $package->get_identifier() ] = array(
@@ -404,7 +414,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( 'data-ran-booster-badge-intent="medium">Paused</span>', $html );
-		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a site setting.</p>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>.</p>', $html );
 
 		// A queued deployment shows its badge, and the row still says why it will not run.
 		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 3, 'queued', null );
@@ -412,14 +422,14 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
 		self::assertStringNotContainsString( '>Paused</span>', $html );
-		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a site setting.</p>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>.</p>', $html );
 		$package_activity['items'] = array();
 
 		// A release failure keeps its badge and guidance; an ordinary release badge does not outrank Paused.
 		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		foreach ( array(
 			'error'   => array( 'Needs attention', 'The release assets are invalid.' ),
-			'pending' => array( 'Paused', 'Updates are paused by a site setting.' ),
+			'pending' => array( 'Paused', 'Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-prerelease_sources">site setting</a>.' ),
 		) as $tone => [ $badge, $line ] ) {
 			$package_extension_rows = array(
 				(string) $package->get_identifier() => array(
@@ -442,22 +452,43 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$package_extension_rows = array();
 
 		$package_provider_settings = array(
-			'default_provider' => 'gh',
-			'providers'        => array( $this->provider_option( 'gh', true ) ),
+			'default_provider' => 'temporarily-offline',
+			'providers'        => array( $this->provider_option( 'temporarily-offline', true ) ),
 		);
 		$package_paused            = true;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
 
-		self::assertMatchesRegularExpression( '/data-ran-booster-ui-notice-intent="warning">.*<p>Updates are paused by a site setting\. <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">Settings<\/a><\/p>/s', $html );
+		// The sentence sits once, in Package operation above its buttons; Reinstall is disabled with it as the reason.
+		self::assertSame( 1, substr_count( $html, 'Updates are paused by a <a' ), 'The paused notice shows once; the button reason is plain.' );
+		self::assertMatchesRegularExpression( '/id="ran-booster-package-operation-heading".*data-ran-booster-ui-notice-intent="warning">.*<p>Updates are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\.<\/p>.*class="ran-booster-package-operation-settings__actions"/s', $html );
+		self::assertMatchesRegularExpression( '/title="Updates are paused by a site setting\."[^>]*data-ran-booster-reinstall-capable="0"/s', $html );
+		self::assertStringContainsString( 'role="tooltip" hidden>Updates are paused by a site setting.</span>', $html );
+		self::assertMatchesRegularExpression( '/Updates<\/p>\s*<p class="ran-booster-package-summary__value">Paused<\/p>\s*<p class="ran-booster-package-summary__value">Automatic<\/p>/', $html );
 
 		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$package_source = array(
+			'current'     => PackageSource::RELEASE_ASSET->value,
+			'selected'    => PackageSource::RELEASE_ASSET->value,
+			'unavailable' => false,
+		);
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'page=ran-booster-settings#ran-booster-general-prerelease_sources">Settings</a>', $html, 'A paused release package links to Preview tracks.' );
+		self::assertStringContainsString( 'page=ran-booster-settings#ran-booster-general-prerelease_sources">site setting</a>.', $html, 'A paused release package links to Preview tracks.' );
+
+		$package_paused = false;
+		$package_source = null;
+		$package->set_source( PackageSource::BRANCH, 3 );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( 'Updates are paused', $html );
+		self::assertStringNotContainsString( 'summary__value">Paused<', $html );
+		self::assertStringContainsString( 'data-ran-booster-reinstall-capable="1"', $html );
 	}
 
 	public function test_theme_list_does_not_offer_or_display_plugin_activation_controls(): void {

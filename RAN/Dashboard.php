@@ -251,7 +251,8 @@ class Dashboard {
 				$this->overview_activity,
 				$this->storage_summary(),
 				$this->provider_settings->overview_provider_facts(),
-				$this->credential_expiry_notice?->overview_summary()
+				$this->credential_expiry_notice?->overview_summary(),
+				$this->paused_counts()
 			);
 		}
 

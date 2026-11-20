@@ -757,6 +757,45 @@ final class OnboardingViewTest extends TestCase {
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/div/a[2]/@href)' ) );
 			self::assertSame( '/themes', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/div/a[1]/@href)' ) );
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-themes-create', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/div/a[2]/@href)' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-package-policy ")])' ), 'No paused lines without paused counts.' );
+		}
+
+		$html     = $this->render_view(
+			null,
+			null,
+			array(
+				'view'         => 'dashboard',
+				'inventory'    => $cases[1][0],
+				'paused'       => array(
+					array(
+						'setting' => 'branch_sources',
+						'title'   => 'Branch sources',
+						'url'     => '/settings#branch',
+						'parts'   => array(
+							array(
+								'label' => '3 plugins',
+								'url'   => '/plugins?paused',
+							),
+							array(
+								'label' => '1 theme',
+								'url'   => '/themes?paused',
+							),
+						),
+						'lapsed'  => false,
+					),
+				),
+				'plugins_url'  => '/plugins',
+				'themes_url'   => '/themes',
+				'activity_url' => '/activity',
+			)
+		);
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath  = new \DOMXPath( $document );
+		$paused = '(//p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-package-policy ")])[2]';
+		self::assertSame( 'Branch sources off: 3 plugins, 1 theme paused', preg_replace( '/\s+/', ' ', trim( (string) $xpath->evaluate( 'string(' . $paused . ')' ) ) ) );
+		foreach ( array( '/settings#branch', '/plugins?paused', '/themes?paused' ) as $index => $href ) {
+			self::assertSame( $href, $xpath->evaluate( 'string(' . $paused . '/a[' . ( $index + 1 ) . ']/@href)' ) );
 		}
 	}
 

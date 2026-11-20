@@ -45,6 +45,7 @@ $package_list_state           = isset( $package_list_state ) && is_array( $packa
 	);
 $package_attention_enabled    = true === ( $package_attention_enabled ?? false );
 $package_paused               = isset( $package_paused ) && is_array( $package_paused ) ? $package_paused : array();
+$package_settings_linked      = current_user_can( 'manage_options' );
 $package_list_total           = isset( $package_list_total ) && is_int( $package_list_total )
 	? max( count( $packages ), $package_list_total )
 	: count( $packages );
@@ -334,7 +335,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			$credential_available      = ! $package->get_private() || is_array( $configured_credential );
 			$provider_can_deploy       = ! $provider_unavailable && true === $package_provider['deploy'];
 			$deployment_available      = $provider_can_deploy && $credential_available;
-			$update_can_run            = $deployment_available && ! $policy_disabled;
+			$update_can_run            = $deployment_available && ! $policy_disabled && ! in_array( $package->get_identifier(), $package_paused, true );
 			$update_in_progress        = ! $release_managed && in_array( $latest_activity_state, array( 'queued', 'running' ), true );
 			$update_needs_attention    = ! $release_managed
 				&& $latest_attempt instanceof \RAN\Deployment\DeploymentAttempt
@@ -450,13 +451,20 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					__( 'Branch · %s', 'ran-booster' ),
 					'' !== $package->get_branch() ? $package->get_branch() : __( 'repository default', 'ran-booster' )
 				);
+			$status_line_html = false;
 			if ( $provider_unavailable ) {
 				$status_line = __( 'The saved Git provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
 			} elseif ( ! $credential_available ) {
 				$status_line = __( 'The saved repository credential is unavailable.', 'ran-booster' );
 			} elseif ( $package_is_paused && ! ( $prominent_status_activity && ( $update_needs_attention || 'failed' === $latest_activity_state ) ) ) {
 				// A failed or review-needed deployment keeps its own guidance.
-				$status_line = __( 'Updates are paused by a site setting.', 'ran-booster' );
+				$status_line = sprintf(
+					/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'Updates are paused by a %1$ssite setting%2$s.', 'ran-booster' ),
+					$package_settings_linked ? '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-general-' . ( $release_managed ? 'prerelease_sources' : 'branch_sources' ) ) ) . '">' : '',
+					$package_settings_linked ? '</a>' : ''
+				);
+				$status_line_html = true;
 			} elseif ( '' !== ( $package_extension_row['status'] ?? '' ) ) {
 				$status_line = (string) $package_extension_row['status'];
 			} elseif ( $policy_disabled ) {
@@ -528,7 +536,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					?>
 				<?php } ?>
 				<p class="ran-booster-package-row__management"><?php echo esc_html( $management_line ); ?></p>
-				<p class="ran-booster-package-row__status-line"><?php echo esc_html( $status_line ); ?></p>
+				<p class="ran-booster-package-row__status-line"><?php echo $status_line_html ? wp_kses_post( $status_line ) : esc_html( $status_line ); ?></p>
 			</td>
 			<td class="ran-booster-package-row__actions">
 				<div class="ran-booster-package-row__action-group">

@@ -474,10 +474,16 @@ final class PackageAdminController {
 
 		$plural = 'plugin' === $type ? __( 'plugins', 'ran-booster' ) : __( 'themes', 'ran-booster' );
 		if ( '' !== $result->error_code ) {
-			$errors = array(
+			$can_follow = current_user_can( 'manage_options' );
+			$errors     = array(
 				'credential_unavailable' => __( 'A selected package does not have its required repository credential.', 'ran-booster' ),
 				'invalid_request'        => __( 'Choose a bulk action and a supported number of managed packages.', 'ran-booster' ),
-				'provider_unavailable'   => __( 'A selected package uses an unavailable Git provider.', 'ran-booster' ),
+				'provider_unavailable'   => sprintf(
+					/* translators: 1: opening link tag to Extensions, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'A selected package uses an unavailable %1$sGit provider%2$s.', 'ran-booster' ),
+					$can_follow ? '<a href="' . esc_url( ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster-extensions' ) . '">' : '',
+					$can_follow ? '</a>' : ''
+				),
 				'stale'                  => __( 'A selected managed package changed or is no longer available. Refresh and try again.', 'ran-booster' ),
 				'unavailable'            => __( 'Booster could not safely complete this bulk action. No success was reported.', 'ran-booster' ),
 				'webhook_unavailable'    => __( 'A selected package Git provider does not support Automatic deployment.', 'ran-booster' ),
@@ -910,16 +916,28 @@ final class PackageAdminController {
 	 */
 	private function coded_refusal( string $action, string $code, \Closure $add_context_message ): bool {
 		status_header( 400 );
+		if ( 'source_paused' === $code ) {
+			// The pause gate runs before any file is touched; Save and reinstall has already saved the settings, so the notice speaks of files.
+			// Only the Branch install and update gates reach here, so the setting it names is Branch sources.
+			$can_follow = current_user_can( 'manage_options' );
+			$admin_url  = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+			$message    = sprintf(
+				/* translators: 1: opening link tag to the Branch sources setting, or nothing; 2: closing link tag, or nothing. */
+				esc_html__( 'Updates are paused by a %1$ssite setting%2$s. No files were changed.', 'ran-booster' ),
+				$can_follow ? '<a href="' . esc_url( $admin_url . '?page=ran-booster-settings#ran-booster-general-branch_sources' ) . '">' : '',
+				$can_follow ? '</a>' : ''
+			);
+		} else {
+			$message = 'package_already_exists' === $code
+				? __( 'That plugin or theme is already installed or managed. No package was overwritten.', 'ran-booster' )
+				: DeploymentOutcomeMessage::for_code_html( $code );
+		}
 		$add_context_message(
-			new WP_Error(
-				'ran_booster_refused_' . $code,
-				'package_already_exists' === $code
-					? __( 'That plugin or theme is already installed or managed. No package was overwritten.', 'ran-booster' )
-					: DeploymentOutcomeMessage::for_code_html( $code )
-			),
+			new WP_Error( 'ran_booster_refused_' . $code, $message ),
 			array(
-				'operation' => $action,
-				'step'      => 'manual_package_operation',
+				'operation'    => $action,
+				'outcome_code' => $code,
+				'step'         => 'manual_package_operation',
 			)
 		);
 		return false;

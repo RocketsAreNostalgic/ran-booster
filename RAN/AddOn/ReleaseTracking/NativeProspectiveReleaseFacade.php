@@ -278,6 +278,14 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
 		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) ) {
+			BoosterLogger::log(
+				'release operation refused',
+				array(
+					'event'        => 'release_operation_refused',
+					'outcome_code' => DeploymentOutcome::CODE_SOURCE_PAUSED,
+				)
+			);
+
 			return ProspectiveReleaseResult::failure( DeploymentOutcome::CODE_SOURCE_PAUSED );
 		}
 

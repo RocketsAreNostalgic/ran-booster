@@ -1152,6 +1152,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	}
 
 	private static function source_paused(): ReleaseTrackingResult {
+		BoosterLogger::log(
+			'release operation refused',
+			array(
+				'event'        => 'release_operation_refused',
+				'outcome_code' => DeploymentOutcome::CODE_SOURCE_PAUSED,
+			)
+		);
+
 		return ReleaseTrackingResult::failed( DeploymentOutcome::CODE_SOURCE_PAUSED, 'Updates are paused by a site setting.' );
 	}
 

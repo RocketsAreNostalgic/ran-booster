@@ -3053,17 +3053,36 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			metadata_eligible: static fn (): bool => true
 		);
 
-		self::assertSame(
-			array( 'source_paused', 'source_paused', 'source_paused', 'release_channel_current' ),
-			array(
-				$facade->change_channel( 'plugin', 'example/example.php', 1, 'prerelease', 'nonce' )->code(),
-				$facade->enable( 'plugin', 'example/example.php', 1, 'prerelease', 'nonce' )->code(),
-				$facade->return_to_branch( 'plugin', 'example/example.php', 1, 'nonce' )->code(),
-				$facade->change_channel( 'plugin', 'example/example.php', 1, 'stable', 'nonce' )->code(),
-			)
-		);
+		$directory = sys_get_temp_dir() . '/ran-booster-paused-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/capture.json', static fn (): int => strtotime( '2026-11-19T12:00:00Z' ) );
+		$capture->start();
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
+		try {
+			self::assertSame(
+				array( 'source_paused', 'source_paused', 'source_paused', 'release_channel_current' ),
+				array(
+					$facade->change_channel( 'plugin', 'example/example.php', 1, 'prerelease', 'nonce' )->code(),
+					$facade->enable( 'plugin', 'example/example.php', 1, 'prerelease', 'nonce' )->code(),
+					$facade->return_to_branch( 'plugin', 'example/example.php', 1, 'nonce' )->code(),
+					$facade->change_channel( 'plugin', 'example/example.php', 1, 'stable', 'nonce' )->code(),
+				)
+			);
+			$entries = array_column( $capture->snapshot()['entries'], 'line' );
+		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			foreach ( (array) glob( $directory . '/*' ) as $path ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+				unlink( (string) $path );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+			rmdir( $directory );
+		}
 		self::assertSame( array(), $store->channel_changes );
 		self::assertSame( array(), $store->transitions );
+		// Each refusal writes one line holding only its code.
+		self::assertSame( array_fill( 0, 3, '[ran-booster] release operation refused {"event":"release_operation_refused","outcome_code":"source_paused"}' ), $entries );
 	}
 
 	public function test_facade_projects_native_diagnostics_and_refreshes_only_exact_release_revision(): void {

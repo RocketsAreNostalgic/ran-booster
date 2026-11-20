@@ -319,13 +319,28 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$repository                                   = $this->repository_request();
 		$GLOBALS['ran_booster_test_environment_type'] = 'production';
 		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+		$directory                                    = sys_get_temp_dir() . '/ran-booster-paused-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/capture.json', static fn (): int => strtotime( '2026-11-19T12:00:00Z' ) );
+		$capture->start();
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
 		try {
-			$result = $facade->install( 'plugin', $repository, '42', 'v1.2.3', self::FINGERPRINT, 'prerelease', 'valid-nonce', $this->expectation_for( $repository ) );
+			$result  = $facade->install( 'plugin', $repository, '42', 'v1.2.3', self::FINGERPRINT, 'prerelease', 'valid-nonce', $this->expectation_for( $repository ) );
+			$entries = array_column( $capture->snapshot()['entries'], 'line' );
 		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			foreach ( (array) glob( $directory . '/*' ) as $path ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+				unlink( (string) $path );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+			rmdir( $directory );
 			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_test_home_url'] );
 		}
 
 		self::assertSame( array( false, 'source_paused' ), array( $result->successful(), $result->code() ) );
+		self::assertSame( array( '[ran-booster] release operation refused {"event":"release_operation_refused","outcome_code":"source_paused"}' ), $entries );
 		self::assertSame( 0, ProspectiveRepositoryProvider::$resolve_calls );
 		self::assertSame( 0, $executor->install_calls );
 		self::assertSame( 0, $plugins->adoption_calls );

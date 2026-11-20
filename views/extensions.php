@@ -135,7 +135,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 								<?php esc_html_e( 'By', 'ran-booster' ); ?>
 								<a href="https://github.com/RocketsAreNostalgic">Rockets Are Nostalgic</a>
 								<span aria-hidden="true"> · </span>
-								<a href="<?php echo esc_url( $extension['support_url'] ); ?>"><?php esc_html_e( 'Support', 'ran-booster' ); ?></a>
+								<a href="<?php echo esc_url( $extension['support_url'] ); ?>"><?php esc_html_e( 'Issues', 'ran-booster' ); ?></a>
 							</cite>
 						</p>
 					</div>
@@ -251,7 +251,7 @@ else :
 						<?php if ( ! empty( $extension['manual_install_url'] ) ) : ?>
 							<p><a href="<?php echo esc_url( $extension['manual_install_url'] ); ?>"><?php esc_html_e( 'Release page', 'ran-booster' ); ?></a></p>
 						<?php endif; ?>
-						<p><a href="<?php echo esc_url( $extension['support_url'] ); ?>"><?php esc_html_e( 'Support', 'ran-booster' ); ?></a></p>
+						<p><a href="<?php echo esc_url( $extension['support_url'] ); ?>"><?php esc_html_e( 'Issues', 'ran-booster' ); ?></a></p>
 					</div>
 				</div>
 			</section>

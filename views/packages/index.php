@@ -46,6 +46,7 @@ $package_list_state           = isset( $package_list_state ) && is_array( $packa
 $package_attention_enabled    = true === ( $package_attention_enabled ?? false );
 $package_paused               = isset( $package_paused ) && is_array( $package_paused ) ? $package_paused : array();
 $package_settings_linked      = current_user_can( 'manage_options' );
+$status_link_tags             = static fn ( string $url ): array => $package_settings_linked ? array( '<a href="' . esc_url( $url ) . '">', '</a>' ) : array( '', '' );
 $package_list_total           = isset( $package_list_total ) && is_int( $package_list_total )
 	? max( count( $packages ), $package_list_total )
 	: count( $packages );
@@ -446,9 +447,24 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				);
 			$status_line_html = false;
 			if ( $provider_unavailable ) {
-				$status_line = __( 'The saved Git provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
+				// An unavailable provider has no tab of its own; Overview is where ProviderTabLinks sends it and lists provider problems.
+				[ $link_open, $link_close ] = $status_link_tags( admin_url( 'admin.php?page=ran-booster&tab=overview' ) );
+				$status_line                = sprintf(
+					/* translators: 1: opening link tag to Overview, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'The saved Git provider is unavailable. %1$sRestore it%2$s before deploying this package.', 'ran-booster' ),
+					$link_open,
+					$link_close
+				);
+				$status_line_html = true;
 			} elseif ( ! $credential_available ) {
-				$status_line = __( 'The saved repository credential is unavailable.', 'ran-booster' );
+				[ $link_open, $link_close ] = $status_link_tags( admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) . '&view=credentials' ) );
+				$status_line                = sprintf(
+					/* translators: 1: opening link tag to the provider's credentials, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'The saved repository %1$scredential%2$s is unavailable.', 'ran-booster' ),
+					$link_open,
+					$link_close
+				);
+				$status_line_html = true;
 			} elseif ( $package_is_paused
 				&& ! ( $prominent_status_activity && ( $update_needs_attention || 'failed' === $latest_activity_state ) )
 				&& ! in_array( 'error', array_column( array_filter( (array) ( $package_extension_row['badges'] ?? array() ), 'is_array' ), 'tone' ), true )
@@ -463,6 +479,11 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				$status_line_html = true;
 			} elseif ( '' !== ( $package_extension_row['status'] ?? '' ) ) {
 				$status_line = (string) $package_extension_row['status'];
+				// A release failure sentence is linked whole to the package page, where its explanation sits; informational status stays plain.
+				if ( in_array( 'error', array_column( array_filter( (array) ( $package_extension_row['badges'] ?? array() ), 'is_array' ), 'tone' ), true ) && $package_settings_linked ) {
+					$status_line      = '<a href="' . esc_url( $edit_url ) . '">' . esc_html( $status_line ) . '</a>';
+					$status_line_html = true;
+				}
 			} elseif ( $policy_disabled ) {
 				$status_line = __( 'Booster will not overwrite this package or respond to repository pushes.', 'ran-booster' );
 			} elseif ( $release_managed ) {
@@ -470,9 +491,41 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					? __( 'WordPress controls when validated published releases are installed.', 'ran-booster' )
 					: __( 'Installed package is current. Release checks run only when requested.', 'ran-booster' );
 			} elseif ( $update_needs_attention ) {
-				$status_line = __( 'A prior branch deployment is awaiting operator review. It is not running. Open deployment activity and record the review before retrying.', 'ran-booster' );
+				[ $link_open, $link_close ] = $status_link_tags(
+					$latest_activity_id > 0 && '' !== $latest_activity_reference
+						? $activity_detail_base_url . '&attempt=' . rawurlencode( (string) $latest_activity_id ) . '&reference=' . rawurlencode( $latest_activity_reference )
+						: add_query_arg(
+							array(
+								'activity_subject_type' => $package_view->get_type(),
+								'activity_subject_identity' => $package_identifier,
+							),
+							$activity_detail_base_url
+						)
+				);
+				$status_line                = sprintf(
+					/* translators: 1: opening link tag to the deployment's Activity record, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'A prior branch deployment is awaiting operator review. It is not running. Open %1$sdeployment activity%2$s and record the review before retrying.', 'ran-booster' ),
+					$link_open,
+					$link_close
+				);
+				$status_line_html = true;
 			} elseif ( 'failed' === $latest_activity_state ) {
-				$status_line = __( 'The latest branch deployment failed. Open deployment activity for details before retrying.', 'ran-booster' );
+				[ $link_open, $link_close ] = $status_link_tags(
+					add_query_arg(
+						array(
+							'activity_subject_type'     => $package_view->get_type(),
+							'activity_subject_identity' => $package_identifier,
+						),
+						$activity_detail_base_url
+					)
+				);
+				$status_line                = sprintf(
+					/* translators: 1: opening link tag to this package's Activity, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'The latest branch deployment failed. Open %1$sdeployment activity%2$s for details before retrying.', 'ran-booster' ),
+					$link_open,
+					$link_close
+				);
+				$status_line_html = true;
 			} elseif ( \RAN\Deployment\DeploymentPolicy::AUTOMATIC === $deployment_policy ) {
 				$status_line = __( 'Signed repository pushes deploy automatically. Review setup if pushes are not arriving.', 'ran-booster' );
 			} else {

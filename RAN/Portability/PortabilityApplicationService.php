@@ -714,7 +714,7 @@ final readonly class PortabilityApplicationService {
 		$message      = \RAN\Admin\DeploymentOutcomeMessage::for_code( $outcome_code );
 		if ( null !== $reference ) {
 			$message = sprintf(
-				/* translators: 1: safe deployment failure reason, 2: random support reference. */
+				/* translators: 1: safe deployment failure reason, 2: random reference. */
 				__( '%1$s Reference: %2$s.', 'ran-booster' ),
 				$message,
 				$reference

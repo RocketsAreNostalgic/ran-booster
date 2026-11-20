@@ -276,7 +276,18 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 				<div class="ran-booster-settings-section__body">
 					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
 						<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
-						<p><?php esc_html_e( 'Booster will not reinterpret this package as a branch deployment. Restore the update source add-on to manage updates or unlink the package.', 'ran-booster' ); ?></p>
+						<p>
+						<?php
+						echo wp_kses_post(
+							sprintf(
+								/* translators: 1: opening link tag to Extensions, or nothing; 2: closing link tag, or nothing. */
+								esc_html__( 'Booster will not reinterpret this package as a branch deployment. Restore the update source %1$sadd-on%2$s to manage updates or unlink the package.', 'ran-booster' ),
+								current_user_can( 'manage_options' ) ? '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ) . '">' : '',
+								current_user_can( 'manage_options' ) ? '</a>' : ''
+							)
+						);
+						?>
+						</p>
 						</div>
 						<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?>
 					</div>

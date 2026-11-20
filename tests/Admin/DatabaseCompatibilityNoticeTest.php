@@ -35,7 +35,7 @@ final class DatabaseCompatibilityNoticeTest extends TestCase {
 
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-database-compatibility-notice' ) );
 		self::assertStringContainsString( DatabaseCompatibilityFailure::REQUIREMENT, $html );
-		self::assertStringContainsString( 'Existing Booster data was left unchanged', $html );
+		self::assertStringContainsString( 'Existing Booster data was left unchanged. Review <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting">Troubleshooting</a> before re-enabling deployments.', $html );
 		self::assertStringNotContainsString( 'is-dismissible', $html );
 	}
 

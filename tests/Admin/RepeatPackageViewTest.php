@@ -856,6 +856,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	public function test_source_warnings_keep_their_static_warning_envelopes(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => true );
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
 			$package                   = $this->package( $package_view );
 			$package_provider_settings = $this->provider_settings( true );
@@ -863,8 +864,9 @@ final class RepeatPackageViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 			$html = (string) ob_get_clean();
-			self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p>Booster will not reinterpret this package as a branch deployment\..*?<\/p>\s*<\/div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>.*?<\/svg>\s*<\/div>/s', $html );
+			self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p>\s*Booster will not reinterpret this package as a branch deployment\. Restore the update source <a href="https:\/\/example\.test\/wp-admin\/admin\.php\?page=ran-booster-extensions">add-on<\/a> to manage updates or unlink the package\.\s*<\/p>\s*<\/div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>.*?<\/svg>\s*<\/div>/s', $html );
 		}
+		unset( $GLOBALS['ran_booster_test_capabilities'] );
 	}
 
 	public function test_unavailable_package_source_keeps_navigation_actions_without_save(): void {

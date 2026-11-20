@@ -452,7 +452,7 @@ final class ReleaseWorkflowDisplay {
 			'preview_storage' => __( 'Booster could not retain the review preview locally. No draft was opened; retry the assessment.', 'ran-booster' ),
 			'repository_mutation' => __( 'The Git provider may have accepted only part of the draft setup. Review the repository and use the failure reference before retrying.', 'ran-booster' ),
 			'local_persistence' => __( 'The draft may exist on the Git provider, but Booster could not retain its verified setup record. Review the repository and use the failure reference before retrying.', 'ran-booster' ),
-			default => __( 'Booster stopped before it could verify the release-workflow request. Retry the assessment and use the failure reference when seeking support.', 'ran-booster' ),
+			default => __( 'Booster stopped before it could verify the release-workflow request. Retry the assessment and use the failure reference.', 'ran-booster' ),
 		};
 	}
 }

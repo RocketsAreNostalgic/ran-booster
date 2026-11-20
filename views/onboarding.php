@@ -155,7 +155,18 @@ $provider_attention         = array_filter(
 				<p><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>: <?php echo esc_html( $provider_attention_message( $provider ) ); ?></p>
 			<?php } ?>
 			<?php if ( $overview_inventory_incomplete ) { ?>
-				<p><?php esc_html_e( 'The managed package inventory is incomplete or unavailable.', 'ran-booster' ); ?></p>
+				<p>
+					<?php
+					echo wp_kses_post(
+						sprintf(
+							/* translators: 1: opening link tag to Troubleshooting, or nothing; 2: closing link tag, or nothing. */
+							esc_html__( 'The managed package inventory is %1$sincomplete or unavailable%2$s.', 'ran-booster' ),
+							current_user_can( 'manage_options' ) ? '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting' ) ) . '">' : '',
+							current_user_can( 'manage_options' ) ? '</a>' : ''
+						)
+					);
+					?>
+				</p>
 			<?php } ?>
 			<?php if ( $overview_storage_unknown ) { ?>
 				<p><?php esc_html_e( 'Secure credential storage status is unavailable.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review storage', 'ran-booster' ); ?></a></p>

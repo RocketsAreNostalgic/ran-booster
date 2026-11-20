@@ -159,7 +159,7 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 	<?php if ( ! empty( $development_safety_notice ) ) { ?>
 		<div class="notice notice-info inline is-dismissible ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-development-safety data-ran-booster-notice-state="<?php echo esc_attr( \RAN\Admin\DevelopmentSafetyNoticeController::NOTICE_STATE ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 			<p><strong><?php esc_html_e( 'Local development detected', 'ran-booster' ); ?></strong></p>
-			<p><?php esc_html_e( 'Booster can still download and replace managed plugins and themes on this site. Disable updates for packages you’re editing. Incoming webhooks for branch deployment are generally unavailable on local or private domains.', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'Booster can still download and replace managed plugins and themes on this site. Disable updates for packages you’re editing.', 'ran-booster' ); ?></p>
 			<?php
 			if ( isset( $core_self_update_development_notice ) ) {
 				$core_self_update_development_notice->render_local_fact(); }

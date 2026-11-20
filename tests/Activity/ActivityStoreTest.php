@@ -17,6 +17,8 @@ require_once __DIR__ . '/ActivityWordPressFunctions.php';
 require_once __DIR__ . '/ActivityConnection.php';
 
 final class ActivityStoreTest extends RANBoosterTestCase {
+	use \RAN\Tests\Support\CapturesBoosterLog;
+
 	private ActivityConnection $connection;
 	private ActivityStore $store;
 
@@ -89,6 +91,44 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertFalse( $store->prune( array() ) );
 		$this->connection->read_results = array( array( array( 'unsafe' => array() ) ) );
 		self::assertFalse( $this->store->activity_history()['available'] );
+	}
+
+	public function test_refused_and_failed_writes_log_one_code_only_line(): void {
+		$this->start_log_capture();
+		try {
+			$id      = $this->store->begin( 'gh', self::request(), self::capture() );
+			$queries = count( $this->connection->queries );
+			self::assertFalse( $this->store->complete( $id, 'unknown', 'checked' ) );
+			self::assertFalse( $this->store->progress( $id, 'checking', 'Authorization: Bearer marker-credential-1234' ) );
+			self::assertCount( $queries, $this->connection->queries, 'A refused write still reaches no SQL.' );
+			$this->connection->query_results = array( 0, false );
+			self::assertFalse( $this->store->progress( $id, 'checking' ) );
+			self::assertFalse( $this->store->progress( $id, 'checking' ) );
+			self::assertFalse( $this->store->complete( null, 'succeeded', 'checked' ) );
+			$this->connection->fail_insert = true;
+			self::assertNull( $this->store->begin( 'gh', self::request(), self::capture() ) );
+			$GLOBALS['ran_booster_activity_options'] = array();
+			self::assertNull( $this->store->begin( 'gh', self::request(), self::capture() ) );
+			$lines = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+		$correlation = $this->connection->inserted[0]['correlation'];
+		self::assertIsString( $correlation );
+		$prefix = '[ran-booster] An Activity write was not recorded. ';
+		self::assertSame(
+			array(
+				$prefix . '{"step":"activity.complete","event":"refused","operation":"release.check","correlation_id":"' . $correlation . '"}',
+				$prefix . '{"step":"activity.progress","event":"refused","operation":"release.check","correlation_id":"' . $correlation . '"}',
+				$prefix . '{"step":"activity.progress","event":"failed","operation":"release.check","correlation_id":"' . $correlation . '"}',
+				$prefix . '{"step":"activity.begin","event":"failed","operation":"release.check"}',
+				$prefix . '{"step":"activity.begin","event":"unavailable","operation":"release.check"}',
+			),
+			$lines
+		);
+		foreach ( array( 'marker-credential', 'owner/repository', 'example/example.php', 'source-and-access' ) as $private ) {
+			self::assertStringNotContainsString( $private, implode( "\n", $lines ) );
+		}
 	}
 
 	public function test_begin_captures_exact_lifetime_and_rejects_wrong_provider(): void {

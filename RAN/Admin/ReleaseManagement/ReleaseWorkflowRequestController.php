@@ -215,9 +215,11 @@ final class ReleaseWorkflowRequestController {
 				};
 				$outcome = $this->workflow_result( $type, $identifier, $result->workflow_code(), $result->successful(), $result->preview_key(), $result->failure_stage(), $result->diagnostic_code(), '' !== $result->correlation_reference(), $result->correlation_reference(), $result->message(), $result->remediation() );
 			} while ( false );
-		} catch ( Throwable ) {
-			$activity_id = null; // Do not dispatch reporting hooks after an unexpected failure.
-			$outcome     = $this->workflow_result( $type, $identifier, 'workflow_remote_unavailable', false, '', 'unexpected', 'unexpected_runtime_failure' );
+		} catch ( Throwable $exception ) {
+			// The provider may already have changed the repository, so the outcome is unknown: the row is closed with the
+			// same uncertain result the operator sees, not a clean failure, and no reporting hooks are dispatched.
+			BoosterLogger::log_provider_failure( 'Provider release workflow request failed', $exception, array( 'step' => 'unexpected' ) );
+			$outcome = $this->workflow_result( $type, $identifier, 'workflow_remote_unavailable', false, '', 'unexpected', 'unexpected_runtime_failure' );
 		}
 		if ( ! $outcome['successful'] && '' === $outcome['correlation_reference'] && '' !== $outcome['failure_stage'] ) {
 			$outcome = $this->preserve_request_failure( $operation, $outcome, $provider_code );

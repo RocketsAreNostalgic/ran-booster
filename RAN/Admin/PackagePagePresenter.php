@@ -9,6 +9,7 @@ use LogicException;
 use RAN\Admin\Component\AdminActionNormalizer;
 use RAN\Admin\Component\AdminPackageSourceChoiceNormalizer;
 use RAN\Admin\Component\StatusBadge;
+use RAN\Deployment\PackageSourceGate;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
@@ -100,18 +101,21 @@ final class PackagePagePresenter {
 		) {
 			$package_list_state['provider'] = '';
 		}
-		$failed = $deployments->failed_update_identifiers( array_values( array_filter( $packages, static fn ( mixed $package ): bool => $package instanceof Package ) ), $this->type );
-		if ( null === $failed ) {
-			// Unreadable Activity is never "none failed": the control is disabled and the filter dropped.
+		$managed = array_values( array_filter( $packages, static fn ( mixed $package ): bool => $package instanceof Package ) );
+		$failed  = $deployments->failed_update_identifiers( $managed, $this->type );
+		if ( null === $failed && 'failed' === $package_list_state['attention'] ) {
+			// Unreadable Activity is never "none failed": its option is disabled and the filter dropped.
 			$package_list_state['attention'] = '';
 		}
-		$filtered_packages = $this->filter_packages( $packages, $package_list_state, $package_provider_options, $failed ?? array() );
+		$paused            = array_values( array_map( static fn ( Package $package ): mixed => $package->get_identifier(), array_filter( $managed, fn ( Package $package ): bool => PackageSourceGate::pauses_package( $package, $this->type ) ) ) );
+		$filtered_packages = $this->filter_packages( $packages, $package_list_state, $package_provider_options, $failed ?? array(), $paused );
 
 		return array(
 			'packages'                  => $filtered_packages,
 			'package_list_total'        => count( $packages ),
 			'package_list_state'        => $package_list_state,
 			'package_attention_enabled' => null !== $failed,
+			'package_paused'            => $paused,
 			'package_provider_options'  => $package_provider_options,
 			'package_view'              => $this,
 			'package_providers'         => $package_providers,
@@ -144,6 +148,7 @@ final class PackagePagePresenter {
 			'package_view'              => $this,
 			'package_extension_panels'  => $this->extension_panels( $package ),
 			'package_source'            => $this->source_composition( 'edit', $requested_source_view, $package, $open_advanced ),
+			'package_paused'            => PackageSourceGate::pauses_package( $package, $this->type ),
 		);
 	}
 
@@ -228,16 +233,17 @@ final class PackagePagePresenter {
 	 * @param array{search: string, provider: string, source: string, policy: string, attention: string} $state
 	 * @param list<array{code: string, label: string}> $provider_options
 	 * @param list<string> $failed Identifiers whose decisive update outcome is failed or needs review.
+	 * @param list<mixed> $paused Identifiers paused by a site setting.
 	 * @return list<Package>
 	 */
-	private function filter_packages( array $packages, array $state, array $provider_options, array $failed ): array {
+	private function filter_packages( array $packages, array $state, array $provider_options, array $failed, array $paused ): array {
 		$provider_labels = array_column( $provider_options, 'label', 'code' );
 		$search          = strtolower( $state['search'] );
 
 		return array_values(
 			array_filter(
 				$packages,
-				static function ( mixed $package ) use ( $state, $provider_labels, $search, $failed ): bool {
+				static function ( mixed $package ) use ( $state, $provider_labels, $search, $failed, $paused ): bool {
 					if ( ! $package instanceof Package ) {
 						return false;
 					}
@@ -252,7 +258,7 @@ final class PackagePagePresenter {
 					if ( '' !== $state['policy'] && $package->get_deployment_policy()->value !== $state['policy'] ) {
 						return false;
 					}
-					if ( '' !== $state['attention'] && ! in_array( $package->get_identifier(), $failed, true ) ) {
+					if ( '' !== $state['attention'] && ! in_array( $package->get_identifier(), 'paused' === $state['attention'] ? $paused : $failed, true ) ) {
 						return false;
 					}
 					if ( '' === $search ) {
@@ -328,6 +334,11 @@ final class PackagePagePresenter {
 			? add_query_arg( 'page', $this->get_create_page_slug(), $this->get_admin_url() )
 			: $projection->settings_url();
 		$base       = $this->get_source_choice_defaults( $page_url );
+		if ( null !== $package && PackageSource::BRANCH !== $package->get_source() && PackageSourceGate::pauses( PackageSource::BRANCH ) ) {
+			// Returning a release package to its branch would be refused.
+			$base['branch']['disabled']    = true;
+			$base['branch']['description'] = __( 'Updates are paused by a site setting.', 'ran-booster' );
+		}
 
 		try {
 			$choices = ( new AdminPackageSourceChoiceNormalizer() )->normalize(

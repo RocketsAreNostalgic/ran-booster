@@ -797,6 +797,11 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header,[^{]*> summary \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);/', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
 	}
 
+	public function test_a_link_in_a_package_row_status_line_keeps_its_underline(): void {
+		// WordPress core removes underlines from links in .widefat tables, which the package list is.
+		self::assertMatchesRegularExpression( '/\n\.ran-booster-admin \.ran-booster-package-row__status-line a \{\s*text-decoration: underline;\s*\}/', $this->asset( 'ran-booster/60-packages.css' ) );
+	}
+
 	public function test_page_and_card_heading_gaps_use_the_shared_spacing_tokens(): void {
 		$owners = array(
 			array( 'ran-booster/25-admin-primitives.css', '\n\.ran-booster-admin \.ran-booster-page-shell__header \{', 'padding-block: 0 var(--ran-booster-card-gap);' ),

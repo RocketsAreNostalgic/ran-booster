@@ -261,6 +261,11 @@
 	color: var(--ran-booster-text-muted);
 }
 
+/* WordPress removes underlines from links in .widefat tables. */
+.ran-booster-admin .ran-booster-package-row__status-line a {
+	text-decoration: underline;
+}
+
 .ran-booster-admin
 	.ran-booster-package-table[data-package-type="plugin"]
 	:is(

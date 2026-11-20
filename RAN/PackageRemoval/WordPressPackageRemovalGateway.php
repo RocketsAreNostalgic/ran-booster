@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace RAN\PackageRemoval;
 
+use RAN\UpdaterSupport\V1\PackageDirectory;
+
 /**
  * Delegates package removal to WordPress so uninstall and deactivation hooks run.
  */
@@ -124,7 +126,7 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 				}
 			}
 			clearstatcache( true, $target );
-			return ! in_array( strtolower( $name ), array_map( 'strtolower', $entries ), true ) && ! file_exists( $target ) && ! is_link( $target );
+			return ! in_array( PackageDirectory::collision_key( $name ), array_map( array( PackageDirectory::class, 'collision_key' ), $entries ), true ) && ! file_exists( $target ) && ! is_link( $target );
 		};
 	}
 

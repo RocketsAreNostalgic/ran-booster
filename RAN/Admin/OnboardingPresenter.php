@@ -8,6 +8,7 @@ use LogicException;
 use RAN\Activity\ActivityStore;
 use RAN\AdoptionIdentity;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Settings\GeneralPreferenceStore;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use Throwable;
@@ -68,9 +69,10 @@ final readonly class OnboardingPresenter {
 	 * @param array<string, mixed>|null $storage_summary Previously inspected storage state.
 	 * @param array<string, array{admitted:bool,selection:?string,source_kind?:?string,source_name?:?string,replacement_detected?:bool}> $provider_facts Local admission and selection facts.
 	 * @param array{status:string,total:?int,items:list<array{provider_label:string,label:string,badge_label:string,stage:string,url:string}>}|null $credential_expiry This request's captured expiry reminders.
+	 * @param array<string,array{plugin:int,theme:int}> $paused_counts Managed packages each source setting pauses.
 	 * @return array<string, mixed>
 	 */
-	public function build_overview( array $tabs, string $install_plugin_url, string $install_theme_url, PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity, ?array $storage_summary = null, array $provider_facts = array(), ?array $credential_expiry = null ): array {
+	public function build_overview( array $tabs, string $install_plugin_url, string $install_theme_url, PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity, ?array $storage_summary = null, array $provider_facts = array(), ?array $credential_expiry = null, array $paused_counts = array() ): array {
 		$overview         = $this->build( $tabs, $install_plugin_url, $install_theme_url );
 		$choice           = get_option( self::PRESENTATION_OPTION );
 		$overview['view'] = 'onboarding' === $choice ? 'onboarding' : 'dashboard';
@@ -161,19 +163,65 @@ final readonly class OnboardingPresenter {
 			'total'  => null,
 			'items'  => array(),
 		);
-		$overview['attention']         = $this->attention( $managed, $activity, $overview['credential_expiry'], $overview['activity_url'] );
+		$overview['paused']            = $this->paused_lines( $paused_counts );
+		$overview['attention']         = $this->attention( $managed, $activity, $overview['credential_expiry'], $overview['activity_url'], $overview['paused'] );
 		return $overview;
 	}
 
 	/**
-	 * Needs attention: each managed package's failed or uncertain Core update for its current adoption, then
-	 * credential reminders. Critical rows sort first; five are shown, and the count opens the hidden updates' filtered list.
+	 * One line per source setting that pauses a managed package. A saved "on" bound to another site
+	 * address is marked lapsed: that site setting was not turned off here.
+	 *
+	 * @param array<string,array{plugin:int,theme:int}> $counts
+	 * @return list<array{setting:string,title:string,url:string,parts:list<array{label:string,url:string}>,lapsed:bool}>
+	 */
+	private function paused_lines( array $counts ): array {
+		$lines = array();
+		foreach ( array(
+			'branch_sources'     => __( 'Branch sources', 'ran-booster' ),
+			'prerelease_sources' => __( 'Preview tracks', 'ran-booster' ),
+		) as $setting => $title ) {
+			$parts = array();
+			foreach ( array( 'plugin', 'theme' ) as $type ) {
+				$count = $counts[ $setting ][ $type ] ?? 0;
+				if ( $count > 0 ) {
+					$parts[] = array(
+						/* translators: %d: number of paused plugins or themes. */
+						'label' => sprintf( 'plugin' === $type ? _n( '%d plugin', '%d plugins', $count, 'ran-booster' ) : _n( '%d theme', '%d themes', $count, 'ran-booster' ), $count ),
+						'url'   => admin_url( 'admin.php?page=ran-booster-' . $type . 's&attention=paused' ),
+					);
+				}
+			}
+			if ( array() === $parts ) {
+				continue;
+			}
+			try {
+				$lapsed = 'address_changed' === ( ( new GeneralPreferenceStore() )->projection()[ $setting ]['error'] ?? null );
+			} catch ( \RuntimeException $failure ) {
+				$lapsed = false; // PackageSourceGate already logged this request's unreadable setting.
+			}
+			$lines[] = array(
+				'setting' => $setting,
+				'title'   => $title,
+				'url'     => admin_url( 'admin.php?page=ran-booster-settings#ran-booster-general-' . $setting ),
+				'parts'   => $parts,
+				'lapsed'  => $lapsed,
+			);
+		}
+		return $lines;
+	}
+
+	/**
+	 * Needs attention: each managed package's failed or uncertain Core update for its current adoption, a
+	 * row per source setting whose saved "on" was for another site address, then credential reminders.
+	 * Critical rows sort first; five are shown, and the count opens the hidden updates' filtered list.
 	 *
 	 * @param list<array{0:'plugin'|'theme',1:\RAN\Package}> $managed
 	 * @param array{status:string,total:?int,items:list<array{provider_label:string,label:string,badge_label:string,stage:string,url:string}>} $credentials
+	 * @param list<array{setting:string,title:string,url:string,parts:list<array{label:string,url:string}>,lapsed:bool}> $paused
 	 * @return array{updates_available:bool,items:list<array{label:string,url:string,badge:string,critical:bool,type:string}>,total:int,hidden_critical:int,more_url:string}
 	 */
-	private function attention( array $managed, ?ActivityStore $activity, array $credentials, string $activity_url ): array {
+	private function attention( array $managed, ?ActivityStore $activity, array $credentials, string $activity_url, array $paused ): array {
 		$packages = array();
 		$names    = array();
 		$types    = array();
@@ -215,6 +263,17 @@ final readonly class OnboardingPresenter {
 				'badge'    => $review ? __( 'Needs review', 'ran-booster' ) : __( 'Update failed', 'ran-booster' ),
 				'critical' => true,
 				'type'     => $types[ $index ],
+			);
+		}
+		foreach ( array_filter( $paused, static fn ( array $line ): bool => $line['lapsed'] ) as $line ) {
+			$items[] = array(
+				'label'    => 'branch_sources' === $line['setting']
+					? __( 'Branch sources were allowed for another site address', 'ran-booster' )
+					: __( 'Preview tracks were allowed for another site address', 'ran-booster' ),
+				'url'      => $line['url'],
+				'badge'    => __( 'Paused', 'ran-booster' ),
+				'critical' => false,
+				'type'     => '',
 			);
 		}
 		foreach ( 'captured' === $credentials['status'] ? $credentials['items'] : array() as $item ) {

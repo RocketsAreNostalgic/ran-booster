@@ -11,8 +11,10 @@ use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\Storage\PackageMutationResult;
+use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
+use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\WordPress\WordPressUpdaterLock;
@@ -204,18 +206,38 @@ final readonly class PackageOperationService {
 		return $this->find( $operation->package_type, $identifier );
 	}
 
+	/**
+	 * Connecting by name finds the folder installed_folder_matches() accepts: the source name, else its lower-case new-install form.
+	 *
+	 * @return Plugin|Theme
+	 * @throws PluginNotFound|ThemeNotFound
+	 */
+	private function installed_by_name( string $type, string $slug ): Package {
+		$repository = 'plugin' === $type ? $this->plugins : $this->themes;
+		try {
+			return $repository->from_slug( $slug );
+		} catch ( PluginNotFound | ThemeNotFound $not_found ) {
+			$new_install = PackageDirectory::deployment_slug( $slug, null );
+			if ( $new_install === $slug ) {
+				throw $not_found;
+			}
+			return $repository->from_slug( $new_install );
+		}
+	}
+
 	/** @return array{status: string, package: Package} */
 	private function link_installed( PackageOperation $operation ): array {
 		$slug    = $operation->package_slug ?? throw new RuntimeException( 'The package slug is unavailable.' );
-		$package = 'plugin' === $operation->package_type
-			? ( null === $operation->identifier ? $this->plugins->from_slug( $slug ) : $this->plugins->installed_plugin_from_file( $operation->identifier ) )
-			: ( null === $operation->identifier ? $this->themes->from_slug( $slug ) : $this->themes->installed_theme_from_stylesheet( $operation->identifier ) );
+		$package = null === $operation->identifier
+			? $this->installed_by_name( $operation->package_type, $slug )
+			: ( 'plugin' === $operation->package_type
+				? $this->plugins->installed_plugin_from_file( $operation->identifier )
+				: $this->themes->installed_theme_from_stylesheet( $operation->identifier ) );
 		if ( $package instanceof Plugin ) {
 			PackageMutationGuard::assert_plugin_file_allowed( $package->get_identifier() );
 		}
-		// The installed folder keeps its case; the source names the folder exactly or, for a new install, in lower case (PackageDirectory).
 		$folder = PackageDirectory::installed_slug( $operation->package_type, (string) $package->get_identifier() );
-		if ( ! in_array( $folder, array( $slug, PackageDirectory::deployment_slug( $slug, null ) ), true ) ) {
+		if ( ! PackageDirectory::installed_folder_matches( $folder, $slug ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; the controller escapes each value when it builds the message.
 			throw new PackageFolderMismatch( $folder, $operation->subdirectory ?? (string) $operation->repository, $slug );
 		}

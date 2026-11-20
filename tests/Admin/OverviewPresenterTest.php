@@ -326,6 +326,52 @@ final class OverviewPresenterTest extends TestCase {
 		}
 	}
 
+	public function test_paused_counts_give_one_line_per_switch_and_only_a_moved_address_needs_attention(): void {
+		require_once __DIR__ . '/../Support/PackageSourceGateWordPressFunctions.php';
+		require_once __DIR__ . '/../Settings/GeneralPreferenceStoreWordPressFunctions.php';
+		$GLOBALS['ran_booster_test_environment_type']  = 'production';
+		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( array() );
+		unset( $GLOBALS['ran_booster_general_preference_cached_option'] );
+		$counts = array(
+			'branch_sources'     => array(
+				'plugin' => 3,
+				'theme'  => 1,
+			),
+			'prerelease_sources' => array(
+				'plugin' => 0,
+				'theme'  => 0,
+			),
+		);
+		try {
+			$overview = $this->present( $this->plugins( array() ), $this->themes( array() ), paused_counts: $counts );
+			self::assertCount( 1, $overview['paused'], 'A switch that pauses nothing has no line.' );
+			self::assertSame( 'Branch sources', $overview['paused'][0]['title'] );
+			self::assertStringEndsWith( 'page=ran-booster-settings#ran-booster-general-branch_sources', $overview['paused'][0]['url'] );
+			self::assertSame( array( '3 plugins', '1 theme' ), array_column( $overview['paused'][0]['parts'], 'label' ) );
+			self::assertStringEndsWith( 'page=ran-booster-themes&attention=paused', $overview['paused'][0]['parts'][1]['url'] );
+			self::assertFalse( $overview['paused'][0]['lapsed'] );
+			self::assertSame( array(), $overview['attention']['items'], 'A switch left off is not an attention row.' );
+
+			// A saved "on" for another site address is the one paused case that needs attention.
+			$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize(
+				array(
+					'branch_sources'         => true,
+					'branch_sources_address' => 'elsewhere.test',
+				)
+			);
+			unset( $GLOBALS['ran_booster_general_preference_cached_option'] );
+			$attention = $this->present( $this->plugins( array() ), $this->themes( array() ), paused_counts: $counts )['attention'];
+			self::assertSame( array( 'Branch sources were allowed for another site address' ), array_column( $attention['items'], 'label' ), 'The count lives only in the card.' );
+			self::assertSame( array( 'Paused' ), array_column( $attention['items'], 'badge' ) );
+			self::assertSame( array( false ), array_column( $attention['items'], 'critical' ) );
+			self::assertStringEndsWith( 'page=ran-booster-settings#ran-booster-general-branch_sources', $attention['items'][0]['url'] );
+
+			self::assertSame( array(), $this->present( $this->plugins( array() ), $this->themes( array() ) )['paused'], 'No counts, no lines.' );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_general_preference_raw'], $GLOBALS['ran_booster_general_preference_cached_option'] );
+		}
+	}
+
 	/** @param list<Plugin>|null $packages */
 	private function plugins( ?array $packages ): PluginRepository {
 		$GLOBALS['ran_booster_overview_plugin_calls'] = 0;
@@ -366,9 +412,10 @@ final class OverviewPresenterTest extends TestCase {
 
 	/**
 	 * @param array{status:string,total:?int,items:list<array{provider_label:string,label:string,badge_label:string,stage:string,url:string}>}|null $credentials
+	 * @param array<string,array{plugin:int,theme:int}> $paused_counts
 	 * @return array<string, mixed>
 	 */
-	private function present( PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity = null, ?array $credentials = null ): array {
+	private function present( PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity = null, ?array $credentials = null, array $paused_counts = array() ): array {
 		$tabs = array();
 		foreach ( array( 'portability', 'documentation', 'troubleshooting' ) as $key ) {
 			$tabs[] = array(
@@ -379,6 +426,6 @@ final class OverviewPresenterTest extends TestCase {
 				'provider' => false,
 			);
 		}
-		return ( new OnboardingPresenter() )->build_overview( $tabs, '/install-plugin', '/install-theme', $plugins, $themes, $activity, array( 'ready' => true ), array(), $credentials );
+		return ( new OnboardingPresenter() )->build_overview( $tabs, '/install-plugin', '/install-theme', $plugins, $themes, $activity, array( 'ready' => true ), array(), $credentials, $paused_counts );
 	}
 }

@@ -449,18 +449,10 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				);
 			$status_line_html = false;
 			if ( $provider_unavailable ) {
-				// An unavailable provider has no tab of its own; Overview is where ProviderTabLinks sends it and lists provider problems. Every link here uses the presenter's admin base, which is the network admin on multisite.
-				[ $link_open, $link_close ] = $status_link_tags(
-					add_query_arg(
-						array(
-							'page' => 'ran-booster',
-							'tab'  => 'overview',
-						),
-						$package_admin_url
-					)
-				);
+				// An unavailable provider has no page of its own; Extensions lists a first-party provider that is not installed or not active with its Install or Activate action. Every link here uses the presenter's admin base, which is the network admin on multisite.
+				[ $link_open, $link_close ] = $status_link_tags( add_query_arg( 'page', 'ran-booster-extensions', $package_admin_url ) );
 				$status_line                = sprintf(
-					/* translators: 1: opening link tag to Overview, or nothing; 2: closing link tag, or nothing. */
+					/* translators: 1: opening link tag to Extensions, or nothing; 2: closing link tag, or nothing. */
 					esc_html__( 'The saved Git provider is unavailable. %1$sRestore it%2$s before deploying this package.', 'ran-booster' ),
 					$link_open,
 					$link_close

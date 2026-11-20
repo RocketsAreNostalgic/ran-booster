@@ -11,7 +11,8 @@ use RuntimeException;
  */
 final class DatabaseLifecycleFailure extends RuntimeException {
 
-	public const REQUIREMENT = 'RAN Booster database storage needs attention. Review Troubleshooting before trying again.';
+	public const SUMMARY     = 'RAN Booster database storage needs attention.';
+	public const REQUIREMENT = self::SUMMARY . ' Review Troubleshooting before trying again.';
 
 	public function __construct( private string $failure_reason ) {
 		parent::__construct( self::REQUIREMENT );

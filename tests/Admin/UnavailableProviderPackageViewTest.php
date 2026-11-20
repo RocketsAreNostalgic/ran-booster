@@ -186,8 +186,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster&amp;tab=overview">Restore it</a>', $html );
-		self::assertStringNotContainsString( 'https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=overview', $html );
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster-extensions">Restore it</a>', $html );
+		self::assertStringNotContainsString( 'https://example.test/wp-admin/admin.php?page=ran-booster-extensions', $html );
 	}
 
 	public function test_list_view_labels_unavailable_provider_and_disables_only_deployment_action(): void {
@@ -251,7 +251,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( '>Automatic</span>', $html );
 		self::assertStringContainsString( 'Branch · release', $html );
 		self::assertStringNotContainsString( 'Branch · release · Push-to-Deploy', $html );
-		self::assertStringContainsString( 'The saved Git provider is unavailable. <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=overview">Restore it</a> before deploying this package.', $html );
+		self::assertStringContainsString( 'The saved Git provider is unavailable. <a href="https://example.test/wp-admin/admin.php?page=ran-booster-extensions">Restore it</a> before deploying this package.', $html );
 		self::assertSame( 1, $this->status_badge_count( $html ) );
 		self::assertSame( 0, substr_count( $html, 'data-ran-booster-ui-badge' ) );
 		self::assertStringContainsString( 'Review package health, deploy saved branches', $html );

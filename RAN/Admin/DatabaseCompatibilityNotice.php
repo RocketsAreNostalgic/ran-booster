@@ -58,6 +58,7 @@ final class DatabaseCompatibilityNotice {
 			return DatabaseCompatibilityFailure::REQUIREMENT;
 		}
 
-		return $this->database->is_ready() ? null : DatabaseLifecycleFailure::REQUIREMENT;
+		// The notice names Troubleshooting once, in its own linked sentence, so it omits the exception text's pointer.
+		return $this->database->is_ready() ? null : DatabaseLifecycleFailure::SUMMARY;
 	}
 }

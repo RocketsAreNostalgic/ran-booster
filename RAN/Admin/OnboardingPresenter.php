@@ -267,14 +267,9 @@ final readonly class OnboardingPresenter {
 		}
 		foreach ( array_filter( $paused, static fn ( array $line ): bool => $line['lapsed'] ) as $line ) {
 			$items[] = array(
-				'label'    => sprintf(
-					'branch_sources' === $line['setting']
-						/* translators: %s: numbers of paused plugins and themes. */
-						? __( 'Branch sources were allowed for another site address: %s paused', 'ran-booster' )
-						/* translators: %s: numbers of paused plugins and themes. */
-						: __( 'Preview tracks were allowed for another site address: %s paused', 'ran-booster' ),
-					implode( ', ', array_column( $line['parts'], 'label' ) )
-				),
+				'label'    => 'branch_sources' === $line['setting']
+					? __( 'Branch sources were allowed for another site address', 'ran-booster' )
+					: __( 'Preview tracks were allowed for another site address', 'ran-booster' ),
 				'url'      => $line['url'],
 				'badge'    => __( 'Paused', 'ran-booster' ),
 				'critical' => false,

@@ -388,10 +388,14 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 				</p>
 		</div>
 		<div>
-			<p class="ran-booster-summary-grid__label"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></p>
-			<?php if ( $package_paused ) { ?>
-				<p class="ran-booster-package-summary__value"><?php esc_html_e( 'Paused', 'ran-booster' ); ?></p>
-			<?php } ?>
+			<p class="ran-booster-summary-grid__label">
+				<?php esc_html_e( 'Updates', 'ran-booster' ); ?>
+				<?php
+				if ( $package_paused ) {
+					\RAN\Admin\Component\StatusBadge::print_tone( __( 'Paused', 'ran-booster' ), 'warning' );
+				}
+				?>
+			</p>
 			<p class="ran-booster-package-summary__value"><?php echo esc_html( $automation_summary ); ?></p>
 			<p class="ran-booster-package-summary__meta"><?php esc_html_e( 'Source changes reset Automatic to Manual', 'ran-booster' ); ?></p>
 		</div>

@@ -85,19 +85,18 @@ $inventory = $onboarding['inventory'] ?? array(
 			</div>
 		</div>
 	</div>
-	<p class="ran-booster-overview-package-policy"><?php esc_html_e( 'Updates disabled:', 'ran-booster' ); ?> <?php echo esc_html( null === $inventory['disabled'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['disabled'] ); ?></p>
-	<?php foreach ( is_array( $onboarding['paused'] ?? null ) ? $onboarding['paused'] : array() as $overview_paused ) { ?>
-		<p class="ran-booster-overview-package-policy">
-		<?php
+	<p class="ran-booster-overview-package-policy"><?php esc_html_e( 'Updates disabled:', 'ran-booster' ); ?> <?php echo esc_html( null === $inventory['disabled'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['disabled'] ); ?>
+	<?php
+	foreach ( is_array( $onboarding['paused'] ?? null ) ? $onboarding['paused'] : array() as $overview_paused ) {
 		$overview_paused_parts = array();
 		foreach ( $overview_paused['parts'] as $overview_paused_part ) {
 			$overview_paused_parts[] = '<a href="' . esc_url( $overview_paused_part['url'] ) . '">' . esc_html( $overview_paused_part['label'] ) . '</a>';
 		}
 		/* translators: 1: linked source setting name; 2: linked numbers of paused plugins and themes. */
-		echo wp_kses_post( sprintf( __( '%1$s off: %2$s paused', 'ran-booster' ), '<a href="' . esc_url( $overview_paused['url'] ) . '">' . esc_html( $overview_paused['title'] ) . '</a>', implode( ', ', $overview_paused_parts ) ) );
-		?>
-		</p>
-	<?php } ?>
+		echo '<br>' . wp_kses_post( sprintf( __( '%1$s off: %2$s paused', 'ran-booster' ), '<a href="' . esc_url( $overview_paused['url'] ) . '">' . esc_html( $overview_paused['title'] ) . '</a>', implode( ', ', $overview_paused_parts ) ) );
+	}
+	?>
+	</p>
 </div></div></section>
 <section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-providers"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 	<h3 class="ran-booster-overview-card-title" id="ran-booster-overview-providers"><?php esc_html_e( 'Git providers', 'ran-booster' ); ?></h3>

@@ -757,7 +757,7 @@ final class OnboardingViewTest extends TestCase {
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/div/a[2]/@href)' ) );
 			self::assertSame( '/themes', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/div/a[1]/@href)' ) );
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-themes-create', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/div/a[2]/@href)' ) );
-			self::assertSame( 1.0, $xpath->evaluate( 'count(//p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-package-policy ")])' ), 'No paused lines without paused counts.' );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(//p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-package-policy ")]/br)' ), 'No paused lines without paused counts.' );
 		}
 
 		$html     = $this->render_view(
@@ -791,9 +791,12 @@ final class OnboardingViewTest extends TestCase {
 		);
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
-		$xpath  = new \DOMXPath( $document );
-		$paused = '(//p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-package-policy ")])[2]';
-		self::assertSame( 'Branch sources off: 3 plugins, 1 theme paused', preg_replace( '/\s+/', ' ', trim( (string) $xpath->evaluate( 'string(' . $paused . ')' ) ) ) );
+		$xpath = new \DOMXPath( $document );
+		// One block under one divider: "Updates disabled", then a line per pausing switch.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-package-policy ")])' ) );
+		$paused = '//p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-package-policy ")]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $paused . '/br)' ) );
+		self::assertSame( 'Updates disabled: 2 Branch sources off: 3 plugins, 1 theme paused', preg_replace( '/\s+/', ' ', trim( (string) $xpath->evaluate( 'string(' . $paused . ')' ) ) ) );
 		foreach ( array( '/settings#branch', '/plugins?paused', '/themes?paused' ) as $index => $href ) {
 			self::assertSame( $href, $xpath->evaluate( 'string(' . $paused . '/a[' . ( $index + 1 ) . ']/@href)' ) );
 		}

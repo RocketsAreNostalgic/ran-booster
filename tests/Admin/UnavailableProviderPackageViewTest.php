@@ -390,14 +390,21 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		);
 		$package_paused    = array( $package->get_identifier() );
 
+		$pill    = '/ran-booster-package-row__update-state">\s*<span class="ran-booster-package-row__state-label">Updates<\/span>\s*<span [^>]*>Automatic<\/span>\s*<span [^>]*data-ran-booster-badge-intent="medium">Paused<\/span>\s*<\/p>/';
+		$summary = static fn ( string $html ): string => preg_match( '/ran-booster-package-row__summary">(.*?)<p class="ran-booster-package-row__management">/s', $html, $matches ) ? $matches[1] : '';
+		$paused  = '<p class="ran-booster-package-row__status-line">Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>.</p>';
+
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'data-ran-booster-badge-intent="medium">Paused</span>', $html );
-		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>.</p>', $html );
+		// The Paused pill sits beside the Updates mode, not in the status slot.
+		self::assertMatchesRegularExpression( $pill, $html );
+		self::assertSame( 1, substr_count( $html, '>Paused</span>' ) );
+		self::assertStringNotContainsString( 'Paused', $summary( $html ) );
+		self::assertStringContainsString( $paused, $html );
 
-		// A failed deployment keeps its own badge and guidance while paused.
+		// A failed deployment keeps its own badge and guidance; the pill stays.
 		$package_activity['items'][ (string) $package->get_identifier() ] = array(
 			'latest'          => $this->attempt( 2, 'failed', null ),
 			'last_successful' => null,
@@ -405,37 +412,40 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
-		self::assertStringNotContainsString( '>Paused</span>', $html );
+		self::assertMatchesRegularExpression( $pill, $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-badge>Failed</span>', $summary( $html ) );
 		self::assertStringContainsString( 'The latest branch deployment failed.', $html );
 
-		// A run the pause itself refused stays Paused.
+		// A run the pause itself refused does not show Failed.
 		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 2, 'failed', null, outcome_code: 'source_paused' );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'data-ran-booster-badge-intent="medium">Paused</span>', $html );
-		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>.</p>', $html );
+		self::assertMatchesRegularExpression( $pill, $html );
+		self::assertStringNotContainsString( 'Failed', $summary( $html ) );
+		self::assertStringContainsString( $paused, $html );
 
 		// A queued deployment shows its badge, and the row still says why it will not run.
 		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 3, 'queued', null );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
-		self::assertStringNotContainsString( '>Paused</span>', $html );
-		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>.</p>', $html );
+		self::assertMatchesRegularExpression( $pill, $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-badge>Queued</span>', $summary( $html ) );
+		self::assertStringContainsString( $paused, $html );
 		$package_activity['items'] = array();
 
-		// A release failure keeps its badge and guidance; an ordinary release badge does not outrank Paused.
+		// A release badge keeps the status slot; a release failure also keeps its guidance.
 		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		foreach ( array(
 			'error'   => array( 'Needs attention', 'The release assets are invalid.' ),
-			'pending' => array( 'Paused', 'Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-prerelease_sources">site setting</a>.' ),
+			'pending' => array( 'Update available', 'Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-prerelease_sources">site setting</a>.' ),
 		) as $tone => [ $badge, $line ] ) {
 			$package_extension_rows = array(
 				(string) $package->get_identifier() => array(
 					'badges' => array(
 						array(
-							'label' => 'error' === $tone ? 'Needs attention' : 'Update available',
+							'label' => $badge,
 							'tone'  => $tone,
 						),
 					),
@@ -445,11 +455,17 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 			$html = (string) ob_get_clean();
-			self::assertStringContainsString( '>' . $badge . '</span>', $html, $tone );
+			self::assertMatchesRegularExpression( $pill, $html, $tone );
+			self::assertStringContainsString( '>' . $badge . '</span>', $summary( $html ), $tone );
 			self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">' . $line . '</p>', $html, $tone );
 		}
 		$package->set_source( PackageSource::BRANCH, 3 );
 		$package_extension_rows = array();
+		$package_paused         = array();
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( '>Paused</span>', $html, 'An unpaused row has no pill.' );
 
 		$package_provider_settings = array(
 			'default_provider' => 'temporarily-offline',
@@ -465,7 +481,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/id="ran-booster-package-operation-heading".*data-ran-booster-ui-notice-intent="warning">.*<p>Updates are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\.<\/p>.*class="ran-booster-package-operation-settings__actions"/s', $html );
 		self::assertMatchesRegularExpression( '/title="Updates are paused by a site setting\."[^>]*data-ran-booster-reinstall-capable="0"/s', $html );
 		self::assertStringContainsString( 'role="tooltip" hidden>Updates are paused by a site setting.</span>', $html );
-		self::assertMatchesRegularExpression( '/Updates<\/p>\s*<p class="ran-booster-package-summary__value">Paused<\/p>\s*<p class="ran-booster-package-summary__value">Automatic<\/p>/', $html );
+		self::assertMatchesRegularExpression( '/summary-grid__label">\s*Updates\s*<span [^>]*data-ran-booster-badge-intent="medium">Paused<\/span>\s*<\/p>\s*<p class="ran-booster-package-summary__value">Automatic<\/p>/', $html );
 
 		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$package_source = array(
@@ -487,7 +503,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringNotContainsString( 'Updates are paused', $html );
-		self::assertStringNotContainsString( 'summary__value">Paused<', $html );
+		self::assertMatchesRegularExpression( '/summary-grid__label">\s*Updates\s*<\/p>/', $html );
 		self::assertStringContainsString( 'data-ran-booster-reinstall-capable="1"', $html );
 	}
 

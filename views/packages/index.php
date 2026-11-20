@@ -295,8 +295,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			$package_extension_row     = isset( $package_extension_rows[ $package_identifier ] ) && is_array( $package_extension_rows[ $package_identifier ] )
 				? $package_extension_rows[ $package_identifier ]
 				: array();
-			$package_is_paused         = in_array( $package->get_identifier(), $package_paused, true )
-				&& ! in_array( 'error', array_column( array_filter( (array) ( $package_extension_row['badges'] ?? array() ), 'is_array' ), 'tone' ), true );
+			$package_is_paused         = in_array( $package->get_identifier(), $package_paused, true );
 			$package_actions           = isset( $package_extension_actions[ $package_identifier ] ) && is_array( $package_extension_actions[ $package_identifier ] )
 				? $package_extension_actions[ $package_identifier ]
 				: array();
@@ -402,7 +401,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			} elseif ( ! $release_managed
 				&& ! $policy_disabled
 				&& ( in_array( $latest_activity_state, array( 'queued', 'running', 'failed' ), true ) || $update_needs_attention )
-				// A run the pause itself refused is not a failure to show above Paused.
+				// A run the pause itself refused is not a failure; the Paused pill says why.
 				&& ! ( $package_is_paused && \RAN\Deployment\DeploymentOutcome::CODE_SOURCE_PAUSED === ( $latest_activity['outcome_code'] ?? null ) )
 			) {
 				$prominent_status          = array(
@@ -410,12 +409,6 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					'tone'  => $activity_badge_variants[ $latest_activity_state ] ?? 'error',
 				);
 				$prominent_status_activity = true;
-			} elseif ( $package_is_paused ) {
-				// Not set when an error-toned extension badge, such as a release failure, needs its own guidance.
-				$prominent_status = array(
-					'label' => __( 'Paused', 'ran-booster' ),
-					'tone'  => 'warning',
-				);
 			} else {
 				foreach ( $package_extension_row['badges'] ?? array() as $extension_badge ) {
 					if ( is_array( $extension_badge )
@@ -456,8 +449,11 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				$status_line = __( 'The saved Git provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
 			} elseif ( ! $credential_available ) {
 				$status_line = __( 'The saved repository credential is unavailable.', 'ran-booster' );
-			} elseif ( $package_is_paused && ! ( $prominent_status_activity && ( $update_needs_attention || 'failed' === $latest_activity_state ) ) ) {
-				// A failed or review-needed deployment keeps its own guidance.
+			} elseif ( $package_is_paused
+				&& ! ( $prominent_status_activity && ( $update_needs_attention || 'failed' === $latest_activity_state ) )
+				&& ! in_array( 'error', array_column( array_filter( (array) ( $package_extension_row['badges'] ?? array() ), 'is_array' ), 'tone' ), true )
+			) {
+				// A failed or review-needed deployment, or a release failure, keeps its own guidance.
 				$status_line = sprintf(
 					/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing. */
 					esc_html__( 'Updates are paused by a %1$ssite setting%2$s.', 'ran-booster' ),
@@ -517,6 +513,9 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					<p class="ran-booster-package-row__state ran-booster-package-row__update-state">
 						<span class="ran-booster-package-row__state-label"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></span>
 						<?php \RAN\Admin\Component\StatusBadge::print_intent( $automation_state_label, $automation_state_intent ); ?>
+						<?php if ( $package_is_paused ) { ?>
+							<?php \RAN\Admin\Component\StatusBadge::print_tone( __( 'Paused', 'ran-booster' ), 'warning' ); ?>
+						<?php } ?>
 					</p>
 				</div>
 			</td>

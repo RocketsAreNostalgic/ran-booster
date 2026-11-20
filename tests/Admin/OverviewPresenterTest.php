@@ -361,7 +361,7 @@ final class OverviewPresenterTest extends TestCase {
 			);
 			unset( $GLOBALS['ran_booster_general_preference_cached_option'] );
 			$attention = $this->present( $this->plugins( array() ), $this->themes( array() ), paused_counts: $counts )['attention'];
-			self::assertSame( array( 'Branch sources were allowed for another site address: 3 plugins, 1 theme paused' ), array_column( $attention['items'], 'label' ) );
+			self::assertSame( array( 'Branch sources were allowed for another site address' ), array_column( $attention['items'], 'label' ), 'The count lives only in the card.' );
 			self::assertSame( array( 'Paused' ), array_column( $attention['items'], 'badge' ) );
 			self::assertSame( array( false ), array_column( $attention['items'], 'critical' ) );
 			self::assertStringEndsWith( 'page=ran-booster-settings#ran-booster-general-branch_sources', $attention['items'][0]['url'] );

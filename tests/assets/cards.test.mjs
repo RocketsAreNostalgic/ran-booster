@@ -149,6 +149,9 @@ function fixture({
 			if (selector === '.ran-wp-ui-notice') {
 				return !!this.staticNotice;
 			}
+			if (selector === '.ran-wp-ui-notice__description') {
+				return !!this.staticDescription;
+			}
 			if (selector.startsWith('.ran-booster-card')) {
 				return this.label !== null;
 			}
@@ -166,6 +169,9 @@ function fixture({
 		querySelectorAll(selector) {
 			if (selector.startsWith(':scope > ')) {
 				const part = selector.slice(9);
+				if (part.startsWith('.')) {
+					return this.children.filter((n) => n.matches(part));
+				}
 				return this.children.filter((n) => {
 					const match = part.match(
 						/^(details|summary|div|span)?(?:\[([^\]]+)\])?$/
@@ -563,6 +569,33 @@ test('a static Notice is never mounted and keeps its content, focus and intent',
 	assert.equal(paragraph.firstChild, link);
 	assert.equal(host.getAttribute('tabindex'), '-1');
 	assert.equal(f.doc.activeElement, link);
+});
+
+test('a static Notice swapped in mid-settle, without its class yet, is never mounted', () => {
+	const f = fixture();
+	// htmx has copied the replaced element's empty class onto the host; the
+	// description keeps the static marker.
+	const settling = f.notice();
+	settling.content.staticDescription = true;
+	// The mountable PHP notices (unsupported multisite, plugin-row failure)
+	// have a bare content element and still mount.
+	const mountable = f.notice();
+	mountable.host.setAttribute('id', 'mountable');
+	f.run();
+	f.flush();
+	f.emit('htmx:load', settling.host);
+	f.flush();
+	assert.equal(
+		settling.host.getAttribute('data-ran-booster-ui-mounted'),
+		null
+	);
+	assert.equal(settling.host.firstChild, settling.content);
+	assert.equal(settling.content.firstChild, settling.paragraph);
+	assert.equal(
+		mountable.host.getAttribute('data-ran-booster-ui-mounted'),
+		''
+	);
+	assert.deepEqual(f.counts(), { renders: 1, unmounts: 0 });
 });
 
 test('only explicitly owned global Notice hosts mount outside Booster ancestry', () => {

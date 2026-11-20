@@ -1158,7 +1158,10 @@ final class PackageOperationServiceTest extends TestCase {
 			$plugins->exact_slug = true;
 			$themes->exact_slug  = true;
 			$service             = $this->service( $plugins, $themes, new OperationCoordinator() );
-			foreach ( array( 'plugin' => $plugins, 'theme' => $themes ) as $type => $repository ) {
+			foreach ( array(
+				'plugin' => $plugins,
+				'theme'  => $themes,
+			) as $type => $repository ) {
 				$input = $this->input(
 					'install-' . $type,
 					array(

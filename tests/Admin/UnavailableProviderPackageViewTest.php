@@ -416,6 +416,16 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-activity-badge>Failed</span>', $summary( $html ) );
 		self::assertStringContainsString( 'The latest branch deployment failed.', $html );
 
+		// A deployment awaiting review keeps its own badge and guidance; the pill stays.
+		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 2, 'needs_attention', null );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html = (string) ob_get_clean();
+		self::assertMatchesRegularExpression( $pill, $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-badge>', $summary( $html ) );
+		self::assertStringContainsString( 'awaiting operator review', $html );
+		self::assertStringNotContainsString( $paused, $html );
+
 		// A run the pause itself refused does not show Failed.
 		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 2, 'failed', null, outcome_code: 'source_paused' );
 		ob_start();

@@ -3428,7 +3428,7 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$unknown_readiness_html = (string) ob_get_clean();
-		self::assertStringContainsString( 'Booster can&#039;t manage this webhook here; manual updates still work.', $unknown_readiness_html );
+		self::assertStringContainsString( '<p>Booster can&#039;t manage this webhook here.</p>', $unknown_readiness_html );
 		self::assertStringNotContainsString( 'public HTTPS URL', $unknown_readiness_html );
 		self::assertStringNotContainsString( 'This site is not ready to receive Git provider deliveries.', $unknown_readiness_html );
 	}

@@ -10,14 +10,19 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentCheckFailure;
 use RAN\Deployment\DeploymentOutcome;
+use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\PackageSourceGate;
+use RAN\Package;
 use RAN\PackageSource;
+use RAN\Tests\Support\CapturesBoosterLog;
 
 require_once __DIR__ . '/../Settings/GeneralPreferenceStoreWordPressFunctions.php';
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
 final class PackageSourceGateTest extends TestCase {
+
+	use CapturesBoosterLog;
 
 	/** @return iterable<string, array{?string, string, bool}> A null environment type is one not set explicitly. */
 	public static function sites(): iterable {
@@ -130,6 +135,91 @@ final class PackageSourceGateTest extends TestCase {
 		self::assertSame( array( ! $branch, $branch ), $paused( false ) );
 		unset( $GLOBALS['wpdb'] );
 		self::assertSame( array( ! $branch, $branch ), $paused( true ), 'A fence reads its own constant before the database.' );
+	}
+
+	public function test_a_package_reads_its_release_channel_only_where_preview_tracks_are_paused(): void {
+		// No database: any channel read fails and is logged, so the log counts the reads.
+		unset( $GLOBALS['wpdb'] );
+		$branch   = $this->package( PackageSource::BRANCH );
+		$release  = $this->package( PackageSource::RELEASE_ASSET );
+		$disabled = $this->package( PackageSource::RELEASE_ASSET, DeploymentPolicy::DISABLED );
+		$this->start_log_capture();
+		try {
+			$this->site( 'local', 'https://example.com' );
+			self::assertSame( array( false, false ), array( PackageSourceGate::pauses_package( $branch, 'plugin' ), PackageSourceGate::pauses_package( $release, 'plugin' ) ), 'A development site pauses nothing.' );
+
+			$this->site( 'production', 'https://example.com' );
+			$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize(
+				array(
+					'prerelease_sources'         => true,
+					'prerelease_sources_address' => 'example.com',
+				)
+			);
+			self::assertSame( array( true, false ), array( PackageSourceGate::pauses_package( $branch, 'theme' ), PackageSourceGate::pauses_package( $release, 'theme' ) ), 'Allowed Preview tracks need no channel.' );
+			self::assertSame( array(), $this->captured_log_lines() );
+
+			$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( array() );
+			unset( $GLOBALS['ran_booster_general_preference_cached_option'] );
+			self::assertFalse( PackageSourceGate::pauses_package( $disabled, 'plugin' ), 'A Disabled package never counts.' );
+			self::assertSame( array(), $this->captured_log_lines() );
+			self::assertFalse( PackageSourceGate::pauses_package( $release, 'plugin' ), 'An unreadable channel is not paused.' );
+			self::assertFalse( PackageSourceGate::pauses_package( $release, 'theme' ) );
+			$lines = $this->captured_log_lines();
+			self::assertCount( 1, $lines, 'An unreadable channel is logged once per request.' );
+			self::assertStringContainsString( 'Package pause state unavailable. {"operation":"package_pause_state","outcome_code":"configuration_unavailable"', $lines[0] );
+		} finally {
+			$this->stop_log_capture();
+		}
+	}
+
+	public function test_only_a_preview_track_release_package_is_paused_by_the_preview_setting(): void {
+		$this->site( 'production', 'https://example.com' );
+		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize(
+			array(
+				'branch_sources'         => true,
+				'branch_sources_address' => 'example.com',
+			)
+		);
+		$store = $this->createStub( \RAN\WordPress\ManagedReleaseStore::class );
+		$store->method( 'configuration' )->willReturnCallback(
+			static fn ( string ...$target ): ?\RAN\WordPress\ManagedReleaseConfiguration => 'none' === $target[1] ? null : new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php', $target[1] )
+		);
+		( new \ReflectionProperty( PackageSourceGate::class, 'releases' ) )->setValue( null, $store );
+
+		self::assertTrue( PackageSourceGate::pauses_package( $this->package( PackageSource::RELEASE_ASSET, identifier: 'prerelease' ), 'plugin' ) );
+		self::assertFalse( PackageSourceGate::pauses_package( $this->package( PackageSource::RELEASE_ASSET, identifier: 'stable' ), 'plugin' ) );
+		self::assertFalse( PackageSourceGate::pauses_package( $this->package( PackageSource::RELEASE_ASSET, identifier: 'none' ), 'theme' ), 'No stored configuration is not paused.' );
+		self::assertFalse( PackageSourceGate::pauses_package( $this->package( PackageSource::BRANCH ), 'plugin' ), 'Allowed branch sources pause no branch package.' );
+	}
+
+	public function test_an_unreadable_setting_is_logged_once_per_source(): void {
+		$this->site( 'production', 'https://example.com' );
+		unset( $GLOBALS['wpdb'] );
+		$this->start_log_capture();
+		try {
+			self::assertTrue( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ) );
+			self::assertTrue( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ) );
+			self::assertTrue( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, 'prerelease', true ) );
+			$lines = $this->captured_log_lines();
+			self::assertCount( 2, $lines );
+			self::assertStringContainsString( 'Package source setting unreadable; paused. {"source":"branch_sources","state":"paused","exception_class":"RuntimeException"', $lines[0] );
+			self::assertStringContainsString( '{"source":"prerelease_sources","state":"paused"', $lines[1] );
+
+			( new \ReflectionProperty( PackageSourceGate::class, 'logged_unreadable' ) )->setValue( null, array() );
+			PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true );
+			self::assertCount( 3, $this->captured_log_lines() );
+		} finally {
+			$this->stop_log_capture();
+		}
+	}
+
+	private function package( PackageSource $source, DeploymentPolicy $policy = DeploymentPolicy::MANUAL, string $identifier = 'example/example.php' ): Package {
+		$package = $this->createStub( Package::class );
+		$package->method( 'get_source' )->willReturn( $source );
+		$package->method( 'get_deployment_policy' )->willReturn( $policy );
+		$package->method( 'get_identifier' )->willReturn( $identifier );
+
+		return $package;
 	}
 
 	private function site( ?string $environment, string $home ): void {

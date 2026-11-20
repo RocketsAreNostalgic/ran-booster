@@ -3004,6 +3004,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'package_view',
 				'package_extension_panels',
 				'package_source',
+				'package_paused',
 				'repository_branch_check_outcome',
 				'repository_branch_check_evidence',
 			),
@@ -3244,7 +3245,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'provider'  => 'BB',
 			'source'    => 'release_asset',
 			'policy'    => 'automatic',
-			'attention' => 'paused',
+			'attention' => 'stale',
 		);
 		$branch  = $this->managed_package(
 			'plugin' === $type ? 'alpha/alpha.php' : 'alpha-theme',
@@ -3294,6 +3295,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		self::assertSame( array( 'Bitbucket', 'GitHub' ), array_column( $data['package_provider_options'], 'label' ) );
 		self::assertSame( array( $release->get_identifier() ), array_map( static fn ( Package $package ): mixed => $package->get_identifier(), $data['packages'] ) );
+
+		$_GET = array( 'attention' => 'paused' );
+		$data = 'plugin' === $type ? $result->get_plugins()['data'] : $result->get_themes()['data'];
+		self::assertSame( 'paused', $data['package_list_state']['attention'] );
+		self::assertSame( array(), $data['packages'], 'A development site pauses nothing.' );
 	}
 
 	public function test_repeated_package_index_rendering_uses_fresh_repository_readback(): void {

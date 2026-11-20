@@ -251,7 +251,8 @@ class Dashboard {
 				$this->overview_activity,
 				$this->storage_summary(),
 				$this->provider_settings->overview_provider_facts(),
-				$this->credential_expiry_notice?->overview_summary()
+				$this->credential_expiry_notice?->overview_summary(),
+				$this->paused_counts()
 			);
 		}
 
@@ -685,7 +686,41 @@ class Dashboard {
 			'native_update_url'    => $url,
 			'development_site'     => \RAN\Deployment\PackageSourceGate::is_development_site(),
 			'site_address'         => \RAN\Settings\GeneralPreferenceStore::site_address(),
+			'paused_counts'        => $this->paused_counts(),
 		);
+	}
+
+	/** @return array<string,array{plugin:int,theme:int}> Managed packages each source setting pauses here. */
+	private function paused_counts(): array {
+		$empty  = array_fill_keys( array( 'branch_sources', 'prerelease_sources' ), array_fill_keys( array( 'plugin', 'theme' ), 0 ) );
+		$counts = $empty;
+		if ( \RAN\Deployment\PackageSourceGate::allows( 'branch_sources' ) && \RAN\Deployment\PackageSourceGate::allows( 'prerelease_sources' ) ) {
+			return $empty; // Nothing can be paused, so no package read.
+		}
+		try {
+			$managed = array(
+				'plugin' => $this->plugins->all_booster_plugins(),
+				'theme'  => $this->themes->all_booster_themes(),
+			);
+			foreach ( $managed as $type => $packages ) {
+				foreach ( $packages as $package ) {
+					if ( \RAN\Deployment\PackageSourceGate::pauses_package( $package, $type ) ) {
+						++$counts[ PackageSource::BRANCH === $package->get_source() ? 'branch_sources' : 'prerelease_sources' ][ $type ];
+					}
+				}
+			}
+		} catch ( PackageStorageFailure | \InvalidArgumentException $failure ) {
+			BoosterLogger::log_exception(
+				'Paused package count unavailable.',
+				$failure,
+				array(
+					'operation'    => 'paused_counts',
+					'outcome_code' => 'packages_unavailable',
+				)
+			);
+			return $empty; // No partial count.
+		}
+		return $counts;
 	}
 
 	/** @param array<string,mixed> $request */
@@ -1118,8 +1153,8 @@ class Dashboard {
 			'policy'    => in_array( $policy, array( DeploymentPolicy::AUTOMATIC->value, DeploymentPolicy::MANUAL->value, DeploymentPolicy::DISABLED->value ), true )
 				? $policy
 				: '',
-			// The decisive update outcome is failed or needs review (#948); derived at render, never a package list.
-			'attention' => 'failed' === $attention ? $attention : '',
+			// Failed or needs review (#948), or paused by a source setting (#888); derived at render, never a package list.
+			'attention' => in_array( $attention, array( 'failed', 'paused' ), true ) ? $attention : '',
 		);
 	}
 

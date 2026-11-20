@@ -234,8 +234,9 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	public function test_unavailable_reinstall_is_natively_disabled_until_javascript_guards_it(): void {
-		$settings_url = 'https://example.test/wp-admin/admin.php?page=ran-booster';
-		$cases        = array(
+		$settings_url   = 'https://example.test/wp-admin/admin.php?page=ran-booster';
+		$package_paused = false;
+		$cases          = array(
 			'disabled policy'     => array( 'disabled', true, false ),
 			'unavailable route'   => array( 'manual', false, false ),
 			'available reinstall' => array( 'manual', true, true ),
@@ -253,6 +254,16 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertSame( ! $available, str_contains( $tag, 'aria-describedby="ran-booster-reinstall-reason"' ), $label );
 			self::assertStringContainsString( $available ? 'aria-disabled="false"' : 'aria-disabled="true"', $tag, $label );
 		}
+
+		// A paused package stays unavailable whatever the policy select says, with the pause as its reason.
+		$package_paused      = true;
+		$package_paused_text = 'Updates are paused by a <a href="/settings">site setting</a>.';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/reinstall.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'data-ran-booster-reinstall-capable="0"', $html );
+		self::assertStringContainsString( 'title="Updates are paused by a site setting."', $html );
+		self::assertStringContainsString( 'role="tooltip" hidden>Updates are paused by a site setting.</span>', $html );
 	}
 
 	public function test_failed_package_submission_marks_form_for_leave_warning(): void {

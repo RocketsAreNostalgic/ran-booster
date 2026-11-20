@@ -44,6 +44,8 @@ $package_list_state           = isset( $package_list_state ) && is_array( $packa
 		'attention' => '',
 	);
 $package_attention_enabled    = true === ( $package_attention_enabled ?? false );
+$package_paused               = isset( $package_paused ) && is_array( $package_paused ) ? $package_paused : array();
+$package_settings_linked      = current_user_can( 'manage_options' );
 $package_list_total           = isset( $package_list_total ) && is_int( $package_list_total )
 	? max( count( $packages ), $package_list_total )
 	: count( $packages );
@@ -170,9 +172,10 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				<option value="disabled" <?php selected( 'disabled', $package_list_state['policy'] ); ?>><?php esc_html_e( 'Disabled', 'ran-booster' ); ?></option>
 			</select>
 			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-attention-filter"><?php esc_html_e( 'Filter by status', 'ran-booster' ); ?></label>
-			<select id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-attention-filter" name="attention"<?php disabled( ! $package_attention_enabled ); ?>>
+			<select id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-attention-filter" name="attention">
 				<option value=""><?php esc_html_e( 'All statuses', 'ran-booster' ); ?></option>
-				<option value="failed" <?php selected( 'failed', $package_list_state['attention'] ); ?>><?php esc_html_e( 'Update failed', 'ran-booster' ); ?></option>
+				<option value="failed" <?php selected( 'failed', $package_list_state['attention'] ); ?><?php disabled( ! $package_attention_enabled ); ?>><?php esc_html_e( 'Update failed', 'ran-booster' ); ?></option>
+				<option value="paused" <?php selected( 'paused', $package_list_state['attention'] ); ?>><?php esc_html_e( 'Paused', 'ran-booster' ); ?></option>
 			</select>
 			<button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
 			<?php if ( $has_package_list_filters ) { ?>
@@ -292,6 +295,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			$package_extension_row     = isset( $package_extension_rows[ $package_identifier ] ) && is_array( $package_extension_rows[ $package_identifier ] )
 				? $package_extension_rows[ $package_identifier ]
 				: array();
+			$package_is_paused         = in_array( $package->get_identifier(), $package_paused, true );
 			$package_actions           = isset( $package_extension_actions[ $package_identifier ] ) && is_array( $package_extension_actions[ $package_identifier ] )
 				? $package_extension_actions[ $package_identifier ]
 				: array();
@@ -397,6 +401,8 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			} elseif ( ! $release_managed
 				&& ! $policy_disabled
 				&& ( in_array( $latest_activity_state, array( 'queued', 'running', 'failed' ), true ) || $update_needs_attention )
+				// A run the pause itself refused is not a failure; the Paused pill says why.
+				&& ! ( $package_is_paused && \RAN\Deployment\DeploymentOutcome::CODE_SOURCE_PAUSED === ( $latest_activity['outcome_code'] ?? null ) )
 			) {
 				$prominent_status          = array(
 					'label' => $activity_state_labels[ $latest_activity_state ] ?? $latest_activity_state,
@@ -438,10 +444,23 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					__( 'Branch · %s', 'ran-booster' ),
 					'' !== $package->get_branch() ? $package->get_branch() : __( 'repository default', 'ran-booster' )
 				);
+			$status_line_html = false;
 			if ( $provider_unavailable ) {
 				$status_line = __( 'The saved Git provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
 			} elseif ( ! $credential_available ) {
 				$status_line = __( 'The saved repository credential is unavailable.', 'ran-booster' );
+			} elseif ( $package_is_paused
+				&& ! ( $prominent_status_activity && ( $update_needs_attention || 'failed' === $latest_activity_state ) )
+				&& ! in_array( 'error', array_column( array_filter( (array) ( $package_extension_row['badges'] ?? array() ), 'is_array' ), 'tone' ), true )
+			) {
+				// A failed or review-needed deployment, or a release failure, keeps its own guidance.
+				$status_line = sprintf(
+					/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'Updates are paused by a %1$ssite setting%2$s.', 'ran-booster' ),
+					$package_settings_linked ? '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-general-' . ( $release_managed ? 'prerelease_sources' : 'branch_sources' ) ) ) . '">' : '',
+					$package_settings_linked ? '</a>' : ''
+				);
+				$status_line_html = true;
 			} elseif ( '' !== ( $package_extension_row['status'] ?? '' ) ) {
 				$status_line = (string) $package_extension_row['status'];
 			} elseif ( $policy_disabled ) {
@@ -494,6 +513,9 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					<p class="ran-booster-package-row__state ran-booster-package-row__update-state">
 						<span class="ran-booster-package-row__state-label"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></span>
 						<?php \RAN\Admin\Component\StatusBadge::print_intent( $automation_state_label, $automation_state_intent ); ?>
+						<?php if ( $package_is_paused ) { ?>
+							<?php \RAN\Admin\Component\StatusBadge::print_tone( __( 'Paused', 'ran-booster' ), 'warning' ); ?>
+						<?php } ?>
 					</p>
 				</div>
 			</td>
@@ -513,7 +535,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					?>
 				<?php } ?>
 				<p class="ran-booster-package-row__management"><?php echo esc_html( $management_line ); ?></p>
-				<p class="ran-booster-package-row__status-line"><?php echo esc_html( $status_line ); ?></p>
+				<p class="ran-booster-package-row__status-line"><?php echo $status_line_html ? wp_kses_post( $status_line ) : esc_html( $status_line ); ?></p>
 			</td>
 			<td class="ran-booster-package-row__actions">
 				<div class="ran-booster-package-row__action-group">

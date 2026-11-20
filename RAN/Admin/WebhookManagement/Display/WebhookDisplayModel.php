@@ -636,7 +636,8 @@ final class WebhookDisplayModel {
 			'verified', 'configuration_confirmed' => __( 'Webhook management confirmed the recorded remote configuration. Correlate Git provider delivery history with the Git provider request ID in Booster Activity before treating signed delivery as established.', 'ran-booster' ),
 			'removed' => __( 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.', 'ran-booster' ),
 			'forgotten' => __( 'Webhook record cleared. Any webhook on the Git provider stays until you remove it there.', 'ran-booster' ),
-			'existing_hook_requires_reconfigure' => __( 'A webhook for this site already exists on the Git provider. Remove it there, then set up again.', 'ran-booster' ),
+			// One or several hooks already target this site: they need removing there, since retrying alone repeats the refusal.
+			'existing_hook_requires_reconfigure', 'matching_hooks_ambiguous' => __( 'A webhook for this site already exists on the Git provider. Remove it there, then set up again.', 'ran-booster' ),
 			'forbidden' => __( 'You are not permitted to manage this repository webhook. Nothing was changed.', 'ran-booster' ),
 			'invalid_request' => __( 'The webhook request was invalid or expired. Nothing was changed; reload this repository and try again.', 'ran-booster' ),
 			'invalid_token' => __( 'Select one saved credential, then try again.', 'ran-booster' ),
@@ -648,7 +649,7 @@ final class WebhookDisplayModel {
 			'setup_compensated' => __( 'Webhook management could not verify the new remote hook, so it removed it. No webhook was established; setup may be tried again.', 'ran-booster' ),
 			'setup_compensation_incomplete' => __( 'Webhook management could not verify or safely remove the new remote hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
 			'setup_outcome_unknown' => __( 'Webhook management could not confirm whether setup changed the remote hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
-			'hook_inventory_unavailable', 'hook_inventory_invalid', 'hook_inventory_incomplete', 'matching_hooks_ambiguous' => __( 'Couldn\'t list this repository\'s webhooks on the Git provider. Nothing was changed. Try again.', 'ran-booster' ),
+			'hook_inventory_unavailable', 'hook_inventory_invalid', 'hook_inventory_incomplete' => __( 'Couldn\'t list this repository\'s webhooks on the Git provider. Nothing was changed. Try again.', 'ran-booster' ),
 			'setup_response_invalid' => __( 'The Git provider response did not identify the new hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
 			'preconfiguration_read_unavailable', 'reconfigure_readback_unavailable', 'reconfigure_outcome_unknown' => __( 'Webhook management could not confirm the remote hook state after the update request. Validate or inspect the hook at the Git provider before retrying an update.', 'ran-booster' ),
 			'reconfigure_failed' => __( 'The Git provider rejected the webhook update request. Validate or inspect the hook at the Git provider before retrying.', 'ran-booster' ),

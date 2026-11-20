@@ -32,21 +32,6 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 		<?php if ( 'edit' !== $source_choice_mode ) { ?>
 		<p class="ran-booster-section__description"><?php esc_html_e( 'Selecting it does not install the package.', 'ran-booster' ); ?></p>
 		<?php } ?>
-		<?php if ( 'create' === $source_choice_mode && true === ( $package_branch_paused ?? false ) ) { ?>
-		<div class="notice notice-warning inline ran-booster-package-source__guidance ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
-			<?php
-			$package_settings_linked = current_user_can( 'manage_options' );
-			echo wp_kses_post(
-				sprintf(
-					/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing. */
-					esc_html__( 'Branch installs are paused by a %1$ssite setting%2$s.', 'ran-booster' ),
-					$package_settings_linked ? '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-general-branch_sources' ) ) . '">' : '',
-					$package_settings_linked ? '</a>' : ''
-				)
-			);
-			?>
-		</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
-		<?php } ?>
 		<div class="notice notice-info inline ran-booster-package-source__guidance ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-source-repository-guidance <?php echo ! empty( $package_repository_ready ) ? 'hidden' : ''; ?>><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Choose a repository first.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 	</div>
 	<div class="ran-booster-source-choices<?php echo 'edit' === $source_choice_mode ? esc_attr( ' ran-booster-source-choices--navigation ' . \RAN\Admin\Component\SectionTabs::STRIP_CLASS ) : ''; ?>"<?php echo 'edit' === $source_choice_mode ? ' role="navigation" aria-label="' . esc_attr( __( 'Update source settings', 'ran-booster' ) ) . '"' : ''; ?>>

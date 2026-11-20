@@ -166,6 +166,21 @@ $managed_package_url        = '' === $managed_package_identifier
 					<div data-ran-booster-branch-install-actions>
 						<fieldset class="ran-booster-package-link-choice" <?php disabled( ! $package_mutation_available ); ?>>
 							<div class="ran-booster-settings-fields">
+								<?php if ( true === ( $package_branch_paused ?? false ) ) { ?>
+								<div class="notice notice-warning inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
+									<?php
+									$package_settings_linked = current_user_can( 'manage_options' );
+									echo wp_kses_post(
+										sprintf(
+											/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing. */
+											esc_html__( 'Branch installs are paused by a %1$ssite setting%2$s.', 'ran-booster' ),
+											$package_settings_linked ? '<a href="' . esc_url( add_query_arg( 'page', 'ran-booster-settings', $package_view->get_admin_url() ) . '#ran-booster-general-branch_sources' ) . '">' : '',
+											$package_settings_linked ? '</a>' : ''
+										)
+									);
+									?>
+								</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
+								<?php } ?>
 								<div class="ran-booster-settings-field ran-booster-settings-field--wide">
 									<label>
 										<input type="checkbox" name="ran_booster[dry-run]" aria-describedby="ran-booster-link-installed-help" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( '' !== $recovery_identifier || isset( $_POST['ran_booster']['dry-run'] ) ); ?>>

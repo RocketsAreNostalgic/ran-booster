@@ -397,6 +397,13 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertMatchesRegularExpression( '/data-ran-booster-ui-notice-intent="warning">.*<p>Updates are paused by a site setting\. <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">Settings<\/a><\/p>/s', $html );
+
+		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'page=ran-booster-settings#ran-booster-general-prerelease_sources">Settings</a>', $html, 'A paused release package links to Preview tracks.' );
 	}
 
 	public function test_theme_list_does_not_offer_or_display_plugin_activation_controls(): void {

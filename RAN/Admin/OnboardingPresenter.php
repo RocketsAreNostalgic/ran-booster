@@ -167,8 +167,9 @@ final readonly class OnboardingPresenter {
 	}
 
 	/**
-	 * Needs attention: each managed package's failed or uncertain Core update for its current adoption, then
-	 * credential reminders. Critical rows sort first; five are shown, and the count opens the hidden updates' filtered list.
+	 * Needs attention: each managed package's failed or uncertain Core update for its current adoption, one
+	 * row per package type paused by a site setting, then credential reminders. Critical rows sort first; five
+	 * are shown, and the count opens the hidden updates' filtered list.
 	 *
 	 * @param list<array{0:'plugin'|'theme',1:\RAN\Package}> $managed
 	 * @param array{status:string,total:?int,items:list<array{provider_label:string,label:string,badge_label:string,stage:string,url:string}>} $credentials

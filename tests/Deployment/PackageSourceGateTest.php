@@ -163,8 +163,9 @@ final class PackageSourceGateTest extends TestCase {
 			self::assertFalse( PackageSourceGate::pauses_package( $disabled, 'plugin' ), 'A Disabled package never counts.' );
 			self::assertSame( array(), $this->captured_log_lines() );
 			self::assertFalse( PackageSourceGate::pauses_package( $release, 'plugin' ), 'An unreadable channel is not paused.' );
+			self::assertFalse( PackageSourceGate::pauses_package( $release, 'theme' ) );
 			$lines = $this->captured_log_lines();
-			self::assertCount( 1, $lines );
+			self::assertCount( 1, $lines, 'An unreadable channel is logged once per request.' );
 			self::assertStringContainsString( 'Package pause state unavailable. {"operation":"package_pause_state","outcome_code":"configuration_unavailable"', $lines[0] );
 		} finally {
 			$this->stop_log_capture();

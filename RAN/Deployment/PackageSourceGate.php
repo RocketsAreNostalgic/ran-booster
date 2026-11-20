@@ -23,8 +23,11 @@ use RAN\WordPress\ManagedReleaseStore;
  */
 final class PackageSourceGate {
 
-	/** @var array<string, true> Overrides whose unreadable setting this request has already logged. */
+	/** @var array<string, true> Overrides, or the release channel, whose unreadable state this request has already logged. */
 	private static array $logged_unreadable = array();
+
+	/** One release store per request, so its storage checks run once rather than once per package. */
+	private static ?ManagedReleaseStore $releases = null;
 
 	/**
 	 * An environment type set explicitly, through the WP_ENVIRONMENT_TYPE constant or
@@ -81,7 +84,7 @@ final class PackageSourceGate {
 	/**
 	 * Whether this managed package is paused here. A Disabled package never counts. The cheap
 	 * answers come first, so only a release package on a site that pauses Preview tracks reads
-	 * its stored channel; an unreadable channel counts as not paused.
+	 * its stored channel; an unreadable channel counts as not paused and is logged once.
 	 *
 	 * @param string $type The managed package type, plugin or theme.
 	 */
@@ -96,8 +99,13 @@ final class PackageSourceGate {
 			return false;
 		}
 		try {
-			return 'prerelease' === ( new ManagedReleaseStore() )->configuration( $type, (string) $package->get_identifier() )?->channel();
-		} catch ( \Throwable $failure ) {
+			self::$releases ??= new ManagedReleaseStore();
+			return 'prerelease' === self::$releases->configuration( $type, (string) $package->get_identifier() )?->channel();
+		} catch ( \RuntimeException | \InvalidArgumentException $failure ) {
+			if ( isset( self::$logged_unreadable['release_channel'] ) ) {
+				return false;
+			}
+			self::$logged_unreadable['release_channel'] = true;
 			BoosterLogger::log_exception(
 				'Package pause state unavailable.',
 				$failure,

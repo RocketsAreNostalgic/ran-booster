@@ -67,8 +67,11 @@ final class WebhookDisplayModelTest extends TestCase {
 			self::assertStringNotContainsString( "'", $html, $code );
 		}
 		self::assertNull( WebhookDisplayModel::site_reason_message( 'unrecognized_reason', true ) );
-		// Storage and inventory failures outrank the address, whose sentence says manual updates still work.
+		// The database comes first; the inventory outranks storage, and every failure outranks the address, because the storage and address sentences say what still works.
 		self::assertSame( 'database_unavailable', WebhookDisplayModel::primary_site_reason( array( 'callback_requires_public_https', 'managed_packages_unavailable', 'database_unavailable' ) ) );
+		self::assertSame( 'database_unavailable', WebhookDisplayModel::primary_site_reason( array( 'secrets_storage_unavailable', 'database_unavailable' ) ) );
+		self::assertSame( 'managed_packages_unavailable', WebhookDisplayModel::primary_site_reason( array( 'secrets_storage_unavailable', 'managed_packages_unavailable' ) ) );
+		self::assertSame( 'managed_packages_unavailable', WebhookDisplayModel::primary_site_reason( array( 'callback_requires_public_https', 'secrets_storage_unavailable', 'managed_packages_unavailable' ) ) );
 		self::assertSame( 'secrets_storage_unavailable', WebhookDisplayModel::primary_site_reason( array( 'callback_requires_public_https', 'secrets_storage_unavailable' ) ) );
 		self::assertSame( 'callback_requires_public_https', WebhookDisplayModel::primary_site_reason( array( 'unrecognized_reason', 'callback_requires_public_https' ) ) );
 		self::assertNull( WebhookDisplayModel::primary_site_reason( array( 'unrecognized_reason' ) ) );

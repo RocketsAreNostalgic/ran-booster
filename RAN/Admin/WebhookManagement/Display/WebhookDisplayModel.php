@@ -110,12 +110,16 @@ final class WebhookDisplayModel {
 	}
 
 	/**
-	 * The one site reason a webhook screen shows: a storage or inventory failure outranks the address, whose sentence says manual updates still work.
+	 * The one site reason a webhook screen shows, most blocking first.
+	 *
+	 * The database comes first. The package inventory outranks secure storage,
+	 * whose sentence says public repositories still update manually. Every
+	 * failure outranks the address, whose sentence says manual updates still work.
 	 *
 	 * @param array<array-key, mixed> $codes
 	 */
 	public static function primary_site_reason( array $codes ): ?string {
-		foreach ( array( 'database_unavailable', 'secrets_storage_unavailable', 'managed_packages_unavailable', 'callback_requires_public_https' ) as $code ) {
+		foreach ( array( 'database_unavailable', 'managed_packages_unavailable', 'secrets_storage_unavailable', 'callback_requires_public_https' ) as $code ) {
 			if ( in_array( $code, $codes, true ) ) {
 				return $code;
 			}

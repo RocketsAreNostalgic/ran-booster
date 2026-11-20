@@ -1707,6 +1707,17 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'No remote hook was established', $interaction->outcome->message() );
 	}
 
+	public function test_an_existing_hook_refused_before_any_create_leaves_no_record(): void {
+		// Provider 1.0.0-beta.27 reports an existing hook at the callback URL as a plain failure, not an ambiguous outcome.
+		$gateway         = $this->gateway();
+		$gateway->result = $this->operation_result( 'failed', 'existing_hook_requires_reconfigure', null );
+		$store           = new OperationStoreFixture();
+
+		$this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->request(), 'valid' );
+
+		self::assertNull( $store->record );
+	}
+
 	public function test_failed_state_cannot_smuggle_a_verified_success_code_into_the_inline_response(): void {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operation_result( 'failed', 'verified' );

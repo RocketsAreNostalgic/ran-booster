@@ -327,7 +327,7 @@ blocks on the Card's bottom edge, so a margin on the last child of a nested
 group always computes to 0. Space after such a block must come from its
 container's padding or from the next sibling's top margin. Each Activity
 record's details cell keeps 12px (`--ran-booster-space-12`) of bottom padding
-below its disclosure (#765). The Support report evidence disclosure takes the Logging
+below its disclosure (#765). The Diagnostic report evidence disclosure takes the Logging
 disclosure's 16px (`--ran-booster-space-16`) top margin after its action
 (#746).
 
@@ -795,7 +795,7 @@ they apply to, and keeps Save and Apply in one predictable place.
 | Card footer band | Transporter Open and Create | Start, in the footer band |
 | Card footer band | Install plugin and theme, Package operation | Start, primary first; shown only for a Branch source |
 | Card footer band | Troubleshooting Logging capture actions | Start, Delete capture last |
-| Card footer band | Troubleshooting Diagnostics and Support report | Start, primary first |
+| Card footer band | Troubleshooting Diagnostics and Diagnostic report | Start, primary first |
 | Disclosure footer band | Repository Webhook management, inside the Webhook setup disclosure | Start, Remove last |
 | Heading row | Managed Plugins and Themes, Install another | End of the heading row |
 | Heading row | Overview, Return to onboarding | End of the heading row |

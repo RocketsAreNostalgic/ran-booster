@@ -1472,7 +1472,7 @@ details** and standing **Booster Core updates** information; nested **Technical
 details** contains bounded local declarations, implementation identities, API
 revisions and capability/credential-format names. These are claims, not publisher
 or remote-access verification, and contain no credential values or private paths.
-The copyable Support report uses the same safe installation snapshot as the page,
+The copyable Diagnostic report uses the same safe installation snapshot as the page,
 separately headed from diagnostic results. Initial and repeated full-page/enhanced
 renders retain this context without generic recovery links. Legitimate explicitly
 triggered recovery remains available through Core-owned operational routes.

@@ -61,7 +61,7 @@ final class DeploymentAdminPresenter {
 		echo '<div class="notice notice-error is-dismissible ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-background-failure-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global" data-ran-booster-notice-preference="failure" data-ran-booster-notice-state="' . esc_attr( $state ) . '"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><strong>'
 			. esc_html( __( 'RAN Booster automatic deployment failed:', 'ran-booster' ) ) . '</strong> '
 			. esc_html( $summary ) . ' '
-			. esc_html( (string) $primary['package_slug'] . ' (' . (string) $primary['provider_label'] . '): ' . DeploymentOutcomeMessage::for_code( (string) $primary['outcome_code'], $this->retained_branch_facts( (string) $primary['correlation_id'], (int) $primary['attempt_id'] ) ) )
+			. esc_html( (string) $primary['package_slug'] . ' (' . (string) $primary['provider_label'] . '): ' ) . wp_kses_post( DeploymentOutcomeMessage::for_code_html( (string) $primary['outcome_code'], $this->retained_branch_facts( (string) $primary['correlation_id'], (int) $primary['attempt_id'] ) ) )
 			. '</p><p><a class="button button-primary" href="' . esc_url( $this->activity_url( $primary ) ) . '">' . esc_html( __( 'Review deployment', 'ran-booster' ) ) . '</a>'
 			. $credential_link . ' <button type="button" class="button" data-ran-booster-notice-preference-mode="acknowledge">' . esc_html( __( 'Acknowledge this incident', 'ran-booster' ) ) . '</button></p></div>' . NoticeIcon::markup( 'error' ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every dynamic value is escaped above; NoticeIcon::markup() escapes its path data.
 	}
@@ -75,7 +75,7 @@ final class DeploymentAdminPresenter {
 		}
 		status_header( 400 );
 		/* translators: 1: safe deployment result, 2: random support reference, 3: activity page URL. */
-		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::for_code( $outcome_code, $this->retained_branch_facts( $reference, operation: $operation ) ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) );
+		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::for_code_html( $outcome_code, $this->retained_branch_facts( $reference, operation: $operation ) ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) );
 
 		return $this->outcome( 'error', 'ran_booster_deployment_failed', $message, $reference, $operation, $outcome_code );
 	}

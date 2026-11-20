@@ -287,7 +287,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 			$this->run_admin_init();
 			self::fail( 'The obsolete report destination must be rejected.' );
 		} catch ( \RuntimeException $exception ) {
-			self::assertStringContainsString( 'Invalid support report request', $exception->getMessage() );
+			self::assertStringContainsString( 'Invalid diagnostic report request', $exception->getMessage() );
 		}
 		self::assertSame( 0, $fixture['secrets']->validations );
 		self::assertSame( 0, $fixture['database']->upgrades );

@@ -161,7 +161,7 @@ $provider_attention         = array_filter(
 						sprintf(
 							/* translators: 1: opening link tag to Troubleshooting, or nothing; 2: closing link tag, or nothing. */
 							esc_html__( 'The managed package inventory is %1$sincomplete or unavailable%2$s.', 'ran-booster' ),
-							current_user_can( 'manage_options' ) ? '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting' ) ) . '">' : '',
+							current_user_can( 'manage_options' ) ? '<a href="' . esc_url( ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster&tab=troubleshooting' ) . '">' : '',
 							current_user_can( 'manage_options' ) ? '</a>' : ''
 						)
 					);

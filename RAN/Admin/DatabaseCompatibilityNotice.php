@@ -41,9 +41,9 @@ final class DatabaseCompatibilityNotice {
 				<?php
 				echo wp_kses_post(
 					sprintf(
-						/* translators: 1: opening link tag to Troubleshooting, or nothing; 2: closing link tag, or nothing. */
+						/* translators: 1: opening link tag to Troubleshooting; 2: closing link tag. */
 						esc_html__( 'Existing Booster data was left unchanged. Review %1$sTroubleshooting%2$s before re-enabling deployments.', 'ran-booster' ),
-						'<a href="' . esc_url( ( function_exists( 'is_network_admin' ) && is_network_admin() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster&tab=troubleshooting' ) . '">',
+						'<a href="' . esc_url( ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster&tab=troubleshooting' ) . '">',
 						'</a>'
 					)
 				);

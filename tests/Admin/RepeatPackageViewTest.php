@@ -1754,6 +1754,8 @@ final class RepeatPackageViewTest extends TestCase {
 
 		$none = $render( $base );
 		self::assertStringContainsString( 'No check recorded', $none );
+		self::assertMatchesRegularExpression( '#activity_package=%5B%22[^"&]*%22%2C%22plugin%22%2C%22[^"&]*%22%5D#', $none );
+		self::assertStringNotContainsString( 'activity_subject', $none );
 		self::assertStringNotContainsString( 'before the latest settings change', $none );
 	}
 

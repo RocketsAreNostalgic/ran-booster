@@ -282,7 +282,7 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 							sprintf(
 								/* translators: 1: opening link tag to Extensions, or nothing; 2: closing link tag, or nothing. */
 								esc_html__( 'Booster will not reinterpret this package as a branch deployment. Restore the update source %1$sadd-on%2$s to manage updates or unlink the package.', 'ran-booster' ),
-								current_user_can( 'manage_options' ) ? '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ) . '">' : '',
+								current_user_can( 'manage_options' ) ? '<a href="' . esc_url( add_query_arg( 'page', 'ran-booster-extensions', $admin_url ) ) . '">' : '',
 								current_user_can( 'manage_options' ) ? '</a>' : ''
 							)
 						);

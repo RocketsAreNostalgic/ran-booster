@@ -186,7 +186,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	public static function disabled_reason_states(): array {
 		$setup  = 'Set up the webhook to enable these actions.';
 		$choose = 'Choose a saved credential';
-		$manual = 'Managed operations are disabled for this repository. Do not retry Setup until both sides are reconciled.';
+		$manual = "Booster couldn't confirm this setup. Forget it, then set up again.";
 
 		return array(
 			'inactive panel'          => array(
@@ -225,7 +225,6 @@ final class WebhookManagementControllerTest extends TestCase {
 				array(
 					'setup'    => $manual,
 					'validate' => $manual,
-					'remove'   => $manual,
 				),
 			),
 			'already matches'         => array(
@@ -234,10 +233,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			),
 			'remote hook missing'     => array(
 				'remote_missing',
-				array(
-					'reconfigure' => 'Nothing to repair.',
-					'remove'      => 'The webhook is already missing from GitHub.',
-				),
+				array( 'reconfigure' => 'Nothing to repair.' ),
 			),
 			'removal pending'         => array(
 				'removal_pending',
@@ -1090,9 +1086,37 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 1, count( $gateway->mutation_calls ) );
 
 		$html = $this->render_panel( $gateway, $store );
-		self::assertStringContainsString( 'without a stable hook ID', $html );
+		self::assertStringContainsString( 'confirm this setup. Forget it, then set up again.', $html );
 		self::assertStringContainsString( 'value="setup"', $html );
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up</button>', $html );
+		self::assertStringContainsString( 'aria-disabled="false">Forget</button>', $html );
+
+		// Forget clears the record locally; the provider is never asked about a hook it can't identify.
+		require_once dirname( __DIR__, 2 ) . '/Logging/LoggingWordPressFunctions.php';
+		$directory = sys_get_temp_dir() . '/ran-booster-forget-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/secrets.json' );
+		$capture->start();
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
+		try {
+			$forget = $controller->handle_admin_post( $this->request( array( 'repository_webhook_management_operation' => 'forget' ) ), 'forget_nonce' );
+			$lines  = array_column( $capture->snapshot()['entries'], 'line' );
+		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			foreach ( (array) glob( $directory . '/*' ) as $path ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+				unlink( (string) $path );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+			rmdir( $directory );
+		}
+		self::assertStringContainsString( 'webhook_management_result=forgotten', $forget );
+		self::assertContains( '[ran-booster] Webhook record forget finished. {"operation":"forget","outcome_code":"forgotten","provider":"gh","state":"hook_unidentified"}', $lines );
+		self::assertNull( $store->record );
+		self::assertSame( array( 'forget', 'wh_0123456789abcdef01234567', 1, 'forget_nonce' ), end( $gateway->calls ) );
+		self::assertSame( 1, count( $gateway->mutation_calls ) );
+		self::assertStringContainsString( 'aria-disabled="false">Set up</button>', $this->render_panel( $gateway, $store ) );
 	}
 
 	public function test_setup_save_failure_falls_back_to_durable_orphan_evidence(): void {
@@ -1231,6 +1255,69 @@ final class WebhookManagementControllerTest extends TestCase {
 		foreach ( array( 'Repair', 'Validate', 'Remove' ) as $label ) {
 			self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">' . $label . '</button>', $html );
 		}
+	}
+
+	public function test_forget_needs_no_saved_credential_and_skips_the_required_credential_field(): void {
+		$gateway                        = $this->gateway();
+		$gateway->credentials_available = false;
+		$store                          = new OperationStoreFixture();
+		$store->record                  = new InstallationRecord( 'gh', '1234', 'owner/repository', InstallationRecord::unknown_hook_id(), 'credential_1', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/webhook', 'needs_verification', '2026-07-23T16:00:00Z', '2026-07-23T17:00:00Z' );
+
+		$html = $this->render_panel( $gateway, $store );
+		self::assertStringContainsString( ' formnovalidate aria-disabled="false">Forget</button>', $html );
+		self::assertSame( 1, substr_count( $html, 'formnovalidate' ), 'Only Forget skips the required credential field.' );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up</button>', $html );
+
+		$redirect = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
+			$this->request(
+				array(
+					'repository_webhook_management_operation' => 'forget',
+					'booster_credential_id' => '',
+				)
+			),
+			'forget_nonce'
+		);
+		self::assertStringContainsString( 'webhook_management_result=forgotten', $redirect );
+		self::assertNull( $store->record );
+		self::assertSame( array( array( 'forget', 'wh_0123456789abcdef01234567', 1, 'forget_nonce' ) ), $gateway->calls );
+	}
+
+	public function test_an_unreachable_site_can_forget_a_recorded_webhook_but_not_remove_it(): void {
+		$gateway                        = $this->gateway();
+		$gateway->site_unreachable      = true;
+		$gateway->credentials_available = false;
+		$store                          = new OperationStoreFixture();
+		$store->record                  = $this->record();
+		$controller                     = $this->controller( gateway: $gateway, store: $store );
+
+		$html = $this->render_panel( $gateway, $store );
+		self::assertStringContainsString( 'value="forget"', $html );
+		self::assertStringNotContainsString( 'value="remove"', $html );
+		self::assertStringContainsString( ' formnovalidate aria-disabled="false">Forget</button>', $html );
+		foreach ( array( 'Repair', 'Validate' ) as $label ) {
+			self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">' . $label . '</button>', $html );
+		}
+		self::assertSame( 2, substr_count( $html, '>This site needs a public HTTPS URL to receive webhooks.<' ) );
+
+		// Remove needs the provider to reach the site, and a Remove nonce never authorises Forget.
+		$remove = $controller->handle_admin_post( $this->request( array( 'repository_webhook_management_operation' => 'remove' ) ), 'valid' );
+		$stolen = $controller->handle_admin_post( $this->request( array( 'repository_webhook_management_operation' => 'forget' ) ), 'valid' );
+		self::assertStringContainsString( 'webhook_management_result=invalid_request', $remove );
+		self::assertStringContainsString( 'webhook_management_result=invalid_request', $stolen );
+		self::assertNotNull( $store->record );
+
+		// A reachable site forgets only a record without a hook ID.
+		$gateway->site_unreachable = false;
+		self::assertStringContainsString( 'webhook_management_result=invalid_request', $controller->handle_admin_post( $this->request( array( 'repository_webhook_management_operation' => 'forget' ) ), 'forget_nonce' ) );
+		self::assertNotNull( $store->record );
+		self::assertSame( array(), $gateway->calls );
+
+		$gateway->site_unreachable = true;
+		$forget                    = $controller->handle_admin_post( $this->request( array( 'repository_webhook_management_operation' => 'forget' ) ), 'forget_nonce' );
+		self::assertStringContainsString( 'webhook_management_result=forgotten', $forget );
+		self::assertNull( $store->record );
+		self::assertSame( array( array( 'forget', 'wh_0123456789abcdef01234567', 1, 'forget_nonce' ) ), $gateway->calls );
+		self::assertSame( array(), $gateway->mutation_calls );
 	}
 
 	public function test_check_records_configuration_without_claiming_signed_delivery(): void {
@@ -1408,6 +1495,22 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertSame( $current->to_array(), $store->record->to_array() );
 		self::assertStringContainsString( 'webhook_management_result=record_conflict', $redirect );
+	}
+
+	public function test_a_webhook_deleted_on_the_provider_is_removed_then_set_up_again(): void {
+		$gateway         = $this->gateway();
+		$gateway->result = $this->operation_result( 'succeeded', 'absence_confirmed', '77', delivery: 'absent' );
+		$store           = new OperationStoreFixture();
+		$store->record   = $this->record( 'remote_missing' );
+		$html            = $this->render_panel( $gateway, $store );
+		self::assertStringContainsString( 'This webhook was deleted on GitHub.', $html );
+		self::assertStringContainsString( 'aria-disabled="false">Remove</button>', $html );
+
+		$redirect = $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->request( array( 'repository_webhook_management_operation' => 'remove' ) ), 'valid' );
+
+		self::assertStringContainsString( 'webhook_management_result=removed', $redirect );
+		self::assertNull( $store->record );
+		self::assertStringContainsString( 'aria-disabled="false">Set up</button>', $this->render_panel( $gateway, $store ) );
 	}
 
 	public function test_failed_reconfigure_with_authoritative_absence_retains_remote_missing_history(): void {
@@ -2002,7 +2105,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			'matched and ping failed'    => array( 'configuration_confirmed', 'ping_delivery_failed', 'notice-error', 'Remote configuration confirmed; signed delivery unverified', 'Ping delivery failed' ),
 			'drifted, ping skipped'      => array( 'configuration_drift', 'skipped', 'notice-error', 'could not confirm', 'Skipped because the settings did not match.' ),
 			'hook absent, ping skipped'  => array( 'remote_missing', 'skipped', 'notice-error', 'could not confirm', 'Skipped because the settings were not confirmed.' ),
-			'uncertain, ping skipped'    => array( 'hook_inventory_unavailable', 'skipped', 'notice-error', 'could not establish the current remote hook state', 'Skipped because the settings were not confirmed.' ),
+			'uncertain, ping skipped'    => array( 'hook_inventory_unavailable', 'skipped', 'notice-error', 'list this repository', 'Skipped because the settings were not confirmed.' ),
 		);
 	}
 
@@ -2220,6 +2323,7 @@ final class WebhookManagementControllerTest extends TestCase {
 				),
 				true
 			) ) || ( 'check_nonce' === $nonce && 'ran_booster_repository_webhook_check_' . $provider_code . '_1234' === $action )
+				|| ( 'forget_nonce' === $nonce && 'ran_booster_repository_webhook_forget_' . $provider_code . '_1234' === $action )
 				|| ( 'test_nonce' === $nonce && 'ran_booster_repository_webhook_test_' . $provider_code . '_1234' === $action )
 				|| ( str_starts_with( $action, 'ran_booster_repository_webhook_result_' )
 				&& hash_equals( hash_hmac( 'sha256', $action, 'test-result-nonce' ), $nonce ) ),
@@ -2352,6 +2456,8 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	public bool $throw_on_readiness    = false;
 	public bool $profile_absent        = false;
 	public bool $credentials_available = true;
+	/** The provider cannot reach the site: only the Forget target exists. */
+	public bool $site_unreachable = false;
 	/** @var array<string, RepositoryWebhookOperationResult> Per-operation results; `result` answers any other operation. */
 	public array $results_by_operation = array();
 
@@ -2373,6 +2479,10 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	}
 
 	public function target( string $provider_code, string $repository_id ): ?AssistanceTarget {
+		return $this->site_unreachable ? null : $this->forget_target( $provider_code, $repository_id );
+	}
+
+	public function forget_target( string $provider_code, string $repository_id ): ?AssistanceTarget {
 		return hash_equals( $this->target_result->provider_code(), $provider_code ) && hash_equals( $repository_id, $this->target_result->repository_id() ) ? $this->target_result : null;
 	}
 
@@ -2492,6 +2602,13 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 		$this->calls[] = $call;
 
 		return $this->authoritative_operation( $call );
+	}
+
+	public function forget( AssistanceTarget $target, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult {
+		unset( $target );
+		$this->calls[] = array( 'forget', $profile_id, $profile_revision, $nonce );
+
+		return new RepositoryWebhookOperationResult( 'succeeded', 'forgotten', '2026-07-23T18:00:00Z', null, array_fill_keys( array( 'endpoint', 'events', 'content_type', 'active' ), 'unknown' ), 'unknown', 'Set up the webhook again.' );
 	}
 
 	/** @param array<mixed> $call */

@@ -161,7 +161,7 @@ final class RepositoryWebhookManagementControls {
 				$this->repository_webhook_settings_url( $provider_code, ( '' !== trim( $repository ) ) ? $repository : null )
 			);
 			// Step 1 (Site receiver) already says a public HTTPS URL is missing; repeat only other reasons.
-			if ( 'is-ok' === ( $readiness_items[2]['state'] ?? '' ) || $reason !== $this->receiver_unavailable_message() ) {
+			if ( 'is-ok' === ( $readiness_items[2]['state'] ?? '' ) || WebhookDisplayModel::receiver_unavailable_message() !== $reason ) {
 				$notices[] = array(
 					'class'   => 'notice-warning',
 					'message' => $reason,
@@ -176,8 +176,9 @@ final class RepositoryWebhookManagementControls {
 				$model['manual_notice'] = WebhookDisplayModel::manual_notice( $manual_at );
 			}
 			$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $model['repository'] );
-			// The panel renders the operation result directly under the Webhook group; the section only keeps the disclosure open for it.
-			$operation_notice = is_array( $model['result'] ?? null ) || is_array( $model['recovery_warning'] ?? null );
+			// The panel renders the operation result directly under the Webhook group; the section only keeps the disclosure open for it,
+			// and for any available action, such as Forget on a site the provider cannot reach.
+			$operation_notice = is_array( $model['result'] ?? null ) || is_array( $model['recovery_warning'] ?? null ) || in_array( false, array_column( $model['operations'], 'disabled' ), true );
 		}
 
 		// The webhook actions are the footer band of the Webhook setup disclosure, after the management form, so they span the disclosure body.
@@ -205,14 +206,10 @@ final class RepositoryWebhookManagementControls {
 		}
 	}
 
-	private function receiver_unavailable_message(): string {
-		return __( 'This site needs a public HTTPS URL to receive webhooks.', 'ran-booster' );
-	}
-
 	/** Explain a failed local readiness projection without probing a provider. */
 	private function repository_webhook_unavailable_reason( string $provider_code, string $repository_id ): string {
 		$messages = array(
-			'callback_requires_public_https'  => $this->receiver_unavailable_message(),
+			'callback_requires_public_https'  => WebhookDisplayModel::receiver_unavailable_message(),
 			'database_unavailable'            => __( 'Webhook setup is unavailable because Booster database storage is unavailable.', 'ran-booster' ),
 			'secrets_storage_unavailable'     => __( 'Webhook setup is unavailable because encrypted signing-secret storage is unavailable.', 'ran-booster' ),
 			'managed_packages_unavailable'    => __( 'Webhook setup is unavailable because Booster could not read managed packages.', 'ran-booster' ),
@@ -413,6 +410,7 @@ final class RepositoryWebhookManagementControls {
 			? $repository['local_secret_coverage']
 			: ( null === $record ? 'unknown' : 'recorded-' . $record->webhook_profile_scope() );
 		$receiver_ready  = 'ready' === ( $site['status'] ?? null );
+		$provider_label  = $this->controller->provider_metadata( $provider_code )?->label;
 		$record_healthy  = null !== $record
 			&& 'configured' === $record->status()
 			&& is_string( $site['callback_url'] ?? null )
@@ -446,7 +444,7 @@ final class RepositoryWebhookManagementControls {
 				'label'   => __( 'Git provider receiver', 'ran-booster' ),
 				'message' => $receiver_ready
 					? __( 'This site can receive webhook deliveries.', 'ran-booster' )
-					: __( 'This site needs a public HTTPS URL to receive webhooks.', 'ran-booster' ),
+					: WebhookDisplayModel::receiver_unavailable_message(),
 				'state'   => $receiver_ready ? 'is-ok' : ( null === $site ? 'is-pending' : 'is-warning' ),
 			),
 			array(
@@ -455,13 +453,21 @@ final class RepositoryWebhookManagementControls {
 					? ( null === $manual_at
 						? __( 'Booster has not set up a webhook for this repository.', 'ran-booster' )
 						: __( 'Not recorded by Booster; a signed delivery was received.', 'ran-booster' ) )
-					: ( $record_healthy
+					: ( $record_healthy && $receiver_ready
 						? sprintf(
 							/* translators: %s: UTC timestamp of the last recorded webhook check. */
 							__( 'Configured at the last recorded check on %s. Validate to confirm current Git provider state.', 'ran-booster' ),
 							$record->checked_at()
 						)
-						: __( 'The recorded remote webhook needs review. Validate or inspect it at the Git provider.', 'ran-booster' ) ),
+						: match ( true ) {
+							// The step names the state; the operational panel's warning, when it renders, says what to do.
+							$record->requires_hook_identification() => __( 'Setup not confirmed', 'ran-booster' ),
+							/* translators: %s: repository provider name. */
+							'remote_missing' === $record->status() && null !== $provider_label => sprintf( __( 'This webhook was deleted on %s.', 'ran-booster' ), $provider_label ),
+							// Nothing can be validated while the provider cannot reach this site; Forget stays available.
+							! $receiver_ready => __( 'Booster has a record of this webhook.', 'ran-booster' ),
+							default => __( 'The recorded remote webhook needs review. Validate or inspect it at the Git provider.', 'ran-booster' ),
+						} ),
 				'state'   => $record_healthy ? 'is-ok' : ( null === $record ? ( null === $manual_at ? 'is-pending' : 'is-ok' ) : 'is-warning' ),
 			),
 		);

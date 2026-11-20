@@ -244,6 +244,37 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 'test_override', $overridden['data']['secrets_storage']['reason_code'] );
 	}
 
+	public function test_settings_counts_paused_packages_under_the_setting_that_pauses_them(): void {
+		$GLOBALS['ran_booster_test_environment_type']  = 'production';
+		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( array() );
+		unset( $GLOBALS['ran_booster_general_preference_cached_option'] );
+		$fields  = array_fill_keys( array( 'Name', 'PluginURI', 'Version', 'Description', 'Author', 'AuthorURI', 'TextDomain', 'DomainPath', 'Title', 'AuthorName' ), '' ) + array( 'Network' => false );
+		$plugins = array( \RAN\Plugin::from_wp_array( 'alpha/alpha.php', $fields ), \RAN\Plugin::from_wp_array( 'off/off.php', $fields ) );
+		$plugins[1]->set_deployment_policy( \RAN\Deployment\DeploymentPolicy::DISABLED );
+		$storage = new SettingsPageStorageProvisioner( SecretsStorageProvisioningResult::setup_available( '/private/ran-booster-store.json' ) );
+		try {
+			$counts = $this->settings_dashboard( $storage, $plugins )->get_settings()['data']['paused_counts'];
+			self::assertSame(
+				array(
+					'branch_sources'     => array(
+						'plugin' => 1,
+						'theme'  => 0,
+					),
+					'prerelease_sources' => array(
+						'plugin' => 0,
+						'theme'  => 0,
+					),
+				),
+				$counts,
+				'A Disabled package is not counted.'
+			);
+			$GLOBALS['ran_booster_test_environment_type'] = 'local';
+			self::assertSame( 0, $this->settings_dashboard( $storage, $plugins )->get_settings()['data']['paused_counts']['branch_sources']['plugin'], 'A development site pauses nothing.' );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_general_preference_raw'], $GLOBALS['ran_booster_general_preference_cached_option'] );
+		}
+	}
+
 	public function test_settings_recovers_to_an_unavailable_status_when_status_throws(): void {
 		$dashboard = $this->settings_dashboard( new SettingsPageStorageProvisioner( null, new \RuntimeException( 'Controlled status failure.' ) ) );
 
@@ -548,6 +579,16 @@ final class SettingsPageTest extends TestCase {
 			),
 			'development_site'   => false,
 			'site_address'       => 'example.com:8443/wp',
+			'paused_counts'      => array(
+				'branch_sources'     => array(
+					'plugin' => 1,
+					'theme'  => 0,
+				),
+				'prerelease_sources' => array(
+					'plugin' => 0,
+					'theme'  => 2,
+				),
+			),
 			'general_scope'      => 'all',
 			'general_token'      => 'token',
 			'general_feedback'   => null,
@@ -583,6 +624,16 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="ran-booster-prerelease-sources" and not(@checked)])' ) );
 		self::assertSame( 'Turned off: the site address changed.', $help( $xpath, 'ran-booster-prerelease-sources' ), 'A copied database explains itself instead of raising an error.' );
 		self::assertSame( 'Disabled', trim( (string) $xpath->evaluate( 'string(' . $form( 'prerelease_sources' ) . '//span[@data-ran-booster-toggle-status])' ) ) );
+		$paused = '/fieldset/p[@class="description" and starts-with(., "Paused:")]';
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//p[@class="description" and starts-with(., "Paused:")])' ), 'One count per switch.' );
+		self::assertSame( 'Paused: 1 plugin', (string) $xpath->evaluate( 'string(' . $form( 'branch_sources' ) . $paused . ')' ), 'A zero part is dropped.' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( 'branch_sources' ) . $paused . '/a[contains(@href, "page=ran-booster-plugins&attention=paused") and .="1 plugin"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( 'prerelease_sources' ) . $paused . '/a[contains(@href, "page=ran-booster-themes&attention=paused") and .="2 themes"])' ) );
+		$bindings['paused_counts']['branch_sources']['plugin'] = 0;
+		$xpath = $this->general_view( $bindings );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $form( 'branch_sources' ) . $paused . ')' ), 'Nothing paused by a switch shows no line.' );
+		self::assertSame( 'Paused: 2 themes', (string) $xpath->evaluate( 'string(' . $form( 'prerelease_sources' ) . $paused . ')' ) );
+		$bindings['paused_counts']['branch_sources']['plugin'] = 1;
 
 		// The store reports both forced on and locked on a development site.
 		$bindings['development_site']                       = true;
@@ -804,11 +855,25 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( array( 'ran-booster-save-general-settings', 'ran-booster-save-general-settings' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
-	private function settings_dashboard( SecretsStorageProvisioner $storage ): SettingsPageDashboard {
+	/** @param list<\RAN\Plugin> $plugins */
+	private function settings_dashboard( SecretsStorageProvisioner $storage, array $plugins = array() ): SettingsPageDashboard {
 		$dashboard = ( new ReflectionClass( SettingsPageDashboard::class ) )->newInstanceWithoutConstructor();
 		foreach ( array(
 			'general_preferences' => new GeneralPreferenceStore(),
 			'secrets_storage'     => $storage,
+			'plugins'             => new class( $plugins ) extends PluginRepository {
+				/** @param list<\RAN\Plugin> $packages */
+				public function __construct( private array $packages ) {}
+				public function all_booster_plugins(): array {
+					return $this->packages;
+				}
+			},
+			'themes'              => new class() extends ThemeRepository {
+				public function __construct() {}
+				public function all_booster_themes(): array {
+					return array();
+				}
+			},
 		) as $property => $value ) {
 			( new ReflectionProperty( Dashboard::class, $property ) )->setValue( $dashboard, $value );
 		}

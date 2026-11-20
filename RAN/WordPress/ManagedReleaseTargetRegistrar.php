@@ -20,6 +20,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use Throwable;
 
 /**
@@ -884,7 +885,8 @@ final class ManagedReleaseTargetRegistrar {
 	}
 
 	private static function plugin_target_identity( string $identifier ): string {
-		return ltrim( strtolower( str_replace( '\\', '/', $identifier ) ), '/' );
+		// A full plugin identifier keeps its separator handling, then folds whole: the documented collision_key() exception.
+		return ltrim( PackageDirectory::collision_key( str_replace( '\\', '/', $identifier ) ), '/' );
 	}
 
 	private static function key( string $type, string $identifier ): string {

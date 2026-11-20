@@ -7,7 +7,8 @@ namespace RAN\Admin;
 /**
  * Owns the fixed panel and view slugs of the Booster administration URLs.
  *
- * Each slug is the visible label in lowercase with hyphens. Unknown slugs are
+ * Each slug is the visible label in lowercase with hyphens, except `support-report`,
+ * which keeps its original slug under the label Diagnostic report. Unknown slugs are
  * never mapped to another panel: callers render the not-found result instead.
  */
 final class AdminRoutes {

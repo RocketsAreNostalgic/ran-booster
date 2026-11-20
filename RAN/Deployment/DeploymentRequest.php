@@ -35,7 +35,7 @@ final readonly class DeploymentRequest {
 		public ?string $selected_commit = null,
 		public ?string $expected_identifier = null
 	) {
-		if ( null !== $expected_identifier && ( null !== $installed_identifier || null !== $adoption_token || strlen( $expected_identifier ) > 191 || 1 !== preg_match( '#\A[a-z0-9][a-z0-9._-]*(?:/[a-zA-Z0-9][a-zA-Z0-9._-]*\.php)?\z#D', $expected_identifier ) || explode( '/', $expected_identifier )[0] !== $package_slug ) ) {
+		if ( null !== $expected_identifier && ( null !== $installed_identifier || null !== $adoption_token || strlen( $expected_identifier ) > 191 || 1 !== preg_match( '#\A[a-z0-9][a-z0-9._-]*(?:/[a-zA-Z0-9][a-zA-Z0-9._-]*\.php)?\z#D', $expected_identifier ) || ! PackageDirectory::installed_folder_matches( explode( '/', $expected_identifier )[0], $package_slug ) ) ) {
 			throw new InvalidArgumentException( 'The expected initial package identity is invalid.' );
 		}
 		if ( null !== $selected_commit && 1 !== preg_match( '/\A(?:[a-f0-9]{40}|[a-f0-9]{64})\z/D', $selected_commit ) ) {

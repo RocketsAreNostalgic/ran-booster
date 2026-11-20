@@ -78,6 +78,60 @@ final class PackagePagePresenterTest extends TestCase {
 		self::assertCount( 4, $index['packages'], 'Unreadable Activity drops the filter instead of claiming none failed.' );
 	}
 
+	public function test_paused_filter_needs_no_activity_and_branch_cannot_be_chosen_while_paused(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		require_once __DIR__ . '/../Activity/ActivityConnection.php';
+		require_once __DIR__ . '/../Support/PackageSourceGateWordPressFunctions.php';
+		require_once __DIR__ . '/../Settings/GeneralPreferenceStoreWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options']       = array();
+		$GLOBALS['ran_booster_test_environment_type']  = 'production';
+		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( array() );
+		unset( $GLOBALS['ran_booster_general_preference_cached_option'] );
+		$packages = array();
+		foreach ( array( 'paused', 'disabled', 'release' ) as $slug ) {
+			$plugin = \RAN\Plugin::from_wp_array(
+				"$slug/$slug.php",
+				array_fill_keys( array( 'Name', 'PluginURI', 'Version', 'Description', 'Author', 'AuthorURI', 'TextDomain', 'DomainPath', 'Title', 'AuthorName' ), '' ) + array( 'Network' => false )
+			);
+			$plugin->set_repository( new \RAN\ManagedRepository( 'gh', 'owner/' . $slug, 'repository-1', 'main' ) );
+			$plugin->set_deployment_policy( 'disabled' === $slug ? \RAN\Deployment\DeploymentPolicy::DISABLED : \RAN\Deployment\DeploymentPolicy::MANUAL );
+			if ( 'release' === $slug ) {
+				$plugin->set_source( \RAN\PackageSource::RELEASE_ASSET, 1 );
+			}
+			$packages[] = $plugin;
+		}
+		$view = new \RAN\Admin\DeploymentAdminPresenter( activity_store: new \RAN\Activity\ActivityStore( new \RAN\Tests\Activity\ActivityConnection() ) );
+		try {
+			$index = PackagePagePresenter::plugin()->index(
+				$packages,
+				array(),
+				array(
+					'search'    => '',
+					'provider'  => '',
+					'source'    => '',
+					'policy'    => '',
+					'attention' => 'paused',
+				),
+				$view
+			);
+			self::assertFalse( $index['package_attention_enabled'] );
+			self::assertSame( 'paused', $index['package_list_state']['attention'], 'Paused stays usable when Activity is unreadable.' );
+			self::assertSame( array( 'paused/paused.php' ), $index['package_paused'] );
+			self::assertSame( array( 'paused/paused.php' ), array_map( static fn ( \RAN\Package $package ): mixed => $package->get_identifier(), $index['packages'] ) );
+
+			$edit = PackagePagePresenter::plugin()->edit( $packages[2], array(), null, 'branch' );
+			self::assertTrue( $edit['package_source']['choices']['branch']['disabled'] );
+			self::assertSame( 'Updates are paused by a site setting.', $edit['package_source']['choices']['branch']['description'] );
+			self::assertSame( 'release_asset', $edit['package_source']['selected'], 'A paused branch cannot be selected.' );
+			self::assertFalse( PackagePagePresenter::plugin()->edit( $packages[0], array(), null, 'branch' )['package_source']['choices']['branch']['disabled'], 'A branch package keeps its own card.' );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_general_preference_raw'], $GLOBALS['ran_booster_general_preference_cached_option'] );
+			// The release read above fills the gate's request statics; later in-process tests start clean.
+			( new \ReflectionProperty( \RAN\Deployment\PackageSourceGate::class, 'releases' ) )->setValue( null, null );
+			( new \ReflectionProperty( \RAN\Deployment\PackageSourceGate::class, 'logged_unreadable' ) )->setValue( null, array() );
+		}
+	}
+
 	public function test_plugin_configuration_preserves_plugin_routing(): void {
 		$config = PackagePagePresenter::plugin();
 

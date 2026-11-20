@@ -66,7 +66,7 @@ final readonly class ManagedPluginFailureRows {
 					<div data-ran-booster-ui-notice-content>
 						<p>
 							<strong><?php esc_html_e( 'RAN Booster automatic deployment failed.', 'ran-booster' ); ?></strong>
-							<?php echo esc_html( DeploymentOutcomeMessage::for_code( (string) $failure['outcome_code'] ) ); ?>
+							<?php echo wp_kses_post( DeploymentOutcomeMessage::for_code_html( (string) $failure['outcome_code'] ) ); ?>
 							<a href="<?php echo esc_url( $this->activity_url( $failure ) ); ?>"><?php esc_html_e( 'Review deployment', 'ran-booster' ); ?></a>
 							<?php if ( is_string( $failure['credential_id'] ) && '' !== $failure['credential_id'] ) { ?>
 								<a href="<?php echo esc_url( $this->credential_url( $failure ) ); ?>"><?php esc_html_e( 'Replace credential', 'ran-booster' ); ?></a>

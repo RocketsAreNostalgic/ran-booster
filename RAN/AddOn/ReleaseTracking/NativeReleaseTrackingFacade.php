@@ -1163,7 +1163,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	}
 
 	private function target_identity( string $type, string $identifier ): string {
-		$identity = strtolower( str_replace( '\\', '/', $identifier ) );
+		// A full identifier keeps its separator handling, then folds whole: the documented collision_key() exception.
+		$identity = PackageDirectory::collision_key( str_replace( '\\', '/', $identifier ) );
 
 		return 'plugin' === $type ? ltrim( $identity, '/' ) : $identity;
 	}

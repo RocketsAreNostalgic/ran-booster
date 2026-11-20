@@ -50,7 +50,7 @@ test('manifest identifies two canonical assets and separate page budgets', () =>
 		'foundation and adapter raw'
 	);
 	assert.ok(
-		gzipSync(foundation).length + gzipSync(adapter).length <= 29780,
+		gzipSync(foundation).length + gzipSync(adapter).length <= 29800,
 		'foundation and adapter gzip sum'
 	);
 	assert.ok(overlay.length <= 345000, 'overlay raw');

@@ -488,6 +488,23 @@ test('public switch derives state and emits exactly one native change', () => {
 	assert.equal(s.input.events.length, 1);
 });
 
+test('every General switch scope mounts the public switch', () => {
+	for (const scope of [
+		'hide_github',
+		'self_update_discovery',
+		'branch_sources',
+		'prerelease_sources',
+	]) {
+		const f = fixture();
+		const s = f.generalSwitch({ scope });
+		f.run();
+		f.flush();
+		assert.equal(f.tree()?.type, 'Switch', scope);
+		assert.equal(s.fallback.hidden, true, scope);
+		assert.equal(s.label.htmlFor, `${s.input.id}-ui`, scope);
+	}
+});
+
 test('history restores native focus and delays remount until focus leaves', () => {
 	const f = fixture();
 	const s = f.generalSwitch({ checked: true });

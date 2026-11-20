@@ -204,7 +204,8 @@ is set, as a constant or an environment variable, only `local` or `development`
 makes a development site; `production` or `staging` overrides the home address.
 When it is not set, a loopback, `.localhost`, `.test` or `.local` home host makes
 a development site. Branch sources and Preview tracks have separate overrides;
-to allow either on any other site:
+to allow either on any other site, turn on Allow branch sources or Allow Preview
+tracks in Settings, General preferences, or set its constant:
 
 ```php
 define( 'RAN_BOOSTER_ALLOW_BRANCH_SOURCES', true );

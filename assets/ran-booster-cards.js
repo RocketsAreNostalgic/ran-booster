@@ -297,7 +297,12 @@
 			) ||
 			input?.type !== 'checkbox' ||
 			!input.id ||
-			!['hide_github', 'self_update_discovery'].includes(scope) ||
+			![
+				'hide_github',
+				'self_update_discovery',
+				'branch_sources',
+				'prerelease_sources',
+			].includes(scope) ||
 			input.name !== `ran_booster[preferences][${scope}]` ||
 			label?.tagName !== 'LABEL' ||
 			host.contains(label) ||

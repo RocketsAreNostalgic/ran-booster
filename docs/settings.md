@@ -118,9 +118,14 @@ Each saved "on" records the home address it was turned on for, ignoring the
 scheme and a trailing slash, and lapses when that address changes, so a database
 copied to another site arrives with both off. Each has its own revision counter;
 a document saved before they existed reads those counters as 0. Turning either
-off clears cached plugin and theme update offers. The Settings controls follow
-separately; until then the constants are the only way to turn them on outside a
-development site.
+off clears cached plugin and theme update offers. General preferences shows them
+as Allow branch sources (Branch sources) and Allow Preview tracks (Preview
+tracks), each saved on its own, and each save writes one log line with its
+outcome. An "on" switch names the address it is bound to, a lapsed one reads
+"Turned off: the site address changed.", one set by its constant is locked and
+reads "Set in configuration." On a development site both are shown on and
+locked, ahead of any constant, and a save cannot change them; the saved values
+are kept and apply again if the site stops being a development site.
 
 Hide GitHub UI requires another locally admitted provider, no managed GitHub
 packages (including Disabled/release/branch records), no active custom replacement

@@ -1772,7 +1772,12 @@ test('numeric Save does not reclaim focus when user moved outside during flight'
 });
 
 test('startup keeps held General controls stable until activation completes', () => {
-	for (const scope of ['hide_github', 'self_update_discovery']) {
+	for (const scope of [
+		'hide_github',
+		'self_update_discovery',
+		'branch_sources',
+		'prerelease_sources',
+	]) {
 		for (const target of [
 			'track',
 			'above-label',

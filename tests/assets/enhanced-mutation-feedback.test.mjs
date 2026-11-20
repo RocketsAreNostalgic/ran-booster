@@ -730,6 +730,37 @@ test('General feedback requires the matching response and falls back when the sh
 	}
 });
 
+test('General request capture tracks every scoped target and ignores others', () => {
+	for (const [id, tracked] of [
+		['ran-booster-general-region', true],
+		['ran-booster-general-hide_github', true],
+		['ran-booster-general-self_update_discovery', true],
+		['ran-booster-general-branch_sources', true],
+		['ran-booster-general-prerelease_sources', true],
+		['ran-booster-general-numeric', true],
+		['ran-booster-general-other', false],
+	]) {
+		const state = fixture();
+		const handlers = new Map();
+		const target = { id, isConnected: true, contains: () => true };
+		state.form.isConnected = true;
+		state.form.matches = (selector) =>
+			selector === '[data-ran-booster-general-form]' ||
+			selector === '[data-ran-booster-enhanced-mutation]';
+		state.form.addEventListener = (name, handler) =>
+			handlers.set(name, handler);
+		state.document.getElementById = () => target;
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		state.listeners.get('htmx:beforeRequest')({
+			detail: { elt: state.form, target, xhr: { addEventListener() {} } },
+		});
+		assert.equal(handlers.has('htmx:beforeOnLoad'), tracked, id);
+	}
+});
+
 test('General response from a detached source cannot replace a newer target', () => {
 	const state = fixture();
 	const handlers = new Map();
@@ -1776,7 +1807,13 @@ test('General busy state keeps switches and their fieldsets usable while protect
 });
 
 test('General busy state leaves only the mounted switch subtree operable', () => {
-	for (const scope of ['hide_github', 'self_update_discovery', 'numeric']) {
+	for (const scope of [
+		'hide_github',
+		'self_update_discovery',
+		'branch_sources',
+		'prerelease_sources',
+		'numeric',
+	]) {
 		const state = fixture();
 		state.form.dataset.ranBoosterSettingsScope = scope;
 		const control = (disabled, mounted) => ({

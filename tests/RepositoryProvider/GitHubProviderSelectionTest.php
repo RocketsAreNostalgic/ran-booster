@@ -432,6 +432,22 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertSame( 'provider_unavailable', $missing->deployment_refusal( 0, 'plugin', 'example/main.php', strict_storage: true ) );
 	}
 
+	public function test_an_interrupted_native_mutation_blocks_its_folder_in_another_case(): void {
+		// The folder could be one on a case-insensitive filesystem (PackageDirectory::names_collide()).
+		$context = $this->context();
+		foreach ( array(
+			'plugin' => array( 'Target/main.php', 'target/other.php', 'target-other/main.php' ),
+			'theme'  => array( 'Target', 'TARGET', 'target-other' ),
+		) as $type => [ $marker, $collides, $distinct ] ) {
+			$owner = $context->begin_native_mutation( $type, $marker, static fn (): bool => true );
+			self::assertTrue( $context->native_mutation_blocks_target( $type, $collides ), $type );
+			self::assertSame( 'provider_unavailable', $context->deployment_refusal( 0, $type, $collides ), $type );
+			self::assertFalse( $context->native_mutation_blocks_target( $type, $distinct ), $type );
+			self::assertNull( $context->deployment_refusal( 0, $type, $distinct ), $type );
+			$context->complete_native_mutation( $owner, $type, $marker, 'verified_success' );
+		}
+	}
+
 	#[\PHPUnit\Framework\Attributes\TestWith( array( 'active' ) )]
 	#[\PHPUnit\Framework\Attributes\TestWith( array( 'selection' ) )]
 	public function test_strict_deployment_refusal_rejects_malformed_storage_but_default_stays_tolerant( string $field ): void {

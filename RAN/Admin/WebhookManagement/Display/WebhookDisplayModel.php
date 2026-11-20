@@ -96,8 +96,12 @@ final class WebhookDisplayModel {
 		return $times;
 	}
 
+	public static function receiver_unavailable_message(): string {
+		return __( 'This site needs a public HTTPS URL to receive webhooks.', 'ran-booster' );
+	}
+
 	/** A setup that ended without a hook ID: the only way on is to forget it. */
-	public static function unconfirmed_setup_message(): string {
+	private static function unconfirmed_setup_message(): string {
 		return __( 'Booster couldn\'t confirm this setup. Forget it, then set up again.', 'ran-booster' );
 	}
 
@@ -239,8 +243,12 @@ final class WebhookDisplayModel {
 			return null;
 		}
 
+		$local = false;
 		try {
 			$target = $this->facade->target( $provider_code, $repository_id );
+			// Forget is local only, so a recorded webhook can still be forgotten while the provider cannot reach this site.
+			$local  = null === $target && null !== $this->records->find( $provider_code, $repository_id );
+			$target = $local ? $this->facade->forget_target( $provider_code, $repository_id ) : $target;
 		} catch ( \Throwable $exception ) {
 			unset( $exception );
 			return null;
@@ -253,11 +261,14 @@ final class WebhookDisplayModel {
 		$record                   = $this->records->find( $provider_code, $repository_id );
 		$status                   = null === $record ? null : $this->projected_status( $record );
 		$credentials              = $this->credential_choices( $provider_code );
-		$operations               = null === $recovery ? $this->available_operations( $target, $record, $status, array() !== $credentials ) : array();
+		$operations               = null === $recovery ? ( $local ? array( 'forget' => true ) : $this->available_operations( $target, $record, $status, array() !== $credentials ) ) : array();
 		$manual_at                = $this->manual_delivery_time( $provider_code, $repository_id );
 		$manual                   = null !== $manual_at;
 		$unidentified             = null !== $record && $record->requires_hook_identification();
-		$operation_models         = $this->operation_models( $operations, $provider_code, $provider_label, $repository_id, null !== $record && ! $unidentified, $this->disabled_reasons( $record, $status, array() !== $credentials, null !== $recovery, $manual ), $unidentified );
+		$reasons                  = $local && null === $recovery
+			? array_fill_keys( array( 'setup', 'reconfigure', 'check', 'test' ), self::receiver_unavailable_message() )
+			: $this->disabled_reasons( $record, $status, array() !== $credentials, null !== $recovery, $manual );
+		$operation_models         = $this->operation_models( $operations, $provider_code, $provider_label, $repository_id, null !== $record && ! $unidentified, $reasons, $local || $unidentified );
 
 		$help = null;
 		if ( null !== $record && 'local_profile_missing' === $status ) {
@@ -332,7 +343,7 @@ final class WebhookDisplayModel {
 	 *
 	 * @param array<string,true> $available
 	 * @param array<string,string> $reasons Why each operation is disabled, keyed by operation.
-	 * @param bool $forget The third slot forgets a record without a hook ID instead of removing a webhook.
+	 * @param bool $forget The third slot forgets Booster's record instead of removing the webhook through the provider.
 	 * @return list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,busy_label:string,busy_message:string,disabled:bool,disabled_reason:string,novalidate:bool}>
 	 */
 	private function operation_models( array $available, string $provider_code, string $provider_label, string $repository_id, bool $recorded, array $reasons, bool $forget = false ): array {
@@ -354,6 +365,7 @@ final class WebhookDisplayModel {
 			'reconfigure' => array( __( 'Repairing…', 'ran-booster' ), __( 'Updating the webhook to match this site\'s settings. This can take a few seconds.', 'ran-booster' ) ),
 			'validate'    => array( __( 'Validating…', 'ran-booster' ), $validate_busy ),
 			'remove'      => array( __( 'Removing…', 'ran-booster' ), __( 'Deleting the webhook and clearing its local record. This can take a few seconds.', 'ran-booster' ) ),
+			'forget'      => array( __( 'Forgetting…', 'ran-booster' ), __( 'Clearing Booster\'s record.', 'ran-booster' ) ),
 		);
 		$remove        = array( __( 'Remove', 'ran-booster' ), $remove_description );
 		if ( $forget ) {
@@ -367,18 +379,18 @@ final class WebhookDisplayModel {
 				__( 'Forget this webhook? Booster clears its record and any signing secret it created. A webhook on %s stays until you remove it there.', 'ran-booster' ),
 				$provider_label
 			);
-			$busy['remove'] = array( __( 'Forgetting…', 'ran-booster' ), __( 'Clearing Booster\'s record.', 'ran-booster' ) );
 		}
 		$slots = array(
 			array( $first, 'setup' === $first ? __( 'Set up', 'ran-booster' ) : __( 'Repair', 'ran-booster' ), 'setup' === $first ? $setup_description : $repair_description ),
 			array( 'validate', __( 'Validate', 'ran-booster' ), $validate_description ),
-			array( 'remove', $remove[0], $remove[1] ),
+			array( $forget ? 'forget' : 'remove', $remove[0], $remove[1] ),
 		);
 		// Validate needs both of its operations; an unavailable one supplies the reason.
 		if ( isset( $available['check'], $available['test'] ) ) {
 			$available['validate'] = true;
 		}
 		$reasons['validate'] = isset( $available['check'] ) ? ( $reasons['test'] ?? '' ) : ( $reasons['check'] ?? '' );
+		$reasons['forget']   = $reasons['remove'] ?? '';
 		$operations          = array();
 		foreach ( $slots as $index => $slot ) {
 			list( $operation, $label, $description ) = $slot;
@@ -393,14 +405,14 @@ final class WebhookDisplayModel {
 				'label'           => $label,
 				'description'     => $description,
 				'primary'         => 0 === $index,
-				'destructive'     => 'remove' === $operation,
-				'confirm'         => 'remove' === $operation ? $remove_confirm : null,
+				'destructive'     => in_array( $operation, array( 'remove', 'forget' ), true ),
+				'confirm'         => in_array( $operation, array( 'remove', 'forget' ), true ) ? $remove_confirm : null,
 				'busy_label'      => $busy[ $operation ][0],
 				'busy_message'    => $busy[ $operation ][1],
 				'disabled'        => ! isset( $available[ $operation ] ),
 				'disabled_reason' => isset( $available[ $operation ] ) ? '' : ( $reasons[ $operation ] ?? '' ),
 				// Forget needs no credential, so the required credential field must not block it.
-				'novalidate'      => $forget && 'remove' === $operation,
+				'novalidate'      => 'forget' === $operation,
 			);
 		}
 
@@ -623,7 +635,7 @@ final class WebhookDisplayModel {
 			'configured_pending_delivery' => __( 'Webhook management configured the remote hook. Signed delivery verification is still pending.', 'ran-booster' ),
 			'verified', 'configuration_confirmed' => __( 'Webhook management confirmed the recorded remote configuration. Correlate Git provider delivery history with the Git provider request ID in Booster Activity before treating signed delivery as established.', 'ran-booster' ),
 			'removed' => __( 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.', 'ran-booster' ),
-			'forgotten' => __( 'Webhook record cleared.', 'ran-booster' ),
+			'forgotten' => __( 'Webhook record cleared. Any webhook on the Git provider stays until you remove it there.', 'ran-booster' ),
 			'existing_hook_requires_reconfigure' => __( 'A webhook for this site already exists on the Git provider. Remove it there, then set up again.', 'ran-booster' ),
 			'forbidden' => __( 'You are not permitted to manage this repository webhook. Nothing was changed.', 'ran-booster' ),
 			'invalid_request' => __( 'The webhook request was invalid or expired. Nothing was changed; reload this repository and try again.', 'ran-booster' ),
@@ -973,7 +985,7 @@ final class WebhookDisplayModel {
 	private function available_operations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status, bool $has_credential ): array {
 		if ( null !== $record && $record->requires_hook_identification() ) {
 			// Remove becomes Forget: without a hook ID there is nothing to ask the provider about, so no credential is needed.
-			return array( 'remove' => true );
+			return array( 'forget' => true );
 		}
 		if ( ! $has_credential ) {
 			return array();

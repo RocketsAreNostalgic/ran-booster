@@ -81,6 +81,10 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		return $this->projected_target( $this->provider_code( $provider_code ), $repository_id );
 	}
 
+	public function forget_target( string $provider_code, string $repository_id ): ?AssistanceTarget {
+		return $this->projected_target( $this->provider_code( $provider_code ), $repository_id, true );
+	}
+
 	public function credential_choices( string $provider_code ): array {
 		$provider_code = $this->provider_code( $provider_code );
 		if ( ! ( $this->can_manage )() || ! $this->storage_available() ) {
@@ -290,7 +294,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		return $this->with_target_lock(
 			$target,
 			function () use ( $target, $profile_id, $profile_revision, $nonce ): RepositoryWebhookOperationResult {
-				$current = $this->authorize( 'remove', $target, $nonce, true );
+				$current = $this->authorize( 'forget', $target, $nonce, true, true );
 				if ( null === $current ) {
 					return $this->failed( 'operation_unauthorized' );
 				}
@@ -446,11 +450,11 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		return $result->as_partial( 'operation_lock_release_failed', 'The operation completed, but do not retry until the current database request has ended.' );
 	}
 
-	private function authorize( string $action, AssistanceTarget $submitted, string $nonce, bool $allow_cleanup = false ): ?AssistanceTarget {
+	private function authorize( string $action, AssistanceTarget $submitted, string $nonce, bool $allow_cleanup = false, bool $unreachable = false ): ?AssistanceTarget {
 		if ( ! ( $this->can_manage )() || ! ( $this->verify_nonce )( $nonce, $this->nonce_action( $action, $submitted ) ) ) {
 			return null;
 		}
-		$current = $this->current_target( $submitted->provider_code(), $submitted->repository_id(), $allow_cleanup );
+		$current = $this->current_target( $submitted->provider_code(), $submitted->repository_id(), $allow_cleanup, $unreachable );
 
 		return null !== $current && $current->to_array() === $submitted->to_array() ? $current : null;
 	}
@@ -459,8 +463,8 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		return 'ran_booster_repository_webhook_' . $action . '_' . $target->provider_code() . '_' . $target->repository_id();
 	}
 
-	private function current_target( string $provider_code, string $repository_id, bool $allow_cleanup ): ?AssistanceTarget {
-		$current = $this->projected_target( $provider_code, $repository_id );
+	private function current_target( string $provider_code, string $repository_id, bool $allow_cleanup, bool $unreachable = false ): ?AssistanceTarget {
+		$current = $this->projected_target( $provider_code, $repository_id, $unreachable );
 		if ( null === $current && $allow_cleanup ) {
 			$current = $this->readiness_evaluator->cleanup_target( $provider_code, $repository_id, ( $this->endpoint )( $provider_code ) );
 		}
@@ -468,16 +472,18 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		return $current;
 	}
 
-	private function projected_target( string $provider_code, string $repository_id ): ?AssistanceTarget {
+	/** @param bool $unreachable Also accept a site whose sole blocker is that the provider cannot reach it (local-only operations). */
+	private function projected_target( string $provider_code, string $repository_id, bool $unreachable = false ): ?AssistanceTarget {
 		if ( ! $this->valid_repository_id( $repository_id ) ) {
 			return null;
 		}
 		$readiness = $this->readiness( $provider_code )->to_array();
-		if ( AssistanceReadiness::READY !== $readiness['site']['status'] ) {
+		$ready     = AssistanceReadiness::READY === $readiness['site']['status'];
+		if ( ! $ready && ! ( $unreachable && array( 'callback_requires_public_https' ) === $readiness['site']['reason_codes'] ) ) {
 			return null;
 		}
 		foreach ( $readiness['repositories'] as $repository ) {
-			if ( $repository_id === $repository['repository_id'] && true === $repository['eligible'] ) {
+			if ( $repository_id === $repository['repository_id'] && ( $ready ? true === $repository['eligible'] : array() === $repository['reason_codes'] ) ) {
 				return new AssistanceTarget( $provider_code, $repository_id, $repository['repository'], $repository['label'], $repository['package_references'], $repository['deployment_policies'], $readiness['site']['callback_url'] );
 			}
 		}

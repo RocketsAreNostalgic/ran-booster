@@ -106,7 +106,7 @@ final class WebhookManagementController {
 				$result['recovery'] ??= $validation['ping']['recovery'] ?? null;
 			}
 		} elseif ( $metadata instanceof ProviderMetadata
-			&& in_array( $operation, array( 'setup', 'check', 'reconfigure', 'remove', 'test' ), true )
+			&& in_array( $operation, array( 'setup', 'check', 'reconfigure', 'remove', 'test', 'forget' ), true )
 			&& ( $this->verify_nonce )( $nonce, $this->nonce_action( $operation, $provider_code, $repository_id ) ) ) {
 			$result = $this->operations->execute( $operation, $provider_code, $repository_id, '' === $credential_id ? null : $credential_id, 'setup' === $operation ? ( self::CREATE_REPOSITORY_SECRET === $profile_id ? null : $profile_id ) : null, $nonce );
 		}

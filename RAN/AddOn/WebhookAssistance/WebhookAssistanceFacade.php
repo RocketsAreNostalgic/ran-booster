@@ -12,6 +12,8 @@ interface WebhookAssistanceFacade {
 
 	public function readiness( string $provider_code ): AssistanceReadiness;
 	public function target( string $provider_code, string $repository_id ): ?AssistanceTarget;
+	/** The target for Forget, which is local only: also available while the site's sole blocker is that the provider cannot reach it. */
+	public function forget_target( string $provider_code, string $repository_id ): ?AssistanceTarget;
 	/** @return list<array{id:string,label:string,kind:string,destroy_on:?string}> */
 	public function credential_choices( string $provider_code ): array;
 	/** @return list<array{id:string,label:string,scope:string}> */
@@ -37,6 +39,6 @@ interface WebhookAssistanceFacade {
 
 	public function test( AssistanceTarget $target, ?string $credential_profile_id, string $hook_id, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult;
 
-	/** Releases a signing secret Booster created for a setup that returned no hook ID; never contacts the provider. */
+	/** Releases the signing secret Booster created for the recorded webhook, if unchanged; never contacts the provider. */
 	public function forget( AssistanceTarget $target, string $profile_id, int $profile_revision, string $nonce ): RepositoryWebhookOperationResult;
 }

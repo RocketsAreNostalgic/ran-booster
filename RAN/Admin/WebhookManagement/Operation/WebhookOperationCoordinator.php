@@ -22,7 +22,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	/**
-	 * @param 'setup'|'check'|'reconfigure'|'remove'|'test' $operation
+	 * @param 'setup'|'check'|'reconfigure'|'remove'|'test'|'forget' $operation
 	 * @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool}
 	 */
 	public function execute(
@@ -33,8 +33,12 @@ final class WebhookOperationCoordinator {
 		?string $selected_profile_id,
 		string $nonce
 	): array {
+		$local = false;
 		try {
 			$target = $this->facade->target( $provider_code, $repository_id );
+			// Forget never contacts the provider, so it stays available while the provider cannot reach this site.
+			$local  = 'forget' === $operation && null === $target;
+			$target = $local ? $this->facade->forget_target( $provider_code, $repository_id ) : $target;
 		} catch ( \Throwable ) {
 			$target = null;
 		}
@@ -45,8 +49,14 @@ final class WebhookOperationCoordinator {
 		}
 
 		$record = $this->records->find( $provider_code, $repository_id );
+		if ( 'forget' === $operation ) {
+			// A reachable site forgets only a record without a hook ID; any other record is removed through the provider.
+			return null !== $record && ( $local || $record->requires_hook_identification() )
+				? $this->forget( $target, $record, $nonce, $local ? 'receiver_unreachable' : 'hook_unidentified' )
+				: $this->outcome( 'invalid_request', inline_safe: true );
+		}
 		if ( null !== $record && $record->requires_hook_identification() ) {
-			return 'remove' === $operation ? $this->forget( $target, $record, $nonce ) : $this->outcome( 'manual_recovery_required' );
+			return $this->outcome( 'manual_recovery_required' );
 		}
 		if ( null === $credential_id
 			|| ( 'setup' === $operation && null !== $record )
@@ -90,11 +100,12 @@ final class WebhookOperationCoordinator {
 	}
 
 	/**
-	 * A record without a hook ID can't be checked on the provider, so Remove clears it locally.
+	 * Clear Booster's record locally: its hook can't be checked, or the provider can't reach this site.
 	 *
+	 * @param 'receiver_unreachable'|'hook_unidentified' $reason
 	 * @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool}
 	 */
-	private function forget( AssistanceTarget $target, InstallationRecord $record, string $nonce ): array {
+	private function forget( AssistanceTarget $target, InstallationRecord $record, string $nonce, string $reason ): array {
 		$activity_id = $this->begin_activity( 'remove', $target );
 		try {
 			$result = $this->facade->forget( $target, $record->webhook_profile_id(), $record->webhook_profile_revision(), $nonce );
@@ -116,6 +127,7 @@ final class WebhookOperationCoordinator {
 				'operation'    => 'forget',
 				'outcome_code' => $code,
 				'provider'     => $record->provider_code(),
+				'state'        => $reason,
 			)
 		);
 

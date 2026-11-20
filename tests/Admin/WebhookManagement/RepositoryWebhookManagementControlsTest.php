@@ -435,7 +435,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'Manage signing secrets</a>', $html );
 	}
 
-	public function test_remote_hook_step_for_an_unconfirmed_setup_uses_the_panel_sentence(): void {
+	public function test_remote_hook_step_names_an_unconfirmed_setup_and_a_hook_deleted_on_the_provider(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options']                           = true;
 		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
 			'fixture-provider:1234' => array(
@@ -470,8 +470,13 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		ob_start();
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', false );
 		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '<p>Setup not confirmed</p>', $html );
 
-		self::assertStringContainsString( '<p>Booster couldn&#039;t confirm this setup. Forget it, then set up again.</p>', $html );
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations']['fixture-provider:1234']['hook_id'] = '77';
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations']['fixture-provider:1234']['status']  = 'remote_missing';
+		ob_start();
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', false );
+		self::assertStringContainsString( '<p>This webhook was deleted on Fixture Forge.</p>', (string) ob_get_clean() );
 	}
 
 	public function test_branch_tab_shows_manual_webhook_only_for_a_verified_delivery_without_a_record(): void {

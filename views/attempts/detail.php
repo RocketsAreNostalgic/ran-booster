@@ -60,7 +60,7 @@ $package_settings_label = 'theme' === $package_type
 			? __( 'Failure reason', 'ran-booster' )
 			: __( 'Outcome', 'ran-booster' );
 		?>
-		<p><strong><?php echo esc_html( $outcome_label ); ?>:</strong> <?php echo esc_html( null === $item['outcome_code'] ? __( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : DeploymentOutcomeMessage::for_code( (string) $item['outcome_code'], $deployment_activity['outcome_facts'] ?? null ) ); ?></p>
+		<p><strong><?php echo esc_html( $outcome_label ); ?>:</strong> <?php echo null === $item['outcome_code'] ? esc_html__( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : wp_kses_post( DeploymentOutcomeMessage::for_code_html( (string) $item['outcome_code'], $deployment_activity['outcome_facts'] ?? null ) ); ?></p>
 		<?php if ( 'needs_attention' === $item['state'] || 'deployment_maintenance_active' === $item['outcome_code'] ) { ?>
 			<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-deployment-recovery' ) ); ?>"><?php esc_html_e( 'Recovery steps', 'ran-booster' ); ?></a></p>
 		<?php } ?>

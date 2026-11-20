@@ -60,7 +60,7 @@ function report(value) {
 			remove: (name) => statusClasses.delete(name),
 		},
 		dataset: {
-			copiedMessage: 'Support report copied to the clipboard.',
+			copiedMessage: 'Diagnostic report copied to the clipboard.',
 			copyFailedMessage:
 				'Clipboard access failed. Use your browser copy command.',
 		},

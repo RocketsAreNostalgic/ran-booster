@@ -64,10 +64,12 @@ slug.
 
 | Route | Label | Slug |
 | --- | --- | --- |
-| Troubleshooting panel | Installation, Diagnostics, Activity, Logging, Support report | `installation`, `diagnostics`, `activity`, `logging`, `support-report` |
+| Troubleshooting panel | Installation, Diagnostics, Activity, Logging, Diagnostic report | `installation`, `diagnostics`, `activity`, `logging`, `support-report` |
 | Provider panel | Status, Repositories, Webhook receiver | `status`, `repositories`, `webhook-receiver` |
 | Provider view | Credentials, Signing secrets (the provider overview has no label) | `credentials`, `signing-secrets` (`overview`) |
 | Repository view | Status, Branch, Releases | `status`, `branch`, `releases` |
+
+The Diagnostic report panel keeps its original slug `support-report`: renaming the label did not rename the URL, so it is the one panel whose slug is not its label.
 
 An absent `tab`, panel or view selects its default (Overview for `tab`). A
 present value outside the list is a closed not-found result: a "Page not

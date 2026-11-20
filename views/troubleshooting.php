@@ -39,7 +39,7 @@ $secondary_navigation  = array(
 	),
 	array(
 		'key'   => 'support-report',
-		'label' => __( 'Support report', 'ran-booster' ),
+		'label' => __( 'Diagnostic report', 'ran-booster' ),
 		'url'   => $troubleshooting_base . '&panel=support-report',
 	),
 );
@@ -106,7 +106,7 @@ $repository_placeholder = array() === $locator_examples
 		</nav>
 
 		<?php
-		// The Diagnostics form, the Support report form and the Logging capture actions finish the Card with a footer band; Logging has none when the capture is unavailable or unreadable.
+		// The Diagnostics form, the Diagnostic report form and the Logging capture actions finish the Card with a footer band; Logging has none when the capture is unavailable or unreadable.
 		$troubleshooting_footed = in_array( $troubleshooting_panel, array( 'diagnostics', 'support-report' ), true )
 			|| ( 'logging' === $troubleshooting_panel && is_array( $debug_capture ?? null ) && in_array( $debug_capture['state'] ?? null, array( 'inactive', 'active', 'retained' ), true ) );
 		?>
@@ -209,7 +209,7 @@ $repository_placeholder = array() === $locator_examples
 			?>
 		<div class="ran-booster-card ran-booster-troubleshooting__results-card" data-ran-booster-card="troubleshooting"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<?php if ( isset( $troubleshooting['retention_available'] ) && ! $troubleshooting['retention_available'] ) { ?>
-			<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'These results remain available below, but could not be retained for a later support report.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
+			<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'These results remain available below, but could not be retained for a later diagnostic report.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 			<?php } ?>
 			<div id="ran-booster-troubleshooting-results" class="ran-booster-troubleshooting__results" aria-live="polite">
 				<h3 class="ran-booster-section__title"><?php esc_html_e( 'Diagnostic results', 'ran-booster' ); ?></h3>

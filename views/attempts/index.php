@@ -130,8 +130,8 @@ $origin_labels = array(
 				$recorded_check   = 'activity' === ( $item['record_source'] ?? '' );
 				$state            = (string) ( $item['state'] ?? '' );
 				$summary          = $recorded_check
-					? DeploymentOutcomeMessage::for_activity( $state, (string) ( $item['reason'] ?? '' ), (string) ( $item['message'] ?? '' ) )
-					: DeploymentOutcomeMessage::for_code( (string) ( $item['outcome_code'] ?? 'pending' ), $item['outcome_facts'] ?? null );
+					? esc_html( DeploymentOutcomeMessage::for_activity( $state, (string) ( $item['reason'] ?? '' ), (string) ( $item['message'] ?? '' ) ) )
+					: DeploymentOutcomeMessage::for_code_html( (string) ( $item['outcome_code'] ?? 'pending' ), $item['outcome_facts'] ?? null );
 				$project_label    = (string) ( $item['package_slug'] ?? '' );
 				$package_type     = (string) ( $item['package_type'] ?? '' );
 				$provider_label   = (string) ( $item['provider_label'] ?? $item['provider'] ?? '' );
@@ -177,7 +177,7 @@ $origin_labels = array(
 						<td class="ran-booster-attempt-row__source" data-label="<?php esc_attr_e( 'Source', 'ran-booster' ); ?>"><?php echo esc_html( $recorded_check ? $provider_label : __( 'Branch deployment', 'ran-booster' ) ); ?></td>
 						<td data-label="<?php esc_attr_e( 'Activity', 'ran-booster' ); ?>"><?php echo esc_html( $activity_label ); ?></td>
 						<td data-label="<?php esc_attr_e( 'Outcome', 'ran-booster' ); ?>"><span class="ran-booster-attempt-row__outcome"><?php $outcome_label = $state_labels[ $state ] ?? ( $recorded_check ? __( 'Unknown', 'ran-booster' ) : $state ); ?><?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $outcome_label, \RAN\Admin\Component\StatusBadge::intent_for( $state_tones[ $state ] ?? '' ), array( 'class' => 'ran-booster-deployment-state ran-booster-deployment-state--' . (string) $state ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?><?php if ( $recorded_check ) { ?>
-							<span class="ran-booster-attempt-row__message"><?php echo esc_html( $summary ); ?></span>
+							<span class="ran-booster-attempt-row__message"><?php echo wp_kses_post( $summary ); ?></span>
 						<?php } ?></span></td>
 					</tr>
 					<tr class="ran-booster-attempt-row__details-row">
@@ -209,7 +209,7 @@ $origin_labels = array(
 									</dl>
 								<?php } else { ?>
 								<dl class="ran-booster-activity__details">
-									<div><dt><?php echo esc_html( in_array( $state, array( 'failed', 'needs_attention' ), true ) ? __( 'Failure reason', 'ran-booster' ) : __( 'Outcome', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( $summary ); ?></dd></div>
+									<div><dt><?php echo esc_html( in_array( $state, array( 'failed', 'needs_attention' ), true ) ? __( 'Failure reason', 'ran-booster' ) : __( 'Outcome', 'ran-booster' ) ); ?></dt><dd><?php echo wp_kses_post( $summary ); ?></dd></div>
 									<?php if ( is_string( $item['source_reference'] ?? null ) ) { ?>
 										<div><dt><?php echo esc_html( (string) ( $deployment_activity['failure_reference_label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) $item['provider_label'] ); ?>: <code><?php echo esc_html( $item['source_reference'] ); ?></code></dd></div>
 									<?php } ?>

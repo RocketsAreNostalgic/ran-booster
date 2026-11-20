@@ -697,6 +697,7 @@ class Dashboard {
 		$this->general_failed_scope = is_string( $scope ) ? $scope : 'all';
 		if ( ! is_array( $values ) || ! is_string( $token ) || ! is_string( $scope ) || ! in_array( $scope, array( 'all', 'hide_github', 'self_update_discovery', 'numeric', 'branch_sources', 'prerelease_sources' ), true ) || null === $this->github_visibility ) {
 			$this->general_feedback = __( 'Settings could not be saved. Reload the page and try again.', 'ran-booster' );
+			$this->log_general_save( 'save_settings', 'invalid_request' );
 			return false;
 		}
 		$fields = $preferences->projection();
@@ -709,45 +710,62 @@ class Dashboard {
 				}
 			}
 		}
-		$result = $preferences->save( $token, $values, $this->github_visibility->with_management_admission_lock( ... ), $this->github_visibility->github_hide_eligible( ... ), $scope );
-		if ( in_array( $scope, array( 'branch_sources', 'prerelease_sources' ), true ) ) {
-			BoosterLogger::log(
-				'Package source setting save finished.',
-				array(
-					'operation'    => 'save_' . $scope,
-					'outcome_code' => $result,
-					'state'        => \RAN\Deployment\PackageSourceGate::allows( $scope ) ? 'allowed' : 'paused',
-				)
-			);
-		}
-		if ( in_array( $result, array( 'saved', 'unchanged' ), true ) ) {
+		$result    = $preferences->save( $token, $values, $this->github_visibility->with_management_admission_lock( ... ), $this->github_visibility->github_hide_eligible( ... ), $scope );
+		$saved     = in_array( $result, array( 'saved', 'unchanged' ), true );
+		$sources   = in_array( $scope, array( 'branch_sources', 'prerelease_sources' ), true );
+		$discovery = $saved && in_array( $scope, array( 'all', 'self_update_discovery' ), true )
+			? \RAN\WordPress\CoreSelfUpdatePolicy::detect( dirname( __DIR__ ) . '/ran-booster.php', (string) ( get_file_data( dirname( __DIR__ ) . '/ran-booster.php', array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' ), true )->allows_native_discovery()
+			: null;
+		$paused    = $sources && ! \RAN\Deployment\PackageSourceGate::allows( $scope );
+		$state     = $sources ? ( $paused ? 'paused' : 'allowed' ) : ( null === $discovery ? null : ( $discovery ? 'discovery_allowed' : 'discovery_disabled' ) );
+		if ( $saved ) {
 			// The live descriptor admission fence remains authoritative even if local offer removal fails.
-			if ( in_array( $scope, array( 'all', 'self_update_discovery' ), true ) && ! \RAN\WordPress\CoreSelfUpdatePolicy::detect( dirname( __DIR__ ) . '/ran-booster.php', (string) ( get_file_data( dirname( __DIR__ ) . '/ran-booster.php', array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' ), true )->allows_native_discovery() ) {
+			if ( false === $discovery ) {
 				try {
 					delete_site_transient( 'update_plugins' );
-				} catch ( Throwable ) {
+				} catch ( Throwable $exception ) {
 					$this->general_feedback = __( 'Settings saved; cached update offers could not be cleared. Discovery remains disabled.', 'ran-booster' );
+					$this->log_general_save( 'save_' . $scope, $result, $state, $exception );
 					return false;
 				}
 			}
-			if ( in_array( $scope, array( 'branch_sources', 'prerelease_sources' ), true ) && ! \RAN\Deployment\PackageSourceGate::allows( $scope ) ) {
+			if ( $paused ) {
 				// Paused downloads stay blocked regardless; this only removes offers made before the pause.
 				try {
 					delete_site_transient( 'update_plugins' );
 					delete_site_transient( 'update_themes' );
-				} catch ( Throwable ) {
+				} catch ( Throwable $exception ) {
 					$this->general_feedback = __( 'Settings saved; cached update offers could not be cleared. Updates remain paused.', 'ran-booster' );
+					$this->log_general_save( 'save_' . $scope, $result, $state, $exception );
 					return false;
 				}
 			}
 			$this->general_attempted    = array();
 			$this->general_failed_scope = null;
+			$this->log_general_save( 'save_' . $scope, $result, $state );
 			return true;
 		}
+		$this->log_general_save( 'save_' . $scope, $result, $state );
 		$this->general_feedback = 'stale' === $result
 			? __( 'Settings changed or GitHub eligibility changed. Review the current values and save again.', 'ran-booster' )
 			: __( 'Settings were not saved. Check the fields or reload the page and try again.', 'ran-booster' );
 		return false;
+	}
+
+	/** One codes-only line per General Settings save; a failure to clear cached offers adds its step, class and code. */
+	private function log_general_save( string $operation, string $outcome, ?string $state = null, ?Throwable $clear_failure = null ): void {
+		$context = array_filter(
+			array(
+				'operation'    => $operation,
+				'outcome_code' => $outcome,
+				'state'        => $state,
+			)
+		);
+		if ( null === $clear_failure ) {
+			BoosterLogger::log( 'General Settings save finished.', $context );
+			return;
+		}
+		BoosterLogger::log_exception( 'General Settings save finished.', $clear_failure, $context + array( 'step' => 'clear_update_offers' ) );
 	}
 
 	public function post_check_core_updates(): void {

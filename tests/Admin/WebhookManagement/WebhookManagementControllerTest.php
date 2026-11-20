@@ -1256,6 +1256,31 @@ final class WebhookManagementControllerTest extends TestCase {
 		}
 	}
 
+	public function test_forget_needs_no_saved_credential_and_skips_the_required_credential_field(): void {
+		$gateway                        = $this->gateway();
+		$gateway->credentials_available = false;
+		$store                          = new OperationStoreFixture();
+		$store->record                  = new InstallationRecord( 'gh', '1234', 'owner/repository', InstallationRecord::unknown_hook_id(), 'credential_1', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/webhook', 'needs_verification', '2026-07-23T16:00:00Z', '2026-07-23T17:00:00Z' );
+
+		$html = $this->render_panel( $gateway, $store );
+		self::assertStringContainsString( ' formnovalidate aria-disabled="false">Forget</button>', $html );
+		self::assertSame( 1, substr_count( $html, 'formnovalidate' ), 'Only Forget skips the required credential field.' );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up</button>', $html );
+
+		$redirect = $this->controller( gateway: $gateway, store: $store )->handle_admin_post(
+			$this->request(
+				array(
+					'repository_webhook_management_operation' => 'remove',
+					'booster_credential_id' => '',
+				)
+			),
+			'valid'
+		);
+		self::assertStringContainsString( 'webhook_management_result=forgotten', $redirect );
+		self::assertNull( $store->record );
+		self::assertSame( array( array( 'forget', 'wh_0123456789abcdef01234567', 1, 'valid' ) ), $gateway->calls );
+	}
+
 	public function test_check_records_configuration_without_claiming_signed_delivery(): void {
 		$gateway         = $this->gateway();
 		$gateway->result = $this->operation_result( 'succeeded', 'configured_pending_delivery', '77' );

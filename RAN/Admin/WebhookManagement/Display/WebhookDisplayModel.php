@@ -37,7 +37,7 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
  *   management_credential_id:?string,
  *   credential_choices:list<array{id:string,label:string}>,
  *   webhook_profile_choices:list<array{id:string,label:string,scope:string}>,
- *   operations:list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,busy_label:string,busy_message:string,disabled:bool,disabled_reason:string}>,
+ *   operations:list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,busy_label:string,busy_message:string,disabled:bool,disabled_reason:string,novalidate:bool}>,
  *   action_help:?string
  * }
  */
@@ -333,7 +333,7 @@ final class WebhookDisplayModel {
 	 * @param array<string,true> $available
 	 * @param array<string,string> $reasons Why each operation is disabled, keyed by operation.
 	 * @param bool $forget The third slot forgets a record without a hook ID instead of removing a webhook.
-	 * @return list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,busy_label:string,busy_message:string,disabled:bool,disabled_reason:string}>
+	 * @return list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,busy_label:string,busy_message:string,disabled:bool,disabled_reason:string,novalidate:bool}>
 	 */
 	private function operation_models( array $available, string $provider_code, string $provider_label, string $repository_id, bool $recorded, array $reasons, bool $forget = false ): array {
 		$first = ( $recorded || isset( $available['reconfigure'] ) ) ? 'reconfigure' : 'setup';
@@ -399,6 +399,8 @@ final class WebhookDisplayModel {
 				'busy_message'    => $busy[ $operation ][1],
 				'disabled'        => ! isset( $available[ $operation ] ),
 				'disabled_reason' => isset( $available[ $operation ] ) ? '' : ( $reasons[ $operation ] ?? '' ),
+				// Forget needs no credential, so the required credential field must not block it.
+				'novalidate'      => $forget && 'remove' === $operation,
 			);
 		}
 
@@ -969,15 +971,15 @@ final class WebhookDisplayModel {
 
 	/** @return array<string, true> */
 	private function available_operations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status, bool $has_credential ): array {
+		if ( null !== $record && $record->requires_hook_identification() ) {
+			// Remove becomes Forget: without a hook ID there is nothing to ask the provider about, so no credential is needed.
+			return array( 'remove' => true );
+		}
 		if ( ! $has_credential ) {
 			return array();
 		}
 		if ( null === $record ) {
 			return array( 'setup' => true );
-		}
-		if ( $record->requires_hook_identification() ) {
-			// Remove becomes Forget: without a hook ID there is nothing to ask the provider about.
-			return array( 'remove' => true );
 		}
 		$operations = array();
 		if ( in_array( $status, array( 'profile_revision_stale', 'configuration_drift', 'local_profile_missing' ), true ) || ( 'needs_verification' !== $status && ! hash_equals( $record->endpoint(), $target->endpoint() ) ) ) {

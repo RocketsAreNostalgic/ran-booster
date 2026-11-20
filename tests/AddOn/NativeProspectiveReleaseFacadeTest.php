@@ -312,6 +312,25 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
+	public function test_a_paused_site_refuses_a_preview_install_before_any_release_work(): void {
+		$plugins                                      = new ProspectivePluginRepository();
+		$executor                                     = new ProspectiveExecutor();
+		$facade                                       = $this->facade( $plugins, $executor );
+		$repository                                   = $this->repository_request();
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+		try {
+			$result = $facade->install( 'plugin', $repository, '42', 'v1.2.3', self::FINGERPRINT, 'prerelease', 'valid-nonce', $this->expectation_for( $repository ) );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_test_home_url'] );
+		}
+
+		self::assertSame( array( false, 'source_paused' ), array( $result->successful(), $result->code() ) );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$resolve_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
+	}
+
 	public function test_opaque_repository_identity_expectation_reaches_prospective_candidate_listing_unchanged(): void {
 		$provider   = new ProspectiveRepositoryProvider(
 			candidate_list: new RepositoryReleaseCandidateList(

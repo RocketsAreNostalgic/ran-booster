@@ -14,10 +14,14 @@ use RAN\RepositoryProvider\GitHubReplacementDeclaration;
  * Inside an existing transaction, authority reads require read(true), because
  * nonlocking reads can inherit an older REPEATABLE READ snapshot.
  * Native-marker clearing requires the caller's exact verified completion or protected recovery.
+ * The options table's shape (InnoDB, whole-column unique option_name) is verified before the
+ * first read or write and again after every invalidate_cache(), so after every write made
+ * through this store: exact locking and compare-and-swap depend on that shape at a write.
  */
 final class GitHubSelectionStore {
 	public const OPTION            = 'ran_booster_github_selection';
 	private bool $commit_uncertain = false;
+	private bool $storage_verified = false;
 
 	public function __construct( private \wpdb|SchemaConnection $connection, private string $table ) {
 	}
@@ -33,7 +37,7 @@ final class GitHubSelectionStore {
 	 * @return list<string>
 	 */
 	public function active_plugins(): array {
-		( new Database( $this->connection ) )->require_selection_storage( $this->table );
+		$this->require_storage();
 		$this->connection->last_error = '';
 		$query                        = $this->connection->prepare( 'SELECT option_name, option_value FROM %i WHERE option_name = %s LIMIT 2 FOR UPDATE', $this->table, 'active_plugins' );
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared current read bypasses REPEATABLE READ snapshots as well as WordPress caches.
@@ -79,7 +83,7 @@ final class GitHubSelectionStore {
 
 	/** @return array<string, mixed> */
 	public function read( bool $for_update = false ): array {
-		( new Database( $this->connection ) )->require_selection_storage( $this->table );
+		$this->require_storage();
 		$this->connection->last_error = '';
 		$query                        = $this->connection->prepare(
 			'SELECT option_name, option_value, autoload FROM %i WHERE option_name = %s LIMIT 2' . ( $for_update ? ' FOR UPDATE' : '' ),
@@ -124,7 +128,7 @@ final class GitHubSelectionStore {
 			'approval'             => 'approved',
 			'approved_api_formats' => $declaration->api_credential_formats,
 		);
-		( new Database( $this->connection ) )->require_selection_storage( $this->table );
+		$this->require_storage();
 		$query = $this->connection->prepare( 'INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $this->table, self::OPTION, $this->encode( $initial ), 'no' );
 		try {
 			$this->connection->last_error = '';
@@ -154,7 +158,7 @@ final class GitHubSelectionStore {
 		$old = $this->encode( $expected );
 		$new = $this->encode( $next );
 		$this->validate_transition( $expected, $next );
-		( new Database( $this->connection ) )->require_selection_storage( $this->table );
+		$this->require_storage();
 		$query = $this->connection->prepare( 'UPDATE %i SET option_value = %s WHERE BINARY option_name = BINARY %s AND BINARY option_value = BINARY %s AND BINARY autoload = BINARY %s', $this->table, $new, self::OPTION, $old, 'no' );
 		try {
 			$this->connection->last_error = '';
@@ -272,15 +276,32 @@ final class GitHubSelectionStore {
 		}
 	}
 
+	/**
+	 * Verify the options table's shape unless it has passed since the last
+	 * invalidate_cache(). A failed check sets nothing and refuses again on the
+	 * next call. The row itself is always read fresh.
+	 */
+	private function require_storage(): void {
+		if ( ! $this->storage_verified ) {
+			( new Database( $this->connection ) )->require_selection_storage( $this->table );
+			$this->storage_verified = true;
+		}
+	}
+
 	/** Read the mutable connection status after each database operation. */
 	private function read_failed(): bool {
 		return '' !== $this->connection->last_error;
 	}
 
-	/** Evict again after the caller finishes its transaction, including uncertain outcomes. */
+	/**
+	 * Evict again after the caller finishes its transaction, including uncertain outcomes.
+	 * Invalidating also forces the next read or write to verify the options table's shape
+	 * again: a write is where exactness depends on that shape, so it is re-checked after each.
+	 */
 	public function invalidate_cache(): void {
 		wp_cache_delete( self::OPTION, 'options' );
 		wp_cache_delete( 'alloptions', 'options' );
 		wp_cache_delete( 'notoptions', 'options' );
+		$this->storage_verified = false;
 	}
 }

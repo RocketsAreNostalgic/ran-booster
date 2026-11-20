@@ -55,7 +55,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			self::assertStringEndsWith( $note, $copy, $reason );
 			$sentences[] = $copy;
 		}
-		self::assertCount( 5, array_unique( $sentences ) );
+		self::assertCount( 6, array_unique( $sentences ) );
 		self::assertStringNotContainsString( $note, DeploymentOutcomeMessage::for_activity( 'skipped', 'policy_disabled' ) );
 	}
 
@@ -101,9 +101,12 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'provider_failed'                   => 'Check the repository and credential settings',
 			'provider_request_invalid'          => 'Review the managed package settings',
 			'provider_credential_rejected'      => 'Replace or update it',
+			'provider_credential_unavailable'   => 'could not read the saved credential',
 			'provider_access_denied'            => 'Check the credential permissions',
 			'provider_repository_missing'       => 'Check that it exists',
 			'provider_reference_unavailable'    => 'Review the configured branch or reference',
+			'provider_repository_changed'       => 'Review the package source',
+			'provider_redirected'               => 'Check the current name on the provider',
 			'provider_rate_limited'             => 'Wait for its quota to reset',
 			'provider_selection_changed'        => 'submit a new deployment',
 			'provider_unavailable'              => 'Try again later',
@@ -164,6 +167,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'deployment_self_update_blocked'    => 'Update Booster separately',
 			'deployment_release_source_blocked' => 'Use Published releases or WordPress Updates',
 			'deployment_maintenance_active'     => 'Check whether an update is still running',
+			'source_paused'                     => 'paused by a site setting',
 		);
 		$defined_failed_codes = array_filter(
 			( new \ReflectionClass( DeploymentOutcome::class ) )->getConstants(),

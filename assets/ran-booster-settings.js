@@ -12,9 +12,12 @@
 	const startupGestureActive = () =>
 		[...document.querySelectorAll(selector)].some(
 			(form) =>
-				['hide_github', 'self_update_discovery'].includes(
-					form.dataset.ranBoosterSettingsScope
-				) &&
+				[
+					'hide_github',
+					'self_update_discovery',
+					'branch_sources',
+					'prerelease_sources',
+				].includes(form.dataset.ranBoosterSettingsScope) &&
 				(form.matches(':active') || form.querySelector(':active'))
 		);
 	let startupPending = Boolean(window.htmx && startupGestureActive());

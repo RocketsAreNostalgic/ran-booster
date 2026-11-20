@@ -6,6 +6,7 @@ namespace RAN\Activity;
 
 use InvalidArgumentException;
 use RAN\AdoptionIdentity;
+use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\Storage\DeploymentWriteConnection;
@@ -23,10 +24,12 @@ final class ActivityStore {
 	public const SKIPPED_HEARTBEAT = 86400;
 	private const PURPOSES         = array( 'branch.check', 'release.check', 'workflow.assessment' );
 	/** Failed deployment reasons that neither show nor clear a failed update. */
-	private const UPDATE_REFUSALS = array( 'lock_unavailable', 'policy_blocked', 'provider_rate_limited', 'provider_selection_changed', 'stale_event' );
+	private const UPDATE_REFUSALS = array( 'lock_unavailable', 'policy_blocked', 'provider_rate_limited', 'provider_selection_changed', 'source_paused', 'stale_event' );
 	private const STATE           = "JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state'))";
 	private const UNRESOLVED      = "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_resolved_at')), 'null') = 'null'";
 	private string $table;
+	/** @var array<int, array{string, string}> Operation and correlation of each row begun here, so a refused write can be logged without SQL. */
+	private array $begun = array();
 
 	public function __construct( private ?object $database = null, ?string $table = null ) {
 		if ( null === $this->database ) {
@@ -157,8 +160,21 @@ final class ActivityStore {
 
 	/** @param Capture $capture */
 	public function begin( string $provider, ActivityRequest $request, array $capture, ?string $correlation = null ): ?int {
+		$id = $this->insert( $provider, $request, $capture, $correlation );
+		if ( is_int( $id ) ) {
+			return $id;
+		}
+		$this->unrecorded( 'begin', $id, correlation: $correlation, operation: $request->operation );
+		return null;
+	}
+
+	/**
+	 * @param Capture $capture
+	 * @return int|'unavailable'|'refused'|'failed' The new row id, or why no row was written.
+	 */
+	private function insert( string $provider, ActivityRequest $request, array $capture, ?string $correlation ): int|string {
 		if ( ! $this->available() ) {
-			return null;
+			return 'unavailable';
 		}
 		$coupled = null !== $correlation;
 		try {
@@ -166,17 +182,17 @@ final class ActivityStore {
 			$this->validate_capture( $capture );
 			$correlation ??= bin2hex( random_bytes( 16 ) );
 			if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) ) {
-				return null;
+				return 'refused';
 			}
 		} catch ( InvalidArgumentException | \Random\RandomException ) {
-			return null;
+			return 'refused';
 		}
 		if ( $coupled && ! $this->transactional_storage() ) {
-			return null;
+			return 'unavailable';
 		}
 		$token = $capture['adoption_token'];
 		if ( null !== $token && ! AdoptionIdentity::matches( $token, $provider, $request->repository->provider_repository_id ?? '' ) ) {
-			return null;
+			return 'refused';
 		}
 		$data = array_merge(
 			$capture,
@@ -195,22 +211,27 @@ final class ActivityStore {
 			)
 		);
 		if ( 1 !== $this->connection()?->insert( $this->table, $data ) ) {
-			return null;
+			return 'failed';
 		}
 		$rows = $this->rows( $this->prepare( "SELECT id FROM {$this->table} WHERE correlation = %s", $correlation ) );
-		return isset( $rows[0]['id'] ) ? (int) $rows[0]['id'] : null;
+		if ( ! isset( $rows[0]['id'] ) ) {
+			return 'failed';
+		}
+		$this->begun[ (int) $rows[0]['id'] ] = array( $request->operation, $correlation );
+		return (int) $rows[0]['id'];
 	}
 
+	/** A missing id is a no-op: begin() has already logged why it wrote no row. */
 	public function progress( ?int $id, string $code, string $message = '' ): bool {
-		try {
-			$this->validate_text( $code, $message );
-		} catch ( InvalidArgumentException | \ValueError ) {
-			return false;
-		}
 		if ( null === $id ) {
 			return false;
 		}
-		return 1 === $this->query(
+		try {
+			$this->validate_text( $code, $message );
+		} catch ( InvalidArgumentException | \ValueError ) {
+			return $this->unrecorded( 'progress', 'refused', $id );
+		}
+		$result = $this->query(
 			$this->prepare(
 				"UPDATE {$this->table} SET stage = %s, message = %s WHERE id = %d AND status = 'incomplete'",
 				$code,
@@ -218,6 +239,8 @@ final class ActivityStore {
 				$id
 			)
 		);
+		// No changed row is not logged: an unchanged repeat of the same stage also changes none.
+		return false === $result ? $this->unrecorded( 'progress', 'failed', $id ) : 1 === $result;
 	}
 
 	/** @param array<string, scalar|null> $facts */
@@ -226,14 +249,17 @@ final class ActivityStore {
 			$this->validate_text( $code, $message );
 			$encoded = $this->encode_facts( $facts );
 		} catch ( InvalidArgumentException | \ValueError ) {
-			return false;
+			return $this->unrecorded( 'progress', 'refused', correlation: $correlation );
 		}
-		if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) || ! $this->transactional_storage() ) {
-			return false;
+		if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) ) {
+			return $this->unrecorded( 'progress', 'refused' );
+		}
+		if ( ! $this->transactional_storage() ) {
+			return $this->unrecorded( 'progress', 'unavailable', correlation: $correlation );
 		}
 		// A deployment needing attention has finished; record that once, on the clock complete() uses.
 		$finished = 'needs_attention' === ( $facts['deployment_state'] ?? null ) ? ", completed_at = COALESCE(completed_at, '" . gmdate( 'Y-m-d H:i:s' ) . "')" : '';
-		return 1 === $this->query(
+		$result   = $this->query(
 			$this->prepare(
 				"UPDATE {$this->table} SET stage = %s, message = %s, facts = %s$finished WHERE correlation = %s AND status = 'incomplete'",
 				$code,
@@ -242,6 +268,7 @@ final class ActivityStore {
 				$correlation
 			)
 		);
+		return false === $result ? $this->unrecorded( 'progress', 'failed', correlation: $correlation ) : 1 === $result;
 	}
 
 	/** @param array<string, scalar|null> $facts Core-normalized observation fields, never arbitrary provider payloads. */
@@ -251,8 +278,11 @@ final class ActivityStore {
 
 	/** @param array<string, scalar|null> $facts */
 	public function complete_by_correlation( string $correlation, string $status, string $reason, string $message = '', string $remediation = '', array $facts = array(), string $effect = 'none' ): bool {
-		if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) || ! $this->transactional_storage() ) {
-			return false;
+		if ( 1 !== preg_match( '/\A[a-f0-9]{32}\z/', $correlation ) ) {
+			return $this->unrecorded( 'complete', 'refused' );
+		}
+		if ( ! $this->transactional_storage() ) {
+			return $this->unrecorded( 'complete', 'unavailable', correlation: $correlation );
 		}
 		return $this->complete_record( null, $correlation, $status, $reason, $message, $remediation, $facts, $effect );
 	}
@@ -273,18 +303,19 @@ final class ActivityStore {
 
 	/** @param array<string, scalar|null> $facts */
 	private function complete_record( ?int $id, ?string $correlation, string $status, string $reason, string $message, string $remediation, array $facts, string $effect ): bool {
+		// A missing id is a no-op: begin() has already logged why it wrote no row.
+		if ( null === $id && null === $correlation ) {
+			return false;
+		}
 		try {
 			$this->validate_text( $reason, $message, $remediation );
 			$encoded = $this->encode_facts( $facts );
 		} catch ( InvalidArgumentException | \ValueError ) {
-			return false;
+			return $this->unrecorded( 'complete', 'refused', $id, $correlation );
 		}
 		if ( ! in_array( $status, array( 'succeeded', 'failed', 'rejected', 'skipped' ), true )
 			|| ! in_array( $effect, array( 'none', 'established', 'invalidated' ), true ) ) {
-			return false;
-		}
-		if ( null === $id && null === $correlation ) {
-			return false;
+			return $this->unrecorded( 'complete', 'refused', $id, $correlation );
 		}
 		$where  = null !== $id ? 'id = %d' : 'correlation = %s';
 		$value  = $id ?? $correlation;
@@ -305,7 +336,7 @@ final class ActivityStore {
 			return true;
 		}
 		if ( 0 !== $result ) {
-			return false;
+			return $this->unrecorded( 'complete', 'failed', $id, $correlation );
 		}
 		$rows     = $this->rows( $this->prepare( "SELECT status,reason,message,remediation,facts,effect FROM {$this->table} WHERE $where", $value ) );
 		$expected = array(
@@ -316,7 +347,34 @@ final class ActivityStore {
 			'facts'       => $encoded,
 			'effect'      => $effect,
 		);
-		return isset( $rows[0] ) && $expected === $rows[0];
+		if ( isset( $rows[0] ) && $expected === $rows[0] ) {
+			return true;
+		}
+		// The row is gone, unreadable or already finished with another outcome.
+		return $this->unrecorded( 'complete', 'refused', $id, $correlation );
+	}
+
+	/**
+	 * Logs one line, codes only, for a write that was refused or failed, and returns the write's false. It reads
+	 * nothing: a row begun by another request or instance is logged without its operation and correlation.
+	 *
+	 * @param 'begin'|'progress'|'complete'    $step
+	 * @param 'unavailable'|'refused'|'failed' $event
+	 */
+	private function unrecorded( string $step, string $event, ?int $id = null, ?string $correlation = null, ?string $operation = null ): false {
+		$begun = null !== $id ? ( $this->begun[ $id ] ?? null ) : null;
+		BoosterLogger::log(
+			'An Activity write was not recorded.',
+			array_filter(
+				array(
+					'step'           => 'activity.' . $step,
+					'event'          => $event,
+					'operation'      => $operation ?? $begun[0] ?? null,
+					'correlation_id' => $correlation ?? $begun[1] ?? null,
+				)
+			)
+		);
+		return false;
 	}
 
 	/**

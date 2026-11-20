@@ -18,9 +18,12 @@ final readonly class DeploymentOutcome {
 	public const CODE_PROVIDER_FAILED                   = 'provider_failed';
 	public const CODE_PROVIDER_REQUEST_INVALID          = 'provider_request_invalid';
 	public const CODE_PROVIDER_CREDENTIAL_REJECTED      = 'provider_credential_rejected';
+	public const CODE_PROVIDER_CREDENTIAL_UNAVAILABLE   = 'provider_credential_unavailable';
 	public const CODE_PROVIDER_ACCESS_DENIED            = 'provider_access_denied';
 	public const CODE_PROVIDER_REPOSITORY_MISSING       = 'provider_repository_missing';
 	public const CODE_PROVIDER_REFERENCE_UNAVAILABLE    = 'provider_reference_unavailable';
+	public const CODE_PROVIDER_REPOSITORY_CHANGED       = 'provider_repository_changed';
+	public const CODE_PROVIDER_REDIRECTED               = 'provider_redirected';
 	public const CODE_PROVIDER_RATE_LIMITED             = 'provider_rate_limited';
 	public const CODE_PROVIDER_SELECTION_CHANGED        = 'provider_selection_changed';
 	public const CODE_PROVIDER_UNAVAILABLE              = 'provider_unavailable';
@@ -81,6 +84,7 @@ final readonly class DeploymentOutcome {
 	public const CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED    = 'deployment_self_update_blocked';
 	public const CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED = 'deployment_release_source_blocked';
 	public const CODE_DEPLOYMENT_MAINTENANCE_ACTIVE     = 'deployment_maintenance_active';
+	public const CODE_SOURCE_PAUSED                     = 'source_paused';
 
 	/** @var array<string, DeploymentState> */
 	private const STATES = array(
@@ -90,9 +94,12 @@ final readonly class DeploymentOutcome {
 		self::CODE_PROVIDER_FAILED                   => DeploymentState::FAILED,
 		self::CODE_PROVIDER_REQUEST_INVALID          => DeploymentState::FAILED,
 		self::CODE_PROVIDER_CREDENTIAL_REJECTED      => DeploymentState::FAILED,
+		self::CODE_PROVIDER_CREDENTIAL_UNAVAILABLE   => DeploymentState::FAILED,
 		self::CODE_PROVIDER_ACCESS_DENIED            => DeploymentState::FAILED,
 		self::CODE_PROVIDER_REPOSITORY_MISSING       => DeploymentState::FAILED,
 		self::CODE_PROVIDER_REFERENCE_UNAVAILABLE    => DeploymentState::FAILED,
+		self::CODE_PROVIDER_REPOSITORY_CHANGED       => DeploymentState::FAILED,
+		self::CODE_PROVIDER_REDIRECTED               => DeploymentState::FAILED,
 		self::CODE_PROVIDER_RATE_LIMITED             => DeploymentState::FAILED,
 		self::CODE_PROVIDER_SELECTION_CHANGED        => DeploymentState::FAILED,
 		self::CODE_PROVIDER_UNAVAILABLE              => DeploymentState::FAILED,
@@ -153,6 +160,7 @@ final readonly class DeploymentOutcome {
 		self::CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED    => DeploymentState::FAILED,
 		self::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED => DeploymentState::FAILED,
 		self::CODE_DEPLOYMENT_MAINTENANCE_ACTIVE     => DeploymentState::FAILED,
+		self::CODE_SOURCE_PAUSED                     => DeploymentState::FAILED,
 	);
 
 	private function __construct( private string $code, private DeploymentState $state, private ?ProviderFailure $provider_failure = null ) {

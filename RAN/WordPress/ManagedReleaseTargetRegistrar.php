@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace RAN\WordPress;
 
+use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\PackageMutationGuard;
+use RAN\Deployment\PackageSourceGate;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
@@ -171,7 +173,7 @@ final class ManagedReleaseTargetRegistrar {
 			return $reply;
 		}
 		try {
-			$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'] );
+			$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'], true );
 		} catch ( PluginNotFound | ThemeNotFound ) {
 			return isset( $this->registered_authorities[ $key ] ) || isset( $this->targets[ $key ] )
 				? $this->native_update_error( 'authority_changed' )
@@ -246,7 +248,7 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		if ( null === $pending ) {
 			try {
-				$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'] );
+				$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'], true );
 			} catch ( PluginNotFound | ThemeNotFound ) {
 				return isset( $this->registered_authorities[ $key ] ) || isset( $this->targets[ $key ] )
 					? $this->native_update_error( 'authority_changed' )
@@ -272,7 +274,7 @@ final class ManagedReleaseTargetRegistrar {
 			} else {
 				$lock_token = $lock->acquire();
 			}
-			$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'] );
+			$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'], true );
 			$current  = $snapshot['authority'];
 			if ( ! $snapshot['release']
 				|| null === $current
@@ -310,7 +312,7 @@ final class ManagedReleaseTargetRegistrar {
 			|| ( $pending['automatic'] && ( ! function_exists( 'doing_action' ) || ! doing_action( 'wp_maybe_auto_update' ) ) ) ) {
 			throw new \RuntimeException( 'GitHub native authority is unavailable.' );
 		}
-		$snapshot = $this->native_authority_snapshot( $type, $identity );
+		$snapshot = $this->native_authority_snapshot( $type, $identity, true );
 		if ( ! $snapshot['release'] || $pending['authority'] !== $snapshot['authority'] || ! $this->native_target_is_active( $type, $identity ) ) {
 			throw new \RuntimeException( 'The managed release authority changed after staging.' );
 		}
@@ -626,7 +628,7 @@ final class ManagedReleaseTargetRegistrar {
 			$configuration->package_root(),
 			$identifier,
 			$configuration->channel(),
-			$package->get_deployment_policy()->value
+			self::effective_policy( $package, $configuration )
 		);
 		if ( ! $target->register() ) {
 			throw new \RuntimeException( 'The managed release target could not be registered.' );
@@ -687,8 +689,11 @@ final class ManagedReleaseTargetRegistrar {
 		return null;
 	}
 
-	/** @return array{release: bool, authority: array<string, int|string>|null} */
-	private function native_authority_snapshot( string $type, string $identifier ): array {
+	/**
+	 * @param bool $fresh Mutation fences read the source setting past the request's option cache.
+	 * @return array{release: bool, authority: array<string, int|string>|null}
+	 */
+	private function native_authority_snapshot( string $type, string $identifier, bool $fresh = false ): array {
 		$package = 'plugin' === $type
 			? $this->plugins->booster_plugin_from_file( $identifier )
 			: $this->themes->booster_theme_from_stylesheet( $identifier );
@@ -742,7 +747,7 @@ final class ManagedReleaseTargetRegistrar {
 
 		return array(
 			'release'   => true,
-			'authority' => $this->authority( $package, $configuration ),
+			'authority' => $this->authority( $package, $configuration, $fresh ),
 		);
 	}
 
@@ -789,6 +794,10 @@ final class ManagedReleaseTargetRegistrar {
 				continue;
 			}
 			$identifier = (string) $package->get_identifier();
+			// Removing this offer is the loop's only effect, so a package without one needs no authority read.
+			if ( ! array_key_exists( $identifier, $transient->response ) ) {
+				continue;
+			}
 			if ( PackageSource::RELEASE_ASSET !== $package->get_source() ) {
 				unset( $transient->response[ $identifier ] );
 
@@ -813,7 +822,7 @@ final class ManagedReleaseTargetRegistrar {
 	}
 
 	/** @return array<string, int|string> */
-	private function authority( Package $package, ManagedReleaseConfiguration $configuration ): array {
+	private function authority( Package $package, ManagedReleaseConfiguration $configuration, bool $fresh = false ): array {
 		return array(
 			'adoption_token'         => \RAN\AdoptionIdentity::of( $package ) ?? throw new \RuntimeException( 'The adoption identity is unavailable.' ),
 			'provider'               => (string) $package->get_provider_code(),
@@ -823,8 +832,19 @@ final class ManagedReleaseTargetRegistrar {
 			'credential_id'          => $package->get_credential_id(),
 			'private'                => $package->get_private() ? 1 : 0,
 			'configuration'          => $configuration->to_json(),
-			'deployment_policy'      => $package->get_deployment_policy()->value,
+			'deployment_policy'      => self::effective_policy( $package, $configuration, $fresh ),
 		);
+	}
+
+	/**
+	 * A paused pre-release track is carried to the updater as disabled, not forced-off, so the
+	 * read-only Check releases still answers. The saved policy is untouched and returns with the override.
+	 * The download-time snapshot reads fresh, so a pause saved after registration fails its authority match.
+	 */
+	private static function effective_policy( Package $package, ManagedReleaseConfiguration $configuration, bool $fresh = false ): string {
+		return PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $configuration->channel(), $fresh )
+			? DeploymentPolicy::DISABLED->value
+			: $package->get_deployment_policy()->value;
 	}
 
 	private function native_update_error( string $reason ): \WP_Error {

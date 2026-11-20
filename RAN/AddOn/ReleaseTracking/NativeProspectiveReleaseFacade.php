@@ -7,10 +7,12 @@ namespace RAN\AddOn\ReleaseTracking;
 use InvalidArgumentException;
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Admin\PackageRepositoryRequestResolver;
+use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\ReleaseArtifactCleanupFailure;
 use RAN\Deployment\ReleaseArtifactCustodian;
 use RAN\Deployment\PackageMutationGuard;
+use RAN\Deployment\PackageSourceGate;
 use RAN\Logging\BoosterLogger;
 use RAN\ManagedRepository;
 use RAN\Package;
@@ -274,6 +276,9 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 			|| ! $this->valid_fingerprint( $expected_fingerprint ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
+		}
+		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) ) {
+			return ProspectiveReleaseResult::failure( DeploymentOutcome::CODE_SOURCE_PAUSED );
 		}
 
 		try {

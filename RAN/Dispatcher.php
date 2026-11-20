@@ -474,7 +474,7 @@ class Dispatcher {
 		check_admin_referer( 'save-general-settings' === $action ? 'ran-booster-save-general-settings' : 'ran-booster-check-core-updates' );
 		$keys = 'save-general-settings' === $action ? array( 'action', 'token', 'preferences' ) : array( 'action' );
 		if ( 'save-general-settings' === $action && array_key_exists( 'scope', $request ) ) {
-			if ( ! is_string( $request['scope'] ) || ! in_array( $request['scope'], array( 'hide_github', 'self_update_discovery', 'numeric' ), true ) ) {
+			if ( ! is_string( $request['scope'] ) || ! in_array( $request['scope'], array( 'hide_github', 'self_update_discovery', 'numeric', 'branch_sources', 'prerelease_sources' ), true ) ) {
 				wp_die( esc_html__( 'Invalid Settings request. Reload Settings and try again.', 'ran-booster' ) );
 			}
 			$keys[] = 'scope';

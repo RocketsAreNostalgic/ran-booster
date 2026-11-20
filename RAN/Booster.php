@@ -687,8 +687,14 @@ class Booster {
 	/** Optional history has its own schema version and cannot poison Core readiness. */
 	private function upgrade_activity(): void {
 		$activity = $this->service( \RAN\Activity\ActivityStore::class );
-		if ( ! $activity->available() ) {
-			$activity->install();
+		if ( ! $activity->available() && ! $activity->install() ) {
+			BoosterLogger::log(
+				'Activity storage could not be installed.',
+				array(
+					'step'  => 'activity.install',
+					'event' => 'failed',
+				)
+			);
 		}
 	}
 

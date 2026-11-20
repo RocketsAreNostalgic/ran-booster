@@ -2,6 +2,7 @@ includes:
 	- vendor/szepeviktor/phpstan-wordpress/extension.neon
 
 parameters:
+	tmpDir: vendor/.phpstan-cache/development
 	level: 8
 	treatPhpDocTypesAsCertain: false
 	parallel:

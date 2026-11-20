@@ -513,6 +513,7 @@ final class PackageAdminController {
 					'busy'                   => __( 'already queued, running, or needs attention', 'ran-booster' ),
 					'credential_unavailable' => __( 'credential unavailable', 'ran-booster' ),
 					'disabled'               => __( 'deployment disabled', 'ran-booster' ),
+					'paused'                 => __( 'paused by a site setting', 'ran-booster' ),
 					'provider_unavailable'   => __( 'Git provider unavailable', 'ran-booster' ),
 					'release_source'         => __( 'published-release source', 'ran-booster' ),
 					'self_update'            => __( 'Booster self-update blocked', 'ran-booster' ),

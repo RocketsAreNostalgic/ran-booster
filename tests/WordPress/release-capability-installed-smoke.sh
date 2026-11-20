@@ -118,6 +118,16 @@ if [[ -L "$wordpress/wp-content/mu-plugins" || -e "$probe_target" || -L "$probe_
 fi
 mkdir -p "$wordpress/wp-content/mu-plugins"
 cp "$probe_source" "$probe_target"
+# Opt-in per-request query log for #1091; normal runs leave it off.
+query_log=''
+if [[ "${RAN_BOOSTER_NATIVE_LIFECYCLE_QUERY_LOG:-}" == '1' ]]; then
+	query_log="$RUNNER_TEMP/ran-booster-native-query-log"
+	if [[ -e "$query_log" || -L "$query_log" ]]; then
+		echo 'The native lifecycle query log directory is not exclusively owned.' >&2
+		exit 1
+	fi
+	mkdir "$query_log"
+fi
 
 for scale in 1 5 10 20; do
 	export RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE="$scale"
@@ -132,6 +142,9 @@ done
 
 cmp "$probe_source" "$probe_target"
 rm -- "$probe_target"
+if [[ -n "$query_log" ]]; then
+	"$php_bin" "$root/tests/WordPress/native-lifecycle-query-summary.php" "$query_log"
+fi
 
 if [[ -e "$plugin_target" || -L "$plugin_target" || -e "$theme_target" || -L "$theme_target" ]]; then
 	echo 'The installed release-capability proof left a package fixture behind.' >&2

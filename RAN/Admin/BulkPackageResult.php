@@ -177,6 +177,7 @@ final readonly class BulkPackageResult {
 			'credential_unavailable',
 			'deactivation_failed',
 			'disabled',
+			'paused',
 			'permission',
 			'provider_unavailable',
 			'release_source',

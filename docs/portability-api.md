@@ -129,7 +129,11 @@ Review returns one of:
 - `managed`: already managed with the exact expected tuple;
 - `protected`: conflicting, stale, or malformed management exists; or
 - `blocked`: identity, provider, credential, destination, capability, nonce, or
-  runtime checks prevent safe adoption.
+  runtime checks prevent safe adoption, or site policy pauses the package's
+  source: on a site that is not a development site, branch sources and Preview
+  tracks are paused until the site allows them (reason `forbidden`, see
+  [General settings](settings.md)). Apply on a paused site returns the same
+  `blocked` result.
 
 The facade never returns `install`. Apply returns `adopted`, `unchanged`,
 `blocked`, or `failed`. `target_verified` is true only for `adopted` or

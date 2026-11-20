@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Tests\Settings;
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -14,10 +15,12 @@ use RAN\Settings\GeneralPreferenceStore;
 use RAN\WordPress\CoreSelfUpdatePolicy;
 
 require_once __DIR__ . '/GeneralPreferenceStoreWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/PackageSourceGateWordPressFunctions.php';
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
 final class GeneralPreferenceStoreTest extends TestCase {
+	use \RAN\Tests\Support\CapturesBoosterLog;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override.
 	protected function setUp(): void {
@@ -28,6 +31,8 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		unset( $GLOBALS['ran_booster_general_preference_cached_option'] );
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Controlled test-only database boundary.
 		$GLOBALS['wpdb'] = new GeneralPreferenceDatabase();
+		// The stubs' default home is localhost; the source overrides are only editable off a development site.
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
 	}
 
 	public function test_saved_github_hide_fallback_applies_without_a_code_override_and_rejects_malformed_saved_values(): void {
@@ -643,6 +648,27 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		self::assertSame( $after, $store->view_snapshot()['tokens']['hide_github'], 'Older writers do not advance the counter; ABA protection does not extend across them.' );
 	}
 
+	public function test_a_throwing_save_logs_only_its_class_and_code(): void {
+		$store = new GeneralPreferenceStore();
+		$this->start_log_capture();
+		try {
+			$result = $store->save(
+				$store->snapshot()['token'],
+				$this->submission(),
+				static function (): never {
+					throw new \RuntimeException( 'marker-private-text', 7 );
+				},
+				static fn (): bool => true,
+				'numeric'
+			);
+			$lines  = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+		self::assertSame( 'failed', $result );
+		self::assertSame( array( '[ran-booster] General Settings could not be saved. {"operation":"save_numeric","step":"settings_save","exception_class":"RuntimeException","exception_code":"7"}' ), $lines );
+	}
+
 	public function test_failed_write_or_commit_does_not_advance_metadata_in_rollback_fixture(): void {
 		$store                        = new GeneralPreferenceStore();
 		$lock                         = static fn ( callable $operation ): string => $operation();
@@ -656,6 +682,200 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		$GLOBALS['wpdb']->fail_commit = true;
 		self::assertSame( 'failed', $store->save( $store->snapshot()['token'], $this->submission(), $lock, $eligible ) );
 		self::assertSame( $original, $GLOBALS['ran_booster_general_preference_raw'] );
+	}
+
+	/** @return iterable<string, array{string, string, string}> */
+	public static function source_overrides(): iterable {
+		yield 'branch' => array( 'branch_sources', 'prerelease_sources', 'RAN_BOOSTER_ALLOW_BRANCH_SOURCES' );
+		yield 'pre-release' => array( 'prerelease_sources', 'branch_sources', 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES' );
+	}
+
+	#[DataProvider( 'source_overrides' )]
+	public function test_each_source_override_saves_alone_binds_its_address_and_lapses_when_it_changes( string $key, string $other ): void {
+		$store                                = new GeneralPreferenceStore();
+		$lock                                 = static fn ( callable $operation ): string => $operation();
+		$eligible                             = static fn (): bool => true;
+		$read                                 = static fn (): array => \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] );
+		$GLOBALS['ran_booster_test_home_url'] = 'http://Example.com/site/';
+		self::assertSame( array( false, false ), array( $store->projection()[ $key ]['value'], $store->projection()[ $other ]['value'] ), 'Neither is on by default.' );
+		self::assertSame( 'invalid', $store->save( $store->snapshot()['token'], array_merge( $this->submission(), array( $key => '1' ) ), $lock, $eligible ), 'An all-fields save never carries it.' );
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens'][ $key ], array( $key => '1' ), $lock, $eligible, $key ) );
+		self::assertSame( array( true, 'example.com/site' ), array( $read()[ $key ], $read()[ $key . '_address' ] ) );
+		self::assertArrayNotHasKey( $other, $read() );
+		self::assertSame( array( true, false ), array( $store->projection()[ $key ]['value'], $store->projection()[ $other ]['value'] ), 'One override alone leaves the other off.' );
+		self::assertSame(
+			array(
+				'hide_github'           => 0,
+				'self_update_discovery' => 0,
+				'numeric'               => 0,
+				$key                    => 1,
+			),
+			$read()['_revisions']
+		);
+
+		$GLOBALS['ran_booster_test_home_url'] = 'https://example.com/site';
+		self::assertTrue( $store->projection()[ $key ]['value'], 'A move to HTTPS keeps it.' );
+		$GLOBALS['ran_booster_test_home_url'] = 'https://copy.example.com/site';
+		self::assertSame(
+			array(
+				'value'  => false,
+				'source' => 'saved',
+				'locked' => false,
+				'error'  => 'address_changed',
+			),
+			$store->projection()[ $key ]
+		);
+		self::assertSame( 'saved', $store->save( $store->snapshot()['token'], $this->submission(), $lock, $eligible ) );
+		self::assertSame( 1, $read()['_revisions'][ $key ], 'An all-fields save leaves it alone.' );
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens'][ $key ], array( $key => '0' ), $lock, $eligible, $key ) );
+		self::assertArrayNotHasKey( $key, $read() );
+		self::assertArrayNotHasKey( $key . '_address', $read() );
+	}
+
+	public function test_both_source_overrides_hold_together_and_each_binds_its_own_address(): void {
+		$store                                = new GeneralPreferenceStore();
+		$lock                                 = static fn ( callable $operation ): string => $operation();
+		$eligible                             = static fn (): bool => true;
+		$GLOBALS['ran_booster_test_home_url'] = 'https://example.com';
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens']['branch_sources'], array( 'branch_sources' => '1' ), $lock, $eligible, 'branch_sources' ) );
+		$GLOBALS['ran_booster_test_home_url'] = 'https://example.com/moved';
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens']['prerelease_sources'], array( 'prerelease_sources' => '1' ), $lock, $eligible, 'prerelease_sources' ) );
+		$projection                           = static fn (): array => array_map( static fn ( array $field ): array => array( $field['value'], $field['error'] ), array_intersect_key( $store->projection(), array_flip( array( 'branch_sources', 'prerelease_sources' ) ) ) );
+		self::assertSame(
+			array(
+				'branch_sources'     => array( false, 'address_changed' ),
+				'prerelease_sources' => array( true, null ),
+			),
+			$projection(),
+			'Each keeps the address it was turned on for.'
+		);
+		$GLOBALS['ran_booster_test_home_url'] = 'https://example.com';
+		self::assertSame(
+			array(
+				'branch_sources'     => array( true, null ),
+				'prerelease_sources' => array( false, 'address_changed' ),
+			),
+			$projection()
+		);
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens']['prerelease_sources'], array( 'prerelease_sources' => '1' ), $lock, $eligible, 'prerelease_sources' ) );
+		self::assertSame(
+			array(
+				'branch_sources'     => array( true, null ),
+				'prerelease_sources' => array( true, null ),
+			),
+			$projection(),
+			'Both on.'
+		);
+	}
+
+	public function test_a_document_saved_before_the_source_overrides_existed_stays_valid(): void {
+		$store    = new GeneralPreferenceStore();
+		$lock     = static fn ( callable $operation ): string => $operation();
+		$eligible = static fn (): bool => true;
+		$this->seed(
+			array(
+				'history_rows'            => 300,
+				// Left by an unreleased build that had one combined override; it is not migrated and is ignored.
+				'package_sources'         => true,
+				'package_sources_address' => 'localhost',
+				'_revisions'              => array(
+					'hide_github'           => 2,
+					'self_update_discovery' => 1,
+					'numeric'               => 4,
+					'package_sources'       => 3,
+				),
+			)
+		);
+		self::assertFalse( $store->snapshot()['malformed'] );
+		self::assertArrayNotHasKey( 'package_sources', $store->projection() );
+		self::assertSame( array( false, false ), array( $store->projection()['branch_sources']['value'], $store->projection()['prerelease_sources']['value'] ) );
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens']['numeric'], array_slice( $this->submission(), 2 ), $lock, $eligible, 'numeric' ) );
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens']['branch_sources'], array( 'branch_sources' => '1' ), $lock, $eligible, 'branch_sources' ) );
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens']['prerelease_sources'], array( 'prerelease_sources' => '1' ), $lock, $eligible, 'prerelease_sources' ) );
+		self::assertSame(
+			array(
+				'hide_github'           => 2,
+				'self_update_discovery' => 1,
+				'numeric'               => 5,
+				'package_sources'       => 3,
+				'branch_sources'        => 1,
+				'prerelease_sources'    => 1,
+			),
+			\RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['_revisions']
+		);
+	}
+
+	public function test_a_development_site_forces_both_on_locked_and_keeps_the_saved_value_for_later(): void {
+		define( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', false );
+		$GLOBALS['ran_booster_test_environment_type'] = 'development';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+		$this->seed(
+			array(
+				'branch_sources'         => true,
+				'branch_sources_address' => 'old.example.com',
+			)
+		);
+		$saved = $GLOBALS['ran_booster_general_preference_raw'];
+		$store = new GeneralPreferenceStore();
+		$on    = array(
+			'value'  => true,
+			'source' => 'default',
+			'locked' => true,
+			'error'  => null,
+		);
+		self::assertSame( array( $on, $on ), array( $store->projection()['branch_sources'], $store->projection()['prerelease_sources'] ), 'A development site wins over the saved value and over a false constant, as PackageSourceGate does.' );
+		foreach ( array( 'branch_sources', 'prerelease_sources' ) as $key ) {
+			self::assertSame( 'invalid', $store->save( $store->view_snapshot()['tokens'][ $key ], array( $key => '0' ), static fn ( callable $operation ): string => $operation(), static fn (): bool => true, $key ), $key );
+		}
+		self::assertSame( $saved, $GLOBALS['ran_booster_general_preference_raw'], 'A posted save leaves the stored value untouched.' );
+
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		self::assertSame( array( false, 'address_changed' ), array( $store->projection()['branch_sources']['value'], $store->projection()['branch_sources']['error'] ), 'The saved value applies again once it is no longer a development site.' );
+		self::assertSame( array( false, 'code' ), array( $store->projection()['prerelease_sources']['value'], $store->projection()['prerelease_sources']['source'] ) );
+	}
+
+	#[DataProvider( 'source_overrides' )]
+	public function test_each_source_constant_wins_and_locks_only_its_own_setting( string $key, string $other, string $constant ): void {
+		'RAN_BOOSTER_ALLOW_BRANCH_SOURCES' === $constant ? define( 'RAN_BOOSTER_ALLOW_BRANCH_SOURCES', true ) : define( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', true );
+		$GLOBALS['ran_booster_test_home_url'] = 'https://example.com';
+		$this->seed(
+			array(
+				$key                => false,
+				$other              => true,
+				$other . '_address' => 'example.com',
+			)
+		);
+		$store = new GeneralPreferenceStore();
+		self::assertSame(
+			array(
+				'value'  => true,
+				'source' => 'code',
+				'locked' => true,
+				'error'  => null,
+			),
+			$store->projection()[ $key ]
+		);
+		self::assertSame(
+			array(
+				'value'  => true,
+				'source' => 'saved',
+				'locked' => false,
+				'error'  => null,
+			),
+			$store->projection()[ $other ]
+		);
+		$lock     = static fn ( callable $operation ): string => $operation();
+		$eligible = static fn (): bool => true;
+		self::assertSame( 'invalid', $store->save( $store->view_snapshot()['tokens'][ $key ], array( $key => '0' ), $lock, $eligible, $key ) );
+		self::assertSame( 'saved', $store->save( $store->view_snapshot()['tokens'][ $other ], array( $other => '0' ), $lock, $eligible, $other ), 'The other setting stays editable.' );
+	}
+
+	#[DataProvider( 'source_overrides' )]
+	public function test_an_invalid_source_constant_counts_as_off( string $key, string $other, string $constant ): void {
+		'RAN_BOOSTER_ALLOW_BRANCH_SOURCES' === $constant ? define( 'RAN_BOOSTER_ALLOW_BRANCH_SOURCES', 'yes' ) : define( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', 'yes' );
+		$projection = ( new GeneralPreferenceStore() )->projection();
+		self::assertSame( array( false, 'invalid_code' ), array( $projection[ $key ]['value'], $projection[ $key ]['error'] ) );
+		self::assertSame( array( 'default', null ), array( $projection[ $other ]['source'], $projection[ $other ]['error'] ) );
 	}
 
 	/** @param array<string,mixed> $value */

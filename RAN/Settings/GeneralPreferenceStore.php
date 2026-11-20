@@ -13,7 +13,16 @@ final class GeneralPreferenceStore {
 		'hide_github'           => array( 'hide_github' ),
 		'self_update_discovery' => array( 'self_update_discovery' ),
 		'numeric'               => array( 'history_rows', 'history_days', 'max_download_bytes' ),
+		'branch_sources'        => array( 'branch_sources' ),
+		'prerelease_sources'    => array( 'prerelease_sources' ),
 	);
+
+	/**
+	 * Scopes added after documents were already saved. Each holds one field of the same name and is
+	 * saved only on its own, never by an all-fields save. A document without its counter is still
+	 * valid: the counter starts at zero.
+	 */
+	private const LATER_SCOPES = array( 'branch_sources', 'prerelease_sources' );
 
 	private const DEFAULTS = array(
 		'hide_github'           => false,
@@ -21,6 +30,8 @@ final class GeneralPreferenceStore {
 		'history_rows'          => 2000,
 		'history_days'          => 30,
 		'max_download_bytes'    => 52428800,
+		'branch_sources'        => false,
+		'prerelease_sources'    => false,
 	);
 
 	/** @return array{exists:bool,token:string,malformed:bool} */
@@ -29,8 +40,8 @@ final class GeneralPreferenceStore {
 	}
 
 	/** @return array<string,array{value:bool|int,source:'default'|'saved'|'code',locked:bool,error:?string}> */
-	public function projection(): array {
-		return $this->projection_for_state( $this->read_option() );
+	public function projection( bool $fresh = false ): array {
+		return $this->projection_for_state( $this->read_option( $fresh ) );
 	}
 
 	/** @return array{fields:array<string,array{value:bool|int,source:'default'|'saved'|'code',locked:bool,error:?string}>,token:string,tokens:array<string,string>,malformed:bool} */
@@ -99,11 +110,12 @@ final class GeneralPreferenceStore {
 	 * @return array<string,int>|null
 	 */
 	private function revisions( array $document ): ?array {
+		$required = array_diff_key( self::SCOPES, array_flip( self::LATER_SCOPES ) );
 		if ( ! array_key_exists( '_revisions', $document ) ) {
-			return array_fill_keys( array_keys( self::SCOPES ), 0 );
+			return array_fill_keys( array_keys( $required ), 0 );
 		}
 		$revisions = $document['_revisions'];
-		if ( ! is_array( $revisions ) || array_diff_key( self::SCOPES, $revisions ) ) {
+		if ( ! is_array( $revisions ) || array_diff_key( $required, $revisions ) ) {
 			return null;
 		}
 		foreach ( $revisions as $scope => $revision ) {
@@ -150,7 +162,15 @@ final class GeneralPreferenceStore {
 		}
 		try {
 			return $this->outcome( $with_management_admission_lock( fn (): string => $this->save_locked( $wpdb, $expected_token, $submitted, $github_hide_eligible, $scope ) ) );
-		} catch ( \Throwable ) {
+		} catch ( \Throwable $exception ) {
+			\RAN\Logging\BoosterLogger::log_exception(
+				'General Settings could not be saved.',
+				$exception,
+				array(
+					'operation' => 'save_' . $scope,
+					'step'      => 'settings_save',
+				)
+			);
 			return $this->finish( $wpdb, false, 'failed' );
 		}
 	}
@@ -186,7 +206,9 @@ final class GeneralPreferenceStore {
 				return $this->finish( $wpdb, false, 'stale' );
 			}
 		}
-		if ( 'all' !== $scope ) {
+		if ( 'all' === $scope ) {
+			$editable = array_values( array_diff( $editable, self::LATER_SCOPES ) );
+		} else {
 			$editable = array_values( array_intersect( $editable, self::SCOPES[ $scope ] ) );
 			if ( 'numeric' !== $scope && 1 !== count( $editable ) ) {
 				return $this->finish( $wpdb, false, 'invalid' );
@@ -204,11 +226,22 @@ final class GeneralPreferenceStore {
 				$replacement[ $key ] = $value;
 			}
 		}
-		foreach ( 'all' === $scope ? array_keys( self::SCOPES ) : array( $scope ) as $changed_scope ) {
-			if ( PHP_INT_MAX === $revisions[ $changed_scope ] ) {
+		foreach ( array_intersect( self::LATER_SCOPES, array_keys( $values ) ) as $key ) {
+			unset( $replacement[ $key . '_address' ] );
+			if ( true === $values[ $key ] ) {
+				$address = self::site_address();
+				if ( '' === $address ) {
+					return $this->finish( $wpdb, false, 'failed' );
+				}
+				$replacement[ $key . '_address' ] = $address;
+			}
+		}
+		foreach ( 'all' === $scope ? array_diff( array_keys( self::SCOPES ), self::LATER_SCOPES ) : array( $scope ) as $changed_scope ) {
+			$revision = $revisions[ $changed_scope ] ?? 0;
+			if ( PHP_INT_MAX === $revision ) {
 				return $this->finish( $wpdb, false, 'failed' );
 			}
-			++$revisions[ $changed_scope ];
+			$revisions[ $changed_scope ] = $revision + 1;
 		}
 		$replacement['_revisions'] = $revisions;
 		if ( ! $this->write_locked_option( $wpdb, $state, $replacement ) ) {
@@ -271,7 +304,7 @@ final class GeneralPreferenceStore {
 		$parsed = array();
 		foreach ( $editable as $key ) {
 			$value = $submitted[ $key ];
-			if ( in_array( $key, array( 'hide_github', 'self_update_discovery' ), true ) ) {
+			if ( in_array( $key, array( 'hide_github', 'self_update_discovery', 'branch_sources', 'prerelease_sources' ), true ) ) {
 				if ( ! is_string( $value ) || ! in_array( $value, array( '0', '1' ), true ) ) {
 					return null;
 				}
@@ -348,7 +381,61 @@ final class GeneralPreferenceStore {
 			'history_rows'          => $this->integer_projection( $document, 'history_rows', 'RAN_BOOSTER_HISTORY_ROWS', 200, 100000 ),
 			'history_days'          => $this->integer_projection( $document, 'history_days', 'RAN_BOOSTER_HISTORY_DAYS', 1, 365 ),
 			'max_download_bytes'    => $this->integer_projection( $document, 'max_download_bytes', 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 1048576, 536870911 ),
+			'branch_sources'        => $this->source_override_projection( $document, 'branch_sources' ),
+			'prerelease_sources'    => $this->source_override_projection( $document, 'prerelease_sources' ),
 		);
+	}
+
+	/**
+	 * A development site forces it on and locked, as PackageSourceGate allows both sources
+	 * there first; the saved value is kept, unread, for when the site stops being one. Then
+	 * its own constant (RAN_BOOSTER_ALLOW_BRANCH_SOURCES or RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES)
+	 * wins. A saved "on" holds only for the site address it was turned on for, so a database
+	 * copied to another site arrives with it off ('address_changed').
+	 *
+	 * @param array<string,mixed> $document
+	 * @param 'branch_sources'|'prerelease_sources' $key
+	 * @return array{value:bool,source:'default'|'saved'|'code',locked:bool,error:?string}
+	 */
+	private function source_override_projection( array $document, string $key ): array {
+		if ( \RAN\Deployment\PackageSourceGate::is_development_site() ) {
+			return array(
+				'value'  => true,
+				'source' => 'default',
+				'locked' => true,
+				'error'  => null,
+			);
+		}
+		$constant = 'RAN_BOOSTER_ALLOW_' . strtoupper( $key );
+		if ( defined( $constant ) ) {
+			$value = constant( $constant );
+			return array(
+				'value'  => true === $value,
+				'source' => 'code',
+				'locked' => true,
+				'error'  => is_bool( $value ) ? null : 'invalid_code',
+			);
+		}
+		$field   = $this->boolean_projection( $document, $key );
+		$address = $document[ $key . '_address' ] ?? null;
+		if ( true === $field['value'] && ( ! is_string( $address ) || '' === $address || ! hash_equals( $address, self::site_address() ) ) ) {
+			return array(
+				'value'  => false,
+				'source' => 'saved',
+				'locked' => false,
+				'error'  => 'address_changed',
+			);
+		}
+		return $field;
+	}
+
+	/** The home address without its scheme or trailing slash, so a move to HTTPS keeps the setting. */
+	public static function site_address(): string {
+		$parts = wp_parse_url( home_url() );
+		if ( ! is_array( $parts ) || ! is_string( $parts['host'] ?? null ) || '' === $parts['host'] ) {
+			return '';
+		}
+		return strtolower( $parts['host'] ) . ( isset( $parts['port'] ) ? ':' . $parts['port'] : '' ) . rtrim( (string) ( $parts['path'] ?? '' ), '/' );
 	}
 
 	/**
@@ -462,6 +549,7 @@ final class GeneralPreferenceStore {
 		return match ( $key ) {
 			'hide_github' => false,
 			'self_update_discovery' => true,
+			'branch_sources', 'prerelease_sources' => false,
 			default => throw new \LogicException( 'Unknown boolean preference.' ),
 		};
 	}

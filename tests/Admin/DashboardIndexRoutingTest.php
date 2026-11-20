@@ -231,7 +231,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ), $args['_ran_booster_repository_branch_nonce'] );
 		$_GET = $args;
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
-		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertThat( $check->invoke( $dashboard, $package, 'plugin' ), self::identicalTo( 'verified' ) );
 		self::assertSame( 2, $provider->prepare_calls, 'A reload of the same check reuses its result.' );
 	}
 

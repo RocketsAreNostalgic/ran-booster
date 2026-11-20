@@ -240,6 +240,18 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		self::assertStringContainsString( 'turn on Troubleshooting logging and retry', $plain );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_the_troubleshooting_logging_link_follows_the_network_admin_on_multisite(): void {
+		// Booster's pages exist only in the network admin on multisite.
+		$GLOBALS['ran_booster_package_view_multisite'] = true;
+
+		self::assertStringContainsString(
+			'<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=logging">Troubleshooting logging</a>',
+			DeploymentOutcomeMessage::for_code_html( 'provider_failed' )
+		);
+	}
+
 	public function test_archive_limit_messages_explain_the_target_local_remedy(): void {
 		$compressed = DeploymentOutcomeMessage::for_code( 'archive_compressed_too_large' );
 		$expanded   = DeploymentOutcomeMessage::for_code( 'archive_expanded_too_large' );

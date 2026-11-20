@@ -216,7 +216,7 @@ final class DeploymentOutcomeMessage {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return $text;
 		}
-		return str_replace( $label, '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=logging' ) ) . '">' . $label . '</a>', $text );
+		return str_replace( $label, '<a href="' . esc_url( ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster&tab=troubleshooting&panel=logging' ) . '">' . $label . '</a>', $text );
 	}
 
 	private static function logging_label(): string {

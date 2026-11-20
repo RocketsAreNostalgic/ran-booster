@@ -123,8 +123,9 @@ as Allow branch sources (Branch sources) and Allow Preview tracks (Preview
 tracks), each saved on its own, and each save writes one log line with its
 outcome. An "on" switch names the address it is bound to, a lapsed one reads
 "Turned off: the site address changed.", one set by its constant is locked and
-reads "Set in configuration.", and on a development site both read "Not needed
-on a development site."
+reads "Set in configuration." On a development site both are shown on and
+locked, ahead of any constant, and a save cannot change them; the saved values
+are kept and apply again if the site stops being a development site.
 
 Hide GitHub UI requires another locally admitted provider, no managed GitHub
 packages (including Disabled/release/branch records), no active custom replacement

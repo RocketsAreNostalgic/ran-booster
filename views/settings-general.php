@@ -303,7 +303,7 @@ foreach ( $source_scopes as $source_scope => $source_label ) {
 	$source      = $field( $source_scope );
 	$source_id   = 'ran-booster-' . str_replace( '_', '-', $source_scope );
 	$source_help = match ( true ) {
-		$development_site => __( 'Not needed on a development site.', 'ran-booster' ),
+		$development_site => 'branch_sources' === $source_scope ? __( 'Branch sources are always enabled in development.', 'ran-booster' ) : __( 'Preview tracks are always enabled in development.', 'ran-booster' ),
 		'code' === $source['source'] => $source_labels['code'] . '.',
 		'address_changed' === $source['error'] => __( 'Turned off: the site address changed.', 'ran-booster' ),
 		true === $source['value'] => sprintf( /* translators: %s: site address. */ __( 'On for %s', 'ran-booster' ), $site_address ),

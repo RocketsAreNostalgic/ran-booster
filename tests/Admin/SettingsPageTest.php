@@ -128,7 +128,9 @@ final class SettingsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-core-development-notice', $unauthorized );
 		$branch = $dashboard->render_general_settings_region( true, 'branch_sources' );
 		self::assertStringContainsString( 'hx-target="#ran-booster-general-branch_sources"', $branch );
-		self::assertStringContainsString( '<p>Not needed on a development site.</p>', $branch );
+		self::assertStringContainsString( '<p>Branch sources are always enabled in development.</p>', $branch );
+		self::assertMatchesRegularExpression( '/<input id="ran-booster-branch-sources" [^>]* checked="checked" disabled="disabled"/', $branch, 'The real projection forces it on and locked.' );
+		self::assertStringNotContainsString( 'name="ran_booster[preferences][branch_sources]" value="0"', $branch );
 		self::assertStringNotContainsString( 'ran-booster-general-prerelease_sources', $branch );
 		self::assertStringNotContainsString( 'hx-swap-oob', $branch );
 		$GLOBALS['ran_booster_test_environment_type'] = 'production';
@@ -575,11 +577,25 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 'Turned off: the site address changed.', $help( $xpath, 'ran-booster-prerelease-sources' ), 'A copied database explains itself instead of raising an error.' );
 		self::assertSame( 'Disabled', trim( (string) $xpath->evaluate( 'string(' . $form( 'prerelease_sources' ) . '//span[@data-ran-booster-toggle-status])' ) ) );
 
-		$bindings['development_site'] = true;
-		$xpath                        = $this->general_view( $bindings );
-		foreach ( array( 'ran-booster-branch-sources', 'ran-booster-prerelease-sources' ) as $id ) {
-			self::assertSame( 'Not needed on a development site.', $help( $xpath, $id ) );
-			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $id . '" and not(@disabled)])' ), 'The switch still saves on a development site.' );
+		// The store reports both forced on and locked on a development site.
+		$bindings['development_site']                       = true;
+		$bindings['general_settings']['branch_sources']     = array(
+			'value'  => true,
+			'source' => 'default',
+			'locked' => true,
+			'error'  => null,
+		);
+		$bindings['general_settings']['prerelease_sources'] = $bindings['general_settings']['branch_sources'];
+		$xpath = $this->general_view( $bindings );
+		foreach ( array(
+			'branch_sources'     => array( 'ran-booster-branch-sources', 'Branch sources are always enabled in development.' ),
+			'prerelease_sources' => array( 'ran-booster-prerelease-sources', 'Preview tracks are always enabled in development.' ),
+		) as $scope => [ $id, $line ] ) {
+			self::assertSame( $line, $help( $xpath, $id ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $id . '" and @checked and @disabled])' ), $scope . ' is forced on and cannot be changed.' );
+			self::assertSame( 'Enabled', trim( (string) $xpath->evaluate( 'string(' . $form( $scope ) . '//span[@data-ran-booster-toggle-status])' ) ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][' . $scope . ']"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//button[@id="ran-booster-save-' . $scope . '" and @disabled])' ) );
 		}
 
 		$bindings['development_site']                       = false;

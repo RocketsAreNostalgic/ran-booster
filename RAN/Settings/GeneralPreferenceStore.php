@@ -379,7 +379,9 @@ final class GeneralPreferenceStore {
 	}
 
 	/**
-	 * Its own constant (RAN_BOOSTER_ALLOW_BRANCH_SOURCES or RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES)
+	 * A development site forces it on and locked, as PackageSourceGate allows both sources
+	 * there first; the saved value is kept, unread, for when the site stops being one. Then
+	 * its own constant (RAN_BOOSTER_ALLOW_BRANCH_SOURCES or RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES)
 	 * wins. A saved "on" holds only for the site address it was turned on for, so a database
 	 * copied to another site arrives with it off ('address_changed').
 	 *
@@ -388,6 +390,14 @@ final class GeneralPreferenceStore {
 	 * @return array{value:bool,source:'default'|'saved'|'code',locked:bool,error:?string}
 	 */
 	private function source_override_projection( array $document, string $key ): array {
+		if ( \RAN\Deployment\PackageSourceGate::is_development_site() ) {
+			return array(
+				'value'  => true,
+				'source' => 'default',
+				'locked' => true,
+				'error'  => null,
+			);
+		}
 		$constant = 'RAN_BOOSTER_ALLOW_' . strtoupper( $key );
 		if ( defined( $constant ) ) {
 			$value = constant( $constant );

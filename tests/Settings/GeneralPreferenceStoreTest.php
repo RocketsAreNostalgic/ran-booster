@@ -15,6 +15,7 @@ use RAN\Settings\GeneralPreferenceStore;
 use RAN\WordPress\CoreSelfUpdatePolicy;
 
 require_once __DIR__ . '/GeneralPreferenceStoreWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/PackageSourceGateWordPressFunctions.php';
 
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
@@ -29,6 +30,8 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		unset( $GLOBALS['ran_booster_general_preference_cached_option'] );
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Controlled test-only database boundary.
 		$GLOBALS['wpdb'] = new GeneralPreferenceDatabase();
+		// The stubs' default home is localhost; the source overrides are only editable off a development site.
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
 	}
 
 	public function test_saved_github_hide_fallback_applies_without_a_code_override_and_rejects_malformed_saved_values(): void {
@@ -778,6 +781,35 @@ final class GeneralPreferenceStoreTest extends TestCase {
 			),
 			\RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['_revisions']
 		);
+	}
+
+	public function test_a_development_site_forces_both_on_locked_and_keeps_the_saved_value_for_later(): void {
+		define( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', false );
+		$GLOBALS['ran_booster_test_environment_type'] = 'development';
+		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
+		$this->seed(
+			array(
+				'branch_sources'         => true,
+				'branch_sources_address' => 'old.example.com',
+			)
+		);
+		$saved = $GLOBALS['ran_booster_general_preference_raw'];
+		$store = new GeneralPreferenceStore();
+		$on    = array(
+			'value'  => true,
+			'source' => 'default',
+			'locked' => true,
+			'error'  => null,
+		);
+		self::assertSame( array( $on, $on ), array( $store->projection()['branch_sources'], $store->projection()['prerelease_sources'] ), 'A development site wins over the saved value and over a false constant, as PackageSourceGate does.' );
+		foreach ( array( 'branch_sources', 'prerelease_sources' ) as $key ) {
+			self::assertSame( 'invalid', $store->save( $store->view_snapshot()['tokens'][ $key ], array( $key => '0' ), static fn ( callable $operation ): string => $operation(), static fn (): bool => true, $key ), $key );
+		}
+		self::assertSame( $saved, $GLOBALS['ran_booster_general_preference_raw'], 'A posted save leaves the stored value untouched.' );
+
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		self::assertSame( array( false, 'address_changed' ), array( $store->projection()['branch_sources']['value'], $store->projection()['branch_sources']['error'] ), 'The saved value applies again once it is no longer a development site.' );
+		self::assertSame( array( false, 'code' ), array( $store->projection()['prerelease_sources']['value'], $store->projection()['prerelease_sources']['source'] ) );
 	}
 
 	#[DataProvider( 'source_overrides' )]

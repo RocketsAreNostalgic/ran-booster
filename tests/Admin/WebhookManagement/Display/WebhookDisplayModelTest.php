@@ -93,6 +93,11 @@ final class WebhookDisplayModelTest extends TestCase {
 		);
 	}
 
+	public function test_a_failed_hook_listing_says_nothing_changed(): void {
+		// Provider 1.0.0-beta.27 reports these before any create request, so Core keeps no record and no created secret.
+		self::assertSame( 'Couldn\'t list this repository\'s webhooks on the Git provider. Nothing was changed. Try again.', $this->display()->notice( 'matching_hooks_ambiguous' ) );
+	}
+
 	public function test_recorded_history_keeps_its_status_and_timestamp_beside_a_current_warning(): void {
 		$method  = new ReflectionMethod( WebhookDisplayModel::class, 'history_details' );
 		$details = array_column( $method->invoke( $this->display(), 'profile_revision_stale', $this->record() ), null, 'key' );

@@ -469,7 +469,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		// A release badge keeps the status slot; a release failure also keeps its guidance.
 		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		foreach ( array(
-			'error'   => array( 'Needs attention', '<a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&amp;package=' . (string) $package->get_identifier() . '">The release assets are invalid.</a>' ),
+			'error'   => array( 'Needs attention', '<a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&amp;package=' . rawurlencode( (string) $package->get_identifier() ) . '&amp;ran_booster_open_advanced=1#ran-booster-advanced-source-settings">The release assets are invalid.</a>' ),
 			'pending' => array( 'Update available', 'Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-prerelease_sources">site setting</a>.' ),
 		) as $tone => [ $badge, $line ] ) {
 			$package_extension_rows = array(

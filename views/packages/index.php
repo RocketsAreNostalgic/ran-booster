@@ -498,9 +498,9 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				$status_line_html = true;
 			} elseif ( '' !== ( $package_extension_row['status'] ?? '' ) ) {
 				$status_line = (string) $package_extension_row['status'];
-				// A release failure sentence is linked whole to the package page, where its explanation sits; informational status stays plain.
+				// A release failure sentence is linked whole to the package page's open Advanced settings, where its explanation sits; informational status stays plain.
 				if ( in_array( 'error', array_column( array_filter( (array) ( $package_extension_row['badges'] ?? array() ), 'is_array' ), 'tone' ), true ) && $package_settings_linked ) {
-					$status_line      = '<a href="' . esc_url( $edit_url ) . '">' . esc_html( $status_line ) . '</a>';
+					$status_line      = '<a href="' . esc_url( add_query_arg( 'ran_booster_open_advanced', '1', $edit_url ) . '#ran-booster-advanced-source-settings' ) . '">' . esc_html( $status_line ) . '</a>';
 					$status_line_html = true;
 				}
 			} elseif ( $policy_disabled ) {

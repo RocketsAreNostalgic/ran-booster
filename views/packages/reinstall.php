@@ -6,16 +6,15 @@
  * @var string $deployment_policy
  * @var bool $package_mutation_available
  * @var string $settings_url
- * @var bool $package_paused
- * @var string $package_paused_text
  */
 
 defined( 'WPINC' ) || die;
 
+$package_paused      = true === ( $package_paused ?? false );
 $reinstall_capable   = $package_mutation_available && ! $package_paused;
 $reinstall_available = $reinstall_capable
 	&& \RAN\Deployment\DeploymentPolicy::DISABLED->value !== $deployment_policy;
-$reinstall_reason    = $package_paused ? wp_strip_all_tags( $package_paused_text ) : __( 'Set Updates to Manual or Automatic before reinstalling.', 'ran-booster' );
+$reinstall_reason    = $package_paused ? wp_strip_all_tags( (string) ( $package_paused_text ?? '' ) ) : __( 'Set Updates to Manual or Automatic before reinstalling.', 'ran-booster' );
 
 ?>
 <span class="ran-booster-reason-tooltip"<?php echo $reinstall_available ? '' : ' data-ran-booster-reason-tooltip'; ?>>

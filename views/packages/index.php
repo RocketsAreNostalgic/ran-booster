@@ -335,7 +335,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			$credential_available      = ! $package->get_private() || is_array( $configured_credential );
 			$provider_can_deploy       = ! $provider_unavailable && true === $package_provider['deploy'];
 			$deployment_available      = $provider_can_deploy && $credential_available;
-			$update_can_run            = $deployment_available && ! $policy_disabled && ! in_array( $package->get_identifier(), $package_paused, true );
+			$update_can_run            = $deployment_available && ! $policy_disabled;
 			$update_in_progress        = ! $release_managed && in_array( $latest_activity_state, array( 'queued', 'running' ), true );
 			$update_needs_attention    = ! $release_managed
 				&& $latest_attempt instanceof \RAN\Deployment\DeploymentAttempt

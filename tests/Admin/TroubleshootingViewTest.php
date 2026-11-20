@@ -2945,10 +2945,9 @@ final class TroubleshootingViewTest extends TestCase {
 			array( array( 'database_unavailable' ), 'https://example.test/hook', 'warning', 'Booster database storage must be healthy before Push-to-Deploy can run.' ),
 			array( array( 'secrets_storage_unavailable' ), 'https://example.test/hook', 'warning', 'Encrypted credential storage must be healthy before Push-to-Deploy can verify signed deliveries.' ),
 			array( array( 'managed_packages_unavailable' ), 'https://example.test/hook', 'warning', 'Booster could not read the managed package inventory needed for Push-to-Deploy.' ),
-			array( array( 'callback_requires_public_https' ), 'http://localhost/hook', 'info', 'This site uses a local URL, so Git providers cannot reach it. Set a public HTTPS site URL before using Push-to-Deploy.' ),
-			array( array( 'callback_requires_public_https' ), 'http://example.test/hook', 'info', 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it.' ),
+			array( array( 'callback_requires_public_https' ), 'http://localhost/hook', 'info', 'This site needs a public HTTPS URL to receive webhooks.' ),
 			array( array( 'unknown-canary' ), 'https://example.test/hook', 'info', '' ),
-			array( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://example.test/hook', 'warning', 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it. Booster database storage must be healthy before Push-to-Deploy can run.' ),
+			array( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://example.test/hook', 'warning', 'This site needs a public HTTPS URL to receive webhooks. Booster database storage must be healthy before Push-to-Deploy can run.' ),
 		);
 		foreach ( array( 'gh', 'bb', 'other' ) as $code ) {
 			$provider['code'] = $code;

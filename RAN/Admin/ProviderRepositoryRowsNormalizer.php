@@ -116,7 +116,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'repository_inventory_available'      => $repositories['available'],
 			'repository_integration_available'    => ! $repositories['available'] || array() !== $model['rows'] || ( ! empty( $provider['capabilities']['webhooks'] ) && ! empty( $provider['webhook_scopes'] ) ),
 			'repository_integration_summary'      => $repository_summary,
-			'webhook_site_reasons'                => $this->site_reasons( $reason_codes, $site_endpoint ),
+			'webhook_site_reasons'                => $this->site_reasons( $reason_codes ),
 			'webhook_has_hard_failure'            => array() !== array_intersect( $reason_codes, array( 'database_unavailable', 'secrets_storage_unavailable', 'managed_packages_unavailable' ) ),
 			'task_urls'                           => $task_urls,
 			'task_request_urls'                   => $task_requests,
@@ -974,14 +974,11 @@ final class ProviderRepositoryRowsNormalizer {
 	 * @param array<array-key, mixed> $codes
 	 * @return list<string>
 	 */
-	private function site_reasons( array $codes, string $endpoint ): array {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Display-safe endpoint parsing performs no network I/O.
-		$host     = parse_url( $endpoint, PHP_URL_HOST );
-		$is_local = is_string( $host ) && ( in_array( strtolower( $host ), array( 'localhost', '127.0.0.1', '::1' ), true ) || str_ends_with( strtolower( $host ), '.local' ) );
-		$labels   = array(
+	private function site_reasons( array $codes ): array {
+		$labels = array(
 			'database_unavailable'           => __( 'Booster database storage must be healthy before Push-to-Deploy can run.', 'ran-booster' ),
 			'secrets_storage_unavailable'    => __( 'Encrypted credential storage must be healthy before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ),
-			'callback_requires_public_https' => $is_local ? __( 'This site uses a local URL, so Git providers cannot reach it. Set a public HTTPS site URL before using Push-to-Deploy.', 'ran-booster' ) : __( 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it.', 'ran-booster' ),
+			'callback_requires_public_https' => __( 'This site needs a public HTTPS URL to receive webhooks.', 'ran-booster' ),
 			'managed_packages_unavailable'   => __( 'Booster could not read the managed package inventory needed for Push-to-Deploy.', 'ran-booster' ),
 		);
 

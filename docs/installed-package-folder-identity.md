@@ -22,7 +22,9 @@ Core compares package folder names with the shared updater-support
 `PackageDirectory` methods, apart from the exceptions listed below:
 
 - `installed_folder_matches()` for the identity of one package: connecting an
-  installed package, and an initial expected identity.
+  installed package, with or without its exact identifier, and an initial
+  expected identity. Connecting by name tries the source name first, then its
+  lower-case new-install form.
 - `names_collide()` for locks, scopes and collisions: an install into a managed
   folder, an interrupted native update, the native-recovery directory scope, a
   theme that names itself as its parent, and Booster's own folder.
@@ -44,7 +46,17 @@ Exceptions, each commented where it is made:
   `uninstall.php` does not load updater-support.
 - Full filesystem paths, such as destination existence and child-path checks,
   are decided by the filesystem.
-- The lock that admits one unfinished attempt per package compares
-  `package_slug` using the table collation, so it keeps its index. WordPress's
-  default collation ignores case. The batch de-duplication keys in front of that
-  lock are exact.
+- Database lookups take the table collation's case rule, as the next section
+  describes; the unfinished-attempt lock is commented where it is made.
+
+## Database lookups
+
+Package-row and attempt lookups that match `package` or `package_slug` with a
+plain `=` take the table collation's case rule, which ignores case on a default
+WordPress install. They keep their indexes, including the `FOR UPDATE` lock that
+admits one unfinished attempt per package; the batch de-duplication keys in
+front of that lock are exact. The safeguard is the exact comparison in PHP after
+the read, or the token a write is bound to. `package_slug` is admitted as an
+ASCII-only name (`is_valid_name()`) before it is stored, so accent folding cannot
+apply. The tables are assumed to use a case-insensitive collation; nothing
+verifies it.

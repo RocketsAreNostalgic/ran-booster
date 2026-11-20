@@ -291,10 +291,11 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			$policy_disabled           = \RAN\Deployment\DeploymentPolicy::DISABLED === $deployment_policy;
 			$package_identifier        = (string) $package->get_identifier();
 			$release_managed           = \RAN\PackageSource::RELEASE_ASSET === $package->get_source();
-			$package_is_paused         = in_array( $package->get_identifier(), $package_paused, true );
 			$package_extension_row     = isset( $package_extension_rows[ $package_identifier ] ) && is_array( $package_extension_rows[ $package_identifier ] )
 				? $package_extension_rows[ $package_identifier ]
 				: array();
+			$package_is_paused         = in_array( $package->get_identifier(), $package_paused, true )
+				&& ! in_array( 'error', array_column( array_filter( (array) ( $package_extension_row['badges'] ?? array() ), 'is_array' ), 'tone' ), true );
 			$package_actions           = isset( $package_extension_actions[ $package_identifier ] ) && is_array( $package_extension_actions[ $package_identifier ] )
 				? $package_extension_actions[ $package_identifier ]
 				: array();
@@ -407,6 +408,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				);
 				$prominent_status_activity = true;
 			} elseif ( $package_is_paused ) {
+				// Not set when an error-toned extension badge, such as a release failure, needs its own guidance.
 				$prominent_status = array(
 					'label' => __( 'Paused', 'ran-booster' ),
 					'tone'  => 'warning',

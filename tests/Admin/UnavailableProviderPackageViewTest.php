@@ -407,6 +407,32 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a site setting.</p>', $html );
 		$package_activity['items'] = array();
 
+		// A release failure keeps its badge and guidance; an ordinary release badge does not outrank Paused.
+		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
+		foreach ( array(
+			'error'   => array( 'Needs attention', 'The release assets are invalid.' ),
+			'pending' => array( 'Paused', 'Updates are paused by a site setting.' ),
+		) as $tone => [ $badge, $line ] ) {
+			$package_extension_rows = array(
+				(string) $package->get_identifier() => array(
+					'badges' => array(
+						array(
+							'label' => 'error' === $tone ? 'Needs attention' : 'Update available',
+							'tone'  => $tone,
+						),
+					),
+					'status' => 'error' === $tone ? 'The release assets are invalid.' : 'Version 1.0.0 is installed; version 1.1.0 is available.',
+				),
+			);
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( '>' . $badge . '</span>', $html, $tone );
+			self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">' . $line . '</p>', $html, $tone );
+		}
+		$package->set_source( PackageSource::BRANCH, 3 );
+		$package_extension_rows = array();
+
 		$package_provider_settings = array(
 			'default_provider' => 'gh',
 			'providers'        => array( $this->provider_option( 'gh', true ) ),

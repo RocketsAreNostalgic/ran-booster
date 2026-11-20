@@ -3472,6 +3472,51 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Repository webhook management is temporarily unavailable', $html );
 	}
 
+	public function test_repository_detail_page_contains_the_region_its_webhook_forms_target(): void {
+		$provider                     = $this->provider_without_optional_settings();
+		$credential_profiles          = array();
+		$webhook_profiles             = array();
+		$provider_task                = 'repositories';
+		$requested_repository_id      = 'repo-42';
+		$repository_view              = 'branch';
+		$managed_webhook_repositories = array(
+			'available'    => true,
+			'repositories' => array(
+				array(
+					'target'             => 'owner/example',
+					'repository_id'      => 'repo-42',
+					'package_count'      => 1,
+					'package_references' => array( 'plugin/example.php' ),
+				),
+			),
+		);
+		$provider_view_data           = $this->provider_view_data( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $provider_view_data );
+		$webhook_management = new class() {
+			public function has_management_capability( string $provider_code ): bool {
+				return 'fixture' === $provider_code;
+			}
+
+			public function render_repository_webhook_setup( string $provider_code, string $repository_id, string $return_url, bool $has_branch_consumer, string $repository ): void {
+				TestCase::assertSame( array( 'fixture', 'repo-42', true, 'owner/example' ), array( $provider_code, $repository_id, $has_branch_consumer, $repository ) );
+				TestCase::assertStringContainsString( 'repository=repo-42', $return_url );
+				echo '<div data-test-webhook-controls>Webhook controls</div>';
+			}
+		};
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+
+		// The webhook panel's enhanced forms swap this region; without it htmx sends nothing.
+		$region   = \RAN\Admin\Interaction\AdminInteractionTarget::PROVIDER_REPOSITORIES->element_id();
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="' . $region . '"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="' . $region . '"]//div[@data-test-webhook-controls])' ) );
+	}
+
 	public function test_provider_webhooks_only_deduplicates_a_surviving_matching_panel_link(): void {
 		foreach ( array( 'gh', 'bb', 'fixture' ) as $provider_code ) {
 			foreach ( array( 'same', 'different', 'no_link', 'empty', 'throws', 'absent', 'no_outer', 'disabled', 'post', 'internal' ) as $mode ) {

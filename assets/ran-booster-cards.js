@@ -175,7 +175,10 @@
 	}
 
 	function mountNotice(notice) {
-		if (notice.matches(staticNotice)) {
+		if (
+			notice.matches(staticNotice) ||
+			notice.querySelector(`:scope > ${staticNotice}__description`)
+		) {
 			return;
 		}
 		const intent =

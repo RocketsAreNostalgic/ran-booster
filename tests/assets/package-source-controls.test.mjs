@@ -117,8 +117,9 @@ function tabFixture(sourceName, selected = false) {
 	return { attributes, listeners, tab };
 }
 
-function fixture(repositoryValue = '') {
+function fixture(repositoryValue = '', paused = false) {
 	const repositoryListeners = new Map();
+	const linkChoice = { checked: false };
 	const formListeners = new Map();
 	const branch = tabFixture('branch', true);
 	const release = tabFixture('release_asset');
@@ -197,6 +198,9 @@ function fixture(repositoryValue = '') {
 				'[data-ran-booster-source-controls]': sourceControls,
 				'[data-ran-booster-source-repository-guidance]': guidance,
 				'[data-ran-booster-branch-install-actions]': installActions,
+				'#ran-booster-branch-paused-warning': paused ? {} : null,
+				'input[name="ran_booster[dry-run]"]:is([type="hidden"], :checked)':
+					linkChoice.checked ? linkChoice : null,
 			}[selector];
 		},
 		addEventListener(type, listener) {
@@ -223,8 +227,10 @@ function fixture(repositoryValue = '') {
 	return {
 		branch,
 		branchPane,
+		formListeners,
 		guidance,
 		installButtons,
+		linkChoice,
 		policyHints,
 		release,
 		releasePane,
@@ -263,6 +269,79 @@ test('source and install controls wait for a valid repository', () => {
 		delete globalThis.window;
 	}
 });
+
+test('while branch installs are paused Install waits for the link choice as well as the repository', () => {
+	const state = fixture('', true);
+	const allDisabled = (expected) =>
+		assert.equal(
+			state.installButtons.every(
+				(button) => button.disabled === expected
+			),
+			true
+		);
+
+	try {
+		loadInitializer()();
+		allDisabled(true);
+
+		// A valid repository alone does not enable a paused install.
+		state.repository.value = 'owner/package';
+		state.repositoryListeners.get('input')();
+		allDisabled(true);
+
+		// Ticking the link choice enables it; unticking disables it again.
+		state.linkChoice.checked = true;
+		state.formListeners.get('change')();
+		allDisabled(false);
+		state.linkChoice.checked = false;
+		state.formListeners.get('change')();
+		allDisabled(true);
+
+		// Linking still waits for a repository: the two conditions combine.
+		state.linkChoice.checked = true;
+		state.repository.value = '';
+		state.repositoryListeners.get('input')();
+		allDisabled(true);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('a paused form that is already linking on load starts with Install enabled', () => {
+	// Recovery mode posts a hidden link field, and a failed link attempt comes back ticked.
+	const state = fixture('owner/package', true);
+	state.linkChoice.checked = true;
+
+	try {
+		loadInitializer()();
+		allEnabled(state);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('without a pause the link choice does not gate Install', () => {
+	const state = fixture('owner/package');
+
+	try {
+		loadInitializer()();
+		allEnabled(state);
+		state.formListeners.get('change')();
+		allEnabled(state);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+function allEnabled(state) {
+	assert.equal(
+		state.installButtons.every((button) => !button.disabled),
+		true
+	);
+}
 
 test('package source choices reveal their matching panels', () => {
 	const state = fixture('owner/package');

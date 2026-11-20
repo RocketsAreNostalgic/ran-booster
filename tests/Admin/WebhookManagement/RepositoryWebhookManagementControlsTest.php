@@ -10,6 +10,7 @@ use RAN\AddOn\WebhookAssistance\AssistanceReadiness;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
+use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Package;
 use RAN\PackageSource;
@@ -432,6 +433,101 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Validate</button>', $html );
 		self::assertStringContainsString( 'Manage credentials</a>', $html );
 		self::assertStringContainsString( 'Manage signing secrets</a>', $html );
+	}
+
+	public function test_remote_hook_step_names_an_unconfirmed_setup_and_a_hook_deleted_on_the_provider(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options']                           = true;
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
+			'fixture-provider:1234' => array(
+				'schema_version'              => 4,
+				'provider_code'               => 'fixture-provider',
+				'repository_id'               => '1234',
+				'repository'                  => 'owner/example',
+				'hook_id'                     => InstallationRecord::unknown_hook_id(),
+				'management_credential_id'    => 'credential_1',
+				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+				'webhook_profile_scope'       => 'repository',
+				'webhook_profile_revision'    => 1,
+				'webhook_profile_disposition' => 'created',
+				'endpoint'                    => 'https://example.test/webhook',
+				'status'                      => 'orphaned',
+				'created_at'                  => '2026-08-20T01:02:03Z',
+				'checked_at'                  => '2026-08-20T01:02:03Z',
+			),
+		);
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array(), 'https://example.test/webhook', array() ) );
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->package_authorities()
+		);
+		$controls->register();
+
+		ob_start();
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', false );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '<p>Setup not confirmed</p>', $html );
+
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations']['fixture-provider:1234']['hook_id'] = '77';
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations']['fixture-provider:1234']['status']  = 'remote_missing';
+		ob_start();
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', false );
+		self::assertStringContainsString( '<p>This webhook was deleted on Fixture Forge.</p>', (string) ob_get_clean() );
+	}
+
+	public function test_an_unreachable_site_with_a_record_opens_setup_for_forget_and_names_the_record(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options']                           = true;
+		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
+			'fixture-provider:1234' => array(
+				'schema_version'              => 4,
+				'provider_code'               => 'fixture-provider',
+				'repository_id'               => '1234',
+				'repository'                  => 'owner/example',
+				'hook_id'                     => '77',
+				'management_credential_id'    => 'credential_1',
+				'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+				'webhook_profile_scope'       => 'repository',
+				'webhook_profile_revision'    => 1,
+				'webhook_profile_disposition' => 'created',
+				'endpoint'                    => 'https://example.test/webhook',
+				'status'                      => 'configured',
+				'created_at'                  => '2026-08-20T01:02:03Z',
+				'checked_at'                  => '2026-08-20T01:02:03Z',
+			),
+		);
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array( 'callback_requires_public_https' ), 'https://example.test/webhook', array() ) );
+		$facade->method( 'target' )->willReturn( null );
+		$facade->method( 'forget_target' )->willReturn(
+			new AssistanceTarget(
+				'fixture-provider',
+				'1234',
+				'owner/example',
+				'Example',
+				array( 'example/example.php' ),
+				array(
+					'automatic' => 0,
+					'manual'    => 1,
+					'disabled'  => 0,
+				),
+				'http://example.local/webhook'
+			)
+		);
+		$controls = new RepositoryWebhookManagementControls( $facade, $this->createMock( AdminInteractionFacade::class ), new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ), dirname( __DIR__, 3 ) . '/', 'https://example.test/wp-content/plugins/ran-booster/', $this->package_authorities() );
+		$controls->register();
+
+		ob_start();
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
+
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup ran-booster-disclosure" open>', $html );
+		// The record matches the callback, so it would read as configured; nothing can be validated here, though.
+		self::assertStringContainsString( '<p>Booster has a record of this webhook.</p>', $html );
 	}
 
 	public function test_branch_tab_shows_manual_webhook_only_for_a_verified_delivery_without_a_record(): void {

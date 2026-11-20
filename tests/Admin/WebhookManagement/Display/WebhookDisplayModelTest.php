@@ -86,6 +86,19 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame( $remediation, $this->display()->notice( 'unknown_result', null, $remediation ) );
 	}
 
+	public function test_an_existing_hook_is_core_copy_not_the_provider_remediation(): void {
+		self::assertSame(
+			'A webhook for this site already exists on the Git provider. Remove it there, then set up again.',
+			$this->display()->notice( 'existing_hook_requires_reconfigure', null, 'An existing endpoint cannot prove the stored signing secret; inspect it and use explicit reconfiguration.' )
+		);
+	}
+
+	public function test_a_failed_hook_listing_says_nothing_changed(): void {
+		// Provider 1.0.0-beta.27 reports these before any create request, so Core keeps no record and no created secret.
+		self::assertSame( 'Couldn\'t list this repository\'s webhooks on the Git provider. Nothing was changed. Try again.', $this->display()->notice( 'hook_inventory_unavailable' ) );
+		self::assertSame( 'A webhook for this site already exists on the Git provider. Remove it there, then set up again.', $this->display()->notice( 'matching_hooks_ambiguous' ), 'Retrying alone repeats a refusal over several existing hooks.' );
+	}
+
 	public function test_recorded_history_keeps_its_status_and_timestamp_beside_a_current_warning(): void {
 		$method  = new ReflectionMethod( WebhookDisplayModel::class, 'history_details' );
 		$details = array_column( $method->invoke( $this->display(), 'profile_revision_stale', $this->record() ), null, 'key' );

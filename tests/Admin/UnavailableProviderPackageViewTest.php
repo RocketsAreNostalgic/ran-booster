@@ -477,19 +477,22 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertStringNotContainsString( '>Paused</span>', $html, 'An unpaused row has no pill.' );
 
-		$package_provider_settings = array(
+		$package_provider_settings        = array(
 			'default_provider' => 'temporarily-offline',
 			'providers'        => array( $this->provider_option( 'temporarily-offline', true ) ),
 		);
-		$package_paused            = true;
+		$package_paused                   = true;
+		$development_environment_detected = true;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
-		$html = (string) ob_get_clean();
+		$html                             = (string) ob_get_clean();
+		$development_environment_detected = false;
 
-		// The sentence sits once, in Package operation above its buttons; Reinstall is disabled with it as the reason.
+		// The sentence sits once, in Package operation under Updates and above the local edits notice and its buttons; Reinstall is disabled with it as the reason.
 		self::assertSame( 1, substr_count( $html, 'Updates are paused by a <a' ), 'The paused notice shows once; the button reason is plain.' );
-		self::assertMatchesRegularExpression( '/id="ran-booster-package-operation-heading".*data-ran-booster-ui-notice-intent="warning">.*<p>Updates are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\.<\/p>.*class="ran-booster-package-operation-settings__actions"/s', $html );
+		self::assertMatchesRegularExpression( '/id="ran-booster-package-operation-heading".*<\/p>\s*<\/div>\s*<div [^>]*data-ran-booster-ui-notice-intent="warning"><div [^>]*><p>Updates are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\. Changes here are saved and apply only when re-enabled\.<\/p>.*Making local edits\? Choose Disabled\..*class="ran-booster-package-operation-settings__actions"/s', $html );
 		self::assertMatchesRegularExpression( '/title="Updates are paused by a site setting\."[^>]*data-ran-booster-reinstall-capable="0"/s', $html );
+		self::assertStringNotContainsString( 'apply only when re-enabled.</span>', $html, 'The Reinstall reason keeps the one sentence.' );
 		self::assertStringContainsString( 'role="tooltip" hidden>Updates are paused by a site setting.</span>', $html );
 		self::assertMatchesRegularExpression( '/summary-grid__label">\s*Updates\s*<span [^>]*data-ran-booster-badge-intent="medium">Paused<\/span>\s*<\/p>\s*<p class="ran-booster-package-summary__value">Automatic<\/p>/', $html );
 
@@ -830,7 +833,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/value="automatic"[^>]*disabled="disabled"/', $html );
 		self::assertStringContainsString( 'Automatic deployment is unavailable', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-local-development-warning', $html );
-		self::assertStringNotContainsString( 'Editing this package’s files here? Choose Disabled.', $html );
+		self::assertStringNotContainsString( 'Making local edits? Choose Disabled.', $html );
 	}
 
 	public function test_deployment_policy_enables_automatic_for_webhook_providers(): void {
@@ -847,7 +850,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/value="automatic"[^>]*disabled="disabled"/', $html );
 		self::assertStringContainsString( 'class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $html );
 		self::assertStringContainsString( 'data-ran-booster-local-development-warning', $html );
-		self::assertStringContainsString( 'Editing this package’s files here? Choose Disabled.', $html );
+		self::assertStringContainsString( 'Making local edits? Choose Disabled.', $html );
 		self::assertStringContainsString( 'Push-to-Deploy setting', $html );
 		self::assertStringContainsString( 'Manual and Automatic can overwrite local changes when an update or reinstall runs.', $html );
 		self::assertStringContainsString( 'tab=gh#ran-booster-webhook-secrets-heading', $html );
@@ -864,7 +867,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-local-development-warning hidden', $html );
-		self::assertStringContainsString( 'Editing this package’s files here? Choose Disabled.', $html );
+		self::assertStringContainsString( 'Making local edits? Choose Disabled.', $html );
 	}
 
 	/**

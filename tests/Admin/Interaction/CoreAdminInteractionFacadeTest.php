@@ -115,7 +115,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		self::assertStringContainsString( ' data-ran-booster-enhanced-mutation', $attributes );
 		self::assertStringContainsString( ' data-ran-booster-error-target="#repository-webhook-management-error"', $attributes );
 		self::assertStringContainsString( ' hx-post="/wp-admin/admin-post.php"', $attributes );
-		self::assertSame( 2, substr_count( $attributes, '#ran-booster-provider-task-panel' ) );
+		self::assertSame( 2, substr_count( $attributes, '#ran-booster-provider-profile-region' ) );
 		self::assertStringContainsString( ' hx-sync="this:drop"', $attributes );
 		self::assertStringContainsString( '&quot;repository-webhook-management:manage-webhook&quot;', $attributes );
 
@@ -133,7 +133,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$facade                           = $this->facade();
 		$request                          = $this->request();
 		$_SERVER['HTTP_HX_REQUEST']       = 'true';
-		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
 		$_POST['ran_booster_interaction'] = array(
 			'operation' => 'repository-webhook-management:manage-webhook',
 			'target'    => 'provider_repositories',
@@ -295,7 +295,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		self::assertNull( $this->header( 'HX-Redirect' ) );
 		$decoded = json_decode( $location, true );
 		self::assertIsArray( $decoded );
-		self::assertSame( '#ran-booster-provider-task-panel', $decoded['target'] );
+		self::assertSame( '#ran-booster-provider-profile-region', $decoded['target'] );
 		self::assertStringStartsWith( '/wp-admin/', $decoded['path'] );
 		self::assertStringNotContainsString( 'https://example.test', $decoded['path'] );
 		self::assertStringNotContainsString( 'message', $decoded['path'] );
@@ -303,7 +303,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 
 		$this->load_query_from_url( $decoded['path'] );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
-		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-profile-region';
 		$this->headers              = array();
 		$facade->prepare_pending_feedback();
 
@@ -327,7 +327,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$this->load_query_from_url( $location['path'] );
 		$_GET['ran_booster_interaction_outcome'] = 'validation_failure';
 		$_SERVER['HTTP_HX_REQUEST']              = 'true';
-		$_SERVER['HTTP_HX_TARGET']               = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']               = 'ran-booster-provider-profile-region';
 		$this->headers                           = array();
 
 		$facade->prepare_pending_feedback();
@@ -348,7 +348,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$this->load_query_from_url( $location['path'] );
 		$_GET['repository']         = '202';
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
-		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-profile-region';
 		$this->headers              = array();
 
 		$facade->prepare_pending_feedback();
@@ -571,7 +571,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		$GLOBALS['ran_booster_interaction_test_meta'] = array();
 		$this->load_query_from_url( $url );
 		$_SERVER['HTTP_HX_REQUEST'] = 'true';
-		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']  = 'ran-booster-provider-profile-region';
 		$this->headers              = array();
 		$this->facade()->prepare_pending_feedback();
 
@@ -918,7 +918,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 
 	private function set_enhanced_request(): void {
 		$_SERVER['HTTP_HX_REQUEST']       = 'true';
-		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-task-panel';
+		$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
 		$_POST['ran_booster_interaction'] = array(
 			'operation' => 'repository-webhook-management:manage-webhook',
 			'target'    => 'provider_repositories',

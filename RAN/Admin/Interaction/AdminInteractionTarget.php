@@ -22,7 +22,7 @@ enum AdminInteractionTarget: string {
 
 	public function selector( ?string $instance = null ): string {
 		return match ( $this ) {
-			self::PROVIDER_REPOSITORIES        => '#ran-booster-provider-task-panel',
+			self::PROVIDER_REPOSITORIES        => '#ran-booster-provider-profile-region',
 			self::TRANSPORTER_MIGRATION_SOURCE => '#ran-booster-transporter-migration-source-' . $this->migration_instance( $instance ),
 		};
 	}

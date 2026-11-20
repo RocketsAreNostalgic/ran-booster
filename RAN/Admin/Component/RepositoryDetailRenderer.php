@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace RAN\Admin\Component;
 
+use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
+
 /** Renders the Core-owned selected-repository relationship view. */
 final class RepositoryDetailRenderer {
 
@@ -13,8 +15,8 @@ final class RepositoryDetailRenderer {
 	 * @param array<string, string> $view_request_urls
 	 * @param callable():(bool|string)|null $render_webhook_panel
 	 * @param callable():void|null $render_release_panel
+	 * @param string $receiver_message Escaped HTML naming why the site cannot receive deliveries, each reason with its one link; shown only without a webhook panel.
 	 */
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Preserve the existing public renderer argument slots and caller evaluation; receiver_message is not rendered by this component.
 	public function render(
 		array $row,
 		string $provider_label,
@@ -84,7 +86,7 @@ final class RepositoryDetailRenderer {
 						<?php if ( '' !== $webhook_panel ) { ?>
 							<?php echo $webhook_panel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The provider view supplies Core RepositoryWebhookManagementControls; its fixed panel template escapes model values. ?>
 						<?php } else { ?>
-							<?php $this->render_unavailable_webhook_guidance( $source_key, $receiver_ready, null !== $render_webhook_panel ); ?>
+							<?php $this->render_unavailable_webhook_guidance( $source_key, $receiver_ready, null !== $render_webhook_panel, $receiver_message ); ?>
 						<?php } ?>
 						<?php $this->render_provider_actions( $row, $provider_label, $rendered_webhooks_url ); ?>
 					<?php } elseif ( 0 < $omitted ) { ?>
@@ -237,22 +239,27 @@ final class RepositoryDetailRenderer {
 		<?php
 	}
 
-	private function render_unavailable_webhook_guidance( string $source, bool $receiver_ready, bool $management_supported ): void {
+	private function render_unavailable_webhook_guidance( string $source, bool $receiver_ready, bool $management_supported, string $receiver_message ): void {
 		$has_branch_consumer = in_array( $source, array( 'branch', 'mixed' ), true );
+		// The caller passes only the primary site reason, so any sentence but the address one is a storage or inventory failure.
+		$hard_reason = ! $receiver_ready && '' !== trim( $receiver_message ) && WebhookDisplayModel::receiver_unavailable_message( true ) !== $receiver_message;
 		if ( $management_supported ) {
+			// Reached only when the panel callback throws or prints nothing, so its cause is unknown unless the site reports a failure.
+			$message = $hard_reason ? $receiver_message : esc_html__( 'Repository webhook management is temporarily unavailable for this repository.', 'ran-booster' );
 			?>
 			<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-settings-section__header">
 					<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></h3>
 				</header>
 				<div class="ran-booster-settings-section__body">
-					<p><?php esc_html_e( 'Repository webhook management is temporarily unavailable for this repository.', 'ran-booster' ); ?></p>
+					<p><?php echo wp_kses_post( $message ); ?></p>
 					<p><button type="button" class="<?php echo esc_attr( ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
 				</div>
 			</div></div></section>
 			<?php
 			return;
 		}
+		// A ready receiver means the site readiness found no database, storage, inventory or address problem, so manual updates work.
 		if ( $has_branch_consumer && $receiver_ready ) {
 			?>
 			<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
@@ -260,15 +267,16 @@ final class RepositoryDetailRenderer {
 					<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></h3>
 				</header>
 				<div class="ran-booster-settings-section__body">
-					<p><?php esc_html_e( 'Assisted webhook management is unavailable in this view. Use the Git provider webhook settings when available.', 'ran-booster' ); ?></p>
+					<p><?php esc_html_e( 'Booster can\'t manage this webhook here; manual updates still work.', 'ran-booster' ); ?></p>
 				</div>
 			</div></div></section>
 			<?php
 			return;
 		}
+		// The site's own reason says what blocks deliveries; with none known, only the missing management is certain.
 		$message = $has_branch_consumer && ! $receiver_ready
-			? __( 'Assisted webhook management is unavailable in this view. Receiver readiness has not been established.', 'ran-booster' )
-			: __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' );
+			? ( '' !== trim( $receiver_message ) ? $receiver_message : esc_html__( 'Booster can\'t manage this webhook here.', 'ran-booster' ) )
+			: esc_html__( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' );
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
@@ -277,7 +285,7 @@ final class RepositoryDetailRenderer {
 			</header>
 			<div class="ran-booster-settings-section__body">
 				<h4 id="ran-booster-repository-webhook-setup-heading"><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></h4>
-				<p><?php echo esc_html( $message ); ?></p>
+				<p><?php echo wp_kses_post( $message ); ?></p>
 				<?php if ( $has_branch_consumer && ! $receiver_ready ) { ?>
 					<p><button type="button" class="<?php echo esc_attr( ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
 				<?php } ?>

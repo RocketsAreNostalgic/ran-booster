@@ -165,6 +165,66 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
+	public function test_a_disabled_save_from_the_stored_record_redirects_with_the_signed_unchecked_marker(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator(), $this->plugin() );
+
+		$redirect = $dashboard->post_package_operation(
+			'edit-plugin',
+			$this->input(
+				'edit-plugin',
+				array(
+					'deployment_policy'        => DeploymentPolicy::DISABLED->value,
+					'repository_check_skipped' => 'updates_disabled',
+				)
+			)
+		);
+
+		self::assertIsString( $redirect );
+		$query = $this->redirect_query( $redirect );
+		self::assertSame( 'edit-unchecked', $query['ran_booster_result'] );
+		self::assertSame( 1, \RAN\wp_verify_nonce( $query['_ran_booster_notice_nonce'], 'ran-booster-package-success|plugin|edit-unchecked|example/example.php' ) );
+	}
+
+	/** @return array<string, array{string, string, string}> */
+	public static function unchecked_save_notices(): array {
+		return array(
+			'plugin' => array( 'plugin', 'example/example.php', 'Plugin was saved. The repository was not checked.' ),
+			'theme'  => array( 'theme', 'example', 'Theme was saved. The repository was not checked.' ),
+		);
+	}
+
+	#[DataProvider( 'unchecked_save_notices' )]
+	public function test_signed_unchecked_edit_marker_says_the_package_was_saved_and_the_repository_not_checked( string $type, string $identifier, string $expected ): void {
+		$dashboard = $this->dashboard( new OperationCoordinator() );
+		$_GET      = array(
+			'ran_booster_result'        => 'edit-unchecked',
+			'ran_booster_package'       => $identifier,
+			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|' . $type . '|edit-unchecked|' . $identifier ),
+		);
+
+		$notice = $this->invoke_package_success_notice( $dashboard, $type );
+
+		self::assertSame(
+			array(
+				'operation'  => 'edit',
+				'identifier' => $identifier,
+			),
+			$notice
+		);
+		// One plain saved result: the enhanced save shows this text as its snackbar.
+		self::assertSame(
+			array(
+				array(
+					'type'          => 'success',
+					'message'       => $expected,
+					'saved_package' => $identifier,
+					'saved_type'    => $type,
+				),
+			),
+			$dashboard->messages
+		);
+	}
+
 	public function test_an_ordinary_edit_save_redirects_with_the_plain_edit_marker(): void {
 		$dashboard = $this->dashboard( new OperationCoordinator(), $this->plugin() );
 

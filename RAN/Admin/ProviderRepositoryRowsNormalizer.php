@@ -8,6 +8,7 @@ use LogicException;
 use RAN\Admin\Component\AdminActionNormalizer;
 use RAN\Admin\Component\StatusBadge;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
+use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
 use RAN\Admin\WebhookManagement\RepositoryWebhookManagementControls;
 use RAN\Logging\BoosterLogger;
 use Throwable;
@@ -120,7 +121,6 @@ final class ProviderRepositoryRowsNormalizer {
 			'webhook_has_hard_failure'            => array() !== array_intersect( $reason_codes, array( 'database_unavailable', 'secrets_storage_unavailable', 'managed_packages_unavailable' ) ),
 			'task_urls'                           => $task_urls,
 			'task_request_urls'                   => $task_requests,
-			'wordpress_urls_url'                  => admin_url( 'options-general.php' ),
 			'webhook_operations_url'              => admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' ),
 			'install_plugin_url'                  => admin_url( 'admin.php?page=ran-booster-plugins-create&provider=' . rawurlencode( $provider_code ) ),
 			'install_theme_url'                   => admin_url( 'admin.php?page=ran-booster-themes-create&provider=' . rawurlencode( $provider_code ) ),
@@ -974,17 +974,12 @@ final class ProviderRepositoryRowsNormalizer {
 
 	/**
 	 * @param array<array-key, mixed> $codes
-	 * @return list<string>
+	 * @return list<string> The primary reason's escaped HTML sentence with its one link, as on every webhook screen.
 	 */
 	private function site_reasons( array $codes ): array {
-		$labels = array(
-			'database_unavailable'           => __( 'Booster database storage must be healthy before Push-to-Deploy can run.', 'ran-booster' ),
-			'secrets_storage_unavailable'    => __( 'Encrypted credential storage must be healthy before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ),
-			'callback_requires_public_https' => __( 'This site needs a public HTTPS URL to receive webhooks.', 'ran-booster' ),
-			'managed_packages_unavailable'   => __( 'Booster could not read the managed package inventory needed for Push-to-Deploy.', 'ran-booster' ),
-		);
+		$code = WebhookDisplayModel::primary_site_reason( $codes );
 
-		return array_values( array_filter( array_map( static fn ( mixed $code ): ?string => is_string( $code ) ? ( $labels[ $code ] ?? null ) : null, $codes ) ) );
+		return null === $code ? array() : array( (string) WebhookDisplayModel::site_reason_message( $code, true ) );
 	}
 
 	/**

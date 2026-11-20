@@ -582,9 +582,53 @@ final class RepositoryDetailRendererTest extends TestCase {
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Repository webhook management is temporarily unavailable for this repository.', $html );
+		// The callback failed for an unknown reason, so the sentence makes no claim about manual updates.
+		self::assertStringContainsString( '<p>Repository webhook management is temporarily unavailable for this repository.</p>', $html );
+		self::assertStringNotContainsString( 'manual updates still work', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
 		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" disabled aria-disabled="true">Manage repository webhook</button>', $html );
+	}
+
+	public function test_failed_supported_panel_names_a_reported_storage_failure_but_not_the_address(): void {
+		$database = 'Webhook setup is paused while Booster&#039;s <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting">database storage</a> needs attention.';
+		foreach ( array(
+			$database => $database,
+			'address' => \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::receiver_unavailable_message( true ),
+		) as $case => $receiver_message ) {
+			ob_start();
+			( new RepositoryDetailRenderer() )->render(
+				array(
+					'repository'          => 'owner/branch',
+					'repository_url'      => '',
+					'source_label'        => 'Branch',
+					'has_branch_consumer' => true,
+					'package_summaries'   => array(),
+					'details'             => array(),
+					'actions'             => array(),
+				),
+				'Fixture Forge',
+				'https://example.test/repositories',
+				'https://example.test/activity',
+				false,
+				$receiver_message,
+				'branch',
+				$this->view_urls(),
+				$this->view_request_urls(),
+				static fn (): bool => false,
+				null
+			);
+			$html = (string) ob_get_clean();
+
+			if ( $database === $case ) {
+				self::assertStringContainsString( '<p>' . $database . '</p>', $html );
+				self::assertStringNotContainsString( 'temporarily unavailable', $html );
+			} else {
+				// The address does not explain the failed panel, so the cause stays unknown.
+				self::assertStringContainsString( '<p>Repository webhook management is temporarily unavailable for this repository.</p>', $html );
+				self::assertStringNotContainsString( 'public HTTPS URL', $html );
+			}
+			self::assertStringNotContainsString( 'manual updates still work', $html, (string) $case );
+		}
 	}
 
 	public function test_published_releases_view_uses_provider_panel_and_keeps_package_controls_linked(): void {
@@ -766,8 +810,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
-		self::assertStringContainsString( 'Assisted webhook management is unavailable in this view.', $html );
-		self::assertStringContainsString( 'Use the Git provider webhook settings when available.', $html );
+		self::assertStringContainsString( 'Booster can&#039;t manage this webhook here; manual updates still work.', $html );
 		self::assertStringNotContainsString( 'no Branch package currently uses this repository webhook', $html );
 		self::assertStringNotContainsString( 'Manage repository webhook', $html );
 	}
@@ -796,12 +839,37 @@ final class RepositoryDetailRendererTest extends TestCase {
 				null
 			);
 			$html = (string) ob_get_clean();
-			self::assertStringContainsString( 'Assisted webhook management is unavailable in this view.', $html );
 			self::assertStringNotContainsString( 'unavailable until', $html );
-			if ( ! $ready ) {
-				self::assertStringContainsString( 'Receiver readiness has not been established.', $html );
-			}
+			// A ready receiver proves the site's storage and inventory, so only then does the sentence say manual updates work.
+			self::assertStringContainsString( $ready ? 'Booster can&#039;t manage this webhook here; manual updates still work.' : '<p>Booster can&#039;t manage this webhook here.</p>', $html );
 		}
+	}
+
+	public function test_unready_receiver_without_management_shows_the_site_reasons_with_their_links(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'        => 'owner/branch',
+				'source_key'        => 'branch',
+				'package_summaries' => array(),
+				'details'           => array(),
+				'actions'           => array(),
+			),
+			'Fixture',
+			'/repositories',
+			'/activity',
+			false,
+			'This site needs a <a href="https://example.test/wp-admin/options-general.php">public HTTPS URL</a> to receive webhooks; manual updates still work.',
+			'branch',
+			$this->view_urls(),
+			$this->view_request_urls(),
+			null,
+			null
+		);
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<p>This site needs a <a href="https://example.test/wp-admin/options-general.php">public HTTPS URL</a> to receive webhooks; manual updates still work.</p>', $html );
+		self::assertStringNotContainsString( 'Booster can&#039;t manage', $html );
 	}
 
 	public function test_throwing_release_callback_keeps_neutral_fallback(): void {

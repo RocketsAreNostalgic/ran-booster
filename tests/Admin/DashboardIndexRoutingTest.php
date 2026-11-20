@@ -154,6 +154,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET = array( 'ran_booster_repository_branch_check' => '1' );
 		self::assertNull( $check->invoke( $dashboard, $package, 'plugin' ) );
 
+		$_GET = array(
+			'ran_booster_repository_branch_check'  => 'not-a-value',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
+		);
+		self::assertNull( $check->invoke( $dashboard, $package, 'plugin' ) );
+
 		$_GET['_ran_booster_repository_branch_nonce'] = \RAN\wp_create_nonce(
 			'ran-booster-repository-branch-check|plugin|different/example.php|branch|1'
 		);
@@ -219,6 +225,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertThat( $check->invoke( $dashboard, $package, 'plugin' ), self::identicalTo( 'verified' ) );
 		self::assertSame( 1, $provider->prepare_calls );
+
+		// Check branch carries a fresh one-time value, so the same package and nonce ask the provider again.
+		$args = \RAN\Admin\PackageAdminController::repository_branch_check_args( $package, 'plugin' );
+		self::assertSame( \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ), $args['_ran_booster_repository_branch_nonce'] );
+		$_GET = $args;
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( 2, $provider->prepare_calls, 'A reload of the same check reuses its result.' );
 	}
 
 	public function test_repository_branch_check_holds_the_shared_updater_lock_during_provider_access(): void {
@@ -3013,10 +3027,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'package_paused',
 				'repository_branch_check_outcome',
 				'repository_branch_check_evidence',
+				'repository_branch_check_args',
 			),
 			array_keys( $result['data'] )
 		);
 		self::assertSame( $package, $result['data']['package'] );
+		self::assertMatchesRegularExpression( '/^[a-f0-9]{16}$/D', $result['data']['repository_branch_check_args']['ran_booster_repository_branch_check'] ?? '' );
+		self::assertNotFalse( \RAN\wp_verify_nonce( $result['data']['repository_branch_check_args']['_ran_booster_repository_branch_nonce'] ?? '', \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, $type ) ) );
 		self::assertSame( $type, $result['data']['package_view']->get_type() );
 		self::assertSame( array(), $result['data']['package_extension_panels'] );
 		self::assertSame( 'branch', $result['data']['package_source']['current'] );

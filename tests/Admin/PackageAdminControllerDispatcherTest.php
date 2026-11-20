@@ -25,7 +25,6 @@ use RAN\Admin\BulkPackageResult;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\PackageAdminController;
 use RAN\Admin\PackageRepositoryRequestResolver;
-use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Dashboard;
 use RAN\Dispatcher;
 use RAN\ManagedRepository;
@@ -48,7 +47,6 @@ use RAN\Storage\ThemeRepository;
 use RAN\Storage\GitHubSelectionStore;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
-use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 use WP_Error;
 
 final class PackageAdminControllerDispatcherTest extends TestCase {
@@ -158,13 +156,12 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	/** @return array<string, array{array<string, string>}> */
 	public static function saves_that_still_check(): array {
 		return array(
-			'Disabled, changed branch'         => array( array( 'branch' => 'renamed' ) ),
-			'Disabled, changed repository'     => array( array( 'repository' => 'owner/other' ) ),
-			'Disabled, changed credential'     => array( array( 'credential_id' => 'other-profile' ) ),
-			'Disabled, changed subfolder'      => array( array( 'subdirectory' => 'packages/fixture' ) ),
-			'Disabled, branch check requested' => array( array( 'check_repository_branch_after_save' => '1' ) ),
-			'Disabled, reinstall requested'    => array( array( 'reinstall_after_save' => '1' ) ),
-			'Manual, unchanged'                => array( array( 'deployment_policy' => 'manual' ) ),
+			'Disabled, changed branch'      => array( array( 'branch' => 'renamed' ) ),
+			'Disabled, changed repository'  => array( array( 'repository' => 'owner/other' ) ),
+			'Disabled, changed credential'  => array( array( 'credential_id' => 'other-profile' ) ),
+			'Disabled, changed subfolder'   => array( array( 'subdirectory' => 'packages/fixture' ) ),
+			'Disabled, reinstall requested' => array( array( 'reinstall_after_save' => '1' ) ),
+			'Manual, unchanged'             => array( array( 'deployment_policy' => 'manual' ) ),
 		);
 	}
 
@@ -658,66 +655,19 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertSame( 0, $themes->lookups );
 	}
 
-	#[DataProvider( 'trusted_public_lookup_packages' )]
-	public function test_edit_save_and_branch_check_uses_trusted_public_lookup_only_for_stored_public_package( bool $is_private, ?string $expected_lookup_credential, bool $expected_public_only ): void {
-		$package          = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', $is_private, 'deployment-profile' );
-		$plugins          = new EditBoundaryPluginRepository( $package );
-		$themes           = new EditBoundaryThemeRepository( $package );
-		$provider         = new CapturingPublicLookupProvider();
-		$providers        = new ProviderRegistry( array( $provider ) );
-		$lookup           = new InMemoryPublicRepositoryLookupProfileStore();
-		$lookup->profiles = array( 'gh' => 'public-profile' );
-		$request          = array(
-			'action'                             => 'edit-plugin',
-			'file'                               => 'fixture/fixture.php',
-			'provider'                           => 'gh',
-			'repository'                         => 'owner/replacement',
-			'credential_id'                      => 'deployment-profile',
-			'branch'                             => 'main',
-			'deployment_policy'                  => 'manual',
-			'check_repository_branch_after_save' => '1',
-		);
-		$dashboard        = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )
-			->method( 'post_package_operation' )
-			->with(
-				'edit-plugin',
-				self::callback(
-					static fn ( array $resolved ): bool => 'deployment-profile' === $resolved['credential_id']
-						&& ! array_key_exists( 'public_lookup_profile_id', $resolved )
-				)
-			)
-			->willReturn( 'https://example.test/redirect' );
-
-		$result = ( new PackageAdminController(
-			repositories: new PackageRepositoryRequestResolver( $providers ),
-			plugins: $plugins,
-			themes: $themes,
-			providers: $providers,
-			public_lookup_profiles: $lookup
-		) )->manage( $dashboard, 'edit-plugin', $request, true );
-
-		self::assertSame( 'https://example.test/redirect', $result );
-		self::assertCount( 1, $provider->requests );
-		self::assertSame( $expected_lookup_credential, $provider->requests[0]->credential_id );
-		self::assertSame( $expected_public_only, $provider->requests[0]->public_only );
-	}
-
-	public function test_edit_save_and_branch_check_keeps_anonymous_public_lookup_distinct_from_submitted_package_access(): void {
-		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', false, 'deployment-profile' );
-		$plugins   = new EditBoundaryPluginRepository( $package );
-		$themes    = new EditBoundaryThemeRepository( $package );
+	#[DataProvider( 'package_access' )]
+	public function test_a_save_looks_the_repository_up_with_the_package_access( bool $is_private ): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', $is_private, 'deployment-profile' );
 		$provider  = new CapturingPublicLookupProvider();
 		$providers = new ProviderRegistry( array( $provider ) );
 		$request   = array(
-			'action'                             => 'edit-plugin',
-			'file'                               => 'fixture/fixture.php',
-			'provider'                           => 'gh',
-			'repository'                         => 'owner/replacement',
-			'credential_id'                      => 'deployment-profile',
-			'branch'                             => 'main',
-			'deployment_policy'                  => 'manual',
-			'check_repository_branch_after_save' => '1',
+			'action'            => 'edit-plugin',
+			'file'              => 'fixture/fixture.php',
+			'provider'          => 'gh',
+			'repository'        => 'owner/replacement',
+			'credential_id'     => 'deployment-profile',
+			'branch'            => 'main',
+			'deployment_policy' => 'manual',
 		);
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
@@ -731,18 +681,21 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			)
 			->willReturn( 'https://example.test/redirect' );
 
-		$result = ( new PackageAdminController(
-			repositories: new PackageRepositoryRequestResolver( $providers ),
-			plugins: $plugins,
-			themes: $themes,
-			providers: $providers,
-			public_lookup_profiles: new InMemoryPublicRepositoryLookupProfileStore()
-		) )->manage( $dashboard, 'edit-plugin', $request, true );
+		$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-plugin', $request, true );
 
+		// The branch check after the save uses its own public access; the save itself never borrows it.
 		self::assertSame( 'https://example.test/redirect', $result );
 		self::assertCount( 1, $provider->requests );
-		self::assertNull( $provider->requests[0]->credential_id );
-		self::assertTrue( $provider->requests[0]->public_only );
+		self::assertSame( 'deployment-profile', $provider->requests[0]->credential_id );
+		self::assertFalse( $provider->requests[0]->public_only );
+	}
+
+	/** @return array<string, array{bool}> */
+	public static function package_access(): array {
+		return array(
+			'public package'  => array( false ),
+			'private package' => array( true ),
+		);
 	}
 
 	public function test_invalid_subdirectory_names_the_field_before_provider_resolution(): void {
@@ -752,15 +705,14 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$provider  = new CapturingPublicLookupProvider();
 		$providers = new ProviderRegistry( array( $provider ) );
 		$request   = array(
-			'action'                             => 'edit-plugin',
-			'file'                               => 'fixture/fixture.php',
-			'provider'                           => 'gh',
-			'repository'                         => 'owner/replacement',
-			'credential_id'                      => '',
-			'branch'                             => 'main',
-			'subdirectory'                       => '../fixture',
-			'deployment_policy'                  => 'manual',
-			'check_repository_branch_after_save' => '1',
+			'action'            => 'edit-plugin',
+			'file'              => 'fixture/fixture.php',
+			'provider'          => 'gh',
+			'repository'        => 'owner/replacement',
+			'credential_id'     => '',
+			'branch'            => 'main',
+			'subdirectory'      => '../fixture',
+			'deployment_policy' => 'manual',
 		);
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )
@@ -784,76 +736,25 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertCount( 0, $provider->requests );
 	}
 
-	public function test_edit_save_and_branch_check_refuses_public_package_when_provider_cannot_make_trusted_public_lookup(): void {
+	public function test_a_public_package_saves_on_a_provider_without_a_default_public_lookup(): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', false, 'deployment-profile' );
-		$plugins   = new EditBoundaryPluginRepository( $package );
-		$themes    = new EditBoundaryThemeRepository( $package );
-		$provider  = new CapturingRepositoryProvider();
-		$providers = new ProviderRegistry( array( $provider ) );
+		$providers = new ProviderRegistry( array( new CapturingPublicLookupProvider( false ) ) );
 		$request   = array(
-			'action'                             => 'edit-plugin',
-			'file'                               => 'fixture/fixture.php',
-			'provider'                           => 'gh',
-			'repository'                         => 'owner/replacement',
-			'credential_id'                      => 'deployment-profile',
-			'branch'                             => 'main',
-			'deployment_policy'                  => 'manual',
-			'check_repository_branch_after_save' => '1',
+			'action'            => 'edit-plugin',
+			'file'              => 'fixture/fixture.php',
+			'provider'          => 'gh',
+			'repository'        => 'owner/replacement',
+			'credential_id'     => 'deployment-profile',
+			'branch'            => 'main',
+			'deployment_policy' => 'manual',
 		);
 		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'add_failure_message' );
-		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
+		$dashboard->expects( self::once() )->method( 'post_package_operation' )->willReturn( 'https://example.test/redirect' );
 
-		$result = ( new PackageAdminController(
-			repositories: new PackageRepositoryRequestResolver( $providers ),
-			plugins: $plugins,
-			themes: $themes,
-			providers: $providers,
-			public_lookup_profiles: new InMemoryPublicRepositoryLookupProfileStore()
-		) )->manage( $dashboard, 'edit-plugin', $request, true );
+		$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-plugin', $request, true );
 
-		self::assertFalse( $result );
-		self::assertSame( array(), $provider->requests );
-	}
-
-	public function test_edit_save_and_branch_check_refuses_public_package_when_provider_disallows_default_public_profile(): void {
-		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', false, 'deployment-profile' );
-		$plugins   = new EditBoundaryPluginRepository( $package );
-		$themes    = new EditBoundaryThemeRepository( $package );
-		$provider  = new CapturingPublicLookupProvider( false );
-		$providers = new ProviderRegistry( array( $provider ) );
-		$request   = array(
-			'action'                             => 'edit-plugin',
-			'file'                               => 'fixture/fixture.php',
-			'provider'                           => 'gh',
-			'repository'                         => 'owner/replacement',
-			'credential_id'                      => 'deployment-profile',
-			'branch'                             => 'main',
-			'deployment_policy'                  => 'manual',
-			'check_repository_branch_after_save' => '1',
-		);
-		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'add_failure_message' );
-		$dashboard->expects( self::never() )->method( 'post_package_operation' );
-
-		$result = ( new PackageAdminController(
-			repositories: new PackageRepositoryRequestResolver( $providers ),
-			plugins: $plugins,
-			themes: $themes,
-			providers: $providers,
-			public_lookup_profiles: new InMemoryPublicRepositoryLookupProfileStore()
-		) )->manage( $dashboard, 'edit-plugin', $request, true );
-
-		self::assertFalse( $result );
-		self::assertSame( array(), $provider->requests );
-	}
-
-	/** @return array<string, array{bool, string|null, bool}> */
-	public static function trusted_public_lookup_packages(): array {
-		return array(
-			'public branch package' => array( false, 'public-profile', true ),
-			'private package'       => array( true, 'deployment-profile', false ),
-		);
+		self::assertSame( 'https://example.test/redirect', $result );
 	}
 
 	#[DataProvider( 'transient_lookup_failures' )]
@@ -930,10 +831,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	/** @return array<string, array{array<string, string>, bool}> */
 	public static function saves_that_continue_to_the_provider(): array {
 		return array(
-			'reinstall, public package'     => array( array( 'reinstall_after_save' => '1' ), false ),
-			'reinstall, private package'    => array( array( 'reinstall_after_save' => '1' ), true ),
-			'branch check, public package'  => array( array( 'check_repository_branch_after_save' => '1' ), false ),
-			'branch check, private package' => array( array( 'check_repository_branch_after_save' => '1' ), true ),
+			'reinstall, public package'  => array( array( 'reinstall_after_save' => '1' ), false ),
+			'reinstall, private package' => array( array( 'reinstall_after_save' => '1' ), true ),
 		);
 	}
 

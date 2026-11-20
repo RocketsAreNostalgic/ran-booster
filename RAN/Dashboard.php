@@ -947,6 +947,9 @@ class Dashboard {
 					);
 					$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
 					$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
+					$edit_data['repository_branch_check_args']     = PackageSource::BRANCH === $package->get_source()
+						? PackageAdminController::repository_branch_check_args( $package, $type )
+						: null;
 					return $this->render(
 						'packages/edit',
 						$edit_data
@@ -1058,8 +1061,9 @@ class Dashboard {
 	/** @return 'verified'|'subdirectory_deferred'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected'|null */
 	private function requested_package_repository_branch_check( Package $package, string $type ): ?string {
 		if ( ! isset( $_GET['ran_booster_repository_branch_check'] )
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This request flag is followed by capability and action-specific nonce verification before the provider check.
-			|| '1' !== (string) $_GET['ran_booster_repository_branch_check']
+			|| ! is_string( $_GET['ran_booster_repository_branch_check'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This one-time request value is followed by capability and action-specific nonce verification before the provider check.
+			|| 1 !== preg_match( '/^[a-f0-9]{1,16}$/D', $_GET['ran_booster_repository_branch_check'] )
 			|| ! current_user_can( 'manage_options' )
 			|| ! isset( $_GET['_ran_booster_repository_branch_nonce'] )
 			|| ! is_string( $_GET['_ran_booster_repository_branch_nonce'] )
@@ -1071,9 +1075,10 @@ class Dashboard {
 		if ( ! wp_verify_nonce( $nonce, $action ) ) {
 			return null;
 		}
+		// The request's one-time value keys the result, so a reload reuses it and a new request asks again.
 		$marker    = 'ran_booster_branch_check_' . hash(
 			'sha256',
-			get_current_user_id() . "\0" . $action . "\0" . $nonce . "\0"
+			get_current_user_id() . "\0" . $action . "\0" . $nonce . "\0" . $_GET['ran_booster_repository_branch_check'] . "\0"
 			. $this->provider_settings->package_repository_branch_check_access_fingerprint( $package )
 		);
 		$completed = get_transient( $marker );

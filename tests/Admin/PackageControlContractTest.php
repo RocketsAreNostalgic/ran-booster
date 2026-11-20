@@ -53,7 +53,6 @@ final class PackageControlContractTest extends TestCase {
 		$associated_settings_include = 'hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"';
 		self::assertStringContainsString( $associated_settings_include, $edit );
 		self::assertStringContainsString( $associated_settings_include, $reinstall );
-		self::assertStringContainsString( $associated_settings_include, $readiness );
 		self::assertStringContainsString( 'hx-get=', $source );
 		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $source );
 		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $source );
@@ -64,11 +63,10 @@ final class PackageControlContractTest extends TestCase {
 		self::assertStringContainsString( "'heading'           => __( 'Releases', 'ran-booster' )", $defaults );
 		self::assertStringNotContainsString( 'Subscriber', $source );
 		self::assertStringNotContainsString( 'Release Deployments', $source );
-		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $readiness );
-		self::assertStringContainsString( 'hx-post=', $readiness );
-		self::assertStringContainsString( 'hx-push-url=', $readiness );
-		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $readiness );
-		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $readiness );
+		self::assertStringContainsString( '<form method="get"', $readiness );
+		self::assertStringContainsString( 'data-ran-booster-submit-busy', $readiness );
+		self::assertStringNotContainsString( 'ran-booster-package-edit-form', $readiness );
+		self::assertStringNotContainsString( 'hx-', $readiness );
 	}
 
 	public function test_plugin_and_theme_use_one_shared_template_set(): void {
@@ -96,7 +94,7 @@ final class PackageControlContractTest extends TestCase {
 			'unlink'                    => array( 'edit', 'mutation-post', 'core', 'signed package PRG', 'local package form', 'package index' ),
 			'unlink and delete'         => array( 'edit', 'mutation-post', 'core', 'signed package PRG', 'local package form', 'package index' ),
 			'saved source navigation'   => array( 'edit', 'readonly-htmx-get', 'core', 'selected pane', 'unchanged page', 'canonical source view' ),
-			'branch readiness'          => array( 'edit', 'mutation-post', 'core', 'green repository row', 'saved form or repository warning', 'canonical branch view' ),
+			'branch readiness'          => array( 'edit', 'native-get', 'core', 'green repository row', 'repository warning', 'canonical branch view' ),
 			'published release actions' => array( 'edit', 'mutation-post', 'core', 'Core PRG', 'local source panel', 'canonical release view' ),
 			'repository provider links' => array( 'edit', 'native-link', 'provider', 'navigation', 'provider page', 'provider settings' ),
 			'activate or enable'        => array( 'edit', 'native-link', 'wordpress', 'WordPress action', 'WordPress page', 'saved package settings' ),

@@ -165,7 +165,16 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	public function test_a_disabled_save_from_the_stored_record_redirects_with_the_signed_unchecked_marker(): void {
+	/** @return array<string, array{string, string}> */
+	public static function skipped_check_saves(): array {
+		return array(
+			'updates disabled'     => array( 'updates_disabled', 'edit-unchecked' ),
+			'provider unavailable' => array( '1', 'edit-unverified' ),
+		);
+	}
+
+	#[DataProvider( 'skipped_check_saves' )]
+	public function test_a_save_from_the_stored_record_redirects_with_its_signed_marker_and_no_branch_check( string $marker, string $result ): void {
 		$dashboard = $this->dashboard( new OperationCoordinator(), $this->plugin() );
 
 		$redirect = $dashboard->post_package_operation(
@@ -174,15 +183,16 @@ final class PackageOperationServiceTest extends TestCase {
 				'edit-plugin',
 				array(
 					'deployment_policy'        => DeploymentPolicy::DISABLED->value,
-					'repository_check_skipped' => 'updates_disabled',
+					'repository_check_skipped' => $marker,
 				)
 			)
 		);
 
 		self::assertIsString( $redirect );
 		$query = $this->redirect_query( $redirect );
-		self::assertSame( 'edit-unchecked', $query['ran_booster_result'] );
-		self::assertSame( 1, \RAN\wp_verify_nonce( $query['_ran_booster_notice_nonce'], 'ran-booster-package-success|plugin|edit-unchecked|example/example.php' ) );
+		self::assertSame( $result, $query['ran_booster_result'] );
+		self::assertSame( 1, \RAN\wp_verify_nonce( $query['_ran_booster_notice_nonce'], 'ran-booster-package-success|plugin|' . $result . '|example/example.php' ) );
+		self::assertArrayNotHasKey( 'ran_booster_repository_branch_check', $query );
 	}
 
 	/** @return array<string, array{string, string, string}> */
@@ -234,39 +244,57 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'edit', $this->redirect_query( $redirect )['ran_booster_result'] );
 	}
 
-	public function test_save_and_check_redirect_uses_the_authoritative_edited_package_without_asuccess_notice(): void {
+	public function test_a_branch_save_returns_with_the_saved_notice_and_a_fresh_branch_check(): void {
 		$package   = $this->plugin();
 		$dashboard = $this->dashboard( new OperationCoordinator(), $package );
+		$checks    = array();
+
+		foreach ( array( 'feature/verified-after-save', 'feature/saved-again' ) as $branch ) {
+			$redirect = $dashboard->post_package_operation(
+				'edit-plugin',
+				$this->input(
+					'edit-plugin',
+					array(
+						'branch'          => $branch,
+						'expected_branch' => (string) $package->get_branch(),
+					)
+				)
+			);
+
+			self::assertIsString( $redirect );
+			self::assertSame( $branch, $package->get_branch() );
+			$query = $this->redirect_query( $redirect );
+			self::assertSame( 'ran-booster-plugins', $query['page'] );
+			self::assertSame( 'example/example.php', $query['package'] );
+			self::assertSame( 'edit', $query['ran_booster_result'] );
+			self::assertSame( 1, \RAN\wp_verify_nonce( $query['_ran_booster_notice_nonce'], 'ran-booster-package-success|plugin|edit|example/example.php' ) );
+			self::assertMatchesRegularExpression( '/^[a-f0-9]{16}$/D', $query['ran_booster_repository_branch_check'] );
+			self::assertSame( 1, \RAN\wp_verify_nonce( $query['_ran_booster_repository_branch_nonce'], PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ) );
+			$checks[] = $query['ran_booster_repository_branch_check'];
+		}
+		self::assertNotSame( $checks[0], $checks[1], 'Each save asks the provider again instead of reusing the last check.' );
+	}
+
+	public function test_a_release_save_returns_without_a_branch_check(): void {
+		$plugin = $this->plugin();
+		$plugin->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$dashboard = $this->dashboard( new OperationCoordinator(), $plugin );
 
 		$redirect = $dashboard->post_package_operation(
 			'edit-plugin',
 			$this->input(
 				'edit-plugin',
 				array(
-					'branch'                             => 'feature/verified-after-save',
-					'subdirectory'                       => 'packages/example',
-					'check_repository_branch_after_save' => '1',
+					'expected_source'          => PackageSource::RELEASE_ASSET->value,
+					'expected_source_revision' => '2',
 				)
 			)
 		);
 
 		self::assertIsString( $redirect );
-		self::assertSame( 'feature/verified-after-save', $package->get_branch() );
-		self::assertSame( 'packages/example', $package->get_subdirectory() );
 		$query = $this->redirect_query( $redirect );
-		self::assertSame( 'ran-booster-plugins', $query['page'] );
-		self::assertSame( 'example/example.php', $query['package'] );
-		self::assertSame( 'branch', $query['source_view'] );
-		self::assertSame( '1', $query['ran_booster_repository_branch_check'] );
-		self::assertArrayNotHasKey( 'ran_booster_result', $query );
-		self::assertArrayNotHasKey( '_ran_booster_notice_nonce', $query );
-		self::assertSame(
-			1,
-			\RAN\wp_verify_nonce(
-				$query['_ran_booster_repository_branch_nonce'],
-				PackageAdminController::repository_branch_check_action( $package, 'plugin' )
-			)
-		);
+		self::assertSame( 'edit', $query['ran_booster_result'] );
+		self::assertArrayNotHasKey( 'ran_booster_repository_branch_check', $query );
 	}
 
 	public function test_successful_package_operations_preserve_bounded_return_context(): void {
@@ -274,7 +302,6 @@ final class PackageOperationServiceTest extends TestCase {
 			array( 'install-plugin', array(), 'ran-booster-plugins-create', false ),
 			array( 'install-plugin', array( 'install_another' => '1' ), 'ran-booster-plugins-create', false ),
 			array( 'edit-plugin', array(), 'ran-booster-plugins', true ),
-			array( 'edit-plugin', array( 'check_repository_branch_after_save' => '1' ), 'ran-booster-plugins', true ),
 			array( 'update-plugin', array(), 'ran-booster-plugins', true ),
 		);
 		foreach ( $cases as [$action, $overrides, $page, $settings] ) {
@@ -305,9 +332,7 @@ final class PackageOperationServiceTest extends TestCase {
 				self::assertSame( 'gh', $query['provider'] );
 				self::assertSame( '1', $query['open_picker'] );
 			}
-			if ( isset( $overrides['check_repository_branch_after_save'] ) ) {
-				self::assertSame( '1', $query['ran_booster_repository_branch_check'] );
-			}
+			self::assertSame( 'edit-plugin' === $action, isset( $query['ran_booster_repository_branch_check'] ), $action );
 		}
 		$_GET = array();
 	}
@@ -352,17 +377,13 @@ final class PackageOperationServiceTest extends TestCase {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$input     = $this->input(
 			'edit-plugin',
-			array(
-				'check_repository_branch_after_save' => '1',
-				'expected_branch'                    => 'older-branch',
-			)
+			array( 'expected_branch' => 'older-branch' )
 		);
 
 		self::assertFalse( $dashboard->post_package_operation( 'edit-plugin', $input ) );
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertSame( 'ran_booster_package_edit_conflict', $dashboard->messages[0]['code'] );
-		self::assertStringContainsString( 'No settings were saved and no repository check ran.', $dashboard->messages[0]['message'] );
-		self::assertStringContainsString( 'Save settings and check again.', $dashboard->messages[0]['message'] );
+		self::assertSame( 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.', $dashboard->messages[0]['message'] );
 
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}

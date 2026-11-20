@@ -22,6 +22,7 @@ use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\WPBranchUpdater\V1\Archive\ArchiveOffer;
 use RAN\WPBranchUpdater\V1\Archive\ArchiveValidator;
@@ -356,7 +357,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 
 		try {
 			if ( 'install' === $data['operation'] ) {
-				if ( 'plugin' === $data['package_type'] && 'ran-booster' === $request->package_slug ) {
+				if ( 'plugin' === $data['package_type'] && PackageDirectory::names_collide( 'ran-booster', $request->package_slug ) ) {
 					$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED );
 				}
 				if ( $this->destination_exists( (string) $data['package_type'], $request->package_slug ) ) {
@@ -789,6 +790,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 	}
 
 	private function destination_exists( string $type, string $slug ): bool {
+		// A full filesystem path: the filesystem decides, not the PackageDirectory folder-name rule.
 		$root = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root();
 		return file_exists( $root . '/' . $slug ) || is_link( $root . '/' . $slug );
 	}

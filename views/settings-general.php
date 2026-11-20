@@ -17,6 +17,7 @@
  * @var list<array{key:string,label:string,url:string,active:bool,provider:bool}> $general_navigation Optional confirmed navigation.
  * @var bool $development_site Whether branch sources and Preview tracks need no override here.
  * @var string $site_address The address a saved source override is bound to.
+ * @var array<string,array{plugin:int,theme:int}> $paused_counts Optional managed packages each source setting pauses.
  */
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -335,6 +336,20 @@ foreach ( $source_scopes as $source_scope => $source_label ) {
 		<div id="<?php echo esc_attr( $source_id ); ?>-help" class="notice notice-info inline ran-booster-settings__reason ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $source_help ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 		<?php } ?>
 		<?php $render_configuration( array( $source_scope => 'RAN_BOOSTER_ALLOW_' . strtoupper( $source_scope ) ) ); ?>
+		<?php
+		$paused_parts = array();
+		foreach ( array( 'plugin', 'theme' ) as $paused_type ) {
+			$paused_count = (int) ( $paused_counts[ $source_scope ][ $paused_type ] ?? 0 );
+			if ( $paused_count > 0 ) {
+				/* translators: %d: number of paused plugins or themes. */
+				$paused_label   = 'plugin' === $paused_type ? _n( '%d plugin', '%d plugins', $paused_count, 'ran-booster' ) : _n( '%d theme', '%d themes', $paused_count, 'ran-booster' );
+				$paused_parts[] = '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-' . $paused_type . 's&attention=paused' ) ) . '">' . esc_html( sprintf( $paused_label, $paused_count ) ) . '</a>';
+			}
+		}
+		if ( array() !== $paused_parts ) {
+			?>
+		<p class="description"><?php echo wp_kses_post( sprintf( /* translators: %s: linked numbers of paused plugins and themes. */ __( 'Paused: %s', 'ran-booster' ), implode( ', ', $paused_parts ) ) ); ?></p>
+		<?php } ?>
 	</fieldset>
 	<div class="ran-booster-settings__toggle-actions">
 		<button id="ran-booster-save-<?php echo esc_attr( $source_scope ); ?>" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-toggle-save<?php disabled( $source['locked'] ); ?>><?php esc_html_e( 'Save setting', 'ran-booster' ); ?></button>

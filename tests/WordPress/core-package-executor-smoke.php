@@ -232,6 +232,9 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		if ( (string) wp_get_theme( $child_slug )->get( 'Template' ) !== $parent_slug ) {
 			throw new RuntimeException( 'The installed child theme did not retain its installed parent.' );
 		}
+		// A parent named in another case could be the theme's own folder (PackageDirectory::names_collide()).
+		$self_parent = ucfirst( $parent_slug );
+		$this->assert_failure( $executor->install_theme( $this->artifact( 'theme', $self_parent, '1.0.0', 'self-parent', null, $parent_slug ), $self_parent, null ), RAN\WordPress\CorePackageExecutionFailure::INVALID_REQUEST );
 
 		$theme_install = $this->artifact( 'theme', $slug, '1.0.0', 'theme-install' );
 		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_theme( $theme_install, $slug, null ) ) );

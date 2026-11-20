@@ -166,6 +166,7 @@ final class DeploymentAttemptRepository {
 			$this->assert_safe_text( $target['provider_repository_id'], 191 );
 			$this->assert_safe_text( $target['requested_ref'], 255 );
 			$this->assert_package_source( $target['package_source'], $target['package_source_revision'] );
+			// Exact key; the active-attempt lock below decides case variants by the table collation.
 			$key = $target['package_type'] . "\0" . $target['request']->package_slug;
 			if ( isset( $normalized[ $key ] ) ) {
 				throw DeploymentStorageFailure::invalid_record();
@@ -265,6 +266,7 @@ final class DeploymentAttemptRepository {
 			$this->assert_safe_text( $target['provider_repository_id'], 191 );
 			$this->assert_safe_text( $target['requested_ref'], 255 );
 			$this->assert_package_source( $target['package_source'], $target['package_source_revision'] );
+			// Exact key; the active-attempt lock below decides case variants by the table collation.
 			$key = $target['package_type'] . "\0" . $target['request']->package_slug;
 			if ( isset( $normalized[ $key ] ) ) {
 				throw DeploymentStorageFailure::invalid_record();
@@ -588,23 +590,6 @@ final class DeploymentAttemptRepository {
 		}
 
 		return $result;
-	}
-	public function has_unresolved_package_attempt( string $package_type, string $package_slug ): bool {
-		$this->assert_package_type( $package_type );
-		$this->assert_safe_text( $package_slug, 191 );
-		$rows = $this->read_rows(
-			$this->prepare(
-				"SELECT id FROM %i WHERE package_type = %s AND package_slug = %s AND (state IN ('queued','running') OR (state = 'needs_attention' AND resolved_at IS NULL AND resolved_by IS NULL)) LIMIT 2",
-				$this->table_name,
-				$package_type,
-				$package_slug
-			)
-		);
-		if ( count( $rows ) > 1 ) {
-			throw DeploymentStorageFailure::inconsistent();
-		}
-
-		return array() !== $rows;
 	}
 	public function latest_authenticated_delivery( ProviderCode $provider ): ?AuthenticatedWebhookDeliveryEvidence {
 		$rows = $this->read_rows(
@@ -1219,9 +1204,10 @@ final class DeploymentAttemptRepository {
 			$blocked = $blocked || null === $request->installed_identifier || $identifier === $request->installed_identifier;
 			if ( $directory_scope && null !== $request->installed_identifier ) {
 				// Native plugin recovery concerns the whole supplying directory, including nested siblings.
+				// The nested-path prefix folds a whole identifier, the documented collision_key() exception.
 				$target  = 'plugin' === $package_type ? explode( '/', $identifier )[0] : $identifier;
 				$other   = 'plugin' === $package_type ? explode( '/', $request->installed_identifier )[0] : $request->installed_identifier;
-				$blocked = $blocked || 0 === strcasecmp( $target, $other ) || str_starts_with( strtolower( $other ), strtolower( $target ) . '/' );
+				$blocked = $blocked || PackageDirectory::names_collide( $target, $other ) || str_starts_with( PackageDirectory::collision_key( $other ), PackageDirectory::collision_key( $target ) . '/' );
 			}
 		}
 		return $blocked;
@@ -1246,7 +1232,7 @@ final class DeploymentAttemptRepository {
 			}
 			$rows = $this->read_rows( $this->prepare( 'SELECT * FROM %i WHERE package_type = %d FOR UPDATE', ran_booster_table_name(), 'plugin' === $type ? 1 : 2 ) );
 			foreach ( $rows as $row ) {
-				if ( ! is_string( $row->package ?? null ) || explode( '/', $row->package )[0] === $request->package_slug ) {
+				if ( ! is_string( $row->package ?? null ) || PackageDirectory::names_collide( explode( '/', $row->package )[0], $request->package_slug ) ) {
 					return false;
 				}
 			}
@@ -1290,6 +1276,8 @@ final class DeploymentAttemptRepository {
 	}
 
 	private function active_package_attempt( string $package_type, string $package_slug ): ?DeploymentAttempt {
+		// Exception: package_slug = %s takes the table collation's case rule (WordPress's default ignores case) and keeps the
+		// package_history index for this FOR UPDATE lock; LOWER(package_slug) would scan and lock the whole history.
 		$query = $this->prepare(
 			"SELECT * FROM %i WHERE package_type = %s AND package_slug = %s AND (state IN ('queued','running') OR (state = 'needs_attention' AND resolved_at IS NULL AND resolved_by IS NULL)) ORDER BY created_at DESC, id DESC LIMIT 1 FOR UPDATE",
 			$this->table_name,

@@ -7,6 +7,7 @@ namespace RAN\RepositoryProvider;
 use RAN\Storage\GitHubSelectionStore;
 use RAN\Secrets\SecretsFile;
 use RAN\Deployment\DeploymentAttemptRepository;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\WordPress\WordPressUpdaterLock;
 
 /**
@@ -375,15 +376,11 @@ final class GitHubProviderSelection {
 				return 'provider_selection_changed';
 			}
 			$marker = $state['native_mutation'] ?? null;
-			if ( is_array( $marker ) && 'plugin' === $type ) {
-				$marker['installed_identity'] = explode( '/', $marker['installed_identity'] )[0];
-				$identity                     = explode( '/', $identity )[0];
-			}
 			// Registry lookup is pure; avoid the tolerant expectation wrappers here.
 			$allowed = $strict_storage
 				? null !== $this->registry && $this->registry->is_sealed() && null !== $this->current_selection( true, strict_storage: true )
 				: $this->operation_allowed();
-			if ( ! $allowed || ( is_array( $marker ) && $marker['target_type'] === $type && $marker['installed_identity'] === $identity ) ) {
+			if ( ! $allowed || ( is_array( $marker ) && self::native_folder_collides( $marker, $type, $identity ) ) ) {
 				return 'provider_unavailable';
 			}
 			return null;
@@ -544,15 +541,23 @@ final class GitHubProviderSelection {
 				if ( null === $marker || ! is_array( $marker ) ) {
 					return null !== $marker;
 				}
-				if ( $marker['target_type'] !== $type ) {
-					return false;
-				}
-				if ( 'plugin' === $type ) {
-					return 0 === strcmp( explode( '/', $marker['installed_identity'] )[0], explode( '/', $identity )[0] );
-				}
-				return 'theme' === $type && $marker['installed_identity'] === $identity;
+				return self::native_folder_collides( $marker, $type, $identity );
 			}
 		);
+	}
+
+	/**
+	 * An interrupted native mutation owns its whole folder: a plugin's directory, a theme's stylesheet.
+	 *
+	 * @param array<mixed> $marker
+	 */
+	private static function native_folder_collides( array $marker, string $type, string $identity ): bool {
+		if ( $marker['target_type'] !== $type ) {
+			return false;
+		}
+		return 'plugin' === $type
+			? PackageDirectory::names_collide( explode( '/', $marker['installed_identity'] )[0], explode( '/', $identity )[0] )
+			: PackageDirectory::names_collide( $marker['installed_identity'], $identity );
 	}
 
 	/**

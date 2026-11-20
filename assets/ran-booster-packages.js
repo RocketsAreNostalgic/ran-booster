@@ -183,6 +183,10 @@
 					'[data-ran-booster-source-repository-guidance]'
 				);
 				form.dataset.ranBoosterSourceControlsBound = 'true';
+				// While branch installs are paused only linking an installed package may submit; the server still refuses the rest.
+				const branchPaused = Boolean(
+					form.querySelector('#ran-booster-branch-paused-warning')
+				);
 
 				const synchronizeAvailability = function () {
 					const repositoryReady =
@@ -193,6 +197,11 @@
 						form.getAttribute(
 							'data-ran-booster-package-mutation-available'
 						) !== '0';
+					const pausedRefusal =
+						branchPaused &&
+						!form.querySelector(
+							'input[name="ran_booster[dry-run]"]:is([type="hidden"], :checked)'
+						);
 
 					sourceControls.disabled = !repositoryReady;
 					if (guidance) {
@@ -202,7 +211,9 @@
 						.querySelectorAll('button')
 						.forEach(function (button) {
 							button.disabled =
-								!repositoryReady || !mutationAvailable;
+								!repositoryReady ||
+								!mutationAvailable ||
+								pausedRefusal;
 						});
 				};
 
@@ -212,6 +223,7 @@
 					'ran-booster:repository-context-changed',
 					synchronizeAvailability
 				);
+				form.addEventListener('change', synchronizeAvailability);
 				synchronizeAvailability();
 			});
 

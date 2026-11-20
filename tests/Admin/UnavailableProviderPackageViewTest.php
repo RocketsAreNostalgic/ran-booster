@@ -490,8 +490,9 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 		// The sentence sits once, in Package operation under Updates and above the local edits notice and its buttons; Reinstall is disabled with it as the reason.
 		self::assertSame( 1, substr_count( $html, 'Updates are paused by a <a' ), 'The paused notice shows once; the button reason is plain.' );
-		self::assertMatchesRegularExpression( '/id="ran-booster-package-operation-heading".*<\/p>\s*<\/div>\s*<div [^>]*data-ran-booster-ui-notice-intent="warning"><div [^>]*><p>Updates are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\.<\/p>.*Making local edits\? Choose Disabled\..*class="ran-booster-package-operation-settings__actions"/s', $html );
+		self::assertMatchesRegularExpression( '/id="ran-booster-package-operation-heading".*<\/p>\s*<\/div>\s*<div [^>]*data-ran-booster-ui-notice-intent="warning"><div [^>]*><p>Updates are paused by a <a href="[^"]*page=ran-booster-settings#ran-booster-general-branch_sources">site setting<\/a>\. Changes here are saved and apply only when re-enabled\.<\/p>.*Making local edits\? Choose Disabled\..*class="ran-booster-package-operation-settings__actions"/s', $html );
 		self::assertMatchesRegularExpression( '/title="Updates are paused by a site setting\."[^>]*data-ran-booster-reinstall-capable="0"/s', $html );
+		self::assertStringNotContainsString( 'apply only when re-enabled.</span>', $html, 'The Reinstall reason keeps the one sentence.' );
 		self::assertStringContainsString( 'role="tooltip" hidden>Updates are paused by a site setting.</span>', $html );
 		self::assertMatchesRegularExpression( '/summary-grid__label">\s*Updates\s*<span [^>]*data-ran-booster-badge-intent="medium">Paused<\/span>\s*<\/p>\s*<p class="ran-booster-package-summary__value">Automatic<\/p>/', $html );
 

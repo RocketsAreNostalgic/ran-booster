@@ -162,15 +162,16 @@ $managed_package_url        = '' === $managed_package_identifier
 							if ( true === ( $package_branch_paused ?? false ) ) {
 								ob_start();
 								?>
-							<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-policy-source="branch"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
+							<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-policy-source="branch" id="ran-booster-branch-paused-warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
 								<?php
 								$package_settings_linked = current_user_can( 'manage_options' );
 								echo wp_kses_post(
 									sprintf(
-										/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing. */
-										esc_html__( 'Branch installs are paused by a %1$ssite setting%2$s.', 'ran-booster' ),
+										/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing; 3: plugin or theme. */
+										esc_html__( 'Branch installs are paused by a %1$ssite setting%2$s. You can still link an installed %3$s.', 'ran-booster' ),
 										$package_settings_linked ? '<a href="' . esc_url( add_query_arg( 'page', 'ran-booster-settings', $package_view->get_admin_url() ) . '#ran-booster-general-branch_sources' ) . '">' : '',
-										$package_settings_linked ? '</a>' : ''
+										$package_settings_linked ? '</a>' : '',
+										esc_html( $package_view->get_type() )
 									)
 								);
 								?>
@@ -196,13 +197,14 @@ $managed_package_url        = '' === $managed_package_identifier
 							</div>
 						</fieldset>
 						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
+						<?php $package_paused_ids = true === ( $package_branch_paused ?? false ) ? ' ran-booster-branch-paused-warning' : ''; // While paused the script disables Install unless linking; the warning says why. ?>
 						<div class="ran-booster-card-footer ran-booster-package-install-actions" role="group" aria-label="<?php esc_attr_e( 'Installation actions', 'ran-booster' ); ?>">
 							<?php if ( '' !== $managed_package_url ) { ?>
 								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" aria-describedby="ran-booster-link-installed-help" href="<?php echo esc_url( $managed_package_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
-								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing. This can take a few seconds.', 'ran-booster' ) ); ?>" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"<?php echo '' !== $package_paused_ids ? ' aria-describedby="ran-booster-branch-paused-warning"' : ''; ?> data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing. This can take a few seconds.', 'ran-booster' ) ); ?>" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
 							<?php } else { ?>
-								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" aria-describedby="ran-booster-link-installed-help" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing. This can take a few seconds.', 'ran-booster' ) ); ?>" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
-								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing and preparing another. This can take a few seconds.', 'ran-booster' ) ); ?>" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php esc_html_e( 'Install and add another', 'ran-booster' ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" aria-describedby="ran-booster-link-installed-help<?php echo esc_attr( $package_paused_ids ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing. This can take a few seconds.', 'ran-booster' ) ); ?>" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"<?php echo '' !== $package_paused_ids ? ' aria-describedby="ran-booster-branch-paused-warning"' : ''; ?> data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing and preparing another. This can take a few seconds.', 'ran-booster' ) ); ?>" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php esc_html_e( 'Install and add another', 'ran-booster' ); ?></button>
 							<?php } ?>
 						</div>
 					</div>

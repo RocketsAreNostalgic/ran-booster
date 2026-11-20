@@ -430,7 +430,8 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 			$headers = array( 'Authorization' => $sentinel );
 			$hooks   = new \stdClass();
 			$scrub   = $this->actions()[0]['callback'];
-			$scrub( $location, $headers, null, array( 'hooks' => $hooks ), (object) array( 'url' => $url ) );
+			$first   = 'https://cdn.example.test/first';
+			$scrub( $first, $headers, null, array( 'hooks' => $hooks ), (object) array( 'url' => $url ) );
 			$headers  = array( 'Authorization' => $sentinel );
 			$allowed  = false;
 			$failures = array(

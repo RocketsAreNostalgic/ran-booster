@@ -172,6 +172,26 @@ final class PackageSourceGateTest extends TestCase {
 		}
 	}
 
+	public function test_only_a_preview_track_release_package_is_paused_by_the_preview_setting(): void {
+		$this->site( 'production', 'https://example.com' );
+		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize(
+			array(
+				'branch_sources'         => true,
+				'branch_sources_address' => 'example.com',
+			)
+		);
+		$store = $this->createStub( \RAN\WordPress\ManagedReleaseStore::class );
+		$store->method( 'configuration' )->willReturnCallback(
+			static fn ( string ...$target ): ?\RAN\WordPress\ManagedReleaseConfiguration => 'none' === $target[1] ? null : new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php', $target[1] )
+		);
+		( new \ReflectionProperty( PackageSourceGate::class, 'releases' ) )->setValue( null, $store );
+
+		self::assertTrue( PackageSourceGate::pauses_package( $this->package( PackageSource::RELEASE_ASSET, identifier: 'prerelease' ), 'plugin' ) );
+		self::assertFalse( PackageSourceGate::pauses_package( $this->package( PackageSource::RELEASE_ASSET, identifier: 'stable' ), 'plugin' ) );
+		self::assertFalse( PackageSourceGate::pauses_package( $this->package( PackageSource::RELEASE_ASSET, identifier: 'none' ), 'theme' ), 'No stored configuration is not paused.' );
+		self::assertFalse( PackageSourceGate::pauses_package( $this->package( PackageSource::BRANCH ), 'plugin' ), 'Allowed branch sources pause no branch package.' );
+	}
+
 	public function test_an_unreadable_setting_is_logged_once_per_source(): void {
 		$this->site( 'production', 'https://example.com' );
 		unset( $GLOBALS['wpdb'] );
@@ -193,11 +213,11 @@ final class PackageSourceGateTest extends TestCase {
 		}
 	}
 
-	private function package( PackageSource $source, DeploymentPolicy $policy = DeploymentPolicy::MANUAL ): Package {
+	private function package( PackageSource $source, DeploymentPolicy $policy = DeploymentPolicy::MANUAL, string $identifier = 'example/example.php' ): Package {
 		$package = $this->createStub( Package::class );
 		$package->method( 'get_source' )->willReturn( $source );
 		$package->method( 'get_deployment_policy' )->willReturn( $policy );
-		$package->method( 'get_identifier' )->willReturn( 'example/example.php' );
+		$package->method( 'get_identifier' )->willReturn( $identifier );
 
 		return $package;
 	}

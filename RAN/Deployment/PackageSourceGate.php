@@ -26,7 +26,7 @@ final class PackageSourceGate {
 	/** @var array<string, true> Overrides, or the release channel, whose unreadable state this request has already logged. */
 	private static array $logged_unreadable = array();
 
-	/** One release store per request, so its storage checks run once rather than once per package. */
+	/** One release store per request, so its storage checks run once rather than once per package. Tests that reach it run in separate processes. */
 	private static ?ManagedReleaseStore $releases = null;
 
 	/**
@@ -102,18 +102,17 @@ final class PackageSourceGate {
 			self::$releases ??= new ManagedReleaseStore();
 			return 'prerelease' === self::$releases->configuration( $type, (string) $package->get_identifier() )?->channel();
 		} catch ( \RuntimeException | \InvalidArgumentException $failure ) {
-			if ( isset( self::$logged_unreadable['release_channel'] ) ) {
-				return false;
+			if ( ! isset( self::$logged_unreadable['release_channel'] ) ) {
+				self::$logged_unreadable['release_channel'] = true;
+				BoosterLogger::log_exception(
+					'Package pause state unavailable.',
+					$failure,
+					array(
+						'operation'    => 'package_pause_state',
+						'outcome_code' => 'configuration_unavailable',
+					)
+				);
 			}
-			self::$logged_unreadable['release_channel'] = true;
-			BoosterLogger::log_exception(
-				'Package pause state unavailable.',
-				$failure,
-				array(
-					'operation'    => 'package_pause_state',
-					'outcome_code' => 'configuration_unavailable',
-				)
-			);
 			return false;
 		}
 	}

@@ -693,6 +693,9 @@ class Dashboard {
 	private function paused_counts(): array {
 		$empty  = array_fill_keys( array( 'branch_sources', 'prerelease_sources' ), array_fill_keys( array( 'plugin', 'theme' ), 0 ) );
 		$counts = $empty;
+		if ( \RAN\Deployment\PackageSourceGate::allows( 'branch_sources' ) && \RAN\Deployment\PackageSourceGate::allows( 'prerelease_sources' ) ) {
+			return $empty; // Nothing can be paused, so no package read.
+		}
 		try {
 			$managed = array(
 				'plugin' => $this->plugins->all_booster_plugins(),

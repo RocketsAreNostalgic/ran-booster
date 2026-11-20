@@ -221,10 +221,11 @@ final readonly class OnboardingPresenter {
 		}
 		foreach ( array( 'plugin', 'theme' ) as $paused_type ) {
 			$paused = array_values( array_filter( $managed, static fn ( array $entry ): bool => $paused_type === $entry[0] && PackageSourceGate::pauses_package( $entry[1], $paused_type ) ) );
-			if ( array() !== $paused ) {
+			$count  = count( $paused );
+			if ( $count > 0 ) {
 				$items[] = array(
 					/* translators: %d: number of paused plugins or themes. */
-					'label'    => 1 === count( $paused ) ? $paused[0][1]->get_display_name() : sprintf( 'plugin' === $paused_type ? _n( '%d plugin', '%d plugins', count( $paused ), 'ran-booster' ) : _n( '%d theme', '%d themes', count( $paused ), 'ran-booster' ), count( $paused ) ),
+					'label'    => 1 === $count ? $paused[0][1]->get_display_name() : sprintf( 'plugin' === $paused_type ? _n( '%d plugin', '%d plugins', $count, 'ran-booster' ) : _n( '%d theme', '%d themes', $count, 'ran-booster' ), $count ),
 					'url'      => admin_url( 'admin.php?page=ran-booster-' . $paused_type . 's&attention=paused' ),
 					'badge'    => __( 'Paused', 'ran-booster' ),
 					'critical' => false,

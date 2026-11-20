@@ -397,11 +397,6 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					'label' => __( 'Credential unavailable', 'ran-booster' ),
 					'tone'  => 'error',
 				);
-			} elseif ( $package_is_paused ) {
-				$prominent_status = array(
-					'label' => __( 'Paused', 'ran-booster' ),
-					'tone'  => 'warning',
-				);
 			} elseif ( ! $release_managed
 				&& ! $policy_disabled
 				&& ( in_array( $latest_activity_state, array( 'queued', 'running', 'failed' ), true ) || $update_needs_attention )
@@ -411,6 +406,11 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					'tone'  => $activity_badge_variants[ $latest_activity_state ] ?? 'error',
 				);
 				$prominent_status_activity = true;
+			} elseif ( $package_is_paused ) {
+				$prominent_status = array(
+					'label' => __( 'Paused', 'ran-booster' ),
+					'tone'  => 'warning',
+				);
 			} else {
 				foreach ( $package_extension_row['badges'] ?? array() as $extension_badge ) {
 					if ( is_array( $extension_badge )
@@ -450,7 +450,8 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				$status_line = __( 'The saved Git provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
 			} elseif ( ! $credential_available ) {
 				$status_line = __( 'The saved repository credential is unavailable.', 'ran-booster' );
-			} elseif ( $package_is_paused ) {
+			} elseif ( $package_is_paused && ! $prominent_status_activity ) {
+				// A running, failed or review-needed deployment keeps its own guidance.
 				$status_line = __( 'Updates are paused by a site setting.', 'ran-booster' );
 			} elseif ( '' !== ( $package_extension_row['status'] ?? '' ) ) {
 				$status_line = (string) $package_extension_row['status'];

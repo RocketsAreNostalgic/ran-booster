@@ -387,6 +387,18 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-badge-intent="medium">Paused</span>', $html );
 		self::assertStringContainsString( '<p class="ran-booster-package-row__status-line">Updates are paused by a site setting.</p>', $html );
 
+		// A failed deployment keeps its own badge and guidance while paused.
+		$package_activity['items'][ (string) $package->get_identifier() ] = array(
+			'latest'          => $this->attempt( 2, 'failed', null ),
+			'last_successful' => null,
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( '>Paused</span>', $html );
+		self::assertStringContainsString( 'The latest branch deployment failed.', $html );
+		$package_activity['items'] = array();
+
 		$package_provider_settings = array(
 			'default_provider' => 'gh',
 			'providers'        => array( $this->provider_option( 'gh', true ) ),

@@ -51,6 +51,7 @@ class ManagedReleaseStore {
 		return ManagedReleaseConfiguration::from_json( $value );
 	}
 
+	/** @param (callable(object,string,string):void)|null $native_complete Protected native custody removal in this transaction, before the package row lock. */
 	public function transition(
 		string $type,
 		string $identifier,
@@ -59,7 +60,8 @@ class ManagedReleaseStore {
 		PackageSource $new_source,
 		?ManagedReleaseConfiguration $configuration,
 		int $user_id,
-		string $expected_adoption_token
+		string $expected_adoption_token,
+		?callable $native_complete = null
 	): bool {
 		PackageMutationGuard::assert_package_mutation_allowed();
 		\RAN\AdoptionIdentity::parse( $expected_adoption_token );
@@ -79,6 +81,9 @@ class ManagedReleaseStore {
 			return false;
 		}
 		try {
+			if ( null !== $native_complete ) {
+				$native_complete( $database, $type, $identifier );
+			}
 			$before = $this->row( $type, $identifier, true, $expected_adoption_token );
 			if ( PackageSource::RELEASE_ASSET === $new_source ) {
 				$this->assert_release_subdirectory( $before );

@@ -379,13 +379,24 @@ push. **Disabled** permits neither.
    releases fail closed. Core accepts only exact
    listing-to-inspection identity, tag, version, channel, package-root and main
    file continuity, then derives the public release URL from the metadata facet.
-5. Only after that check succeeds does Core acquire the existing updater lock,
-   atomically transition the stored package source from `branch` to
-   `release_asset`, record its release configuration, increment the source
-   revision, and invalidate the native WordPress update transient.
-6. The request does not install anything. On the next WordPress request,
-   Booster's early bootstrap sees the new source and registers the target with
-   the selected shared-updater runtime.
+5. Only after that check succeeds does Core admit the Branch package as a
+   native target for this request only. It asks the shared updater to offer
+   that exact release through `ran_wp_release_updater_offer_release_v1`, then
+   runs WordPress's own upgrader for that one package. The updater refuses an
+   older release (`release_older`), Updates set to Disabled or forced off, and
+   an updater copy without the offer.
+6. The stored source changes from `branch` to `release_asset` only when the
+   updater's finalisation reports a verified install. The change happens in
+   the transaction that clears native custody and repeats the repository
+   exclusivity check, and it records the release configuration, increments the
+   source revision and resets Automatic to Manual. A refused switch, or one
+   that fails before WordPress's installer completes, stays on Branch and asks
+   WordPress to recheck for updates at the end of the request. An uncertain or
+   interrupted install keeps native custody for the existing recovery path.
+   The request's reply comes before that commit at shutdown, so the page the
+   administrator lands on decides the result. It shows "Release tracking
+   enabled." only when it reads the package back on Releases, and otherwise
+   the existing uncertain-state message.
 
 Changing Stable/Preview channel later updates eligibility and invalidates the
 native transient; it does not install or downgrade. Returning to Branch changes

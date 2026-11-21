@@ -82,6 +82,10 @@ final class NativePortabilityFacadeTest extends TestCase {
 		$missing = $this->facade( false )->review( $this->candidate(), 'valid-nonce' );
 		self::assertSame( PortabilityReviewResult::BLOCKED, $missing->action );
 		self::assertSame( 'destination_conflict', $missing->reason );
+
+		// A candidate that is not installed and whose subfolder would install elsewhere is still a destination conflict, not a folder complaint.
+		$elsewhere = $this->facade( false )->review( $this->candidate( array( 'subdirectory' => 'plugins/example-v2' ) ), 'valid-nonce' );
+		self::assertSame( 'destination_conflict', $elsewhere->reason );
 	}
 
 	public function test_review_authorization_fails_before_provider_access(): void {

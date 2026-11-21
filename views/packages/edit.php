@@ -50,6 +50,7 @@ $subdirectory_value          = isset( $submitted_package['subdirectory'] ) && is
 	? sanitize_text_field( wp_unslash( (string) $submitted_package['subdirectory'] ) )
 	: (string) $package->get_subdirectory();
 $saved_subdirectory_value    = (string) $package->get_subdirectory();
+$saved_branch_value          = (string) $package->get_branch();
 $submitted_deployment_policy = isset( $submitted_package['deployment_policy'] ) && is_scalar( $submitted_package['deployment_policy'] )
 	? \RAN\Deployment\DeploymentPolicy::tryFrom( sanitize_key( wp_unslash( (string) $submitted_package['deployment_policy'] ) ) )
 	: null;

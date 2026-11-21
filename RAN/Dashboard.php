@@ -969,9 +969,7 @@ class Dashboard {
 							)
 						);
 					}
-					$repository_branch_check_evidence              = null === $repository_branch_check_outcome
-						? $this->provider_settings->package_repository_branch_evidence( $type, $package )
-						: null;
+					$repository_branch_check_evidence              = $this->provider_settings->package_repository_branch_evidence( $type, $package );
 					$edit_data                                     = $package_view->edit(
 						$package,
 						$this->provider_settings->build_existing_package_form( (string) ( $package->get_provider_code() ?? '' ) ),
@@ -1117,7 +1115,7 @@ class Dashboard {
 		);
 		$completed = get_transient( $marker );
 		if ( is_string( $completed ) && in_array( $completed, array( 'verified', 'subdirectory_deferred', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable', 'branch_unavailable', 'branch_redirected' ), true ) ) {
-			if ( ! in_array( $completed, array( 'verified', 'subdirectory_deferred' ), true ) || null !== $this->provider_settings->package_repository_branch_evidence( $type, $package ) ) {
+			if ( ! in_array( $completed, array( 'verified', 'subdirectory_deferred' ), true ) || 'verified' === ( $this->provider_settings->package_repository_branch_evidence( $type, $package )['outcome'] ?? null ) ) {
 				return $completed;
 			}
 		}

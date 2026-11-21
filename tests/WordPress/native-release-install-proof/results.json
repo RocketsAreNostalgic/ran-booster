@@ -1,53 +1,53 @@
 {
-  "author_reported_composition": {
-    "core_source_head": "c5b645bba754fe6e80e96a8f648814042ac17a86",
-    "core_archive_version": "1.0.0-beta.46",
-    "core_archive_sha256": "90c74530b45ef8cde5b24857a6ec6d9dba663d30338353872b8ce38eeaba2e21",
-    "release_updater_version": "v1.0.0-beta.19",
-    "release_updater_reference": "c6aa2e6e1456b0ad4abec24bf41a870d151eb4b2",
-    "wordpress": "7.0.3",
+  "issue": "#969",
+  "feasibility_verdict": "Not equivalent on the current code: equal-version installs are refused, the marked offer survives in the stored update check on the active-plugin bulk path and after every install that fails after replacement, and Branch-source packages are not admitted. The recovery evidence does not show unequal recovery.",
+  "characterization_verdict": "All scenario and negative-control assertions held; exit zero is a characterization result, not a passed feasibility gate.",
+  "composition": {
+    "core_source_head": "23b8460268245e1c50f05538707e58ccf9451719",
+    "core_archive_version": "1.0.0-beta.49",
+    "core_archive": "published release asset ran-booster-1.0.0-beta.49.zip",
+    "core_archive_sha256": "25663edc0c57c9ed153f3ffab89e70b8f044e8c283f9b934e9e8069b22acb68e",
+    "release_updater_version": "v1.0.0-beta.21",
+    "release_updater_reference": "6f5d66b3f5b6f7e1ece992d36da80b19f5788907",
+    "wordpress": "7.0.3 (official zip sha1 ccfd5109f9f87d7639a874e19bcac717b6ad1795; wp core verify-checksums passed on every site)",
     "php": "8.2.30",
-    "mysql": "8.4.0",
-    "limit": "No per-request loaded-class origin, file-hash or installed-manifest attestation; native-runtime and Core/updater provenance are author reported."
+    "mysql": "8.4.0, private socket-only server",
+    "attestation": {
+      "loaded_core_files_matching_archive": {
+        "min": 247,
+        "max": 253,
+        "comparisons": 66
+      },
+      "wordpress_upgrader_sha256": {
+        "Plugin_Upgrader": "fd6d813719a3533b1f61ef872dd4a793c86fdaf691aa4556b88ec1b5af953ed7",
+        "Theme_Upgrader": "9457098f5de802d2af05f53539ce69145292a4b937c57dea7599a53c5a4bcca3",
+        "WP_Upgrader": "510128b556bec5f58a504360f654b2b260b7608f7a99f9b42243e983d3116477"
+      },
+      "scope": "Every run phase compares every PHP file included from the installed Core with its archive entry before the upgrade and, unless the request is killed, again after it; no RAN class may load from elsewhere. WordPress upgrader classes load from the disposable site."
+    }
   },
-  "feasibility_verdict": "partial_failed_chosen_release_gate",
-  "characterization_verdict": "all_scenario_assertions_matched",
-  "normal_cache_cleanup": "native_default_true_for_upgrade_and_bulk_upgrade",
-  "scenario_runs": 32,
-  "scenario_sites": 7,
-  "negative_control_runs": 6,
+  "scenario_sites": 11,
+  "scenario_runs": 36,
+  "runner_exit_status": {
+    "ordinary": "0",
+    "restore-plugin": "0",
+    "restore-newer-plugin": "0",
+    "restore-fail-plugin": "0",
+    "kill-current-plugin": "0",
+    "kill-newer-plugin": "0",
+    "restore-theme": "0",
+    "restore-newer-theme": "0",
+    "restore-fail-theme": "0",
+    "kill-current-theme": "0",
+    "kill-newer-theme": "0",
+    "negative": "0"
+  },
   "negative_control_sites": 1,
-  "files": {
-    "NativeReleaseInstallProof.php": "f3ef531e03779d75cef8d1a66efca182d1910bc02538efde8971daeb6bc4706c",
-    "run.sh": "c01e55b7e51e2c2cf953405ba9ede8264de224c9427e21b29e33fe363fbbbb0a",
-    "NativeReleaseInstallProofNegativeControl.php": "7b5f3fbc6ce184553904f7e46c29aaf381e51eaec9595b7d99f4d9e50fff745e",
-    "negative-controls.sh": "d196c43a3f0b5e09ac7083f1d6b2e4188521c1ee117f5ab8d98725382dbb1628"
-  },
-  "runner_exit_status": 0,
-  "negative_control_runner_exit_status": 0,
-  "sigkill_process_exit": 137,
-  "commands": [
-    "PHP_BIN=<php8.2> RAN_NATIVE_RELEASE_INSTALL_PROOF_SITE=<fresh-disposable-site> bash tests/WordPress/native-release-install-proof/run.sh",
-    "PHP_BIN=<php8.2> RAN_NATIVE_RELEASE_INSTALL_PROOF_SITE=<separate-fresh-site-per-case> RAN_NATIVE_RELEASE_INSTALL_PROOF_TYPES=<plugin-or-theme> RAN_NATIVE_RELEASE_INSTALL_PROOF_CASES=<restore-or-kill-current-or-kill-newer> bash tests/WordPress/native-release-install-proof/run.sh",
-    "PHP_BIN=<php8.2> RAN_NATIVE_RELEASE_INSTALL_PROOF_SITE=<another-fresh-site> bash tests/WordPress/native-release-install-proof/negative-controls.sh"
-  ],
-  "limits": [
-    "Automatic is a manual request with the stored setting; no scheduled automatic update.",
-    "Disabled discovery only; no forced injected-offer install.",
-    "Environment policy and site-address binding unimplemented; constant declarations do not qualify #888.",
-    "Restoration covers the current 3.0.0 offer only; no noncurrent restoration or restore failure.",
-    "Missing digest is not a separate assurance-checker rejection.",
-    "Repository and revision changes are sequential simulations, not competing requests.",
-    "Kills cover one post-install point, not overall recovery equivalence.",
-    "Active plugin uses count-one bulk; active noncurrent and bulk failure cleanup unexercised.",
-    "Branch-to-release is source-only; no runtime switch proof.",
-    "Equal/older refusal and specific lifetime failures support the partial/failed gate and owner-confirmed fallback; PU-002 remains closed."
-  ],
   "negative_controls": [
     {
       "type": "plugin",
       "negative_control": "refusal",
-      "exit_status": 1,
+      "exit_status": 255,
       "expected_assertion": "Unexpected scenario-specific refusal or acquisition."
     },
     {
@@ -61,11 +61,23 @@
       "negative_control": "lifetime",
       "exit_status": 1,
       "expected_assertion": "Unexpected fresh-request offer lifetime."
+    },
+    {
+      "type": "plugin",
+      "negative_control": "stored-absent",
+      "exit_status": 1,
+      "expected_assertion": "Unexpected stored update-check row."
+    },
+    {
+      "type": "plugin",
+      "negative_control": "stored",
+      "exit_status": 1,
+      "expected_assertion": "Unexpected stored update-check row."
     },
     {
       "type": "theme",
       "negative_control": "refusal",
-      "exit_status": 1,
+      "exit_status": 255,
       "expected_assertion": "Unexpected scenario-specific refusal or acquisition."
     },
     {
@@ -79,6 +91,12 @@
       "negative_control": "lifetime",
       "exit_status": 1,
       "expected_assertion": "Unexpected fresh-request offer lifetime."
+    },
+    {
+      "type": "theme",
+      "negative_control": "stored-absent",
+      "exit_status": 1,
+      "expected_assertion": "Unexpected stored update-check row."
     }
   ],
   "observations": [
@@ -89,12 +107,7 @@
       "phase": "run",
       "outcome": "installed",
       "installed": "3.0.0",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "plugin",
-      "case": "current",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "bool"
     },
     {
@@ -102,7 +115,7 @@
       "type": "plugin",
       "case": "current",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "3.0.0",
       "fresh_downloads": 0
     },
@@ -131,12 +144,7 @@
       "phase": "run",
       "outcome": "installed",
       "installed": "3.0.0",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "plugin",
-      "case": "automatic",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "bool"
     },
     {
@@ -144,7 +152,7 @@
       "type": "plugin",
       "case": "automatic",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "3.0.0",
       "fresh_downloads": 0
     },
@@ -173,12 +181,7 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_unverified_pre_download",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "plugin",
-      "case": "equal",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -186,7 +189,7 @@
       "type": "plugin",
       "case": "equal",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -215,12 +218,7 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_unverified_pre_download",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "plugin",
-      "case": "older",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -228,7 +226,7 @@
       "type": "plugin",
       "case": "older",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -257,12 +255,7 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_unverified_pre_download",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "plugin",
-      "case": "older-override-off",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -270,7 +263,7 @@
       "type": "plugin",
       "case": "older-override-off",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -299,12 +292,7 @@
       "phase": "run",
       "outcome": "installed",
       "installed": "2.0.0",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "plugin",
-      "case": "newer",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "bool"
     },
     {
@@ -312,7 +300,7 @@
       "type": "plugin",
       "case": "newer",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "2.0.0",
       "fresh_downloads": 0
     },
@@ -341,12 +329,7 @@
       "phase": "run",
       "outcome": "installed",
       "installed": "2.1.0-rc.1",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "plugin",
-      "case": "prerelease",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "bool"
     },
     {
@@ -354,7 +337,7 @@
       "type": "plugin",
       "case": "prerelease",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "2.1.0-rc.1",
       "fresh_downloads": 0
     },
@@ -383,12 +366,7 @@
       "phase": "run",
       "outcome": "ran_booster_native_update_authority_changed",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "plugin",
-      "case": "repository-race",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -396,7 +374,7 @@
       "type": "plugin",
       "case": "repository-race",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -425,12 +403,7 @@
       "phase": "run",
       "outcome": "ran_booster_native_update_authority_changed",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "plugin",
-      "case": "revision-race",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -438,7 +411,7 @@
       "type": "plugin",
       "case": "revision-race",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -467,12 +440,7 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_remote_release_changed",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "plugin",
-      "case": "mutable",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -480,7 +448,7 @@
       "type": "plugin",
       "case": "mutable",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -509,12 +477,7 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_acquisition_failed",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "plugin",
-      "case": "assurance",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -522,7 +485,7 @@
       "type": "plugin",
       "case": "assurance",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -558,7 +521,7 @@
       "type": "plugin",
       "case": "disabled",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -596,12 +559,7 @@
       "phase": "run",
       "outcome": "installed",
       "installed": "3.0.0",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "plugin",
-      "case": "active",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "array"
     },
     {
@@ -609,7 +567,7 @@
       "type": "plugin",
       "case": "active",
       "phase": "readback",
-      "outcome": "request_offer_persisted",
+      "outcome": "request_offer_persisted_in_stored_row",
       "installed": "3.0.0",
       "fresh_downloads": 0
     },
@@ -638,12 +596,7 @@
       "phase": "run",
       "outcome": "installed",
       "installed": "3.0.0",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "theme",
-      "case": "current",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "bool"
     },
     {
@@ -651,7 +604,7 @@
       "type": "theme",
       "case": "current",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "3.0.0",
       "fresh_downloads": 0
     },
@@ -680,12 +633,7 @@
       "phase": "run",
       "outcome": "installed",
       "installed": "3.0.0",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "theme",
-      "case": "automatic",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "bool"
     },
     {
@@ -693,7 +641,7 @@
       "type": "theme",
       "case": "automatic",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "3.0.0",
       "fresh_downloads": 0
     },
@@ -722,12 +670,7 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_unverified_pre_download",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "theme",
-      "case": "equal",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -735,7 +678,7 @@
       "type": "theme",
       "case": "equal",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -764,12 +707,7 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_unverified_pre_download",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "theme",
-      "case": "older",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -777,7 +715,7 @@
       "type": "theme",
       "case": "older",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -806,12 +744,7 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_unverified_pre_download",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "theme",
-      "case": "older-override-off",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -819,7 +752,7 @@
       "type": "theme",
       "case": "older-override-off",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -848,12 +781,7 @@
       "phase": "run",
       "outcome": "installed",
       "installed": "2.0.0",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "theme",
-      "case": "newer",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "bool"
     },
     {
@@ -861,7 +789,7 @@
       "type": "theme",
       "case": "newer",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "2.0.0",
       "fresh_downloads": 0
     },
@@ -890,12 +818,7 @@
       "phase": "run",
       "outcome": "installed",
       "installed": "2.1.0-rc.1",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "theme",
-      "case": "prerelease",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "bool"
     },
     {
@@ -903,7 +826,7 @@
       "type": "theme",
       "case": "prerelease",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "2.1.0-rc.1",
       "fresh_downloads": 0
     },
@@ -932,12 +855,7 @@
       "phase": "run",
       "outcome": "ran_booster_native_update_authority_changed",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "theme",
-      "case": "repository-race",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -945,7 +863,7 @@
       "type": "theme",
       "case": "repository-race",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -974,12 +892,7 @@
       "phase": "run",
       "outcome": "ran_booster_native_update_authority_changed",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "theme",
-      "case": "revision-race",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -987,7 +900,7 @@
       "type": "theme",
       "case": "revision-race",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -1016,12 +929,7 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_remote_release_changed",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "theme",
-      "case": "mutable",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -1029,7 +937,7 @@
       "type": "theme",
       "case": "mutable",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -1058,12 +966,7 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_acquisition_failed",
       "installed": "1.0.0",
-      "fresh_downloads": 0
-    },
-    {
-      "type": "theme",
-      "case": "assurance",
-      "phase": "run",
+      "fresh_downloads": 0,
       "native_return_type": "null"
     },
     {
@@ -1071,7 +974,7 @@
       "type": "theme",
       "case": "assurance",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -1107,7 +1010,7 @@
       "type": "theme",
       "case": "disabled",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -1145,12 +1048,7 @@
       "phase": "run",
       "outcome": "installed",
       "installed": "3.0.0",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "theme",
-      "case": "active",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "bool"
     },
     {
@@ -1158,7 +1056,7 @@
       "type": "theme",
       "case": "active",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "3.0.0",
       "fresh_downloads": 0
     },
@@ -1187,22 +1085,21 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_unverified_install_result",
       "installed": "3.0.0",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "plugin",
-      "case": "restore",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "WP_Error",
       "native_error_data": null,
-      "restore_scheduled": true
+      "restore_scheduled": true,
+      "restore_return_type": "bool",
+      "restore_error_codes": [],
+      "log_errors": "1",
+      "error_log_written": false
     },
     {
       "source_override_declared": true,
       "type": "plugin",
       "case": "restore",
       "phase": "readback",
-      "outcome": "request_offer_persisted",
+      "outcome": "request_offer_persisted_in_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -1227,9 +1124,106 @@
     {
       "source_override_declared": true,
       "type": "plugin",
+      "case": "restore-newer",
+      "phase": "run",
+      "outcome": "ran_wp_release_updater_unverified_install_result",
+      "installed": "2.0.0",
+      "fresh_downloads": 1,
+      "native_return_type": "WP_Error",
+      "native_error_data": null,
+      "restore_scheduled": true,
+      "restore_return_type": "bool",
+      "restore_error_codes": [],
+      "log_errors": "1",
+      "error_log_written": false
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore-newer",
+      "phase": "readback",
+      "outcome": "request_offer_persisted_in_stored_row",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore-newer",
+      "phase": "readback",
+      "outcome": "activation_remained_inactive",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore-newer",
+      "phase": "readback",
+      "outcome": "filesystem_restored",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore-fail",
+      "phase": "run",
+      "outcome": "ran_wp_release_updater_unverified_install_result",
+      "installed": "2.0.0",
+      "fresh_downloads": 1,
+      "native_return_type": "WP_Error",
+      "native_error_data": null,
+      "restore_scheduled": true,
+      "restore_return_type": "WP_Error",
+      "restore_error_codes": [
+        "fs_temp_backup_delete"
+      ],
+      "log_errors": "1",
+      "error_log_written": false
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore-fail",
+      "phase": "readback",
+      "outcome": "request_offer_persisted_in_stored_row",
+      "installed": "2.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore-fail",
+      "phase": "readback",
+      "outcome": "activation_remained_inactive",
+      "installed": "2.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore-fail",
+      "phase": "readback",
+      "outcome": "old_backup_deleted",
+      "installed": "2.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
+      "case": "restore-fail",
+      "phase": "readback",
+      "outcome": "restore_failed_new_bytes_remain",
+      "installed": "2.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "plugin",
       "case": "kill-current",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "3.0.0",
       "fresh_downloads": 0
     },
@@ -1265,7 +1259,7 @@
       "type": "plugin",
       "case": "kill-newer",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "2.0.0",
       "fresh_downloads": 0
     },
@@ -1303,22 +1297,21 @@
       "phase": "run",
       "outcome": "ran_wp_release_updater_unverified_install_result",
       "installed": "3.0.0",
-      "fresh_downloads": 1
-    },
-    {
-      "type": "theme",
-      "case": "restore",
-      "phase": "run",
+      "fresh_downloads": 1,
       "native_return_type": "WP_Error",
       "native_error_data": null,
-      "restore_scheduled": true
+      "restore_scheduled": true,
+      "restore_return_type": "bool",
+      "restore_error_codes": [],
+      "log_errors": "1",
+      "error_log_written": false
     },
     {
       "source_override_declared": true,
       "type": "theme",
       "case": "restore",
       "phase": "readback",
-      "outcome": "request_offer_persisted",
+      "outcome": "request_offer_persisted_in_stored_row",
       "installed": "1.0.0",
       "fresh_downloads": 0
     },
@@ -1343,9 +1336,106 @@
     {
       "source_override_declared": true,
       "type": "theme",
+      "case": "restore-newer",
+      "phase": "run",
+      "outcome": "ran_wp_release_updater_unverified_install_result",
+      "installed": "2.0.0",
+      "fresh_downloads": 1,
+      "native_return_type": "WP_Error",
+      "native_error_data": null,
+      "restore_scheduled": true,
+      "restore_return_type": "bool",
+      "restore_error_codes": [],
+      "log_errors": "1",
+      "error_log_written": false
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore-newer",
+      "phase": "readback",
+      "outcome": "request_offer_persisted_in_stored_row",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore-newer",
+      "phase": "readback",
+      "outcome": "activation_remained_inactive",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore-newer",
+      "phase": "readback",
+      "outcome": "filesystem_restored",
+      "installed": "1.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore-fail",
+      "phase": "run",
+      "outcome": "ran_wp_release_updater_unverified_install_result",
+      "installed": "2.0.0",
+      "fresh_downloads": 1,
+      "native_return_type": "WP_Error",
+      "native_error_data": null,
+      "restore_scheduled": true,
+      "restore_return_type": "WP_Error",
+      "restore_error_codes": [
+        "fs_temp_backup_delete"
+      ],
+      "log_errors": "1",
+      "error_log_written": false
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore-fail",
+      "phase": "readback",
+      "outcome": "request_offer_persisted_in_stored_row",
+      "installed": "2.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore-fail",
+      "phase": "readback",
+      "outcome": "activation_remained_inactive",
+      "installed": "2.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore-fail",
+      "phase": "readback",
+      "outcome": "old_backup_deleted",
+      "installed": "2.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
+      "case": "restore-fail",
+      "phase": "readback",
+      "outcome": "restore_failed_new_bytes_remain",
+      "installed": "2.0.0",
+      "fresh_downloads": 0
+    },
+    {
+      "source_override_declared": true,
+      "type": "theme",
       "case": "kill-current",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "3.0.0",
       "fresh_downloads": 0
     },
@@ -1381,7 +1471,7 @@
       "type": "theme",
       "case": "kill-newer",
       "phase": "readback",
-      "outcome": "fresh_request_offer_absent",
+      "outcome": "fresh_request_offer_absent_from_stored_row",
       "installed": "2.0.0",
       "fresh_downloads": 0
     },
@@ -1412,5 +1502,11 @@
       "installed": "2.0.0",
       "fresh_downloads": 0
     }
-  ]
+  ],
+  "files": {
+    "NativeReleaseInstallProof.php": "8c2d02114cc199ff122bfd64cdecf32f73828c267f04ee83d79db82543d4b906",
+    "NativeReleaseInstallProofNegativeControl.php": "69a612c63c13fbf4776d317f37fb3c18df39506f938ef85215960f07b45dd7f8",
+    "negative-controls.sh": "58a1640d93347c572eaa1fa66293868a6560ee4ddb2108438b566913739a7a05",
+    "run.sh": "1db1776a52d83fa9453e962f481cd82c27c2d5caf1745eaed59fb617efce0535"
+  }
 }

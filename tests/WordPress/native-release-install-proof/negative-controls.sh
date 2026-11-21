@@ -9,17 +9,27 @@ directory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 log="$(mktemp)"
 trap 'rm -f "$log"' EXIT
 export RAN_NATIVE_RELEASE_INSTALL_PROOF_SITE
-export RAN_NATIVE_RELEASE_INSTALL_PROOF_RUN="${RAN_NATIVE_RELEASE_INSTALL_PROOF_RUN:-$(date +%s)}"
+run="${RAN_NATIVE_RELEASE_INSTALL_PROOF_RUN:-$(date +%s)}"
 for package_type in plugin theme; do
     export RAN_NATIVE_RELEASE_INSTALL_PROOF_TYPE="$package_type"
-    for control in refusal activation lifetime; do
+    controls="refusal activation lifetime stored-absent"
+    [[ "$package_type" != plugin ]] || controls="$controls stored"
+    for control in $controls; do
         export RAN_NATIVE_RELEASE_INSTALL_PROOF_NEGATIVE_CONTROL="$control"
         case "$control" in
             refusal) scenario=equal; phases="seed run"; expected="Unexpected scenario-specific refusal or acquisition." ;;
             activation) scenario=active; phases="seed run"; expected="Unexpected fixture activation state." ;;
             lifetime) scenario=current; phases="seed run readback"; expected="Unexpected fresh-request offer lifetime." ;;
+            stored) scenario=active; phases="seed run readback"; expected="Unexpected stored update-check row." ;;
+            stored-absent) scenario=current; phases="seed run readback"; expected="Unexpected stored update-check row." ;;
         esac
         export RAN_NATIVE_RELEASE_INSTALL_PROOF_CASE="$scenario"
+        # The stored-row controls reuse cases above, so each needs its own fixture.
+        case "$control" in
+            stored) export RAN_NATIVE_RELEASE_INSTALL_PROOF_RUN="${run}s" ;;
+            stored-absent) export RAN_NATIVE_RELEASE_INSTALL_PROOF_RUN="${run}a" ;;
+            *) export RAN_NATIVE_RELEASE_INSTALL_PROOF_RUN="$run" ;;
+        esac
         for phase in $phases; do
             export RAN_NATIVE_RELEASE_INSTALL_PROOF_PHASE="$phase"
             proof="$directory/NativeReleaseInstallProof.php"

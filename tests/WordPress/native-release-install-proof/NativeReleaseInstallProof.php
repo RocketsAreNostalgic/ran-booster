@@ -31,10 +31,12 @@ final class RAN_Booster_NativeReleaseInstallProof {
 			|| is_link( $root . '/.ran-booster-disposable-test-site' )
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact disposable-site ownership marker before any fixture mutation.
 			|| "RAN Booster disposable test site\n" !== file_get_contents( $root . '/.ran-booster-disposable-test-site' )
-			|| '7.0.3' !== get_bloginfo( 'version' ) || 802 !== PHP_MAJOR_VERSION * 100 + PHP_MINOR_VERSION ) {
+			|| '7.0.3' !== get_bloginfo( 'version' ) || 802 !== PHP_MAJOR_VERSION * 100 + PHP_MINOR_VERSION
+			// The raw stored-row check needs single-site options storage.
+			|| is_multisite() || wp_using_ext_object_cache() ) {
 			throw new RuntimeException( 'Disposable WordPress 7.0.3 / PHP 8.2 identity not established.' );
 		}
-		if ( ! in_array( $kind, array( 'plugin', 'theme' ), true ) || ! in_array( $scenario, array( 'current', 'automatic', 'equal', 'older', 'older-override-off', 'newer', 'prerelease', 'repository-race', 'revision-race', 'mutable', 'assurance', 'disabled', 'active', 'restore', 'kill-current', 'kill-newer' ), true ) ) {
+		if ( ! in_array( $kind, array( 'plugin', 'theme' ), true ) || ! in_array( $scenario, array( 'current', 'automatic', 'equal', 'older', 'older-override-off', 'newer', 'prerelease', 'repository-race', 'revision-race', 'mutable', 'assurance', 'disabled', 'active', 'restore', 'restore-newer', 'restore-fail', 'kill-current', 'kill-newer' ), true ) ) {
 			throw new RuntimeException( 'Unknown proof case.' );
 		}
 		$run = getenv( 'RAN_NATIVE_RELEASE_INSTALL_PROOF_RUN' );
@@ -195,6 +197,8 @@ final class RAN_Booster_NativeReleaseInstallProof {
 
 	public function run(): void {
 		global $wpdb;
+		// Attest before the upgrade too, so killed requests are covered.
+		$this->attest();
 		$this->assert_files( '1.0.0', $this->directory );
 		$this->assert_activation();
 		add_filter( 'pre_http_request', $this->http( ... ), PHP_INT_MIN, 3 );
@@ -218,7 +222,7 @@ final class RAN_Booster_NativeReleaseInstallProof {
 			throw new RuntimeException( 'Production native discovery did not produce a control offer.' );
 		}
 		$chosen = match ( $this->scenario ) {
-			'older', 'older-override-off' => 0, 'equal' => 1, 'newer', 'kill-newer' => 2, 'prerelease' => 4, default => 3 };
+			'older', 'older-override-off' => 0, 'equal' => 1, 'newer', 'kill-newer', 'restore-newer', 'restore-fail' => 2, 'prerelease' => 4, default => 3 };
 		if ( 3 !== $chosen ) {
 			// Construct the proposed request-only offer, keeping the real binding and production guards.
 			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decode the production offer protocol as data for this feasibility experiment.
@@ -262,7 +266,11 @@ final class RAN_Booster_NativeReleaseInstallProof {
 		$offer['plugin']                       = $this->identity;
 		$offer['theme']                        = $this->identity;
 		$offer['native_release_install_proof'] = $this->slug;
-		if ( 'restore' === $this->scenario ) {
+		if ( str_starts_with( $this->scenario, 'restore' ) ) {
+			// phpcs:ignore WordPress.PHP.IniSet.Risky -- Capture anything PHP or WordPress logs during this disposable request.
+			ini_set( 'error_log', $this->archive_root . '/' . $this->slug . '-error.log' );
+			// phpcs:ignore WordPress.PHP.IniSet.log_errors_Disallowed -- Make sure anything logged during this disposable request reaches that file.
+			ini_set( 'log_errors', '1' );
 			add_filter( 'upgrader_post_install', static fn () => new WP_Error( 'native_proof_after_replace', 'Synthetic failure after replacement.' ), PHP_INT_MAX );
 		}
 		if ( str_starts_with( $this->scenario, 'kill-' ) ) {
@@ -304,11 +312,12 @@ final class RAN_Booster_NativeReleaseInstallProof {
 		}
 		if ( $this->download_failure instanceof WP_Error ) {
 			$result = $this->download_failure; }
+		$this->attest();
 		$expected = $this->expected_version();
 		$this->assert_files( $expected, $this->directory );
 		$this->assert_activation();
-		if ( 'restore' === $this->scenario ) {
-			$restore_scheduled = false !== has_action( 'shutdown', array( $upgrader, 'restore_temp_backup' ) );
+		if ( str_starts_with( $this->scenario, 'restore' ) ) {
+			$restore_scheduled = 10 === has_action( 'shutdown', array( $upgrader, 'restore_temp_backup' ) );
 			if ( ! is_wp_error( $result ) || array( 'ran_wp_release_updater_unverified_install_result' ) !== $result->get_error_codes()
 				|| 'WP_Error' !== $native_return || null !== $result->get_error_data() || ! $restore_scheduled || 1 !== $this->download_count() ) {
 				throw new RuntimeException( 'Unexpected restoration trigger.' ); }
@@ -320,6 +329,9 @@ final class RAN_Booster_NativeReleaseInstallProof {
 					'restore_scheduled'  => $restore_scheduled,
 				)
 			) . "\n";
+			// WordPress discards this call's return; make the same call at the same hook and priority to record it.
+			remove_action( 'shutdown', array( $upgrader, 'restore_temp_backup' ), 10 );
+			add_action( 'shutdown', fn () => $this->observe_restore( $upgrader ), 10, 0 );
 			return;
 		}
 		$refusal = match ( $this->scenario ) {
@@ -344,25 +356,67 @@ final class RAN_Booster_NativeReleaseInstallProof {
 		echo wp_json_encode( array( 'native_return_type' => $native_return ) ) . "\n";
 	}
 
+	public function observe_restore( WP_Upgrader $upgrader ): void {
+		global $wp_filesystem;
+		$forced = 'restore-fail' === $this->scenario;
+		// A read-only target makes WordPress's own cleanup of the failed version fail; the backup is untouched.
+		if ( $forced && ( 0 === posix_geteuid() || ! $wp_filesystem->chmod( $this->directory, 0555 ) ) ) {
+			throw new RuntimeException( 'Restore failure could not be forced.' ); }
+		try {
+			$restored = $upgrader->restore_temp_backup();
+		} finally {
+			if ( $forced ) {
+				$wp_filesystem->chmod( $this->directory, 0755 ); }
+		}
+		clearstatcache();
+		$codes = is_wp_error( $restored ) ? $restored->get_error_codes() : array();
+		if ( ( $forced ? array( 'fs_temp_backup_delete' ) !== $codes : true !== $restored ) || file_exists( $this->archive_root . '/' . $this->slug . '-error.log' ) ) {
+			throw new RuntimeException( 'Unexpected WordPress restore result or log.' ); }
+		echo wp_json_encode(
+			array(
+				'restore_return_type' => get_debug_type( $restored ),
+				'restore_error_codes' => $codes,
+				'log_errors'          => ini_get( 'log_errors' ),
+				'error_log_written'   => false,
+			)
+		) . "\n";
+	}
+
 	public function readback(): void {
 		global $wpdb;
-		$offer  = get_site_transient( 'update_' . ( 'plugin' === $this->kind ? 'plugins' : 'themes' ) );
+		$name   = 'update_' . ( 'plugin' === $this->kind ? 'plugins' : 'themes' );
+		$offer  = get_site_transient( $name );
 		$entry  = is_object( $offer ) ? ( $offer->response[ $this->identity ] ?? null ) : null;
 		$marker = is_object( $entry ) ? ( $entry->native_release_install_proof ?? null ) : ( is_array( $entry ) ? ( $entry['native_release_install_proof'] ?? null ) : null );
 		// Characterize the observed failure as well as the passing lifetime cases.
-		$persists = 'restore' === $this->scenario || ( 'plugin' === $this->kind && 'active' === $this->scenario );
+		$persists = str_starts_with( $this->scenario, 'restore' ) || ( 'plugin' === $this->kind && 'active' === $this->scenario );
+		// Read the stored row itself, past every read filter, for this run's exact marker.
+		$raw    = $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", '_site_transient_' . $name ) );
+		$stored = is_string( $raw ) && str_contains( $raw, 's:28:"native_release_install_proof";s:' . strlen( $this->slug ) . ':"' . $this->slug . '";' );
 		if ( $persists ? $marker !== $this->slug : null !== $entry ) {
 			throw new RuntimeException( 'Unexpected fresh-request offer lifetime.' ); }
-		$expected = 'restore' === $this->scenario ? '1.0.0' : $this->expected_version();
+		if ( $persists !== $stored ) {
+			throw new RuntimeException( 'Unexpected stored update-check row.' ); }
+		// The failed request's log is checked again here, after every later shutdown callback has run.
+		if ( file_exists( $this->archive_root . '/' . $this->slug . '-error.log' ) ) {
+			throw new RuntimeException( 'The failed request wrote to the error log.' ); }
+		$restored = in_array( $this->scenario, array( 'restore', 'restore-newer' ), true );
+		$expected = $restored ? '1.0.0' : $this->expected_version();
 		$this->assert_files( $expected, $this->directory );
 		$this->assert_activation();
-		$this->report( $persists ? 'request_offer_persisted' : 'fresh_request_offer_absent', $expected );
+		$this->report( $persists ? 'request_offer_persisted_in_stored_row' : 'fresh_request_offer_absent_from_stored_row', $expected );
 		$this->report( 'active' === $this->scenario ? 'activation_preserved' : 'activation_remained_inactive', $expected );
+		$backup = WP_CONTENT_DIR . '/upgrade-temp-backup/' . ( 'plugin' === $this->kind ? 'plugins/' : 'themes/' ) . $this->slug;
 		if ( str_starts_with( $this->scenario, 'kill-' ) ) {
-			$this->assert_files( '1.0.0', WP_CONTENT_DIR . '/upgrade-temp-backup/' . ( 'plugin' === $this->kind ? 'plugins/' : 'themes/' ) . $this->slug );
+			$this->assert_files( '1.0.0', $backup );
 			$this->report( 'old_backup_bytes_remain', '1.0.0' );
+		} elseif ( 'restore-fail' === $this->scenario ) {
+			// WordPress deletes its backup at shutdown priority 100 whether or not the restore at priority 10 worked.
+			if ( file_exists( $backup ) ) {
+				throw new RuntimeException( 'Unexpected backup after the failed restore.' ); }
+			$this->report( 'old_backup_deleted', $expected );
 		}
-		$this->report( 'restore' === $this->scenario ? 'filesystem_restored' : ( str_starts_with( $this->scenario, 'kill-' ) ? 'killed_request_replaced_bytes_no_completion' : 'filesystem_verified' ), $expected );
+		$this->report( $restored ? 'filesystem_restored' : ( 'restore-fail' === $this->scenario ? 'restore_failed_new_bytes_remain' : ( str_starts_with( $this->scenario, 'kill-' ) ? 'killed_request_replaced_bytes_no_completion' : 'filesystem_verified' ) ), $expected );
 		// Retire only this exact fixture row after observation; preserve files for inspection.
 		if ( 1 !== $wpdb->delete( ran_booster_table_name(), array( 'package' => $this->identity ) ) ) {
 			throw new RuntimeException( 'Fixture row cleanup failed.' ); }
@@ -371,7 +425,7 @@ final class RAN_Booster_NativeReleaseInstallProof {
 	private function expected_version(): string {
 		return match ( $this->scenario ) {
 			'current', 'automatic', 'active', 'restore', 'kill-current' => '3.0.0',
-			'newer', 'kill-newer' => '2.0.0',
+			'newer', 'kill-newer', 'restore-newer', 'restore-fail' => '2.0.0',
 			'prerelease' => '2.1.0-rc.1',
 			default => '1.0.0',
 		};
@@ -397,6 +451,44 @@ final class RAN_Booster_NativeReleaseInstallProof {
 			if ( is_link( $directory . '/' . $name ) || file_get_contents( $directory . '/' . $name ) !== $bytes ) {
 				throw new RuntimeException( 'Unexpected target file bytes.' ); }
 		}
+	}
+
+	/** Every loaded Booster file must equal its entry in the Core ZIP under test; upgraders load from this site. */
+	private function attest(): void {
+		$archive = getenv( 'RAN_NATIVE_RELEASE_INSTALL_PROOF_CORE_ZIP' );
+		$zip     = new ZipArchive();
+		if ( ! is_string( $archive ) || true !== $zip->open( $archive, ZipArchive::RDONLY ) ) {
+			throw new RuntimeException( 'Core archive under test is unavailable.' ); }
+		$plugins = realpath( WP_PLUGIN_DIR ) . '/';
+		$loaded  = array();
+		foreach ( array_merge( get_declared_classes(), get_declared_interfaces(), get_declared_traits() ) as $name ) {
+			$file = ( new ReflectionClass( $name ) )->getFileName();
+			if ( str_starts_with( $name, 'RAN\\' ) && ( ! is_string( $file ) || ! str_starts_with( $file, $plugins . 'ran-booster/' ) ) ) {
+				throw new RuntimeException( 'A RAN class loaded from outside the installed Core.' ); }
+		}
+		foreach ( get_included_files() as $file ) {
+			if ( str_starts_with( $file, $plugins . 'ran-booster/' ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Compare loaded runtime bytes with the archive entry.
+				$loaded[ $file ] = $zip->getFromName( substr( $file, strlen( $plugins ) ) ) === file_get_contents( $file );
+			}
+		}
+		$upgraders = array();
+		foreach ( array( 'WP_Upgrader', 'Plugin_Upgrader', 'Theme_Upgrader' ) as $name ) {
+			$file = ( new ReflectionClass( $name ) )->getFileName();
+			if ( ! is_string( $file ) || ! str_starts_with( $file, realpath( ABSPATH ) . '/wp-admin/includes/' ) ) {
+				throw new RuntimeException( 'A WordPress upgrader loaded from outside this site.' ); }
+			$upgraders[ $name ] = hash_file( 'sha256', $file );
+		}
+		$updater = $plugins . 'ran-booster/vendor/ran/wp-release-updater/src/WordPress/NativePackageUpdater.php';
+		if ( in_array( false, $loaded, true ) || true !== ( $loaded[ $updater ] ?? null ) ) {
+			throw new RuntimeException( 'Loaded Core files do not match the archive under test.' ); }
+		echo wp_json_encode(
+			array(
+				'core_archive_sha256'           => hash_file( 'sha256', $archive ),
+				'loaded_core_files_match_count' => count( $loaded ),
+				'wordpress_upgrader_sha256'     => $upgraders,
+			)
+		) . "\n";
 	}
 
 	/** Read the count after WordPress has invoked the HTTP callback. */

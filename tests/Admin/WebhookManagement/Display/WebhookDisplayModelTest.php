@@ -641,7 +641,7 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame( array( true, false, false ), $off( $in_sync ) );
 
 		self::assertSame( 'Create the webhook on GitHub.', $none[0]['description'] );
-		self::assertSame( 'Make the webhook on GitHub match this site\'s settings.', $repair[0]['description'] );
+		self::assertSame( 'Make the webhook on GitHub match this site\'s settings, then ping it.', $repair[0]['description'] );
 		self::assertSame( 'Compare the webhook on GitHub with this site\'s settings, then ask GitHub to send a ping. Delivery counts only when it arrives.', $repair[1]['description'] );
 		self::assertSame( 'Delete the webhook from GitHub and clear its local record.', $repair[2]['description'] );
 		self::assertSame( 'Remove this webhook from the repository? Booster will delete the webhook on GitHub and clear its local record.', $repair[2]['confirm'] );
@@ -649,6 +649,18 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame( array( 'Repairing…', 'Validating…', 'Removing…' ), array_column( $repair, 'busy_label' ) );
 		self::assertSame( 'Setting up…', $none[0]['busy_label'] );
 		self::assertSame( 'Comparing the webhook with this site\'s settings, then asking GitHub to send a ping. This can take a few seconds.', $repair[1]['busy_message'] );
+		self::assertSame( 'Updating the webhook, then sending a ping. This can take a few seconds.', $repair[0]['busy_message'] );
+	}
+
+	public function test_a_repair_result_keeps_a_provider_label_containing_a_percent_sign(): void {
+		$method = new ReflectionMethod( WebhookDisplayModel::class, 'settled_result' );
+		$failed = $method->invoke( $this->display(), 'repaired_pending_delivery', null, null, false, 'ping_delivery_failed', 'Git%Lab' );
+		self::assertIsArray( $failed );
+		self::assertSame( 'Webhook repaired, but its ping delivery failed. See the delivery on Git%Lab.', $failed['message'] );
+		self::assertSame( 'Webhook repaired, but its ping delivery failed. See <a href="https://example.test/hooks">the delivery on Git%Lab</a>.', WebhookDisplayModel::link_sentence( $failed['link_sentence'], 'https://example.test/hooks', true ) );
+		$changed = $method->invoke( $this->display(), 'repaired_pending_delivery', null, null, false, 'remote_missing', 'Git%Lab' );
+		self::assertIsArray( $changed );
+		self::assertSame( 'Webhook repaired, but it then changed on Git%Lab, so no ping was sent.', $changed['message'] );
 	}
 
 	public function test_validate_is_available_only_when_both_check_and_test_are_and_reports_the_unavailable_reason(): void {

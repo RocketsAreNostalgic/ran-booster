@@ -15,7 +15,9 @@ $result_notices   = array_values( array_filter( array( $model['result'] ?? null,
 if ( array() === $result_notices && is_array( $model['manual_notice'] ?? null ) ) {
 	$result_notices = array( $model['manual_notice'] );
 }
-$render_result_notices = static function () use ( $result_notices ): void {
+// A result sentence with a link slot links the provider's webhooks page when one is known, else reads as plain text.
+$webhooks_url          = is_string( $model['webhooks_url'] ?? null ) && '' !== $model['webhooks_url'] ? $model['webhooks_url'] : null;
+$render_result_notices = static function () use ( $result_notices, $webhooks_url ): void {
 	?>
 		<?php if ( array() !== $result_notices ) : ?>
 			<div class="ran-booster-repository-webhook-management__result">
@@ -29,6 +31,8 @@ $render_result_notices = static function () use ( $result_notices ): void {
 						<?php foreach ( $notice['lines'] as $line ) : ?>
 							<p><strong><?php echo esc_html( $line['label'] ); ?>:</strong> <?php echo esc_html( $line['text'] ); ?></p>
 						<?php endforeach; ?>
+					<?php elseif ( is_string( $notice['link_sentence'] ?? null ) ) : ?>
+						<p><?php echo wp_kses_post( \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::link_sentence( $notice['link_sentence'], $webhooks_url, true ) ); ?></p>
 					<?php else : ?>
 						<p><?php echo esc_html( $notice['message'] ); ?></p>
 					<?php endif; ?>

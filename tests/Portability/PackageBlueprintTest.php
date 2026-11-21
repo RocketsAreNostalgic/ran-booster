@@ -728,6 +728,12 @@ final class PackageBlueprintTest extends TestCase {
 		);
 	}
 
+	public function test_a_branch_package_record_without_a_branch_is_rejected(): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repo-42', 'owner/example', '', null );
+	}
+
 	private static function throw_from_unannotated_forwarding_frame( BlueprintCredential $credential, PackageBlueprint $blueprint ): void {
 		if ( 'gh' !== $credential->provider || array() === $blueprint->packages ) {
 			throw new RuntimeException( 'Synthetic forwarding fixture is invalid.' );

@@ -145,6 +145,23 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$release->handoff_to_core();
 	}
 
+	public function test_the_prospective_install_records_the_repository_default_branch_by_name(): void {
+		$facade     = ( new \ReflectionClass( NativeProspectiveReleaseFacade::class ) )->newInstanceWithoutConstructor();
+		$repository = ( new \ReflectionMethod( NativeProspectiveReleaseFacade::class, 'managed_repository' ) )->invoke(
+			$facade,
+			array(
+				'provider'                  => 'gh',
+				'repository'                => 'owner/example',
+				'provider_repository_id'    => 'repo-42',
+				'repository_default_branch' => 'develop',
+				'private'                   => '0',
+				'credential_id'             => '',
+			)
+		);
+
+		self::assertSame( 'develop', $repository->branch );
+	}
+
 	public function test_supported_provider_codes_are_bounded_and_local(): void {
 		$plugins  = new ProspectivePluginRepository();
 		$executor = new ProspectiveExecutor();

@@ -512,7 +512,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		$result = $resolver->resolve_unchanged(
-			$this->edit_request(),
+			array_merge( $this->edit_request(), array( 'branch' => 'trunk' ) ),
 			$this->stored_plugin( 'workspace/repository', 'bitbucket-deploy', true )
 		);
 
@@ -524,9 +524,50 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		self::assertSame( 'resolved', $result['provider_repository_identity_source'] );
 		self::assertSame( '1', $result['private'] );
 		self::assertSame( 'bitbucket-deploy', $result['credential_id'] );
-		self::assertSame( 'trunk', $result['branch'], 'A blank branch falls back to the stored branch.' );
+		self::assertSame( 'trunk', $result['branch'], 'An unchanged branch keeps the stored branch.' );
 		self::assertSame( DeploymentPolicy::MANUAL->value, $result['deployment_policy'] );
 		self::assertSame( 'resolved-subdir', $result['subdirectory'] );
+	}
+
+	public function test_an_empty_branch_field_needs_the_provider_to_learn_the_default_branch(): void {
+		$provider = $this->resolving_provider(
+			new RepositoryDescriptor( ProviderCode::parse( 'bb' ), 'workspace/repository', 'repository', 'provider-id-42', true, 'develop', 'bitbucket-deploy' )
+		);
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+
+		// The edit form's branch field is empty; the stored branch is trunk, which is not the repository default.
+		self::assertNull( $resolver->resolve_unchanged( $this->edit_request(), $this->stored_plugin( 'workspace/repository', 'bitbucket-deploy', true ) ) );
+		self::assertNull( $provider->request, 'Deciding that it needs the provider does not itself call the provider.' );
+	}
+
+	/** @return array<string, array{string}> */
+	public static function branch_resolutions(): array {
+		return array(
+			'install or link' => array( 'resolve' ),
+			'edit save'       => array( 'resolve_branch' ),
+		);
+	}
+
+	#[DataProvider( 'branch_resolutions' )]
+	public function test_an_empty_branch_field_is_saved_as_the_repository_default_branch_by_name( string $method ): void {
+		$provider = $this->resolving_provider(
+			new RepositoryDescriptor( ProviderCode::parse( 'bb' ), 'workspace/repository', 'repository', 'provider-id-42', false, 'develop', null )
+		);
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+
+		$result = $resolver->$method(
+			array(
+				'provider'   => 'bb',
+				'repository' => 'workspace/repository',
+				'branch'     => '',
+			)
+		);
+
+		self::assertSame( 'develop', $result['branch'] );
+		if ( 'resolve_branch' === $method ) {
+			self::assertSame( 'develop', $provider->archive_request?->ref, 'The default branch is the one verified.' );
+		}
+		self::assertSame( 'develop', PackageOperation::from_input( 'edit-plugin', array_merge( $result, array( 'file' => 'fixture/fixture.php' ) ) )->branch );
 	}
 
 	public function test_unchanged_public_repository_with_a_credential_stays_public_through_the_stored_fallback(): void {
@@ -536,7 +577,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
 
 		$resolved = $resolver->resolve_unchanged(
-			$this->edit_request(),
+			array_merge( $this->edit_request(), array( 'branch' => 'trunk' ) ),
 			$this->stored_plugin( 'workspace/repository', 'bitbucket-deploy', false )
 		);
 

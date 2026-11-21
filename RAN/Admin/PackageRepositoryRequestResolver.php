@@ -46,8 +46,8 @@ final readonly class PackageRepositoryRequestResolver {
 	 *
 	 * Used only as a fallback when the provider lookup is rate-limited or unavailable: a save
 	 * that keeps the same provider, repository, credential, subdirectory and branch can then
-	 * proceed on the stored identity. Returns null when any of those fields differs or the stored
-	 * identity is incomplete, so a changed repository is never accepted unverified.
+	 * proceed on the stored identity. Returns null when any of those fields differs, the branch field
+	 * is empty or the stored identity is incomplete, so a changed repository is never accepted unverified.
 	 *
 	 * @param array<string, mixed> $request Package form request.
 	 * @return array<string, mixed>|null
@@ -100,7 +100,8 @@ final readonly class PackageRepositoryRequestResolver {
 
 		$branch_input = $request['branch'] ?? '';
 		$branch       = is_string( $branch_input ) ? trim( sanitize_text_field( wp_unslash( $branch_input ) ) ) : '';
-		if ( '' !== $branch && $branch !== (string) $stored->get_branch() ) {
+		// An empty field asks for the repository's default branch, which only the provider knows; a different branch needs it too.
+		if ( '' === $branch || $branch !== (string) $stored->get_branch() ) {
 			return null;
 		}
 

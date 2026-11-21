@@ -156,12 +156,19 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	/** @return array<string, array{array<string, string>}> */
 	public static function saves_that_still_check(): array {
 		return array(
-			'Disabled, changed branch'      => array( array( 'branch' => 'renamed' ) ),
-			'Disabled, changed repository'  => array( array( 'repository' => 'owner/other' ) ),
-			'Disabled, changed credential'  => array( array( 'credential_id' => 'other-profile' ) ),
-			'Disabled, changed subfolder'   => array( array( 'subdirectory' => 'packages/fixture' ) ),
-			'Disabled, reinstall requested' => array( array( 'reinstall_after_save' => '1' ) ),
-			'Manual, unchanged'             => array( array( 'deployment_policy' => 'manual' ) ),
+			'Disabled, changed branch'          => array( array( 'branch' => 'renamed' ) ),
+			'Disabled, changed repository'      => array( array( 'repository' => 'owner/other' ) ),
+			'Disabled, changed credential'      => array( array( 'credential_id' => 'other-profile' ) ),
+			'Disabled, changed subfolder'       => array( array( 'subdirectory' => 'packages/fixture' ) ),
+			'Disabled, reinstall requested'     => array( array( 'reinstall_after_save' => '1' ) ),
+			'Disabled, empty branch'            => array( array( 'branch' => '' ) ),
+			'Disabled, empty branch, reinstall' => array(
+				array(
+					'branch'               => '',
+					'reinstall_after_save' => '1',
+				),
+			),
+			'Manual, unchanged'                 => array( array( 'deployment_policy' => 'manual' ) ),
 		);
 	}
 
@@ -193,6 +200,58 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 
 		self::assertFalse( $result );
 		self::assertSame( 1, $provider->lookups );
+	}
+
+	public function test_an_empty_branch_on_a_disabled_save_asks_the_provider_and_logs_no_skipped_check(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$provider  = new FailingLookupProvider( 401 );
+		$providers = new ProviderRegistry( array( $provider ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+		$request = array_merge(
+			$this->unchanged_edit_request(),
+			array(
+				'branch'            => '',
+				'deployment_policy' => 'disabled',
+			)
+		);
+
+		$this->start_log_capture();
+		try {
+			$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-plugin', $request, true );
+			$lines  = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+
+		self::assertFalse( $result );
+		self::assertSame( 1, $provider->lookups, 'An empty branch needs the provider to name the default branch.' );
+		self::assertSame( array(), array_values( array_filter( $lines, static fn ( string $line ): bool => str_contains( $line, 'package_repository_check_skipped' ) ) ), 'The skipped-check line is written only when the provider was not asked.' );
+	}
+
+	public function test_a_rate_limited_save_with_an_empty_branch_saves_nothing_and_says_so(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( 429 ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'add_failure_message' )
+			->with(
+				self::callback(
+					static fn ( mixed $message ): bool => $message instanceof WP_Error
+						&& 'The Git provider rate limit has been reached. Nothing was saved. Try again later.' === $message->get_error_message()
+				)
+			);
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: new EditBoundaryPluginRepository( $package ),
+			themes: new EditBoundaryThemeRepository( $package ),
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', array_merge( $this->unchanged_edit_request(), array( 'branch' => '' ) ), true );
+
+		self::assertFalse( $result );
 	}
 
 	public function test_manual_working_copy_copy_requires_one_exact_core_activity_record(): void {

@@ -1374,6 +1374,43 @@ test('a taken success strips the result arguments on first render', () => {
 	]);
 });
 
+test('a Core provider interaction landing focuses the section heading, and nothing else does', () => {
+	const HEADING = '[data-ran-booster-provider-profile-focus]';
+	const landing = (query, { heading = true, items = true } = {}) => {
+		const env = build();
+		env.window.history = { state: null, replaceState() {} };
+		env.window.location.href = `https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh${query}`;
+		const node = element({ ownerDocument: env.document });
+		if (heading) {
+			env.targets.set(HEADING, node);
+		}
+		if (items) {
+			env.staticContainer([
+				{ key: 'k', intent: 'success', text: 'Credential removed.' },
+			]);
+		}
+		env.run();
+		return env.document.activeElement === node;
+	};
+	const marker = (operation) =>
+		`&ran_booster_interaction_operation=${operation}&ran_booster_interaction_target=t&_ran_booster_interaction_nonce=n`;
+
+	assert.equal(landing(marker('core:delete-access-profile')), true);
+	assert.equal(landing(marker('core:delete-webhook-profile')), true);
+	// A page without the heading is unaffected, and so is a landing the host took nothing from.
+	assert.equal(
+		landing(marker('core:delete-access-profile'), { heading: false }),
+		false
+	);
+	assert.equal(
+		landing(marker('core:delete-access-profile'), { items: false }),
+		false
+	);
+	// An add-on's operation, or no interaction marker, leaves focus alone.
+	assert.equal(landing(marker('addon:remove-row')), false);
+	assert.equal(landing('&ran_booster_result=install'), false);
+});
+
 test('the address is kept when the host takes nothing or on a later swap', () => {
 	const env = build({ components: false });
 	const replaced = [];

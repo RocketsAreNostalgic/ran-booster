@@ -410,6 +410,16 @@
 
 	function consumeLoaded() {
 		if (consume() > 0) {
+			// A provider interaction that reloaded the page: put focus back on the
+			// section heading that a located swap used to move it to.
+			const operation = new URL(window.location.href).searchParams.get(
+				'ran_booster_interaction_operation'
+			);
+			if (operation?.startsWith('core:')) {
+				document
+					.querySelector('[data-ran-booster-provider-profile-focus]')
+					?.focus({ preventScroll: true });
+			}
 			cleanResultUrl();
 		}
 	}

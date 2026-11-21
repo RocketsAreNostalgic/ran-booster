@@ -142,9 +142,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function test_repository_branch_check_rejects_missing_and_stale_nonce_without_provider_work(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider();
+		$evidence  = new DashboardBranchCheckEvidenceStore();
 		$dashboard = $this->dashboard(
 			$this->throwing_secrets(),
-			providers: new ProviderRegistry( array( $provider ) )
+			providers: new ProviderRegistry( array( $provider ) ),
+			branch_check_evidence: $evidence
 		);
 		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
 		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
@@ -171,6 +173,29 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		self::assertNull( $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 0, $provider->prepare_calls );
+		self::assertSame( array(), $evidence->database->records, 'Only an explicit, nonce-checked check writes a record; a save or reinstall carries no check request.' );
+	}
+
+	public function test_a_check_that_never_starts_stores_nothing_and_keeps_the_earlier_result(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider  = new DashboardBranchCheckProvider();
+		$evidence  = new DashboardBranchCheckEvidenceStore();
+		$lock      = new DashboardBranchCheckUpdaterLock();
+		$dashboard = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry( array( $provider ) ), branch_check_evidence: $evidence, branch_check_lock: $lock );
+		$package   = $this->managed_package( 'example/example.php', 'Example', 'repo-42' );
+		$check     = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
+		$_GET      = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
+		);
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		$records = $evidence->database->records;
+
+		$lock->acquire_fails                         = true;
+		$_GET['ran_booster_repository_branch_check'] = '2';
+		self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertSame( $records, $evidence->database->records );
+		self::assertSame( 'verified', $evidence->find( 'plugin', $package, null )['outcome'] ?? null );
 	}
 
 	public function test_repository_branch_check_uses_exact_saved_target_and_cleans_prepared_authority(): void {
@@ -415,7 +440,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'public-profile', $provider->request->repository->credential_id );
 	}
 
-	public function test_repository_branch_check_clears_earlier_evidence_when_the_provider_is_unavailable(): void {
+	public function test_repository_branch_check_replaces_earlier_evidence_when_the_provider_is_unavailable(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$evidence = new DashboardBranchCheckEvidenceStore();
 		$package  = $this->managed_package( 'provider-missing/example.php', 'Example', 'repo-42' );
@@ -436,7 +461,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$outcome = ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' );
 
 		self::assertSame( 'provider_unavailable', $outcome );
-		self::assertNull( $evidence->find( 'plugin', $package, null ) );
+		self::assertSame( 'provider_unavailable', $evidence->find( 'plugin', $package, null )['outcome'] ?? null );
 	}
 
 	public function test_repository_branch_check_drops_astored_public_profile_without_the_declared_capability(): void {
@@ -5381,6 +5406,7 @@ final class DashboardBranchCheckProviderWithoutPathInspector implements Reposito
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- The bounded database fake belongs to its production-controller test.
 final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
 	public bool $release_fails = false;
+	public bool $acquire_fails = false;
 
 	/** @var list<string> */
 	public array $events               = array();
@@ -5388,6 +5414,9 @@ final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
 	private bool $provider_access_held = false;
 
 	public function acquire(): string {
+		if ( $this->acquire_fails ) {
+			throw new \RuntimeException( 'The package operation lock is busy.' );
+		}
 		$this->events[] = 'acquire';
 		$this->held     = true;
 

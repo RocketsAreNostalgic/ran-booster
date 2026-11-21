@@ -23,6 +23,9 @@ class RepositoryBranchCheckEvidenceStore {
 
 	private const MAX_RECORDS = 200;
 
+	/** Every result a check can end with; a stored record keeps the last one, passing or not. */
+	private const OUTCOMES = array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified', 'unable_to_check', 'provider_unavailable', 'branch_unavailable', 'branch_redirected' );
+
 	private ?ActivityStore $activity = null;
 	/** @var array<string,array{id:?int,profile:string,target:string,nonce:string}> */
 	private array $pending = array();
@@ -82,11 +85,11 @@ class RepositoryBranchCheckEvidenceStore {
 	}
 
 	/**
-	 * @return array{outcome: 'verified', checked_at: string}|null
+	 * @return array{outcome: 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected', checked_at: string}|null
 	 */
 	public function find( string $type, Package $package, ?string $profile_id ): ?array {
 		$record = $this->all()['records'][ $this->key( $type, $package ) ] ?? null;
-		if ( ! is_array( $record ) || 'verified' !== ( $record['outcome'] ?? null )
+		if ( ! is_array( $record ) || ! in_array( $record['outcome'] ?? null, self::OUTCOMES, true )
 			|| ! is_string( $record['nonce'] ?? null ) || 1 !== preg_match( '/\A[0-9a-f]{32}\z/', $record['nonce'] )
 			|| ! is_string( $record['checked_at'] ?? null ) || ! is_string( $record['target'] ?? null ) || ! is_string( $record['profile'] ?? null )
 			|| ! hash_equals( $this->target_fingerprint( $package ), $record['target'] )
@@ -94,12 +97,12 @@ class RepositoryBranchCheckEvidenceStore {
 			return null;
 		}
 		return array(
-			'outcome'    => 'verified',
+			'outcome'    => $record['outcome'],
 			'checked_at' => $record['checked_at'],
 		);
 	}
 
-	/** Publish only the still-current check; optional history never grants verification. */
+	/** Publish the still-current check's result, whether or not it passed. */
 	public function record( string $type, Package $package, ?string $profile_id, string $outcome, ?string $profile_fingerprint = null ): void {
 		$key = $this->key( $type, $package );
 		if ( ! isset( $this->pending[ $key ] ) ) {
@@ -118,10 +121,10 @@ class RepositoryBranchCheckEvidenceStore {
 					return $all;
 				}
 				unset( $all['records'][ $key ] );
-				if ( 'verified' === $outcome ) {
+				if ( in_array( $outcome, self::OUTCOMES, true ) ) {
 					$all['records'][ $key ] = array(
 						'nonce'      => $pending['nonce'],
-						'outcome'    => 'verified',
+						'outcome'    => $outcome,
 						'checked_at' => gmdate( 'Y-m-d\\TH:i:s\\Z' ),
 						'target'     => $pending['target'],
 						'profile'    => $profile_fingerprint ?? $pending['profile'],

@@ -92,40 +92,48 @@ $needs_attention                  = ! $published_release_source
 $repository_branch_check_evidence = is_array( $repository_branch_check_evidence ?? null )
 	? $repository_branch_check_evidence
 	: null;
-$repository_branch_verified       = in_array( $repository_branch_check_outcome ?? null, array( 'verified', 'subdirectory_deferred', 'subdirectory_unavailable', 'subdirectory_unverified' ), true )
-	|| ( null === $repository_branch_check_outcome && 'verified' === ( $repository_branch_check_evidence['outcome'] ?? null ) );
-$saved_subdirectory_value         = isset( $saved_subdirectory_value ) && is_string( $saved_subdirectory_value )
+// A stored "provider unavailable" result is stale once the provider is registered again.
+if ( 'provider_unavailable' === ( $repository_branch_check_evidence['outcome'] ?? null ) && empty( $provider_unavailable ) ) {
+	$repository_branch_check_evidence = null;
+}
+// The branch line reports this request's check, else the last stored result; a check that left the subfolder for later passed the branch.
+$branch_check_now                = null !== ( $repository_branch_check_outcome ?? null );
+$branch_check_result             = $repository_branch_check_outcome ?? $repository_branch_check_evidence['outcome'] ?? null;
+$branch_check_result             = 'subdirectory_deferred' === $branch_check_result ? 'verified' : $branch_check_result;
+$repository_branch_verified      = in_array( $branch_check_result, array( 'verified', 'subdirectory_unavailable', 'subdirectory_unverified' ), true );
+$saved_subdirectory_value        = isset( $saved_subdirectory_value ) && is_string( $saved_subdirectory_value )
 	? trim( $saved_subdirectory_value )
 	: '';
-$branch_check_sentences           = \RAN\Admin\PackageAdminController::repository_branch_check_sentences( $repository_branch_check_outcome ?? null );
-$repository_branch_check_message  = null !== $branch_check_sentences ? implode( ' ', $branch_check_sentences ) : null;
+$branch_check_sentences          = \RAN\Admin\PackageAdminController::repository_branch_check_sentences( $repository_branch_check_outcome ?? null );
+$repository_branch_check_message = null !== $branch_check_sentences ? implode( ' ', $branch_check_sentences ) : null;
 
 $repository_branch_check_intent = null !== $repository_branch_check_message ? 'warning' : 'error';
 $repository_state_class         = match ( true ) {
-	! $identity_ready                         => 'is-warning',
-	$repository_branch_verified                => 'is-ok',
-	$saved_identity_ready && ! in_array( $repository_branch_check_outcome, array( 'branch_unavailable', 'branch_redirected' ), true ) => 'is-ok',
-	null !== $repository_branch_check_outcome   => 'is-warning',
-	default                                  => 'is-pending',
+	! $identity_ready                                  => 'is-warning',
+	$repository_branch_verified                        => 'is-ok',
+	null !== $branch_check_result                      => 'is-warning',
+	$published_release_source && $saved_identity_ready => 'is-ok',
+	default                                            => 'is-pending',
 };
-if ( in_array( $repository_branch_check_outcome ?? null, array( 'verified', 'subdirectory_deferred', 'subdirectory_unavailable', 'subdirectory_unverified' ), true ) ) {
-	$saved_repository_label = __( 'is accessible with the saved repository settings.', 'ran-booster' );
-} elseif ( $repository_branch_verified ) {
-	$saved_repository_label = __( 'was accessible at the last check.', 'ran-booster' );
-} elseif ( 'provider_unavailable' === ( $repository_branch_check_outcome ?? null ) ) {
-	$saved_repository_label = __( 'is saved, but the Git provider is unavailable.', 'ran-booster' );
-} elseif ( in_array( $repository_branch_check_outcome ?? null, array( 'unable_to_check', 'branch_unavailable', 'branch_redirected' ), true ) ) {
-	$saved_repository_label = __( 'is saved, but access could not be verified.', 'ran-booster' );
-} else {
-	$saved_repository_label = __( 'is saved. Access has not been checked.', 'ran-booster' );
-}
+$saved_branch_value = isset( $saved_branch_value ) && is_string( $saved_branch_value ) ? $saved_branch_value : $branch_value;
+// What Booster knows about the branch; the redirected arm is the one to reword if the owner asks.
+$branch_check_known = match ( true ) {
+	$repository_branch_verified && $branch_check_now => __( 'Booster can reach it.', 'ran-booster' ),
+	$repository_branch_verified                      => __( 'Booster reached it at the last check.', 'ran-booster' ),
+	'branch_unavailable' === $branch_check_result    => __( 'Booster couldn\'t find it on the provider.', 'ran-booster' ),
+	'branch_redirected' === $branch_check_result     => __( 'Booster was redirected when it looked for it.', 'ran-booster' ),
+	'unable_to_check' === $branch_check_result       => __( 'Booster couldn\'t reach it.', 'ran-booster' ),
+	'provider_unavailable' === $branch_check_result  => __( 'The Git provider is unavailable, so Booster couldn\'t check.', 'ran-booster' ),
+	default                                          => __( 'Booster hasn\'t checked it yet.', 'ran-booster' ),
+};
 $saved_repository_message = $identity_ready
-	? sprintf(
-		/* translators: 1: branch name, 2: repository check status. */
-		__( 'The branch <code>%1$s</code> %2$s', 'ran-booster' ),
-		esc_html( '' !== $branch_value ? $branch_value : __( 'The repository default branch', 'ran-booster' ) ),
-		esc_html( $saved_repository_label )
-	)
+	? ( '' !== $saved_branch_value
+		? sprintf(
+			/* translators: %s: branch name. */
+			__( 'This package tracks the branch <code>%s</code>.', 'ran-booster' ),
+			esc_html( $saved_branch_value )
+		)
+		: __( 'This package tracks the repository\'s default branch.', 'ran-booster' ) ) . ' ' . esc_html( $branch_check_known )
 	: __( 'The saved repository needs one stable Git provider identity.', 'ran-booster' );
 $saved_subdirectory_message = '' === $saved_subdirectory_value
 	? __( 'Repository root (no subdirectory).', 'ran-booster' )
@@ -192,10 +200,10 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					<strong><?php esc_html_e( 'Saved repository', 'ran-booster' ); ?></strong>
 					<span>
 						<?php echo wp_kses_post( $saved_repository_message ); ?>
-						<?php if ( $repository_branch_verified && null !== $repository_branch_check_evidence ) { ?>
+						<?php if ( null !== $repository_branch_check_evidence && ( ! $branch_check_now || $branch_check_result === $repository_branch_check_evidence['outcome'] ) ) { ?>
 							<br/><span>
 							<?php
-							/* translators: %s: UTC timestamp of the last successful repository branch check. */
+							/* translators: %s: UTC timestamp of the last repository branch check. */
 							echo esc_html( sprintf( __( 'Last checked: %s.', 'ran-booster' ), (string) $repository_branch_check_evidence['checked_at'] ) );
 							?>
 							</span>

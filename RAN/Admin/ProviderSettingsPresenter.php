@@ -617,7 +617,7 @@ final readonly class ProviderSettingsPresenter {
 		return $this->branch_check_evidence->profile_fingerprint_for( $package, $this->effective_branch_check_profile( $package ) );
 	}
 
-	/** @return array{outcome: 'verified', checked_at: string}|null */
+	/** @return array{outcome: 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected', checked_at: string}|null */
 	public function package_repository_branch_evidence( string $type, Package $package ): ?array {
 		return $this->branch_check_evidence->find( $type, $package, $this->effective_branch_check_profile( $package ) );
 	}

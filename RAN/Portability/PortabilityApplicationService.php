@@ -666,7 +666,8 @@ final readonly class PortabilityApplicationService {
 
 		$managed = null;
 		$item    = $this->reviewer->review_package( $package, $managed );
-		if ( TargetPackageAction::INSTALL === $item->action ) {
+		// An adoption candidate must already be installed; a package that is not is a destination conflict, whatever else would block its install.
+		if ( TargetPackageAction::INSTALL === $item->action || TargetPackageReason::PACKAGE_FOLDER_MISMATCH === $item->reason ) {
 			$item = new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::DESTINATION_CONFLICT );
 		} elseif ( TargetPackageAction::MANAGED === $item->action
 			&& ( ! $managed instanceof Package

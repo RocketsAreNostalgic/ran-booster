@@ -94,13 +94,10 @@ final class CoreAdminInteractionFacade implements
 	public function respond( AdminInteractionOutcome $outcome ): never {
 		$request = $outcome->request();
 		$this->assert_canonical_url( $request );
-		// The provider repositories region is the whole provider view, so a success reloads it like a provider save:
-		// a located swap would carry its message only on the follow-up request, where the page never shows it.
 		$this->flow->respond(
 			$this->signed_request( $request ),
 			$outcome->kind(),
-			$outcome->message(),
-			AdminInteractionTarget::PROVIDER_REPOSITORIES === $request->target()
+			$outcome->message()
 		);
 	}
 	public function respond_with_transporter_row_fragment(
@@ -191,12 +188,7 @@ final class CoreAdminInteractionFacade implements
 		$this->flow->respond(
 			$request,
 			AdminInteractionOutcome::SUCCESS,
-			$message,
-			in_array(
-				$request->operation,
-				array( 'core:save-access-profile', 'core:save-webhook-profile' ),
-				true
-			)
+			$message
 		);
 	}
 	public function respond_to_provider_profile_validation_failure( SignedAdminInteractionRequest $request, string $message ): never {

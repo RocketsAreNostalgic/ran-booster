@@ -86,7 +86,7 @@ An add-on-owned handler must, in order:
 
 `respond()` terminates both enhanced and ordinary requests. An expected
 validation failure may replace only the declared local error region. Success
-refreshes the request's fixed Core-owned target. Unexpected failures remain on
+reloads the page, which shows the outcome. Unexpected failures remain on
 Core's normal safe error path.
 
 ## Outcome text and feedback
@@ -105,10 +105,10 @@ If the marker verifies but the row is missing, expired, replaced, lost to a
 second tab or never written, a full-page or no-JavaScript landing shows one
 fixed neutral persistent info notice instead: "The result details are not
 available. Check the page or Activity for the current state." It never advises
-a retry and never says the operation failed. On an enhanced (HTMX) landing a
-lost row shows nothing extra: the success is still visible through the swapped
-region. A marker that does not verify shows nothing. Expired rows are deleted on
-the user's next administration load, and uninstall removes the row.
+a retry and never says the operation failed. An enhanced success lands as a
+full page too, so a lost row shows the same neutral notice. A marker that
+does not verify shows nothing. Expired rows are deleted on the user's next
+administration load, and uninstall removes the row.
 
 On first view the feedback host also strips the marker arguments
 (`ran_booster_interaction_*` and its nonce) from the address, so a reload or

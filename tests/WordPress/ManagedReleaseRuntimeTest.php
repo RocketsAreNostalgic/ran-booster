@@ -774,6 +774,103 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		}
 	}
 
+	public function test_switch_permit_admits_one_branch_package_for_this_request_only(): void {
+		$branch        = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH, source_revision: 3 );
+		$configuration = new ManagedReleaseConfiguration( 'example', 'example.php', 'prerelease' );
+		[ $registrar ] = $this->native_plugin_registrar( $branch );
+		$offers        = (object) array( 'response' => array( self::NATIVE_PLUGIN => (object) array( 'new_version' => '1.0.0' ) ) );
+
+		self::assertNull( $registrar->target( 'plugin', self::NATIVE_PLUGIN ) );
+		self::assertArrayNotHasKey( self::NATIVE_PLUGIN, $registrar->suppress_unauthorized_plugin_offers( clone $offers )->response );
+		self::assertTrue( $registrar->admit_switch( 'plugin', $branch, $configuration, 7 ) );
+		self::assertNotNull( $registrar->target( 'plugin', self::NATIVE_PLUGIN ) );
+		self::assertFalse( $registrar->admit_switch( 'plugin', $branch, $configuration, 7 ) );
+		self::assertArrayHasKey( self::NATIVE_PLUGIN, $registrar->suppress_unauthorized_plugin_offers( clone $offers )->response );
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		self::assertNotSame( '', $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN ) );
+	}
+
+	public function test_switch_permit_refuses_release_subdirectory_and_reserved_packages(): void {
+		$configuration = new ManagedReleaseConfiguration( 'example', 'example.php' );
+		foreach ( array(
+			'release'      => $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL ),
+			'subdirectory' => $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH, subdirectory: 'packages/example' ),
+			'reserved'     => $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH ),
+		) as $case => $package ) {
+			[ $registrar ] = $this->native_plugin_registrar( $package );
+			if ( 'reserved' === $case ) {
+				$registrar->reserve_core_self_update_target( self::NATIVE_PLUGIN );
+			}
+			self::assertFalse( $registrar->admit_switch( 'plugin', $package, $configuration, 7 ), $case );
+		}
+	}
+
+	public function test_withdrawn_or_changed_switch_refuses_the_download_and_the_offer(): void {
+		$branch        = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH, source_revision: 3 );
+		$changed       = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH, source_revision: 4 );
+		$configuration = new ManagedReleaseConfiguration( 'example', 'example.php' );
+		$offers        = (object) array( 'response' => array( self::NATIVE_PLUGIN => (object) array( 'new_version' => '1.0.0' ) ) );
+
+		[ $registrar ] = $this->native_plugin_registrar( $branch );
+		self::assertTrue( $registrar->admit_switch( 'plugin', $branch, $configuration, 7 ) );
+		$registrar->withdraw_switch( 'plugin', self::NATIVE_PLUGIN );
+		self::assertArrayNotHasKey( self::NATIVE_PLUGIN, $registrar->suppress_unauthorized_plugin_offers( clone $offers )->response );
+		$this->assert_native_authority_error( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+
+		$current       = $branch;
+		[ $registrar ] = $this->native_plugin_registrar(
+			$branch,
+			static function () use ( &$current ): Package {
+				return $current;
+			}
+		);
+		self::assertTrue( $registrar->admit_switch( 'plugin', $branch, $configuration, 7 ) );
+		$current = $changed;
+		self::assertArrayNotHasKey( self::NATIVE_PLUGIN, $registrar->suppress_unauthorized_plugin_offers( clone $offers )->response );
+		$this->assert_native_authority_error( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+	}
+
+	public function test_switch_source_changes_only_with_verified_native_completion(): void {
+		$configuration = new ManagedReleaseConfiguration( 'example', 'example.php', 'prerelease' );
+		foreach ( array( 'verified_success', 'uncertain' ) as $outcome ) {
+			$branch                         = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::AUTOMATIC, source: PackageSource::BRANCH, source_revision: 3 );
+			$this->native_selection         = null;
+			[ $registrar, $lock, , $store ] = $this->native_plugin_registrar( $branch );
+			self::assertTrue( $registrar->admit_switch( 'plugin', $branch, $configuration, 7 ) );
+			self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+			self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+			$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+			self::assertSame( array(), $store->transitions );
+			$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, $outcome );
+			self::assertNotNull( $this->native_selection_store );
+			self::assertSame( array( 'runtime-lock' ), $lock->releases );
+			if ( 'uncertain' === $outcome ) {
+				self::assertSame( array(), $store->transitions );
+				self::assertArrayHasKey( 'native_mutation', $this->native_selection_store->read() );
+				continue;
+			}
+			self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
+			self::assertSame(
+				array(
+					array(
+						'type'              => 'plugin',
+						'identifier'        => self::NATIVE_PLUGIN,
+						'expected_source'   => PackageSource::BRANCH,
+						'expected_revision' => 3,
+						'new_source'        => PackageSource::RELEASE_ASSET,
+						'configuration'     => $configuration,
+						'user_id'           => 7,
+						'adoption_token'    => (string) \RAN\AdoptionIdentity::of( $branch ),
+					),
+				),
+				$store->transitions
+			);
+			// The permit ends with the request's one completion.
+			$this->assert_native_authority_error( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+		}
+	}
+
 	public function test_staging_authority_or_policy_change_refuses_native_begin(): void {
 		foreach ( array( 'source_revision', 'disabled' ) as $change ) {
 			$first                = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
@@ -1600,79 +1697,205 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array( 'runtime-lock' ), $lock->releases );
 	}
 
-	public function test_facade_enables_with_exact_nonce_revision_and_preserves_policy_through_store(): void {
-		$package = $this->package(
-			'plugin',
-			'example/example.php',
-			'example',
-			DeploymentPolicy::MANUAL,
-			source: PackageSource::BRANCH
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_enable_installs_the_chosen_release_and_leaves_the_source_to_native_completion(): void {
+		$expected_action                       = 'ran-booster-release-tracking-enable-plugin-example/example.php-1-gh:123456789:11111111-1111-4111-8111-111111111111';
+		$installs                              = array();
+		[ $facade, $store, $registrar, $lock ] = $this->switch_facade(
+			static function ( string ...$request ) use ( &$installs ): string {
+				$installs[] = $request;
+
+				return 'installed';
+			},
+			static fn ( string $nonce, string $action ): bool => 'valid' === $nonce && $expected_action === $action
 		);
+
+		self::assertSame( $expected_action, $facade->nonce_action( 'enable', 'plugin', 'example/example.php', 1 ) );
+		$denied = $facade->enable( 'plugin', 'example/example.php', 1, 'prerelease', 'wrong' );
+		self::assertSame( 'forbidden', $denied->code() );
+		self::assertCount( 0, $installs );
+
+		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'prerelease', 'valid' );
+		self::assertTrue( $result->successful() );
+		self::assertSame( 'release_enabled', $result->code() );
+		self::assertSame( array( array( 'plugin', 'example/example.php', '101', 'v2.0.0' ) ), $installs );
+		// The source changes only in native completion, never in this request's reply.
+		self::assertSame( array(), $store->transitions );
+		self::assertSame( 0, $lock->acquires );
+		self::assertNotNull( $registrar->target( 'plugin', 'example/example.php' ) );
+		self::assertSame( array(), $this->shutdown_rechecks() );
+	}
+
+	/** @return iterable<string, array{string, string}> */
+	public static function refused_switches(): iterable {
+		yield 'older release' => array( 'release_older', 'release_older' );
+		yield 'updates off' => array( 'policy_disabled', 'policy_blocked' );
+		yield 'updater refusal' => array( 'candidate_not_eligible', 'release_unavailable' );
+		yield 'older updater copy' => array( 'unsupported', 'service_unavailable' );
+		yield 'updater busy' => array( 'runtime_busy', 'service_unavailable' );
+		yield 'install failed' => array( 'failed', 'wordpress_failed' );
+	}
+
+	#[DataProvider( 'refused_switches' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_refused_or_failed_switch_withdraws_and_rechecks_updates_at_shutdown( string $install, string $code ): void {
+		$invalidated                    = array();
+		[ $facade, $store, $registrar ] = $this->switch_facade(
+			static fn (): string => $install,
+			invalidate_native: static function ( string $type ) use ( &$invalidated ): void {
+				$invalidated[] = $type;
+			}
+		);
+
+		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		self::assertFalse( $result->successful() );
+		self::assertSame( $code, $result->code() );
+		self::assertSame( array(), $store->transitions );
+		self::assertSame( array(), $invalidated );
+		$rechecks = $this->shutdown_rechecks();
+		self::assertCount( 1, $rechecks );
+		self::assertSame( PHP_INT_MAX, $rechecks[0]['priority'] );
+		( $rechecks[0]['callback'] )();
+		self::assertSame( array( 'plugin' ), $invalidated );
+		$this->assert_native_authority_error( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_a_throw_during_the_install_leaves_the_source_to_shutdown_verification(): void {
+		[ $facade, $store, $registrar ] = $this->switch_facade(
+			static function (): string {
+				throw new \RuntimeException( 'A hook threw after the upgrader ran.' );
+			}
+		);
+
+		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'management_state_uncertain', $result->code() );
+		self::assertSame( array(), $store->transitions );
+		self::assertCount( 1, $this->shutdown_rechecks() );
+		// The permit stays: WordPress may have installed, and only a verified install commits the source.
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+	}
+
+	/** @return iterable<string, array{mixed, string}> */
+	public static function updater_offer_answers(): iterable {
+		yield 'older updater copy' => array( null, 'service_unavailable' );
+		yield 'refusal' => array(
+			array(
+				'status' => 'refused',
+				'code'   => 'release_older',
+			),
+			'release_older',
+		);
+		yield 'refusal spelled as an outcome' => array(
+			array(
+				'status' => 'refused',
+				'code'   => 'installed',
+			),
+			'service_unavailable',
+		);
+	}
+
+	#[DataProvider( 'updater_offer_answers' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_the_default_install_trusts_only_an_authorised_offer( mixed $answer, string $code ): void {
+		require_once __DIR__ . '/ReadOnlyCheckWordPressFunctions.php';
+		$GLOBALS['ran_booster_read_only_check'] = array(
+			'calls'      => array(),
+			'transients' => array(),
+			'answer'     => $answer,
+		);
+		[ $facade, $store ]                     = $this->switch_facade( null );
+
+		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		self::assertFalse( $result->successful() );
+		self::assertSame( $code, $result->code() );
+		self::assertSame( array(), $store->transitions );
+		// One exact-release offer for the newest eligible release, then nothing more.
+		self::assertSame( array( array( 'ran_wp_release_updater_offer_release_v1', null, 'plugin', 'example/example.php', '101', 'v2.0.0' ) ), $GLOBALS['ran_booster_read_only_check']['calls'] );
+	}
+
+	/** @return iterable<string, array{string}> */
+	public static function unfinished_switches(): iterable {
+		yield 'install failed' => array( 'failed' );
+		yield 'updater refused' => array( 'release_older' );
+	}
+
+	#[DataProvider( 'unfinished_switches' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_unfinished_switch_blocks_a_second_attempt_in_its_request_and_leaves_the_next_request_clean( string $install ): void {
+		$installs                       = 0;
+		[ $facade, $store, $registrar ] = $this->switch_facade(
+			static function () use ( &$installs, $install ): string {
+				++$installs;
+
+				return $install;
+			}
+		);
+		self::assertFalse( $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' )->successful() );
+		$again = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		self::assertFalse( $again->successful() );
+		self::assertSame( 'release_unavailable', $again->code() );
+		self::assertSame( 1, $installs );
+		$this->assert_native_authority_error( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+		self::assertSame( array(), $store->transitions );
+
+		// Nothing about the switch is stored, so the next request admits it again.
+		[ $next ] = $this->switch_facade(
+			static function () use ( &$installs ): string {
+				++$installs;
+
+				return 'installed';
+			},
+			store: $store
+		);
+		self::assertSame( 'release_enabled', $next->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' )->code() );
+		self::assertSame( 2, $installs );
+	}
+
+	/**
+	 * @param (callable(string, string, string, string): string)|null $switch_install Null runs the facade's own offer and upgrader.
+	 * @param (callable(string, string): bool)|null            $verify_nonce
+	 * @param (callable(string): void)|null                    $invalidate_native
+	 * @param RuntimeReleaseStore|null                         $store             Shared with an earlier request's facade.
+	 * @return array{NativeReleaseTrackingFacade, RuntimeReleaseStore, ManagedReleaseTargetRegistrar, RuntimeUpdaterLock}
+	 */
+	private function switch_facade( ?callable $switch_install, ?callable $verify_nonce = null, ?callable $invalidate_native = null, ?RuntimeReleaseStore $store = null ): array {
+		$package = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH );
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array() );
 		$themes    = $this->createStub( ThemeRepository::class );
-		$store     = new RuntimeReleaseStore();
-		$registrar = $this->registrar(
-			$plugins,
-			$themes,
-			$store,
-			new RuntimeUpdaterLock(),
-			$this->release_metadata_registry()
-		);
-
-		$expected_action = 'ran-booster-release-tracking-enable-plugin-example/example.php-1-gh:123456789:11111111-1111-4111-8111-111111111111';
-
-		$lock   = new RuntimeUpdaterLock();
-		$facade = $this->facade(
+		$store   ??= new RuntimeReleaseStore();
+		$providers = $this->release_metadata_registry();
+		$registrar = $this->registrar( $plugins, $themes, $store, new RuntimeUpdaterLock(), $providers );
+		$lock      = new RuntimeUpdaterLock();
+		$facade    = $this->facade(
 			$plugins,
 			$themes,
 			$store,
 			$registrar,
 			$lock,
-			$this->release_metadata_registry(),
+			$providers,
 			static fn ( string $type ): bool => 'plugin' === $type,
-			static fn ( string $nonce, string $action ): bool => 'valid' === $nonce && $expected_action === $action,
+			$verify_nonce ?? static fn ( string $nonce ): bool => 'valid' === $nonce,
 			metadata_eligible: static fn (): bool => true,
-			invalidate_native: static function (): void {
-			}
+			invalidate_native: $invalidate_native ?? static function (): void {
+			},
+			switch_install: $switch_install
 		);
 
-		self::assertSame(
-			$expected_action,
-			$facade->nonce_action( 'enable', 'plugin', 'example/example.php', 1 )
-		);
-		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'prerelease', 'valid' );
+		return array( $facade, $store, $registrar, $lock );
+	}
 
-		self::assertTrue( $result->successful() );
-		self::assertSame( 'release_enabled', $result->code() );
-		self::assertCount( 1, $store->transitions );
-		self::assertSame( PackageSource::BRANCH, $store->transitions[0]['expected_source'] );
-		self::assertSame( PackageSource::RELEASE_ASSET, $store->transitions[0]['new_source'] );
-		self::assertSame( 'example', $store->transitions[0]['configuration']->package_root() );
-		self::assertSame( 'example.php', $store->transitions[0]['configuration']->metadata_file() );
-		self::assertSame( 'prerelease', $store->transitions[0]['configuration']->channel() );
-		self::assertSame( 1, $lock->acquires );
-		self::assertSame( array( 'runtime-lock' ), $lock->releases );
-
-		$store->transition_failure = new ManagedReleaseSubdirectoryNotSupported();
-		$rejected                  = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
-		self::assertFalse( $rejected->successful() );
-		self::assertSame( 'subdirectory_not_supported', $rejected->code() );
-		self::assertCount( 1, $store->transitions );
-		$store->transition_failure = null;
-
-		$denied = $facade->enable( 'plugin', 'example/example.php', 1, 'prerelease', 'wrong' );
-		self::assertFalse( $denied->successful() );
-		self::assertSame( 'forbidden', $denied->code() );
-		self::assertCount( 1, $store->transitions );
-
-		$lock->acquire_fails = true;
-		$contended           = $facade->enable( 'plugin', 'example/example.php', 1, 'prerelease', 'valid' );
-		self::assertFalse( $contended->successful() );
-		self::assertSame( 'release_unavailable', $contended->code() );
-		self::assertCount( 1, $store->transitions );
-		self::assertSame( 3, $lock->acquires );
-		self::assertSame( array( 'runtime-lock', 'runtime-lock' ), $lock->releases );
+	/** @return list<array{hook: string, callback: callable, priority: int, acceptedArgs: int}> */
+	private function shutdown_rechecks(): array {
+		return array_values( array_filter( $GLOBALS['ran_booster_runtime_actions'] ?? array(), static fn ( array $action ): bool => 'shutdown' === $action['hook'] ) );
 	}
 
 	#[DataProvider( 'release_adoption_targets' )]
@@ -1984,55 +2207,19 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		}
 	}
 
-	public function test_enable_reports_aconflict_that_appears_under_the_updater_lock(): void {
-		$root    = $this->package(
-			'plugin',
-			'example/example.php',
-			'example',
-			DeploymentPolicy::MANUAL,
-			source: PackageSource::BRANCH
-		);
-		$reads   = 0;
-		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'booster_plugin_from_file' )->willReturnCallback(
-			function () use ( $root, &$reads ): Package {
-				if ( 1 === ++$reads ) {
-					return $root;
-				}
-				$this->repository_rows["plugin\0other/other.php"] = (object) array(
-					'type'                   => '1',
-					'package'                => 'other/other.php',
-					'source'                 => PackageSource::BRANCH->value,
-					'provider'               => 'gh',
-					'provider_repository_id' => '123456789',
-				);
-
-				return $root;
-			}
-		);
-		$themes    = $this->createStub( ThemeRepository::class );
-		$store     = new RuntimeReleaseStore();
-		$lock      = new RuntimeUpdaterLock();
-		$providers = $this->release_metadata_registry();
-		$facade    = $this->facade(
-			$plugins,
-			$themes,
-			$store,
-			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
-			$lock,
-			$providers,
-			static fn (): bool => true,
-			static fn (): bool => true,
-			metadata_eligible: static fn (): bool => true
+	public function test_switch_download_is_refused_when_a_repository_conflict_appears_after_admission(): void {
+		$branch        = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH );
+		[ $registrar ] = $this->native_plugin_registrar( $branch );
+		self::assertTrue( $registrar->admit_switch( 'plugin', $branch, new ManagedReleaseConfiguration( 'example', 'example.php' ), 7 ) );
+		$this->repository_rows["plugin\0other/other.php"] = (object) array(
+			'type'                   => '1',
+			'package'                => 'other/other.php',
+			'source'                 => PackageSource::BRANCH->value,
+			'provider'               => 'gh',
+			'provider_repository_id' => '123456789',
 		);
 
-		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
-
-		self::assertSame( 'release_repository_conflict', $result->code() );
-		self::assertSame( array(), $store->transitions );
-		self::assertSame( 1, $lock->acquires );
-		self::assertSame( PackageSource::BRANCH, $root->get_source() );
-		self::assertSame( 1, $root->get_source_revision() );
+		$this->assert_native_authority_error( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
 	}
 
 	public function test_managed_release_reads_use_the_configured_public_lookup_profile_without_replacing_package_credentials(): void {
@@ -4706,7 +4893,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	/**
 	 * @param Package|callable(): Package|null $live
-	 * @return array{ManagedReleaseTargetRegistrar, RuntimeUpdaterLock, RuntimeUpdaterFacade}
+	 * @return array{ManagedReleaseTargetRegistrar, RuntimeUpdaterLock, RuntimeUpdaterFacade, RuntimeReleaseStore}
 	 */
 	private function native_plugin_registrar(
 		Package $registered,
@@ -4725,14 +4912,15 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$themes->method( 'all_deployment_themes' )->willReturn( array() );
 		$lock      = new RuntimeUpdaterLock();
 		$facade    = new RuntimeUpdaterFacade();
+		$store     = new RuntimeReleaseStore(
+			array(
+				"plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ),
+			)
+		);
 		$registrar = $this->registrar(
 			$plugins,
 			$themes,
-			new RuntimeReleaseStore(
-				array(
-					"plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ),
-				)
-			),
+			$store,
 			$lock,
 			$this->release_metadata_registry(
 				target_factory: static function ( mixed ...$options ) use ( $facade ): object {
@@ -4744,8 +4932,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			activity: $activity
 		);
 		$registrar->register();
+		$store->native_connection = $this->native_selection_db;
 
-		return array( $registrar, $lock, $facade );
+		return array( $registrar, $lock, $facade, $store );
 	}
 
 	private function assert_native_authority_error( mixed $result ): void {

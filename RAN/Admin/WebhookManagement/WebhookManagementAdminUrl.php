@@ -7,7 +7,7 @@ namespace RAN\Admin\WebhookManagement;
 /** @internal Builds routes for the network-admin-owned webhook management UI. */
 final class WebhookManagementAdminUrl {
 	public static function for_path( string $path ): string {
-		if ( str_starts_with( $path, 'admin-post.php' ) ) {
+		if ( str_starts_with( $path, 'admin-post.php' ) || str_starts_with( $path, 'admin-ajax.php' ) ) {
 			return admin_url( $path );
 		}
 

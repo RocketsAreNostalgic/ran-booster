@@ -930,6 +930,82 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertSame( $revoked, $this->store->read() );
 	}
 
+	/** @return iterable<string, array{string, string, string, bool}> */
+	public static function foreign_source_completions(): iterable {
+		yield 'foreign connection' => array( 'foreign', 'theme', 'first', true );
+		yield 'other type' => array( 'store', 'plugin', 'first', true );
+		yield 'other target' => array( 'store', 'theme', 'second', true );
+		yield 'unconfirmed commit' => array( 'store', 'theme', 'first', false );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'foreign_source_completions' )]
+	public function test_native_completion_refuses_a_foreign_or_unconfirmed_source_transaction( string $connection, string $type, string $identity, bool $committed ): void {
+		$context = $this->context();
+		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		$source  = 'store' === $connection ? $this->db : new \stdClass();
+		try {
+			$context->complete_native_mutation(
+				$owner,
+				'theme',
+				'first',
+				'verified_success',
+				static function ( callable $complete ) use ( $source, $type, $identity, $committed ): bool {
+					$complete( $source, $type, $identity );
+					return $committed;
+				}
+			);
+			self::fail( 'Completion accepted a foreign or unconfirmed source transaction.' );
+		} catch ( \RuntimeException ) {
+			self::addToAssertionCount( 1 );
+		}
+		// The fixture has no outer transaction to roll back, so only a refused completion keeps the marker here.
+		self::assertSame( $committed, isset( $this->store->read()['native_mutation'] ) );
+	}
+
+	public function test_native_completion_refuses_a_source_commit_that_skipped_custody_removal(): void {
+		$context = $this->context();
+		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		try {
+			$context->complete_native_mutation( $owner, 'theme', 'first', 'verified_success', static fn (): bool => true );
+			self::fail( 'Completion accepted a source commit that never removed custody.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Native source completion is unconfirmed.', $failure->getMessage() );
+		}
+		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+	}
+
+	public function test_native_completion_commits_inside_the_source_transaction_on_its_connection(): void {
+		$context = $this->context();
+		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		$context->complete_native_mutation(
+			$owner,
+			'theme',
+			'first',
+			'verified_success',
+			function ( callable $complete ): bool {
+				$complete( $this->db, 'theme', 'first' );
+				return true;
+			}
+		);
+		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+
+		$owner  = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		$marked = $this->store->read();
+		$calls  = 0;
+		$context->complete_native_mutation(
+			$owner,
+			'theme',
+			'first',
+			'uncertain',
+			static function () use ( &$calls ): bool {
+				++$calls;
+				return true;
+			}
+		);
+		self::assertSame( 0, $calls );
+		self::assertSame( $marked, $this->store->read() );
+	}
+
 	public function test_uncertain_native_outcome_is_not_later_promoted_to_success(): void {
 		$context = $this->context();
 		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );

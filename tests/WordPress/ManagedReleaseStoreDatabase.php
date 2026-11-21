@@ -17,6 +17,9 @@ final class ManagedReleaseStoreDatabase implements \RAN\Storage\ManagedReleaseWr
 
 	public bool $replace_after_update = false;
 
+	/** @var list<array<string, mixed>> Other packages managed from the same repository. */
+	public array $repository_others = array();
+
 	/** @var list<array{0: string, 1: array<string, mixed>, 2: array<string, mixed>}> */
 	public array $updates = array();
 
@@ -54,7 +57,14 @@ final class ManagedReleaseStoreDatabase implements \RAN\Storage\ManagedReleaseWr
 			return array( (object) array( 'type' => 1 ) );
 		}
 
-		return array( (object) array_merge( $this->row, array( 'type' => $this->row['package_type'] ?? null ) ) );
+		$rows = array( (object) array_merge( $this->row, array( 'type' => $this->row['package_type'] ?? null ) ) );
+		if ( str_contains( $query, 'provider_repository_id' ) ) {
+			foreach ( $this->repository_others as $other ) {
+				$rows[] = (object) array_merge( $this->row, $other );
+			}
+		}
+
+		return $rows;
 	}
 
 	/**

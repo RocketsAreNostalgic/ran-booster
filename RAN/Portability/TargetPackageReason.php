@@ -16,6 +16,7 @@ enum TargetPackageReason: string {
 	case REPOSITORY_ACCESS_FAILED         = 'repository_access_failed';
 	case REPOSITORY_IDENTITY_MISMATCH     = 'repository_identity_mismatch';
 	case DESTINATION_CONFLICT             = 'destination_conflict';
+	case PACKAGE_FOLDER_MISMATCH          = 'package_folder_mismatch';
 	case PROVIDER_SELECTION_CHANGED       = 'provider_selection_changed';
 	case PROVIDER_UNAVAILABLE             = 'provider_unavailable';
 	case PROVIDER_TEMPORARILY_UNAVAILABLE = 'provider_temporarily_unavailable';
@@ -41,6 +42,7 @@ enum TargetPackageReason: string {
 			self::REPOSITORY_ACCESS_FAILED => __( 'Booster could not confirm repository access.', 'ran-booster' ),
 			self::REPOSITORY_IDENTITY_MISMATCH => __( 'The repository does not match this Blueprint.', 'ran-booster' ),
 			self::DESTINATION_CONFLICT => __( 'The destination package conflicts with this Blueprint.', 'ran-booster' ),
+			self::PACKAGE_FOLDER_MISMATCH => __( 'This package would install under a different folder name from the one in this Blueprint.', 'ran-booster' ),
 			self::PROVIDER_SELECTION_CHANGED => __( 'The selected Git provider changed. Review again before applying.', 'ran-booster' ),
 			self::PROVIDER_UNAVAILABLE => __( 'This Git provider is not available on the target.', 'ran-booster' ),
 			self::PROVIDER_TEMPORARILY_UNAVAILABLE => __( 'The Git provider is temporarily unavailable.', 'ran-booster' ),

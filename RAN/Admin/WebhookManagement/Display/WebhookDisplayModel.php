@@ -31,7 +31,7 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
  *   webhooks_url:?string,
  *   return_url:string,
  *   interaction_request:AdminInteractionRequest|null,
- *   result:array{class:string,message:string,heading?:string,details?:list<string>,lines?:list<array{label:string,text:string}>,link_sentence?:string}|null,
+ *   result:array{class:string,message:string,heading?:string,details?:list<string>,lines?:list<array{label:string,text:string}>,link_sentence?:string,listen?:array{status:string,settle:string,label:string}}|null,
  *   recovery_warning:array{class:string,message:string,heading?:string,details?:list<string>}|null,
  *   manual_notice:array{class:string,heading:string,message:string}|null,
  *   management_credential_id:?string,
@@ -379,6 +379,35 @@ final class WebhookDisplayModel {
 			}
 		}
 
+		// Repair carries its ping's code too, but only Validate's result shows Settings and Ping lines.
+		$result = null === $result_code ? null : ( null === $ping_code || 'repaired_pending_delivery' === $result_code ? $this->settled_result( $result_code, $recovery, $remediation, 'configured' === $status, $ping_code, $provider_label ) : $this->validation_presentation( $result_code, $ping_code, $remediation, 'configured' === $status ) );
+		if ( null !== $result && null !== $result_code && $this->listens( $result_code, $ping_code, 'configured' === $status ) ) {
+			// With JavaScript the result checks the stored record for the delivery, then renders this view again from the same codes.
+			$result['listen'] = array(
+				'status' => WebhookManagementAdminUrl::for_path( 'admin-ajax.php' ) . '?' . http_build_query(
+					array(
+						'action'        => WebhookManagementController::DELIVERY_STATUS_ACTION,
+						'provider_code' => $provider_code,
+						'repository_id' => $repository_id,
+						'_wpnonce'      => wp_create_nonce( $this->operation_action( 'delivery', $provider_code, $repository_id ) ),
+					),
+					'',
+					'&',
+					PHP_QUERY_RFC3986
+				),
+				'settle' => add_query_arg(
+					array_filter(
+						array(
+							'webhook_management_result' => $result_code,
+							'webhook_management_ping'   => $ping_code,
+						)
+					),
+					$this->panel_url( $return_url, $repository_id )
+				),
+				'label'  => __( 'Listening for webhook delivery…', 'ran-booster' ),
+			);
+		}
+
 		return array(
 			'disabled'                    => false,
 			'unavailable_reason'          => null,
@@ -397,8 +426,7 @@ final class WebhookDisplayModel {
 			'webhooks_url'                => $webhooks_url,
 			'return_url'                  => $this->panel_url( $return_url, $repository_id ),
 			'interaction_request'         => AdminInteractionRequest::provider_repositories( 'repository-webhook-management:manage-webhook', $this->panel_url( $return_url, $repository_id ), 'repository-webhook-management-error' ),
-			// Repair carries its ping's code too, but only Validate's result shows Settings and Ping lines.
-			'result'                      => null === $result_code ? null : ( null === $ping_code || 'repaired_pending_delivery' === $result_code ? $this->settled_result( $result_code, $recovery, $remediation, 'configured' === $status, $ping_code, $provider_label ) : $this->validation_presentation( $result_code, $ping_code, $remediation, 'configured' === $status ) ),
+			'result'                      => $result,
 			'recovery_warning'            => $recovery_warning,
 			'manual_notice'               => null === $manual_at ? null : self::manual_notice( $manual_at ),
 			'management_credential_id'    => null === $record ? null : $record->management_credential_id(),
@@ -594,6 +622,28 @@ final class WebhookDisplayModel {
 			);
 		}
 		return $result;
+	}
+
+	/**
+	 * A result listens for the delivery only while one is awaited and a ping was sent: Set up's comes with the new
+	 * hook, and a Repair or Validate listens only when its ping request succeeded.
+	 */
+	private function listens( string $code, ?string $ping_code, bool $delivered ): bool {
+		if ( $delivered ) {
+			return false;
+		}
+
+		return null === $ping_code
+			? 'configured_pending_delivery' === $code
+			: in_array( $ping_code, self::PING_REQUESTED, true ) && ( 'repaired_pending_delivery' === $code || in_array( $code, self::SETTINGS_MATCHED, true ) );
+	}
+
+	/** Whether a signed delivery has verified the stored record. It reads Booster's record and the site's signing secrets only. */
+	public function delivery_confirmed( string $provider_code, string $repository_id ): bool {
+		$this->projected_statuses = array();
+		$record                   = $this->records->find( $provider_code, $repository_id );
+
+		return null !== $record && 'configured' === $this->projected_status( $record );
 	}
 
 	/**

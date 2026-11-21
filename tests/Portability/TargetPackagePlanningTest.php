@@ -34,6 +34,7 @@ final class TargetPackagePlanningTest extends TestCase {
 				'repository_access_failed',
 				'repository_identity_mismatch',
 				'destination_conflict',
+				'package_folder_mismatch',
 				'provider_selection_changed',
 				'provider_unavailable',
 				'provider_temporarily_unavailable',

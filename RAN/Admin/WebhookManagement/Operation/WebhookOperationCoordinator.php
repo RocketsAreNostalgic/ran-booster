@@ -397,7 +397,8 @@ final class WebhookOperationCoordinator {
 			);
 		}
 		if ( ! ( ( 'succeeded' === $state && in_array( $code, array( 'ping_requested', 'ping_verified' ), true ) ) || ( 'failed' === $state && 'ping_delivery_failed' === $code ) ) ) {
-			return $code;
+			// A ping code its state contradicts, such as a failed ping_requested, never counts as a ping that was sent.
+			return in_array( $code, array( 'ping_requested', 'ping_verified', 'ping_delivery_failed' ), true ) ? 'operation_failed' : $code;
 		}
 
 		$status = 'succeeded' === $state && 'configured' === $record->status() ? 'configured' : 'needs_verification';

@@ -133,7 +133,8 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$service   = $this->service( $this->createStub( PluginRepository::class ), $this->createStub( ThemeRepository::class ), $provider );
 		$package   = new BlueprintPackage( 'plugin', $identifier, 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', 40 ) ) );
 		$blueprint = new PackageBlueprint( array( $package ) );
-		self::assertSame( 'unsupported_blueprint_operation', $service->review( $blueprint )[0]->reason->value );
+		// A capitalised root folder would install in lower case, which the plan now names as a folder mismatch.
+		self::assertSame( 'Example/main.php' === $identifier ? 'package_folder_mismatch' : 'unsupported_blueprint_operation', $service->review( $blueprint )[0]->reason->value );
 		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, false, true, null, $this->provider_expectation )['status'] );
 	}
 

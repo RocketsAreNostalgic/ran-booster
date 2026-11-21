@@ -127,15 +127,17 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core loads lock-pinned `ran/wp-release-updater` beta.21 after single-site
+Core loads lock-pinned `ran/wp-release-updater` beta.22 after single-site
 admission. The root Composer manifest declares runtime protocol 11, up from 8.
 The packaged runtime manifest and the active broker must agree with that
 declaration. Physical copies with conflicting protocols refuse target
 registration in either load order.
 
-The published beta.21 commit is
-`6f5d66b3f5b6f7e1ece992d36da80b19f5788907`. Its runtime revision is
-`69c8bdb41e1e4f4ec1af9e53d453fecc60b87e78d9dc07ffb7b9310015164e5d`.
+The published beta.22 commit is
+`75a76877dcd254e3ae88b0b1d0a2c0ea9c691a87`. Its runtime revision is
+`eebda6cfffd0daa0f859458dd5accd1b47f15714e09768d51e6156173cf1ddf7`.
+Beta.22 adds the exact-release offer, `ran_wp_release_updater_offer_release_v1`,
+and keeps runtime protocol 11.
 Core's bundled GitHub provider shares this copy. GitHub Example v0.2.2 carries
 beta.15/Protocol 7, and standalone updater Example v0.2.0 carries
 beta.13/Protocol 6. Example installations with a separate runtime need a

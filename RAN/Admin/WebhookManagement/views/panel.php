@@ -22,19 +22,27 @@ $render_result_notices = static function () use ( $result_notices, $webhooks_url
 		<?php if ( array() !== $result_notices ) : ?>
 			<div class="ran-booster-repository-webhook-management__result">
 			<?php foreach ( $result_notices as $notice ) : ?>
-				<?php $intent = substr( (string) $notice['class'], 7 ); ?>
-				<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $intent ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( $intent ); ?>"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+				<?php
+				$intent = substr( (string) $notice['class'], 7 );
+				// A result awaiting its delivery carries what the script needs to listen; the text it swaps is the message, or the Ping line.
+				$listen = is_array( $notice['listen'] ?? null ) ? $notice['listen'] : null;
+				?>
+				<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $intent ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( $intent ); ?>"<?php echo null === $listen ? '' : ' data-ran-booster-webhook-listen="' . esc_url( $listen['status'] ) . '" data-ran-booster-webhook-settle="' . esc_url( $listen['settle'] ) . '" data-ran-booster-webhook-listen-label="' . esc_attr( $listen['label'] ) . '"'; ?>><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 					<?php if ( isset( $notice['heading'] ) ) : ?>
 						<p><strong><?php echo esc_html( $notice['heading'] ); ?></strong></p>
 					<?php endif; ?>
 					<?php if ( isset( $notice['lines'] ) ) : ?>
-						<?php foreach ( $notice['lines'] as $line ) : ?>
-							<p><strong><?php echo esc_html( $line['label'] ); ?>:</strong> <?php echo esc_html( $line['text'] ); ?></p>
+						<?php foreach ( $notice['lines'] as $index => $line ) : ?>
+							<?php if ( null !== $listen && array_key_last( $notice['lines'] ) === $index ) : ?>
+								<p><strong><?php echo esc_html( $line['label'] ); ?>:</strong> <span data-ran-booster-webhook-listen-text><?php echo esc_html( $line['text'] ); ?></span></p>
+							<?php else : ?>
+								<p><strong><?php echo esc_html( $line['label'] ); ?>:</strong> <?php echo esc_html( $line['text'] ); ?></p>
+							<?php endif; ?>
 						<?php endforeach; ?>
 					<?php elseif ( is_string( $notice['link_sentence'] ?? null ) ) : ?>
 						<p><?php echo wp_kses_post( \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::link_sentence( $notice['link_sentence'], $webhooks_url, true ) ); ?></p>
 					<?php else : ?>
-						<p><?php echo esc_html( $notice['message'] ); ?></p>
+						<p<?php echo null !== $listen ? ' data-ran-booster-webhook-listen-text' : ''; ?>><?php echo esc_html( $notice['message'] ); ?></p>
 					<?php endif; ?>
 					<?php foreach ( $notice['details'] ?? array() as $detail ) : ?>
 						<p><?php echo esc_html( $detail ); ?></p>

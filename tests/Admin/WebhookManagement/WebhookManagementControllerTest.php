@@ -2051,7 +2051,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 		self::assertStringContainsString( 'notice notice-warning inline', $html );
 		self::assertStringContainsString( '<strong>Settings:</strong> Match</p>', $html );
-		self::assertStringContainsString( '<strong>Ping:</strong> Ping sent. Reload to check that it arrived.</p>', $html );
+		self::assertStringContainsString( '<strong>Ping:</strong> <span data-ran-booster-webhook-listen-text>Ping sent. Reload to check that it arrived.</span></p>', $html );
 		self::assertStringNotContainsString( 'delivery history', $html );
 
 		// The receiver verified the ping with the record's own secret before the reload.
@@ -2078,7 +2078,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 1, $store->save_attempts );
 		$html = $this->render_panel( $gateway, $store );
 		self::assertStringContainsString( 'notice notice-warning inline', $html );
-		self::assertStringContainsString( '<strong>Ping:</strong> Ping sent. Reload to check that it arrived.</p>', $html );
+		self::assertStringContainsString( '<strong>Ping:</strong> <span data-ran-booster-webhook-listen-text>Ping sent. Reload to check that it arrived.</span></p>', $html );
 		self::assertStringNotContainsString( 'Signed delivery received', $html );
 
 		// A provider's own report of the ping never confirms the record either.
@@ -2152,7 +2152,9 @@ final class WebhookManagementControllerTest extends TestCase {
 			$_GET = $query;
 			$html = $this->render_panel( $gateway, $store );
 			self::assertStringContainsString( 'notice notice-warning inline', $html, $operation );
-			self::assertStringContainsString( '<p>' . htmlspecialchars( $sentence, ENT_QUOTES ) . '</p>', $html, $operation );
+			// The pending sentence is what a listening result swaps out, and what it returns to when no delivery arrives.
+			self::assertStringContainsString( '<p data-ran-booster-webhook-listen-text>' . htmlspecialchars( $sentence, ENT_QUOTES ) . '</p>', $html, $operation );
+			self::assertStringContainsString( 'data-ran-booster-webhook-listen-label="Listening for webhook delivery…"', $html, $operation );
 
 			// A signed delivery after the write verified the record before the page was shown.
 			$store->record = $this->record();
@@ -2175,7 +2177,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$changed                                 = '<p>Webhook repaired, but it then changed on GitHub, so no ping was sent.</p>';
 		// Each ping code reaches exactly one of the Repair sentences.
 		$cases = array(
-			'ping sent'            => array( $this->operation_result( 'succeeded', 'ping_requested' ), 'ping_requested', 'needs_verification', 'warning', '<p>Webhook repaired. Reload to check that its delivery arrived.</p>' ),
+			'ping sent'            => array( $this->operation_result( 'succeeded', 'ping_requested' ), 'ping_requested', 'needs_verification', 'warning', '<p data-ran-booster-webhook-listen-text>Webhook repaired. Reload to check that its delivery arrived.</p>' ),
 			'ping refused'         => array( $this->operation_result( 'failed', 'ping_failed' ), 'ping_failed', 'needs_verification', 'warning', $unsent ),
 			'ping ambiguous'       => array( $this->operation_result( 'ambiguous', 'operation_failed' ), 'operation_failed', 'needs_verification', 'warning', $unsent ),
 			'settings drifted'     => array( $this->operation_result( 'succeeded', 'ping_requested', configuration: $drift ), 'configuration_drift', 'configuration_drift', 'warning', $changed ),
@@ -2204,7 +2206,9 @@ final class WebhookManagementControllerTest extends TestCase {
 			self::assertStringNotContainsString( '<strong>Settings:</strong>', $html, $case );
 			self::assertStringContainsString( 'notice notice-' . $intent . ' inline', $html, $case );
 			self::assertStringContainsString( $sentence, $html, $case );
-			self::assertSame( 1, substr_count( $html, '<p>Webhook repaired' ), $case );
+			self::assertSame( 1, substr_count( $html, 'Webhook repaired' ), $case );
+			// Only a Repair whose ping was sent listens for its delivery.
+			self::assertSame( 'ping_requested' === $ping, str_contains( $html, 'data-ran-booster-webhook-listen=' ), $case );
 		}
 
 		// With the provider's webhooks page known, the failed delivery's sentence links it, and nothing else does.
@@ -2256,7 +2260,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$store->record = $this->record( status: 'needs_verification' );
 		$html          = $this->render_panel( store: $store );
 		self::assertStringContainsString( 'notice notice-warning inline', $html );
-		self::assertStringContainsString( '<p>Webhook set up. Reload to check that its first delivery arrived.</p>', $html );
+		self::assertStringContainsString( '<p data-ran-booster-webhook-listen-text>Webhook set up. Reload to check that its first delivery arrived.</p>', $html );
 		self::assertStringNotContainsString( '<p><strong>', $html );
 		self::assertStringNotContainsString( 'delivery history', $html );
 
@@ -2310,6 +2314,129 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array(), $gateway->calls );
 		self::assertSame( array(), $connection->inserted );
 		self::assertSame( 0, $store->save_attempts );
+	}
+
+	public function test_a_ping_result_whose_state_contradicts_its_code_never_counts_as_sent(): void {
+		$contradictions = array(
+			'failed ping requested'     => $this->operation_result( 'failed', 'ping_requested' ),
+			'ambiguous ping verified'   => $this->operation_result( 'ambiguous', 'ping_verified' ),
+			'succeeded failed delivery' => $this->operation_result( 'succeeded', 'ping_delivery_failed', delivery: 'unknown' ),
+		);
+		foreach ( $contradictions as $case => $ping ) {
+			foreach ( array( 'validate', 'reconfigure' ) as $operation ) {
+				list( $gateway, $store ) = $this->validate_fixtures(
+					array(
+						'check'       => $this->confirmed_check(),
+						'reconfigure' => $this->operation_result( 'succeeded', 'configured_pending_delivery' ),
+						'test'        => $ping,
+					),
+					'needs_verification'
+				);
+				$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request( array( 'repository_webhook_management_operation' => $operation ) ), 'validate' === $operation ? 'check_nonce' : 'valid' ) );
+
+				self::assertSame( 'operation_failed', $redirect['webhook_management_ping'], $case . ' ' . $operation );
+				$_GET = $redirect;
+				self::assertStringNotContainsString( 'data-ran-booster-webhook-listen=', $this->render_panel( $gateway, $store ), $case . ' ' . $operation );
+			}
+		}
+	}
+
+	public function test_a_result_listens_only_while_a_sent_ping_awaits_its_delivery(): void {
+		$store         = new OperationStoreFixture();
+		$store->record = $this->record( status: 'needs_verification' );
+		$cases         = array(
+			'set up'                 => array( 'configured_pending_delivery', null, true ),
+			'repair ping sent'       => array( 'repaired_pending_delivery', 'ping_requested', true ),
+			'validate ping sent'     => array( 'configuration_confirmed', 'ping_requested', true ),
+			'validate ping verified' => array( 'configured_pending_delivery', 'ping_verified', true ),
+			'validate verified hook' => array( 'verified', 'ping_requested', true ),
+			'repair ping failed'     => array( 'repaired_pending_delivery', 'ping_delivery_failed', false ),
+			'repair hook changed'    => array( 'repaired_pending_delivery', 'configuration_drift', false ),
+			'repair hook missing'    => array( 'repaired_pending_delivery', 'remote_missing', false ),
+			'validate ping skipped'  => array( 'configuration_drift', 'skipped', false ),
+			'validate ping refused'  => array( 'configuration_confirmed', 'ping_failed', false ),
+			'repair ping unsent'     => array( 'repaired_pending_delivery', 'operation_failed', false ),
+			'standalone check'       => array( 'configuration_confirmed', null, false ),
+			'failed set up'          => array( 'setup_failed', null, false ),
+		);
+		foreach ( $cases as $case => list( $code, $ping, $listens ) ) {
+			$_GET = array_filter(
+				array(
+					'webhook_management_result' => $code,
+					'webhook_management_ping'   => $ping,
+				)
+			);
+			$html = $this->render_panel( store: $store );
+			self::assertSame( $listens, str_contains( $html, 'data-ran-booster-webhook-listen=' ), $case );
+			if ( ! $listens ) {
+				self::assertStringNotContainsString( 'data-ran-booster-webhook-listen-text', $html, $case );
+				continue;
+			}
+			// The status check names this repository and carries its own nonce; the settle address repeats the result's codes only.
+			$nonce = 'nonce-for-' . hash( 'sha256', 'ran_booster_repository_webhook_delivery_gh_1234' );
+			self::assertStringContainsString( 'data-ran-booster-webhook-listen="https://example.test/wp-admin/admin-ajax.php?action=ran_booster_repository_webhook_delivery_status&amp;provider_code=gh&amp;repository_id=1234&amp;_wpnonce=' . $nonce . '"', $html, $case );
+			if ( 1 !== preg_match( '/data-ran-booster-webhook-settle="([^"]*)"/', $html, $settle ) ) {
+				self::fail( $case );
+			}
+			$settle_parts = wp_parse_url( html_entity_decode( $settle[1] ) );
+			self::assertIsArray( $settle_parts, $case );
+			parse_str( $settle_parts['query'] ?? '', $settle_query );
+			self::assertSame(
+				array_filter(
+					array(
+						'page'                      => 'ran-booster',
+						'tab'                       => 'gh',
+						'repository'                => '1234',
+						'webhook_management_result' => $code,
+						'webhook_management_ping'   => $ping,
+					)
+				),
+				$settle_query,
+				$case
+			);
+		}
+
+		// A record a signed delivery has verified is shown as received, with nothing to listen for.
+		$store->record = $this->record();
+		$_GET          = array( 'webhook_management_result' => 'configured_pending_delivery' );
+		self::assertStringNotContainsString( 'data-ran-booster-webhook-listen=', $this->render_panel( store: $store ) );
+	}
+
+	public function test_the_delivery_status_reads_only_the_stored_record_after_capability_and_nonce(): void {
+		$query      = array(
+			'provider_code' => 'gh',
+			'repository_id' => '1234',
+			'_wpnonce'      => 'delivery_nonce',
+		);
+		$gateway    = $this->gateway();
+		$store      = new OperationStoreFixture();
+		$controller = $this->controller( gateway: $gateway, store: $store );
+
+		self::assertFalse( $controller->delivery_status( $query ) );
+		$store->record = $this->record( status: 'needs_verification' );
+		self::assertFalse( $controller->delivery_status( $query ) );
+		$store->record = $this->record();
+		self::assertTrue( $controller->delivery_status( $query ) );
+
+		foreach ( array(
+			'_wpnonce'      => 'check_nonce',
+			'repository_id' => '999',
+			'provider_code' => 'unknown',
+		) as $key => $value ) {
+			self::assertNull( $controller->delivery_status( array( $key => $value ) + $query ), $key );
+		}
+		$forbidden = new WebhookManagementController(
+			new WebhookOperationCoordinator( $gateway, $store ),
+			$this->display( $gateway, $store ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'gh', 'GitHub' ) ) ),
+			$this->package_authorities(),
+			static fn (): bool => false,
+			static fn (): bool => true,
+			static fn ( string $action ): string => $action
+		);
+		self::assertNull( $forbidden->delivery_status( $query ) );
+		// It never reaches the Git provider.
+		self::assertSame( array(), $gateway->calls );
 	}
 
 	public function test_validate_requires_the_capability_once_up_front(): void {
@@ -2383,7 +2510,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		if ( 1 !== preg_match( '#<p><strong>Settings:</strong> ([^<]*)</p>#', $html, $settings_line ) ) {
 			self::fail( 'The Settings line is missing.' );
 		}
-		if ( 1 !== preg_match( '#<p><strong>Ping:</strong> ([^<]*)</p>#', $html, $ping_line ) ) {
+		if ( 1 !== preg_match( '#<p><strong>Ping:</strong> (?:<span data-ran-booster-webhook-listen-text>)?([^<]*)#', $html, $ping_line ) ) {
 			self::fail( 'The Ping line is missing.' );
 		}
 		self::assertStringContainsString( $settings, html_entity_decode( $settings_line[1] ) );
@@ -2590,6 +2717,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			) ) || ( 'check_nonce' === $nonce && 'ran_booster_repository_webhook_check_' . $provider_code . '_1234' === $action )
 				|| ( 'forget_nonce' === $nonce && 'ran_booster_repository_webhook_forget_' . $provider_code . '_1234' === $action )
 				|| ( 'test_nonce' === $nonce && 'ran_booster_repository_webhook_test_' . $provider_code . '_1234' === $action )
+				|| ( 'delivery_nonce' === $nonce && 'ran_booster_repository_webhook_delivery_' . $provider_code . '_1234' === $action )
 				|| ( str_starts_with( $action, 'ran_booster_repository_webhook_result_' )
 				&& hash_equals( hash_hmac( 'sha256', $action, 'test-result-nonce' ), $nonce ) ),
 			static fn ( string $action ): string => hash_hmac( 'sha256', $action, 'test-result-nonce' )

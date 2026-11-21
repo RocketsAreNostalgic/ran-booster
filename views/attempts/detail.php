@@ -85,7 +85,7 @@ $package_settings_label = 'theme' === $package_type
 			<div><dt><?php esc_html_e( 'Reference', 'ran-booster' ); ?></dt><dd>
 			<?php
 			$copy_value = (string) $item['correlation_id'];
-			$copy_label = __( 'Copy support reference', 'ran-booster' );
+			$copy_label = __( 'Copy reference', 'ran-booster' );
 			include dirname( __DIR__ ) . '/copy-displayed-value.php';
 			?>
 			</dd></div>

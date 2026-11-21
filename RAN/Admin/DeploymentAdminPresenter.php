@@ -74,7 +74,7 @@ final class DeploymentAdminPresenter {
 			return null;
 		}
 		status_header( 400 );
-		/* translators: 1: safe deployment result, 2: random support reference, 3: activity page URL. */
+		/* translators: 1: safe deployment result, 2: random reference, 3: activity page URL. */
 		$message = sprintf( __( '%1$s Reference: <code>%2$s</code>. <a href="%3$s">View deployment activity</a>.', 'ran-booster' ), DeploymentOutcomeMessage::for_code_html( $outcome_code, $this->retained_branch_facts( $reference, operation: $operation ) ), $reference, admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' ) );
 
 		return $this->outcome( 'error', 'ran_booster_deployment_failed', $message, $reference, $operation, $outcome_code );
@@ -149,7 +149,7 @@ final class DeploymentAdminPresenter {
 		$activity_url = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' )
 			. '&attempt=' . rawurlencode( (string) $attempt['id'] ) . '&reference=' . rawurlencode( $reference );
 		if ( $failure->is_left_running() ) {
-			/* translators: 1: random support reference, 2: activity record link. */
+			/* translators: 1: random reference, 2: activity record link. */
 			$message = sprintf( __( 'Deployment attempt left running. Reference: <code>%1$s</code>. <a href="%2$s">Reconcile it in Recent Activity</a>.', 'ran-booster' ), $reference, esc_url( $activity_url ) );
 			status_header( 409 );
 

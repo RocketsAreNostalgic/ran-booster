@@ -2099,7 +2099,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<dt>Origin</dt><dd>Repository webhook</dd>', $html );
 		self::assertStringContainsString( '<code data-copy-value>delivery-7</code>', $html );
 		self::assertStringContainsString( 'aria-label="Copy Git provider request ID"', $html );
-		self::assertStringContainsString( 'aria-label="Copy support reference"', $html );
+		self::assertStringContainsString( 'aria-label="Copy reference"', $html );
 		self::assertStringContainsString( 'name="_wpnonce" value="ran-booster-resolve-needs-attention"', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="resolve-needs-attention"', $html );
 		self::assertStringContainsString( 'name="ran_booster[attempt_id]" value="7"', $html );

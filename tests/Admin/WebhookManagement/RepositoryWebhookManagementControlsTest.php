@@ -20,6 +20,7 @@ use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\Tests\Support\AbsentWebhookManagementCapabilityProvider;
+use RAN\Tests\Support\CapturesBoosterLog;
 use RAN\Tests\Support\CompleteWebhookManagementCapabilityProvider;
 use RAN\Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
 use RAN\Tests\Support\ManagementOnlyWebhookManagementCapabilityProvider;
@@ -31,8 +32,12 @@ require_once __DIR__ . '/WordPressInstallationStoreWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/Support/WebhookManagementCapabilityProviders.php';
 require_once dirname( __DIR__, 2 ) . '/Support/PackageViewWordPressFunctions.php';
 require_once __DIR__ . '/Display/WebhookDisplayModelWordPressFunctions.php';
+require_once dirname( __DIR__, 2 ) . '/Support/CapturesBoosterLog.php';
+require_once dirname( __DIR__, 2 ) . '/Support/DocumentationHookWordPressFunctions.php';
 
 final class RepositoryWebhookManagementControlsTest extends TestCase {
+	use CapturesBoosterLog;
+
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
@@ -871,6 +876,32 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$normalizer->normalize( $core_rows, $presented, 'fixture-provider' );
 	}
 
+	public function test_a_stored_record_failing_a_row_check_falls_back_to_the_rows_before_the_webhook_pass(): void {
+		$this->start_log_capture();
+		try {
+			$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array( 'fixture-provider:202' => $this->retained_record( 'owner/retired' ) );
+			$healthy       = array_column( $this->project_fixture_page()['rows'], null, 'key' );
+			$healthy_lines = $this->captured_log_lines();
+
+			$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array( 'fixture-provider:202' => $this->retained_record( 'owner/' . str_repeat( 'r', 300 ) ) );
+			$fallback = array_column( $this->project_fixture_page()['rows'], null, 'key' );
+			$lines    = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+
+		self::assertSame( array(), $healthy_lines );
+		self::assertCount( 2, $healthy );
+		self::assertSame( 'core:webhook-recorded-status', array_values( array_filter( $healthy, static fn ( array $row ): bool => $row['historical'] ) )[0]['details'][0]['key'] );
+		self::assertSame( array( '101' ), array_map( 'strval', array_keys( $fallback ) ) );
+		self::assertSame( array(), $fallback['101']['details'] );
+		self::assertCount( 1, $lines );
+		self::assertStringContainsString( 'provider repository row enrichment unavailable', $lines[0] );
+		self::assertStringContainsString( '"step":"webhook_repository_row_enrichment"', $lines[0] );
+		self::assertStringContainsString( '"exception_class":"LogicException"', $lines[0] );
+		self::assertStringNotContainsString( 'rrrr', $lines[0] );
+	}
+
 	public function test_repository_webhook_shell_keeps_its_child_zones_and_control_labels_across_active_and_inactive_states(): void {
 		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
 		$items  = array(
@@ -1467,6 +1498,81 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			'https://example.test/wp-content/plugins/ran-booster/',
 			$this->package_authorities()
 		);
+	}
+
+	/** @return array<string, mixed> */
+	private function retained_record( string $repository ): array {
+		return array(
+			'schema_version'              => 4,
+			'provider_code'               => 'fixture-provider',
+			'repository_id'               => '202',
+			'repository'                  => $repository,
+			'hook_id'                     => '88',
+			'management_credential_id'    => 'credential_1',
+			'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+			'webhook_profile_scope'       => 'repository',
+			'webhook_profile_revision'    => 1,
+			'webhook_profile_disposition' => 'created',
+			'endpoint'                    => 'https://example.test/webhook',
+			'status'                      => 'configured',
+			'created_at'                  => '2026-08-20T01:02:03Z',
+			'checked_at'                  => '2026-08-20T01:02:03Z',
+		);
+	}
+
+	/** @return array<string, mixed> The repository projection project_page() returns for one current repository. */
+	private function project_fixture_page(): array {
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array(), 'https://example.test/webhook', array() ) );
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->package_authorities()
+		);
+		$controls->register();
+		$page = ( new ProviderRepositoryRowsNormalizer() )->project_page(
+			array(
+				'provider'                     => array(
+					'code'         => 'fixture-provider',
+					'label'        => 'Fixture Forge',
+					'capabilities' => array( 'webhooks' => true ),
+				),
+				'provider_task'                => 'repositories',
+				'provider_repositories'        => array(
+					'available'    => true,
+					'repositories' => array(
+						array(
+							'target'              => 'owner/example',
+							'repository_id'       => '101',
+							'source'              => 'branch',
+							'package_references'  => array( 'example/example.php' ),
+							'deployment_policies' => array(
+								'automatic' => 0,
+								'manual'    => 1,
+								'disabled'  => 0,
+							),
+						),
+					),
+				),
+				'managed_webhook_repositories' => array(
+					'available'    => true,
+					'repositories' => array(),
+				),
+				'webhook_assistance_readiness' => array(
+					'site'         => array(
+						'status'       => 'ready',
+						'reason_codes' => array(),
+					),
+					'repositories' => array(),
+				),
+			),
+			$controls
+		);
+
+		return array( 'rows' => $page['repository_table_rows'] );
 	}
 
 	private function package_authorities(): ManagedPackageWebhookAuthorityResolver {

@@ -505,36 +505,28 @@ final class ProviderRepositoryRowsNormalizer {
 				);
 			}
 		}
-		$core_rows    = null !== $webhook_management
-			? $webhook_management->enrich_repository_rows( $rows, $provider_code, $projections, $return_url )
-			: $rows;
-		$webhook_rows = $this->normalize( $rows, $core_rows, $provider_code, true );
-		$core_rows    = null !== $release_workflow
-			? $release_workflow->enrich_repository_rows( $webhook_rows, $provider_code, $projections, $return_url )
-			: $webhook_rows;
-		$core_rows    = $this->normalize( $webhook_rows, $core_rows, $provider_code, true );
-		try {
-			$presented = apply_filters(
-				'ran_booster_provider_repository_rows',
-				$core_rows,
-				$provider_code,
-				$projections,
-				$return_url
-			);
-			$rows      = $this->normalize( $core_rows, $presented, $provider_code );
-		} catch ( Throwable $failure ) {
-			$rows = $core_rows;
-			BoosterLogger::log_exception(
-				'provider repository row enrichment unavailable',
-				$failure,
-				array(
-					'source'   => 'admin',
-					'step'     => 'provider_repository_row_enrichment',
-					'provider' => $provider_code,
-				)
-			);
-		}
-		$selected = null;
+		$webhook_rows = $this->contained_pass(
+			$rows,
+			static fn (): mixed => null !== $webhook_management ? $webhook_management->enrich_repository_rows( $rows, $provider_code, $projections, $return_url ) : $rows,
+			$provider_code,
+			'webhook_repository_row_enrichment',
+			true
+		);
+		$core_rows    = $this->contained_pass(
+			$webhook_rows,
+			static fn (): mixed => null !== $release_workflow ? $release_workflow->enrich_repository_rows( $webhook_rows, $provider_code, $projections, $return_url ) : $webhook_rows,
+			$provider_code,
+			'release_workflow_repository_row_enrichment',
+			true
+		);
+		$rows         = $this->contained_pass(
+			$core_rows,
+			static fn (): mixed => apply_filters( 'ran_booster_provider_repository_rows', $core_rows, $provider_code, $projections, $return_url ),
+			$provider_code,
+			'provider_repository_row_enrichment',
+			false
+		);
+		$selected     = null;
 		foreach ( $rows as $row ) {
 			if ( '' !== $requested_id && false === ( $row['historical'] ?? false ) && ( $row['repository_id'] ?? null ) === $requested_id ) {
 				$selected = $row;
@@ -549,6 +541,31 @@ final class ProviderRepositoryRowsNormalizer {
 			'rows'         => $rows,
 			'selected'     => $selected,
 		);
+	}
+
+	/**
+	 * One enrichment pass, all or nothing: if it throws or its rows fail a check, the rows from before it stand and one bounded line names the step.
+	 *
+	 * @param array<array-key, array<string, mixed>> $before
+	 * @param callable(): mixed                      $enrich
+	 * @return array<array-key, array<string, mixed>>
+	 */
+	private function contained_pass( array $before, callable $enrich, string $provider_code, string $step, bool $core_pass ): array {
+		try {
+			return $this->normalize( $before, $enrich(), $provider_code, $core_pass );
+		} catch ( Throwable $failure ) {
+			BoosterLogger::log_exception(
+				'provider repository row enrichment unavailable',
+				$failure,
+				array(
+					'source'   => 'admin',
+					'step'     => $step,
+					'provider' => $provider_code,
+				)
+			);
+
+			return $before;
+		}
 	}
 
 	/**

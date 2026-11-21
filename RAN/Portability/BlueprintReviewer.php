@@ -13,6 +13,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 
 /** Classifies current local package state before any provider access. */
 final readonly class BlueprintReviewer {
@@ -81,7 +82,21 @@ final readonly class BlueprintReviewer {
 				&& ! in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true ) ) ) {
 			return new BlueprintPlanItem( $blueprint, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );
 		}
+		// A branch install lands in the folder its subfolder names; a different folder from the identifier's would only be found after installing.
+		if ( TargetPackageAction::INSTALL === $item->action && null === $blueprint->release_configuration && ! self::installs_under_its_folder( $blueprint ) ) {
+			return new BlueprintPlanItem( $blueprint, TargetPackageAction::BLOCKED, TargetPackageReason::PACKAGE_FOLDER_MISMATCH );
+		}
 		return $item;
+	}
+
+	private static function installs_under_its_folder( BlueprintPackage $package ): bool {
+		try {
+			$folder = PackageDirectory::installed_slug( $package->type, $package->identifier );
+
+			return PackageDirectory::installed_folder_matches( $folder, PackageDirectory::deployment_slug( $folder, $package->subdirectory ) );
+		} catch ( \InvalidArgumentException ) {
+			return false;
+		}
 	}
 
 	private function review_local_package( BlueprintPackage $blueprint, ?Package &$managed_package = null ): BlueprintPlanItem {

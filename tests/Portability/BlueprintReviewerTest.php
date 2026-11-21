@@ -68,6 +68,47 @@ final class BlueprintReviewerTest extends TestCase {
 		yield 'malformed management is protected' => array( true, true, null, 'malformed', TargetPackageAction::PROTECTED, TargetPackageReason::MALFORMED_MANAGEMENT );
 	}
 
+	/** @return iterable<string, array{string, string, ?string, bool}> */
+	public static function install_folder_names(): iterable {
+		yield 'plugin subfolder differs' => array( 'plugin', 'forms/forms.php', 'plugins/forms-v2', false );
+		yield 'theme subfolder differs' => array( 'theme', 'forms', 'themes/forms-v2', false );
+		yield 'plugin subfolder matches' => array( 'plugin', 'forms-v2/forms-v2.php', 'plugins/forms-v2', true );
+		yield 'theme subfolder matches' => array( 'theme', 'forms-v2', 'themes/forms-v2', true );
+		yield 'subfolder in capitals installs in lower case' => array( 'plugin', 'forms-v2/forms-v2.php', 'plugins/Forms-V2', true );
+		yield 'root plugin in capitals would install in lower case' => array( 'plugin', 'MyPlugin/MyPlugin.php', null, false );
+		yield 'root plugin matches' => array( 'plugin', 'example/example.php', null, true );
+	}
+
+	#[DataProvider( 'install_folder_names' )]
+	public function test_a_branch_install_whose_folder_would_differ_is_refused_in_the_plan( string $type, string $identifier, ?string $subdirectory, bool $installs ): void {
+		$plugins = $this->createStub( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$plugins->method( 'is_installed' )->willReturn( false );
+		$plugins->method( 'has_management_record' )->willReturn( false );
+		$themes->method( 'is_installed' )->willReturn( false );
+		$themes->method( 'has_management_record' )->willReturn( false );
+		$package = new BlueprintPackage( $type, $identifier, 'Example', 'gh', 'repository-id', 'owner/repository', 'main', $subdirectory );
+		$item    = ( new BlueprintReviewer( $plugins, $themes ) )->review_package( $package );
+
+		self::assertSame( $installs ? TargetPackageAction::INSTALL : TargetPackageAction::BLOCKED, $item->action );
+		self::assertSame( $installs ? TargetPackageReason::NONE : TargetPackageReason::PACKAGE_FOLDER_MISMATCH, $item->reason );
+	}
+
+	public function test_an_installed_package_and_a_release_install_are_not_refused_by_the_folder_check(): void {
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'is_installed' )->willReturnOnConsecutiveCalls( true, false );
+		$plugins->method( 'has_management_record' )->willReturn( false );
+		$reviewer = new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ) );
+
+		// Installed already: the folder is what it is, and connecting it has its own check.
+		$installed = new BlueprintPackage( 'plugin', 'forms/forms.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', 'plugins/forms-v2' );
+		self::assertSame( TargetPackageAction::ADOPT, $reviewer->review_package( $installed )->action );
+
+		// A release install does not take its folder from a repository subfolder.
+		$release = new BlueprintPackage( 'plugin', 'MyPlugin/MyPlugin.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, new ManagedReleaseConfiguration( 'MyPlugin', 'MyPlugin.php', 'stable' ) );
+		self::assertSame( TargetPackageAction::INSTALL, $reviewer->review_package( $release )->action );
+	}
+
 	public function test_unsupported_database_is_not_reclassified_as_blueprint_corruption(): void {
 		$plugins = $this->createMock( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );

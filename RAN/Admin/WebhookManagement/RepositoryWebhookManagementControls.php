@@ -483,6 +483,7 @@ final class RepositoryWebhookManagementControls {
 							'remote_missing' === $record->status() && null !== $provider_label => sprintf( __( 'This webhook was deleted on %s.', 'ran-booster' ), esc_html( $provider_label ) ),
 							// Nothing can be validated while the provider cannot reach this site; Forget stays available.
 							! $receiver_ready => __( 'Booster has a record of this webhook.', 'ran-booster' ),
+							'needs_verification' === $record->status() => __( 'Booster hasn\'t received a signed delivery yet. Validate to trigger one.', 'ran-booster' ),
 							default => __( 'The recorded remote webhook needs review. Validate or inspect it at the Git provider.', 'ran-booster' ),
 						} ),
 				'state'   => $record_healthy ? 'is-ok' : ( null === $record ? ( null === $manual_at ? 'is-pending' : 'is-ok' ) : 'is-warning' ),

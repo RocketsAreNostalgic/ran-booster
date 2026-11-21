@@ -132,7 +132,8 @@ final class WebhookManagementController {
 			$this->admin_interaction->respond( $outcome );
 		}
 
-		$remediation = false === $result['inline_safe'] ? $this->safe_remediation( $result['remediation'] ) : null;
+		// A successful result has its own fixed sentence, so provider guidance rides only on the redirect of one that is not.
+		$remediation = false === $result['inline_safe'] && true !== $successful ? $this->safe_remediation( $result['remediation'] ) : null;
 		$args        = array( 'webhook_management_result' => $result_code );
 		if ( null !== $ping ) {
 			$args['webhook_management_ping'] = $ping;

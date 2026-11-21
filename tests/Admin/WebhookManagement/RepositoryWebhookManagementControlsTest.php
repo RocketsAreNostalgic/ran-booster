@@ -384,6 +384,55 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//button[@disabled])' ) );
 	}
 
+	public function test_repository_webhook_step_asks_for_a_signed_delivery_only_while_one_is_awaited(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$awaiting = "Booster hasn't received a signed delivery yet. Validate to trigger one.";
+		$review   = 'The recorded remote webhook needs review. Validate or inspect it at the Git provider.';
+		$cases    = array(
+			'needs_verification'  => $awaiting,
+			'configuration_drift' => $review,
+			'removal_pending'     => $review,
+		);
+		foreach ( $cases as $status => $sentence ) {
+			$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
+				'fixture-provider:1234' => array(
+					'schema_version'              => 4,
+					'provider_code'               => 'fixture-provider',
+					'repository_id'               => '1234',
+					'repository'                  => 'owner/example',
+					'hook_id'                     => '77',
+					'management_credential_id'    => 'credential_1',
+					'webhook_profile_id'          => 'wh_0123456789abcdef01234567',
+					'webhook_profile_scope'       => 'repository',
+					'webhook_profile_revision'    => 1,
+					'webhook_profile_disposition' => 'created',
+					'endpoint'                    => 'https://example.test/webhook',
+					'status'                      => $status,
+					'created_at'                  => '2026-08-20T01:02:03Z',
+					'checked_at'                  => '2026-08-20T01:02:03Z',
+				),
+			);
+			$facade = $this->createMock( WebhookAssistanceFacade::class );
+			$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array(), 'https://example.test/webhook', array() ) );
+			$controls = new RepositoryWebhookManagementControls(
+				$facade,
+				$this->createMock( AdminInteractionFacade::class ),
+				new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+				dirname( __DIR__, 3 ) . '/',
+				'https://example.test/wp-content/plugins/ran-booster/',
+				$this->package_authorities()
+			);
+			$controls->register();
+
+			ob_start();
+			$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', false );
+			$html = html_entity_decode( (string) ob_get_clean(), ENT_QUOTES );
+
+			self::assertStringContainsString( $sentence, $html, $status );
+			self::assertStringNotContainsString( $sentence === $awaiting ? $review : $awaiting, $html, $status );
+		}
+	}
+
 	public function test_repository_checklist_remains_visible_when_webhook_operations_are_unavailable(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options']                           = true;
 		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(
@@ -1258,7 +1307,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$presentation = new \ReflectionMethod( $display, 'result_presentation' );
 		$panel        = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
 		$section      = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
-		foreach ( array( 'configured_pending_delivery', 'ping_delivery_failed', 'removed', 'orphaned', 'manual_recovery_required', 'recovery_record_failed', 'record_conflict', 'record_update_failed' ) as $code ) {
+		foreach ( array( 'ping_delivery_failed', 'removed', 'orphaned', 'manual_recovery_required', 'recovery_record_failed', 'record_conflict', 'record_update_failed' ) as $code ) {
 			$result = $presentation->invoke(
 				$display,
 				$code,

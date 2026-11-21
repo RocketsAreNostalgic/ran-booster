@@ -1751,6 +1751,56 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 'Version 1.0.0 is installed. Updates are off for this package.', $rows[ $package->identifier() ]['status'] );
 	}
 
+	#[DataProvider( 'update_uri_failure_pairs' )]
+	public function test_an_update_uri_failure_the_eligibility_check_states_shows_one_sentence( string $eligibility_code, string $failure_code, string $sentence ): void {
+		$generic = 'Published release status needs attention.';
+		$package = new PackageProjection( 'release_asset' );
+		$status  = ReleaseManagementFixture::status( 'release_asset', eligibility_code: $eligibility_code, failure_code: $failure_code );
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, $status, $package->settings_url() );
+		$html = (string) ob_get_clean();
+		$rows = ( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->present_management( array( $package->identifier() => array() ), 'plugin', array( $package ), array( $package->identifier() => $status ) );
+
+		self::assertSame( 1, substr_count( $html, $sentence ) );
+		self::assertStringNotContainsString( 'data-ran-booster-release-status-notice', $html );
+		self::assertStringNotContainsString( $generic, $html );
+		self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
+		self::assertSame( $sentence, $rows[ $package->identifier() ]['status'] );
+	}
+
+	/** @return array<string,array{string,string,string}> */
+	public static function update_uri_failure_pairs(): array {
+		return array(
+			'missing'    => array( 'missing_update_uri', 'github_updater_installed_header_missing', 'This package header does not declare an Update URI for its configured repository.' ),
+			'mismatched' => array( 'mismatched_update_uri', 'github_updater_installed_update_uri_mismatch', 'This package header Update URI does not match its configured repository.' ),
+		);
+	}
+
+	#[DataProvider( 'unpaired_installed_failures' )]
+	public function test_an_installed_failure_the_eligibility_check_does_not_state_keeps_the_generic_sentence( string $eligibility_code, string $failure_code ): void {
+		$generic = 'Published release status needs attention.';
+		$package = new PackageProjection( 'release_asset' );
+		$status  = ReleaseManagementFixture::status( 'release_asset', eligibility_code: $eligibility_code, failure_code: $failure_code );
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, $status, $package->settings_url() );
+		$html = (string) ob_get_clean();
+		$rows = ( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->present_management( array( $package->identifier() => array() ), 'plugin', array( $package ), array( $package->identifier() => $status ) );
+
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-release-status-notice' ) );
+		self::assertStringContainsString( $generic, $html );
+		self::assertStringContainsString( 'Why this happened and how to fix it', $html );
+		self::assertSame( $generic, $rows[ $package->identifier() ]['status'] );
+	}
+
+	/** @return array<string,array{string,string}> */
+	public static function unpaired_installed_failures(): array {
+		return array(
+			'eligible package'          => array( 'eligible', 'github_updater_installed_header_missing' ),
+			'unreadable installed file' => array( 'missing_update_uri', 'github_updater_installed_file_unreadable' ),
+			'other eligibility code'    => array( 'mismatched_update_uri', 'github_updater_installed_header_missing' ),
+		);
+	}
+
 	public function test_manual_and_automatic_packages_keep_the_up_to_date_wording(): void {
 		foreach ( array( 'manual', 'automatic' ) as $policy ) {
 			self::assertStringContainsString( 'Version 1.0.0 is installed. No newer eligible release was found.</span>', $this->render_release_view( array( 'deployment_policy' => $policy ) ) );

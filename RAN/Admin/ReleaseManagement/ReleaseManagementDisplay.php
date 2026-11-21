@@ -103,7 +103,7 @@ final class ReleaseManagementDisplay {
 
 			&& '' !== ( $nonce_actions['inspect_candidate'] ?? '' )
 			&& ! $repository_blocked;
-		$status_notice_visible = $status_available && 'release_asset' === $source && '' !== $failure_code && ! $repository_blocked;
+		$status_notice_visible = $status_available && 'release_asset' === $source && '' !== $failure_code && ! $repository_blocked && ! $this->eligibility_explains_failure( $status );
 		$release_unchecked     = $status_available && 'release_asset' === $source && '' === $failure_code && '' === $status->last_checked_at() && ! $status->update_available();
 		$gate_notice           = $repository_conflict_code
 			? __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' )
@@ -764,7 +764,9 @@ final class ReleaseManagementDisplay {
 			}
 			if ( '' === (string) ( $rows[ $identifier ]['status'] ?? '' ) ) {
 				if ( '' !== $status->failure_code() ) {
-					$rows[ $identifier ]['status'] = $this->diagnostic_message( $status->failure_code(), null === $status->preflight() ? '' : $status->preflight()->reason_code() );
+					$rows[ $identifier ]['status'] = $this->eligibility_explains_failure( $status )
+						? $this->eligibility_message( $status->eligibility(), $status->source() )
+						: $this->diagnostic_message( $status->failure_code(), null === $status->preflight() ? '' : $status->preflight()->reason_code() );
 				} else {
 					$rows[ $identifier ]['status'] = $this->release_status_message( $status );
 				}
@@ -1175,6 +1177,15 @@ final class ReleaseManagementDisplay {
 			'invalid_repository' => __( 'The configured repository is invalid.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'This package already registers its own release updater. Use either that updater or Booster published-release tracking, not both.', 'ran-booster' ),
 			default => __( 'The installed plugin or theme identity is not eligible for published release tracking.', 'ran-booster' ),
+		};
+	}
+
+	/** A status failure whose condition the package's own eligibility check already states, in its own sentence. */
+	private function eligibility_explains_failure( ReleaseTrackingStatus $status ): bool {
+		return match ( $status->failure_code() ) {
+			'github_updater_installed_header_missing' => 'missing_update_uri' === $status->eligibility()->code(),
+			'github_updater_installed_update_uri_mismatch' => 'mismatched_update_uri' === $status->eligibility()->code(),
+			default => false,
 		};
 	}
 

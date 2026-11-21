@@ -199,14 +199,49 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		self::assertSame( 'verified', $evidence['outcome'] );
 	}
 
-	public function test_changed_source_revision_and_provider_generation_invalidate_evidence(): void {
+	public function test_a_save_that_changes_nothing_checked_keeps_the_stored_result_and_its_time(): void {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
 		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
-		$package->set_source( PackageSource::BRANCH, 2 );
-		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+		$before = $store->find( 'plugin', $package, 'profile-a' );
+		self::assertNotNull( $before );
 
+		// Every save, including Save and reinstall and a save with no change, raises the source revision.
+		$package->set_source( PackageSource::BRANCH, 2 );
+		$package->set_source( PackageSource::BRANCH, 3 );
+
+		self::assertSame( $before, $store->find( 'plugin', $package, 'profile-a' ) );
+	}
+
+	/** @param callable(BranchEvidencePackage): void $change */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'changes_to_what_was_checked' )]
+	public function test_a_change_to_what_was_checked_drops_the_stored_result( callable $change ): void {
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main', true, 'cred-a' ) );
+		$store->begin_check( 'plugin', $package, 'profile-a' );
+		$store->record( 'plugin', $package, 'profile-a', 'branch_unavailable' );
+		self::assertNotNull( $store->find( 'plugin', $package, 'profile-a' ) );
+
+		$change( $package );
+
+		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
+	}
+
+	/** @return array<string, array{callable(BranchEvidencePackage): void}> */
+	public static function changes_to_what_was_checked(): array {
+		return array(
+			'branch'     => array( static fn ( BranchEvidencePackage $package ) => $package->set_repository( new ManagedRepository( 'gh', 'owner/example', '42', 'other', true, 'cred-a' ) ) ),
+			'subfolder'  => array( static fn ( BranchEvidencePackage $package ) => $package->set_subdirectory( 'inner' ) ),
+			'repository' => array( static fn ( BranchEvidencePackage $package ) => $package->set_repository( new ManagedRepository( 'gh', 'owner/elsewhere', '42', 'main', true, 'cred-a' ) ) ),
+			'credential' => array( static fn ( BranchEvidencePackage $package ) => $package->set_repository( new ManagedRepository( 'gh', 'owner/example', '42', 'main', true, 'cred-b' ) ) ),
+			'source'     => array( static fn ( BranchEvidencePackage $package ) => $package->set_source( PackageSource::RELEASE_ASSET, 2 ) ),
+		);
+	}
+
+	public function test_a_provider_generation_change_invalidates_evidence(): void {
+		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
+		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
 		$store->begin_check( 'plugin', $package, 'profile-a' );
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
 		$store->bump_provider_generation( 'gh' );
@@ -483,7 +518,7 @@ final class RepositoryBranchCheckEvidenceStoreTest extends TestCase {
 		$store   = new InMemoryRepositoryBranchCheckEvidenceStore();
 		$package = new BranchEvidencePackage( new ManagedRepository( 'gh', 'owner/example', '42', 'main' ) );
 		$store->begin_check( 'plugin', $package, 'profile-a' );
-		$package->set_source( PackageSource::BRANCH, 2 );
+		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
 		$store->record( 'plugin', $package, 'profile-a', 'verified' );
 		self::assertNull( $store->find( 'plugin', $package, 'profile-a' ) );
 	}

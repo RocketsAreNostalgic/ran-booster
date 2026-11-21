@@ -77,7 +77,7 @@ class RepositoryBranchCheckEvidenceStore {
 			'subject_type'     => $type,
 			'subject_identity' => (string) $package->get_identifier(),
 			'adoption_token'   => AdoptionIdentity::of( $package ),
-			'context'          => hash( 'sha256', $this->target_fingerprint( $package ) . ':' . $this->all()['generation'] ),
+			'context'          => hash( 'sha256', $this->target_fingerprint( $package, true ) . ':' . $this->all()['generation'] ),
 			'purpose'          => $purpose,
 			'provenance'       => 'core',
 			'actor'            => function_exists( 'get_current_user_id' ) ? get_current_user_id() : 0,
@@ -286,7 +286,13 @@ class RepositoryBranchCheckEvidenceStore {
 		return hash( 'sha256', $type . "\\0" . $package->get_identifier() . "\\0" . ( AdoptionIdentity::of( $package ) ?? throw new RuntimeException( 'The adoption identity is unavailable.' ) ) );
 	}
 
-	private function target_fingerprint( Package $package ): string {
+	/**
+	 * What a check observed: the repository, provider, source, branch, subfolder and credential.
+	 * A stored result leaves the source revision out: every save raises it, and a save that
+	 * changes none of these leaves what was checked as it was. Activity contexts keep it, so
+	 * an observation recorded for one revision is not read at the next.
+	 */
+	private function target_fingerprint( Package $package, bool $with_source_revision = false ): string {
 		$reference = $package->get_repository()->reference;
 		return hash(
 			'sha256',
@@ -295,7 +301,7 @@ class RepositoryBranchCheckEvidenceStore {
 				array(
 					AdoptionIdentity::of( $package ) ?? throw new RuntimeException( 'The adoption identity is unavailable.' ),
 					(string) $package->get_source()->value,
-					(string) $package->get_source_revision(),
+					$with_source_revision ? (string) $package->get_source_revision() : '',
 					(string) $package->get_provider_code(),
 
 					(string) $reference->provider_repository_id,

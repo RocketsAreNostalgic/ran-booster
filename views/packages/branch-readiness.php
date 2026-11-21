@@ -112,7 +112,6 @@ $repository_state_class         = match ( true ) {
 	! $identity_ready                                  => 'is-warning',
 	$repository_branch_verified                        => 'is-ok',
 	null !== $branch_check_result                      => 'is-warning',
-	$published_release_source && $saved_identity_ready => 'is-ok',
 	default                                            => 'is-pending',
 };
 $saved_branch_value = isset( $saved_branch_value ) && is_string( $saved_branch_value ) ? $saved_branch_value : $branch_value;
@@ -127,17 +126,19 @@ $branch_check_known = match ( true ) {
 	default                                          => __( 'Booster hasn\'t checked it yet.', 'ran-booster' ),
 };
 $saved_repository_message = $identity_ready
-	? ( '' !== $saved_branch_value
-		? sprintf(
-			/* translators: %s: branch name. */
-			__( 'This package tracks the branch <code>%s</code>.', 'ran-booster' ),
-			esc_html( $saved_branch_value )
-		)
-		: __( 'This package tracks the repository\'s default branch.', 'ran-booster' ) ) . ' ' . esc_html( $branch_check_known )
+	? sprintf(
+		/* translators: 1: branch name, 2: what Booster knows about it. */
+		__( 'This package tracks the branch <code>%1$s</code>. %2$s', 'ran-booster' ),
+		esc_html( $saved_branch_value ),
+		esc_html( $branch_check_known )
+	)
 	: __( 'The saved repository needs one stable Git provider identity.', 'ran-booster' );
+// The subfolder row uses this request's check, else a stored "not found" or "could not be checked"; a stored pass may have left the subfolder for later, so it says nothing.
+$subdirectory_check_outcome = $repository_branch_check_outcome
+	?? ( in_array( $repository_branch_check_evidence['outcome'] ?? null, array( 'subdirectory_unavailable', 'subdirectory_unverified' ), true ) ? $repository_branch_check_evidence['outcome'] : null );
 $saved_subdirectory_message = '' === $saved_subdirectory_value
 	? __( 'Repository root (no subdirectory).', 'ran-booster' )
-	: match ( $repository_branch_check_outcome ?? null ) {
+	: match ( $subdirectory_check_outcome ) {
 		'verified' => sprintf(
 			/* translators: %s: configured repository subdirectory. */
 			__( 'The subdirectory <code>%s</code> is accessible at this branch.', 'ran-booster' ),
@@ -161,7 +162,7 @@ $saved_subdirectory_message = '' === $saved_subdirectory_value
 	};
 $subdirectory_state_class = '' === $saved_subdirectory_value
 	? 'is-ok'
-	: match ( $repository_branch_check_outcome ?? null ) {
+	: match ( $subdirectory_check_outcome ) {
 		'verified' => 'is-ok',
 		'subdirectory_unavailable', 'subdirectory_unverified' => 'is-warning',
 		default => 'is-pending',

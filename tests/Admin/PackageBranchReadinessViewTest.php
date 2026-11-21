@@ -410,7 +410,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ready for manual deployments', strtolower( $html ) );
 	}
 
-	public function test_published_releases_keeps_the_saved_repository_identity_green(): void {
+	public function test_a_published_releases_package_has_no_green_tick_for_a_branch_that_was_not_checked(): void {
 		$provider_code              = 'gh';
 		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
@@ -428,7 +428,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item is-ok">\s*<span[^>]*><\\/span>\s*<strong>Saved repository<\\/strong>/s', $html );
+		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item is-pending">\s*<span[^>]*><\\/span>\s*<strong>Saved repository<\\/strong>/s', $html );
 		self::assertStringContainsString( 'This package tracks the branch <code>main</code>. Booster hasn&#039;t checked it yet.', $html );
 		self::assertStringContainsString( 'panel=repositories&amp;repository=repo-42&amp;repository_view=branch', $html );
 		self::assertStringContainsString( 'Pushes are ignored while Releases is active.', $html );
@@ -690,13 +690,18 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'gone', $html );
 	}
 
-	public function test_an_unset_default_branch_is_named_as_the_repository_default(): void {
-		$provider_code              = 'gh';
-		$provider_webhook_available = true;
-		$branch_value               = '';
-		$deployment_policy          = DeploymentPolicy::MANUAL->value;
-		$is_package_edit            = true;
-		$package_branch_readiness   = array(
+	/** @param array{outcome: string, checked_at: string}|null $evidence */
+	#[DataProvider( 'stored_subdirectory_result_provider' )]
+	public function test_the_subfolder_row_uses_a_stored_not_found_but_the_warning_belongs_to_the_checking_request( ?array $evidence, ?string $request_outcome, string $css_class, string $sentence, bool $shows_warning ): void {
+		$provider_code                    = 'gh';
+		$provider_webhook_available       = true;
+		$branch_value                     = 'main';
+		$saved_subdirectory_value         = 'packages/example';
+		$deployment_policy                = DeploymentPolicy::MANUAL->value;
+		$is_package_edit                  = true;
+		$repository_branch_check_evidence = $evidence;
+		$repository_branch_check_outcome  = $request_outcome;
+		$package_branch_readiness         = array(
 			'site'       => array(
 				'status'       => 'ready',
 				'reason_codes' => array(),
@@ -711,7 +716,57 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( "This package tracks the repository's default branch. Booster hasn&#039;t checked it yet.", $html );
+		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item ' . $css_class . '">\s*<span[^>]*><\/span>\s*<strong>Repository subdirectory<\/strong>/s', $html );
+		self::assertStringContainsString( $sentence, $html );
+		self::assertSame( $shows_warning, str_contains( $html, 'data-ran-booster-repository-branch-check' ) );
+	}
+
+	/** @return array<string, array{array{outcome: string, checked_at: string}|null, string|null, string, string, bool}> */
+	public static function stored_subdirectory_result_provider(): array {
+		$at = '2026-11-21T10:00:00Z';
+
+		return array(
+			'not found, stored'        => array(
+				array(
+					'outcome'    => 'subdirectory_unavailable',
+					'checked_at' => $at,
+				),
+				null,
+				'is-warning',
+				'The subdirectory <code>packages/example</code> was not found at this branch.',
+				false,
+			),
+			'could not check, stored'  => array(
+				array(
+					'outcome'    => 'subdirectory_unverified',
+					'checked_at' => $at,
+				),
+				null,
+				'is-warning',
+				'The subdirectory <code>packages/example</code> could not be checked.',
+				false,
+			),
+			'not found, just now'      => array(
+				array(
+					'outcome'    => 'subdirectory_unavailable',
+					'checked_at' => $at,
+				),
+				'subdirectory_unavailable',
+				'is-warning',
+				'The subdirectory <code>packages/example</code> was not found at this branch.',
+				true,
+			),
+			'stored pass says nothing' => array(
+				array(
+					'outcome'    => 'verified',
+					'checked_at' => $at,
+				),
+				null,
+				'is-pending',
+				'will be checked when Booster prepares the deployment archive.',
+				false,
+			),
+		);
 	}
 
 	public function test_only_a_passing_check_gets_the_green_tick_for_a_saved_branch_package(): void {

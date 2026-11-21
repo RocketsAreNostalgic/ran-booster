@@ -175,10 +175,13 @@ final readonly class WebhookProcessor {
 			// Recording is best effort; the delivery response never depends on it.
 			$write = InstallationStore::WRITE_FAILED;
 		}
-		if ( in_array( $write, array( InstallationStore::WRITE_APPLIED, InstallationStore::WRITE_UNCHANGED ), true ) ) {
+		if ( InstallationStore::WRITE_UNCHANGED === $write ) {
 			return;
 		}
-		BoosterLogger::log( 'Webhook delivery verification could not be recorded.', array( 'provider' => $verification->get_provider()->value ) );
+		BoosterLogger::log(
+			InstallationStore::WRITE_APPLIED === $write ? 'Webhook delivery verified the recorded webhook.' : 'Webhook delivery verification could not be recorded.',
+			array( 'provider' => $verification->get_provider()->value )
+		);
 	}
 
 	private function available( string $provider ): bool {

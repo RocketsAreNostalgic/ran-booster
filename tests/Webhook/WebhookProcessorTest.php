@@ -1262,6 +1262,44 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertSame( 'needs_verification', $failing->record?->status() );
 	}
 
+	public function test_marking_a_record_configured_logs_one_bounded_line(): void {
+		$body      = '{"zen":"Keep it logically awesome."}';
+		$request   = $this->request( $body, $this->signed_headers( $body ) );
+		$probe     = static fn (): ProviderRegistry => new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe( '4001' ) ) ) );
+		$directory = sys_get_temp_dir() . '/ran-webhook-verified-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/secrets.json' );
+		$capture->start();
+		\RAN\Logging\BoosterLogger::configure_capture( $capture );
+		try {
+			$store = new WebhookProcessorInstallationStore( $this->installation( 'needs_verification' ) );
+			$this->processor( $probe(), new WebhookProcessorCoordinator(), null, $store )->handle( 'gh', $request );
+			// The repeat finds the record configured and logs nothing more.
+			$this->processor( $probe(), new WebhookProcessorCoordinator(), null, $store )->handle( 'gh', $request );
+			$this->processor( $probe(), new WebhookProcessorCoordinator(), null, new WebhookProcessorInstallationStore( $this->installation( 'needs_verification' ), InstallationStore::WRITE_FAILED ) )->handle( 'gh', $request );
+
+			$lines = array_values( array_filter( array_column( $capture->snapshot()['entries'], 'line' ), static fn ( string $line ): bool => str_contains( $line, 'Webhook delivery' ) ) );
+			self::assertSame(
+				array(
+					'[ran-booster] Webhook delivery verified the recorded webhook. {"provider":"gh"}',
+					'[ran-booster] Webhook delivery verification could not be recorded. {"provider":"gh"}',
+				),
+				$lines
+			);
+		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			foreach ( array( '/ran-booster-debug.php', '/ran-booster-debug.php.lock' ) as $file ) {
+				if ( is_file( $directory . $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+					unlink( $directory . $file );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+			rmdir( $directory );
+		}
+	}
+
 	/**
 	 * @param array<string, string|list<string>> $headers
 	 * @return callable(): array{body: string, headers: array<string, string|list<string>>}

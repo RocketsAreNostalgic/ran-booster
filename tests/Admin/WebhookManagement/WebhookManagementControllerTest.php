@@ -2016,7 +2016,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 		self::assertStringContainsString( 'notice-error', $html );
 		self::assertStringNotContainsString( 'notice-success', $html );
-		self::assertStringContainsString( '<strong>Settings:</strong> Remote configuration confirmed; signed delivery unverified', $html );
+		self::assertStringContainsString( '<strong>Settings:</strong> Settings match', $html );
 		self::assertStringContainsString( '<strong>Ping:</strong> Ping delivery failed', $html );
 	}
 
@@ -2035,7 +2035,64 @@ final class WebhookManagementControllerTest extends TestCase {
 			self::assertInstanceOf( AdminInteractionOutcome::class, $interaction->outcome );
 		}
 		self::assertSame( AdminInteractionOutcome::VALIDATION_FAILURE, $interaction->outcome->kind() );
-		self::assertSame( 'Settings: Remote configuration confirmed; signed delivery unverified Ping: Ping delivery failed', $interaction->outcome->message() );
+		self::assertSame( 'Settings: Settings match Ping: Ping delivery failed', $interaction->outcome->message() );
+	}
+
+	public function test_validate_reports_the_signed_delivery_only_once_the_record_is_verified(): void {
+		list( $gateway, $store ) = $this->validate_fixtures(
+			array(
+				'check' => $this->confirmed_check(),
+				'test'  => $this->operation_result( 'succeeded', 'ping_requested' ),
+			),
+			'needs_verification'
+		);
+
+		$_GET = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+
+		$html = $this->render_panel( $gateway, $store );
+		self::assertStringContainsString( 'notice notice-warning inline', $html );
+		self::assertStringContainsString( '<strong>Settings:</strong> Settings match</p>', $html );
+		self::assertStringContainsString( '<strong>Ping:</strong> Ping sent. Reload to check that it arrived.</p>', $html );
+		self::assertStringNotContainsString( 'delivery history', $html );
+
+		// The receiver verified the ping with the record's own secret before the reload.
+		$store->record = $this->record();
+		$html          = $this->render_panel( $gateway, $store );
+		self::assertStringContainsString( 'notice notice-success inline', $html );
+		self::assertStringContainsString( '<strong>Ping:</strong> Signed delivery received</p>', $html );
+		self::assertStringNotContainsString( 'delivery history', $html );
+	}
+
+	public function test_setup_result_says_signed_delivery_received_once_the_record_is_verified(): void {
+		$_GET = array( 'webhook_management_result' => 'configured_pending_delivery' );
+
+		$store         = new OperationStoreFixture();
+		$store->record = $this->record( status: 'needs_verification' );
+		$html          = $this->render_panel( store: $store );
+		self::assertStringContainsString( '<p><strong>Webhook configured; delivery unverified</strong></p>', $html );
+
+		$store->record = $this->record();
+		$html          = $this->render_panel( store: $store );
+		self::assertStringContainsString( 'notice notice-success inline', $html );
+		self::assertStringContainsString( '<p>Signed delivery received</p>', $html );
+		self::assertStringNotContainsString( 'delivery unverified', $html );
+		self::assertStringNotContainsString( 'delivery history', $html );
+	}
+
+	public function test_a_provider_reporting_verified_delivery_never_verifies_the_record(): void {
+		$cases = array(
+			'setup'       => array( null, 'needs_verification' ),
+			'check'       => array( $this->record( status: 'needs_verification' ), 'needs_verification' ),
+			'reconfigure' => array( $this->record(), 'needs_verification' ),
+		);
+		foreach ( $cases as $operation => list( $record, $status ) ) {
+			$gateway         = $this->gateway();
+			$gateway->result = $this->operation_result( 'succeeded', 'verified' );
+			$store           = new OperationStoreFixture();
+			$store->record   = $record;
+			( new WebhookOperationCoordinator( $gateway, $store ) )->execute( $operation, 'gh', '1234', 'credential_1', 'setup' === $operation ? 'wh_0123456789abcdef01234567' : null, 'valid' );
+			self::assertSame( $status, $this->stored_status( $store ), $operation );
+		}
 	}
 
 	public function test_validate_rejects_a_bad_check_nonce_before_running_anything(): void {
@@ -2116,8 +2173,8 @@ final class WebhookManagementControllerTest extends TestCase {
 	/** @return array<string, array{0:string,1:string,2:string,3:string,4:string}> */
 	public static function validate_result_blocks(): array {
 		return array(
-			'matched and ping requested' => array( 'configuration_confirmed', 'ping_requested', 'notice-warning', 'Remote configuration confirmed; signed delivery unverified', 'Ping request accepted; signed delivery unverified' ),
-			'matched and ping failed'    => array( 'configuration_confirmed', 'ping_delivery_failed', 'notice-error', 'Remote configuration confirmed; signed delivery unverified', 'Ping delivery failed' ),
+			'matched and ping requested' => array( 'configuration_confirmed', 'ping_requested', 'notice-warning', 'Settings match', 'Ping sent. Reload to check that it arrived.' ),
+			'matched and ping failed'    => array( 'configuration_confirmed', 'ping_delivery_failed', 'notice-error', 'Settings match', 'Ping delivery failed' ),
 			'drifted, ping skipped'      => array( 'configuration_drift', 'skipped', 'notice-error', 'could not confirm', 'Skipped because the settings did not match.' ),
 			'hook absent, ping skipped'  => array( 'remote_missing', 'skipped', 'notice-error', 'could not confirm', 'Skipped because the settings were not confirmed.' ),
 			'uncertain, ping skipped'    => array( 'hook_inventory_unavailable', 'skipped', 'notice-error', 'list this repository', 'Skipped because the settings were not confirmed.' ),

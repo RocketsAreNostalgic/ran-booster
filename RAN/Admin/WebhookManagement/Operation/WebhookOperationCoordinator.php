@@ -210,7 +210,7 @@ final class WebhookOperationCoordinator {
 		$remediation = '' === $remediation ? null : $remediation;
 
 		if ( 'setup' === $operation ) {
-			$outcome    = $this->record_setup( $target, $result, $credential_id, $state, $code, $observed, $delivery );
+			$outcome    = $this->record_setup( $target, $result, $credential_id, $state, $code, $observed );
 			$successful = 'succeeded' === $state && $this->successful_code( $outcome['code'] );
 
 			return $this->finalize_outcome( $outcome, $remediation, $successful, $successful || 'failed' === $state );
@@ -245,7 +245,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
-	private function record_setup( AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $credential_id, string $state, string $code, string $observed, string $delivery ): array {
+	private function record_setup( AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $credential_id, string $state, string $code, string $observed ): array {
 		if ( 'failed' === $state ) {
 			return $this->outcome( $code );
 		}
@@ -262,9 +262,8 @@ final class WebhookOperationCoordinator {
 			$hook_id = InstallationRecord::unknown_hook_id();
 		}
 
-		$status = 'succeeded' === $state
-			? ( 'verified' === $delivery ? 'configured' : 'needs_verification' )
-			: 'orphaned';
+		// Only a signed delivery the receiver verifies makes a record configured, never the provider's own report.
+		$status = 'succeeded' === $state ? 'needs_verification' : 'orphaned';
 		$record = new InstallationRecord(
 			$target->provider_code(),
 			$target->repository_id(),
@@ -298,11 +297,7 @@ final class WebhookOperationCoordinator {
 			return $this->outcome( 'orphaned' );
 		}
 
-		return $this->outcome(
-			'succeeded' === $state
-				? ( 'verified' === $delivery ? 'verified' : 'configured_pending_delivery' )
-				: $code
-		);
+		return $this->outcome( 'succeeded' === $state ? 'configured_pending_delivery' : $code );
 	}
 
 	/** @param array<string, mixed> $configuration */
@@ -315,7 +310,6 @@ final class WebhookOperationCoordinator {
 			'partial' === $state || 'ambiguous' === $state => 'needs_verification',
 			'succeeded' === $state && 'absent' === $delivery => 'remote_missing',
 			'succeeded' === $state && in_array( 'mismatched', $configuration, true ) => 'configuration_drift',
-			'succeeded' === $state && 'verified' === $delivery => 'configured',
 			'profile_revision_stale' === $code => 'profile_revision_stale',
 			'local_profile_missing' === $code => 'local_profile_missing',
 			// A signed delivery already verified this hook; a clean check keeps that.
@@ -359,14 +353,14 @@ final class WebhookOperationCoordinator {
 			$profile->revision(),
 			$profile->disposition(),
 			$target->endpoint(),
-			'verified' === $delivery ? 'configured' : 'needs_verification',
+			'needs_verification',
 			$observed
 		);
 
 		$write = $this->records->save_if_current( $next, $record );
 
 		return $this->outcome(
-			$this->write_result_code( $write, 'verified' === $delivery ? 'verified' : 'configured_pending_delivery' ),
+			$this->write_result_code( $write, 'configured_pending_delivery' ),
 			$this->write_succeeded( $write ) ? null : $hook_id,
 			$this->write_succeeded( $write ) ? null : $profile->id()
 		);

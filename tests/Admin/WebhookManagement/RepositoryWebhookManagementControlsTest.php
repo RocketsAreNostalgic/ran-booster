@@ -433,7 +433,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 		self::assertStringContainsString( 'A signing secret was available when Booster last checked.', $html );
 		self::assertStringContainsString( 'This site can receive webhook deliveries.', $html );
-		self::assertStringContainsString( 'Configured at the last recorded check on 2026-08-20T01:02:03Z.', $html );
+		self::assertStringContainsString( 'Signed delivery received; last confirmed on 2026-08-20T01:02:03Z.', $html );
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		// The Branch demand step says it; the reason titles the disabled buttons without repeating as a notice.
 		self::assertStringContainsString( 'disabled-reason-setup">Webhook operations are unavailable while no eligible Branch package uses this repository.</span>', $html );

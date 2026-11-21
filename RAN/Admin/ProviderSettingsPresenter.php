@@ -49,7 +49,7 @@ use Throwable;
  *   credential_profiles: list<PackageCredential>,
  *   public_lookup: array{supports_default: bool, configured_id: string, configured_label: string, stale: bool}|null
  * }
- * @phpstan-type PackageProviderSettings array{default_provider: string, providers: list<PackageProviderChoice>}
+ * @phpstan-type PackageProviderSettings array{default_provider: string, providers: list<PackageProviderChoice>, restore_args?: array<string, string>}
  */
 final readonly class ProviderSettingsPresenter {
 	private const MAX_REPOSITORY_PACKAGE_SUMMARIES = 20;
@@ -239,6 +239,21 @@ final readonly class ProviderSettingsPresenter {
 		return $facts;
 	}
 
+	/**
+	 * Where an operator restores a Git provider that is not registered: the GitHub provider page while its
+	 * selection needs a decision or review, otherwise Extensions, which lists the providers to install or activate.
+	 *
+	 * @return array{page: string, tab?: string}
+	 */
+	public function provider_restore_args( string $provider_code ): array {
+		return 'gh' === $provider_code && 'available' !== ( $this->github_selection_diagnostics()['state'] ?? 'available' )
+			? array(
+				'page' => 'ran-booster',
+				'tab'  => 'gh',
+			)
+			: array( 'page' => 'ran-booster-extensions' );
+	}
+
 	/** @return array<string,mixed>|null Passive local claims; never credential material. */
 	public function github_selection_diagnostics(): ?array {
 		return $this->github_selection?->status();
@@ -351,7 +366,7 @@ final readonly class ProviderSettingsPresenter {
 
 			'default_provider' => $default_provider,
 			'providers'        => $providers,
-		);
+		) + ( array() === $providers ? array( 'restore_args' => $this->provider_restore_args( 'gh' ) ) : array() );
 	}
 
 	/**
@@ -397,7 +412,7 @@ final readonly class ProviderSettingsPresenter {
 
 			'default_provider' => $stored_provider,
 			'providers'        => $providers,
-		);
+		) + ( in_array( $stored_provider, $codes, true ) ? array() : array( 'restore_args' => $this->provider_restore_args( $stored_provider ) ) );
 	}
 
 	/**

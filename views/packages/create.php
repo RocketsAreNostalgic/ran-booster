@@ -30,8 +30,8 @@ $recovery_identifier   = isset( $recovery_identifier ) && is_string( $recovery_i
 $provider_options      = $package_provider_settings['providers'];
 $default_provider_code = $package_provider_settings['default_provider'];
 if ( array() === $provider_options ) {
-	// Nothing can be installed without a Git provider; Extensions is where one is restored.
-	$extensions_link = current_user_can( 'manage_options' ) ? '<a href="' . esc_url( add_query_arg( 'page', 'ran-booster-extensions', $package_view->get_admin_url() ) ) . '">' : '';
+	// Nothing can be installed without a Git provider; the link goes to where one is restored.
+	$extensions_link = current_user_can( 'manage_options' ) ? '<a href="' . esc_url( add_query_arg( $package_provider_settings['restore_args'] ?? array( 'page' => 'ran-booster-extensions' ), $package_view->get_admin_url() ) ) . '">' : '';
 	?>
 <h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is Plugin or Theme. */ __( 'Install New %s', 'ran-booster' ), $package_view->get_singular_label() ) ); ?></h2>
 <div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">

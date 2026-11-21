@@ -118,9 +118,13 @@ final class ProviderSettingsExpiryProjectionTest extends TestCase {
 			array(
 				'default_provider' => '',
 				'providers'        => array(),
+				'restore_args'     => array( 'page' => 'ran-booster-extensions' ),
 			),
 			$presenter->build_package_form()
 		);
+		// With no GitHub selection to review, every provider is restored from Extensions.
+		self::assertSame( array( 'page' => 'ran-booster-extensions' ), $presenter->provider_restore_args( 'gh' ) );
+		self::assertSame( array( 'page' => 'ran-booster-extensions' ), $presenter->provider_restore_args( 'bb' ) );
 		$existing = $presenter->build_existing_package_form( 'gh' );
 		self::assertSame( 'gh', $existing['default_provider'] );
 		self::assertFalse( $existing['providers'][0]['available'] );

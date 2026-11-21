@@ -943,6 +943,15 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$review    = $presenter->build( 'gh' )['github_selection'];
 		self::assertSame( 'missing', $review['status']['state'] );
 		self::assertSame( 'bundled', $review['review']['selected'] );
+		// A GitHub selection that needs review is restored on the GitHub provider page; any other provider from Extensions.
+		self::assertSame(
+			array(
+				'page' => 'ran-booster',
+				'tab'  => 'gh',
+			),
+			$presenter->provider_restore_args( 'gh' )
+		);
+		self::assertSame( array( 'page' => 'ran-booster-extensions' ), $presenter->provider_restore_args( 'bb' ) );
 		foreach ( array( 'booster.php', 'replacement.php', 'replacement.gh-replacement.json' ) as $file ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture file.
 			unlink( $root . '/' . $file );
@@ -3401,6 +3410,18 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array( $fallback ), $result['data']['packages'] );
 		self::assertSame( $type, $result['data']['package_view']->get_type() );
 		self::assertSame( 1, $result['data']['package_list_total'] );
+	}
+
+	public function test_the_package_list_looks_up_a_restore_page_only_for_an_unregistered_provider(): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$package = $this->managed_package( 'provider-missing/example.php', 'Example', 'repo-42' );
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->method( 'all_booster_plugins' )->willReturn( array( $package ) );
+		$_GET = array();
+
+		$data = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry(), plugins: $plugins )->get_plugins()['data'];
+
+		self::assertSame( array( (string) $package->get_provider_code() => array( 'page' => 'ran-booster-extensions' ) ), $data['provider_restore_args'] );
 	}
 
 	/** @return list<array{string, string}> */

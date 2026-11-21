@@ -23,6 +23,7 @@ final class WebhookManagementController {
 	public const ADMIN_POST_ACTION         = 'ran_booster_repository_webhook_management_operation';
 	public const CREATE_REPOSITORY_SECRET  = 'create_repository_secret';
 	public const VALIDATE_TEST_NONCE_FIELD = '_wpnonce_test';
+	public const DELIVERY_STATUS_ACTION    = 'ran_booster_repository_webhook_delivery_status';
 
 	private const NONCE_ACTION_PREFIX = 'ran_booster_repository_webhook_';
 
@@ -154,6 +155,24 @@ final class WebhookManagementController {
 		}
 
 		return add_query_arg( $args, $return_url );
+	}
+
+	/**
+	 * Whether a signed delivery has verified the stored record, for a result listening after its ping; null when refused.
+	 * It reads Booster's record and the site's signing secrets only, never the Git provider.
+	 *
+	 * @param array<string, mixed> $query
+	 */
+	public function delivery_status( array $query ): ?bool {
+		$provider_code = $this->string_value( $query, 'provider_code' );
+		$repository_id = $this->string_value( $query, 'repository_id' );
+		if ( ! ( $this->can_manage )()
+			|| ! $this->provider_metadata( $provider_code ) instanceof ProviderMetadata
+			|| ! ( $this->verify_nonce )( $this->string_value( $query, '_wpnonce' ), $this->nonce_action( 'delivery', $provider_code, $repository_id ) ) ) {
+			return null;
+		}
+
+		return $this->display->delivery_confirmed( $provider_code, $repository_id );
 	}
 
 	/** @return list<ProviderMetadata> */

@@ -1020,6 +1020,16 @@ class Booster {
 
 		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
 			$package_settings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->build_package_form();
+			if ( array() === $package_settings['providers'] ) {
+				BoosterLogger::log(
+					'package page loaded without a Git provider',
+					array(
+						'event'        => 'package_form_no_provider',
+						'outcome_code' => 'no_provider',
+						'step'         => 'package_form',
+					)
+				);
+			}
 			wp_localize_script(
 				'ran-booster-repository-picker',
 				'ranBoosterRepoPicker',

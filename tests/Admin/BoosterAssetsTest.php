@@ -519,6 +519,16 @@ final class BoosterAssetsTest extends TestCase {
 	}
 
 	#[DataProvider( 'package_admin_hook_provider' )]
+	public function test_package_pages_still_load_when_no_git_provider_is_available( string $hook ): void {
+		$this->booster( package_providers: array() )->load_scripts( $hook );
+
+		self::assertContains( 'ran-booster-repository-picker', $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+		$picker = $GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-repository-picker']['ranBoosterRepoPicker'];
+		self::assertSame( '', $picker['defaultProvider'] );
+		self::assertSame( array(), $picker['providers'] );
+	}
+
+	#[DataProvider( 'package_admin_hook_provider' )]
 	public function test_package_pages_receive_common_assets_and_picker_localization( string $hook ): void {
 		$_GET['page'] = 'untrusted-mismatch';
 
@@ -963,12 +973,16 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertArrayHasKey( 'ranBoosterDevelopmentSafetyNotice', $GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-notice-preference'] );
 	}
 
-	/** @param list<class-string> $visible_global_notices */
+	/**
+	 * @param list<class-string> $visible_global_notices
+	 * @param array<string, mixed> $package_providers
+	 */
 	private function booster(
 		bool $expiry_notice_visible = false,
 		bool $background_failure_notice_visible = false,
 		bool $expiry_notice_dismissible = true,
-		array $visible_global_notices = array()
+		array $visible_global_notices = array(),
+		array $package_providers = array( 'gh' => array( 'label' => 'GitHub' ) )
 	): Booster {
 		$container = new CoreContainer();
 		$booster   = new class( $container ) extends Booster {
@@ -1026,12 +1040,16 @@ final class BoosterAssetsTest extends TestCase {
 		}
 		$container->bind(
 			'RAN\\Admin\\ProviderSettingsPresenter',
-			new class() {
+			new class( $package_providers ) {
+				/** @param array<string, mixed> $providers */
+				public function __construct( private readonly array $providers ) {
+				}
+
 				/** @return array{default_provider: string, providers: array<string, mixed>} */
 				public function build_package_form(): array {
 					return array(
-						'default_provider' => 'gh',
-						'providers'        => array( 'gh' => array( 'label' => 'GitHub' ) ),
+						'default_provider' => array() === $this->providers ? '' : 'gh',
+						'providers'        => $this->providers,
 					);
 				}
 			}

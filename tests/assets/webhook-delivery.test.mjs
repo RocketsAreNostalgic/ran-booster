@@ -8,37 +8,36 @@ const source = fs.readFileSync(
 	'utf8'
 );
 const SECTION = '.ran-booster-repository-webhook-section';
+const RESULT = SECTION + ' .ran-booster-repository-webhook-management__result';
+const HISTORY = '.ran-booster-repository-detail__history';
 const PARTS = [
-	'#ran-booster-repository-webhook-automation-heading',
-	'.ran-booster-repository-webhook-lifecycle',
-	'.ran-booster-repository-webhook-management__result',
+	SECTION + ' #ran-booster-repository-webhook-automation-heading',
+	SECTION + ' .ran-booster-repository-webhook-lifecycle',
+	RESULT,
+	HISTORY,
 ];
+const LISTEN = 'data-ran-booster-webhook-listen';
 const STATUS = 'https://example.test/wp-admin/admin-ajax.php?action=status';
 const SETTLE = 'https://example.test/wp-admin/admin.php?page=ran-booster';
+const LABEL = 'Listening for webhook delivery…';
 const PENDING =
 	'Webhook set up. Reload to check that its first delivery arrived.';
+const DELIVERED = {
+	ok: true,
+	json: { success: true, data: { delivered: true } },
+};
 
-// A result notice as the panel view prints it while a delivery is awaited.
-function notice(section, attributes = {}) {
-	const values = new Map(
-		Object.entries({
-			'data-ran-booster-webhook-listen': STATUS,
-			'data-ran-booster-webhook-settle': SETTLE,
-			'data-ran-booster-webhook-listen-label':
-				'Listening for webhook delivery…',
-			'data-ran-booster-ui-notice-intent': 'warning',
-			...attributes,
-		})
-	);
-	const target = { textContent: PENDING };
+// A notice node: its attributes, its listening text and its place in the page.
+function element(document, values, text) {
+	const target = { textContent: text };
 	const node = {
-		isConnected: true,
+		isConnected: false,
 		target,
+		ownerDocument: document,
 		getAttribute: (name) => values.get(name) ?? null,
 		hasAttribute: (name) => values.has(name),
 		removeAttribute: (name) => values.delete(name),
 		matches: () => false,
-		closest: (selector) => (selector === SECTION ? section : null),
 		querySelector(selector) {
 			if (selector === '[data-ran-booster-webhook-listen-text]') {
 				return target;
@@ -48,11 +47,21 @@ function notice(section, attributes = {}) {
 				: null;
 		},
 		contains: (other) => other === node,
+		cloneNode: () => element(document, new Map(values), target.textContent),
+		replaceWith(other) {
+			node.isConnected = false;
+			other.isConnected = true;
+			document.replaced.push([node, other]);
+		},
 	};
 	return node;
 }
 
-function install({ readyState = 'complete', feedbackShows = true } = {}) {
+function install({
+	readyState = 'complete',
+	feedbackShows = true,
+	history = true,
+} = {}) {
 	let clock = 0;
 	let timerId = 0;
 	const timers = [];
@@ -66,33 +75,30 @@ function install({ readyState = 'complete', feedbackShows = true } = {}) {
 	const pointers = [];
 	const notices = [];
 	const focused = [];
+	const missing = new Set();
 	const parts = new Map(
-		PARTS.map((part) => [
+		PARTS.filter((part) => history || part !== HISTORY).map((part) => [
 			part,
 			{ part, contains: (node) => node?.inPart === part },
 		])
 	);
-	const section = {
-		get ownerDocument() {
-			return document;
-		},
-		querySelector(selector) {
-			if (selector === PARTS[2] + ' [data-ran-booster-ui-notice]') {
-				return parts.get(PARTS[2]).notice ?? null;
-			}
-			return parts.get(selector) ?? null;
-		},
-	};
 	const document = {
 		readyState,
 		activeElement: null,
+		replaced: [],
 		addEventListener: (name, callback) => {
 			(listeners[name] ||= []).push(callback);
 		},
+		querySelector(selector) {
+			if (selector === RESULT + ' [data-ran-booster-ui-notice]') {
+				return parts.get(RESULT).notice ?? null;
+			}
+			return parts.get(selector) ?? null;
+		},
 		querySelectorAll: (selector) =>
-			selector === '[data-ran-booster-webhook-listen]'
-				? notices.filter((node) =>
-						node.hasAttribute('data-ran-booster-webhook-listen')
+			selector === '[' + LISTEN + ']'
+				? notices.filter(
+						(node) => node.isConnected && node.hasAttribute(LISTEN)
 					)
 				: [],
 	};
@@ -130,16 +136,8 @@ function install({ readyState = 'complete', feedbackShows = true } = {}) {
 			parseFromString() {
 				return {
 					querySelector: (selector) =>
-						selector.startsWith(SECTION + ' ') &&
-						!(
-							window.missingPart &&
-							selector.endsWith(window.missingPart)
-						)
-							? {
-									outerHTML:
-										'new ' +
-										selector.slice(SECTION.length + 1),
-								}
+						PARTS.includes(selector) && !missing.has(selector)
+							? { outerHTML: 'new ' + selector }
 							: null,
 				};
 			}
@@ -147,8 +145,8 @@ function install({ readyState = 'complete', feedbackShows = true } = {}) {
 		htmx: {
 			swap(current, html, spec) {
 				swaps.push({ part: current.part, html, spec });
-				if (current.part === PARTS[2]) {
-					parts.get(PARTS[2]).notice = {
+				if (current.part === RESULT) {
+					parts.get(RESULT).notice = {
 						querySelector: () => ({
 							textContent: '  Signed delivery received ',
 						}),
@@ -183,7 +181,7 @@ function install({ readyState = 'complete', feedbackShows = true } = {}) {
 		}
 	}
 
-	// Runs the next timer at its time, or at a later time when the tab hid it.
+	// Runs the next timer at its time, or at a later time when the tab held it.
 	async function tick(lateBy = 0) {
 		timers.sort((a, b) => a.at - b.at);
 		const timer = timers.shift();
@@ -194,15 +192,37 @@ function install({ readyState = 'complete', feedbackShows = true } = {}) {
 		return timer;
 	}
 
+	function fire(name, detail = {}) {
+		(listeners[name] || []).forEach((callback) => callback({ detail }));
+	}
+
 	return {
-		add(attributes) {
-			const node = notice(section, attributes);
+		// A result notice as the panel view prints it while a delivery is awaited.
+		add(attributes = {}) {
+			const node = element(
+				document,
+				new Map(
+					Object.entries({
+						[LISTEN]: STATUS,
+						'data-ran-booster-webhook-settle': SETTLE,
+						'data-ran-booster-webhook-listen-label': LABEL,
+						'data-ran-booster-ui-notice-intent': 'warning',
+						...attributes,
+					})
+				),
+				PENDING
+			);
+			node.isConnected = true;
 			notices.push(node);
 			return node;
 		},
+		// The waiting copy standing in for a notice, if one does.
+		waiting: (node) =>
+			document.replaced.find(([from]) => from === node)?.[1] ?? null,
 		run,
 		tick,
 		flush,
+		fire,
 		timers,
 		listeners,
 		windowListeners,
@@ -213,30 +233,60 @@ function install({ readyState = 'complete', feedbackShows = true } = {}) {
 		spoken,
 		pointers,
 		focused,
+		missing,
 		document,
 		window,
 	};
 }
 
-test('listening shows the waiting text in the one waiting intent and drops its marker', () => {
+test('listening puts a waiting copy in the one waiting intent in place of the untouched notice', () => {
 	const page = install();
 	const node = page.add();
 	page.run();
+	const waiting = page.waiting(node);
 
-	assert.equal(node.target.textContent, 'Listening for webhook delivery…');
-	assert.deepEqual(
-		page.intents.map(({ intent }) => intent),
-		['info']
+	assert.ok(waiting);
+	assert.equal(waiting.isConnected, true);
+	assert.equal(waiting.target.textContent, LABEL);
+	assert.deepEqual(page.intents, [{ host: waiting, intent: 'info' }]);
+	// The server's notice is set aside as rendered, without its marker.
+	assert.equal(node.isConnected, false);
+	assert.equal(node.target.textContent, PENDING);
+	assert.equal(
+		node.getAttribute('data-ran-booster-ui-notice-intent'),
+		'warning'
 	);
-	assert.equal(node.hasAttribute('data-ran-booster-webhook-listen'), false);
+	assert.equal(node.hasAttribute(LISTEN), false);
 	assert.equal(page.timers.length, 1);
 	assert.equal(page.timers[0].delay, 1000);
 });
 
-test('no delivery: six record reads at 1, 2, 3, 5, 7 and 10 seconds, then the pending sentence and a warning pointer', async () => {
+test('a result swapped in is claimed on the swap, before htmx settles and paints it', () => {
+	const page = install();
+	page.run();
+	const node = page.add();
+	page.fire('htmx:afterSwap');
+
+	assert.equal(page.waiting(node)?.target.textContent, LABEL);
+	assert.equal(page.timers.length, 1);
+});
+
+test('a page still parsing is claimed when the script runs, and only once', () => {
+	const page = install({ readyState: 'loading' });
+	const node = page.add();
+	page.run();
+
+	assert.ok(page.waiting(node));
+	page.fire('DOMContentLoaded');
+	assert.equal(page.document.replaced.length, 1);
+	assert.equal(page.timers.length, 1);
+});
+
+test('no delivery: six record reads at 1, 2, 3, 5, 7 and 10 seconds, then the server notice returns with a warning pointer', async () => {
 	const page = install();
 	const node = page.add();
 	page.run();
+	const waiting = page.waiting(node);
 	for (let i = 0; i < 6; i++) {
 		await page.tick();
 	}
@@ -246,11 +296,11 @@ test('no delivery: six record reads at 1, 2, 3, 5, 7 and 10 seconds, then the pe
 		[1000, 2000, 3000, 5000, 7000, 10000].map((at) => [STATUS, at])
 	);
 	assert.equal(page.timers.length, 0);
+	// The notice comes back as the server rendered it, icon and all; it is never redrawn.
+	assert.equal(node.isConnected, true);
+	assert.equal(waiting.isConnected, false);
 	assert.equal(node.target.textContent, PENDING);
-	assert.deepEqual(
-		page.intents.map(({ intent }) => intent),
-		['info', 'warning']
-	);
+	assert.deepEqual(page.intents, [{ host: waiting, intent: 'info' }]);
 	assert.equal(page.pointers.length, 1);
 	assert.equal(page.pointers[0].message, PENDING);
 	assert.equal(page.pointers[0].options.intent, 'warning');
@@ -292,27 +342,28 @@ test('a hidden tab delays checks but never restarts the window', async () => {
 	assert.equal(page.pointers.length, 1);
 });
 
-test('a tab hidden past the window makes one late read, then settles', async () => {
+test('a check held past the window is the one late read, then the result settles', async () => {
 	const page = install();
-	page.add();
+	const node = page.add();
 	page.run();
-	await page.tick(60000);
-	await page.tick();
+	// Timers held for twenty seconds.
+	await page.tick(19000);
 
 	assert.deepEqual(
 		page.fetches.map(({ at }) => at),
-		[61000, 61000]
+		[20000]
 	);
 	assert.equal(page.timers.length, 0);
+	assert.equal(node.isConnected, true);
 	assert.equal(page.pointers.length, 1);
 });
 
-test('a confirmed record renders the panel once, swaps three parts and announces the result once', async () => {
+test('a confirmed record renders the panel once, swaps every part showing the webhook and announces the result once', async () => {
 	const page = install();
 	const node = page.add();
 	page.responses.push(
 		{ ok: true, json: { success: true, data: { delivered: false } } },
-		{ ok: true, json: { success: true, data: { delivered: true } } }
+		DELIVERED
 	);
 	page.run();
 	await page.tick();
@@ -330,24 +381,36 @@ test('a confirmed record renders the panel once, swaps three parts and announces
 	assert.deepEqual(page.spoken, ['Signed delivery received']);
 	assert.deepEqual(page.pointers, []);
 	assert.equal(page.timers.length, 0);
-	// The swap replaced the result, so the waiting text is not put back.
-	assert.equal(node.target.textContent, 'Listening for webhook delivery…');
+	// The swap replaced the result, so the server's pending notice is not put back.
+	assert.equal(node.isConnected, false);
 	// Focus was outside the replaced parts, so it stays where it was.
 	assert.deepEqual(page.focused, []);
+});
+
+test('a screen without the sidebar history swaps the other parts', async () => {
+	const page = install({ history: false });
+	page.add();
+	page.missing.add(HISTORY);
+	page.responses.push(DELIVERED);
+	page.run();
+	await page.tick();
+
+	assert.deepEqual(
+		page.swaps.map(({ part }) => part),
+		PARTS.slice(0, 3)
+	);
+	assert.deepEqual(page.spoken, ['Signed delivery received']);
 });
 
 test('focus inside a replaced part moves to the new result', async () => {
 	const page = install();
 	page.add();
 	page.document.activeElement = { inPart: PARTS[1] };
-	page.responses.push({
-		ok: true,
-		json: { success: true, data: { delivered: true } },
-	});
+	page.responses.push(DELIVERED);
 	page.run();
 	await page.tick();
 
-	assert.equal(page.swaps.length, 3);
+	assert.equal(page.swaps.length, 4);
 	assert.deepEqual(page.focused, [
 		['attribute', 'tabindex', '-1'],
 		['focus'],
@@ -360,10 +423,7 @@ test('leaving while a read is in flight ends quietly when it returns', async () 
 	const page = install();
 	const node = page.add();
 	let release;
-	page.responses.push({
-		ok: true,
-		json: { success: true, data: { delivered: true } },
-	});
+	page.responses.push(DELIVERED);
 	const fetch = page.window.fetch;
 	page.window.fetch = (url) =>
 		new Promise((resolve) => {
@@ -380,10 +440,10 @@ test('leaving while a read is in flight ends quietly when it returns', async () 
 	assert.deepEqual(page.pointers, []);
 	assert.deepEqual(page.spoken, []);
 	assert.equal(page.timers.length, 0);
-	assert.equal(node.target.textContent, PENDING);
+	assert.equal(node.isConnected, true);
 });
 
-test('a failed status read stops at once with the pending sentence', async () => {
+test('a failed status read stops at once with the server notice', async () => {
 	for (const failure of [
 		{ ok: false, json: { success: false } },
 		{ ok: true, json: { success: false } },
@@ -396,27 +456,22 @@ test('a failed status read stops at once with the pending sentence', async () =>
 
 		assert.equal(page.fetches.length, 1);
 		assert.equal(page.timers.length, 0);
-		assert.equal(node.target.textContent, PENDING);
+		assert.equal(node.isConnected, true);
 		assert.equal(page.pointers.length, 1);
 	}
 });
 
-test('a settle render that fails or lacks a part keeps the pending sentence', async () => {
+test('a settle render that fails or lacks a part keeps the server notice', async () => {
 	for (const setup of [
-		(page) =>
-			page.responses.push(
-				{
-					ok: true,
-					json: { success: true, data: { delivered: true } },
-				},
-				{ ok: false, text: '' }
-			),
+		(page) => page.responses.push(DELIVERED, { ok: false, text: '' }),
 		(page) => {
-			page.responses.push({
-				ok: true,
-				json: { success: true, data: { delivered: true } },
-			});
-			page.window.missingPart = PARTS[1];
+			page.responses.push(DELIVERED);
+			page.missing.add(PARTS[1]);
+		},
+		(page) => {
+			// The page shows the history card, but the render lacks it.
+			page.responses.push(DELIVERED);
+			page.missing.add(HISTORY);
 		},
 	]) {
 		const page = install();
@@ -426,21 +481,18 @@ test('a settle render that fails or lacks a part keeps the pending sentence', as
 		await page.tick();
 
 		assert.deepEqual(page.swaps, []);
-		assert.equal(node.target.textContent, PENDING);
+		assert.equal(node.isConnected, true);
 		assert.equal(page.pointers.length, 1);
 	}
 });
 
-test('leaving the panel stops listening silently', async () => {
+test('leaving the panel stops listening silently and puts the server notice back', async () => {
 	for (const leave of [
 		(page, node) =>
-			page.listeners['htmx:beforeCleanupElement'].forEach((callback) =>
-				callback({ detail: { elt: node } })
-			),
-		(page) =>
-			page.listeners['htmx:beforeHistorySave'].forEach((callback) =>
-				callback()
-			),
+			page.fire('htmx:beforeCleanupElement', {
+				elt: { contains: (other) => other === page.waiting(node) },
+			}),
+		(page) => page.fire('htmx:beforeHistorySave'),
 		(page) =>
 			page.windowListeners.pagehide.forEach((callback) => callback()),
 	]) {
@@ -451,6 +503,7 @@ test('leaving the panel stops listening silently', async () => {
 		await page.flush();
 
 		assert.equal(page.timers.length, 0);
+		assert.equal(node.isConnected, true);
 		assert.equal(node.target.textContent, PENDING);
 		assert.deepEqual(page.pointers, []);
 		assert.deepEqual(page.spoken, []);
@@ -461,7 +514,7 @@ test('a result removed from the page stops at its next check without a read', as
 	const page = install();
 	const node = page.add();
 	page.run();
-	node.isConnected = false;
+	page.waiting(node).isConnected = false;
 	await page.tick();
 
 	assert.deepEqual(page.fetches, []);
@@ -473,38 +526,26 @@ test('only one result listens: a newer one replaces the earlier', async () => {
 	const first = page.add();
 	page.run();
 	const second = page.add();
-	page.listeners['htmx:load'].forEach((callback) =>
-		callback({
-			detail: {
-				elt: {
-					matches: () => false,
-					querySelectorAll: () => [second],
-				},
-			},
-		})
-	);
+	page.fire('htmx:load', {
+		elt: { matches: () => false, querySelectorAll: () => [second] },
+	});
 
-	assert.equal(first.target.textContent, PENDING);
-	assert.equal(second.target.textContent, 'Listening for webhook delivery…');
+	assert.equal(first.isConnected, true);
+	assert.equal(page.waiting(second)?.target.textContent, LABEL);
 	assert.equal(page.timers.length, 1);
 	await page.tick();
 	assert.equal(page.fetches.length, 1);
 });
 
-test('a page that loads twice starts one listener', () => {
+test('a page that loads or swaps again starts one listener', () => {
 	const page = install();
 	page.add();
 	page.run();
-	page.listeners['htmx:load'].forEach((callback) =>
-		callback({
-			detail: {
-				elt: {
-					matches: () => false,
-					querySelectorAll: () => [],
-				},
-			},
-		})
-	);
+	page.fire('htmx:afterSwap');
+	page.fire('htmx:load', {
+		elt: { matches: () => false, querySelectorAll: () => [] },
+	});
 
+	assert.equal(page.document.replaced.length, 1);
 	assert.equal(page.timers.length, 1);
 });

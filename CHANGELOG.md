@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.0-beta.50](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.49...v1.0.0-beta.50) (2026-11-21)
+
+
+### Features
+
+* **webhooks:** send a ping after a webhook repair ([#1164](https://github.com/RocketsAreNostalgic/ran-booster/issues/1164)) ([d2468bb](https://github.com/RocketsAreNostalgic/ran-booster/commit/d2468bbb6d8408e5bc318f2e10abec0bcc3c8405))
+
+
+### Bug Fixes
+
+* **admin-ui:** finish credential and reference copy changes ([#1157](https://github.com/RocketsAreNostalgic/ran-booster/issues/1157)) ([38693bd](https://github.com/RocketsAreNostalgic/ran-booster/commit/38693bd1cb9279be6ff32533ec2d2670e4a127eb))
+* **deployment:** show a pause-refused run as Skipped ([#1163](https://github.com/RocketsAreNostalgic/ran-booster/issues/1163)) ([51a646a](https://github.com/RocketsAreNostalgic/ran-booster/commit/51a646ab635593dbfcc782d87d31cdf73fb5231b))
+* **packages:** make an empty branch field use the default branch ([#1168](https://github.com/RocketsAreNostalgic/ran-booster/issues/1168)) ([80224a3](https://github.com/RocketsAreNostalgic/ran-booster/commit/80224a3a95df40ace0034d240b5e8c0c1909d1d1))
+* **packages:** show one notice for a missing Update URI ([#1159](https://github.com/RocketsAreNostalgic/ran-booster/issues/1159)) ([3d94186](https://github.com/RocketsAreNostalgic/ran-booster/commit/3d94186ae3cce5fa0016f660a4eb09deb78c50c8))
+* **packages:** store the last branch check and say it truly ([#1165](https://github.com/RocketsAreNostalgic/ran-booster/issues/1165)) ([59c5d1f](https://github.com/RocketsAreNostalgic/ran-booster/commit/59c5d1fb9b8af68a5af4a39fec4092d6da508195))
+* **webhooks:** finish the webhook result and step wording ([#1162](https://github.com/RocketsAreNostalgic/ran-booster/issues/1162)) ([85eb90d](https://github.com/RocketsAreNostalgic/ran-booster/commit/85eb90d8382ec01e202e0df47f44a211e3843bb7))
+* **webhooks:** show a signed delivery as the webhook working ([#1156](https://github.com/RocketsAreNostalgic/ran-booster/issues/1156)) ([9a06343](https://github.com/RocketsAreNostalgic/ran-booster/commit/9a06343f592023a8677d1665cfc91b59c66cbb3a))
+
 ## [1.0.0-beta.49](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.48...v1.0.0-beta.49) (2026-11-21)
 
 

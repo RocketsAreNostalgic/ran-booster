@@ -605,6 +605,7 @@
 			const form = requestForm(event);
 			const xhr = event.detail?.xhr;
 			// A cancelled load (a stale request) issues no follow-up to wait for.
+			const location = xhr?.getResponseHeader?.('HX-Location');
 			if (
 				!event.defaultPrevented &&
 				form?.hasAttribute?.(
@@ -612,17 +613,31 @@
 				) &&
 				xhr?.status >= 200 &&
 				xhr.status < 300 &&
-				xhr.getResponseHeader?.('HX-Location')
+				location
 			) {
-				heldSave = { form, xhr };
+				let path = location;
+				try {
+					path = JSON.parse(location).path || location;
+				} catch {
+					// A plain path is the header's other form.
+				}
+				heldSave = { form, xhr, path };
 			}
 		}
 
-		function releaseHeldSave(event) {
+		function releaseHeldSave(event, failed = false) {
 			if (heldSave && event.detail?.xhr !== heldSave.xhr) {
-				resetBusy(heldSave.form, heldSave.xhr);
+				const { form, xhr, path } = heldSave;
 				heldSave = null;
+				resetBusy(form, xhr);
+				// The save went through but the page load that follows it failed:
+				// load that address the ordinary way rather than keep the stale page.
+				if (failed && path) {
+					window.location.assign(path);
+					return true;
+				}
 			}
+			return false;
 		}
 
 		function resetBusy(form, xhr) {
@@ -1327,7 +1342,13 @@
 					progress.hidden = true;
 				}
 			}
-			releaseHeldSave(event);
+			// htmx raises a transport error right after afterRequest, so let that take the failed path first.
+			const held = heldSave;
+			queueMicrotask(() => {
+				if (heldSave === held) {
+					releaseHeldSave(event);
+				}
+			});
 			const form = requestForm(event);
 			if (form && heldSave?.form !== form) {
 				resetBusy(form, event.detail?.xhr);
@@ -1342,7 +1363,9 @@
 			'htmx:timeout',
 		].forEach(function (eventName) {
 			document.addEventListener(eventName, function (event) {
-				releaseHeldSave(event);
+				if (releaseHeldSave(event, true)) {
+					return;
+				}
 				const form = requestForm(event);
 				if (form) {
 					resetBusy(form, event.detail?.xhr);

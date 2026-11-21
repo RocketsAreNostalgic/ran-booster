@@ -94,6 +94,7 @@ function fixture() {
 	const noticeIntents = [];
 	const animationFrames = [];
 	const replacedUrls = [];
+	const assignedUrls = [];
 	const scrollCalls = [];
 	let packageDisclosures = [
 		{ id: 'ran-booster-advanced-source-settings-disclosure', open: false },
@@ -293,6 +294,9 @@ function fixture() {
 		},
 		location: {
 			href: 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
+			assign(path) {
+				assignedUrls.push(path);
+			},
 		},
 		scrollY: 0,
 		scrollTo(x, y) {
@@ -339,6 +343,7 @@ function fixture() {
 		form,
 		formAttributes,
 		listeners,
+		assignedUrls,
 		replacedUrls,
 		secondary,
 		scrollCalls,
@@ -397,7 +402,7 @@ test('enhanced mutation feedback is opt-in and restores the submitter after a re
 	);
 });
 
-test('the settings Save stays busy through its redirect request until that request ends', () => {
+test('the settings Save stays busy through its redirect request until that request ends', async () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,
@@ -429,12 +434,14 @@ test('the settings Save stays busy through its redirect request until that reque
 	answer(redirected());
 	assert.equal(busy(), true);
 	assert.equal(state.button.disabled, true);
-	// The follow-up ends, here as a failure; htmx sends afterRequest for a load,
+	// The follow-up ends, here as an abort; htmx sends afterRequest for a load,
 	// an error, an abort and a timeout alike.
 	state.listeners.get('htmx:afterRequest')({
 		detail: { elt: null, xhr: { status: 0 } },
 	});
+	await Promise.resolve();
 	assert.equal(busy(), false);
+	assert.deepEqual(state.assignedUrls, []);
 	assert.equal(state.button.disabled, false);
 
 	// A follow-up that cannot start raises its error before the save's afterRequest.
@@ -443,6 +450,7 @@ test('the settings Save stays busy through its redirect request until that reque
 	);
 	assert.equal(busy(), false);
 	assert.equal(state.button.disabled, false);
+	assert.deepEqual(state.assignedUrls, ['/wp-admin/admin.php']);
 
 	// A stale save whose load is cancelled issues no follow-up, so it resets.
 	const stale = redirected();
@@ -462,6 +470,72 @@ test('the settings Save stays busy through its redirect request until that reque
 	assert.equal(busy(), false);
 	state.form.hasAttribute = () => false;
 	answer(redirected());
+	assert.equal(busy(), false);
+});
+
+test('a failed page load after a successful save navigates to that page instead of keeping the stale one', async () => {
+	const state = fixture();
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	init();
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-package-settings-save';
+	const target =
+		'/wp-admin/admin.php?page=ran-booster-plugins&package=a%2Fb.php';
+	const save = () => ({
+		elt: state.form,
+		xhr: {
+			status: 200,
+			getResponseHeader: (name) =>
+				name === 'HX-Location'
+					? JSON.stringify({
+							path: target,
+							target: '#wpbody-content',
+						})
+					: null,
+		},
+	});
+	const saved = () => {
+		const detail = save();
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		state.listeners.get('htmx:beforeOnLoad')({ detail });
+		state.listeners.get('htmx:afterRequest')({ detail });
+	};
+	const followUp = { elt: null, xhr: { status: 0 } };
+	const busy = () => state.formAttributes.get('aria-busy') === 'true';
+	const sequences = {
+		// htmx raises an HTTP error before afterRequest.
+		'HTTP error': ['htmx:responseError', 'htmx:afterRequest'],
+		// A dropped connection or a timeout raises afterRequest first.
+		'dropped connection': ['htmx:afterRequest', 'htmx:sendError'],
+		timeout: ['htmx:afterRequest', 'htmx:timeout'],
+		'cannot start': ['htmx:targetError', 'htmx:afterRequest'],
+	};
+
+	for (const [label, events] of Object.entries(sequences)) {
+		saved();
+		const before = state.assignedUrls.length;
+		events.forEach((name) =>
+			state.listeners.get(name)({ detail: followUp })
+		);
+		await Promise.resolve();
+
+		assert.equal(state.assignedUrls.length, before + 1, label);
+		assert.equal(state.assignedUrls.at(-1), target, label);
+		assert.equal(busy(), false, label);
+	}
+
+	// A follow-up that loads, or is aborted, releases the save without navigating.
+	const count = state.assignedUrls.length;
+	saved();
+	state.listeners.get('htmx:afterRequest')({ detail: followUp });
+	state.listeners.get('htmx:sendAbort')?.({ detail: followUp });
+	await Promise.resolve();
+	// With no save waiting on its page, a later failure goes nowhere.
+	state.listeners.get('htmx:sendError')({ detail: followUp });
+	assert.equal(state.assignedUrls.length, count);
 	assert.equal(busy(), false);
 });
 

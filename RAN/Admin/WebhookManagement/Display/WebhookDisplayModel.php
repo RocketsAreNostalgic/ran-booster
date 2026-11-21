@@ -31,7 +31,7 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
  *   webhooks_url:?string,
  *   return_url:string,
  *   interaction_request:AdminInteractionRequest|null,
- *   result:array{class:string,message:string,heading?:string,details?:list<string>,lines?:list<array{label:string,text:string}>}|null,
+ *   result:array{class:string,message:string,heading?:string,details?:list<string>,lines?:list<array{label:string,text:string}>,link_sentence?:string}|null,
  *   recovery_warning:array{class:string,message:string,heading?:string,details?:list<string>}|null,
  *   manual_notice:array{class:string,heading:string,message:string}|null,
  *   management_credential_id:?string,
@@ -398,7 +398,7 @@ final class WebhookDisplayModel {
 			'return_url'                  => $this->panel_url( $return_url, $repository_id ),
 			'interaction_request'         => AdminInteractionRequest::provider_repositories( 'repository-webhook-management:manage-webhook', $this->panel_url( $return_url, $repository_id ), 'repository-webhook-management-error' ),
 			// Repair carries its ping's code too, but only Validate's result shows Settings and Ping lines.
-			'result'                      => null === $result_code ? null : ( null === $ping_code || 'repaired_pending_delivery' === $result_code ? $this->settled_result( $result_code, $recovery, $remediation, 'configured' === $status, $ping_code ) : $this->validation_presentation( $result_code, $ping_code, $remediation, 'configured' === $status ) ),
+			'result'                      => null === $result_code ? null : ( null === $ping_code || 'repaired_pending_delivery' === $result_code ? $this->settled_result( $result_code, $recovery, $remediation, 'configured' === $status, $ping_code, $provider_label ) : $this->validation_presentation( $result_code, $ping_code, $remediation, 'configured' === $status ) ),
 			'recovery_warning'            => $recovery_warning,
 			'manual_notice'               => null === $manual_at ? null : self::manual_notice( $manual_at ),
 			'management_credential_id'    => null === $record ? null : $record->management_credential_id(),
@@ -600,10 +600,14 @@ final class WebhookDisplayModel {
 	 * A Set up or Repair result shown after a signed delivery has verified the record says so, and a Repair
 	 * whose ping was not requested says why; any other result keeps its own presentation.
 	 *
+	 * A Repair's ping codes: ping_requested and ping_verified were sent; configuration_drift and remote_missing
+	 * found the hook changed, so none was sent; ping_delivery_failed was sent and its delivery failed, and its
+	 * link_sentence links the delivery when the view knows the provider's webhooks page; any other code was not sent.
+	 *
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
-	 * @return array{class:string,message:string,heading?:string,details?:list<string>}
+	 * @return array{class:string,message:string,heading?:string,details?:list<string>,link_sentence?:string}
 	 */
-	private function settled_result( string $code, ?array $recovery, ?string $remediation, bool $delivered, ?string $ping_code = null ): array {
+	private function settled_result( string $code, ?array $recovery, ?string $remediation, bool $delivered, ?string $ping_code, string $provider_label ): array {
 		if ( $delivered && in_array( $code, self::AWAITING_DELIVERY, true ) ) {
 			return array(
 				'class'   => 'notice-success',
@@ -615,13 +619,24 @@ final class WebhookDisplayModel {
 			return $this->result_presentation( $code, $recovery, $remediation );
 		}
 
-		// A ping the provider delivered and saw fail was sent, so it keeps its own result.
-		return 'ping_delivery_failed' === $ping_code
-			? $this->result_presentation( $ping_code, null, null )
-			: array(
-				'class'   => 'notice-warning',
-				'message' => __( 'Webhook repaired, but the ping couldn\'t be sent. Validate to try again.', 'ran-booster' ),
+		if ( 'ping_delivery_failed' === $ping_code ) {
+			/* translators: 1: opening link tag to the repository's webhooks page on the provider; 2: closing link tag; 3: repository provider name. */
+			$sentence = sprintf( __( 'Webhook repaired, but its ping delivery failed. See %1$sthe delivery on %3$s%2$s.', 'ran-booster' ), '%1$s', '%2$s', str_replace( '%', '%%', $provider_label ) );
+
+			return array(
+				'class'         => 'notice-error',
+				'message'       => self::link_sentence( $sentence, null, false ),
+				'link_sentence' => $sentence,
 			);
+		}
+
+		return array(
+			'class'   => 'notice-warning',
+			'message' => in_array( $ping_code, array( 'configuration_drift', 'remote_missing' ), true )
+				/* translators: %s: repository provider name. */
+				? sprintf( __( 'Webhook repaired, but it then changed on %s, so no ping was sent.', 'ran-booster' ), $provider_label )
+				: __( 'Webhook repaired, but the ping couldn\'t be sent. Validate to try again.', 'ran-booster' ),
+		);
 	}
 
 	/**

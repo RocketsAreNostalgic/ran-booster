@@ -2165,17 +2165,29 @@ final class WebhookManagementControllerTest extends TestCase {
 	public function test_repair_pings_after_it_reconfigures_with_both_nonces_verified_first(): void {
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
 		$repair                                  = $this->request( array( 'repository_webhook_management_operation' => 'reconfigure' ) );
-		$cases                                   = array(
-			'ping sent'            => 'ping_requested',
-			'ping refused'         => 'ping_failed',
-			'ping delivery failed' => 'ping_delivery_failed',
+		$drift                                   = array(
+			'endpoint'     => 'mismatched',
+			'events'       => 'matched',
+			'content_type' => 'matched',
+			'active'       => 'matched',
 		);
-		foreach ( $cases as $case => $ping ) {
+		$unsent                                  = '<p>Webhook repaired, but the ping couldn&#039;t be sent. Validate to try again.</p>';
+		$changed                                 = '<p>Webhook repaired, but it then changed on GitHub, so no ping was sent.</p>';
+		// Each ping code reaches exactly one of the Repair sentences.
+		$cases = array(
+			'ping sent'            => array( $this->operation_result( 'succeeded', 'ping_requested' ), 'ping_requested', 'needs_verification', 'warning', '<p>Webhook repaired. Reload to check that its delivery arrived.</p>' ),
+			'ping refused'         => array( $this->operation_result( 'failed', 'ping_failed' ), 'ping_failed', 'needs_verification', 'warning', $unsent ),
+			'ping ambiguous'       => array( $this->operation_result( 'ambiguous', 'operation_failed' ), 'operation_failed', 'needs_verification', 'warning', $unsent ),
+			'settings drifted'     => array( $this->operation_result( 'succeeded', 'ping_requested', configuration: $drift ), 'configuration_drift', 'configuration_drift', 'warning', $changed ),
+			'hook missing'         => array( $this->operation_result( 'failed', 'hook_absent' ), 'remote_missing', 'remote_missing', 'warning', $changed ),
+			'ping delivery failed' => array( $this->operation_result( 'failed', 'ping_delivery_failed' ), 'ping_delivery_failed', 'needs_verification', 'error', '<p>Webhook repaired, but its ping delivery failed. See the delivery on GitHub.</p>' ),
+		);
+		foreach ( $cases as $case => list( $test, $ping, $status, $intent, $sentence ) ) {
 			$connection              = new \RAN\Tests\Activity\ActivityConnection();
 			list( $gateway, $store ) = $this->validate_fixtures(
 				array(
 					'reconfigure' => $this->operation_result( 'succeeded', 'configured_pending_delivery' ),
-					'test'        => $this->operation_result( 'ping_requested' === $ping ? 'succeeded' : 'failed', $ping ),
+					'test'        => $test,
 				)
 			);
 			$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store, activity: new \RAN\Activity\ActivityStore( $connection ) )->handle_admin_post( $repair, 'valid' ) );
@@ -2184,23 +2196,25 @@ final class WebhookManagementControllerTest extends TestCase {
 			self::assertSame( array( 'valid', 'test_nonce' ), array_column( $gateway->mutation_calls, 5 ), $case );
 			self::assertSame( array( 'webhook.reconfigure', 'webhook.test' ), array_column( $connection->inserted, 'operation' ), $case );
 			self::assertSame( 'repaired_pending_delivery', $redirect['webhook_management_result'], $case );
-			self::assertSame( 'needs_verification', $this->stored_status( $store ), $case );
+			self::assertSame( $ping, $redirect['webhook_management_ping'] ?? null, $case );
+			self::assertSame( $status, $this->stored_status( $store ), $case );
 			$_GET = $redirect;
+			// The view has no provider webhooks page here, so a link slot reads as plain text.
 			$html = $this->render_panel( $gateway, $store );
 			self::assertStringNotContainsString( '<strong>Settings:</strong>', $html, $case );
-			// A failed delivery keeps its own error; the other two are warnings.
-			self::assertStringContainsString( 'ping_delivery_failed' === $ping ? 'notice notice-error inline' : 'notice notice-warning inline', $html, $case );
-			self::assertSame( $ping, $redirect['webhook_management_ping'] ?? null, $case );
-			if ( 'ping_requested' === $ping ) {
-				self::assertStringContainsString( '<p>Webhook repaired. Reload to check that its delivery arrived.</p>', $html );
-			} elseif ( 'ping_delivery_failed' === $ping ) {
-				// The ping was sent, and the provider recorded its failed delivery.
-				self::assertStringContainsString( '<p><strong>Ping delivery failed</strong></p>', $html );
-				self::assertStringNotContainsString( 'couldn&#039;t be sent', $html );
-			} else {
-				self::assertStringContainsString( '<p>Webhook repaired, but the ping couldn&#039;t be sent. Validate to try again.</p>', $html );
-			}
+			self::assertStringContainsString( 'notice notice-' . $intent . ' inline', $html, $case );
+			self::assertStringContainsString( $sentence, $html, $case );
+			self::assertSame( 1, substr_count( $html, '<p>Webhook repaired' ), $case );
 		}
+
+		// With the provider's webhooks page known, the failed delivery's sentence links it, and nothing else does.
+		$html = $this->render_panel( $gateway, $store, 'https://github.com/owner/repository/settings/hooks' );
+		self::assertStringContainsString( '<p>Webhook repaired, but its ping delivery failed. See <a href="https://github.com/owner/repository/settings/hooks">the delivery on GitHub</a>.</p>', $html );
+		$_GET = array(
+			'webhook_management_result' => 'repaired_pending_delivery',
+			'webhook_management_ping'   => 'ping_failed',
+		);
+		self::assertStringContainsString( $unsent, $this->render_panel( $gateway, $store, 'https://github.com/owner/repository/settings/hooks' ) );
 
 		// A bad Test nonce runs nothing, so a Repair is never left without its ping, and Validate's Check nonce never runs a Repair.
 		list( $gateway, $store ) = $this->validate_fixtures( array( 'reconfigure' => $this->operation_result( 'succeeded', 'configured_pending_delivery' ) ) );
@@ -2534,7 +2548,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		return new WebhookDisplayModel( $gateway ?? $this->gateway(), $store ?? new OperationStoreFixture() );
 	}
 
-	private function render_panel( ?OperationGatewayFixture $gateway = null, ?OperationStoreFixture $store = null ): string {
+	private function render_panel( ?OperationGatewayFixture $gateway = null, ?OperationStoreFixture $store = null, ?string $webhooks_url = null ): string {
 		$gateway  ??= $this->gateway();
 		$store    ??= new OperationStoreFixture();
 		$display    = $this->display( $gateway, $store );
@@ -2542,7 +2556,9 @@ final class WebhookManagementControllerTest extends TestCase {
 		$context    = $controller->panel_context();
 		$model      = $display->panel( 'gh', 'GitHub', '1234', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', $context['result'], $context['recovery'], true, $context['remediation'], null, $context['ping'] );
 		self::assertIsArray( $model );
-		$form_attributes = '';
+		// The controls add the provider's webhooks page after building the model, as here.
+		$model['webhooks_url'] = $webhooks_url;
+		$form_attributes       = '';
 		ob_start();
 		$panel_part = 'form';
 		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';

@@ -652,6 +652,17 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame( 'Updating the webhook, then sending a ping. This can take a few seconds.', $repair[0]['busy_message'] );
 	}
 
+	public function test_a_repair_result_keeps_a_provider_label_containing_a_percent_sign(): void {
+		$method = new ReflectionMethod( WebhookDisplayModel::class, 'settled_result' );
+		$failed = $method->invoke( $this->display(), 'repaired_pending_delivery', null, null, false, 'ping_delivery_failed', 'Git%Lab' );
+		self::assertIsArray( $failed );
+		self::assertSame( 'Webhook repaired, but its ping delivery failed. See the delivery on Git%Lab.', $failed['message'] );
+		self::assertSame( 'Webhook repaired, but its ping delivery failed. See <a href="https://example.test/hooks">the delivery on Git%Lab</a>.', WebhookDisplayModel::link_sentence( $failed['link_sentence'], 'https://example.test/hooks', true ) );
+		$changed = $method->invoke( $this->display(), 'repaired_pending_delivery', null, null, false, 'remote_missing', 'Git%Lab' );
+		self::assertIsArray( $changed );
+		self::assertSame( 'Webhook repaired, but it then changed on Git%Lab, so no ping was sent.', $changed['message'] );
+	}
+
 	public function test_validate_is_available_only_when_both_check_and_test_are_and_reports_the_unavailable_reason(): void {
 		$method  = new ReflectionMethod( WebhookDisplayModel::class, 'operation_models' );
 		$reasons = array(

@@ -26,6 +26,13 @@ if ( 'refusal' === $ran_booster_native_proof_control && 'run' === $ran_booster_n
 		static fn () => (object) array( 'response' => array( $ran_booster_native_proof_identity => array( 'native_release_install_proof' => $ran_booster_native_proof_slug ) ) ),
 		PHP_INT_MAX
 	);
+} elseif ( 'stored' === $ran_booster_native_proof_control && 'readback' === $ran_booster_native_proof_phase && 'active' === $ran_booster_native_proof_case && 'plugin' === $ran_booster_native_proof_kind ) {
+	// Hide only the proof's raw row read (WordPress's own read adds LIMIT 1); the filtered read still sees the offer.
+	add_filter( 'query', static fn ( string $query ): string => str_ends_with( $query, "option_name = '_site_transient_update_plugins'" ) ? str_replace( '_site_transient_update_plugins', 'native_proof_absent_row', $query ) : $query );
+} elseif ( 'stored-absent' === $ran_booster_native_proof_control && 'readback' === $ran_booster_native_proof_phase && 'current' === $ran_booster_native_proof_case ) {
+	// Return this run's marker from the proof's raw row read only; the filtered read stays clean.
+	$ran_booster_native_proof_slug = 'native-proof-' . $ran_booster_native_proof_kind . '-current-' . getenv( 'RAN_NATIVE_RELEASE_INSTALL_PROOF_RUN' );
+	add_filter( 'query', static fn ( string $query ): string => str_ends_with( $query, "option_name = '_site_transient_update_" . ( 'plugin' === $ran_booster_native_proof_kind ? 'plugins' : 'themes' ) . "'" ) ? "SELECT 's:28:\"native_release_install_proof\";s:" . strlen( $ran_booster_native_proof_slug ) . ':"' . $ran_booster_native_proof_slug . "\";'" : $query );
 } else {
 	throw new RuntimeException( 'Unknown negative control or incorrect scenario phase.' );
 }

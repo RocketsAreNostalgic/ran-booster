@@ -342,13 +342,9 @@ final readonly class ProviderSettingsPresenter {
 			array_filter( $providers, static fn ( array $provider ): bool => true === $provider['deploy'] ),
 			'code'
 		);
-		if ( array() === $package_provider_codes ) {
-			throw new RuntimeException( 'No repository provider can install packages.' );
-		}
-
+		// With no provider the pages still load: the install form says so and a package's edit page shows its provider as unavailable.
 		if ( ! is_string( $default_provider ) || ! in_array( $default_provider, $package_provider_codes, true ) ) {
-
-			$default_provider = $package_provider_codes[0];
+			$default_provider = $package_provider_codes[0] ?? '';
 		}
 
 		return array(

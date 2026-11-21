@@ -29,6 +29,31 @@ if ( ! defined( 'WPINC' ) ) {
 $recovery_identifier   = isset( $recovery_identifier ) && is_string( $recovery_identifier ) ? $recovery_identifier : '';
 $provider_options      = $package_provider_settings['providers'];
 $default_provider_code = $package_provider_settings['default_provider'];
+if ( array() === $provider_options ) {
+	// Nothing can be installed without a Git provider; Extensions is where one is restored.
+	$extensions_link = current_user_can( 'manage_options' ) ? '<a href="' . esc_url( add_query_arg( 'page', 'ran-booster-extensions', $package_view->get_admin_url() ) ) . '">' : '';
+	?>
+<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is Plugin or Theme. */ __( 'Install New %s', 'ran-booster' ), $package_view->get_singular_label() ) ); ?></h2>
+<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
+	<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+		<p>
+		<?php
+		echo wp_kses_post(
+			sprintf(
+				/* translators: 1: opening link tag to Extensions, or nothing; 2: closing link tag, or nothing. */
+				esc_html__( 'No Git provider is available. %1$sRestore one%2$s before installing a package.', 'ran-booster' ),
+				$extensions_link,
+				'' === $extensions_link ? '' : '</a>'
+			)
+		);
+		?>
+		</p>
+	</div>
+	<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?>
+</div>
+	<?php
+	return;
+}
 // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 $selected_credential_id = isset( $_POST['ran_booster']['credential_id'] )
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.

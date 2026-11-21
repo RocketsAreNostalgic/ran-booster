@@ -138,6 +138,52 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'name="_ran_booster_reinstall_nonce"', $html );
 	}
 
+	/** @return array<string, array{bool}> */
+	public static function install_form_without_a_provider_cases(): array {
+		return array(
+			'single site' => array( false ),
+			'multisite'   => array( true ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'install_form_without_a_provider_cases' )]
+	public function test_install_form_without_a_provider_says_so_with_one_link_and_no_form( bool $multisite ): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
+		$package_view                                  = PackagePagePresenter::plugin();
+		$package_provider_settings                     = array(
+			'default_provider' => '',
+			'providers'        => array(),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+		$html = (string) ob_get_clean();
+
+		$base = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
+		self::assertStringContainsString( 'No Git provider is available. <a href="' . $base . '?page=ran-booster-extensions">Restore one</a> before installing a package.', $html );
+		self::assertSame( 1, substr_count( $html, '<a ' ) );
+		self::assertStringContainsString( 'Install New Plugin', $html );
+		self::assertStringNotContainsString( '<form', $html );
+	}
+
+	public function test_install_form_without_a_provider_has_no_link_for_a_user_who_cannot_manage_options(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => false );
+		$package_view                             = PackagePagePresenter::plugin();
+		$package_provider_settings                = array(
+			'default_provider' => '',
+			'providers'        => array(),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'No Git provider is available. Restore one before installing a package.', $html );
+		self::assertStringNotContainsString( '<a ', $html );
+	}
+
 	public function test_edit_view_explains_a_replacement_provider_that_cannot_load(): void {
 		$package                   = $this->package();
 		$package_view              = PackagePagePresenter::plugin();

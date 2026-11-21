@@ -940,12 +940,31 @@ class Dashboard {
 						? PackageAdminController::repository_branch_check_sentences( $repository_branch_check_outcome )
 						: null;
 					if ( null !== $save_check_sentences ) {
+						// The link reuses this check's verified value and nonce, so the card reopens on its cached result without the saved notice.
+						$return_args = array( 'return_type' => $type );
+						foreach ( $this->package_return_context( $type ) as $key => $value ) {
+							$return_args[ 'return_' . $key ] = $value;
+						}
+						$card_url = add_query_arg(
+							array_map(
+								'rawurlencode',
+								array(
+									'page'        => $package_view->get_page_slug(),
+									'package'     => $identifier,
+									'source_view' => 'branch',
+									'ran_booster_open_advanced' => '1',
+									'ran_booster_repository_branch_check' => sanitize_key( wp_unslash( $_GET['ran_booster_repository_branch_check'] ?? '' ) ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified with its nonce by the check above.
+									'_ran_booster_repository_branch_nonce' => sanitize_key( wp_unslash( $_GET['_ran_booster_repository_branch_nonce'] ?? '' ) ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified by the check above.
+								) + $return_args
+							),
+							$package_view->get_admin_url()
+						);
 						$this->add_message(
 							array(
 								'type'     => 'warning',
 								'code'     => 'ran_booster_package_branch_check',
 								'feedback' => 'package_branch_check',
-								'message'  => '<a href="#ran-booster-branch-readiness">' . esc_html( array_shift( $save_check_sentences ) ) . '</a>'
+								'message'  => '<a href="' . esc_url( $card_url . '#ran-booster-branch-readiness' ) . '">' . esc_html( array_shift( $save_check_sentences ) ) . '</a>'
 									. ( array() === $save_check_sentences ? '' : ' ' . esc_html( implode( ' ', $save_check_sentences ) ) ),
 							)
 						);

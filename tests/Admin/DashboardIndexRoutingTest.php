@@ -583,12 +583,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 	/** @return array<string, array{string, string}> */
 	public static function save_check_outcomes(): array {
 		return array(
-			'missing branch'           => array( 'branch_unavailable', '<a href="#ran-booster-branch-readiness">The saved branch could not be found.</a> Check the branch name on the provider.' ),
-			'redirected branch'        => array( 'branch_redirected', '<a href="#ran-booster-branch-readiness">The branch lookup was redirected.</a> The branch may have been renamed or the repository moved. Check the current name on the provider.' ),
-			'unavailable provider'     => array( 'provider_unavailable', '<a href="#ran-booster-branch-readiness">The saved Git provider is unavailable, so Booster could not check the repository and branch.</a>' ),
-			'unable to check'          => array( 'unable_to_check', '<a href="#ran-booster-branch-readiness">Booster could not access the saved repository and branch.</a> Check the branch name and repository access, then try again.' ),
-			'missing subdirectory'     => array( 'subdirectory_unavailable', '<a href="#ran-booster-branch-readiness">The saved branch is accessible, but Booster could not find the configured subdirectory.</a> Check the path and try again.' ),
-			'unchecked subdirectory'   => array( 'subdirectory_unverified', '<a href="#ran-booster-branch-readiness">The saved branch is accessible, but Booster could not check the configured subdirectory.</a> Try again later.' ),
+			'missing branch'           => array( 'branch_unavailable', '<a href="{href}">The saved branch could not be found.</a> Check the branch name on the provider.' ),
+			'redirected branch'        => array( 'branch_redirected', '<a href="{href}">The branch lookup was redirected.</a> The branch may have been renamed or the repository moved. Check the current name on the provider.' ),
+			'unavailable provider'     => array( 'provider_unavailable', '<a href="{href}">The saved Git provider is unavailable, so Booster could not check the repository and branch.</a>' ),
+			'unable to check'          => array( 'unable_to_check', '<a href="{href}">Booster could not access the saved repository and branch.</a> Check the branch name and repository access, then try again.' ),
+			'missing subdirectory'     => array( 'subdirectory_unavailable', '<a href="{href}">The saved branch is accessible, but Booster could not find the configured subdirectory.</a> Check the path and try again.' ),
+			'unchecked subdirectory'   => array( 'subdirectory_unverified', '<a href="{href}">The saved branch is accessible, but Booster could not check the configured subdirectory.</a> Try again later.' ),
 			'passing check'            => array( 'verified', '' ),
 			'provider cannot check it' => array( 'subdirectory_deferred', '' ),
 		);
@@ -620,9 +620,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'ran_booster_result'        => 'edit',
 			'ran_booster_package'       => 'example/example.php',
 			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|edit|example/example.php' ),
+			'return_type'               => 'plugin',
+			'return_s'                  => 'needle',
 		);
 
-		// The save returns with its result marker and its check.
+		// The save returns with its result marker, its check and the list it came from.
 		$_GET = $saved + $check;
 		$data = $dashboard->get_plugins()['data'];
 
@@ -634,16 +636,51 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertFalse( $data['package_source']['advanced_open'] );
 		} else {
 			self::assertCount( 2, $dashboard->messages );
+			if ( 1 !== preg_match( '/\A<a href="([^"]+)">/', $dashboard->messages[1]['message'], $link ) ) {
+				self::fail( 'The warning starts with its link.' );
+			}
 			self::assertSame(
 				array(
 					'type'     => 'warning',
 					'code'     => 'ran_booster_package_branch_check',
 					'feedback' => 'package_branch_check',
-					'message'  => $warning,
+					'message'  => str_replace( '{href}', $link[1], $warning ),
 				),
 				$dashboard->messages[1]
 			);
 			self::assertTrue( $data['package_source']['advanced_open'], 'Advanced settings open on the card the warning links to.' );
+
+			// The link reopens this package's card with Advanced settings open, on the save's own check and without its result marker.
+			$href = html_entity_decode( $link[1], ENT_QUOTES );
+			self::assertSame( 1, preg_match( '/\A(.+\/admin\.php)\?([^#]+)#ran-booster-branch-readiness\z/', $href, $parts ) );
+			parse_str( $parts[2] ?? '', $target );
+			// WordPress leaves value encoding to the caller; this routing double encodes again, so undo one layer.
+			$target = array_map( static fn ( mixed $value ): string => is_string( $value ) ? rawurldecode( $value ) : '', $target );
+			self::assertSame(
+				array(
+					'page'                      => 'ran-booster-plugins',
+					'package'                   => 'example/example.php',
+					'source_view'               => 'branch',
+					'ran_booster_open_advanced' => '1',
+				) + $check + array(
+					'return_type' => 'plugin',
+					'return_s'    => 'needle',
+				),
+				$target
+			);
+			self::assertSame( \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ), $target['_ran_booster_repository_branch_nonce'], 'The same nonce as the Check branch form on the page.' );
+
+			// Following it shows the same result from the cached check: no provider call, no saved notice, no top warning.
+			self::assertInstanceOf( DashboardBranchCheckProvider::class, $provider );
+			$calls               = $provider->prepare_calls;
+			$dashboard->messages = array();
+			$_GET                = $target;
+			$data                = $dashboard->get_plugins()['data'];
+
+			self::assertSame( $outcome, $data['repository_branch_check_outcome'] );
+			self::assertSame( $calls, $provider->prepare_calls );
+			self::assertSame( array(), $dashboard->messages );
+			self::assertTrue( $data['package_source']['advanced_open'] );
 		}
 
 		// A result marker for another package does not carry this package's check result.

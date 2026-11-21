@@ -110,9 +110,13 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 
 		$request->require_verification();
 
-		return 'ping' === $request->get_header( 'x-fixture-event' )
-			? WebhookEnvelope::probe()
-			: WebhookEnvelope::ignored();
+		if ( 'ping' !== $request->get_header( 'x-fixture-event' ) ) {
+			return WebhookEnvelope::ignored();
+		}
+		// Like a GitHub ping, a fixture ping names its repository, so a signed one can confirm that repository's webhook record.
+		$payload = json_decode( $request->get_body(), true );
+
+		return WebhookEnvelope::probe( is_array( $payload ) && is_string( $payload['repository_id'] ?? null ) ? $payload['repository_id'] : null );
 	}
 
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
@@ -213,7 +217,7 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 	public function check( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
 		$this->credential( $credential_profile_id );
 
-		return $this->operation( 'fixture_configuration_confirmed', 'unknown' );
+		return $this->operation( 'configuration_confirmed', 'unknown' );
 	}
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of reconfigure retains the production method contract; these inputs do not affect this controlled result.
@@ -230,8 +234,11 @@ final readonly class Provider implements RepositoryProvider, ProviderCredentialP
 		return $this->operation( 'fixture_absence_confirmed', 'absent' );
 	}
 
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceBeforeLastUsed -- The fixture implementation of test retains the production method contract; these inputs do not affect this controlled result.
 	public function test( string $repository_id, string $repository, string $hook_id, string $callback_url, ?string $credential_profile_id ): RepositoryWebhookOperationResult {
-		return $this->check( $repository_id, $repository, $hook_id, $callback_url, $credential_profile_id );
+		$this->credential( $credential_profile_id );
+
+		return $this->operation( 'ping_requested', 'unknown' );
 	}
 
 	private function fitness( ?string $credential_id ): RepositoryWebhookFitnessResult {

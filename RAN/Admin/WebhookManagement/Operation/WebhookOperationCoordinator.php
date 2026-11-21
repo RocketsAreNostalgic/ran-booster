@@ -210,7 +210,7 @@ final class WebhookOperationCoordinator {
 		$remediation = '' === $remediation ? null : $remediation;
 
 		if ( 'setup' === $operation ) {
-			$outcome    = $this->record_setup( $target, $result, $credential_id, $state, $code, $observed, $delivery );
+			$outcome    = $this->record_setup( $target, $result, $credential_id, $state, $code, $observed );
 			$successful = 'succeeded' === $state && $this->successful_code( $outcome['code'] );
 
 			return $this->finalize_outcome( $outcome, $remediation, $successful, $successful || 'failed' === $state );
@@ -227,11 +227,9 @@ final class WebhookOperationCoordinator {
 		};
 
 		$successful = match ( $operation ) {
-			'check' => 'succeeded' === $state && (
-				( 'verified' === $outcome['code'] && 'verified' === $delivery )
-				|| ( 'configured_pending_delivery' === $outcome['code'] && 'configured_pending_delivery' === $delivery )
-				|| 'configuration_confirmed' === $outcome['code']
-			),
+			// The record write applied and the check confirmed the settings; Validate pings only then.
+			'check' => 'succeeded' === $state && $this->check_confirms_settings( $code, $delivery )
+				&& in_array( $outcome['code'], array( 'verified', 'configured_pending_delivery', 'configuration_confirmed' ), true ),
 			'reconfigure' => 'succeeded' === $state && $this->successful_code( $outcome['code'] ),
 			'remove' => $result->confirms_absence() && 'removed' === $outcome['code'],
 			'test' => false,
@@ -245,7 +243,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	/** @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} */
-	private function record_setup( AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $credential_id, string $state, string $code, string $observed, string $delivery ): array {
+	private function record_setup( AssistanceTarget $target, RepositoryWebhookOperationResult $result, string $credential_id, string $state, string $code, string $observed ): array {
 		if ( 'failed' === $state ) {
 			return $this->outcome( $code );
 		}
@@ -262,9 +260,8 @@ final class WebhookOperationCoordinator {
 			$hook_id = InstallationRecord::unknown_hook_id();
 		}
 
-		$status = 'succeeded' === $state
-			? ( 'verified' === $delivery ? 'configured' : 'needs_verification' )
-			: 'orphaned';
+		// Only a signed delivery the receiver verifies makes a record configured, never the provider's own report.
+		$status = 'succeeded' === $state ? 'needs_verification' : 'orphaned';
 		$record = new InstallationRecord(
 			$target->provider_code(),
 			$target->repository_id(),
@@ -298,11 +295,7 @@ final class WebhookOperationCoordinator {
 			return $this->outcome( 'orphaned' );
 		}
 
-		return $this->outcome(
-			'succeeded' === $state
-				? ( 'verified' === $delivery ? 'verified' : 'configured_pending_delivery' )
-				: $code
-		);
+		return $this->outcome( 'succeeded' === $state ? 'configured_pending_delivery' : $code );
 	}
 
 	/** @param array<string, mixed> $configuration */
@@ -315,11 +308,11 @@ final class WebhookOperationCoordinator {
 			'partial' === $state || 'ambiguous' === $state => 'needs_verification',
 			'succeeded' === $state && 'absent' === $delivery => 'remote_missing',
 			'succeeded' === $state && in_array( 'mismatched', $configuration, true ) => 'configuration_drift',
-			'succeeded' === $state && 'verified' === $delivery => 'configured',
 			'profile_revision_stale' === $code => 'profile_revision_stale',
 			'local_profile_missing' === $code => 'local_profile_missing',
-			// A signed delivery already verified this hook; a clean check keeps that.
-			'succeeded' === $state && 'configured' === $record->status() => 'configured',
+			// Validate pings only after a check that confirms the settings, so any other clean check keeps a verified hook.
+			'succeeded' === $state && 'configured' === $record->status() && ! $this->check_confirms_settings( $code, $delivery ) => 'configured',
+			// One that does is written before the ping, so only that ping's own signed delivery confirms the hook again.
 			default => 'needs_verification',
 		};
 		$next        = 'succeeded' === $state
@@ -359,14 +352,14 @@ final class WebhookOperationCoordinator {
 			$profile->revision(),
 			$profile->disposition(),
 			$target->endpoint(),
-			'verified' === $delivery ? 'configured' : 'needs_verification',
+			'needs_verification',
 			$observed
 		);
 
 		$write = $this->records->save_if_current( $next, $record );
 
 		return $this->outcome(
-			$this->write_result_code( $write, 'verified' === $delivery ? 'verified' : 'configured_pending_delivery' ),
+			$this->write_result_code( $write, 'configured_pending_delivery' ),
 			$this->write_succeeded( $write ) ? null : $hook_id,
 			$this->write_succeeded( $write ) ? null : $profile->id()
 		);
@@ -467,6 +460,12 @@ final class WebhookOperationCoordinator {
 		$outcome['inline_safe'] = $inline_safe;
 
 		return $outcome;
+	}
+
+	/** Whether a succeeded check's result confirms the settings, which is when Validate sends its ping. */
+	private function check_confirms_settings( string $code, string $delivery ): bool {
+		return 'verified' === $delivery || 'configuration_confirmed' === $code
+			|| ( 'configured_pending_delivery' === $code && 'configured_pending_delivery' === $delivery );
 	}
 
 	private function successful_code( string $code ): bool {

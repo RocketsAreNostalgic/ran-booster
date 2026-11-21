@@ -472,8 +472,8 @@ final class RepositoryWebhookManagementControls {
 						: __( 'Not recorded by Booster; a signed delivery was received.', 'ran-booster' ) )
 					: ( $record_healthy && $receiver_ready
 						? sprintf(
-							/* translators: %s: UTC timestamp of the last recorded webhook check. */
-							__( 'Configured at the last recorded check on %s. Validate to confirm current Git provider state.', 'ran-booster' ),
+							/* translators: %s: UTC time a signed delivery or a later Validate last confirmed the webhook. */
+							__( 'Signed delivery received; last confirmed on %s.', 'ran-booster' ),
 							esc_html( $record->checked_at() )
 						)
 						: match ( true ) {

@@ -433,7 +433,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 		self::assertStringContainsString( 'A signing secret was available when Booster last checked.', $html );
 		self::assertStringContainsString( 'This site can receive webhook deliveries.', $html );
-		self::assertStringContainsString( 'Configured at the last recorded check on 2026-08-20T01:02:03Z.', $html );
+		self::assertStringContainsString( 'Signed delivery received; last confirmed on 2026-08-20T01:02:03Z.', $html );
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		// The Branch demand step says it; the reason titles the disabled buttons without repeating as a notice.
 		self::assertStringContainsString( 'disabled-reason-setup">Webhook operations are unavailable while no eligible Branch package uses this repository.</span>', $html );
@@ -1258,7 +1258,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$presentation = new \ReflectionMethod( $display, 'result_presentation' );
 		$panel        = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
 		$section      = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
-		foreach ( array( 'configured_pending_delivery', 'verified', 'ping_requested', 'ping_verified', 'ping_delivery_failed', 'removed', 'orphaned', 'manual_recovery_required', 'recovery_record_failed', 'record_conflict', 'record_update_failed' ) as $code ) {
+		foreach ( array( 'configured_pending_delivery', 'ping_delivery_failed', 'removed', 'orphaned', 'manual_recovery_required', 'recovery_record_failed', 'record_conflict', 'record_update_failed' ) as $code ) {
 			$result = $presentation->invoke(
 				$display,
 				$code,
@@ -1269,9 +1269,6 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				null
 			);
 			self::assertNotEmpty( $result['heading'], $code );
-			if ( in_array( $code, array( 'verified', 'ping_requested', 'ping_verified' ), true ) ) {
-				self::assertStringContainsString( 'signed delivery unverified', $result['heading'] );
-			}
 			if ( 'removed' === $code ) {
 				self::assertArrayNotHasKey( 'details', $result );
 			}

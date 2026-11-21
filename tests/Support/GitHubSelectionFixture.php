@@ -18,8 +18,9 @@ require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 
 /** Real selection/CAS authority shared by native lifecycle tests. */
 trait GitHubSelectionFixture {
-	private ?GitHubSelectionStore $native_selection_store = null;
-	private ?GitHubProviderSelection $native_selection    = null;
+	private ?GitHubSelectionStore $native_selection_store  = null;
+	private ?GitHubProviderSelection $native_selection     = null;
+	private ?SelectionContextDatabase $native_selection_db = null;
 
 	private function github_selection(): GitHubProviderSelection {
 		if ( null !== $this->native_selection ) {
@@ -38,6 +39,7 @@ trait GitHubSelectionFixture {
 				'facets'                 => array(),
 			)
 		);
+		$this->native_selection_db    = $db;
 		$this->native_selection_store = new GitHubSelectionStore( $db, 'wp_options' );
 		$this->native_selection_store->initialize_bundled( $declaration );
 		$selection = new GitHubProviderSelection( $this->native_selection_store, dirname( __DIR__ ) . '/WordPress/fixtures/ran-booster-managed-active', $declaration );

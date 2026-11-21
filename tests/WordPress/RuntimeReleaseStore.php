@@ -31,6 +31,10 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 		$this->configurations[ $type . "\0" . $identifier ] = $configuration;
 	}
 
+	/** The selection fixture's connection, standing in for the one database both stores share. */
+	public ?object $native_connection = null;
+
+	/** @param (callable(object,string,string):void)|null $native_complete Runs on the shared connection, as real storage runs it inside its transaction. */
 	public function transition(
 		string $type,
 		string $identifier,
@@ -39,10 +43,14 @@ final class RuntimeReleaseStore extends ManagedReleaseStore {
 		PackageSource $new_source,
 		?ManagedReleaseConfiguration $configuration,
 		int $user_id,
-		string $expected_adoption_token
+		string $expected_adoption_token,
+		?callable $native_complete = null
 	): bool {
 		if ( null !== $this->transition_failure ) {
 			throw $this->transition_failure;
+		}
+		if ( null !== $native_complete ) {
+			$native_complete( $this->native_connection ?? throw new \RuntimeException( 'Native completion requires a shared connection.' ), $type, $identifier );
 		}
 		$this->transitions[] = array(
 			'type'              => $type,

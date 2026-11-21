@@ -58,6 +58,9 @@ final class ManagedReleaseTargetRegistrar {
 	/** @var array<string, array{status: string, reason: string}> Last observed check result by target key. */
 	private array $check_outcomes = array();
 
+	/** @var array<string, array{configuration: ManagedReleaseConfiguration, revision: int, token: string, user: int}> This request's Branch-to-release switch, never stored. */
+	private array $switches = array();
+
 	public function __construct(
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
@@ -134,6 +137,43 @@ final class ManagedReleaseTargetRegistrar {
 		return 'plugin' === $package_type
 			&& null !== $this->core_self_update_plugin_identifier
 			&& hash_equals( $this->core_self_update_plugin_identifier, self::plugin_target_identity( $installed_identifier ) );
+	}
+
+	/**
+	 * Admit one Branch package's switch to releases for this request only. Its source changes when
+	 * the native install completes, in the transaction that ends the install's custody.
+	 */
+	public function admit_switch( string $type, Package $package, ManagedReleaseConfiguration $configuration, int $user_id ): bool {
+		$identifier = (string) $package->get_identifier();
+		$key        = self::key( $type, $identifier );
+		$token      = \RAN\AdoptionIdentity::of( $package );
+		if ( PackageSource::BRANCH !== $package->get_source()
+			|| null === $token
+			|| null !== $package->get_subdirectory()
+			|| isset( $this->targets[ $key ] )
+			|| $this->has_reserved_core_self_update_target( $type, $identifier ) ) {
+			return false;
+		}
+		$this->switches[ $key ] = array(
+			'configuration' => $configuration,
+			'revision'      => $package->get_source_revision(),
+			'token'         => $token,
+			'user'          => $user_id,
+		);
+		try {
+			$this->targets[ $key ] = $this->register_package( $type, $package, $configuration );
+
+			return true;
+		} catch ( Throwable ) {
+			unset( $this->switches[ $key ], $this->targets[ $key ], $this->registered_authorities[ $key ] );
+
+			return false;
+		}
+	}
+
+	/** The target stays registered, so a later download in this request is refused. */
+	public function withdraw_switch( string $type, string $identifier ): void {
+		unset( $this->switches[ self::key( $type, $identifier ) ] );
 	}
 
 	public function suppress_unauthorized_plugin_offers( mixed $transient ): mixed {
@@ -327,16 +367,37 @@ final class ManagedReleaseTargetRegistrar {
 	public function complete_provider_native_mutation( string $owner, string $type, string $identity, string $outcome ): void {
 		$key     = self::key( $type, $identity );
 		$pending = $this->native_updates[ $key ] ?? null;
+		$switch  = $this->switches[ $key ] ?? null;
 		if ( null === $pending || ( $pending['native_owner'] ?? null ) !== $owner ) {
 			throw new \RuntimeException( 'GitHub native completion owner changed.' );
 		}
+		$committed = false;
+		$refused   = 'outcome_uncertain';
 		try {
 			if ( ! $pending['automatic'] && null !== $pending['lock'] && ! $this->updater_lock->release( $pending['lock'] ) ) {
 				throw new \RuntimeException( 'GitHub native lock release failed.' );
 			}
-			$this->github_selection->complete_native_mutation( $owner, $type, $identity, $outcome );
+			$refused = 'verified_success' === $outcome ? 'commit_refused' : 'outcome_uncertain';
+			// A switch commits its source in the transaction that ends custody; uncertain leaves both for recovery.
+			$this->github_selection->complete_native_mutation(
+				$owner,
+				$type,
+				$identity,
+				$outcome,
+				null === $switch ? null : fn ( callable $complete ): bool => $this->store->transition( $type, $identity, PackageSource::BRANCH, $switch['revision'], PackageSource::RELEASE_ASSET, $switch['configuration'], $switch['user'], $switch['token'], $complete )
+			);
+			$committed = 'verified_success' === $outcome;
 		} finally {
-			unset( $this->native_updates[ $key ] );
+			unset( $this->native_updates[ $key ], $this->switches[ $key ] );
+			if ( null !== $switch ) {
+				BoosterLogger::log(
+					'release switch completed',
+					array(
+						'event'        => 'release_switch',
+						'outcome_code' => $committed ? 'release_enabled' : $refused,
+					)
+				);
+			}
 		}
 	}
 
@@ -610,9 +671,9 @@ final class ManagedReleaseTargetRegistrar {
 		return $conflicts;
 	}
 
-	private function register_package( string $type, Package $package ): RepositoryReleaseNativeTarget {
+	private function register_package( string $type, Package $package, ?ManagedReleaseConfiguration $configuration = null ): RepositoryReleaseNativeTarget {
 		$identifier    = (string) $package->get_identifier();
-		$configuration = $this->store->configuration( $type, $identifier );
+		$configuration = $configuration ?? $this->store->configuration( $type, $identifier );
 		$provider_code = $package->get_provider_code();
 		if ( null === $configuration
 			|| null === $provider_code
@@ -698,7 +759,12 @@ final class ManagedReleaseTargetRegistrar {
 		$package = 'plugin' === $type
 			? $this->plugins->booster_plugin_from_file( $identifier )
 			: $this->themes->booster_theme_from_stylesheet( $identifier );
-		if ( PackageSource::RELEASE_ASSET !== $package->get_source() ) {
+		$switch  = PackageSource::BRANCH === $package->get_source() ? ( $this->switches[ self::key( $type, $identifier ) ] ?? null ) : null;
+		if ( null !== $switch
+			&& ( $package->get_source_revision() !== $switch['revision'] || \RAN\AdoptionIdentity::of( $package ) !== $switch['token'] ) ) {
+			$switch = null;
+		}
+		if ( PackageSource::RELEASE_ASSET !== $package->get_source() && null === $switch ) {
 			return array(
 				'release'   => false,
 				'authority' => null,
@@ -710,7 +776,7 @@ final class ManagedReleaseTargetRegistrar {
 				'authority' => null,
 			);
 		}
-		$configuration = $this->store->configuration( $type, $identifier );
+		$configuration = null !== $switch ? $switch['configuration'] : $this->store->configuration( $type, $identifier );
 		$repository_id = $package->get_provider_repository_id();
 		$provider_code = $package->get_provider_code();
 		if ( $identifier !== (string) $package->get_identifier()
@@ -799,12 +865,12 @@ final class ManagedReleaseTargetRegistrar {
 			if ( ! array_key_exists( $identifier, $transient->response ) ) {
 				continue;
 			}
-			if ( PackageSource::RELEASE_ASSET !== $package->get_source() ) {
+			$key = self::key( $type, $identifier );
+			if ( PackageSource::RELEASE_ASSET !== $package->get_source() && ! isset( $this->switches[ $key ] ) ) {
 				unset( $transient->response[ $identifier ] );
 
 				continue;
 			}
-			$key = self::key( $type, $identifier );
 			try {
 				$snapshot = $this->native_authority_snapshot( $type, $identifier );
 				$current  = $snapshot['authority'];

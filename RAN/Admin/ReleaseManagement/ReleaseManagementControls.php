@@ -199,8 +199,9 @@ final class ReleaseManagementControls {
 			&& null !== $status && in_array( $status->failure_code(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
 			&& $release_pane;
 		if ( 'edit' === $mode && null !== $result && '' !== $code && ! $duplicate_conflict ) {
+			[ $code, $successful ] = ReleaseTrackingOperations::settled( $code, $result['successful'], $status );
 			ob_start();
-			$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'] ), null );
+			$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $successful, $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'] ), null );
 			$operation_notice_html = (string) ob_get_clean();
 		}
 		$prospective = $this->prospective_projection( $type );
@@ -262,8 +263,9 @@ final class ReleaseManagementControls {
 			return;
 		}
 
-		$status = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->fresh_status( $result['type'], $result['identifier'] ), null );
-		\RAN\Admin\BoosterNoticeScope::render( fn () => $this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'] ), null ) );
+		$status                = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->fresh_status( $result['type'], $result['identifier'] ), null );
+		[ $code, $successful ] = ReleaseTrackingOperations::settled( $code, $result['successful'], $status );
+		\RAN\Admin\BoosterNoticeScope::render( fn () => $this->request_boundary( fn () => $this->display->render_operation_notice( $code, $successful, $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'] ), null ) );
 	}
 
 	/**
@@ -521,11 +523,12 @@ final class ReleaseManagementControls {
 			&& null !== $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->fresh_status( $outcome['type'], $outcome['identifier'] ), null );
 		if ( $flash ) {
 			FeedbackFlash::enqueue( 'release_current' === $outcome['code'] ? 'release_check_current' : 'release_check_update' );
-		} elseif ( $outcome['successful'] && in_array( $operation, array( 'enable', 'change_channel', 'return_to_branch' ), true ) && null !== FeedbackFlash::release_operation_success( $outcome['code'] ) ) {
+		} elseif ( $outcome['successful'] && in_array( $operation, array( 'change_channel', 'return_to_branch' ), true ) && null !== FeedbackFlash::release_operation_success( $outcome['code'] ) ) {
 			// A confirmed settings operation travels as a closed-code flash too; the new state is its own record.
 			FeedbackFlash::enqueue( $outcome['code'] );
 		} else {
 			// A result that is not a success is its inline notice, which the host reads and which stays the record.
+			// So is a switch to Releases: it commits after this reply, and the landing page reads the source back to settle it.
 			$url = add_query_arg( $this->result_query_arguments( $outcome, $channel ), $url );
 		}
 

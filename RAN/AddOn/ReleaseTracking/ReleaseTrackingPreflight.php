@@ -31,7 +31,8 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 		private string $package_header_version = '',
 		private string $version_relationship = '',
 		string $reason_code = '',
-		private string $detail = ''
+		private string $detail = '',
+		private string $release_identity = ''
 	) {
 		if ( ! in_array(
 			$code,
@@ -54,6 +55,8 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 
 			|| strlen( $this->release_tag ) > 128
 
+			|| strlen( $this->release_identity ) > 191
+
 			|| strlen( $this->package_header_version ) > 64
 
 			|| ! in_array( $this->version_relationship, array( '', 'newer', 'same', 'older', 'invalid' ), true )
@@ -62,7 +65,7 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 
 			|| self::detail( $this->detail ) !== $this->detail
 
-			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $this->release_tag . $this->package_header_version )
+			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $this->release_tag . $this->package_header_version . $this->release_identity )
 
 			|| ( '' !== $this->release_url && ! $this->valid_release_url( $this->release_url ) ) ) {
 			throw new InvalidArgumentException( 'Release tracking preflight is invalid.' );
@@ -105,6 +108,11 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 		return $this->package_header_version;
 	}
 
+
+	/** The provider's identity of the inspected release, which a switch installs. */
+	public function release_identity(): string {
+		return $this->release_identity;
+	}
 
 	public function version_relationship(): string {
 

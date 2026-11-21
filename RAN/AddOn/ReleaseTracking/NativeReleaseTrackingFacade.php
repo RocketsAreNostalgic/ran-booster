@@ -77,6 +77,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** The default read-only check is throttled; an injected one is not. */
 	private bool $check_cooldown;
 
+	/** @var \Closure(string, string, string, string): string */
+	private \Closure $switch_install;
+
 	/**
 	 * @param callable(string): bool|null         $can_manage
 	 * @param callable(string, string): bool|null $verify_nonce
@@ -85,6 +88,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(string): void|null         $invalidate_native
 	 * @param callable(string): ?string|null      $public_lookup_profile
 	 * @param callable(string, string): mixed|null $check_without_offer
+	 * @param callable(string, string, string, string): string|null $switch_install Offers one exact release and runs WordPress's upgrader for it.
 	 */
 	public function __construct(
 		private PluginRepository $plugins,
@@ -100,8 +104,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		?callable $invalidate_native = null,
 		?callable $public_lookup_profile = null,
 		?RepositorySourceGuard $source_guard = null,
-		?callable $check_without_offer = null
+		?callable $check_without_offer = null,
+		?callable $switch_install = null
 	) {
+		$this->switch_install = null === $switch_install ? \Closure::fromCallable( array( self::class, 'install_release' ) ) : \Closure::fromCallable( $switch_install );
 
 		$this->updater_lock = $updater_lock;
 
@@ -661,78 +667,49 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$header_file,
 				$channel
 			);
-			$incompatible  = false;
-			$conflict      = false;
-			$unavailable   = false;
-			$changed       = $this->mutate_with_updater_lock(
-				function () use ( $type, $identifier, $expected_source_revision, $configuration, $package, &$incompatible, &$conflict, &$unavailable ): bool {
-					$token   = \RAN\AdoptionIdentity::of( $package );
-					$package = $this->package( $type, $identifier );
-					if ( null === $token || \RAN\AdoptionIdentity::of( $package ) !== $token ) {
-						return false;
+			$live          = $this->package( $type, $identifier );
+			if ( null === \RAN\AdoptionIdentity::of( $live ) || \RAN\AdoptionIdentity::of( $live ) !== \RAN\AdoptionIdentity::of( $package ) || $expected_source_revision !== $live->get_source_revision() ) {
+				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
+			}
+			if ( ! $this->registrar->admit_switch( $type, $live, $configuration, function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0 ) ) {
+				return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
+			}
+			$installed = 'failed';
+			try {
+				$installed = ( $this->switch_install )( $type, $identifier, $preflight->release_identity(), $preflight->release_tag() );
+			} catch ( Throwable ) {
+				// WordPress may already have installed: the permit stays, so the updater's verification at shutdown decides the source.
+				$installed = 'uncertain';
+			} finally {
+				if ( 'installed' !== $installed ) {
+					if ( 'uncertain' !== $installed ) {
+						$this->registrar->withdraw_switch( $type, $identifier );
 					}
-					if ( ! $this->release_source_supported( $package ) ) {
-						$incompatible = true;
-
-						return false;
-					}
-					$availability = $this->release_source_available( $type, $package );
-					if ( false === $availability ) {
-						$conflict = true;
-
-						return false;
-					}
-					if ( null === $availability ) {
-						$unavailable = true;
-
-						return false;
-					}
-					$changed = $this->store->transition(
-						$type,
-						$identifier,
-						PackageSource::BRANCH,
-						$expected_source_revision,
-						PackageSource::RELEASE_ASSET,
-						$configuration,
-						function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0,
-						$token
-					);
-					if ( $changed ) {
-						( $this->invalidate_native )( $type );
-					}
-
-					return $changed;
+					// The one-off offer may have displaced an ordinary one; WordPress rechecks on the next admin load.
+					add_action( 'shutdown', fn () => ( $this->invalidate_native )( $type ), PHP_INT_MAX, 0 );
 				}
+			}
+			$code = match ( $installed ) {
+				'installed' => 'release_enabled',
+				'failed' => 'wordpress_failed',
+				'uncertain' => 'management_state_uncertain',
+				'unsupported', 'runtime_busy', 'filesystem_unavailable', 'discovery_not_admitted', 'offer_token_unavailable', 'runtime_liveness_lost' => 'service_unavailable',
+				'release_older' => 'release_older',
+				'policy_disabled', 'policy_forced_off' => 'policy_blocked',
+				default => 'release_unavailable',
+			};
+			BoosterLogger::log(
+				'release switch',
+				array(
+					'event'        => 'release_switch',
+					'outcome_code' => $code,
+					'reason'       => $installed,
+				)
 			);
-			if ( $changed instanceof ManagedReleaseSubdirectoryNotSupported ) {
-				return $this->subdirectory_not_supported();
-			}
-			if ( null === $changed ) {
-				return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
-			}
-			if ( $incompatible ) {
-				return $this->subdirectory_not_supported();
-			}
-			if ( $unavailable ) {
-				return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
-			}
-			if ( $conflict ) {
-				return ReleaseTrackingResult::failed( 'release_repository_conflict', 'Published releases require exclusive use of this provider repository.' );
-			}
 
-			if ( ! $changed ) {
-				$availability = $this->release_source_available( $type, $this->package( $type, $identifier ) );
-				if ( false === $availability ) {
-					return ReleaseTrackingResult::failed( 'release_repository_conflict', 'Published releases require exclusive use of this provider repository.' );
-				}
-				if ( null === $availability ) {
-					return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
-				}
-			}
-
-			return $changed
-				? ReleaseTrackingResult::succeeded( 'release_enabled', 'Release tracking enabled' )
-				: ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
+			return 'release_enabled' === $code
+				? ReleaseTrackingResult::succeeded( $code, 'Release tracking enabled' )
+				: ReleaseTrackingResult::failed( $code, 'Release tracking could not be enabled.' );
 		} catch ( Throwable ) {
 			return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
 		}
@@ -1029,6 +1006,31 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		} catch ( Throwable ) {
 			return null;
 		}
+	}
+
+	/**
+	 * Offer the one release this request chose, then run WordPress's own upgrader for that package alone.
+	 * Nothing refreshes the updater between the two, so the offer reaches the upgrader.
+	 *
+	 * @return string 'installed', 'failed', 'unsupported', or the updater's refusal code.
+	 */
+	private static function install_release( string $type, string $identifier, string $release_identity, string $tag ): string {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented exact-release filter.
+		$offer = apply_filters( 'ran_wp_release_updater_offer_release_v1', null, $type, $identifier, $release_identity, $tag );
+		if ( ! is_array( $offer ) || ! is_string( $offer['code'] ?? null ) || '' === $offer['code'] ) {
+			return 'unsupported';
+		}
+		if ( 'authorized' !== ( $offer['status'] ?? null ) ) {
+			return in_array( $offer['code'], array( 'installed', 'failed', 'uncertain', 'unsupported' ), true ) ? 'unsupported' : $offer['code'];
+		}
+		require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+		$skin   = new \WP_Ajax_Upgrader_Skin();
+		$result = 'plugin' === $type
+			? ( ( new \Plugin_Upgrader( $skin ) )->bulk_upgrade( array( $identifier ) )[ $identifier ] ?? null )
+			: ( new \Theme_Upgrader( $skin ) )->upgrade( $identifier );
+
+		// The plugin upgrader reports `true` for a package it found up to date, so only its result array means installed.
+		return ( 'plugin' === $type ? is_array( $result ) : true === $result ) ? 'installed' : 'failed';
 	}
 
 	private function package( string $type, string $identifier ): Package {
@@ -1367,7 +1369,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$release_url,
 				$inspection->tag,
 				$inspection->version,
-				$relationship
+				$relationship,
+				release_identity: $inspection->provider_release_id
 			);
 		}
 

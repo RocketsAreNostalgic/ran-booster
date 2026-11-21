@@ -122,6 +122,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( '<code>temporarily-offline</code>', $html );
 		self::assertStringContainsString( '<code>owner/exact-repository</code>', $html );
 		self::assertStringContainsString( '<code>stable-provider-id</code>', $html );
+		self::assertStringContainsString( 'until its Git provider is <a href="https://example.test/wp-admin/admin.php?page=ran-booster-extensions">registered again</a>.', $html );
 		self::assertStringNotContainsString( 'tab=temporarily-offline', $html, 'No control may link to the not-found tab of an unregistered provider.' );
 		self::assertStringContainsString( '<fieldset  disabled="disabled"', $html );
 		self::assertStringContainsString( 'temporarily-offline — Git provider unavailable', $html );
@@ -305,7 +306,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-badge-intent="high">Credential unavailable</span>', $html );
 		self::assertSame( 1, $this->status_badge_count( $html ) );
 		self::assertSame( 0, substr_count( $html, 'data-ran-booster-ui-badge' ) );
-		self::assertMatchesRegularExpression( '#The saved repository <a href="https://example\.test/wp-admin/admin\.php\?page=ran-booster&amp;tab=[a-z0-9_-]+&amp;view=credentials">credential</a> is unavailable\.#', $html );
+		self::assertMatchesRegularExpression( '#The saved repository <a href="https://example\.test/wp-admin/admin\.php\?page=ran-booster&amp;tab=[a-z0-9_-]+&amp;view=credentials">credential</a> is unavailable; this private repository cannot be updated\.#', $html );
 		self::assertStringContainsString( 'data-ran-booster-update-label>Reinstall</span>', $html );
 		self::assertStringContainsString( 'button-update-package"  disabled="disabled"', $html );
 		self::assertMatchesRegularExpression( '/ran-booster-package-row__wordpress-state">\\s*<span class="ran-booster-package-row__state-label">WordPress<\\/span>\\s*<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none">Disabled<\\/span>/', $html );

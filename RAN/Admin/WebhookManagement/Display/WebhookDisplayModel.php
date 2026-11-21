@@ -397,7 +397,8 @@ final class WebhookDisplayModel {
 			'webhooks_url'                => $webhooks_url,
 			'return_url'                  => $this->panel_url( $return_url, $repository_id ),
 			'interaction_request'         => AdminInteractionRequest::provider_repositories( 'repository-webhook-management:manage-webhook', $this->panel_url( $return_url, $repository_id ), 'repository-webhook-management-error' ),
-			'result'                      => null === $result_code ? null : ( null === $ping_code ? $this->settled_result( $result_code, $recovery, $remediation, 'configured' === $status ) : $this->validation_presentation( $result_code, $ping_code, $remediation, 'configured' === $status ) ),
+			// Repair carries its ping's code too, but only Validate's result shows Settings and Ping lines.
+			'result'                      => null === $result_code ? null : ( null === $ping_code || 'repaired_pending_delivery' === $result_code ? $this->settled_result( $result_code, $recovery, $remediation, 'configured' === $status, $ping_code ) : $this->validation_presentation( $result_code, $ping_code, $remediation, 'configured' === $status ) ),
 			'recovery_warning'            => $recovery_warning,
 			'manual_notice'               => null === $manual_at ? null : self::manual_notice( $manual_at ),
 			'management_credential_id'    => null === $record ? null : $record->management_credential_id(),
@@ -423,7 +424,7 @@ final class WebhookDisplayModel {
 		/* translators: %s: repository provider name. */
 		$setup_description = sprintf( __( 'Create the webhook on %s.', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */
-		$repair_description = sprintf( __( 'Make the webhook on %s match this site\'s settings.', 'ran-booster' ), $provider_label );
+		$repair_description = sprintf( __( 'Make the webhook on %s match this site\'s settings, then ping it.', 'ran-booster' ), $provider_label );
 		/* translators: 1: repository provider name, 2: repository provider name (repeated). */
 		$validate_description = sprintf( __( 'Compare the webhook on %1$s with this site\'s settings, then ask %2$s to send a ping. Delivery counts only when it arrives.', 'ran-booster' ), $provider_label, $provider_label );
 		/* translators: %s: repository provider name. */
@@ -434,7 +435,7 @@ final class WebhookDisplayModel {
 		$validate_busy = sprintf( __( 'Comparing the webhook with this site\'s settings, then asking %s to send a ping. This can take a few seconds.', 'ran-booster' ), $provider_label );
 		$busy          = array(
 			'setup'       => array( __( 'Setting up…', 'ran-booster' ), __( 'Creating the webhook. This can take a few seconds.', 'ran-booster' ) ),
-			'reconfigure' => array( __( 'Repairing…', 'ran-booster' ), __( 'Updating the webhook to match this site\'s settings. This can take a few seconds.', 'ran-booster' ) ),
+			'reconfigure' => array( __( 'Repairing…', 'ran-booster' ), __( 'Updating the webhook, then sending a ping. This can take a few seconds.', 'ran-booster' ) ),
 			'validate'    => array( __( 'Validating…', 'ran-booster' ), $validate_busy ),
 			'remove'      => array( __( 'Removing…', 'ran-booster' ), __( 'Deleting the webhook and clearing its local record. This can take a few seconds.', 'ran-booster' ) ),
 			'forget'      => array( __( 'Forgetting…', 'ran-booster' ), __( 'Clearing Booster\'s record.', 'ran-booster' ) ),
@@ -468,7 +469,8 @@ final class WebhookDisplayModel {
 			list( $operation, $label, $description ) = $slot;
 			$operations[]                            = array(
 				'key'             => $operation,
-				// Validate posts with the Check nonce in its URL and carries the Test nonce beside the button.
+				// Validate posts with the Check nonce in its URL and carries the Test nonce beside the button; Repair, in the
+				// same form, posts that Test nonce too, since Validate's slot always renders.
 				'url'             => $this->operation_url( 'validate' === $operation ? 'check' : $operation, $provider_code, $repository_id ),
 				'companion_nonce' => 'validate' === $operation ? array(
 					'name'  => WebhookManagementController::VALIDATE_TEST_NONCE_FIELD,
@@ -595,19 +597,31 @@ final class WebhookDisplayModel {
 	}
 
 	/**
-	 * A Set up or Repair result shown after a signed delivery has verified the record says so;
-	 * any other result keeps its own presentation.
+	 * A Set up or Repair result shown after a signed delivery has verified the record says so, and a Repair
+	 * whose ping was not requested says why; any other result keeps its own presentation.
 	 *
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
 	 * @return array{class:string,message:string,heading?:string,details?:list<string>}
 	 */
-	private function settled_result( string $code, ?array $recovery, ?string $remediation, bool $delivered ): array {
-		return $delivered && in_array( $code, self::AWAITING_DELIVERY, true )
-			? array(
+	private function settled_result( string $code, ?array $recovery, ?string $remediation, bool $delivered, ?string $ping_code = null ): array {
+		if ( $delivered && in_array( $code, self::AWAITING_DELIVERY, true ) ) {
+			return array(
 				'class'   => 'notice-success',
 				'message' => self::manual_status_label(),
-			)
-			: $this->result_presentation( $code, $recovery, $remediation );
+			);
+		}
+
+		if ( 'repaired_pending_delivery' !== $code || null === $ping_code || in_array( $ping_code, self::PING_REQUESTED, true ) ) {
+			return $this->result_presentation( $code, $recovery, $remediation );
+		}
+
+		// A ping the provider delivered and saw fail was sent, so it keeps its own result.
+		return 'ping_delivery_failed' === $ping_code
+			? $this->result_presentation( $ping_code, null, null )
+			: array(
+				'class'   => 'notice-warning',
+				'message' => __( 'Webhook repaired, but the ping couldn\'t be sent. Validate to try again.', 'ran-booster' ),
+			);
 	}
 
 	/**
@@ -720,8 +734,8 @@ final class WebhookDisplayModel {
 			'ping_requested', 'ping_verified' => __( 'Ping sent. Reload to check that it arrived.', 'ran-booster' ),
 			'ping_delivery_failed' => __( 'The Git provider recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the Git provider delivery details.', 'ran-booster' ),
 			'configured_pending_delivery' => __( 'Webhook set up. Reload to check that its first delivery arrived.', 'ran-booster' ),
-			// Repair sends no ping and resets the record, so only a Validate or a push can confirm it.
-			'repaired_pending_delivery' => __( 'Webhook repaired. Validate to confirm it\'s working.', 'ran-booster' ),
+			// Repair resets the record, then asks for a ping; a ping that could not be sent has its own sentence.
+			'repaired_pending_delivery' => __( 'Webhook repaired. Reload to check that its delivery arrived.', 'ran-booster' ),
 			'verified', 'configuration_confirmed' => __( 'Settings match', 'ran-booster' ),
 			'removed' => __( 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.', 'ran-booster' ),
 			'forgotten' => __( 'Webhook record cleared. Any webhook on the Git provider stays until you remove it there.', 'ran-booster' ),

@@ -2118,15 +2118,16 @@ final class WebhookManagementControllerTest extends TestCase {
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
 		$cases                                   = array(
 			'setup'       => array( null, 'configured_pending_delivery', 'Webhook set up. Reload to check that its first delivery arrived.' ),
-			'reconfigure' => array( $this->record(), 'repaired_pending_delivery', "Webhook repaired. Validate to confirm it's working." ),
+			'reconfigure' => array( $this->record(), 'repaired_pending_delivery', 'Webhook repaired. Reload to check that its delivery arrived.' ),
 		);
 		foreach ( $cases as $operation => list( $record, $code, $sentence ) ) {
-			$connection      = new \RAN\Tests\Activity\ActivityConnection();
-			$gateway         = $this->gateway();
-			$gateway->result = $this->operation_result( 'succeeded', 'configured_pending_delivery' );
-			$store           = new OperationStoreFixture();
-			$store->record   = $record;
-			$interaction     = new CapturingAdminInteractionFacade();
+			$connection                    = new \RAN\Tests\Activity\ActivityConnection();
+			$gateway                       = $this->gateway();
+			$gateway->result               = $this->operation_result( 'succeeded', 'configured_pending_delivery' );
+			$gateway->results_by_operation = array( 'test' => $this->operation_result( 'succeeded', 'ping_requested' ) );
+			$store                         = new OperationStoreFixture();
+			$store->record                 = $record;
+			$interaction                   = new CapturingAdminInteractionFacade();
 
 			$redirect = $this->controller( gateway: $gateway, store: $store, admin_interaction: $interaction, activity: new \RAN\Activity\ActivityStore( $connection ) )->handle_admin_post(
 				$this->request(
@@ -2144,10 +2145,9 @@ final class WebhookManagementControllerTest extends TestCase {
 			self::assertSame( $code, $query['webhook_management_result'], $operation );
 			self::assertArrayNotHasKey( 'webhook_management_remediation', $query, $operation );
 			self::assertSame( 'needs_verification', $this->stored_status( $store ), $operation );
-			// The hook was set up or repaired, so Activity still records a success.
-			$terminal = end( $connection->prepared );
-			self::assertIsArray( $terminal );
-			self::assertSame( 'webhook.operation_succeeded', $terminal['args'][1], $operation );
+			// The hook was set up or repaired, so its own Activity entry, the first, still records a success.
+			$terminals = array_values( array_filter( $connection->prepared, static fn ( array $prepared ): bool => str_starts_with( $prepared['sql'], 'UPDATE ' ) ) );
+			self::assertSame( array( 'webhook.operation_succeeded', 1 ), array( $terminals[0]['args'][1] ?? null, $terminals[0]['args'][7] ?? null ), $operation );
 
 			$_GET = $query;
 			$html = $this->render_panel( $gateway, $store );
@@ -2160,6 +2160,64 @@ final class WebhookManagementControllerTest extends TestCase {
 			self::assertStringContainsString( 'notice notice-success inline', $html, $operation );
 			self::assertStringContainsString( '<p>Signed delivery received</p>', $html, $operation );
 		}
+	}
+
+	public function test_repair_pings_after_it_reconfigures_with_both_nonces_verified_first(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$repair                                  = $this->request( array( 'repository_webhook_management_operation' => 'reconfigure' ) );
+		$cases                                   = array(
+			'ping sent'            => 'ping_requested',
+			'ping refused'         => 'ping_failed',
+			'ping delivery failed' => 'ping_delivery_failed',
+		);
+		foreach ( $cases as $case => $ping ) {
+			$connection              = new \RAN\Tests\Activity\ActivityConnection();
+			list( $gateway, $store ) = $this->validate_fixtures(
+				array(
+					'reconfigure' => $this->operation_result( 'succeeded', 'configured_pending_delivery' ),
+					'test'        => $this->operation_result( 'ping_requested' === $ping ? 'succeeded' : 'failed', $ping ),
+				)
+			);
+			$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store, activity: new \RAN\Activity\ActivityStore( $connection ) )->handle_admin_post( $repair, 'valid' ) );
+
+			self::assertSame( array( 'reconfigure', 'test' ), array_column( $gateway->mutation_calls, 0 ), $case );
+			self::assertSame( array( 'valid', 'test_nonce' ), array_column( $gateway->mutation_calls, 5 ), $case );
+			self::assertSame( array( 'webhook.reconfigure', 'webhook.test' ), array_column( $connection->inserted, 'operation' ), $case );
+			self::assertSame( 'repaired_pending_delivery', $redirect['webhook_management_result'], $case );
+			self::assertSame( 'needs_verification', $this->stored_status( $store ), $case );
+			$_GET = $redirect;
+			$html = $this->render_panel( $gateway, $store );
+			self::assertStringNotContainsString( '<strong>Settings:</strong>', $html, $case );
+			// A failed delivery keeps its own error; the other two are warnings.
+			self::assertStringContainsString( 'ping_delivery_failed' === $ping ? 'notice notice-error inline' : 'notice notice-warning inline', $html, $case );
+			self::assertSame( $ping, $redirect['webhook_management_ping'] ?? null, $case );
+			if ( 'ping_requested' === $ping ) {
+				self::assertStringContainsString( '<p>Webhook repaired. Reload to check that its delivery arrived.</p>', $html );
+			} elseif ( 'ping_delivery_failed' === $ping ) {
+				// The ping was sent, and the provider recorded its failed delivery.
+				self::assertStringContainsString( '<p><strong>Ping delivery failed</strong></p>', $html );
+				self::assertStringNotContainsString( 'couldn&#039;t be sent', $html );
+			} else {
+				self::assertStringContainsString( '<p>Webhook repaired, but the ping couldn&#039;t be sent. Validate to try again.</p>', $html );
+			}
+		}
+
+		// A bad Test nonce runs nothing, so a Repair is never left without its ping, and Validate's Check nonce never runs a Repair.
+		list( $gateway, $store ) = $this->validate_fixtures( array( 'reconfigure' => $this->operation_result( 'succeeded', 'configured_pending_delivery' ) ) );
+		foreach ( array( 'invalid', '', 'check_nonce' ) as $bad ) {
+			$redirect = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( array( WebhookManagementController::VALIDATE_TEST_NONCE_FIELD => $bad ) + $repair, 'valid' ) );
+			self::assertSame( 'invalid_request', $redirect['webhook_management_result'], $bad );
+		}
+		$redirect = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $repair, 'check_nonce' ) );
+		self::assertSame( 'invalid_request', $redirect['webhook_management_result'] );
+		self::assertSame( array(), $gateway->calls );
+		self::assertSame( 0, $store->save_attempts );
+
+		// A failed Repair sends no ping and keeps its own result.
+		list( $gateway, $store ) = $this->validate_fixtures( array( 'reconfigure' => $this->operation_result( 'failed', 'reconfigure_failed' ) ) );
+		$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $repair, 'valid' ) );
+		self::assertSame( array( 'reconfigure' ), array_column( $gateway->mutation_calls, 0 ) );
+		self::assertArrayNotHasKey( 'webhook_management_ping', $redirect );
 	}
 
 	public function test_validate_after_a_check_reporting_pending_delivery_keeps_the_settings_success(): void {
@@ -2368,6 +2426,8 @@ final class WebhookManagementControllerTest extends TestCase {
 				'repository_id'                           => '1234',
 				'booster_credential_id'                   => 'credential_1',
 				'webhook_profile_id'                      => WebhookManagementController::CREATE_REPOSITORY_SECRET,
+				// Every form post carries Validate's Test nonce; Repair needs it too.
+				WebhookManagementController::VALIDATE_TEST_NONCE_FIELD => 'test_nonce',
 			),
 			$changes
 		);

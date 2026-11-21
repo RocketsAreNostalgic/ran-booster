@@ -641,7 +641,7 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame( array( true, false, false ), $off( $in_sync ) );
 
 		self::assertSame( 'Create the webhook on GitHub.', $none[0]['description'] );
-		self::assertSame( 'Make the webhook on GitHub match this site\'s settings.', $repair[0]['description'] );
+		self::assertSame( 'Make the webhook on GitHub match this site\'s settings, then ping it.', $repair[0]['description'] );
 		self::assertSame( 'Compare the webhook on GitHub with this site\'s settings, then ask GitHub to send a ping. Delivery counts only when it arrives.', $repair[1]['description'] );
 		self::assertSame( 'Delete the webhook from GitHub and clear its local record.', $repair[2]['description'] );
 		self::assertSame( 'Remove this webhook from the repository? Booster will delete the webhook on GitHub and clear its local record.', $repair[2]['confirm'] );
@@ -649,6 +649,7 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame( array( 'Repairing…', 'Validating…', 'Removing…' ), array_column( $repair, 'busy_label' ) );
 		self::assertSame( 'Setting up…', $none[0]['busy_label'] );
 		self::assertSame( 'Comparing the webhook with this site\'s settings, then asking GitHub to send a ping. This can take a few seconds.', $repair[1]['busy_message'] );
+		self::assertSame( 'Updating the webhook, then sending a ping. This can take a few seconds.', $repair[0]['busy_message'] );
 	}
 
 	public function test_validate_is_available_only_when_both_check_and_test_are_and_reports_the_unavailable_reason(): void {

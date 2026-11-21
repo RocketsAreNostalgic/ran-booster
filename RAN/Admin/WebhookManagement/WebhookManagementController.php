@@ -86,31 +86,35 @@ final class WebhookManagementController {
 
 		$inline_safe = true;
 		$successful  = false;
-		// Null unless a Validate request ran: then 'skipped' or the ping operation's own code.
+		// Null unless a ping ran, or a Validate skipped it ('skipped'): then the ping operation's own code.
 		$ping = null;
 
 		if ( ! ( $this->can_manage )() ) {
 			$result['code'] = 'forbidden';
 		} elseif ( 'setup' === $operation && '' === $profile_id ) {
 			$result['code'] = 'invalid_request';
-		} elseif ( 'validate' === $operation ) {
-			// Both operation nonces are verified up front so a bad second nonce never leaves a half-run validation.
+		} elseif ( in_array( $operation, array( 'validate', 'reconfigure' ), true ) ) {
+			// Validate checks the settings and Repair reconfigures the hook, then each asks for a ping. Both operation
+			// nonces are verified up front so a bad second nonce never leaves a half-run chain.
+			$first = 'validate' === $operation ? 'check' : 'reconfigure';
 			if ( $metadata instanceof ProviderMetadata
-				&& ( $this->verify_nonce )( $nonce, $this->nonce_action( 'check', $provider_code, $repository_id ) )
+				&& ( $this->verify_nonce )( $nonce, $this->nonce_action( $first, $provider_code, $repository_id ) )
 				&& ( $this->verify_nonce )( $this->string_value( $request, self::VALIDATE_TEST_NONCE_FIELD ), $this->nonce_action( 'test', $provider_code, $repository_id ) ) ) {
-				$validation           = $this->validation->validate( $provider_code, $repository_id, '' === $credential_id ? null : $credential_id, $nonce, $this->string_value( $request, self::VALIDATE_TEST_NONCE_FIELD ) );
-				$result               = $validation['check'];
-				$ping                 = null === $validation['ping'] ? 'skipped' : $validation['ping']['code'];
-				$inline_safe          = $result['inline_safe'] && ( null === $validation['ping'] || $validation['ping']['inline_safe'] );
-				$successful           = $result['successful'] && null !== $validation['ping'] && $validation['ping']['successful'];
+				$validation  = $this->validation->then_ping( $first, $provider_code, $repository_id, '' === $credential_id ? null : $credential_id, $nonce, $this->string_value( $request, self::VALIDATE_TEST_NONCE_FIELD ) );
+				$result      = $validation['operation'];
+				$inline_safe = $result['inline_safe'] && ( null === $validation['ping'] || $validation['ping']['inline_safe'] );
+				// A failed Repair keeps its own result, while Validate's Ping line names the skipped ping.
+				$ping = $validation['ping']['code'] ?? ( 'validate' === $operation ? 'skipped' : null );
+				// Validate succeeds only when its ping does too; a Repair has succeeded once the hook is repaired.
+				$successful           = $result['successful'] && ( 'reconfigure' === $operation || ( null !== $validation['ping'] && $validation['ping']['successful'] ) );
 				$result['recovery'] ??= $validation['ping']['recovery'] ?? null;
 			}
 		} elseif ( $metadata instanceof ProviderMetadata
-			&& in_array( $operation, array( 'setup', 'check', 'reconfigure', 'remove', 'test', 'forget' ), true )
+			&& in_array( $operation, array( 'setup', 'check', 'remove', 'test', 'forget' ), true )
 			&& ( $this->verify_nonce )( $nonce, $this->nonce_action( $operation, $provider_code, $repository_id ) ) ) {
 			$result = $this->operations->execute( $operation, $provider_code, $repository_id, '' === $credential_id ? null : $credential_id, 'setup' === $operation ? ( self::CREATE_REPOSITORY_SECRET === $profile_id ? null : $profile_id ) : null, $nonce );
 		}
-		if ( 'validate' !== $operation || null === $ping ) {
+		if ( null === $ping ) {
 			$inline_safe = $result['inline_safe'];
 			$successful  = $result['successful'];
 		}

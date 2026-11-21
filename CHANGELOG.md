@@ -1,5 +1,57 @@
 # Changelog
 
+## [1.0.0-beta.49](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.48...v1.0.0-beta.49) (2026-11-21)
+
+
+### Features
+
+* **activity:** keep each package's deciding update outcome ([#1065](https://github.com/RocketsAreNostalgic/ran-booster/issues/1065)) ([301726e](https://github.com/RocketsAreNostalgic/ran-booster/commit/301726e6f9792ecdf1ca413baf43848d73a6d637))
+* **admin-ui:** snackbar when a bulk update queue is accepted ([#1068](https://github.com/RocketsAreNostalgic/ran-booster/issues/1068)) ([9d8edd4](https://github.com/RocketsAreNostalgic/ran-booster/commit/9d8edd49c31af2149f9174e1f773bf3c0b59473e))
+* **overview:** show failed updates in needs attention ([#1078](https://github.com/RocketsAreNostalgic/ran-booster/issues/1078)) ([88c0668](https://github.com/RocketsAreNostalgic/ran-booster/commit/88c06684fb8972b1b5d22c0754557cbf243e620c))
+* **packages:** check branch on every save and add Check branch ([#1148](https://github.com/RocketsAreNostalgic/ran-booster/issues/1148)) ([730e481](https://github.com/RocketsAreNostalgic/ran-booster/commit/730e481836ad4d00cc9188a47fda0f3bfced083a))
+* **packages:** filter package lists by failed updates ([#1082](https://github.com/RocketsAreNostalgic/ran-booster/issues/1082)) ([dc38d04](https://github.com/RocketsAreNostalgic/ran-booster/commit/dc38d04385ce3f824976c3410861967bac80e318))
+* **packages:** pause branch and pre-release sources by site ([#1095](https://github.com/RocketsAreNostalgic/ran-booster/issues/1095)) ([dbefd39](https://github.com/RocketsAreNostalgic/ran-booster/commit/dbefd39f19e97a1578dd21b3a561b50b3468159f))
+* **packages:** show packages paused by a source setting ([#1111](https://github.com/RocketsAreNostalgic/ran-booster/issues/1111)) ([ce1f8e0](https://github.com/RocketsAreNostalgic/ran-booster/commit/ce1f8e03a241a134a45868880032d3f25a19c1cf))
+* **packages:** warn on install form when branches pause ([#1136](https://github.com/RocketsAreNostalgic/ran-booster/issues/1136)) ([49ce95f](https://github.com/RocketsAreNostalgic/ran-booster/commit/49ce95f61cf92e293c55794fbcba1112c87cd1c3))
+* **settings:** add branch source and Preview track switches ([#1104](https://github.com/RocketsAreNostalgic/ran-booster/issues/1104)) ([250824d](https://github.com/RocketsAreNostalgic/ran-booster/commit/250824db801e18827af38ea859789cc8de61f2fd))
+
+
+### Bug Fixes
+
+* **activity:** log failed writes and close thrown rows ([#1109](https://github.com/RocketsAreNostalgic/ran-booster/issues/1109)) ([72fb312](https://github.com/RocketsAreNostalgic/ran-booster/commit/72fb312f5a4894bc42e553bdca8d0a93011f7a38))
+* **activity:** say why a branch check found no branch ([#1101](https://github.com/RocketsAreNostalgic/ran-booster/issues/1101)) ([83d06b4](https://github.com/RocketsAreNostalgic/ran-booster/commit/83d06b49467e13c4274e59cdbdfb1c3ef5c3d48f))
+* **admin-ui:** show each coded feedback result as one element ([#1062](https://github.com/RocketsAreNostalgic/ran-booster/issues/1062)) ([6ee7aed](https://github.com/RocketsAreNostalgic/ran-booster/commit/6ee7aed4e46753e148257e1fa54369b2ee10be25))
+* **admin:** end failure copy at self-serve steps ([#1125](https://github.com/RocketsAreNostalgic/ran-booster/issues/1125)) ([65aa623](https://github.com/RocketsAreNostalgic/ran-booster/commit/65aa623b929b8e6b71251bb2809e7a9fc5478c1c))
+* **admin:** link detached warnings to their fix or evidence ([#1138](https://github.com/RocketsAreNostalgic/ran-booster/issues/1138)) ([45116db](https://github.com/RocketsAreNostalgic/ran-booster/commit/45116dbc68b2a27790ce47f39f6f5b98a2025425))
+* **admin:** say what still works in refusals and bulk notices ([#1140](https://github.com/RocketsAreNostalgic/ran-booster/issues/1140)) ([074e43a](https://github.com/RocketsAreNostalgic/ran-booster/commit/074e43af62af7b17d6c2c5e6c52d639322060256))
+* **admin:** show the local notice by the development site rule ([#1135](https://github.com/RocketsAreNostalgic/ran-booster/issues/1135)) ([3ab5571](https://github.com/RocketsAreNostalgic/ran-booster/commit/3ab5571a270092abe8761e5be83efe7e70c6165f))
+* **admin:** show the reason when a manual deployment is refused ([#1083](https://github.com/RocketsAreNostalgic/ran-booster/issues/1083)) ([3ba5bc1](https://github.com/RocketsAreNostalgic/ran-booster/commit/3ba5bc10fc798b23a09e28990374093ba02463c2))
+* **deployment:** name the managed folder on a repeat install ([#1070](https://github.com/RocketsAreNostalgic/ran-booster/issues/1070)) ([d98b41e](https://github.com/RocketsAreNostalgic/ran-booster/commit/d98b41e5609307fb0998a80b7426f868cd2d7716))
+* **deployments:** classify archive size and rate-limit failures ([#1076](https://github.com/RocketsAreNostalgic/ran-booster/issues/1076)) ([b6aa77f](https://github.com/RocketsAreNostalgic/ran-booster/commit/b6aa77fee53d58eeb97a6722b651628db00b1198))
+* **packages:** always save when updates are disabled ([#1142](https://github.com/RocketsAreNostalgic/ran-booster/issues/1142)) ([30a8d39](https://github.com/RocketsAreNostalgic/ran-booster/commit/30a8d399c65a5af1b0d1dd1137eb937d70733e00))
+* **packages:** check the folder name when connecting a package ([#1090](https://github.com/RocketsAreNostalgic/ran-booster/issues/1090)) ([01d648d](https://github.com/RocketsAreNostalgic/ran-booster/commit/01d648df351f0ae3542dca0b592c24fc4b7d0c6a))
+* **packages:** compare folder names with the shared methods ([#1121](https://github.com/RocketsAreNostalgic/ran-booster/issues/1121)) ([7a08c8a](https://github.com/RocketsAreNostalgic/ran-booster/commit/7a08c8af4dc62f8aa04cdb8e13ada55338926452))
+* **packages:** defer folder check for providers that cannot list ([#1097](https://github.com/RocketsAreNostalgic/ran-booster/issues/1097)) ([e656f5b](https://github.com/RocketsAreNostalgic/ran-booster/commit/e656f5b6c76284fd07a4bb38f6952efa82739412))
+* **provider:** name credential, identity and redirect outcomes ([#1103](https://github.com/RocketsAreNostalgic/ran-booster/issues/1103)) ([06e74e3](https://github.com/RocketsAreNostalgic/ran-booster/commit/06e74e3814c29a48de7734a1731fa51f684da5f8))
+* **provider:** show exact outcomes for credential, site faults ([#1096](https://github.com/RocketsAreNostalgic/ran-booster/issues/1096)) ([a25232d](https://github.com/RocketsAreNostalgic/ran-booster/commit/a25232d3a3c2b35bb0673559f154d4ef3f197f0e))
+* **webhooks:** adopt GitHub provider 1.0.0-beta.27 ([#1137](https://github.com/RocketsAreNostalgic/ran-booster/issues/1137)) ([957f167](https://github.com/RocketsAreNostalgic/ran-booster/commit/957f167607a34a2ff21f6025917067f656e773c5))
+* **webhooks:** keep provider pages up when a Core row pass fails ([#1147](https://github.com/RocketsAreNostalgic/ran-booster/issues/1147)) ([862dd48](https://github.com/RocketsAreNostalgic/ran-booster/commit/862dd48dd3c914d549dde23b8ff598dacc576c47))
+* **webhooks:** let a missing or unconfirmed webhook be cleared ([#1112](https://github.com/RocketsAreNostalgic/ran-booster/issues/1112)) ([aa38e16](https://github.com/RocketsAreNostalgic/ran-booster/commit/aa38e16c53606ae74877e71d0b87ef6e2194aea1))
+* **webhooks:** let retained webhook rows keep their Core details ([#1144](https://github.com/RocketsAreNostalgic/ran-booster/issues/1144)) ([909a3b0](https://github.com/RocketsAreNostalgic/ran-booster/commit/909a3b07726ddbda119826777ae4ee801aab87f4))
+* **webhooks:** link webhook warnings to their fix ([#1141](https://github.com/RocketsAreNostalgic/ran-booster/issues/1141)) ([6a77c3e](https://github.com/RocketsAreNostalgic/ran-booster/commit/6a77c3e536b11e63706b4cfe894801161a5a7fc9))
+* **webhooks:** make panel actions work with JavaScript on ([#1116](https://github.com/RocketsAreNostalgic/ran-booster/issues/1116)) ([e19719b](https://github.com/RocketsAreNostalgic/ran-booster/commit/e19719bb91fe35bd96b53fae5d96b5ddbd984ec4))
+* **webhooks:** mark a webhook working after a signed delivery ([#1077](https://github.com/RocketsAreNostalgic/ran-booster/issues/1077)) ([bc7d958](https://github.com/RocketsAreNostalgic/ran-booster/commit/bc7d958e6e90921df48434441a20570872b1ca56))
+* **webhooks:** match webhook copy to its buttons and gate setup ([#1071](https://github.com/RocketsAreNostalgic/ran-booster/issues/1071)) ([073d179](https://github.com/RocketsAreNostalgic/ran-booster/commit/073d179ae2823b21471e9a69afd1075f24f6c44b))
+* **webhooks:** record pushes that match no managed package ([#1079](https://github.com/RocketsAreNostalgic/ran-booster/issues/1079)) ([7536c00](https://github.com/RocketsAreNostalgic/ran-booster/commit/7536c00a7db63d9dc9cdc22f26cfd82ee3106a54))
+* **webhooks:** tell a secrets-store failure from a bad signature ([#1094](https://github.com/RocketsAreNostalgic/ran-booster/issues/1094)) ([bc188a6](https://github.com/RocketsAreNostalgic/ran-booster/commit/bc188a6a746f1a294769ca420fd9efe48a45a012))
+* **webhooks:** treat .test and .localhost hosts as unreachable ([#1126](https://github.com/RocketsAreNostalgic/ran-booster/issues/1126)) ([e9a1375](https://github.com/RocketsAreNostalgic/ran-booster/commit/e9a1375a55a70fe9b63046176dc2f1ba9be2f084))
+
+
+### Performance
+
+* **packages:** skip offer checks for packages with no offer ([#1108](https://github.com/RocketsAreNostalgic/ran-booster/issues/1108)) ([ccf6247](https://github.com/RocketsAreNostalgic/ran-booster/commit/ccf62476f45da4168601beade4e78661c062c690))
+* **provider:** stop re-checking the selection table each read ([#1105](https://github.com/RocketsAreNostalgic/ran-booster/issues/1105)) ([d5d03a0](https://github.com/RocketsAreNostalgic/ran-booster/commit/d5d03a0f0b3f9176fc6d36a7ad94505178267978))
+
 ## [1.0.0-beta.48](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.47...v1.0.0-beta.48) (2026-11-18)
 
 

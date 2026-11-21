@@ -1751,6 +1751,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<dl class="ran-booster-activity__details">', $html );
 		self::assertStringContainsString( '<dt>Failure reason</dt><dd>The Git provider rate limit was reached.', $html );
 		self::assertStringContainsString( 'Wait for its quota to reset', $html );
+		self::assertStringContainsString( '<dt>Reference</dt>', $html );
+		self::assertStringNotContainsString( 'Support reference', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=plugin%2Fexample.php', $html );
 		self::assertStringContainsString( 'Open plugin settings', $html );
 	}

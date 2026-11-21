@@ -194,7 +194,7 @@ $origin_labels = array(
 											'stage'        => __( 'Last recorded stage', 'ran-booster' ),
 											'reason'       => __( 'Reason', 'ran-booster' ),
 											'remediation'  => __( 'Remediation', 'ran-booster' ),
-											'correlation'  => __( 'Support reference', 'ran-booster' ),
+											'correlation'  => __( 'Reference', 'ran-booster' ),
 											'completed_at' => __( 'Completed (UTC)', 'ran-booster' ),
 										) as $key => $label ) {
 											?>
@@ -213,7 +213,7 @@ $origin_labels = array(
 									<?php if ( is_string( $item['source_reference'] ?? null ) ) { ?>
 										<div><dt><?php echo esc_html( (string) ( $deployment_activity['failure_reference_label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) $item['provider_label'] ); ?>: <code><?php echo esc_html( $item['source_reference'] ); ?></code></dd></div>
 									<?php } ?>
-									<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['correlation_id'] ?? '' ) ); ?></code></dd></div>
+									<div><dt><?php esc_html_e( 'Reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['correlation_id'] ?? '' ) ); ?></code></dd></div>
 									<div><dt><?php esc_html_e( 'Package', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $project_label ); ?> (<?php echo esc_html( (string) ( $item['package_type'] ?? '' ) ); ?>)</dd></div>
 									<div><dt><?php esc_html_e( 'Origin', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $origin_labels[ $item['source'] ?? '' ] ?? (string) ( $item['source'] ?? '' ) ); ?></dd></div>
 									<div><dt><?php esc_html_e( 'Requested reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['requested_ref'] ?? '' ) ); ?></code></dd></div>

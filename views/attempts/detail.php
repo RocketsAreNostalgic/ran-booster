@@ -82,7 +82,7 @@ $package_settings_label = 'theme' === $package_type
 			<?php if ( is_string( $deployment_activity['source_reference'] ?? null ) ) { ?>
 				<div><dt><?php echo esc_html( (string) ( $deployment_activity['failure_reference_label'] ?? '' ) ); ?></dt><dd><?php echo esc_html( (string) $deployment_activity['source_label'] ); ?>: <code><?php echo esc_html( $deployment_activity['source_reference'] ); ?></code></dd></div>
 			<?php } ?>
-			<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd>
+			<div><dt><?php esc_html_e( 'Reference', 'ran-booster' ); ?></dt><dd>
 			<?php
 			$copy_value = (string) $item['correlation_id'];
 			$copy_label = __( 'Copy support reference', 'ran-booster' );

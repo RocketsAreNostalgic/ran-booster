@@ -471,7 +471,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				);
 				$status_line                = sprintf(
 					/* translators: 1: opening link tag to the provider's credentials, or nothing; 2: closing link tag, or nothing. */
-					esc_html__( 'The saved repository %1$scredential%2$s is unavailable.', 'ran-booster' ),
+					esc_html__( 'The saved repository %1$scredential%2$s is unavailable; this private repository cannot be updated.', 'ran-booster' ),
 					$link_open,
 					$link_close
 				);

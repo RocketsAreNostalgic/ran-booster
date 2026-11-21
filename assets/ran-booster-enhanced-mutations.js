@@ -647,6 +647,18 @@
 			}
 		}
 
+		// The follow-up is a page load, not a long operation, so it is bounded as the
+		// Save's own request is (30 seconds); htmx then reports it as a timeout.
+		function boundFollowUp(event) {
+			if (
+				heldSave &&
+				!heldSave.followUp &&
+				samePage(event.detail?.path, heldSave.path)
+			) {
+				event.detail.timeout = 30000;
+			}
+		}
+
 		// Only the held save's own follow-up counts. One that could not start raises
 		// its error with no request attached, before any follow-up was sent.
 		function isHeldFollowUp(event, early) {
@@ -1369,6 +1381,7 @@
 		document.addEventListener('htmx:beforeOnLoad', holdSaveThroughRedirect);
 		// beforeSend fires only for a request nothing cancelled, so a held save is never waiting on one that was.
 		document.addEventListener('htmx:beforeSend', captureFollowUp);
+		document.addEventListener('htmx:configRequest', boundFollowUp);
 		document.addEventListener('htmx:afterRequest', function (event) {
 			if (event.detail?.xhr === sourceRequest && sourceRequest) {
 				const progress = document.querySelector(

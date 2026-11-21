@@ -565,6 +565,29 @@ test('a failed page load after a successful save navigates to that page instead 
 	assert.equal(state.assignedUrls.length, count);
 });
 
+test("only the held save's own page load is given the 30 second limit", () => {
+	const { state, target } = heldSaveFixture();
+	const configure = (path) => {
+		const detail = { path, timeout: 0 };
+		state.listeners.get('htmx:configRequest')({ detail });
+		return detail.timeout;
+	};
+	assert.equal(configure(target), 0, 'No save is held yet.');
+
+	const save = {
+		elt: state.form,
+		xhr: {
+			status: 200,
+			getResponseHeader: () => JSON.stringify({ path: target }),
+		},
+	};
+	state.listeners.get('htmx:beforeOnLoad')({ detail: save });
+	assert.equal(configure('/wp-admin/admin-ajax.php?lane=unrelated'), 0);
+	// htmx starts the timer from this value and reports an expiry as htmx:timeout,
+	// which the held save already treats as a failed page load.
+	assert.equal(configure(target), 30000);
+});
+
 test('a request that could not start navigates only before any follow-up was sent', async () => {
 	const { state, target, saved, busy } = heldSaveFixture();
 	// Raised with no request attached, while the save's response is still being handled.

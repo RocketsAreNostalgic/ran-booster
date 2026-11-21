@@ -292,6 +292,9 @@ final class ExternalFixturePluginTest extends TestCase {
 				)
 			);
 			self::assertTrue( $normalizer->normalize_webhook( $verified )->is_probe() );
+			self::assertNull( $normalizer->normalize_webhook( $verified )->get_repository_id() );
+			$named = new WebhookRequest( ProviderCode::parse( 'fixture-provider' ), '{"repository_id":"fixture:1"}', array( 'x-fixture-event' => 'ping' ), $normalizer->get_webhook_policy()->get_retained_headers() );
+			self::assertSame( 'fixture:1', $normalizer->normalize_webhook( $named->with_verification( $verified->require_verification() ) )->get_repository_id() );
 			$other_provider_request = new WebhookRequest(
 				ProviderCode::parse( 'gh' ),
 				'',

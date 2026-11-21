@@ -1945,7 +1945,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 		$cases = array(
 			// Validate's check runs before its ping, so only that ping's own delivery confirms the hook again.
-			'clean check'          => array( 'check', $this->confirmed_check(), 'needs_verification' ),
+			'confirming check'     => array( 'check', $this->confirmed_check(), 'needs_verification' ),
 			'check finds drift'    => array( 'check', $this->operation_result( 'succeeded', 'configured_pending_delivery', configuration: $drift ), 'configuration_drift' ),
 			'check finds no hook'  => array( 'check', $this->operation_result( 'succeeded', 'hook_absent' ), 'remote_missing' ),
 			'check uncertain'      => array( 'check', $this->operation_result( 'ambiguous', 'hook_inventory_incomplete' ), 'needs_verification' ),
@@ -2099,6 +2099,18 @@ final class WebhookManagementControllerTest extends TestCase {
 			$html = $this->render_panel( $gateway, $store );
 			self::assertStringContainsString( 'notice ' . $notice . ' inline', $html, $code );
 			self::assertStringNotContainsString( 'Signed delivery received', $html, $code );
+		}
+	}
+
+	public function test_a_clean_check_that_validate_does_not_ping_after_keeps_the_record(): void {
+		// A provider's own success code that is not a settings confirmation: Validate sends no ping, so nothing could confirm a demoted hook.
+		foreach ( array( 'configured', 'needs_verification' ) as $status ) {
+			list( $gateway, $store ) = $this->validate_fixtures( array( 'check' => $this->operation_result( 'succeeded', 'provider_check_complete', '77', delivery: 'unknown' ) ), $status );
+
+			$redirect = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+			self::assertSame( 'skipped', $redirect['webhook_management_ping'], $status );
+			self::assertSame( array( 'check' ), array_column( $gateway->mutation_calls, 0 ), $status );
+			self::assertSame( $status, $this->stored_status( $store ), $status );
 		}
 	}
 

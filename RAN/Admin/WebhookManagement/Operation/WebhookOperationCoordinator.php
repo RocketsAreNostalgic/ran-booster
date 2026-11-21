@@ -227,11 +227,9 @@ final class WebhookOperationCoordinator {
 		};
 
 		$successful = match ( $operation ) {
-			'check' => 'succeeded' === $state && (
-				( 'verified' === $outcome['code'] && 'verified' === $delivery )
-				|| ( 'configured_pending_delivery' === $outcome['code'] && 'configured_pending_delivery' === $delivery )
-				|| 'configuration_confirmed' === $outcome['code']
-			),
+			// The record write applied and the check confirmed the settings; Validate pings only then.
+			'check' => 'succeeded' === $state && $this->check_confirms_settings( $code, $delivery )
+				&& in_array( $outcome['code'], array( 'verified', 'configured_pending_delivery', 'configuration_confirmed' ), true ),
 			'reconfigure' => 'succeeded' === $state && $this->successful_code( $outcome['code'] ),
 			'remove' => $result->confirms_absence() && 'removed' === $outcome['code'],
 			'test' => false,
@@ -312,7 +310,9 @@ final class WebhookOperationCoordinator {
 			'succeeded' === $state && in_array( 'mismatched', $configuration, true ) => 'configuration_drift',
 			'profile_revision_stale' === $code => 'profile_revision_stale',
 			'local_profile_missing' === $code => 'local_profile_missing',
-			// A clean check never keeps configured: Validate writes this before its ping, so only that ping's own signed delivery confirms the hook again.
+			// Validate pings only after a check that confirms the settings, so any other clean check keeps a verified hook.
+			'succeeded' === $state && 'configured' === $record->status() && ! $this->check_confirms_settings( $code, $delivery ) => 'configured',
+			// One that does is written before the ping, so only that ping's own signed delivery confirms the hook again.
 			default => 'needs_verification',
 		};
 		$next        = 'succeeded' === $state
@@ -460,6 +460,12 @@ final class WebhookOperationCoordinator {
 		$outcome['inline_safe'] = $inline_safe;
 
 		return $outcome;
+	}
+
+	/** Whether a succeeded check's result confirms the settings, which is when Validate sends its ping. */
+	private function check_confirms_settings( string $code, string $delivery ): bool {
+		return 'verified' === $delivery || 'configuration_confirmed' === $code
+			|| ( 'configured_pending_delivery' === $code && 'configured_pending_delivery' === $delivery );
 	}
 
 	private function successful_code( string $code ): bool {

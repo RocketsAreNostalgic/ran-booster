@@ -815,6 +815,15 @@ jobs:
                 printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
                 composer test:release-capability-installed
 
+          - name: Prove the Branch-to-release switch installs through WordPress
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_RELEASE_SWITCH_PROOF_SITE: ${{ github.workspace }}/build/wordpress
+                RAN_RELEASE_SWITCH_PROOF_CORE_ZIP: ${{ github.workspace }}/build/ran-booster-${{ needs.runtime-archive.outputs.version }}.zip
+            run: |
+                printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
+                PHP_BIN="$(command -v php)" bash tests/WordPress/native-release-install-proof/switch.sh
+
           - name: Prove installed corrupt-management recovery
             if: ${{ matrix.suite == 'critical' }}
             env:

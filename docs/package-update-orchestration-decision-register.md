@@ -77,6 +77,7 @@ Release Deployments `main` at `986b8aa`, and updater `main` at `2d9300c`.
 | PU-034 | Approved exception   | Letting Release Deployments infer release readiness from branch status, duplicate the release verifier, temporarily switch package source, or inspect releases with its separate request-only setup credential | Branch status intentionally has no release result, duplicating verification creates two artifact authorities, a temporary source change is a mutation rather than inspection, and the setup credential is not Core's stored package credential. The Phase 3 implementation proved that these smaller-looking alternatives either could not answer the question or crossed an existing authority boundary. | Add-on API 12 adds one read-only `ReleaseTrackingFacade::preflight()` operation and a channel-bound use of the existing nonce action. It accepts only the current eligible branch-managed plugin or theme at the exact source revision and reuses enablement's forced verifier. Failed authorization or binding returns `null`; verifier outcomes use the existing bounded result. The approved Core production delta is +66 net lines, one public method and one optional nonce argument, with zero new concrete types, services, DTOs, registries, storage fields, locks, credentials, provider clients or mutation paths. | A smaller implementation deletes the same authority ambiguity without duplicating verification or weakening exact capability, nonce, package, revision and channel binding; or the assisted workflow consumer is removed and the public operation has no remaining supported caller. |
 | PU-035 | Current product policy | Allowing Branch companions alongside a Release package on the same site and repository | Although technically possible, mixed ownership adds supported combinations, ambiguous controls and a larger support/test burden. | One repository supplies multiple Branch packages or one Release package, never both. Reinforce existing operation and transactional storage boundaries with one shared admission helper; retain ordinary Return to Branch recovery. | Demonstrated demand justifies Branch companions beside at most one Release package, including the extra UI and support coverage. |
 | PU-036 | Deliberate non-goal | One repository release serving several managed packages | Asset-to-package mapping, coordinated versioning and additional packaging conventions would expand the release contract and support surface. | Keep workflow-independent consumption of one compatible uploaded package ZIP. Booster workflow setup is optional; users may publish manually or with their own automation. | A separate explicit product decision approves a multi-package artifact and ownership contract; relaxing PU-035 alone is not sufficient. |
+| PU-037 | Current boundary | A switch from Branch to published releases that changes only the stored source (the 2026-11-16 fallback), and any Core installer, marker file, receipt, saga or stored switch state | The owner decided on #903 (2026-11-21) that the switch installs the chosen release. WordPress's native upgrader and the existing install custody already own installation and recovery. | The registrar admits the package for this request only. The updater's exact-release filter offers the chosen release, with no refresh before the upgrade, and one native upgrade runs. The source changes only on a verified install, inside the transaction that ends the install's custody. A refused or failed switch stays on Branch, and WordPress rechecks for updates at the end of the request. An uncertain or interrupted install keeps custody and uses the existing recovery. An older release is refused until the interface passes the "older is intended" argument after the operator confirms. A package whose Updates setting is Disabled is refused; the operator sets Manual first. No failure message says the previous version was restored or implies a backup exists. | WordPress gains a supported way to install one exact version of one package; the completion can no longer stay inside the source transaction; or PU-036 changes. |
 
 PU-014 remains the historical reason Core must not simply omit its target
 registration. Its reconsideration trigger is satisfied by updater
@@ -379,3 +380,37 @@ uncertainty, callback failure and process death require protected recovery.
 Completion preserves revocation and survives provider availability changes.
 This adds no table, Branch journal, automatic recovery or new receipt framework.
 Installed combined qualification and explicit manual acceptance remain required.
+
+## 2026-11-21 install on switch (#903)
+
+### PU-037: the switch to Releases installs through WordPress
+
+Switching from Branch to published releases installs the chosen release
+through WordPress's native upgrader for that one package.
+
+**Ruled out:** a switch that changes only the stored source (the 2026-11-16
+fallback), and any Core installer, marker file, receipt, saga or stored switch
+state.
+
+**Accepted shape:**
+
+- The registrar admits the package for this request only.
+- The updater's exact-release filter offers the chosen release, with no refresh
+  before the upgrade.
+- One native upgrade runs.
+- The source changes only on a verified install, inside the transaction that
+  ends the install's custody.
+- A refused or failed switch stays on Branch, and WordPress rechecks for
+  updates at the end of the request.
+- An uncertain or interrupted install keeps custody and uses the existing
+  recovery.
+- An older release is refused until the interface passes the "older is
+  intended" argument after the operator confirms.
+- A package whose Updates setting is Disabled is refused; the operator sets
+  Manual first.
+- No failure message says the previous version was restored or implies a
+  backup exists.
+
+**Reconsider if:** WordPress gains a supported way to install one exact version
+of one package; the completion can no longer stay inside the source
+transaction; or PU-036 changes.

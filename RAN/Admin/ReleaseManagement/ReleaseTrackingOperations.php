@@ -91,6 +91,18 @@ final class ReleaseTrackingOperations {
 		return $outcome + ( '' === $result->detail() ? array() : array( 'detail' => $result->detail() ) );
 	}
 
+	/**
+	 * The switch to Releases commits at the end of its own request, after the reply, so its success is decided where it is shown:
+	 * only a package read back on Releases is reported enabled; otherwise the outcome is not yet confirmed.
+	 *
+	 * @return array{0: string, 1: bool} Code and success for display.
+	 */
+	public static function settled( string $code, bool $successful, ?ReleaseTrackingStatus $status ): array {
+		return 'release_enabled' === $code && \RAN\PackageSource::RELEASE_ASSET->value !== $status?->source()
+			? array( 'management_state_uncertain', false )
+			: array( $code, $successful );
+	}
+
 	private function matches( ReleaseTrackingStatus $status, string $type, string $identifier, int $revision ): bool {
 		return $revision === $status->source_revision() && $this->matches_identity( $status, $type, $identifier );
 	}

@@ -500,8 +500,12 @@ final class GitHubProviderSelection {
 		return true === $owns_lock();
 	}
 
-	/** Captured completion survives guard loss and revocation; it never restores approval. */
-	public function complete_native_mutation( string $owner, string $type, string $identity, string $outcome ): void {
+	/**
+	 * Captured completion survives guard loss and revocation; it never restores approval.
+	 *
+	 * @param (callable(callable(object,string,string):void):bool)|null $commit_source Core's source transaction invokes completion before locking its package row.
+	 */
+	public function complete_native_mutation( string $owner, string $type, string $identity, string $outcome, ?callable $commit_source = null ): void {
 		$marker = $this->native_owners[ $owner ] ?? null;
 		if ( null === $marker || $marker['target_type'] !== $type || $marker['installed_identity'] !== $identity || ! in_array( $outcome, array( 'verified_success', 'uncertain' ), true ) ) {
 			throw new \RuntimeException( 'GitHub native completion owner changed.' );
@@ -510,19 +514,32 @@ final class GitHubProviderSelection {
 		if ( 'uncertain' === $outcome ) {
 			return;
 		}
-		$this->store->selection_transaction(
-			function () use ( $marker ): void {
-				$state = $this->store->read( true );
-				if ( ( $state['native_mutation'] ?? null ) !== $marker ) {
-						throw new \RuntimeException( 'GitHub native completion owner changed.' );
-				}
-				$next = $state;
-				unset( $next['native_mutation'] );
-				if ( ! $this->store->compare_and_swap( $state, $next ) ) {
-					throw new \RuntimeException( 'GitHub native completion changed.' );
-				}
+		$completed = false;
+		$complete  = function ( ?object $connection = null, string $source_type = '', string $source_identity = '' ) use ( $marker, &$completed ): void {
+			if ( null !== $connection && ! $this->store->uses_connection( $connection ) ) {
+				throw new \RuntimeException( 'Native completion requires the source transaction connection.' );
 			}
-		);
+			if ( null !== $connection && ( $source_type !== $marker['target_type'] || $source_identity !== $marker['installed_identity'] ) ) {
+				throw new \RuntimeException( 'Native completion source target changed.' );
+			}
+			$state = $this->store->read( true );
+			if ( ( $state['native_mutation'] ?? null ) !== $marker ) {
+				throw new \RuntimeException( 'GitHub native completion owner changed.' );
+			}
+			$next = $state;
+			unset( $next['native_mutation'] );
+			if ( ! $this->store->compare_and_swap( $state, $next ) ) {
+				throw new \RuntimeException( 'GitHub native completion changed.' );
+			}
+			$completed = true;
+		};
+		if ( null !== $commit_source ) {
+			if ( true !== $commit_source( $complete ) || ! $completed ) {
+				throw new \RuntimeException( 'Native source completion is unconfirmed.' );
+			}
+			return;
+		}
+		$this->store->selection_transaction( $complete );
 	}
 
 	/** @return array<string,mixed> Internal recovery authority; never expose the native owner in public status. */

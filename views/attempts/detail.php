@@ -20,7 +20,8 @@ $later_verified_attempt = $deployment_activity['later_verified_attempt'] ?? null
 $back_url               = $troubleshooting_base . '&panel=activity';
 
 if ( $attempt instanceof DeploymentAttempt ) {
-	$item = $attempt->safe_data();
+	$item          = $attempt->safe_data();
+	$item['state'] = DeploymentOutcomeMessage::display_state( $item['state'], $item['outcome_code'] );
 } else {
 	$item = array();
 }

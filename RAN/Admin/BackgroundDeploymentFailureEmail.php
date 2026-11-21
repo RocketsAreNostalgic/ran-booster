@@ -7,6 +7,7 @@ namespace RAN\Admin;
 use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentFailureNotifier;
 use RAN\Deployment\DeploymentState;
+use RAN\Logging\BoosterLogger;
 
 /**
  * Sends one Core-style site-administrator email after a webhook attempt closes.
@@ -19,6 +20,22 @@ class BackgroundDeploymentFailureEmail implements DeploymentFailureNotifier {
 			|| ! in_array( $attempt->get_state(), array( DeploymentState::FAILED, DeploymentState::NEEDS_ATTENTION ), true )
 			|| ! is_string( $data['outcome_code'] )
 		) {
+			return false;
+		}
+		// A run the source pause refused is not a failure, so it sends nothing.
+		if ( 'skipped' === DeploymentOutcomeMessage::display_state( $attempt->get_state()->value, $data['outcome_code'] ) ) {
+			BoosterLogger::log(
+				'background deployment failure notice skipped for a paused run',
+				array(
+					'event'        => 'background_failure_notice_skipped',
+					'operation'    => 'background_failure_email',
+					'outcome_code' => $data['outcome_code'],
+					'package_slug' => (string) $data['package_slug'],
+					'provider'     => (string) $data['provider'],
+					'step'         => 'background_failure_email',
+				)
+			);
+
 			return false;
 		}
 

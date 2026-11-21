@@ -71,7 +71,7 @@ final readonly class PackageUpdateProgressController {
 			$items[ (string) $id ] = array(
 				'attempt_id' => $id,
 				'reference'  => $attempt->get_correlation_id(),
-				'state'      => $attempt->get_state()->value,
+				'state'      => DeploymentOutcomeMessage::display_state( $attempt->get_state()->value, $attempt->get_outcome()?->get_code() ),
 			);
 		}
 

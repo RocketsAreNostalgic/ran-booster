@@ -71,6 +71,27 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 		self::assertCount( 1, $this->database->queries );
 	}
 
+	public function test_a_failed_run_the_pause_refused_is_reported_as_skipped(): void {
+		$attempt = $this->queued_attempt();
+		$_POST   = $this->request_for( $attempt );
+		foreach ( array(
+			'source_paused'  => 'skipped',
+			'policy_blocked' => 'failed',
+		) as $code => $expected ) {
+			foreach ( $this->database->rows as $index => $row ) {
+				if ( (int) $row['id'] === $attempt->get_id() ) {
+					$this->database->rows[ $index ]['state']        = 'failed';
+					$this->database->rows[ $index ]['outcome_code'] = $code;
+					$this->database->rows[ $index ]['finished_at']  = '2026-07-23 00:00:01';
+				}
+			}
+
+			$result = ( new PackageUpdateProgressController( $this->repository ) )->handle();
+
+			self::assertSame( $expected, $result['data']['items'][ (string) $attempt->get_id() ]['state'], $code );
+		}
+	}
+
 	public function test_mismatched_reference_does_not_disclose_the_attempt(): void {
 		$attempt                                 = $this->queued_attempt();
 		$_POST                                   = $this->request_for( $attempt );

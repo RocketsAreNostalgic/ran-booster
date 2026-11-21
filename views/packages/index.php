@@ -70,6 +70,7 @@ $activity_state_labels    = array(
 	'running'         => __( 'Running', 'ran-booster' ),
 	'succeeded'       => __( 'Succeeded', 'ran-booster' ),
 	'failed'          => __( 'Failed', 'ran-booster' ),
+	'skipped'         => __( 'Skipped', 'ran-booster' ),
 	'needs_attention' => __( 'Needs attention', 'ran-booster' ),
 );
 $activity_badge_variants  = array(
@@ -77,6 +78,7 @@ $activity_badge_variants  = array(
 	'running'         => 'pending',
 	'succeeded'       => 'ok',
 	'failed'          => 'error',
+	'skipped'         => 'neutral',
 	'needs_attention' => 'error',
 );
 $bulk_form_id             = 'ran-booster-' . $package_view->get_type() . '-bulk-form';
@@ -315,7 +317,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			$latest_activity           = $latest_attempt instanceof \RAN\Deployment\DeploymentAttempt ? $latest_attempt->safe_data() : null;
 			$last_successful_activity  = $last_successful_attempt instanceof \RAN\Deployment\DeploymentAttempt ? $last_successful_attempt->safe_data() : null;
 			$latest_activity_state     = is_array( $latest_activity ) && is_string( $latest_activity['state'] ?? null )
-				? $latest_activity['state']
+				? \RAN\Admin\DeploymentOutcomeMessage::display_state( $latest_activity['state'], is_string( $latest_activity['outcome_code'] ?? null ) ? $latest_activity['outcome_code'] : null )
 				: '';
 			$latest_activity_id        = is_array( $latest_activity ) && is_int( $latest_activity['id'] ?? null )
 				? $latest_activity['id']
@@ -404,8 +406,6 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			} elseif ( ! $release_managed
 				&& ! $policy_disabled
 				&& ( in_array( $latest_activity_state, array( 'queued', 'running', 'failed' ), true ) || $update_needs_attention )
-				// A run the pause itself refused is not a failure; the Paused pill says why.
-				&& ! ( $package_is_paused && \RAN\Deployment\DeploymentOutcome::CODE_SOURCE_PAUSED === ( $latest_activity['outcome_code'] ?? null ) )
 			) {
 				$prominent_status          = array(
 					'label' => $activity_state_labels[ $latest_activity_state ] ?? $latest_activity_state,
@@ -448,6 +448,15 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 					'' !== $package->get_branch() ? $package->get_branch() : __( 'repository default', 'ran-booster' )
 				);
 			$status_line_html = false;
+			// The one paused sentence; the status line uses it, and a polled run the pause refused shows it in place of the status line.
+			$paused_status_line = $package_is_paused
+				? sprintf(
+					/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing. */
+					esc_html__( 'Updates are paused by a %1$ssite setting%2$s.', 'ran-booster' ),
+					$package_settings_linked ? '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-general-' . ( $release_managed ? 'prerelease_sources' : 'branch_sources' ) ) ) . '">' : '',
+					$package_settings_linked ? '</a>' : ''
+				)
+				: '';
 			if ( $provider_unavailable ) {
 				// An unavailable provider has no page of its own; Extensions lists a first-party provider that is not installed or not active with its Install or Activate action. Every link here uses the presenter's admin base, which is the network admin on multisite.
 				[ $link_open, $link_close ] = $status_link_tags( add_query_arg( 'page', 'ran-booster-extensions', $package_admin_url ) );
@@ -481,12 +490,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				&& ! in_array( 'error', array_column( array_filter( (array) ( $package_extension_row['badges'] ?? array() ), 'is_array' ), 'tone' ), true )
 			) {
 				// A failed or review-needed deployment, or a release failure, keeps its own guidance.
-				$status_line = sprintf(
-					/* translators: 1: opening link tag to the setting, or nothing; 2: closing link tag, or nothing. */
-					esc_html__( 'Updates are paused by a %1$ssite setting%2$s.', 'ran-booster' ),
-					$package_settings_linked ? '<a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-general-' . ( $release_managed ? 'prerelease_sources' : 'branch_sources' ) ) ) . '">' : '',
-					$package_settings_linked ? '</a>' : ''
-				);
+				$status_line      = $paused_status_line;
 				$status_line_html = true;
 			} elseif ( '' !== ( $package_extension_row['status'] ?? '' ) ) {
 				$status_line = (string) $package_extension_row['status'];
@@ -586,6 +590,9 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				<?php } ?>
 				<p class="ran-booster-package-row__management"><?php echo esc_html( $management_line ); ?></p>
 				<p class="ran-booster-package-row__status-line"><?php echo $status_line_html ? wp_kses_post( $status_line ) : esc_html( $status_line ); ?></p>
+				<?php if ( ! $release_managed && '' !== $paused_status_line ) { ?>
+					<p class="ran-booster-package-row__status-line" data-ran-booster-paused-status hidden><?php echo wp_kses_post( $paused_status_line ); ?></p>
+				<?php } ?>
 			</td>
 			<td class="ran-booster-package-row__actions">
 				<div class="ran-booster-package-row__action-group">
@@ -682,11 +689,11 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 										<?php $active_detail_url = $activity_detail_base_url . '&attempt=' . rawurlencode( (string) $latest_activity['id'] ) . '&reference=' . rawurlencode( (string) $latest_activity['correlation_id'] ); ?>
 										<?php
 										\RAN\Admin\Component\StatusBadge::print_intent(
-											(string) ( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ),
-											\RAN\Admin\Component\StatusBadge::intent_for( $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ),
+											(string) ( $activity_state_labels[ $latest_activity_state ] ?? $latest_activity_state ),
+											\RAN\Admin\Component\StatusBadge::intent_for( $activity_badge_variants[ $latest_activity_state ] ?? 'neutral' ),
 											array(
 												'data-ran-booster-activity-state' => '',
-												'class' => 'ran-booster-deployment-state ran-booster-deployment-state--' . (string) $latest_activity['state'],
+												'class' => 'ran-booster-deployment-state ran-booster-deployment-state--' . $latest_activity_state,
 											)
 										);
 										?>

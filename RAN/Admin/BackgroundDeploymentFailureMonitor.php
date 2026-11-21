@@ -68,6 +68,7 @@ final class BackgroundDeploymentFailureMonitor {
 				|| ( DeploymentState::NEEDS_ATTENTION === $attempt->get_state() && ! $attempt->requires_operator_resolution() )
 				|| ! is_string( $data['outcome_code'] )
 				|| ! is_string( $data['finished_at'] )
+				|| 'skipped' === DeploymentOutcomeMessage::display_state( $attempt->get_state()->value, $data['outcome_code'] )
 			) {
 				continue;
 			}

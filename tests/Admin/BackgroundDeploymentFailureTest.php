@@ -115,6 +115,20 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertNotNull( $monitor->fingerprint() );
 	}
 
+	public function test_a_run_the_pause_refused_is_no_background_failure_anywhere(): void {
+		$this->database->rows = array(
+			$this->row( 1, 'paused', 'example', 'webhook', DeploymentOutcome::CODE_SOURCE_PAUSED ),
+		);
+		$monitor              = $this->monitor();
+
+		self::assertSame( array(), $monitor->failures() );
+		self::assertNull( $monitor->for_package( 'plugin', 'example' ) );
+		self::assertNull( $monitor->fingerprint(), 'No fingerprint means no notice and nothing to dismiss.' );
+
+		self::assertFalse( ( new BackgroundDeploymentFailureEmail() )->notify( DeploymentAttempt::from_database( $this->database->rows[0] ) ) );
+		self::assertCount( 0, $GLOBALS['ran_booster_background_failure_mail'] );
+	}
+
 	public function test_notice_is_administrator_only_escaped_request_deduplicated_and_dismissible_per_user(): void {
 		$this->database->rows = array(
 			$this->row( 1, 'affected', 'affected', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED ),

@@ -4,8 +4,17 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\Deployment\DeploymentOutcome;
+
 /** Administrator-facing copy for the closed deployment outcome set. */
 final class DeploymentOutcomeMessage {
+
+	/**
+	 * The state to show for a stored deployment state. A run the source pause itself refused is stored as failed but is not a failure, so it reads as skipped.
+	 */
+	public static function display_state( string $state, ?string $outcome_code ): string {
+		return 'failed' === $state && DeploymentOutcome::CODE_SOURCE_PAUSED === $outcome_code ? 'skipped' : $state;
+	}
 
 	public static function for_activity( string $status, string $reason, string $message = '' ): string {
 		if ( 'incomplete' === $status ) {

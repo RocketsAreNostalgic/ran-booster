@@ -1048,6 +1048,7 @@ class Booster {
 						'running'            => __( 'Running', 'ran-booster' ),
 						'succeeded'          => __( 'Succeeded', 'ran-booster' ),
 						'failed'             => __( 'Failed', 'ran-booster' ),
+						'skipped'            => __( 'Skipped', 'ran-booster' ),
 						'needsAttention'     => __( 'Needs attention', 'ran-booster' ),
 						'queuedButton'       => __( 'Reinstall queued', 'ran-booster' ),
 						'updatingButton'     => __( 'Reinstall in progress…', 'ran-booster' ),

@@ -126,7 +126,15 @@ function rowFixture(id, state = 'queued', packageSource = 'branch') {
 	const activityState = badgeHost(
 		'ran-booster-deployment-state ran-booster-deployment-state--queued'
 	);
+	const statusLine = element();
+	const pausedStatus = element();
+	pausedStatus.hidden = true;
 	const children = new Map([
+		[
+			'.ran-booster-package-row__status-line:not([data-ran-booster-paused-status])',
+			statusLine,
+		],
+		['[data-ran-booster-paused-status]', pausedStatus],
 		['[data-ran-booster-activity-badge]', badge],
 		['[data-ran-booster-update-button]', button],
 		['[data-ran-booster-update-label]', label],
@@ -149,8 +157,10 @@ function rowFixture(id, state = 'queued', packageSource = 'branch') {
 		label,
 		message,
 		messageUpdates,
+		pausedStatus,
 		reference,
 		row,
+		statusLine,
 	};
 }
 
@@ -192,6 +202,7 @@ function environment(rows, responses) {
 			queued: 'Queued',
 			queuedButton: 'Reinstall queued',
 			running: 'Running',
+			skipped: 'Skipped',
 			succeeded: 'Succeeded',
 			successMessage: 'Package reinstalled.',
 			summaryActive:
@@ -563,6 +574,37 @@ test('failure is retryable while needs-attention remains blocked', async () => {
 		);
 		assert.equal(fixture.timers.length, 0);
 		assert.equal(fixture.events.length, 0);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('a run the pause refused is skipped, not a failure', async () => {
+	const skipped = rowFixture(11);
+	const fixture = environment([skipped], [{ 11: 'skipped' }]);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+
+		assert.equal(skipped.badge.hidden, true);
+		assert.equal(skipped.statusLine.hidden, true);
+		assert.equal(skipped.pausedStatus.hidden, false);
+		assert.equal(skipped.activityState.textContent, 'Skipped');
+		assert.equal(skipped.message.textContent, '');
+		assert.equal(skipped.button.disabled, false);
+		assert.equal(
+			fixture.summary.classList.contains('notice-warning'),
+			true
+		);
+		assert.equal(
+			fixture.summaryMessage.textContent,
+			'Booster reinstalls have finished. Skipped: 1.'
+		);
+		assert.equal(fixture.timers.length, 0);
 	} finally {
 		delete globalThis.document;
 		delete globalThis.window;

@@ -301,6 +301,7 @@ final class DeploymentAdminPresenter {
 				$mutation    = is_array( $facts ) && is_string( $facts['deployment_mutation_started_at'] ?? null ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $facts['deployment_mutation_started_at'] ) ? $facts['deployment_mutation_started_at'] : null;
 				$finished    = is_array( $facts ) && is_string( $facts['deployment_finished_at'] ?? null ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $facts['deployment_finished_at'] ) ? $facts['deployment_finished_at'] : ( $record['completed_at'] ?? null );
 				$outcome     = is_array( $facts ) && is_string( $facts['deployment_outcome'] ?? null ) && 1 === preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/', $facts['deployment_outcome'] ) ? $facts['deployment_outcome'] : ( $record['reason'] ?? null );
+				$state       = DeploymentOutcomeMessage::display_state( (string) $state, is_string( $outcome ) ? $outcome : null );
 				$resolved_at = is_array( $facts ) && is_string( $facts['deployment_resolved_at'] ?? null ) && 1 === preg_match( '/\A\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\z/', $facts['deployment_resolved_at'] ) ? $facts['deployment_resolved_at'] : null;
 				$resolved_by = is_array( $facts ) && is_int( $facts['deployment_resolved_by'] ?? null ) && $facts['deployment_resolved_by'] > 0 ? $facts['deployment_resolved_by'] : null;
 				$rows[]      = array_merge(

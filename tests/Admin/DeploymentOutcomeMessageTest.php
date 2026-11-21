@@ -13,6 +13,14 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class DeploymentOutcomeMessageTest extends TestCase {
 
+	public function test_only_a_failed_run_the_pause_refused_displays_as_skipped(): void {
+		self::assertSame( 'skipped', DeploymentOutcomeMessage::display_state( 'failed', DeploymentOutcome::CODE_SOURCE_PAUSED ) );
+		self::assertSame( 'failed', DeploymentOutcomeMessage::display_state( 'failed', DeploymentOutcome::CODE_POLICY_BLOCKED ) );
+		self::assertSame( 'failed', DeploymentOutcomeMessage::display_state( 'failed', null ) );
+		self::assertSame( 'needs_attention', DeploymentOutcomeMessage::display_state( 'needs_attention', DeploymentOutcome::CODE_SOURCE_PAUSED ) );
+		self::assertSame( 'queued', DeploymentOutcomeMessage::display_state( 'queued', null ) );
+	}
+
 	public function test_only_a_terminal_pre_fence_working_copy_fact_refines_policy_copy(): void {
 		$facts = array(
 			'branch_refusal'                 => 'target_is_working_copy',

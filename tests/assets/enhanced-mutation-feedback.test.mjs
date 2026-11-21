@@ -420,25 +420,31 @@ test('the settings Save stays busy through its redirect request until that reque
 					: null,
 		},
 	});
+	const followUp = () => ({
+		elt: null,
+		xhr: { status: 0 },
+		pathInfo: { requestPath: '/wp-admin/admin.php' },
+	});
 	const busy = () => state.formAttributes.get('aria-busy') === 'true';
-	const answer = (detail, followUp = () => {}) => {
+	const answer = (detail, issue = () => {}) => {
 		state.listeners.get('htmx:beforeRequest')({ detail });
 		state.listeners.get('htmx:beforeOnLoad')({ detail });
 		// htmx issues the follow-up request here, before the save's afterRequest.
-		followUp();
+		issue();
 		state.listeners.get('htmx:afterRequest')({ detail });
 	};
+	const issued = (detail) => () =>
+		state.listeners.get('htmx:beforeSend')({ detail });
 
 	state.form.hasAttribute = (name) =>
 		name === 'data-ran-booster-package-settings-save';
-	answer(redirected());
+	const loading = followUp();
+	answer(redirected(), issued(loading));
 	assert.equal(busy(), true);
 	assert.equal(state.button.disabled, true);
 	// The follow-up ends, here as an abort; htmx sends afterRequest for a load,
 	// an error, an abort and a timeout alike.
-	state.listeners.get('htmx:afterRequest')({
-		detail: { elt: null, xhr: { status: 0 } },
-	});
+	state.listeners.get('htmx:afterRequest')({ detail: loading });
 	await Promise.resolve();
 	assert.equal(busy(), false);
 	assert.deepEqual(state.assignedUrls, []);
@@ -451,6 +457,11 @@ test('the settings Save stays busy through its redirect request until that reque
 	assert.equal(busy(), false);
 	assert.equal(state.button.disabled, false);
 	assert.deepEqual(state.assignedUrls, ['/wp-admin/admin.php']);
+
+	// No follow-up was started, so the save does not wait for one.
+	answer(redirected());
+	assert.equal(busy(), false);
+	assert.equal(state.assignedUrls.length, 1);
 
 	// A stale save whose load is cancelled issues no follow-up, so it resets.
 	const stale = redirected();
@@ -473,7 +484,7 @@ test('the settings Save stays busy through its redirect request until that reque
 	assert.equal(busy(), false);
 });
 
-test('a failed page load after a successful save navigates to that page instead of keeping the stale one', async () => {
+function heldSaveFixture() {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,
@@ -497,25 +508,40 @@ test('a failed page load after a successful save navigates to that page instead 
 					: null,
 		},
 	});
-	const saved = () => {
+	// The page load htmx issues for the save, and a request from somewhere else.
+	const request = (path) => ({
+		elt: null,
+		xhr: { status: 0 },
+		pathInfo: { requestPath: path },
+	});
+	const saved = (path = target) => {
 		const detail = save();
+		const followUp = request(path);
 		state.listeners.get('htmx:beforeRequest')({ detail });
 		state.listeners.get('htmx:beforeOnLoad')({ detail });
+		state.listeners.get('htmx:beforeSend')({ detail: followUp });
 		state.listeners.get('htmx:afterRequest')({ detail });
+		return followUp;
 	};
-	const followUp = { elt: null, xhr: { status: 0 } };
 	const busy = () => state.formAttributes.get('aria-busy') === 'true';
+
+	return { state, target, saved, request, busy };
+}
+
+test('a failed page load after a successful save navigates to that page instead of keeping the stale one', async () => {
+	const { state, target, saved, busy } = heldSaveFixture();
 	const sequences = {
 		// htmx raises an HTTP error before afterRequest.
 		'HTTP error': ['htmx:responseError', 'htmx:afterRequest'],
 		// A dropped connection or a timeout raises afterRequest first.
 		'dropped connection': ['htmx:afterRequest', 'htmx:sendError'],
 		timeout: ['htmx:afterRequest', 'htmx:timeout'],
-		'cannot start': ['htmx:targetError', 'htmx:afterRequest'],
+		// htmx raises swapError and rethrows, with no afterRequest.
+		'cannot render': ['htmx:swapError'],
 	};
 
 	for (const [label, events] of Object.entries(sequences)) {
-		saved();
+		const followUp = saved();
 		const before = state.assignedUrls.length;
 		events.forEach((name) =>
 			state.listeners.get(name)({ detail: followUp })
@@ -527,15 +553,70 @@ test('a failed page load after a successful save navigates to that page instead 
 		assert.equal(busy(), false, label);
 	}
 
-	// A follow-up that loads, or is aborted, releases the save without navigating.
+	// A follow-up that loads releases the save without navigating, and so does
+	// one that is aborted; once released, a later failure goes nowhere.
 	const count = state.assignedUrls.length;
-	saved();
-	state.listeners.get('htmx:afterRequest')({ detail: followUp });
-	state.listeners.get('htmx:sendAbort')?.({ detail: followUp });
+	const loaded = saved();
+	state.listeners.get('htmx:afterRequest')({ detail: loaded });
+	state.listeners.get('htmx:sendAbort')?.({ detail: loaded });
 	await Promise.resolve();
-	// With no save waiting on its page, a later failure goes nowhere.
-	state.listeners.get('htmx:sendError')({ detail: followUp });
+	assert.equal(busy(), false);
+	state.listeners.get('htmx:sendError')({ detail: loaded });
 	assert.equal(state.assignedUrls.length, count);
+});
+
+test('a request that could not start navigates only before any follow-up was sent', async () => {
+	const { state, target, saved, busy } = heldSaveFixture();
+	// Raised with no request attached, while the save's response is still being handled.
+	const detail = {
+		xhr: {
+			status: 200,
+			getResponseHeader: (name) =>
+				name === 'HX-Location'
+					? JSON.stringify({ path: target })
+					: null,
+		},
+	};
+	state.form.hasAttribute = () => true;
+	state.listeners.get('htmx:beforeOnLoad')({
+		detail: { ...detail, elt: state.form },
+	});
+	state.listeners.get('htmx:targetError')({ detail: { elt: null } });
+	assert.deepEqual(state.assignedUrls, [target]);
+	assert.equal(busy(), false);
+
+	// With the follow-up already sent, a request-less target error is someone else's.
+	const followUp = saved();
+	state.listeners.get('htmx:targetError')({ detail: { elt: null } });
+	assert.equal(state.assignedUrls.length, 1);
+	assert.equal(busy(), true);
+	state.listeners.get('htmx:afterRequest')({ detail: followUp });
+	await Promise.resolve();
+	assert.equal(busy(), false);
+});
+
+test('a failing request from somewhere else leaves a held save waiting for its own page load', async () => {
+	const { state, target, saved, request, busy } = heldSaveFixture();
+	const followUp = saved();
+	assert.equal(busy(), true);
+
+	// A different request starts and fails while the follow-up is pending.
+	const other = request('/wp-admin/admin-ajax.php?lane=unrelated');
+	state.listeners.get('htmx:beforeSend')({ detail: other });
+	state.listeners.get('htmx:responseError')({ detail: other });
+	state.listeners.get('htmx:afterRequest')({ detail: other });
+	state.listeners.get('htmx:sendError')({ detail: other });
+	state.listeners.get('htmx:timeout')({ detail: other });
+	await Promise.resolve();
+
+	assert.deepEqual(state.assignedUrls, []);
+	assert.equal(busy(), true, 'The save is still held.');
+
+	// Its own page load then fails, and that is what navigates.
+	state.listeners.get('htmx:afterRequest')({ detail: followUp });
+	state.listeners.get('htmx:sendError')({ detail: followUp });
+	await Promise.resolve();
+	assert.deepEqual(state.assignedUrls, [target]);
 	assert.equal(busy(), false);
 });
 

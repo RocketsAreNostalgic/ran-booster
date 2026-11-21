@@ -621,21 +621,55 @@
 				} catch {
 					// A plain path is the header's other form.
 				}
-				heldSave = { form, xhr, path };
+				heldSave = { form, xhr, path, followUp: null };
 			}
 		}
 
-		function releaseHeldSave(event, failed = false) {
-			if (heldSave && event.detail?.xhr !== heldSave.xhr) {
-				const { form, xhr, path } = heldSave;
-				heldSave = null;
-				resetBusy(form, xhr);
-				// The save went through but the page load that follows it failed:
-				// load that address the ordinary way rather than keep the stale page.
-				if (failed && path) {
-					window.location.assign(path);
-					return true;
-				}
+		function samePage(first, second) {
+			try {
+				const a = new URL(first, window.location.href);
+				const b = new URL(second, window.location.href);
+				return a.pathname === b.pathname && a.search === b.search;
+			} catch {
+				return false;
+			}
+		}
+
+		// htmx issues the follow-up from the save's own response, before the save's
+		// afterRequest, so it is the first request for the saved address sent until then.
+		function captureFollowUp(event) {
+			if (
+				heldSave &&
+				!heldSave.followUp &&
+				samePage(event.detail?.pathInfo?.requestPath, heldSave.path)
+			) {
+				heldSave.followUp = event.detail.xhr;
+			}
+		}
+
+		// Only the held save's own follow-up counts. One that could not start raises
+		// its error with no request attached, before any follow-up was sent.
+		function isHeldFollowUp(event, early) {
+			return (
+				Boolean(heldSave) &&
+				(event.detail?.xhr
+					? event.detail.xhr === heldSave.followUp
+					: early && !heldSave.followUp)
+			);
+		}
+
+		function releaseHeldSave(failed = false) {
+			if (!heldSave) {
+				return false;
+			}
+			const { form, xhr, path } = heldSave;
+			heldSave = null;
+			resetBusy(form, xhr);
+			// The save went through but the page load that follows it failed:
+			// load that address the ordinary way rather than keep the stale page.
+			if (failed && path) {
+				window.location.assign(path);
+				return true;
 			}
 			return false;
 		}
@@ -1333,6 +1367,8 @@
 		);
 
 		document.addEventListener('htmx:beforeOnLoad', holdSaveThroughRedirect);
+		// beforeSend fires only for a request nothing cancelled, so a held save is never waiting on one that was.
+		document.addEventListener('htmx:beforeSend', captureFollowUp);
 		document.addEventListener('htmx:afterRequest', function (event) {
 			if (event.detail?.xhr === sourceRequest && sourceRequest) {
 				const progress = document.querySelector(
@@ -1342,13 +1378,22 @@
 					progress.hidden = true;
 				}
 			}
-			// htmx raises a transport error right after afterRequest, so let that take the failed path first.
-			const held = heldSave;
-			queueMicrotask(() => {
-				if (heldSave === held) {
-					releaseHeldSave(event);
-				}
-			});
+			if (
+				heldSave &&
+				event.detail?.xhr === heldSave.xhr &&
+				!heldSave.followUp
+			) {
+				// No follow-up was started, so there is nothing to wait for.
+				releaseHeldSave();
+			} else if (isHeldFollowUp(event, false)) {
+				// htmx raises a transport error right after afterRequest, so let that take the failed path first.
+				const held = heldSave;
+				queueMicrotask(() => {
+					if (heldSave === held) {
+						releaseHeldSave();
+					}
+				});
+			}
 			const form = requestForm(event);
 			if (form && heldSave?.form !== form) {
 				resetBusy(form, event.detail?.xhr);
@@ -1363,7 +1408,10 @@
 			'htmx:timeout',
 		].forEach(function (eventName) {
 			document.addEventListener(eventName, function (event) {
-				if (releaseHeldSave(event, true)) {
+				if (
+					isHeldFollowUp(event, 'htmx:targetError' === eventName) &&
+					releaseHeldSave(true)
+				) {
 					return;
 				}
 				const form = requestForm(event);

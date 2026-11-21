@@ -829,7 +829,7 @@
 		const summaryMessage = summary?.querySelector(
 			'[data-ran-booster-update-summary-message]'
 		);
-		const skipped = Math.max(
+		let skipped = Math.max(
 			0,
 			Number(summary?.getAttribute('data-skipped')) || 0
 		);
@@ -939,6 +939,7 @@
 				running: labels.running,
 				succeeded: labels.succeeded,
 				failed: labels.failed,
+				skipped: labels.skipped,
 				needs_attention: labels.needsAttention,
 			};
 			const variants = {
@@ -946,6 +947,7 @@
 				running: 'pending',
 				succeeded: 'ok',
 				failed: 'error',
+				skipped: 'neutral',
 				needs_attention: 'error',
 			};
 			if (!stateLabels[state] || !variants[state]) {
@@ -957,14 +959,29 @@
 				intent = 'informational';
 			} else if (variants[state] === 'ok') {
 				intent = 'stable';
+			} else if (variants[state] === 'neutral') {
+				intent = 'none';
 			}
 
 			row.setAttribute('data-attempt-state', state);
 			const badge = row.querySelector(
 				'[data-ran-booster-activity-badge]'
 			);
+			// A run the source pause refused is not a failure: the row keeps its Paused pill and shows its paused sentence instead of a badge.
+			const pausedStatus = row.querySelector(
+				'[data-ran-booster-paused-status]'
+			);
+			if (pausedStatus) {
+				const statusLine = row.querySelector(
+					'.ran-booster-package-row__status-line:not([data-ran-booster-paused-status])'
+				);
+				if (statusLine) {
+					statusLine.hidden = state === 'skipped';
+				}
+				pausedStatus.hidden = state !== 'skipped';
+			}
 			if (badge) {
-				badge.hidden = false;
+				badge.hidden = state === 'skipped';
 				const label = sprintf(
 					/* translators: %s: deployment state label. */
 					__('Deployment: %s', 'ran-booster'),
@@ -1105,6 +1122,9 @@
 						}
 						if (updateRow(entry.row, item.state)) {
 							tracked.delete(id);
+							if (item.state === 'skipped') {
+								++skipped;
+							}
 						}
 					});
 					updateSummary();

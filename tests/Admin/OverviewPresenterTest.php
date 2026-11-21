@@ -217,6 +217,30 @@ final class OverviewPresenterTest extends TestCase {
 		);
 	}
 
+	public function test_recent_activity_shows_a_run_the_pause_refused_as_skipped(): void {
+		$connection                              = new ActivityConnection();
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$connection->read_results                = array(
+			array(
+				(object) array(
+					'operation' => 'update',
+					'status'    => 'failed',
+					'reason'    => 'source_paused',
+					'sort_at'   => '2026-10-30 12:00:00',
+				),
+				(object) array(
+					'operation' => 'update',
+					'status'    => 'failed',
+					'reason'    => 'policy_blocked',
+					'sort_at'   => '2026-10-30 11:00:00',
+				),
+			),
+		);
+		$result                                  = $this->present( $this->plugins( array() ), $this->themes( array() ), new ActivityStore( $connection ) );
+
+		self::assertSame( array( 'skipped', 'failed' ), array_column( $result['activity']['records'], 'status' ) );
+	}
+
 	public function test_attention_lists_failed_and_uncertain_updates_critical_first_within_one_cap(): void {
 		$connection                              = new ActivityConnection();
 		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );

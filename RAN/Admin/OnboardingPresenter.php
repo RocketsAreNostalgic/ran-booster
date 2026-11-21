@@ -121,7 +121,7 @@ final readonly class OnboardingPresenter {
 				foreach ( $history['records'] as $record ) {
 					$records[] = array(
 						'operation' => $record['operation'] ?? '',
-						'status'    => $record['status'] ?? '',
+						'status'    => DeploymentOutcomeMessage::display_state( (string) ( $record['status'] ?? '' ), is_string( $record['reason'] ?? null ) ? $record['reason'] : null ),
 						'sort_at'   => $record['sort_at'] ?? '',
 					);
 				}

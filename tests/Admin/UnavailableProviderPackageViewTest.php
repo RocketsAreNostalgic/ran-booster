@@ -456,6 +456,21 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( $pill, $html );
 		self::assertStringNotContainsString( 'Failed', $summary( $html ) );
 		self::assertStringContainsString( $paused, $html );
+		self::assertStringContainsString( 'data-attempt-state="skipped"', $html );
+		self::assertStringContainsString( 'ran-booster-deployment-state--skipped" data-ran-booster-badge data-ran-booster-badge-intent="none" data-ran-booster-activity-state>Skipped</span>', $html );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-paused-status hidden>Updates are paused by a <a' ) );
+
+		// After the pause is lifted the old run still reads Skipped, never Failed.
+		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 2, 'failed', null, outcome_code: 'source_paused' );
+		$lifted_paused  = $package_paused;
+		$package_paused = array();
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html           = (string) ob_get_clean();
+		$package_paused = $lifted_paused;
+		self::assertStringNotContainsString( 'Failed', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-paused-status', $html );
+		self::assertStringContainsString( '>Skipped</span>', $html );
 
 		// A queued deployment shows its badge, and the row still says why it will not run.
 		$package_activity['items'][ (string) $package->get_identifier() ]['latest'] = $this->attempt( 3, 'queued', null );

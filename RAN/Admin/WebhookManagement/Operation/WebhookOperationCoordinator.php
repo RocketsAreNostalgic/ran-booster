@@ -312,8 +312,7 @@ final class WebhookOperationCoordinator {
 			'succeeded' === $state && in_array( 'mismatched', $configuration, true ) => 'configuration_drift',
 			'profile_revision_stale' === $code => 'profile_revision_stale',
 			'local_profile_missing' === $code => 'local_profile_missing',
-			// A signed delivery already verified this hook; a clean check keeps that.
-			'succeeded' === $state && 'configured' === $record->status() => 'configured',
+			// A clean check never keeps configured: Validate writes this before its ping, so only that ping's own signed delivery confirms the hook again.
 			default => 'needs_verification',
 		};
 		$next        = 'succeeded' === $state

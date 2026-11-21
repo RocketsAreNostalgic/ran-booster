@@ -178,7 +178,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertStringContainsString( 'notice-success', $html );
 		self::assertStringNotContainsString( 'notice-error', $html );
-		self::assertStringContainsString( 'Remote configuration confirmed; signed delivery unverified', $html );
+		self::assertStringContainsString( '<p>Settings match</p>', $html );
 		self::assertStringNotContainsString( 'Review the bounded operation result.', $html );
 	}
 
@@ -542,9 +542,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$display = new WebhookDisplayModel( $this->createMock( WebhookAssistanceFacade::class ), new OperationStoreFixture() );
 		$row     = ( new \ReflectionMethod( $display, 'retained_record_row' ) )->invoke( $display, '1234', $this->record(), 'GitHub', 'https://github.com' );
 		self::assertSame( 'Remove this webhook on the Git provider if it still exists.', $row['action_message'] );
-		foreach ( array( 'ping_requested', 'ping_delivery_failed' ) as $code ) {
-			self::assertStringStartsWith( 'The Git provider ', $display->notice( $code ), $code );
-		}
+		self::assertStringStartsWith( 'The Git provider ', $display->notice( 'ping_delivery_failed' ) );
 		// The record keeps a hook ID here, so Validate is offered beside the result.
 		self::assertStringEndsWith( 'Check the webhook on the Git provider, then Validate.', $display->notice( 'setup_compensation_incomplete' ) );
 		// Without a hook ID or a saved record Validate is not offered, so these keep their inspect wording.
@@ -1384,7 +1382,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( 'notice notice-warning inline ran-booster-repository-webhook-management__notice', $html );
-		self::assertStringContainsString( 'does not prove an authenticated inbound delivery', $html );
+		self::assertStringContainsString( '<p>Ping sent. Reload to check that it arrived.</p>', $html );
 	}
 
 	public function test_authoritative_test_readback_persists_absent_and_configuration_drift(): void {
@@ -1701,8 +1699,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		$_GET = array( 'webhook_management_result' => 'verified' );
 		$html = $this->render_panel();
 
-		self::assertStringContainsString( 'Git provider request ID in Booster Activity', $html );
-		self::assertStringNotContainsString( 'confirmed the recorded remote configuration and signed delivery state', $html );
+		self::assertStringContainsString( '<p>Settings match</p>', $html );
+		self::assertStringNotContainsString( 'Signed delivery received', $html );
 	}
 
 	public function test_failed_setup_uses_the_shared_inline_failure_response(): void {
@@ -1938,7 +1936,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array( 'webhook.check', 'webhook.test' ), array_column( $connection->inserted, 'operation' ) );
 	}
 
-	public function test_a_record_verified_by_a_signed_delivery_stays_configured_until_contradicted(): void {
+	public function test_a_verified_record_leaves_configured_on_a_clean_check_or_contradiction(): void {
 		$drift = array(
 			'endpoint'     => 'mismatched',
 			'events'       => 'matched',
@@ -1946,7 +1944,8 @@ final class WebhookManagementControllerTest extends TestCase {
 			'active'       => 'matched',
 		);
 		$cases = array(
-			'clean check'          => array( 'check', $this->confirmed_check(), 'configured' ),
+			// Validate's check runs before its ping, so only that ping's own delivery confirms the hook again.
+			'clean check'          => array( 'check', $this->confirmed_check(), 'needs_verification' ),
 			'check finds drift'    => array( 'check', $this->operation_result( 'succeeded', 'configured_pending_delivery', configuration: $drift ), 'configuration_drift' ),
 			'check finds no hook'  => array( 'check', $this->operation_result( 'succeeded', 'hook_absent' ), 'remote_missing' ),
 			'check uncertain'      => array( 'check', $this->operation_result( 'ambiguous', 'hook_inventory_incomplete' ), 'needs_verification' ),
@@ -2061,6 +2060,46 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'notice notice-success inline', $html );
 		self::assertStringContainsString( '<strong>Ping:</strong> Signed delivery received</p>', $html );
 		self::assertStringNotContainsString( 'delivery history', $html );
+	}
+
+	public function test_validate_on_a_confirmed_record_waits_for_this_pings_own_delivery(): void {
+		list( $gateway, $store ) = $this->validate_fixtures(
+			array(
+				'check' => $this->confirmed_check(),
+				'test'  => $this->operation_result( 'succeeded', 'ping_requested' ),
+			)
+		);
+
+		$_GET = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+
+		// No delivery arrived, so the record that drives the step and the badge is no longer confirmed.
+		self::assertSame( 'needs_verification', $this->stored_status( $store ) );
+		// Only the check wrote, before the ping was requested; the ping's own delivery can never be overwritten.
+		self::assertSame( 1, $store->save_attempts );
+		$html = $this->render_panel( $gateway, $store );
+		self::assertStringContainsString( 'notice notice-warning inline', $html );
+		self::assertStringContainsString( '<strong>Ping:</strong> Ping sent. Reload to check that it arrived.</p>', $html );
+		self::assertStringNotContainsString( 'Signed delivery received', $html );
+
+		// A provider's own report of the ping never confirms the record either.
+		$reports = array(
+			'ping_verified'        => array( 'succeeded', 'notice-warning' ),
+			'ping_delivery_failed' => array( 'failed', 'notice-error' ),
+		);
+		foreach ( $reports as $code => list( $state, $notice ) ) {
+			list( $gateway, $store ) = $this->validate_fixtures(
+				array(
+					'check' => $this->confirmed_check(),
+					'test'  => $this->operation_result( $state, $code ),
+				)
+			);
+
+			$_GET = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+			self::assertSame( 'needs_verification', $this->stored_status( $store ), $code );
+			$html = $this->render_panel( $gateway, $store );
+			self::assertStringContainsString( 'notice ' . $notice . ' inline', $html, $code );
+			self::assertStringNotContainsString( 'Signed delivery received', $html, $code );
+		}
 	}
 
 	public function test_setup_result_says_signed_delivery_received_once_the_record_is_verified(): void {
@@ -2208,7 +2247,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel();
 
 		self::assertStringNotContainsString( '<strong>Settings:</strong>', $html );
-		self::assertStringContainsString( '<p><strong>Ping request accepted; signed delivery unverified</strong></p>', $html );
+		self::assertStringContainsString( '<p>Ping sent. Reload to check that it arrived.</p>', $html );
 		// A ping argument without a result is ignored.
 		$_GET = array( 'webhook_management_ping' => 'ping_requested' );
 		self::assertNull( $this->controller()->panel_context()['ping'] );

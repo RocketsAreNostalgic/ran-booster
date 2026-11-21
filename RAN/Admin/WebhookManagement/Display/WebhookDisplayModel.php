@@ -568,10 +568,6 @@ final class WebhookDisplayModel {
 		);
 		$headings = array(
 			'configured_pending_delivery' => __( 'Webhook configured; delivery unverified', 'ran-booster' ),
-			'verified'                    => __( 'Remote configuration confirmed; signed delivery unverified', 'ran-booster' ),
-			'configuration_confirmed'     => __( 'Remote configuration confirmed; signed delivery unverified', 'ran-booster' ),
-			'ping_requested'              => __( 'Ping request accepted; signed delivery unverified', 'ran-booster' ),
-			'ping_verified'               => __( 'Ping request accepted; signed delivery unverified', 'ran-booster' ),
 			'ping_delivery_failed'        => __( 'Ping delivery failed', 'ran-booster' ),
 			'removed'                     => __( 'Webhook removed', 'ran-booster' ),
 			'orphaned'                    => __( 'Manual webhook recovery required', 'ran-booster' ),
@@ -594,13 +590,8 @@ final class WebhookDisplayModel {
 				sprintf( __( 'Core signing profile: %s', 'ran-booster' ), $recovery['profile_id'] ),
 			);
 		}
-		$next_steps = array(
-			'configured_pending_delivery' => __( 'Check Git provider delivery history and Booster Activity to establish signed delivery.', 'ran-booster' ),
-			'ping_requested'              => __( 'Inspect Git provider delivery history and Booster Activity to establish signed delivery.', 'ran-booster' ),
-			'ping_verified'               => __( 'Inspect Git provider delivery history and Booster Activity to establish signed delivery.', 'ran-booster' ),
-		);
-		if ( isset( $next_steps[ $code ] ) ) {
-			$result['details'] = array( $next_steps[ $code ] );
+		if ( 'configured_pending_delivery' === $code ) {
+			$result['details'] = array( __( 'Check Git provider delivery history and Booster Activity to establish signed delivery.', 'ran-booster' ) );
 		}
 		return $result;
 	}
@@ -653,7 +644,8 @@ final class WebhookDisplayModel {
 
 	/** @return list<array{label:string,text:string}> */
 	private function validation_lines( string $check_code, string $ping_code, ?string $remediation, bool $delivered ): array {
-		$settings      = $this->result_presentation( $check_code, null, $remediation );
+		$settings = $this->result_presentation( $check_code, null, $remediation );
+		// Set up's own heading says delivery is unverified; on Validate's Settings line every matched check reads the same.
 		$settings_text = in_array( $check_code, self::SETTINGS_MATCHED, true ) ? __( 'Settings match', 'ran-booster' ) : ( $settings['heading'] ?? $settings['message'] );
 		if ( 'skipped' === $ping_code ) {
 			$ping_text = 'configuration_drift' === $check_code
@@ -661,7 +653,7 @@ final class WebhookDisplayModel {
 				: __( 'Skipped because the settings were not confirmed.', 'ran-booster' );
 		} elseif ( in_array( $ping_code, self::PING_REQUESTED, true ) ) {
 			// Only the receiver marks a record verified, and only for a delivery signed with that record's own secret.
-			$ping_text = $delivered ? self::manual_status_label() : __( 'Ping sent. Reload to check that it arrived.', 'ran-booster' );
+			$ping_text = $delivered ? self::manual_status_label() : $this->notice( $ping_code );
 		} else {
 			$ping      = $this->result_presentation( $ping_code, null, null );
 			$ping_text = $ping['heading'] ?? $ping['message'];
@@ -727,10 +719,10 @@ final class WebhookDisplayModel {
 		}
 
 		return match ( $code ) {
-			'ping_requested', 'ping_verified' => __( 'The Git provider accepted the ping request for the recorded hook. This does not prove an authenticated inbound delivery or verify the signing secret; recorded status remains needs verification.', 'ran-booster' ),
+			'ping_requested', 'ping_verified' => __( 'Ping sent. Reload to check that it arrived.', 'ran-booster' ),
 			'ping_delivery_failed' => __( 'The Git provider recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the Git provider delivery details.', 'ran-booster' ),
 			'configured_pending_delivery' => __( 'Webhook management configured the remote hook. Signed delivery verification is still pending.', 'ran-booster' ),
-			'verified', 'configuration_confirmed' => __( 'Webhook management confirmed the recorded remote configuration. Correlate Git provider delivery history with the Git provider request ID in Booster Activity before treating signed delivery as established.', 'ran-booster' ),
+			'verified', 'configuration_confirmed' => __( 'Settings match', 'ran-booster' ),
 			'removed' => __( 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.', 'ran-booster' ),
 			'forgotten' => __( 'Webhook record cleared. Any webhook on the Git provider stays until you remove it there.', 'ran-booster' ),
 			// One or several hooks already target this site: they need removing there, since retrying alone repeats the refusal.

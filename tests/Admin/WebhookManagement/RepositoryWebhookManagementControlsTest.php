@@ -1258,7 +1258,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$presentation = new \ReflectionMethod( $display, 'result_presentation' );
 		$panel        = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
 		$section      = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
-		foreach ( array( 'configured_pending_delivery', 'verified', 'ping_requested', 'ping_verified', 'ping_delivery_failed', 'removed', 'orphaned', 'manual_recovery_required', 'recovery_record_failed', 'record_conflict', 'record_update_failed' ) as $code ) {
+		foreach ( array( 'configured_pending_delivery', 'ping_delivery_failed', 'removed', 'orphaned', 'manual_recovery_required', 'recovery_record_failed', 'record_conflict', 'record_update_failed' ) as $code ) {
 			$result = $presentation->invoke(
 				$display,
 				$code,
@@ -1269,9 +1269,6 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				null
 			);
 			self::assertNotEmpty( $result['heading'], $code );
-			if ( in_array( $code, array( 'verified', 'ping_requested', 'ping_verified' ), true ) ) {
-				self::assertStringContainsString( 'signed delivery unverified', $result['heading'] );
-			}
 			if ( 'removed' === $code ) {
 				self::assertArrayNotHasKey( 'details', $result );
 			}

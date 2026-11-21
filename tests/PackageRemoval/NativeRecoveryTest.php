@@ -132,7 +132,7 @@ final class NativeRecoveryTest extends TestCase {
 		$revoked['selection_generation'] = 1;
 		self::assertTrue( $this->store->compare_and_swap( $old, $revoked ) );
 		$review = $this->service->native_recovery_confirmation();
-		self::assertSame( array( 'digest', 'type', 'identifier', 'managed' ), array_keys( $review ) );
+		self::assertSame( array( 'digest', 'type', 'identifier', 'managed', 'finished' ), array_keys( $review ) );
 		self::assertFalse( $review['managed'] );
 		$this->recover( $review['digest'] );
 		unset( $revoked['native_mutation'] );
@@ -323,6 +323,160 @@ final class NativeRecoveryTest extends TestCase {
 		$this->refused( fn () => $this->recover( $digest ) );
 		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
 		self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows );
+	}
+
+	public function test_finished_hold_release_keeps_management_and_needs_no_stop_confirmation(): void {
+		$this->hold( str_repeat( 'a', 32 ), 'finished' );
+		$this->managed();
+		$record = $this->record;
+		$before = $this->store->read();
+		$review = $this->service->native_recovery_confirmation();
+		self::assertTrue( $review['finished'] );
+		$this->service->release_native_hold( $review['digest'], false, true, static fn (): bool => true );
+		unset( $before['native_mutation'] );
+		self::assertSame( $before, $this->store->read() );
+		self::assertSame( $record, $this->record );
+		self::assertSame( array( 'inventory', 'inventory', 'invalidate', 'locked_absence' ), $this->events );
+		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
+	}
+
+	public function test_hold_release_needs_every_confirmation_and_permission(): void {
+		$this->managed();
+		$digest = $this->service->native_recovery_confirmation()['digest'];
+		self::assertFalse( $this->service->native_recovery_confirmation()['finished'] );
+		foreach ( array( array( false, true, true ), array( true, false, true ), array( true, true, false ) ) as list( $stopped, $checked, $authorized ) ) {
+			$this->refused( fn () => $this->service->release_native_hold( $digest, $stopped, $checked, static fn (): bool => $authorized ) );
+		}
+		$this->hold( str_repeat( 'a', 32 ), 'finished' );
+		$this->refused( fn () => $this->service->release_native_hold( $this->service->native_recovery_confirmation()['digest'], true, false, static fn (): bool => true ) );
+		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+		self::assertNotContains( 'invalidate', $this->events );
+	}
+
+	public function test_unfinished_hold_frees_its_own_lock_by_exact_value(): void {
+		$own = (string) ( time() - 10 );
+		$this->hold( self::tag( $own ), 'started' );
+		$this->db->option_rows['auto_updater.lock'] = $own;
+		$this->release();
+		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
+	}
+
+	/** @return iterable<string, array{string, int}> */
+	public static function foreign_live_locks(): iterable {
+		yield 'unfinished hold, other live lock' => array( 'started', 5 );
+		yield 'unfinished hold, tag without a token' => array( 'started', 0 );
+		yield 'finished hold, even with the same value' => array( 'finished', 0 );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'foreign_live_locks' )]
+	public function test_live_lock_that_is_not_the_holds_own_is_never_removed( string $phase, int $offset ): void {
+		$own     = time() - 20;
+		$foreign = (string) ( $own + $offset );
+		$this->hold( 0 === $offset && 'started' === $phase ? str_repeat( 'a', 32 ) : self::tag( (string) $own ), $phase );
+		$this->db->option_rows['auto_updater.lock'] = $foreign;
+		$this->refused( fn () => $this->release() );
+		self::assertSame( $foreign, $this->db->option_rows['auto_updater.lock'] );
+		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+		self::assertNotContains( 'invalidate', $this->events );
+	}
+
+	public function test_hour_old_foreign_lock_is_reclaimed_by_the_release_itself(): void {
+		foreach ( array( 'started', 'finished' ) as $phase ) {
+			$this->hold( self::tag( (string) ( time() - 100 ) ), $phase );
+			$this->db->option_rows['auto_updater.lock'] = (string) ( time() - 3601 );
+			$this->release();
+			self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+			self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
+			$state                     = $this->store->read();
+			$marked                    = $state;
+			$marked['native_mutation'] = array(
+				'selection_generation' => $state['selection_generation'],
+				'owner_tag'            => str_repeat( 'a', 32 ),
+				'target_type'          => 'plugin',
+				'installed_identity'   => 'target/main.php',
+				'phase'                => 'started',
+			);
+			self::assertTrue( $this->store->compare_and_swap( $state, $marked ) );
+		}
+	}
+
+	public function test_hold_release_refuses_changed_review_record_or_attempts(): void {
+		$digest = $this->service->native_recovery_confirmation()['digest'];
+		$this->managed();
+		$this->refused( fn () => $this->release( $digest ) );
+		$digest = $this->service->native_recovery_confirmation()['digest'];
+		$calls  = 0;
+		$this->refused(
+			function () use ( $digest, &$calls ): void {
+				$this->service->release_native_hold(
+					$digest,
+					true,
+					true,
+					function () use ( &$calls ): bool {
+						if ( 2 === ++$calls ) {
+							$record           = $this->record ?? throw new \LogicException( 'The fixture record is missing.' );
+							$record['digest'] = str_repeat( 'e', 64 );
+							$this->record     = $record;
+						}
+						return true;
+					}
+				);
+			}
+		);
+		$this->db->rows = array(
+			array(
+				'id'           => 1,
+				'provider'     => 'gh',
+				'package_type' => 'plugin',
+				'package_slug' => 'target',
+				'source'       => 'manual',
+				'state'        => 'needs_attention',
+				'resolved_at'  => null,
+				'resolved_by'  => null,
+			),
+		);
+		$this->refused( fn () => $this->release() );
+		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
+	}
+
+	public function test_hold_release_cache_failure_keeps_a_retryable_hold(): void {
+		$this->cache_failure = true;
+		$this->refused( fn () => $this->release() );
+		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+		$this->cache_failure = false;
+		$this->release();
+		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+	}
+
+	private function hold( string $tag, string $phase ): void {
+		$state   = $this->store->read();
+		$cleared = $state;
+		unset( $cleared['native_mutation'] );
+		self::assertTrue( $this->store->compare_and_swap( $state, $cleared ) );
+		$marked                    = $cleared;
+		$marked['native_mutation'] = array(
+			'selection_generation' => $cleared['selection_generation'],
+			'owner_tag'            => $tag,
+			'target_type'          => 'plugin',
+			'installed_identity'   => 'target/main.php',
+			'phase'                => 'started',
+		);
+		self::assertTrue( $this->store->compare_and_swap( $cleared, $marked ) );
+		if ( 'finished' === $phase ) {
+			$finished                             = $marked;
+			$finished['native_mutation']['phase'] = 'finished';
+			self::assertTrue( $this->store->compare_and_swap( $marked, $finished ) );
+		}
+	}
+
+	private static function tag( string $lock_token ): string {
+		return sprintf( '%016x', (int) $lock_token ) . str_repeat( 'b', 16 );
+	}
+
+	private function release( ?string $digest = null ): void {
+		$this->service->release_native_hold( $digest ?? $this->service->native_recovery_confirmation()['digest'], true, true, static fn (): bool => true );
 	}
 
 	private function managed(): void {

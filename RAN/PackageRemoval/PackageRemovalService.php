@@ -34,7 +34,7 @@ final readonly class PackageRemovalService {
 	) {
 	}
 
-	/** @return array{digest:string,type:string,identifier:string,managed:bool} No credential or native owner disclosure. */
+	/** @return array{digest:string,type:string,identifier:string,managed:bool,finished:bool} No credential or native owner disclosure. */
 	public function native_recovery_confirmation(): array {
 		$snapshot = $this->native_recovery_snapshot();
 		return array(
@@ -42,7 +42,66 @@ final readonly class PackageRemovalService {
 			'type'       => $snapshot['type'],
 			'identifier' => $snapshot['identifier'],
 			'managed'    => null !== $snapshot['record'],
+			'finished'   => 'finished' === ( $snapshot['state']['native_mutation']['phase'] ?? null ),
 		);
+	}
+
+	/**
+	 * Release the hold in place, keeping the package and its management record exactly as they are.
+	 * A hold whose request never recorded its end also needs the operator's word that it stopped.
+	 * Only the hold owner's own lock is freed at once; any other lock waits for the inherited
+	 * hour-old reclaim. This never deletes files or claims the installation is intact.
+	 *
+	 * @param callable():bool $authorized Host administrative permissions, outside owned SQL transactions.
+	 */
+	public function release_native_hold( string $digest, bool $confirmed_stopped, bool $confirmed_checked, callable $authorized ): void {
+		RuntimeSupport::assert_managed_operations_allowed();
+		global $wpdb;
+		if ( ! $confirmed_checked || true !== $this->recovery_authorized( $authorized ) || null === $this->github_selection || null === $this->attempts || ! $this->github_selection->uses_connection( $wpdb ) ) {
+			throw new \RuntimeException( 'Explicit native hold release authority is required.' );
+		}
+		$snapshot = $this->native_recovery_snapshot();
+		$marker   = $snapshot['state']['native_mutation'];
+		if ( ! hash_equals( $snapshot['digest'], $digest ) || ! is_array( $marker ) ) {
+			throw new \RuntimeException( 'The native hold review changed.' );
+		}
+		if ( 'finished' !== $marker['phase'] ) {
+			if ( ! $confirmed_stopped ) {
+				throw new \RuntimeException( 'The interrupted install must be confirmed stopped.' );
+			}
+			// An unfinished owner never released its lock, so a row with its exact value is still its own.
+			$own = GitHubProviderSelection::native_lock_token( $marker );
+			if ( null !== $own ) {
+				$this->updater_lock->release( $own );
+			}
+		}
+		$token = $this->updater_lock->acquire();
+		try {
+			$type       = $snapshot['type'];
+			$identifier = $snapshot['identifier'];
+			$repository = 'plugin' === $type ? $this->plugins : $this->themes;
+			$verify     = function () use ( $type, $identifier, $repository, $snapshot, $token, $authorized ): void {
+				if ( true !== $this->recovery_authorized( $authorized ) || null === $this->attempts || $this->attempts->has_unresolved_target_attempt( $type, $identifier, true )
+					|| $repository->native_recovery_record( $identifier, true ) !== $snapshot['record'] || $this->updater_lock->current_token() !== $token ) {
+					throw new \RuntimeException( 'The held package, its attempts or operation ownership changed.' );
+				}
+				$this->attempts->assert_selection_transition_idle( $this->github_selection );
+			};
+			// As in removal recovery, a failed invalidation keeps the hold so the release can be retried.
+			$this->wordpress->invalidate_native_target( $type, $identifier );
+			$this->github_selection->release_native_hold( $snapshot['state'], $verify );
+			BoosterLogger::log(
+				'native hold released',
+				array(
+					'event'        => 'native_hold_release',
+					'outcome_code' => 'finished' === $marker['phase'] ? 'finished' : 'confirmed_stopped',
+				)
+			);
+		} finally {
+			if ( ! $this->updater_lock->release( $token ) ) {
+				throw new \RuntimeException( 'The native hold may be released; updater lock release requires recovery.' );
+			}
+		}
 	}
 
 	/**
@@ -92,7 +151,7 @@ final readonly class PackageRemovalService {
 			if ( true !== $this->recovery_authorized( $authorized ) ) {
 				throw new \RuntimeException( 'Native recovery permission changed.' );
 			}
-			$this->github_selection->recover_native_removal(
+			$this->github_selection->release_native_hold(
 				$snapshot['state'],
 				function () use ( $repository, $identifier, $verify ): void {
 					if ( null !== $repository->native_recovery_record( $identifier, true ) ) {

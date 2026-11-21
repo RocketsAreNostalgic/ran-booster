@@ -465,17 +465,20 @@ final class GitHubProviderSelection {
 		return $state;
 	}
 
-	/** @param callable():bool $owns_lock Exact captured updater ownership, never acquisition. */
-	public function begin_native_mutation( string $type, string $identity, callable $owns_lock ): string {
+	/**
+	 * @param callable():bool $owns_lock Exact captured updater ownership, never acquisition.
+	 * @param string $lock_token The held updater lock's value, carried in the owner tag so a release can free that exact lock.
+	 */
+	public function begin_native_mutation( string $type, string $identity, callable $owns_lock, string $lock_token ): string {
 		$marker                                      = $this->store->selection_transaction(
-			function () use ( $type, $identity, $owns_lock ): array {
+			function () use ( $type, $identity, $owns_lock, $lock_token ): array {
 				$state = $this->store->read( true );
-				if ( isset( $state['native_mutation'] ) || ! $this->owns_native_lock( $owns_lock ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
+				if ( isset( $state['native_mutation'] ) || 1 !== preg_match( '/\A[1-9]\d{0,15}\z/D', $lock_token ) || ! $this->owns_native_lock( $owns_lock ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
 						throw new \RuntimeException( 'GitHub native mutation is unavailable.' );
 				}
 				$marker                  = array(
 					'selection_generation' => $state['selection_generation'],
-					'owner_tag'            => bin2hex( random_bytes( 16 ) ),
+					'owner_tag'            => sprintf( '%016x', (int) $lock_token ) . bin2hex( random_bytes( 8 ) ),
 					'target_type'          => $type,
 					'installed_identity'   => $identity,
 					'phase'                => 'started',
@@ -512,6 +515,20 @@ final class GitHubProviderSelection {
 		}
 		unset( $this->native_owners[ $owner ] );
 		if ( 'uncertain' === $outcome ) {
+			// The owning request ended normally: record that, so its release needs no proof that it stopped.
+			$this->store->selection_transaction(
+				function () use ( $marker ): void {
+					$state = $this->store->read( true );
+					if ( ( $state['native_mutation'] ?? null ) !== $marker ) {
+						throw new \RuntimeException( 'GitHub native completion owner changed.' );
+					}
+					$next                             = $state;
+					$next['native_mutation']['phase'] = 'finished';
+					if ( ! $this->store->compare_and_swap( $state, $next ) ) {
+						throw new \RuntimeException( 'GitHub native completion changed.' );
+					}
+				}
+			);
 			return;
 		}
 		$completed = false;
@@ -540,6 +557,19 @@ final class GitHubProviderSelection {
 			return;
 		}
 		$this->store->selection_transaction( $complete );
+	}
+
+	/**
+	 * The updater lock value the hold's owner held, or null for a tag that does not carry one.
+	 *
+	 * @param array<mixed> $marker
+	 */
+	public static function native_lock_token( array $marker ): ?string {
+		$tag = $marker['owner_tag'] ?? null;
+		if ( ! is_string( $tag ) || 1 !== preg_match( '/\A0*([1-9a-f][0-9a-f]{0,13})[0-9a-f]{16}\z/D', $tag, $matches ) ) {
+			return null;
+		}
+		return (string) hexdec( $matches[1] );
 	}
 
 	/** @return array<string,mixed> Internal recovery authority; never expose the native owner in public status. */
@@ -581,7 +611,7 @@ final class GitHubProviderSelection {
 	 * @param array<string,mixed> $expected Exact reviewed state, including marker and approval.
 	 * @param callable():void $verify Core-only physical absence/management/attempt/lock checks; no permission filters.
 	 */
-	public function recover_native_removal( array $expected, callable $verify ): void {
+	public function release_native_hold( array $expected, callable $verify ): void {
 		$this->store->selection_transaction(
 			function () use ( $expected, $verify ): void {
 				$state = $this->native_recovery_state();

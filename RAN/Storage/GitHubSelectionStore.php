@@ -196,7 +196,7 @@ final class GitHubSelectionStore {
 		}
 		if ( isset( $state['native_mutation'] ) ) {
 			$marker = $state['native_mutation'];
-			if ( ! is_array( $marker ) || array_keys( $marker ) !== array( 'selection_generation', 'owner_tag', 'target_type', 'installed_identity', 'phase' ) || ! is_int( $marker['selection_generation'] ) || $marker['selection_generation'] < 0 || $marker['selection_generation'] > $state['selection_generation'] || ! is_string( $marker['owner_tag'] ) || 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $marker['owner_tag'] ) || ! in_array( $marker['target_type'], array( 'plugin', 'theme' ), true ) || ! is_string( $marker['installed_identity'] ) || '' === $marker['installed_identity'] || strlen( $marker['installed_identity'] ) > ( 'plugin' === $marker['target_type'] ? 255 : 191 ) || preg_match( '/[\x00-\x1f\x7f]/', $marker['installed_identity'] ) || 'started' !== $marker['phase'] ) {
+			if ( ! is_array( $marker ) || array_keys( $marker ) !== array( 'selection_generation', 'owner_tag', 'target_type', 'installed_identity', 'phase' ) || ! is_int( $marker['selection_generation'] ) || $marker['selection_generation'] < 0 || $marker['selection_generation'] > $state['selection_generation'] || ! is_string( $marker['owner_tag'] ) || 1 !== preg_match( '/\A[a-f0-9]{32}\z/D', $marker['owner_tag'] ) || ! in_array( $marker['target_type'], array( 'plugin', 'theme' ), true ) || ! is_string( $marker['installed_identity'] ) || '' === $marker['installed_identity'] || strlen( $marker['installed_identity'] ) > ( 'plugin' === $marker['target_type'] ? 255 : 191 ) || preg_match( '/[\x00-\x1f\x7f]/', $marker['installed_identity'] ) || ! in_array( $marker['phase'], array( 'started', 'finished' ), true ) ) {
 				throw new \InvalidArgumentException( 'Invalid native mutation owner.' );
 			}
 		}
@@ -215,7 +215,11 @@ final class GitHubSelectionStore {
 		$marker      = $old['native_mutation'] ?? null;
 		$next_marker = $next['native_mutation'] ?? null;
 		if ( $before === $after && $marker !== $next_marker ) {
-			if ( null === $next_marker || ( null === $marker && is_array( $next_marker ) && $next_marker['selection_generation'] === $old['selection_generation'] && 'approved' === $old['approval'] ) ) {
+			if ( null === $next_marker || ( null === $marker && is_array( $next_marker ) && 'started' === $next_marker['phase'] && $next_marker['selection_generation'] === $old['selection_generation'] && 'approved' === $old['approval'] ) ) {
+				return;
+			}
+			// The owning request records that it ended; nothing else about the hold may change.
+			if ( is_array( $marker ) && 'started' === $marker['phase'] && array_replace( $marker, array( 'phase' => 'finished' ) ) === $next_marker ) {
 				return;
 			}
 		}

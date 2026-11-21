@@ -1,9 +1,12 @@
 <?php
 
-// Refs #903. The Branch-to-release switch through the real installed Core facade
-// and WordPress upgrader. Only remote HTTP is synthetic.
+// Refs #903, #987. The Branch-to-release switch through the real installed Core facade
+// and WordPress upgrader, and the in-place release of the hold an unfinished one leaves.
+// Only remote HTTP is synthetic.
 
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
+use RAN\PackageRemoval\PackageRemovalService;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Storage\GitHubSelectionStore;
 
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -13,6 +16,8 @@ require_once ABSPATH . 'wp-admin/includes/file.php';
 final class RAN_Booster_ReleaseSwitchProof {
 
 	private const VERSIONS = array( '0.5.0', '1.0.0', '2.0.0' );
+	/** Killed after the install result: the request never records its end. */
+	private const KILLED = array( 'kill', 'foreign-lock', 'expired-lock' );
 
 	private string $slug;
 	private string $identity;
@@ -39,7 +44,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			throw new RuntimeException( 'Disposable WordPress 7.0.3 / PHP 8.2 administrator identity not established.' );
 		}
 		if ( ! in_array( $kind, array( 'plugin', 'theme' ), true )
-			|| ! in_array( $scenario, array( 'same', 'newer', 'active', 'older', 'disabled', 'failed-download', 'offer-removed', 'compete', 'conflict', 'failed-install', 'kill' ), true ) ) {
+			|| ! in_array( $scenario, array( 'same', 'newer', 'active', 'older', 'disabled', 'failed-download', 'offer-removed', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock' ), true ) ) {
 			throw new RuntimeException( 'Unknown proof case.' );
 		}
 		$run = getenv( 'RAN_RELEASE_SWITCH_PROOF_RUN' );
@@ -89,7 +94,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			'failed-install' => array( 'wordpress_failed', '1.0.0', false, true ),
 			// The reply precedes the shutdown commit, which the repository conflict refuses.
 			'conflict' => array( 'release_enabled', '2.0.0', false, true ),
-			'kill' => array( null, '2.0.0', false, true ),
+			'kill', 'foreign-lock', 'expired-lock' => array( null, '2.0.0', false, true ),
 			default => throw new RuntimeException( 'Unknown proof case.' ),
 		};
 	}
@@ -150,7 +155,13 @@ final class RAN_Booster_ReleaseSwitchProof {
 				switch_theme( $this->slug );
 			}
 		}
-		// A still-fresh stored check holding the ordinary offer: only a recheck replaces it on the next load.
+		$this->seed_stored_check();
+		$this->assert_activation();
+		$this->report( 'seeded', '1.0.0' );
+	}
+
+	/** A still-fresh stored check holding the ordinary offer: only a recheck replaces it on the next load. */
+	private function seed_stored_check(): void {
 		$name                               = $this->transient();
 		$stored                             = get_site_transient( $name );
 		$check                              = (object) ( is_object( $stored ) ? get_object_vars( $stored ) : array() );
@@ -158,8 +169,6 @@ final class RAN_Booster_ReleaseSwitchProof {
 		$check->response                    = is_array( $check->response ?? null ) ? $check->response : array();
 		$check->response[ $this->identity ] = $this->ordinary_offer( 'seeded' );
 		set_site_transient( $name, $check );
-		$this->assert_activation();
-		$this->report( 'seeded', '1.0.0' );
 	}
 
 	/** @return array<string,mixed> */
@@ -268,7 +277,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 		if ( 'failed-install' === $this->scenario ) {
 			add_filter( 'upgrader_post_install', static fn () => new WP_Error( 'release_switch_proof_after_replace', 'Synthetic failure after replacement.' ), PHP_INT_MAX );
 		}
-		if ( 'kill' === $this->scenario ) {
+		if ( in_array( $this->scenario, self::KILLED, true ) ) {
 			add_filter(
 				'upgrader_install_package_result',
 				function ( mixed $result ): mixed {
@@ -376,8 +385,18 @@ final class RAN_Booster_ReleaseSwitchProof {
 		[ $reply, $version, $switched, $custody ] = $this->expected();
 		$this->assert_row( $switched );
 		$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
-		if ( isset( $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ) !== $custody ) {
+		$hold      = $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ?? null;
+		if ( isset( $hold ) !== $custody ) {
 			throw new RuntimeException( 'Unexpected native custody after the switch.' );
+		}
+		if ( is_array( $hold ) ) {
+			// A request that ended records it; only a killed or refused one leaves the hold started, still owning its lock.
+			$finished = 'failed-install' === $this->scenario;
+			$own      = GitHubProviderSelection::native_lock_token( $hold );
+			if ( ( $finished ? 'finished' : 'started' ) !== $hold['phase'] || $this->identity !== $hold['installed_identity'] || null === $own
+				|| ( $finished ? null : $own ) !== $this->lock_row() ) {
+				throw new RuntimeException( 'Unexpected hold or updater lock after the switch.' );
+			}
 		}
 		if ( 'release_enabled' === $reply ) {
 			// The page the administrator lands on settles the reply against the stored source: enabled only when committed.
@@ -387,13 +406,13 @@ final class RAN_Booster_ReleaseSwitchProof {
 				throw new RuntimeException( 'The landing page would misreport the switch.' );
 			}
 		}
-		$this->assert_files( $version, $switched || in_array( $this->scenario, array( 'kill', 'conflict' ), true ), $this->directory );
+		$this->assert_files( $version, $this->published_after_switch(), $this->directory );
 		$this->assert_activation();
-		if ( 'kill' === $this->scenario ) {
+		if ( in_array( $this->scenario, self::KILLED, true ) ) {
 			$this->assert_files( '1.0.0', false, WP_CONTENT_DIR . '/upgrade-temp-backup/' . ( 'plugin' === $this->kind ? 'plugins/' : 'themes/' ) . $this->slug );
 		}
 		$this->assert_stored_check( null );
-		if ( ! $switched && ! in_array( $this->scenario, array( 'kill', 'conflict' ), true ) ) {
+		if ( ! $switched && ! in_array( $this->scenario, array_merge( self::KILLED, array( 'conflict' ) ), true ) ) {
 			// The next admin load: WordPress must check again, and the ordinary offer returns.
 			$start = time();
 			add_filter( 'pre_http_request', static fn ( mixed ...$request ): mixed => self::wordpress_org( (string) $request[2] ), PHP_INT_MIN, 3 );
@@ -403,13 +422,141 @@ final class RAN_Booster_ReleaseSwitchProof {
 			$this->assert_stored_check( $start );
 		}
 		$this->report( $switched ? 'switched' : ( $custody ? 'custody_retained' : 'ordinary_offer_restored' ), $version );
+		if ( $custody ) {
+			// The release phase needs the managed row it keeps.
+			return;
+		}
+		$this->cleanup();
+	}
+
+	/** The files the switch left: the release after a commit, a kill or a refused commit. */
+	private function published_after_switch(): bool {
+		return $this->expected()[2] || in_array( $this->scenario, array_merge( self::KILLED, array( 'conflict' ) ), true );
+	}
+
+	/** Release the hold in place with the operator's confirmations; the package, its row and its files stay as they are. */
+	public function release_hold(): void {
+		$this->attest();
+		$container  = require dirname( __DIR__ ) . '/core-container-fixture.php';
+		$removal    = $container->make( PackageRemovalService::class );
+		$store      = $container->make( GitHubSelectionStore::class );
+		$authorized = static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
+		$hold       = $store->read( true )['native_mutation'] ?? null;
+		$before     = $this->managed_row();
+		$review     = $removal->native_recovery_confirmation();
+		if ( ! is_array( $hold ) || $this->identity !== $review['identifier'] || ( 'finished' === $hold['phase'] ) !== $review['finished'] ) {
+			throw new RuntimeException( 'Unexpected hold review.' );
+		}
+		$finished = $review['finished'];
+		$this->refused( fn () => $removal->release_native_hold( $review['digest'], true, false, $authorized ) );
+		if ( ! $finished ) {
+			$this->refused( fn () => $removal->release_native_hold( $review['digest'], false, true, $authorized ) );
+		}
+		if ( 'foreign-lock' === $this->scenario ) {
+			// Another operation's live lock: never removed, however the hold was left.
+			$foreign = (string) max( time(), (int) GitHubProviderSelection::native_lock_token( $hold ) + 1 );
+			$this->set_lock( $foreign );
+			$this->refused( fn () => $removal->release_native_hold( $review['digest'], true, true, $authorized ) );
+			if ( $foreign !== $this->lock_row() || $store->read( true )['native_mutation'] !== $hold ) {
+				throw new RuntimeException( 'A live foreign updater lock was removed.' );
+			}
+		}
+		if ( in_array( $this->scenario, array( 'foreign-lock', 'expired-lock' ), true ) ) {
+			// An hour-old lock that is not the hold's own: the release reclaims it itself.
+			$this->set_lock( (string) ( time() - 3601 ) );
+		}
+		$removal->release_native_hold( $review['digest'], ! $finished, true, $authorized );
+		if ( isset( $store->read( true )['native_mutation'] ) || null !== $this->lock_row() || $this->managed_row() !== $before ) {
+			throw new RuntimeException( 'The release left the hold or a lock, or changed the managed package.' );
+		}
+		$this->assert_files( $this->expected()[1], $this->published_after_switch(), $this->directory );
+		$this->assert_activation();
+		if ( 'conflict' === $this->scenario ) {
+			global $wpdb;
+			if ( 1 !== $wpdb->delete( ran_booster_table_name(), array( 'package' => $this->conflicting_row()['package'] ) ) ) {
+				throw new RuntimeException( 'Conflicting row cleanup failed.' );
+			}
+		}
+		$this->report( $finished ? 'finished_hold_released' : 'unfinished_hold_released', $this->expected()[1] );
+	}
+
+	/**
+	 * After the release, the same switch runs again. Nothing of Booster's blocks it. After a kill, the release
+	 * updater's own ten-minute discovery lease, which the killed request never returned, refuses it until it expires.
+	 */
+	public function retry_switch(): void {
+		$this->attest();
+		// This site cannot reach WordPress.org, so a recheck after a completed install saves a check with no
+		// response list, to which the release updater does not add its offer. Give it an ordinary check again.
+		$this->seed_stored_check();
+		$code = $this->enable();
+		if ( $this->retry_result()[0] !== $code ) {
+			throw new RuntimeException( 'Unexpected switch result after the release: ' . $code );
+		}
+		$this->report( $code, $this->retry_result()[1] );
+	}
+
+	public function retried(): void {
+		[ , $version, $switched ] = $this->retry_result();
+		$this->assert_row( $switched );
+		$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
+		if ( isset( $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ) || null !== $this->lock_row() ) {
+			throw new RuntimeException( 'The switch after the release left a hold or a lock.' );
+		}
+		$this->assert_files( $version, true, $this->directory );
+		$this->assert_activation();
+		$this->report( $switched ? 'switched_after_release' : 'updater_lease_held', $version );
+		$this->cleanup();
+	}
+
+	/** @return array{0: string, 1: string, 2: bool} Result code, installed version, switched. */
+	private function retry_result(): array {
+		return in_array( $this->scenario, self::KILLED, true ) ? array( 'service_unavailable', '2.0.0', false ) : array( 'release_enabled', '2.0.0', true );
+	}
+
+	/** @param callable():void $operation */
+	private function refused( callable $operation ): void {
+		$released = false;
+		try {
+			$operation();
+			$released = true;
+		} catch ( RuntimeException ) {
+			$released = false;
+		}
+		if ( $released ) {
+			throw new RuntimeException( 'An unconfirmed or blocked hold release succeeded.' );
+		}
+	}
+
+	/** @return array<string, mixed>|null */
+	private function managed_row(): ?array {
+		global $wpdb;
+		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE package = %s', ran_booster_table_name(), $this->identity ), ARRAY_A );
+	}
+
+	/** The raw updater lock row, past every option cache. */
+	private function lock_row(): ?string {
+		global $wpdb;
+		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
+		return is_string( $value ) ? $value : null;
+	}
+
+	private function set_lock( string $value ): void {
+		global $wpdb;
+		if ( 1 !== $wpdb->query( $wpdb->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s', $wpdb->options, $value, 'auto_updater.lock' ) ) ) {
+			throw new RuntimeException( 'Synthetic updater lock was not set.' );
+		}
+		wp_cache_delete( 'auto_updater.lock', 'options' );
+	}
+
+	private function cleanup(): void {
+		global $wpdb;
 		// Leave the shared site as it was: activation back, then only this exact fixture row retired. Files stay for inspection.
 		if ( 'active' === $this->scenario ) {
 			'plugin' === $this->kind ? deactivate_plugins( $this->identity ) : switch_theme( (string) get_option( 'ran_release_switch_proof_previous_theme' ) );
 			delete_option( 'ran_release_switch_proof_previous_theme' );
 		}
-		if ( 1 !== $wpdb->delete( ran_booster_table_name(), array( 'package' => $this->identity ) )
-			|| ( 'conflict' === $this->scenario && 1 !== $wpdb->delete( ran_booster_table_name(), array( 'package' => $this->conflicting_row()['package'] ) ) ) ) {
+		if ( 1 !== $wpdb->delete( ran_booster_table_name(), array( 'package' => $this->identity ) ) ) {
 			throw new RuntimeException( 'Fixture row cleanup failed.' );
 		}
 	}
@@ -598,5 +745,8 @@ match ( getenv( 'RAN_RELEASE_SWITCH_PROOF_PHASE' ) ) {
 	'run' => $ran_booster_release_switch_proof->run(),
 	'compete' => $ran_booster_release_switch_proof->competing(),
 	'readback' => $ran_booster_release_switch_proof->readback(),
+	'release' => $ran_booster_release_switch_proof->release_hold(),
+	'retry' => $ran_booster_release_switch_proof->retry_switch(),
+	'retried' => $ran_booster_release_switch_proof->retried(),
 	default => throw new RuntimeException( 'Unknown proof phase.' ),
 };

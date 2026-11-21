@@ -441,7 +441,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						break;
 					}
 					if ( 'gh' === (string) $repository->provider ) {
-						$native_owner = $this->github_selection->begin_native_mutation( $type, $identifier, fn (): bool => $lock_token === $this->updater_lock->current_token() );
+						$native_owner = $this->github_selection->begin_native_mutation( $type, $identifier, fn (): bool => $lock_token === $this->updater_lock->current_token(), $lock_token );
 					}
 					$result               = 'plugin' === $type
 						? $this->executor->install_plugin( $artifact, $package_root, null )
@@ -532,9 +532,19 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 				);
 			}
 
-			if ( null !== $lock_token ) {
+			// Complete the hold before releasing the lock. An unfinished hold keeps the lock, so a lock still
+			// holding the owner's value always belongs to it and its release may free that exact value.
+			$hold_unfinished = false;
+			if ( null !== $native_owner ) {
 				try {
-
+					$this->github_selection->complete_native_mutation( $native_owner, $type, $identifier, ! $finalization_failed && $outcome->successful() ? 'verified_success' : 'uncertain' );
+				} catch ( Throwable ) {
+					$finalization_failed = true;
+					$hold_unfinished     = true;
+				}
+			}
+			if ( null !== $lock_token && ! $hold_unfinished ) {
+				try {
 					if ( ! $this->updater_lock->release( $lock_token ) ) {
 						$finalization_failed = true;
 						BoosterLogger::log(
@@ -549,13 +559,6 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						$failure,
 						array( 'step' => 'prospective_release_lock_release' )
 					);
-				}
-			}
-			if ( null !== $native_owner ) {
-				try {
-					$this->github_selection->complete_native_mutation( $native_owner, $type, $identifier, ! $finalization_failed && $outcome->successful() ? 'verified_success' : 'uncertain' );
-				} catch ( Throwable ) {
-					$finalization_failed = true;
 				}
 			}
 		}

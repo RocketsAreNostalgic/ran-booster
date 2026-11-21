@@ -86,6 +86,8 @@ if ( ! class_exists( \RAN\Dashboard::class, false ) ) {
 final class DashboardIndexRoutingTest extends TestCase {
 	use \RAN\Tests\Support\QueuedSelectionFixture;
 
+	private const LOCK_TOKEN = '1700000000';
+
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_GET = array();
@@ -2290,7 +2292,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'gh', $make()->hidden_navigation_key(), 'Control: an available selection is hidden.' );
 
-		$selection->begin_native_mutation( 'plugin', 'target/main.php', static fn (): bool => true );
+		$selection->begin_native_mutation( 'plugin', 'target/main.php', static fn (): bool => true, self::LOCK_TOKEN );
 		self::assertSame( 'recovery_required', $selection->status()['state'] );
 		$visibility = $make();
 		self::assertNull( $visibility->hidden_navigation_key() );

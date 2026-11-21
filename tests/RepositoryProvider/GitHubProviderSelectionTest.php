@@ -29,6 +29,8 @@ require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 final class GitHubProviderSelectionTest extends TestCase {
 	use \RAN\Tests\Support\QueuedSelectionFixture;
 
+	private const LOCK_TOKEN = '1700000000';
+
 	private string $root;
 	private SelectionContextDatabase $db;
 	private GitHubSelectionStore $store;
@@ -283,7 +285,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$this->activate( array( 'booster.php', 'replacement.php' ) );
 		$this->adopt( $candidate );
 		$context = $this->context();
-		$owner   = $context->begin_native_mutation( 'plugin', 'target/main.php', static fn (): bool => true );
+		$owner   = $context->begin_native_mutation( 'plugin', 'target/main.php', static fn (): bool => true, self::LOCK_TOKEN );
 		$status  = $context->status();
 		self::assertSame( 'recovery_required', $status['state'] );
 		self::assertTrue( $status['available'] );
@@ -439,7 +441,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 			'plugin' => array( 'Target/main.php', 'target/other.php', 'target-other/main.php' ),
 			'theme'  => array( 'Target', 'TARGET', 'target-other' ),
 		) as $type => [ $marker, $collides, $distinct ] ) {
-			$owner = $context->begin_native_mutation( $type, $marker, static fn (): bool => true );
+			$owner = $context->begin_native_mutation( $type, $marker, static fn (): bool => true, self::LOCK_TOKEN );
 			self::assertTrue( $context->native_mutation_blocks_target( $type, $collides ), $type );
 			self::assertSame( 'provider_unavailable', $context->deployment_refusal( 0, $type, $collides ), $type );
 			self::assertFalse( $context->native_mutation_blocks_target( $type, $distinct ), $type );
@@ -846,13 +848,13 @@ final class GitHubProviderSelectionTest extends TestCase {
 
 	public function test_native_begin_blocks_second_target_and_completion_survives_guard_loss(): void {
 		$context = $this->context();
-		$owner   = $context->begin_native_mutation( 'plugin', 'first/main.php', static fn (): bool => true );
+		$owner   = $context->begin_native_mutation( 'plugin', 'first/main.php', static fn (): bool => true, self::LOCK_TOKEN );
 		$marker  = $this->store->read()['native_mutation'];
 		self::assertSame( $owner, $marker['owner_tag'] );
 		self::assertTrue( $context->operation_allowed() );
 		foreach ( array( $context, $this->context() ) as $request ) {
 			try {
-				$request->begin_native_mutation( 'theme', 'second', static fn (): bool => true );
+				$request->begin_native_mutation( 'theme', 'second', static fn (): bool => true, self::LOCK_TOKEN );
 				self::fail( 'Unresolved first target was overwritten.' );
 			} catch ( \RuntimeException ) {
 				self::assertSame( $marker, $this->store->read()['native_mutation'] );
@@ -911,7 +913,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 
 	public function test_native_completion_preserves_revocation_and_requires_captured_owner(): void {
 		$context                         = $this->context();
-		$owner                           = $context->begin_native_mutation( 'plugin', 'first.php', static fn (): bool => true );
+		$owner                           = $context->begin_native_mutation( 'plugin', 'first.php', static fn (): bool => true, self::LOCK_TOKEN );
 		$state                           = $this->store->read();
 		$revoked                         = $state;
 		$revoked['selection_generation'] = 1;
@@ -941,7 +943,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'foreign_source_completions' )]
 	public function test_native_completion_refuses_a_foreign_or_unconfirmed_source_transaction( string $connection, string $type, string $identity, bool $committed ): void {
 		$context = $this->context();
-		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
 		$source  = 'store' === $connection ? $this->db : new \stdClass();
 		try {
 			$context->complete_native_mutation(
@@ -964,7 +966,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 
 	public function test_native_completion_refuses_a_source_commit_that_skipped_custody_removal(): void {
 		$context = $this->context();
-		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
 		try {
 			$context->complete_native_mutation( $owner, 'theme', 'first', 'verified_success', static fn (): bool => true );
 			self::fail( 'Completion accepted a source commit that never removed custody.' );
@@ -976,7 +978,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 
 	public function test_native_completion_commits_inside_the_source_transaction_on_its_connection(): void {
 		$context = $this->context();
-		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
 		$context->complete_native_mutation(
 			$owner,
 			'theme',
@@ -989,7 +991,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		);
 		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
 
-		$owner  = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		$owner  = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
 		$marked = $this->store->read();
 		$calls  = 0;
 		$context->complete_native_mutation(
@@ -1003,14 +1005,115 @@ final class GitHubProviderSelectionTest extends TestCase {
 			}
 		);
 		self::assertSame( 0, $calls );
+		$marked['native_mutation']['phase'] = 'finished';
 		self::assertSame( $marked, $this->store->read() );
+	}
+
+	public function test_native_owner_tag_carries_the_exact_lock_token(): void {
+		$this->context()->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
+		$marker = $this->store->read()['native_mutation'];
+		self::assertIsArray( $marker );
+		self::assertMatchesRegularExpression( '/\A000000006553f100[0-9a-f]{16}\z/D', (string) $marker['owner_tag'] );
+		self::assertSame( self::LOCK_TOKEN, GitHubProviderSelection::native_lock_token( $marker ) );
+		// A tag that never carried a token is never mistaken for one.
+		foreach ( array( str_repeat( 'a', 32 ), str_repeat( '0', 32 ), str_repeat( '0', 20 ) . str_repeat( 'f', 12 ), 'not-a-tag' ) as $tag ) {
+			self::assertNull( GitHubProviderSelection::native_lock_token( array( 'owner_tag' => $tag ) ) );
+		}
+	}
+
+	public function test_native_begin_refuses_a_malformed_lock_token(): void {
+		foreach ( array( '', '0', '012', 'abc', '1.5', '12345678901234567' ) as $token ) {
+			try {
+				$this->context()->begin_native_mutation( 'theme', 'first', static fn (): bool => true, $token );
+				self::fail( 'Malformed lock token admitted mutation.' );
+			} catch ( \RuntimeException ) {
+				self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+			}
+		}
+	}
+
+	public function test_uncertain_completion_records_only_that_the_owner_finished(): void {
+		$context = $this->context();
+		$owner   = $context->begin_native_mutation( 'plugin', 'first/main.php', static fn (): bool => true, self::LOCK_TOKEN );
+		$started = $this->store->read();
+		$context->complete_native_mutation( $owner, 'plugin', 'first/main.php', 'uncertain' );
+		$finished = $this->store->read();
+		self::assertIsArray( $started['native_mutation'] );
+		self::assertSame( array_replace( $started['native_mutation'], array( 'phase' => 'finished' ) ), $finished['native_mutation'] );
+		unset( $started['native_mutation'], $finished['native_mutation'] );
+		self::assertSame( $started, $finished );
+		self::assertTrue( $context->native_mutation_blocks_target( 'plugin', 'first/other.php' ) );
+
+		// Revocation keeps a finished hold exactly as it is.
+		$state                           = $this->store->read();
+		$revoked                         = $state;
+		$revoked['selection_generation'] = 1;
+		$revoked['approval']             = 'revoked';
+		self::assertTrue( $this->store->compare_and_swap( $state, $revoked ) );
+		self::assertSame( 'finished', $this->store->read()['native_mutation']['phase'] ?? null );
+	}
+
+	/** @return iterable<string, array{array<string, mixed>}> */
+	public static function forbidden_marker_changes(): iterable {
+		yield 'finished back to started' => array( array( 'phase' => 'started' ) );
+		yield 'unknown phase' => array( array( 'phase' => 'restored' ) );
+		yield 'other target' => array( array( 'installed_identity' => 'second' ) );
+		yield 'other owner' => array( array( 'owner_tag' => str_repeat( 'c', 32 ) ) );
+	}
+
+	/** @param array<string, mixed> $change */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'forbidden_marker_changes' )]
+	public function test_store_refuses_any_other_marker_change( array $change ): void {
+		$context = $this->context();
+		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
+		$context->complete_native_mutation( $owner, 'theme', 'first', 'uncertain' );
+		$state                   = $this->store->read();
+		$next                    = $state;
+		$next['native_mutation'] = array_replace( (array) $state['native_mutation'], $change );
+		try {
+			$this->store->compare_and_swap( $state, $next );
+			self::fail( 'A forbidden marker change was stored.' );
+		} catch ( \InvalidArgumentException ) {
+			self::assertSame( $state, $this->store->read() );
+		}
+	}
+
+	public function test_store_never_begins_a_hold_as_finished(): void {
+		$state                   = $this->store->read();
+		$next                    = $state;
+		$next['native_mutation'] = array(
+			'selection_generation' => $state['selection_generation'],
+			'owner_tag'            => str_repeat( 'a', 32 ),
+			'target_type'          => 'theme',
+			'installed_identity'   => 'first',
+			'phase'                => 'finished',
+		);
+		$this->expectException( \InvalidArgumentException::class );
+		$this->store->compare_and_swap( $state, $next );
+	}
+
+	public function test_finished_write_refuses_a_hold_that_changed(): void {
+		$context = $this->context();
+		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
+		$state   = $this->store->read();
+		$cleared = $state;
+		unset( $cleared['native_mutation'] );
+		self::assertTrue( $this->store->compare_and_swap( $state, $cleared ) );
+		try {
+			$context->complete_native_mutation( $owner, 'theme', 'first', 'uncertain' );
+			self::fail( 'A changed hold was marked finished.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'GitHub native completion owner changed.', $failure->getMessage() );
+		}
+		self::assertSame( $cleared, $this->store->read() );
 	}
 
 	public function test_uncertain_native_outcome_is_not_later_promoted_to_success(): void {
 		$context = $this->context();
-		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
 		$state   = $this->store->read();
 		$context->complete_native_mutation( $owner, 'theme', 'first', 'uncertain' );
+		$state['native_mutation']['phase'] = 'finished';
 		self::assertSame( $state, $this->store->read() );
 		$this->expectException( \RuntimeException::class );
 		$context->complete_native_mutation( $owner, 'theme', 'first', 'verified_success' );
@@ -1020,7 +1123,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$context = $this->context();
 		foreach ( array( array( 'plugin', 'first.php', false ), array( 'other', 'first.php', true ), array( 'theme', '', true ) ) as [ $type, $identity, $locked ] ) {
 			try {
-				$context->begin_native_mutation( $type, $identity, static fn (): bool => $locked );
+				$context->begin_native_mutation( $type, $identity, static fn (): bool => $locked, self::LOCK_TOKEN );
 				self::fail( 'Invalid native begin accepted.' );
 			} catch ( \RuntimeException | \InvalidArgumentException ) {
 				self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
@@ -1028,7 +1131,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		}
 		$this->activate( array() );
 		$this->expectException( \RuntimeException::class );
-		$context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		$context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
 	}
 
 	public function test_unknown_native_begin_commit_retains_marker_and_grants_no_completion(): void {
@@ -1036,7 +1139,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$this->db->selection->fail_commit    = true;
 		$this->db->selection->commit_applied = true;
 		try {
-			$context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+			$context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
 			self::fail( 'Unknown commit admitted mutation.' );
 		} catch ( DatabaseLifecycleFailure $failure ) {
 			self::assertSame( 'selection_commit_uncertain', $failure->reason() );
@@ -1051,7 +1154,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$this->db->query( 'START TRANSACTION' );
 		$before = $this->store->read();
 		try {
-			$this->context()->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+			$this->context()->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
 			self::fail( 'Nested transaction accepted.' );
 		} catch ( DatabaseLifecycleFailure ) {
 			self::assertNotNull( $this->db->selection->transaction_rows );
@@ -1063,7 +1166,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 
 	public function test_unknown_completion_commit_retains_marker_when_not_committed_and_pauses_request(): void {
 		$context                          = $this->context();
-		$owner                            = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true );
+		$owner                            = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
 		$before                           = $this->store->read();
 		$this->db->selection->fail_commit = true;
 		try {
@@ -1074,7 +1177,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		}
 		$this->db->selection->fail_commit = false;
 		$this->expectException( DatabaseLifecycleFailure::class );
-		$context->begin_native_mutation( 'theme', 'second', static fn (): bool => true );
+		$context->begin_native_mutation( 'theme', 'second', static fn (): bool => true, self::LOCK_TOKEN );
 	}
 
 	public function test_lock_check_cannot_change_active_selection_then_admit_old_work(): void {
@@ -1086,7 +1189,8 @@ final class GitHubProviderSelectionTest extends TestCase {
 				function (): bool {
 					$this->activate( array() );
 					return true;
-				}
+				},
+				self::LOCK_TOKEN
 			);
 			self::fail( 'Changed selection admitted after lock check.' );
 		} catch ( \RuntimeException ) {
@@ -1116,7 +1220,8 @@ final class GitHubProviderSelectionTest extends TestCase {
 				'first',
 				static function () use ( &$checks ): bool {
 					return 1 === ++$checks;
-				}
+				},
+				self::LOCK_TOKEN
 			);
 			self::fail( 'Lost lock admitted mutation.' );
 		} catch ( \RuntimeException ) {

@@ -358,7 +358,7 @@ final class ManagedReleaseTargetRegistrar {
 			throw new \RuntimeException( 'The managed release authority changed after staging.' );
 		}
 		PackageMutationGuard::assert_package_mutation_allowed();
-		$owner = $this->github_selection->begin_native_mutation( $type, $identity, fn (): bool => $pending['lock'] === $this->updater_lock->current_token() );
+		$owner = $this->github_selection->begin_native_mutation( $type, $identity, fn (): bool => $pending['lock'] === $this->updater_lock->current_token(), $pending['lock'] );
 		$this->native_updates[ self::key( $type, $identity ) ]['native_owner'] = $owner;
 		return $owner;
 	}
@@ -372,12 +372,8 @@ final class ManagedReleaseTargetRegistrar {
 			throw new \RuntimeException( 'GitHub native completion owner changed.' );
 		}
 		$committed = false;
-		$refused   = 'outcome_uncertain';
+		$refused   = 'verified_success' === $outcome ? 'commit_refused' : 'outcome_uncertain';
 		try {
-			if ( ! $pending['automatic'] && null !== $pending['lock'] && ! $this->updater_lock->release( $pending['lock'] ) ) {
-				throw new \RuntimeException( 'GitHub native lock release failed.' );
-			}
-			$refused = 'verified_success' === $outcome ? 'commit_refused' : 'outcome_uncertain';
 			// A switch commits its source in the transaction that ends custody; uncertain leaves both for recovery.
 			$this->github_selection->complete_native_mutation(
 				$owner,
@@ -387,6 +383,11 @@ final class ManagedReleaseTargetRegistrar {
 				null === $switch ? null : fn ( callable $complete ): bool => $this->store->transition( $type, $identity, PackageSource::BRANCH, $switch['revision'], PackageSource::RELEASE_ASSET, $switch['configuration'], $switch['user'], $switch['token'], $complete )
 			);
 			$committed = 'verified_success' === $outcome;
+			// Release only after the hold is cleared or finished: a lock still holding the owner's value then
+			// always belongs to an unfinished hold, which the hold's release may free by that exact value.
+			if ( ! $pending['automatic'] && null !== $pending['lock'] && ! $this->updater_lock->release( $pending['lock'] ) ) {
+				throw new \RuntimeException( 'GitHub native lock release failed.' );
+			}
 		} finally {
 			unset( $this->native_updates[ $key ], $this->switches[ $key ] );
 			if ( null !== $switch ) {

@@ -232,9 +232,11 @@ load.
 | `disabled` | `policy_blocked`; files unchanged | Branch | None |
 | `failed-download` | `wordpress_failed` before replacement; files unchanged | Branch | None |
 | `offer-removed` | The offer is gone when the upgrader reads it, so WordPress reports the package up to date: `wordpress_failed`, never success; files unchanged | Branch | None |
-| `conflict` | Another package from the same repository is added after the install; the shutdown commit refuses it, so the updater records an uncertain outcome. The reply said `release_enabled`; the next load settles it as `management_state_uncertain` | Branch, with the release files installed | Retained |
-| `failed-install` | `wordpress_failed` after replacement; WordPress restores 1.0.0 at shutdown | Branch | Retained |
-| `kill` | SIGKILL after the install result: 2.0.0 files, 1.0.0 backup left | Branch | Retained |
+| `conflict` | Another package from the same repository is added after the install; the shutdown commit refuses it, so the updater records an uncertain outcome. The reply said `release_enabled`; the next load settles it as `management_state_uncertain` | Branch, with the release files installed | Retained, `started`, still owning its lock |
+| `failed-install` | `wordpress_failed` after replacement; WordPress restores 1.0.0 at shutdown | Branch | Retained, `finished`, lock released |
+| `kill` | SIGKILL after the install result: 2.0.0 files, 1.0.0 backup left | Branch | Retained, `started`, still owning its lock |
+| `foreign-lock` | As `kill`; the release then meets another operation's live lock and is refused without touching it | Branch | Retained until the lock is an hour old |
+| `expired-lock` | As `kill`; the lock row is another, hour-old value, which the release reclaims itself | Branch | Retained |
 
 The source changes only when the updater's finalisation reports a verified
 install, in the same transaction that clears native custody. That commit runs
@@ -244,6 +246,32 @@ only a package on Releases is reported enabled. In `conflict` the reply is
 `release_enabled`, the commit is refused, and the landing shows
 `management_state_uncertain`. Retained custody is the existing recovery path
 for an interrupted Update.
+
+Refs #987. The held cases (`conflict`, `failed-install`, `kill`,
+`foreign-lock`, `expired-lock`) then release the hold in place and switch
+again. The readback checks the hold's phase and that a hold whose request never
+recorded its end still owns the updater lock by the exact value carried in its
+owner tag. The release phase requires the operator's check, and for a `started`
+hold also the confirmation that the install stopped. It proves that the managed
+row is byte-identical afterwards, that no hold or lock is left, and that the
+files are untouched. The switch then runs again:
+
+- `conflict` and `failed-install` switch to the release.
+- After a kill, the release updater's own ten-minute discovery lease, which the
+  killed request never returned, refuses the retry (`service_unavailable`) with
+  no Booster hold or lock left.
+
+Before the retry, the proof seeds an ordinary stored update check again. This
+site cannot reach WordPress.org, and after a completed install WordPress saves
+a check with no response list, to which the release updater does not add its
+offer.
+
+Two negative controls each mutate one line of the Core archive under test:
+
+- Freeing any lock row instead of the hold's own value fails `foreign-lock` at
+  "An unconfirmed or blocked hold release succeeded."
+- Removing the `finished` write fails `failed-install` at "Unexpected hold or
+  updater lock after the switch."
 
 Every readback reads the raw `_site_transient_update_*` row and fails if the
 one-off offer reached it. Each case seeds a still-fresh stored check holding an
@@ -262,10 +290,10 @@ bash tests/WordPress/native-release-install-proof/switch.sh
 
 The site is the marked disposable WordPress 7.0.3 site described above, with
 an administrator named by `RAN_RELEASE_SWITCH_PROOF_USER` (default `admin`).
-CI runs the default cases for both package types on the critical MySQL 8.4 and
-MariaDB 10.11 rows. `conflict`, `failed-install` and `kill` keep native custody, which
-blocks later native work on that site, so they run locally only, each on its own
-fresh site:
+CI runs every case, the held ones included, for both package types on the
+critical MySQL 8.4 and MariaDB 10.11 rows. Each held case releases its own hold,
+so all of them run in sequence on one site. A single case runs with, for
+example:
 
 ```sh
 RAN_RELEASE_SWITCH_PROOF_TYPES=plugin RAN_RELEASE_SWITCH_PROOF_CASES=kill \

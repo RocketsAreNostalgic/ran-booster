@@ -2776,7 +2776,7 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 	public ?\Closure $on_acquire  = null;
 
 	public function current_token(): ?string {
-		return $this->acquire_calls > $this->release_calls ? 'test-lock-token' : null;
+		return $this->acquire_calls > $this->release_calls ? '1700000004' : null;
 	}
 
 	public function acquire(): string {
@@ -2788,7 +2788,7 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 			( $this->on_acquire )();
 		}
 
-		return 'test-lock-token';
+		return '1700000004';
 	}
 
 	public function release( string $token ): bool {

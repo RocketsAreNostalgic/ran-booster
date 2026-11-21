@@ -253,7 +253,7 @@ try {
 				throw new RuntimeException( 'Managed fixture updater lock is unavailable.' );
 			}
 			try {
-				$ran_booster_owner = $ran_booster_selection->begin_native_mutation( $type, $ran_booster_identifier, static fn (): bool => $ran_booster_token === $ran_booster_lock->current_token() );
+				$ran_booster_owner = $ran_booster_selection->begin_native_mutation( $type, $ran_booster_identifier, static fn (): bool => $ran_booster_token === $ran_booster_lock->current_token(), $ran_booster_token );
 				$ran_booster_selection->complete_native_mutation( $ran_booster_owner, $type, $ran_booster_identifier, 'uncertain' );
 			} finally {
 				$ran_booster_assert( $ran_booster_lock->release( $ran_booster_token ), 'Managed fixture lock cleanup failed.' );

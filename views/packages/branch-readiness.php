@@ -5,10 +5,11 @@
  *
  * @var string $branch_value
  * @var string $deployment_policy
+ * @var string $identifier_value
  * @var array<string, mixed>|null $package_branch_readiness
+ * @var \RAN\Admin\PackagePagePresenter $package_view
  * @var string $provider_code
  * @var bool $provider_webhook_available
- * @var string $settings_url
  */
 
 defined( 'WPINC' ) || die;
@@ -41,9 +42,6 @@ $provider_settings_url           = add_query_arg(
 	),
 	$provider_base_url
 );
-$check_return_url                = $is_package_edit
-	? add_query_arg( array( 'source_view' => 'branch' ), $settings_url ) . '#ran-booster-branch-readiness'
-	: '';
 $site_readiness                  = is_array( $package_branch_readiness['site'] ?? null )
 	? $package_branch_readiness['site']
 	: null;
@@ -99,15 +97,9 @@ $repository_branch_verified       = in_array( $repository_branch_check_outcome ?
 $saved_subdirectory_value         = isset( $saved_subdirectory_value ) && is_string( $saved_subdirectory_value )
 	? trim( $saved_subdirectory_value )
 	: '';
-$repository_branch_check_message  = match ( $repository_branch_check_outcome ?? null ) {
-	'branch_unavailable' => __( 'The saved branch could not be found. Check the branch name on the provider.', 'ran-booster' ),
-	'branch_redirected' => __( 'The branch lookup was redirected. The branch may have been renamed or the repository moved. Check the current name on the provider.', 'ran-booster' ),
-	'provider_unavailable' => __( 'The saved Git provider is unavailable, so Booster could not check the repository and branch.', 'ran-booster' ),
-	'unable_to_check'      => __( 'Booster could not access the saved repository and branch. Check the branch name and repository access, then try again.', 'ran-booster' ),
-	'subdirectory_unavailable' => __( 'The saved branch is accessible, but Booster could not find the configured subdirectory. Check the path and try again.', 'ran-booster' ),
-	'subdirectory_unverified'  => __( 'The saved branch is accessible, but Booster could not check the configured subdirectory. Try again later.', 'ran-booster' ),
-	default                => null,
-};
+$branch_check_sentences           = \RAN\Admin\PackageAdminController::repository_branch_check_sentences( $repository_branch_check_outcome ?? null );
+$repository_branch_check_message  = null !== $branch_check_sentences ? implode( ' ', $branch_check_sentences ) : null;
+
 $repository_branch_check_intent = null !== $repository_branch_check_message ? 'warning' : 'error';
 $repository_state_class         = match ( true ) {
 	! $identity_ready                         => 'is-warning',
@@ -257,27 +249,25 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					</div>
 					<?php \RAN\Admin\Component\NoticeIcon::print_intent( $repository_branch_check_intent ); ?>
 				</div>
-				<?php if ( $is_package_edit ) { ?>
-					<button
-					type="submit"
-					name="ran_booster[check_repository_branch_after_save]"
-					value="1"
-					form="ran-booster-package-edit-form"
-					class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-branch-readiness-check-form' ); ?>"
-					data-ran-booster-enhanced-mutation
-					data-ran-booster-error-target="#ran-booster-repository-branch-check-error"
-					data-ran-booster-relocate-rendered-error
-					hx-post="<?php echo esc_url( wp_make_link_relative( (string) $settings_url ) ); ?>"
-					hx-target="#wpbody-content"
-					hx-select="#wpbody-content"
-					hx-swap="outerHTML show:#ran-booster-branch-readiness:top"
-					hx-push-url="<?php echo esc_url( wp_make_link_relative( (string) $check_return_url ) ); ?>"
-					hx-sync="this:drop"
-					hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"
-					data-ran-booster-busy-label="<?php echo esc_attr( __( 'Saving and checking…', 'ran-booster' ) ); ?>"
-					data-ran-booster-busy-message="<?php echo esc_attr( __( 'Saving settings and checking the branch. This can take a few seconds.', 'ran-booster' ) ); ?>"
-					<?php disabled( isset( $package_mutation_available ) && false === $package_mutation_available ); ?>
-					><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
+				<?php if ( $is_package_edit && is_array( $repository_branch_check_args ?? null ) ) { ?>
+					<form method="get" action="<?php echo esc_url( $package_view->get_admin_url() . '#ran-booster-branch-readiness' ); ?>" class="ran-booster-branch-readiness-check-form" data-ran-booster-submit-busy>
+						<?php
+						foreach ( array(
+							'page'        => $package_view->get_page_slug(),
+							'package'     => $identifier_value,
+							'source_view' => 'branch',
+						) + $repository_branch_check_args + ( $package_return_args ?? array() ) as $check_field => $check_value ) {
+							?>
+							<input type="hidden" name="<?php echo esc_attr( (string) $check_field ); ?>" value="<?php echo esc_attr( (string) $check_value ); ?>">
+						<?php } ?>
+						<button
+						type="submit"
+						class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"
+						data-ran-booster-busy-label="<?php echo esc_attr( __( 'Checking…', 'ran-booster' ) ); ?>"
+						data-ran-booster-busy-message="<?php echo esc_attr( __( 'Checking the branch. This can take a few seconds.', 'ran-booster' ) ); ?>"
+						><?php esc_html_e( 'Check branch', 'ran-booster' ); ?></button>
+						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
+					</form>
 				<?php } ?>
 				<?php if ( $repository_detail_available ) { ?>
 					<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $provider_settings_url ); ?>"><?php echo esc_html( $webhook_action_label ); ?></a>

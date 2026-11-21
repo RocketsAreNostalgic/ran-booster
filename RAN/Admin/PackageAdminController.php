@@ -37,7 +37,6 @@ final class PackageAdminController {
 		private ?ProviderRegistry $providers = null,
 		private ?DeploymentAdminPresenter $deployments = null,
 		private ?BulkPackageActionService $bulk_actions = null,
-		private ?PublicRepositoryLookupProfileStore $public_lookup_profiles = null,
 		private ?\RAN\PackageRemoval\PackageRemovalService $removals = null
 	) {
 	}
@@ -99,7 +98,7 @@ final class PackageAdminController {
 			}
 		}
 		if ( in_array( $action, array( 'install-plugin', 'install-theme', 'edit-plugin', 'edit-theme' ), true ) ) {
-			$request = $this->resolve( $dashboard, $request, $this->trusted_public_lookup_profile( $request, $stored_package ), $stored_package );
+			$request = $this->resolve( $dashboard, $request, $stored_package );
 			if ( null === $request ) {
 				return false;
 			}
@@ -227,12 +226,10 @@ final class PackageAdminController {
 			if ( null === $this->operations ) {
 				throw new LogicException( 'Package operations are not configured.' );
 			}
-			$operation               = PackageOperation::from_input( $action, $request );
-			$reinstall               = 'edit' === $operation->operation
+			$operation = PackageOperation::from_input( $action, $request );
+			$reinstall = 'edit' === $operation->operation
 				&& $this->enabled( $request, 'reinstall_after_save' );
-			$check_repository_branch = 'edit' === $operation->operation
-				&& $this->enabled( $request, 'check_repository_branch_after_save' );
-			$result                  = $this->operations->execute( $operation );
+			$result    = $this->operations->execute( $operation );
 			if ( $reinstall && 'edited' === ( $result['status'] ?? null ) && ( $result['package'] ?? null ) instanceof Package ) {
 				$dashboard->add_message(
 					array(
@@ -302,13 +299,6 @@ final class PackageAdminController {
 
 			return $this->success_redirect( $operation, $result['package'], $list_arguments, false, true, 'already-managed' );
 		}
-		if ( $check_repository_branch
-			&& 'edited' === $status
-			&& ( $result['package'] ?? null ) instanceof Package
-			&& PackageSource::BRANCH === $result['package']->get_source()
-		) {
-			return $this->repository_branch_check_redirect( $operation, $result['package'], $list_arguments );
-		}
 		if ( in_array( $status, array( 'succeeded', 'edited', 'linked' ), true ) && ( $result['package'] ?? null ) instanceof Package ) {
 
 			$check_skipped = 'edited' === $status ? match ( $request['repository_check_skipped'] ?? null ) {
@@ -317,7 +307,10 @@ final class PackageAdminController {
 				default => null,
 			} : null;
 
-			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status, $check_skipped );
+			// A saved branch is checked on the settings page it returns to, unless the save skipped the provider.
+			$check_branch = 'edited' === $status && null === $check_skipped && PackageSource::BRANCH === $result['package']->get_source();
+
+			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status, $check_skipped, $check_branch );
 		}
 		if ( in_array( $status, array( 'unlinked', 'deleted' ), true ) ) {
 
@@ -325,9 +318,7 @@ final class PackageAdminController {
 		}
 		if ( 'conflict' === $status ) {
 			status_header( 409 );
-			$message = $check_repository_branch
-				? __( 'Package settings changed after this page was loaded. No settings were saved and no repository check ran. Review the refreshed current settings, then choose Save settings and check again.', 'ran-booster' )
-				: __( 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.', 'ran-booster' );
+			$message = __( 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.', 'ran-booster' );
 
 			$add_context_message(
 				new WP_Error( 'ran_booster_package_edit_conflict', $message ),
@@ -648,16 +639,14 @@ final class PackageAdminController {
 
 	/**
 	 * @param array<string, mixed> $request
-	 * @param array{profile_id: string|null}|null $trusted_public_lookup
 	 * @return array<string, mixed>|null
 	 */
-	private function resolve( Dashboard $dashboard, array $request, ?array $trusted_public_lookup = null, ?Package $stored_package = null ): ?array {
+	private function resolve( Dashboard $dashboard, array $request, ?Package $stored_package = null ): ?array {
 		// Disabled is the safer setting, so a deleted branch or rejected credential must not block it: an
 		// unchanged provider, repository, credential, subfolder and branch save without asking the provider.
 		if ( $stored_package instanceof Package
 			&& 'disabled' === ( $request['deployment_policy'] ?? null )
-			&& ! $this->enabled( $request, 'reinstall_after_save' )
-			&& ! $this->enabled( $request, 'check_repository_branch_after_save' ) ) {
+			&& ! $this->enabled( $request, 'reinstall_after_save' ) ) {
 			$unchecked = $this->saved_from_stored( $request, $stored_package, 'updates_disabled', 'updates_disabled' );
 			if ( null !== $unchecked ) {
 				return $unchecked;
@@ -666,7 +655,7 @@ final class PackageAdminController {
 		try {
 			// Only a branch-managed package or a new install deploys its branch, so only they verify it.
 			$resolved = ! $stored_package instanceof Package || PackageSource::BRANCH === $stored_package->get_source()
-				? $this->repositories?->resolve_branch( $request, $trusted_public_lookup )
+				? $this->repositories?->resolve_branch( $request )
 				: $this->repositories?->resolve( $request );
 			return $resolved ?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
@@ -678,7 +667,7 @@ final class PackageAdminController {
 		} catch ( InvalidArgumentException $failure ) {
 			$message = __( 'Check the Git provider, account, repository, and credential fields.', 'ran-booster' );
 		} catch ( RuntimeException $failure ) {
-			$stored_fallback = $this->stored_repository_fallback( $request, $failure, $trusted_public_lookup, $stored_package );
+			$stored_fallback = $this->stored_repository_fallback( $request, $failure, $stored_package );
 			if ( null !== $stored_fallback ) {
 				return $stored_fallback;
 			}
@@ -717,17 +706,14 @@ final class PackageAdminController {
 	 * any changed repository identity still fail, so only the re-check is skipped.
 	 *
 	 * @param array<string, mixed> $request
-	 * @param array{profile_id: string|null}|null $trusted_public_lookup
 	 * @return array<string, mixed>|null
 	 */
-	private function stored_repository_fallback( array $request, RuntimeException $failure, ?array $trusted_public_lookup, ?Package $stored_package ): ?array {
-		// Saves that go on to reinstall or check the branch need the provider as well, so only a
-		// plain settings save may continue without it.
-		if ( null !== $trusted_public_lookup
-			|| ! $stored_package instanceof Package
+	private function stored_repository_fallback( array $request, RuntimeException $failure, ?Package $stored_package ): ?array {
+		// A save that goes on to reinstall needs the provider as well, so only a settings save may
+		// continue without it; that save then skips the branch check too.
+		if ( ! $stored_package instanceof Package
 			|| in_array( ProviderFailure::from_throwable( $failure )?->reason, array( 'ref_not_found', 'redirect_blocked' ), true )
 			|| $this->enabled( $request, 'reinstall_after_save' )
-			|| $this->enabled( $request, 'check_repository_branch_after_save' )
 			|| ! ( ProviderFailure::carried( $failure )?->is_transient() ?? in_array( $failure->getCode(), self::TRANSIENT_LOOKUP_CODES, true ) ) ) {
 			return null;
 		}
@@ -765,28 +751,8 @@ final class PackageAdminController {
 		return $stored;
 	}
 
-	/**
-	 * @param array<string, mixed> $request
-	 * @return array{profile_id: string|null}|null
-	 */
-	private function trusted_public_lookup_profile( array $request, ?Package $package ): ?array {
-		if ( ! $package instanceof Package
-			|| ! $this->enabled( $request, 'check_repository_branch_after_save' )
-			|| PackageSource::BRANCH !== $package->get_source()
-			|| $package->get_repository()->reference->private
-			|| ! is_string( $request['provider'] ?? null )
-			|| $package->get_provider_code() !== trim( wp_unslash( $request['provider'] ) ) ) {
-			return null;
-		}
-
-		return array(
-
-			'profile_id' => $this->public_lookup_profiles?->get( $package->get_provider_code() ),
-		);
-	}
-
 	/** @param array<string, string> $list_arguments */
-	private function success_redirect( PackageOperation $operation, Package|string $package, array $list_arguments, bool $install_another = false, bool $return_to_settings = false, ?string $result_operation = null ): string {
+	private function success_redirect( PackageOperation $operation, Package|string $package, array $list_arguments, bool $install_another = false, bool $return_to_settings = false, ?string $result_operation = null, bool $check_branch = false ): string {
 		$identifier = $package instanceof Package ? $package->get_identifier() : $package;
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The deployed package identity is unavailable.' );
@@ -805,6 +771,9 @@ final class PackageAdminController {
 			$args['open_picker'] = '1';
 		} elseif ( in_array( $operation->operation, array( 'install', 'edit' ), true ) || $return_to_settings ) {
 			$args['package'] = $identifier;
+			if ( $check_branch && $package instanceof Package ) {
+				$args += self::repository_branch_check_args( $package, $type );
+			}
 		} else {
 			$args = array_merge( $list_arguments, $args );
 		}
@@ -816,27 +785,35 @@ final class PackageAdminController {
 		return $admin_url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
 	}
 
-	/** @param array<string, string> $list_arguments */
-	private function repository_branch_check_redirect( PackageOperation $operation, Package $package, array $list_arguments ): string {
-		$identifier = $package->get_identifier();
-		if ( ! is_string( $identifier ) || '' === $identifier ) {
-			throw new LogicException( 'The managed package identity is unavailable.' );
-		}
-		$type                = $operation->package_type;
-		$args                = array(
-			'page'                                 => 'ran-booster-' . $type . 's',
-			'package'                              => $identifier,
-			'source_view'                          => 'branch',
-			'ran_booster_repository_branch_check'  => '1',
+	/**
+	 * Query values that run the branch check on the settings page. The fresh value makes each request
+	 * ask the provider again; reloading the same address reuses its result.
+	 *
+	 * @return array{ran_booster_repository_branch_check: string, _ran_booster_repository_branch_nonce: string}
+	 */
+	public static function repository_branch_check_args( Package $package, string $type ): array {
+		return array(
+			'ran_booster_repository_branch_check'  => bin2hex( random_bytes( 8 ) ),
 			'_ran_booster_repository_branch_nonce' => wp_create_nonce( self::repository_branch_check_action( $package, $type ) ),
 		);
-		$args['return_type'] = $type;
-		foreach ( $list_arguments as $key => $value ) {
-			$args[ 'return_' . $key ] = $value;
-		}
-		$url = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+	}
 
-		return $url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
+	/**
+	 * The Branch readiness card's sentences for a check that did not pass: what was found, then what to do.
+	 * Passing and deferred-subdirectory outcomes have none.
+	 *
+	 * @return array{0: string, 1?: string}|null
+	 */
+	public static function repository_branch_check_sentences( ?string $outcome ): ?array {
+		return match ( $outcome ) {
+			'branch_unavailable' => array( __( 'The saved branch could not be found.', 'ran-booster' ), __( 'Check the branch name on the provider.', 'ran-booster' ) ),
+			'branch_redirected' => array( __( 'The branch lookup was redirected.', 'ran-booster' ), __( 'The branch may have been renamed or the repository moved. Check the current name on the provider.', 'ran-booster' ) ),
+			'provider_unavailable' => array( __( 'The saved Git provider is unavailable, so Booster could not check the repository and branch.', 'ran-booster' ) ),
+			'unable_to_check' => array( __( 'Booster could not access the saved repository and branch.', 'ran-booster' ), __( 'Check the branch name and repository access, then try again.', 'ran-booster' ) ),
+			'subdirectory_unavailable' => array( __( 'The saved branch is accessible, but Booster could not find the configured subdirectory.', 'ran-booster' ), __( 'Check the path and try again.', 'ran-booster' ) ),
+			'subdirectory_unverified' => array( __( 'The saved branch is accessible, but Booster could not check the configured subdirectory.', 'ran-booster' ), __( 'Try again later.', 'ran-booster' ) ),
+			default => null,
+		};
 	}
 
 	public static function repository_branch_check_action( Package $package, string $type ): string {

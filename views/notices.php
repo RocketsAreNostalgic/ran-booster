@@ -40,7 +40,7 @@ foreach ( $notice_messages as $message ) {
 		$notice_coded     = '' !== $feedback_key && ( 'success' !== $message['type'] || $is_bulk_queue_notice );
 		$notice_class     = 'error' === $message['type'] ? 'notice-error' : ( 'warning' === $message['type'] ? 'notice-warning' : ( 'info' === $message['type'] ? 'notice-info' : 'notice-success' ) );
 		$notice_intent    = $message['type'];
-		$is_package_saved = 'success' === $message['type'] && ! $is_bulk_queue_notice
+		$is_package_saved = 'success' === $message['type'] && ! $is_bulk_queue_notice && ! $notice_qualified
 			&& is_string( $message['saved_package'] ?? null )
 			&& in_array( $message['saved_type'] ?? null, array( 'plugin', 'theme' ), true );
 		?>

@@ -40,12 +40,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$package_advanced_open      = false;
 		$package_repository_ready   = true;
 		$package_source             = array();
-		$package_view               = new class( $package_type ) {
-			public function __construct( private string $type ) {}
-			public function get_type(): string {
-				return $this->type;
-			}
-		};
+		[ $package_view, $identifier_value, $repository_branch_check_args ] = self::check_branch_bindings( $package_type );
 
 		if ( $expects_readiness ) {
 			$provider_code                   = 'gh';
@@ -62,10 +57,10 @@ final class PackageBranchReadinessViewTest extends TestCase {
 
 		if ( $expects_readiness ) {
 			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html );
-			self::assertStringContainsString( '>Save settings and check</button>', $html );
+			self::assertStringContainsString( '>Check branch</button>', $html );
 		} else {
 			self::assertStringNotContainsString( 'id="ran-booster-branch-readiness"', $html );
-			self::assertStringNotContainsString( '>Save settings and check</button>', $html );
+			self::assertStringNotContainsString( '>Check branch</button>', $html );
 		}
 	}
 
@@ -106,6 +101,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$settings_url               = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php';
 		$provider_webhook_available = true;
 		$deployment_policy          = DeploymentPolicy::MANUAL->value;
+		[ $package_view, $identifier_value, $repository_branch_check_args ] = self::check_branch_bindings();
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
@@ -129,31 +125,20 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Setup instructions', $html );
 		self::assertStringNotContainsString( 'Booster Activity', $html );
 		self::assertStringNotContainsString( 'ran-booster-readiness-actions__links', $html );
-		self::assertStringContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
 		self::assertStringContainsString( '>Manage webhooks</a>', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh&amp;panel=repositories&amp;repository=repo-42&amp;repository_view=branch"', $html );
 		self::assertStringNotContainsString( 'repository=repo-42#', $html );
-		$check_position  = strpos( $html, '>Save settings and check</button>' );
+		$check_position  = strpos( $html, '>Check branch</button>' );
 		$manage_position = strrpos( $html, '>Manage webhooks</a>' );
 		self::assertIsInt( $check_position );
 		self::assertIsInt( $manage_position );
 		self::assertTrue( $check_position < $manage_position );
-		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );
-		self::assertStringContainsString( 'hx-post=', $html );
-		self::assertStringContainsString( 'hx-post="/wp-admin/admin.php?', $html );
-		self::assertStringNotContainsString( 'name="ran_booster_branch_readiness_check"', $html );
+		self::assertStringNotContainsString( 'form="ran-booster-package-edit-form"', $html );
+		self::assertStringNotContainsString( 'hx-post=', $html );
 		self::assertStringNotContainsString( 'hx-get=', $html );
-		self::assertStringContainsString( 'hx-target="#wpbody-content"', $html );
-		self::assertStringContainsString( 'hx-select="#wpbody-content"', $html );
-		self::assertStringContainsString( 'hx-swap="outerHTML show:#ran-booster-branch-readiness:top"', $html );
-		self::assertStringContainsString( 'hx-push-url=', $html );
-		self::assertStringContainsString( 'hx-push-url="/wp-admin/admin.php?', $html );
-		self::assertStringContainsString( 'data-ran-booster-enhanced-mutation', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-enhanced-mutation', $html );
 		self::assertStringContainsString( 'id="ran-booster-repository-branch-check-error"', $html );
-		self::assertStringContainsString( 'data-ran-booster-error-target="#ran-booster-repository-branch-check-error"', $html );
-		self::assertStringContainsString( 'hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"', $html );
-		self::assertStringContainsString( 'data-ran-booster-relocate-rendered-error', $html );
-		self::assertStringNotContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-error-target=', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-package-mutation', $html );
 		self::assertStringNotContainsString( 'remote webhook is configured', strtolower( $html ) );
 		self::assertStringNotContainsString( 'is-high-intent', $html );
@@ -227,7 +212,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			restore_error_handler();
 		}
 
-		self::assertStringNotContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
+		self::assertStringNotContainsString( '>Check branch</button>', $html );
 		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline" disabled aria-disabled="true">Manage webhooks</button>', $html );
 	}
 
@@ -305,7 +290,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'A repository-specific signing secret is saved.', $html );
 		self::assertStringContainsString( 'The site exposes a structurally valid HTTPS webhook endpoint.', $html );
 		self::assertStringNotContainsString( '>Needs attention</span>', $html );
-		self::assertStringContainsString( '>Save settings and check</button>', $html );
+		self::assertStringNotContainsString( '>Check branch</button>', $html, 'A release-managed package gets no check values, so no Check branch.' );
 	}
 
 	#[DataProvider( 'subdirectory_checklist_provider' )]
@@ -728,6 +713,9 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$is_package_edit                 = true;
 		$package_branch_readiness        = null;
 		$repository_branch_check_outcome = $outcome;
+		$package_mutation_available      = false; // A paused or unavailable source still offers Check branch.
+		$package_return_args             = array( 'return_type' => $package_type );
+		[ $package_view, $identifier_value, $repository_branch_check_args ] = self::check_branch_bindings( $package_type );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
@@ -765,15 +753,48 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$paragraph = $primary->item( 0 );
 		self::assertInstanceOf( \DOMElement::class, $paragraph );
 		self::assertSame( '<p data-ran-booster-ui-notice-primary>' . $message . '</p>', $document->saveHTML( $paragraph ) );
-		$action = $xpath->query( '//button[@name="ran_booster[check_repository_branch_after_save]"]' );
-		self::assertNotFalse( $action );
-		self::assertCount( 1, $action );
-		$button = $action->item( 0 );
+		// Check branch is its own GET form back to this page: it posts nothing to the save form.
+		$forms = $xpath->query( '//form[@method="get"][@data-ran-booster-submit-busy][button[@type="submit"][normalize-space()="Check branch"]]' );
+		self::assertNotFalse( $forms );
+		self::assertCount( 1, $forms );
+		$form = $forms->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $form );
+		$button = $form->getElementsByTagName( 'button' )->item( 0 );
 		self::assertInstanceOf( \DOMElement::class, $button );
-		self::assertSame( 'ran-booster-package-edit-form', $button->getAttribute( 'form' ) );
-		self::assertSame( '#ran-booster-repository-branch-check-error', $button->getAttribute( 'data-ran-booster-error-target' ) );
-		self::assertSame( '1', $button->getAttribute( 'value' ) );
-		self::assertFalse( $button->hasAttribute( 'disabled' ) );
+		self::assertSame( 'https://example.test/wp-admin/admin.php#ran-booster-branch-readiness', $form->getAttribute( 'action' ) );
+		self::assertFalse( $button->hasAttribute( 'form' ) || $button->hasAttribute( 'name' ) || $button->hasAttribute( 'disabled' ) );
+		self::assertStringContainsString( 'data-ran-booster-busy-label="Checking…"', $html );
+		self::assertSame( 'Checking the branch. This can take a few seconds.', $button->getAttribute( 'data-ran-booster-busy-message' ) );
+		$fields = array();
+		$hidden = $xpath->query( './input[@type="hidden"]', $form );
+		self::assertNotFalse( $hidden );
+		foreach ( $hidden as $field ) {
+			self::assertInstanceOf( \DOMElement::class, $field );
+			$fields[ $field->getAttribute( 'name' ) ] = $field->getAttribute( 'value' );
+		}
+		self::assertSame(
+			array(
+				'page'                                 => 'ran-booster-' . $package_type . 's',
+				'package'                              => $identifier_value,
+				'source_view'                          => 'branch',
+				'ran_booster_repository_branch_check'  => '0123456789abcdef',
+				'_ran_booster_repository_branch_nonce' => 'check-nonce',
+				'return_type'                          => $package_type,
+			),
+			$fields
+		);
+	}
+
+	/** @return array{\RAN\Admin\PackagePagePresenter, string, array{ran_booster_repository_branch_check: string, _ran_booster_repository_branch_nonce: string}} */
+	private static function check_branch_bindings( string $type = 'plugin' ): array {
+		return array(
+			'plugin' === $type ? \RAN\Admin\PackagePagePresenter::plugin() : \RAN\Admin\PackagePagePresenter::theme(),
+			'plugin' === $type ? 'example/example.php' : 'example',
+			array(
+				'ran_booster_repository_branch_check'  => '0123456789abcdef',
+				'_ran_booster_repository_branch_nonce' => 'check-nonce',
+			),
+		);
 	}
 
 	/** @return iterable<string, array{?string, string, string}> */
@@ -817,6 +838,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			),
 		);
 		$repository_branch_check_outcome = 'verified';
+		[ $package_view, $identifier_value, $repository_branch_check_args ] = self::check_branch_bindings( 'theme' );
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
@@ -829,8 +851,8 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/<li class="ran-booster-readiness-item is-ok">\s*<span[^>]*><\/span>\s*<strong>Repository subdirectory<\/strong>/s', $html );
 		self::assertStringNotContainsString( 'main is saved.', $html );
 		self::assertStringNotContainsString( 'Local evidence refreshed.', $html );
-		self::assertMatchesRegularExpression( '/hx-push-url="[^"]*source_view=branch[^"]*#ran-booster-branch-readiness"/', $html );
-		self::assertDoesNotMatchRegularExpression( '/hx-push-url="[^"]*ran_booster_repository_branch_check/', $html );
+		self::assertStringContainsString( '<input type="hidden" name="source_view" value="branch">', $html );
+		self::assertStringNotContainsString( 'hx-push-url=', $html );
 	}
 
 	public function test_failed_repository_branch_check_shows_one_transient_warning_without_claiming_readiness(): void {
@@ -842,6 +864,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$is_package_edit                 = true;
 		$package_branch_readiness        = null;
 		$repository_branch_check_outcome = 'unable_to_check';
+		[ $package_view, $identifier_value, $repository_branch_check_args ] = self::check_branch_bindings();
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
@@ -855,7 +878,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			$html
 		);
 		self::assertLessThan(
-			strpos( $html, '>Save settings and check</button>' ),
+			strpos( $html, '>Check branch</button>' ),
 			strpos( $html, 'id="ran-booster-repository-branch-check-error"' )
 		);
 		self::assertStringContainsString( 'Booster could not access the saved repository and branch. Check the branch name and repository access, then try again.', $html );

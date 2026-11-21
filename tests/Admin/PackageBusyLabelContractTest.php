@@ -22,7 +22,7 @@ final class PackageBusyLabelContractTest extends TestCase {
 		yield 'check releases' => array( 'RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php', "'Check releases'", 'Checking…' );
 		yield 'use releases' => array( 'RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php', 'data-ran-booster-use-releases ', 'Switching…' );
 		yield 'install published release' => array( 'RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php', 'data-ran-booster-release-install ', 'Installing…' );
-		yield 'save and check' => array( 'views/packages/branch-readiness.php', "'Save settings and check'", 'Saving and checking…' );
+		yield 'check branch' => array( 'views/packages/branch-readiness.php', "'Check branch'", 'Checking…' );
 		yield 'save settings' => array( 'views/packages/edit.php', 'data-ran-booster-package-settings-save', 'Saving…' );
 		yield 'install' => array( 'views/packages/create.php', "__( 'Install %s'", 'Installing…' );
 		yield 'bulk apply' => array( 'views/packages/index.php', "'Apply'", 'Applying…' );

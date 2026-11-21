@@ -72,7 +72,6 @@ final class HtmxRequestTimeoutContractTest extends TestCase {
 		yield 'webhook profile delete' => array( 'views/provider.php', '#ran-booster-delete-webhook-profile-error', false );
 		yield 'credential delete' => array( 'views/provider/modals.php', '#ran-booster-delete-access-profile-error', false );
 		yield 'reinstall' => array( 'views/packages/reinstall.php', 'hx-post=', false );
-		yield 'save and check' => array( 'views/packages/branch-readiness.php', 'hx-post=', false );
 		yield 'diagnostics' => array( 'views/troubleshooting.php', 'hx-post=', false );
 		yield 'debug capture' => array( 'views/debug-capture.php', 'hx-post=', false );
 	}

@@ -76,7 +76,7 @@ final class DashboardBranchCheckCacheTest extends TestCase {
 			self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
 			self::assertSame( 2, $checks, 'A cache miss must enter fresh verification even when writing its previous result failed.' );
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reconstruct the cache key from the fixture nonce already verified by the production route.
-			$marker = 'ran_booster_branch_check_' . hash( 'sha256', \RAN\get_current_user_id() . "\0" . PackageAdminController::repository_branch_check_action( $package, 'plugin' ) . "\0" . $_GET['_ran_booster_repository_branch_nonce'] . "\0current-access" );
+			$marker = 'ran_booster_branch_check_' . hash( 'sha256', \RAN\get_current_user_id() . "\0" . PackageAdminController::repository_branch_check_action( $package, 'plugin' ) . "\0" . $_GET['_ran_booster_repository_branch_nonce'] . "\0" . $_GET['ran_booster_repository_branch_check'] . "\0current-access" );
 			$GLOBALS['ran_booster_dashboard_test_transients'][ $marker ] = $outcome;
 			self::assertSame( $outcome, $check->invoke( $dashboard, $package, 'plugin' ) );
 			self::assertSame( 2, $checks, 'A cached failure must not trigger another verification.' );

@@ -60,34 +60,48 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 	}
 
 	public function test_saved_package_marker_preserves_the_visible_notice_and_escapes_identity(): void {
-		$messages = array(
-			array(
-				'type'          => 'success',
-				'message'       => 'Plugin was successfully saved.',
-				'saved_package' => 'example/"plugin.php',
-				'saved_type'    => 'plugin',
-			),
-			array(
-				'type'    => 'success',
-				'message' => 'Plugin was successfully updated.',
-			),
-			array(
-				'type'          => 'error',
-				'message'       => 'Save failed.',
-				'saved_package' => 'example/plugin.php',
-				'saved_type'    => 'plugin',
-			),
+		$saved = array(
+			'type'          => 'success',
+			'message'       => 'Plugin was successfully saved.',
+			'saved_package' => 'example/"plugin.php',
+			'saved_type'    => 'plugin',
 		);
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/notices.php';
-		$html = (string) ob_get_clean();
+		$html  = $this->notices(
+			array(
+				$saved,
+				array(
+					'type'    => 'success',
+					'message' => 'Plugin was successfully updated.',
+				),
+			)
+		);
 
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-package-saved' ) );
 		self::assertSame( 2, substr_count( $html, 'data-ran-booster-package-success' ) );
 		self::assertStringContainsString( 'data-ran-booster-saved-package="example/&quot;plugin.php" data-ran-booster-saved-type="plugin"', $html );
 		self::assertStringContainsString( '<p>Plugin was successfully saved.</p>', $html );
 		self::assertStringContainsString( '<p>Plugin was successfully updated.</p>', $html );
-		self::assertStringContainsString( '<p>Save failed.</p>', $html );
+
+		// A warning or error qualifies the save (R12), so the enhanced save leaves it a static notice beside them.
+		foreach ( array( 'error', 'warning' ) as $intent ) {
+			$html = $this->notices(
+				array(
+					$saved,
+					array(
+						'type'          => $intent,
+						'feedback'      => 'package_branch_check',
+						'message'       => '<a href="#ran-booster-branch-readiness">Not saved as expected.</a>',
+						'saved_package' => 'example/plugin.php',
+						'saved_type'    => 'plugin',
+					),
+				)
+			);
+
+			self::assertSame( 0, substr_count( $html, 'data-ran-booster-package-saved' ), $intent );
+			self::assertStringContainsString( 'data-feedback-key="package_branch_check" role="' . ( 'error' === $intent ? 'alert' : 'status' ) . '" class="notice notice-' . $intent . ' inline', $html, $intent );
+			self::assertStringContainsString( '<p>Plugin was successfully saved.</p>', $html, $intent );
+			self::assertStringContainsString( '<p><a href="#ran-booster-branch-readiness">Not saved as expected.</a></p>', $html, $intent );
+		}
 	}
 
 	/** @param list<array<string, mixed>> $queued */

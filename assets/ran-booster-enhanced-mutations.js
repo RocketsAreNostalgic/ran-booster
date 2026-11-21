@@ -308,6 +308,8 @@
 		const busyStates = new WeakMap();
 		let pendingInteractionState = null;
 		let sourceRequest = null;
+		// The settings Save held busy through its HX-Location follow-up request.
+		let heldSave = null;
 		const requests = new WeakMap();
 		let armedSuccess = null;
 
@@ -592,6 +594,34 @@
 				if (!form.hasAttribute?.('data-ran-booster-source-choice')) {
 					submitter.classList.add('ran-booster-update-is-active');
 				}
+			}
+		}
+
+		// The settings Save's redirect loads the page that checks the branch, so the
+		// Save stays busy until that next request ends. The hold starts before htmx
+		// issues the follow-up, which then ends with afterRequest however it ends, or
+		// with an error event if it cannot start. Other saves reset as before.
+		function holdSaveThroughRedirect(event) {
+			const form = requestForm(event);
+			const xhr = event.detail?.xhr;
+			// A cancelled load (a stale request) issues no follow-up to wait for.
+			if (
+				!event.defaultPrevented &&
+				form?.hasAttribute?.(
+					'data-ran-booster-package-settings-save'
+				) &&
+				xhr?.status >= 200 &&
+				xhr.status < 300 &&
+				xhr.getResponseHeader?.('HX-Location')
+			) {
+				heldSave = { form, xhr };
+			}
+		}
+
+		function releaseHeldSave(event) {
+			if (heldSave && event.detail?.xhr !== heldSave.xhr) {
+				resetBusy(heldSave.form, heldSave.xhr);
+				heldSave = null;
 			}
 		}
 
@@ -1287,6 +1317,7 @@
 			}
 		);
 
+		document.addEventListener('htmx:beforeOnLoad', holdSaveThroughRedirect);
 		document.addEventListener('htmx:afterRequest', function (event) {
 			if (event.detail?.xhr === sourceRequest && sourceRequest) {
 				const progress = document.querySelector(
@@ -1296,8 +1327,9 @@
 					progress.hidden = true;
 				}
 			}
+			releaseHeldSave(event);
 			const form = requestForm(event);
-			if (form) {
+			if (form && heldSave?.form !== form) {
 				resetBusy(form, event.detail?.xhr);
 			}
 		});
@@ -1310,6 +1342,7 @@
 			'htmx:timeout',
 		].forEach(function (eventName) {
 			document.addEventListener(eventName, function (event) {
+				releaseHeldSave(event);
 				const form = requestForm(event);
 				if (form) {
 					resetBusy(form, event.detail?.xhr);

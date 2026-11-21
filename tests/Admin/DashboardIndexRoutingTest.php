@@ -154,6 +154,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET = array( 'ran_booster_repository_branch_check' => '1' );
 		self::assertNull( $check->invoke( $dashboard, $package, 'plugin' ) );
 
+		$_GET = array(
+			'ran_booster_repository_branch_check'  => 'not-a-value',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
+		);
+		self::assertNull( $check->invoke( $dashboard, $package, 'plugin' ) );
+
 		$_GET['_ran_booster_repository_branch_nonce'] = \RAN\wp_create_nonce(
 			'ran-booster-repository-branch-check|plugin|different/example.php|branch|1'
 		);
@@ -219,6 +225,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertThat( $check->invoke( $dashboard, $package, 'plugin' ), self::identicalTo( 'verified' ) );
 		self::assertSame( 1, $provider->prepare_calls );
+
+		// Check branch carries a fresh one-time value, so the same package and nonce ask the provider again.
+		$args = \RAN\Admin\PackageAdminController::repository_branch_check_args( $package, 'plugin' );
+		self::assertSame( \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ), $args['_ran_booster_repository_branch_nonce'] );
+		$_GET = $args;
+		self::assertSame( 'verified', $check->invoke( $dashboard, $package, 'plugin' ) );
+		self::assertThat( $check->invoke( $dashboard, $package, 'plugin' ), self::identicalTo( 'verified' ) );
+		self::assertSame( 2, $provider->prepare_calls, 'A reload of the same check reuses its result.' );
 	}
 
 	public function test_repository_branch_check_holds_the_shared_updater_lock_during_provider_access(): void {
@@ -564,6 +578,131 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'subdirectory_deferred', ( new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' ) )->invoke( $dashboard, $package, 'plugin' ) );
 		self::assertSame( 0, $provider->path_calls );
+	}
+
+	/** @return array<string, array{string, string}> */
+	public static function save_check_outcomes(): array {
+		return array(
+			'missing branch'           => array( 'branch_unavailable', '<a href="{href}">The saved branch could not be found.</a> Check the branch name on the provider.' ),
+			'redirected branch'        => array( 'branch_redirected', '<a href="{href}">The branch lookup was redirected.</a> The branch may have been renamed or the repository moved. Check the current name on the provider.' ),
+			'unavailable provider'     => array( 'provider_unavailable', '<a href="{href}">The saved Git provider is unavailable, so Booster could not check the repository and branch.</a>' ),
+			'unable to check'          => array( 'unable_to_check', '<a href="{href}">Booster could not access the saved repository and branch.</a> Check the branch name and repository access, then try again.' ),
+			'missing subdirectory'     => array( 'subdirectory_unavailable', '<a href="{href}">The saved branch is accessible, but Booster could not find the configured subdirectory.</a> Check the path and try again.' ),
+			'unchecked subdirectory'   => array( 'subdirectory_unverified', '<a href="{href}">The saved branch is accessible, but Booster could not check the configured subdirectory.</a> Try again later.' ),
+			'passing check'            => array( 'verified', '' ),
+			'provider cannot check it' => array( 'subdirectory_deferred', '' ),
+		);
+	}
+
+	#[DataProvider( 'save_check_outcomes' )]
+	public function test_a_save_whose_branch_check_does_not_pass_says_so_beside_the_saved_notice( string $outcome, string $warning ): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider = match ( $outcome ) {
+			'branch_unavailable' => new DashboardBranchCheckProvider( prepare_failure: 'ref_not_found' ),
+			'branch_redirected' => new DashboardBranchCheckProvider( prepare_failure: 'redirect_blocked' ),
+			'unable_to_check' => new DashboardBranchCheckProvider( cleanup_fails: true ),
+			'subdirectory_unavailable' => new DashboardBranchCheckProvider( path_exists: false ),
+			'subdirectory_unverified' => new DashboardBranchCheckProvider( path_check_fails: true ),
+			'subdirectory_deferred' => new DashboardBranchCheckProviderWithoutPathInspector(),
+			default => new DashboardBranchCheckProvider(),
+		};
+		$package = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$dashboard = $this->dashboard(
+			$this->throwing_secrets(),
+			plugins: $plugins,
+			providers: new ProviderRegistry( 'provider_unavailable' === $outcome ? array() : array( $provider ) )
+		);
+		$check     = \RAN\Admin\PackageAdminController::repository_branch_check_args( $package, 'plugin' );
+		$saved     = array(
+			'package'                   => 'example/example.php',
+			'ran_booster_result'        => 'edit',
+			'ran_booster_package'       => 'example/example.php',
+			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|edit|example/example.php' ),
+			'return_type'               => 'plugin',
+			'return_s'                  => 'needle',
+		);
+
+		// The save returns with its result marker, its check and the list it came from.
+		$_GET = $saved + $check;
+		$data = $dashboard->get_plugins()['data'];
+
+		self::assertSame( $outcome, $data['repository_branch_check_outcome'] );
+		self::assertSame( 'Plugin was successfully saved.', $dashboard->messages[0]['message'] );
+		self::assertSame( 'success', $dashboard->messages[0]['type'] );
+		if ( '' === $warning ) {
+			self::assertCount( 1, $dashboard->messages, 'A passing or deferred check adds nothing to the saved notice.' );
+			self::assertFalse( $data['package_source']['advanced_open'] );
+		} else {
+			self::assertCount( 2, $dashboard->messages );
+			if ( 1 !== preg_match( '/\A<a href="([^"]+)">/', $dashboard->messages[1]['message'], $link ) ) {
+				self::fail( 'The warning starts with its link.' );
+			}
+			self::assertSame(
+				array(
+					'type'     => 'warning',
+					'code'     => 'ran_booster_package_branch_check',
+					'feedback' => 'package_branch_check',
+					'message'  => str_replace( '{href}', $link[1], $warning ),
+				),
+				$dashboard->messages[1]
+			);
+			self::assertTrue( $data['package_source']['advanced_open'], 'Advanced settings open on the card the warning links to.' );
+
+			// The link reopens this package's card with Advanced settings open, on the save's own check and without its result marker.
+			$href = html_entity_decode( $link[1], ENT_QUOTES );
+			self::assertSame( 1, preg_match( '/\A(.+\/admin\.php)\?([^#]+)#ran-booster-branch-readiness\z/', $href, $parts ) );
+			parse_str( $parts[2] ?? '', $target );
+			// WordPress leaves value encoding to the caller; this routing double encodes again, so undo one layer.
+			$target = array_map( static fn ( mixed $value ): string => is_string( $value ) ? rawurldecode( $value ) : '', $target );
+			self::assertSame(
+				array(
+					'page'                      => 'ran-booster-plugins',
+					'package'                   => 'example/example.php',
+					'source_view'               => 'branch',
+					'ran_booster_open_advanced' => '1',
+				) + $check + array(
+					'return_type' => 'plugin',
+					'return_s'    => 'needle',
+				),
+				$target
+			);
+			self::assertSame( \RAN\wp_create_nonce( \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ), $target['_ran_booster_repository_branch_nonce'], 'The same nonce as the Check branch form on the page.' );
+
+			// Following it shows the same result from the cached check: no provider call, no saved notice, no top warning.
+			self::assertInstanceOf( DashboardBranchCheckProvider::class, $provider );
+			$calls               = $provider->prepare_calls;
+			$dashboard->messages = array();
+			$_GET                = $target;
+			$data                = $dashboard->get_plugins()['data'];
+
+			self::assertSame( $outcome, $data['repository_branch_check_outcome'] );
+			self::assertSame( $calls, $provider->prepare_calls );
+			self::assertSame( array(), $dashboard->messages );
+			self::assertTrue( $data['package_source']['advanced_open'] );
+		}
+
+		// A result marker for another package does not carry this package's check result.
+		$dashboard->messages = array();
+		$_GET                = array(
+			'ran_booster_package'       => 'other/other.php',
+			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|edit|other/other.php' ),
+		) + $saved + $check;
+		$dashboard->get_plugins();
+
+		self::assertCount( 1, $dashboard->messages );
+
+		// Check branch runs the same check without the save's result marker, so it adds no notice.
+		$dashboard->messages = array();
+		$_GET                = array(
+			'package'     => 'example/example.php',
+			'source_view' => 'branch',
+		) + \RAN\Admin\PackageAdminController::repository_branch_check_args( $package, 'plugin' );
+		$data                = $dashboard->get_plugins()['data'];
+
+		self::assertSame( $outcome, $data['repository_branch_check_outcome'] );
+		self::assertSame( array(), $dashboard->messages );
 	}
 
 	public function test_repository_branch_check_fails_closed_when_cleanup_fails(): void {
@@ -3013,10 +3152,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'package_paused',
 				'repository_branch_check_outcome',
 				'repository_branch_check_evidence',
+				'repository_branch_check_args',
 			),
 			array_keys( $result['data'] )
 		);
 		self::assertSame( $package, $result['data']['package'] );
+		self::assertMatchesRegularExpression( '/^[a-f0-9]{16}$/D', $result['data']['repository_branch_check_args']['ran_booster_repository_branch_check'] ?? '' );
+		self::assertNotFalse( \RAN\wp_verify_nonce( $result['data']['repository_branch_check_args']['_ran_booster_repository_branch_nonce'] ?? '', \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, $type ) ) );
 		self::assertSame( $type, $result['data']['package_view']->get_type() );
 		self::assertSame( array(), $result['data']['package_extension_panels'] );
 		self::assertSame( 'branch', $result['data']['package_source']['current'] );
@@ -5111,7 +5253,8 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 	public function __construct(
 		public readonly bool $cleanup_fails = false,
 		public readonly bool $path_exists = true,
-		public readonly bool $path_check_fails = false
+		public readonly bool $path_check_fails = false,
+		public readonly ?string $prepare_failure = null
 	) {
 	}
 
@@ -5144,6 +5287,9 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 		}
 		++$this->prepare_calls;
 		$this->request = $request;
+		if ( null !== $this->prepare_failure ) {
+			throw new \RAN\RepositoryProvider\ProviderRequestFailed( new \RAN\RepositoryProvider\ProviderFailure( $this->prepare_failure, 404 ) );
+		}
 
 		return new class( $this ) implements PreparedArchive {
 			public function __construct( private DashboardBranchCheckProvider $provider ) {

@@ -906,7 +906,7 @@ class Dashboard {
 		if ( '1' === ( $_GET['recovery'] ?? null ) ) {
 			return $this->render_recovery( $package_view );
 		}
-		( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_success_notice( $this, $type );
+		$saved = ( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_success_notice( $this, $type );
 		$this->add_bulk_package_notice( $type );
 
 		// Read-only package selection; malformed navigation never diagnoses damaged settings.
@@ -934,7 +934,41 @@ class Dashboard {
 			}
 			if ( null !== $package ) {
 				try {
-					$repository_branch_check_outcome               = $this->requested_package_repository_branch_check( $package, $type );
+					$repository_branch_check_outcome = $this->requested_package_repository_branch_check( $package, $type );
+					// A save that returns with a failed check says so beside the saved notice, linking to the card that shows it.
+					$save_check_sentences = 'edit' === ( $saved['operation'] ?? null ) && ( $saved['identifier'] ?? null ) === $identifier
+						? PackageAdminController::repository_branch_check_sentences( $repository_branch_check_outcome )
+						: null;
+					if ( null !== $save_check_sentences ) {
+						// The link reuses this check's verified value and nonce, so the card reopens on its cached result without the saved notice.
+						$return_args = array( 'return_type' => $type );
+						foreach ( $this->package_return_context( $type ) as $key => $value ) {
+							$return_args[ 'return_' . $key ] = $value;
+						}
+						$card_url = add_query_arg(
+							array_map(
+								'rawurlencode',
+								array(
+									'page'        => $package_view->get_page_slug(),
+									'package'     => $identifier,
+									'source_view' => 'branch',
+									'ran_booster_open_advanced' => '1',
+									'ran_booster_repository_branch_check' => sanitize_key( wp_unslash( $_GET['ran_booster_repository_branch_check'] ?? '' ) ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified with its nonce by the check above.
+									'_ran_booster_repository_branch_nonce' => sanitize_key( wp_unslash( $_GET['_ran_booster_repository_branch_nonce'] ?? '' ) ), // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified by the check above.
+								) + $return_args
+							),
+							$package_view->get_admin_url()
+						);
+						$this->add_message(
+							array(
+								'type'     => 'warning',
+								'code'     => 'ran_booster_package_branch_check',
+								'feedback' => 'package_branch_check',
+								'message'  => '<a href="' . esc_url( $card_url . '#ran-booster-branch-readiness' ) . '">' . esc_html( array_shift( $save_check_sentences ) ) . '</a>'
+									. ( array() === $save_check_sentences ? '' : ' ' . esc_html( implode( ' ', $save_check_sentences ) ) ),
+							)
+						);
+					}
 					$repository_branch_check_evidence              = null === $repository_branch_check_outcome
 						? $this->provider_settings->package_repository_branch_evidence( $type, $package )
 						: null;
@@ -943,10 +977,13 @@ class Dashboard {
 						$this->provider_settings->build_existing_package_form( (string) ( $package->get_provider_code() ?? '' ) ),
 						$this->provider_settings->build_package_branch_readiness( $package ),
 						$this->requested_package_source_view(),
-						$this->requested_advanced_settings_open()
+						$this->requested_advanced_settings_open() || null !== $save_check_sentences
 					);
 					$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
 					$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
+					$edit_data['repository_branch_check_args']     = PackageSource::BRANCH === $package->get_source()
+						? PackageAdminController::repository_branch_check_args( $package, $type )
+						: null;
 					return $this->render(
 						'packages/edit',
 						$edit_data
@@ -1058,8 +1095,9 @@ class Dashboard {
 	/** @return 'verified'|'subdirectory_deferred'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|'branch_unavailable'|'branch_redirected'|null */
 	private function requested_package_repository_branch_check( Package $package, string $type ): ?string {
 		if ( ! isset( $_GET['ran_booster_repository_branch_check'] )
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This request flag is followed by capability and action-specific nonce verification before the provider check.
-			|| '1' !== (string) $_GET['ran_booster_repository_branch_check']
+			|| ! is_string( $_GET['ran_booster_repository_branch_check'] )
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This one-time request value is followed by capability and action-specific nonce verification before the provider check.
+			|| 1 !== preg_match( '/^[a-f0-9]{1,16}$/D', $_GET['ran_booster_repository_branch_check'] )
 			|| ! current_user_can( 'manage_options' )
 			|| ! isset( $_GET['_ran_booster_repository_branch_nonce'] )
 			|| ! is_string( $_GET['_ran_booster_repository_branch_nonce'] )
@@ -1071,9 +1109,10 @@ class Dashboard {
 		if ( ! wp_verify_nonce( $nonce, $action ) ) {
 			return null;
 		}
+		// The request's one-time value keys the result, so a reload reuses it and a new request asks again.
 		$marker    = 'ran_booster_branch_check_' . hash(
 			'sha256',
-			get_current_user_id() . "\0" . $action . "\0" . $nonce . "\0"
+			get_current_user_id() . "\0" . $action . "\0" . $nonce . "\0" . $_GET['ran_booster_repository_branch_check'] . "\0"
 			. $this->provider_settings->package_repository_branch_check_access_fingerprint( $package )
 		);
 		$completed = get_transient( $marker );

@@ -213,7 +213,8 @@ final class WebhookOperationCoordinator {
 			$outcome    = $this->record_setup( $target, $result, $credential_id, $state, $code, $observed );
 			$successful = 'succeeded' === $state && $this->successful_code( $outcome['code'] );
 
-			return $this->finalize_outcome( $outcome, $remediation, $successful, $successful || 'failed' === $state );
+			// A set-up hook waits for its first delivery: the result redirects so the panel reads the record, never an inline success.
+			return $this->finalize_outcome( $outcome, $remediation, $successful, 'failed' === $state );
 		}
 		if ( ! $record instanceof InstallationRecord ) {
 			return $this->outcome( 'invalid_request' );
@@ -236,7 +237,8 @@ final class WebhookOperationCoordinator {
 		};
 		$inline_safe = match ( $operation ) {
 			'check', 'remove', 'test' => $successful || 'failed' === $state,
-			'reconfigure' => $successful || ( 'failed' === $state && 'absent' !== $delivery ),
+			// A repaired hook waits for a delivery too, so its success redirects like Set up's.
+			'reconfigure' => 'failed' === $state && 'absent' !== $delivery,
 		};
 
 		return $this->finalize_outcome( $outcome, $remediation, $successful, $inline_safe );
@@ -359,7 +361,7 @@ final class WebhookOperationCoordinator {
 		$write = $this->records->save_if_current( $next, $record );
 
 		return $this->outcome(
-			$this->write_result_code( $write, 'configured_pending_delivery' ),
+			$this->write_result_code( $write, 'repaired_pending_delivery' ),
 			$this->write_succeeded( $write ) ? null : $hook_id,
 			$this->write_succeeded( $write ) ? null : $profile->id()
 		);
@@ -469,7 +471,7 @@ final class WebhookOperationCoordinator {
 	}
 
 	private function successful_code( string $code ): bool {
-		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed' ), true );
+		return in_array( $code, array( 'configured_pending_delivery', 'repaired_pending_delivery', 'verified', 'removed' ), true );
 	}
 
 	private function safe_code( mixed $code, string $fallback ): string {

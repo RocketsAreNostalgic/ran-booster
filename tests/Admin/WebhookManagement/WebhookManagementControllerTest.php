@@ -2015,7 +2015,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 		self::assertStringContainsString( 'notice-error', $html );
 		self::assertStringNotContainsString( 'notice-success', $html );
-		self::assertStringContainsString( '<strong>Settings:</strong> Settings match', $html );
+		self::assertStringContainsString( '<strong>Settings:</strong> Match', $html );
 		self::assertStringContainsString( '<strong>Ping:</strong> Ping delivery failed', $html );
 	}
 
@@ -2034,7 +2034,7 @@ final class WebhookManagementControllerTest extends TestCase {
 			self::assertInstanceOf( AdminInteractionOutcome::class, $interaction->outcome );
 		}
 		self::assertSame( AdminInteractionOutcome::VALIDATION_FAILURE, $interaction->outcome->kind() );
-		self::assertSame( 'Settings: Settings match Ping: Ping delivery failed', $interaction->outcome->message() );
+		self::assertSame( 'Settings: Match Ping: Ping delivery failed', $interaction->outcome->message() );
 	}
 
 	public function test_validate_reports_the_signed_delivery_only_once_the_record_is_verified(): void {
@@ -2050,7 +2050,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		$html = $this->render_panel( $gateway, $store );
 		self::assertStringContainsString( 'notice notice-warning inline', $html );
-		self::assertStringContainsString( '<strong>Settings:</strong> Settings match</p>', $html );
+		self::assertStringContainsString( '<strong>Settings:</strong> Match</p>', $html );
 		self::assertStringContainsString( '<strong>Ping:</strong> Ping sent. Reload to check that it arrived.</p>', $html );
 		self::assertStringNotContainsString( 'delivery history', $html );
 
@@ -2114,13 +2114,79 @@ final class WebhookManagementControllerTest extends TestCase {
 		}
 	}
 
+	public function test_set_up_and_repair_successes_redirect_to_a_persistent_warning(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$cases                                   = array(
+			'setup'       => array( null, 'configured_pending_delivery', 'Webhook set up. Reload to check that its first delivery arrived.' ),
+			'reconfigure' => array( $this->record(), 'repaired_pending_delivery', "Webhook repaired. Validate to confirm it's working." ),
+		);
+		foreach ( $cases as $operation => list( $record, $code, $sentence ) ) {
+			$connection      = new \RAN\Tests\Activity\ActivityConnection();
+			$gateway         = $this->gateway();
+			$gateway->result = $this->operation_result( 'succeeded', 'configured_pending_delivery' );
+			$store           = new OperationStoreFixture();
+			$store->record   = $record;
+			$interaction     = new CapturingAdminInteractionFacade();
+
+			$redirect = $this->controller( gateway: $gateway, store: $store, admin_interaction: $interaction, activity: new \RAN\Activity\ActivityStore( $connection ) )->handle_admin_post(
+				$this->request(
+					array(
+						'repository_webhook_management_operation' => $operation,
+						'return_url' => 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234',
+					)
+				),
+				'valid'
+			);
+
+			// No inline success snackbar: the redirect lets the panel read the record (R12).
+			self::assertNull( $interaction->outcome, $operation );
+			$query = $this->redirect_query( $redirect );
+			self::assertSame( $code, $query['webhook_management_result'], $operation );
+			self::assertArrayNotHasKey( 'webhook_management_remediation', $query, $operation );
+			self::assertSame( 'needs_verification', $this->stored_status( $store ), $operation );
+			// The hook was set up or repaired, so Activity still records a success.
+			$terminal = end( $connection->prepared );
+			self::assertIsArray( $terminal );
+			self::assertSame( 'webhook.operation_succeeded', $terminal['args'][1], $operation );
+
+			$_GET = $query;
+			$html = $this->render_panel( $gateway, $store );
+			self::assertStringContainsString( 'notice notice-warning inline', $html, $operation );
+			self::assertStringContainsString( '<p>' . htmlspecialchars( $sentence, ENT_QUOTES ) . '</p>', $html, $operation );
+
+			// A signed delivery after the write verified the record before the page was shown.
+			$store->record = $this->record();
+			$html          = $this->render_panel( $gateway, $store );
+			self::assertStringContainsString( 'notice notice-success inline', $html, $operation );
+			self::assertStringContainsString( '<p>Signed delivery received</p>', $html, $operation );
+		}
+	}
+
+	public function test_validate_after_a_check_reporting_pending_delivery_keeps_the_settings_success(): void {
+		// The check's own code is a pending-delivery warning elsewhere; on Validate's Settings line it is a match.
+		$_GET          = array(
+			'webhook_management_result' => 'configured_pending_delivery',
+			'webhook_management_ping'   => 'ping_requested',
+		);
+		$store         = new OperationStoreFixture();
+		$store->record = $this->record();
+		$html          = $this->render_panel( store: $store );
+
+		self::assertStringContainsString( 'notice notice-success inline', $html );
+		self::assertStringContainsString( '<strong>Settings:</strong> Match</p>', $html );
+		self::assertStringContainsString( '<strong>Ping:</strong> Signed delivery received</p>', $html );
+	}
+
 	public function test_setup_result_says_signed_delivery_received_once_the_record_is_verified(): void {
 		$_GET = array( 'webhook_management_result' => 'configured_pending_delivery' );
 
 		$store         = new OperationStoreFixture();
 		$store->record = $this->record( status: 'needs_verification' );
 		$html          = $this->render_panel( store: $store );
-		self::assertStringContainsString( '<p><strong>Webhook configured; delivery unverified</strong></p>', $html );
+		self::assertStringContainsString( 'notice notice-warning inline', $html );
+		self::assertStringContainsString( '<p>Webhook set up. Reload to check that its first delivery arrived.</p>', $html );
+		self::assertStringNotContainsString( '<p><strong>', $html );
+		self::assertStringNotContainsString( 'delivery history', $html );
 
 		$store->record = $this->record();
 		$html          = $this->render_panel( store: $store );
@@ -2224,8 +2290,8 @@ final class WebhookManagementControllerTest extends TestCase {
 	/** @return array<string, array{0:string,1:string,2:string,3:string,4:string}> */
 	public static function validate_result_blocks(): array {
 		return array(
-			'matched and ping requested' => array( 'configuration_confirmed', 'ping_requested', 'notice-warning', 'Settings match', 'Ping sent. Reload to check that it arrived.' ),
-			'matched and ping failed'    => array( 'configuration_confirmed', 'ping_delivery_failed', 'notice-error', 'Settings match', 'Ping delivery failed' ),
+			'matched and ping requested' => array( 'configuration_confirmed', 'ping_requested', 'notice-warning', 'Match', 'Ping sent. Reload to check that it arrived.' ),
+			'matched and ping failed'    => array( 'configuration_confirmed', 'ping_delivery_failed', 'notice-error', 'Match', 'Ping delivery failed' ),
 			'drifted, ping skipped'      => array( 'configuration_drift', 'skipped', 'notice-error', 'could not confirm', 'Skipped because the settings did not match.' ),
 			'hook absent, ping skipped'  => array( 'remote_missing', 'skipped', 'notice-error', 'could not confirm', 'Skipped because the settings were not confirmed.' ),
 			'uncertain, ping skipped'    => array( 'hook_inventory_unavailable', 'skipped', 'notice-error', 'list this repository', 'Skipped because the settings were not confirmed.' ),

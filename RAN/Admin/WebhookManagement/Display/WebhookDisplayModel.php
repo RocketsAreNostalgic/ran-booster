@@ -44,6 +44,8 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 final class WebhookDisplayModel {
 	/** Check outcomes that confirm the webhook's settings, which is when Validate sends its ping. */
 	private const SETTINGS_MATCHED = array( 'configuration_confirmed', 'configured_pending_delivery', 'verified' );
+	/** Set up and Repair results: the hook works only once a signed delivery verifies the record. */
+	private const AWAITING_DELIVERY = array( 'configured_pending_delivery', 'repaired_pending_delivery' );
 	/** A ping the provider accepted; only its signed delivery can verify the record. */
 	private const PING_REQUESTED = array( 'ping_requested', 'ping_verified' );
 
@@ -567,14 +569,13 @@ final class WebhookDisplayModel {
 			'message' => $this->notice( $code, $recovery, $remediation ),
 		);
 		$headings = array(
-			'configured_pending_delivery' => __( 'Webhook configured; delivery unverified', 'ran-booster' ),
-			'ping_delivery_failed'        => __( 'Ping delivery failed', 'ran-booster' ),
-			'removed'                     => __( 'Webhook removed', 'ran-booster' ),
-			'orphaned'                    => __( 'Manual webhook recovery required', 'ran-booster' ),
-			'manual_recovery_required'    => __( 'Manual webhook recovery required', 'ran-booster' ),
-			'recovery_record_failed'      => __( 'Webhook recovery record not saved', 'ran-booster' ),
-			'record_conflict'             => __( 'Webhook recovery record not saved', 'ran-booster' ),
-			'record_update_failed'        => __( 'Webhook recovery record not saved', 'ran-booster' ),
+			'ping_delivery_failed'     => __( 'Ping delivery failed', 'ran-booster' ),
+			'removed'                  => __( 'Webhook removed', 'ran-booster' ),
+			'orphaned'                 => __( 'Manual webhook recovery required', 'ran-booster' ),
+			'manual_recovery_required' => __( 'Manual webhook recovery required', 'ran-booster' ),
+			'recovery_record_failed'   => __( 'Webhook recovery record not saved', 'ran-booster' ),
+			'record_conflict'          => __( 'Webhook recovery record not saved', 'ran-booster' ),
+			'record_update_failed'     => __( 'Webhook recovery record not saved', 'ran-booster' ),
 		);
 		if ( isset( $headings[ $code ] ) ) {
 			$result['heading'] = $headings[ $code ];
@@ -590,9 +591,6 @@ final class WebhookDisplayModel {
 				sprintf( __( 'Core signing profile: %s', 'ran-booster' ), $recovery['profile_id'] ),
 			);
 		}
-		if ( 'configured_pending_delivery' === $code ) {
-			$result['details'] = array( __( 'Check Git provider delivery history and Booster Activity to establish signed delivery.', 'ran-booster' ) );
-		}
 		return $result;
 	}
 
@@ -604,7 +602,7 @@ final class WebhookDisplayModel {
 	 * @return array{class:string,message:string,heading?:string,details?:list<string>}
 	 */
 	private function settled_result( string $code, ?array $recovery, ?string $remediation, bool $delivered ): array {
-		return $delivered && 'configured_pending_delivery' === $code
+		return $delivered && in_array( $code, self::AWAITING_DELIVERY, true )
 			? array(
 				'class'   => 'notice-success',
 				'message' => self::manual_status_label(),
@@ -629,7 +627,7 @@ final class WebhookDisplayModel {
 	 */
 	private function validation_presentation( string $check_code, string $ping_code, ?string $remediation, bool $delivered ): array {
 		$lines = $this->validation_lines( $check_code, $ping_code, $remediation, $delivered );
-		$class = $this->result_notice_class( $check_code );
+		$class = in_array( $check_code, self::SETTINGS_MATCHED, true ) ? 'notice-success' : $this->result_notice_class( $check_code );
 		// A delivered ping keeps the matched settings' success; otherwise the worse of the two lines sets the intent.
 		if ( 'skipped' !== $ping_code && ! $this->validation_delivered( $check_code, $ping_code, $delivered ) && $this->notice_rank( $this->result_notice_class( $ping_code ) ) > $this->notice_rank( $class ) ) {
 			$class = $this->result_notice_class( $ping_code );
@@ -645,8 +643,8 @@ final class WebhookDisplayModel {
 	/** @return list<array{label:string,text:string}> */
 	private function validation_lines( string $check_code, string $ping_code, ?string $remediation, bool $delivered ): array {
 		$settings = $this->result_presentation( $check_code, null, $remediation );
-		// Set up's own heading says delivery is unverified; on Validate's Settings line every matched check reads the same.
-		$settings_text = in_array( $check_code, self::SETTINGS_MATCHED, true ) ? __( 'Settings match', 'ran-booster' ) : ( $settings['heading'] ?? $settings['message'] );
+		// On Validate's Settings line every check that confirms the settings reads the same, whatever its own result says.
+		$settings_text = in_array( $check_code, self::SETTINGS_MATCHED, true ) ? _x( 'Match', 'webhook settings comparison result', 'ran-booster' ) : ( $settings['heading'] ?? $settings['message'] );
 		if ( 'skipped' === $ping_code ) {
 			$ping_text = 'configuration_drift' === $check_code
 				? __( 'Skipped because the settings did not match.', 'ran-booster' )
@@ -721,7 +719,9 @@ final class WebhookDisplayModel {
 		return match ( $code ) {
 			'ping_requested', 'ping_verified' => __( 'Ping sent. Reload to check that it arrived.', 'ran-booster' ),
 			'ping_delivery_failed' => __( 'The Git provider recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the Git provider delivery details.', 'ran-booster' ),
-			'configured_pending_delivery' => __( 'Webhook management configured the remote hook. Signed delivery verification is still pending.', 'ran-booster' ),
+			'configured_pending_delivery' => __( 'Webhook set up. Reload to check that its first delivery arrived.', 'ran-booster' ),
+			// Repair sends no ping and resets the record, so only a Validate or a push can confirm it.
+			'repaired_pending_delivery' => __( 'Webhook repaired. Validate to confirm it\'s working.', 'ran-booster' ),
 			'verified', 'configuration_confirmed' => __( 'Settings match', 'ran-booster' ),
 			'removed' => __( 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.', 'ran-booster' ),
 			'forgotten' => __( 'Webhook record cleared. Any webhook on the Git provider stays until you remove it there.', 'ran-booster' ),
@@ -757,11 +757,11 @@ final class WebhookDisplayModel {
 	}
 
 	public function is_successful_result( string $code ): bool {
-		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'configuration_confirmed', 'removed', 'forgotten' ), true );
+		return in_array( $code, array( 'configured_pending_delivery', 'repaired_pending_delivery', 'verified', 'configuration_confirmed', 'removed', 'forgotten' ), true );
 	}
 
 	private function result_notice_class( string $code ): string {
-		return in_array( $code, array( 'ping_requested', 'ping_verified' ), true )
+		return in_array( $code, array_merge( self::PING_REQUESTED, self::AWAITING_DELIVERY ), true )
 			? 'notice-warning'
 			: ( $this->is_successful_result( $code ) ? 'notice-success' : 'notice-error' );
 	}

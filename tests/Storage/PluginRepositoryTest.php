@@ -43,6 +43,13 @@ final class PluginRepositoryTest extends TestCase {
 		self::assertSame( 'example/example.php', $plugin->get_identifier() );
 	}
 
+	public function test_a_plugin_is_never_recorded_under_a_spelling_that_is_not_its_installed_folder(): void {
+		// The installed folder is example; a source named Example is not that folder, so it is not found by that spelling (connect by name then retries the lower-case form).
+		$this->expectException( PluginNotFound::class );
+
+		( new PluginRepository() )->from_slug( 'Example' );
+	}
+
 	public function test_missing_slug_throws_instead_of_creating_an_empty_plugin_identity(): void {
 		$repository = new PluginRepository();
 

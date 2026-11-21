@@ -5,6 +5,7 @@ namespace RAN\Storage;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\Theme;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\WordPress\ManagedReleaseConfiguration;
 
 /** @extends AbstractPackageRepository<Theme> */
@@ -54,7 +55,7 @@ class ThemeRepository extends AbstractPackageRepository {
 			throw $this->not_found_exception();
 		}
 
-		return Theme::from_wp_theme_object( $wp_theme );
+		return Theme::from_wp_theme_object( $this->installed_wp_theme( (string) $slug, $wp_theme ) );
 	}
 
 	/**
@@ -111,7 +112,27 @@ class ThemeRepository extends AbstractPackageRepository {
 
 	/** @return Theme */
 	protected function package_from_installation( string $identifier ): Package {
-		return Theme::from_wp_theme_object( wp_get_theme( $identifier ) );
+		return Theme::from_wp_theme_object( $this->installed_wp_theme( $identifier, wp_get_theme( $identifier ) ) );
+	}
+
+	/**
+	 * On a case-insensitive filesystem WordPress resolves a differently-cased name to the installed
+	 * folder but keeps the spelling it was given, so record the folder's own spelling.
+	 *
+	 * @param \WP_Theme $resolved WordPress's answer for that name.
+	 */
+	private function installed_wp_theme( string $name, $resolved ): \WP_Theme {
+		$themes = wp_get_themes();
+		if ( isset( $themes[ $name ] ) ) {
+			return $themes[ $name ];
+		}
+		foreach ( $themes as $stylesheet => $installed ) {
+			if ( PackageDirectory::names_collide( (string) $stylesheet, $name ) ) {
+				return $installed;
+			}
+		}
+
+		return $resolved;
 	}
 
 	protected function not_found_exception(): ThemeNotFound {

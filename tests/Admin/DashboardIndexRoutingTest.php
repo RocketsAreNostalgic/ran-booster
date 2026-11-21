@@ -580,6 +580,94 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 0, $provider->path_calls );
 	}
 
+	/** @return array<string, array{string, string}> */
+	public static function save_check_outcomes(): array {
+		return array(
+			'missing branch'           => array( 'branch_unavailable', '<a href="#ran-booster-branch-readiness">The saved branch could not be found.</a> Check the branch name on the provider.' ),
+			'redirected branch'        => array( 'branch_redirected', '<a href="#ran-booster-branch-readiness">The branch lookup was redirected.</a> The branch may have been renamed or the repository moved. Check the current name on the provider.' ),
+			'unavailable provider'     => array( 'provider_unavailable', '<a href="#ran-booster-branch-readiness">The saved Git provider is unavailable, so Booster could not check the repository and branch.</a>' ),
+			'unable to check'          => array( 'unable_to_check', '<a href="#ran-booster-branch-readiness">Booster could not access the saved repository and branch.</a> Check the branch name and repository access, then try again.' ),
+			'missing subdirectory'     => array( 'subdirectory_unavailable', '<a href="#ran-booster-branch-readiness">The saved branch is accessible, but Booster could not find the configured subdirectory.</a> Check the path and try again.' ),
+			'unchecked subdirectory'   => array( 'subdirectory_unverified', '<a href="#ran-booster-branch-readiness">The saved branch is accessible, but Booster could not check the configured subdirectory.</a> Try again later.' ),
+			'passing check'            => array( 'verified', '' ),
+			'provider cannot check it' => array( 'subdirectory_deferred', '' ),
+		);
+	}
+
+	#[DataProvider( 'save_check_outcomes' )]
+	public function test_a_save_whose_branch_check_does_not_pass_says_so_beside_the_saved_notice( string $outcome, string $warning ): void {
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$provider = match ( $outcome ) {
+			'branch_unavailable' => new DashboardBranchCheckProvider( prepare_failure: 'ref_not_found' ),
+			'branch_redirected' => new DashboardBranchCheckProvider( prepare_failure: 'redirect_blocked' ),
+			'unable_to_check' => new DashboardBranchCheckProvider( cleanup_fails: true ),
+			'subdirectory_unavailable' => new DashboardBranchCheckProvider( path_exists: false ),
+			'subdirectory_unverified' => new DashboardBranchCheckProvider( path_check_fails: true ),
+			'subdirectory_deferred' => new DashboardBranchCheckProviderWithoutPathInspector(),
+			default => new DashboardBranchCheckProvider(),
+		};
+		$package = $this->managed_package( 'example/example.php', 'Example', 'repo-42', subdirectory: 'packages/example' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$dashboard = $this->dashboard(
+			$this->throwing_secrets(),
+			plugins: $plugins,
+			providers: new ProviderRegistry( 'provider_unavailable' === $outcome ? array() : array( $provider ) )
+		);
+		$check     = \RAN\Admin\PackageAdminController::repository_branch_check_args( $package, 'plugin' );
+		$saved     = array(
+			'package'                   => 'example/example.php',
+			'ran_booster_result'        => 'edit',
+			'ran_booster_package'       => 'example/example.php',
+			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|edit|example/example.php' ),
+		);
+
+		// The save returns with its result marker and its check.
+		$_GET = $saved + $check;
+		$data = $dashboard->get_plugins()['data'];
+
+		self::assertSame( $outcome, $data['repository_branch_check_outcome'] );
+		self::assertSame( 'Plugin was successfully saved.', $dashboard->messages[0]['message'] );
+		self::assertSame( 'success', $dashboard->messages[0]['type'] );
+		if ( '' === $warning ) {
+			self::assertCount( 1, $dashboard->messages, 'A passing or deferred check adds nothing to the saved notice.' );
+			self::assertFalse( $data['package_source']['advanced_open'] );
+		} else {
+			self::assertCount( 2, $dashboard->messages );
+			self::assertSame(
+				array(
+					'type'     => 'warning',
+					'code'     => 'ran_booster_package_branch_check',
+					'feedback' => 'package_branch_check',
+					'message'  => $warning,
+				),
+				$dashboard->messages[1]
+			);
+			self::assertTrue( $data['package_source']['advanced_open'], 'Advanced settings open on the card the warning links to.' );
+		}
+
+		// A result marker for another package does not carry this package's check result.
+		$dashboard->messages = array();
+		$_GET                = array(
+			'ran_booster_package'       => 'other/other.php',
+			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|edit|other/other.php' ),
+		) + $saved + $check;
+		$dashboard->get_plugins();
+
+		self::assertCount( 1, $dashboard->messages );
+
+		// Check branch runs the same check without the save's result marker, so it adds no notice.
+		$dashboard->messages = array();
+		$_GET                = array(
+			'package'     => 'example/example.php',
+			'source_view' => 'branch',
+		) + \RAN\Admin\PackageAdminController::repository_branch_check_args( $package, 'plugin' );
+		$data                = $dashboard->get_plugins()['data'];
+
+		self::assertSame( $outcome, $data['repository_branch_check_outcome'] );
+		self::assertSame( array(), $dashboard->messages );
+	}
+
 	public function test_repository_branch_check_fails_closed_when_cleanup_fails(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
 		$provider  = new DashboardBranchCheckProvider( cleanup_fails: true );
@@ -5128,7 +5216,8 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 	public function __construct(
 		public readonly bool $cleanup_fails = false,
 		public readonly bool $path_exists = true,
-		public readonly bool $path_check_fails = false
+		public readonly bool $path_check_fails = false,
+		public readonly ?string $prepare_failure = null
 	) {
 	}
 
@@ -5161,6 +5250,9 @@ final class DashboardBranchCheckProvider implements RepositoryProvider, Credenti
 		}
 		++$this->prepare_calls;
 		$this->request = $request;
+		if ( null !== $this->prepare_failure ) {
+			throw new \RAN\RepositoryProvider\ProviderRequestFailed( new \RAN\RepositoryProvider\ProviderFailure( $this->prepare_failure, 404 ) );
+		}
 
 		return new class( $this ) implements PreparedArchive {
 			public function __construct( private DashboardBranchCheckProvider $provider ) {

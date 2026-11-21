@@ -906,7 +906,7 @@ class Dashboard {
 		if ( '1' === ( $_GET['recovery'] ?? null ) ) {
 			return $this->render_recovery( $package_view );
 		}
-		( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_success_notice( $this, $type );
+		$saved = ( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_success_notice( $this, $type );
 		$this->add_bulk_package_notice( $type );
 
 		// Read-only package selection; malformed navigation never diagnoses damaged settings.
@@ -934,7 +934,22 @@ class Dashboard {
 			}
 			if ( null !== $package ) {
 				try {
-					$repository_branch_check_outcome               = $this->requested_package_repository_branch_check( $package, $type );
+					$repository_branch_check_outcome = $this->requested_package_repository_branch_check( $package, $type );
+					// A save that returns with a failed check says so beside the saved notice, linking to the card that shows it.
+					$save_check_sentences = 'edit' === ( $saved['operation'] ?? null ) && ( $saved['identifier'] ?? null ) === $identifier
+						? PackageAdminController::repository_branch_check_sentences( $repository_branch_check_outcome )
+						: null;
+					if ( null !== $save_check_sentences ) {
+						$this->add_message(
+							array(
+								'type'     => 'warning',
+								'code'     => 'ran_booster_package_branch_check',
+								'feedback' => 'package_branch_check',
+								'message'  => '<a href="#ran-booster-branch-readiness">' . esc_html( array_shift( $save_check_sentences ) ) . '</a>'
+									. ( array() === $save_check_sentences ? '' : ' ' . esc_html( implode( ' ', $save_check_sentences ) ) ),
+							)
+						);
+					}
 					$repository_branch_check_evidence              = null === $repository_branch_check_outcome
 						? $this->provider_settings->package_repository_branch_evidence( $type, $package )
 						: null;
@@ -943,7 +958,7 @@ class Dashboard {
 						$this->provider_settings->build_existing_package_form( (string) ( $package->get_provider_code() ?? '' ) ),
 						$this->provider_settings->build_package_branch_readiness( $package ),
 						$this->requested_package_source_view(),
-						$this->requested_advanced_settings_open()
+						$this->requested_advanced_settings_open() || null !== $save_check_sentences
 					);
 					$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
 					$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;

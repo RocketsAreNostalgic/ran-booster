@@ -798,6 +798,24 @@ final class PackageAdminController {
 		);
 	}
 
+	/**
+	 * The Branch readiness card's sentences for a check that did not pass: what was found, then what to do.
+	 * Passing and deferred-subdirectory outcomes have none.
+	 *
+	 * @return array{0: string, 1?: string}|null
+	 */
+	public static function repository_branch_check_sentences( ?string $outcome ): ?array {
+		return match ( $outcome ) {
+			'branch_unavailable' => array( __( 'The saved branch could not be found.', 'ran-booster' ), __( 'Check the branch name on the provider.', 'ran-booster' ) ),
+			'branch_redirected' => array( __( 'The branch lookup was redirected.', 'ran-booster' ), __( 'The branch may have been renamed or the repository moved. Check the current name on the provider.', 'ran-booster' ) ),
+			'provider_unavailable' => array( __( 'The saved Git provider is unavailable, so Booster could not check the repository and branch.', 'ran-booster' ) ),
+			'unable_to_check' => array( __( 'Booster could not access the saved repository and branch.', 'ran-booster' ), __( 'Check the branch name and repository access, then try again.', 'ran-booster' ) ),
+			'subdirectory_unavailable' => array( __( 'The saved branch is accessible, but Booster could not find the configured subdirectory.', 'ran-booster' ), __( 'Check the path and try again.', 'ran-booster' ) ),
+			'subdirectory_unverified' => array( __( 'The saved branch is accessible, but Booster could not check the configured subdirectory.', 'ran-booster' ), __( 'Try again later.', 'ran-booster' ) ),
+			default => null,
+		};
+	}
+
 	public static function repository_branch_check_action( Package $package, string $type ): string {
 		return 'ran-booster-repository-branch-check|'
 			. $type . '|' . (string) $package->get_identifier() . '|'

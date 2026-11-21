@@ -34,6 +34,7 @@ final readonly class BlueprintPlanItem {
 				TargetPackageReason::REPOSITORY_ACCESS_FAILED,
 				TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH,
 				TargetPackageReason::DESTINATION_CONFLICT,
+				TargetPackageReason::PACKAGE_FOLDER_MISMATCH,
 				TargetPackageReason::PROVIDER_UNAVAILABLE,
 				TargetPackageReason::PROVIDER_SELECTION_CHANGED,
 				TargetPackageReason::PROVIDER_TEMPORARILY_UNAVAILABLE,

@@ -959,7 +959,9 @@ value object. Its stable result codes are `ready`, `release_unavailable`,
 `release_version_mismatch`, `release_header_missing`,
 `release_header_invalid` and `release_archive_unreadable`. Consumers read only
 `code()`, `ready()`, `package_root()`, `latest_version()`, `release_url()`,
-`release_tag()`, `package_header_version()` and `reason_code()`. The stable `code()`
+`release_tag()`, `package_header_version()` and `reason_code()`. The facade
+alone reads `release_identity()`, the provider release identity it offers to
+the shared updater; it is not for display. The stable `code()`
 remains the workflow category; `reason_code()` is an optional, allowlisted,
 display-safe cause for actionable diagnostics and never contains provider
 response bodies, URLs, paths, tokens or exception messages. Unknown or unprovable

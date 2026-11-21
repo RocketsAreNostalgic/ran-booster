@@ -388,6 +388,110 @@ final class ManagedReleaseStoreTest extends TestCase {
 		}
 	}
 
+	public function test_switch_completes_native_custody_inside_its_transaction_before_the_row_lock(): void {
+		$row      = array(
+			'package_type'          => 1,
+			'package'               => 'installed/example.php',
+			'source'                => PackageSource::BRANCH->value,
+			'source_revision'       => 4,
+			'source_previous'       => null,
+			'source_changed_at'     => null,
+			'source_changed_by'     => null,
+			'deployment_policy'     => 'manual',
+			'release_configuration' => null,
+		);
+		$token    = 'gh:fixture-repository:11111111-1111-4111-8111-111111111111';
+		$database = new ManagedReleaseStoreDatabase( $row );
+		$store    = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+		$seen     = array();
+		self::assertTrue(
+			$store->transition(
+				'plugin',
+				'installed/example.php',
+				PackageSource::BRANCH,
+				4,
+				PackageSource::RELEASE_ASSET,
+				new ManagedReleaseConfiguration( 'installed', 'example.php' ),
+				7,
+				$token,
+				function ( object $connection, string $type, string $identifier ) use ( $database, &$seen ): void {
+					$seen = array( $connection === $database, $type, $identifier, $database->reads, end( $database->queries ) );
+				}
+			)
+		);
+		self::assertSame( array( true, 'plugin', 'installed/example.php', 0, 'START TRANSACTION' ), $seen );
+		self::assertSame( 'COMMIT', end( $database->queries ) );
+
+		$database = new ManagedReleaseStoreDatabase( $row );
+		$store    = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+		try {
+			$store->transition(
+				'plugin',
+				'installed/example.php',
+				PackageSource::BRANCH,
+				4,
+				PackageSource::RELEASE_ASSET,
+				new ManagedReleaseConfiguration( 'installed', 'example.php' ),
+				7,
+				$token,
+				static function (): void {
+					throw new RuntimeException( 'custody changed' );
+				}
+			);
+			self::fail( 'A failed custody completion switched the source.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'custody changed', $failure->getMessage() );
+		}
+		self::assertSame( array(), $database->updates );
+		self::assertSame( 'ROLLBACK', end( $database->queries ) );
+		self::assertSame( PackageSource::BRANCH->value, $database->row['source'] );
+	}
+
+	public function test_switch_commit_refuses_a_second_package_from_the_repository_and_rolls_back_custody_removal(): void {
+		$database                    = new ManagedReleaseStoreDatabase(
+			array(
+				'package_type'          => 1,
+				'package'               => 'installed/example.php',
+				'source'                => PackageSource::BRANCH->value,
+				'source_revision'       => 4,
+				'source_previous'       => null,
+				'source_changed_at'     => null,
+				'source_changed_by'     => null,
+				'deployment_policy'     => 'manual',
+				'release_configuration' => null,
+			)
+		);
+		$database->repository_others = array(
+			array(
+				'type'    => 2,
+				'package' => 'added-during-install',
+			),
+		);
+		$store                       = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
+		$completed                   = false;
+		self::assertFalse(
+			$store->transition(
+				'plugin',
+				'installed/example.php',
+				PackageSource::BRANCH,
+				4,
+				PackageSource::RELEASE_ASSET,
+				new ManagedReleaseConfiguration( 'installed', 'example.php' ),
+				7,
+				'gh:fixture-repository:11111111-1111-4111-8111-111111111111',
+				static function () use ( &$completed ): void {
+					$completed = true;
+				}
+			)
+		);
+		// Custody removal ran in the transaction that the exclusivity refusal rolled back.
+		self::assertTrue( $completed );
+		self::assertSame( array(), $database->updates );
+		self::assertSame( 'ROLLBACK', end( $database->queries ) );
+		self::assertContains( 'START TRANSACTION', $database->queries );
+		self::assertSame( PackageSource::BRANCH->value, $database->row['source'] );
+	}
+
 	public function test_same_source_channel_cas_preserves_release_identity_and_resets_automatic(): void {
 		$configuration   = new ManagedReleaseConfiguration(
 			'canonical-example',

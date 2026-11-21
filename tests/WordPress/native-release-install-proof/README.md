@@ -1,5 +1,9 @@
 # Native chosen-release install feasibility
 
+The switch from Branch to releases now has its own proof,
+[below](#branch-to-release-switch). The characterisation that follows records
+Core `1.0.0-beta.49` and is kept as it was measured.
+
 Refs #969 and #903. Re-baselined on Core `1.0.0-beta.49` with release updater
 `v1.0.0-beta.21`. Exit zero means every characterization assertion held. It does
 not mean the feasibility gate passed.
@@ -206,3 +210,64 @@ These runners are local. CI analyses the PHP but does not execute them.
   including site provisioning. `results.json` records every observation and the
   hashes of the harness files that produced them.
 - `composer check` and `pnpm check`: see the pull request.
+
+## Branch-to-release switch
+
+Refs #903. `ReleaseSwitchProof.php` drives the real installed Core: the
+`enable()` facade an administrator's switch calls, the release updater's
+exact-release offer and WordPress's own upgrader (count-one `bulk_upgrade` for a
+plugin, `upgrade` for a theme). Remote HTTP is synthetic; every other component
+is the installed code, attested against the Core ZIP under test before and after
+each switch. Each case seeds a Branch package at 1.0.0, switches in a second
+process and reads back in a third, which stands in for the next admin page
+load.
+
+| Case | Result | Source after | Native custody |
+| --- | --- | --- | --- |
+| `same` | Published 1.0.0 installed over the Branch 1.0.0 build | Releases, revision 2 | Cleared |
+| `newer` | 2.0.0 installed; Automatic reset to Manual | Releases, revision 2 | Cleared |
+| `active` | 2.0.0 installed; activation preserved | Releases, revision 2 | Cleared |
+| `compete` | A second switch, run while the first holds the installer, is refused; the first completes | Releases, revision 2 | Cleared |
+| `older` | `release_older`; files unchanged | Branch | None |
+| `disabled` | `policy_blocked`; files unchanged | Branch | None |
+| `failed-download` | `wordpress_failed` before replacement; files unchanged | Branch | None |
+| `offer-removed` | The offer is gone when the upgrader reads it, so WordPress reports the package up to date: `wordpress_failed`, never success; files unchanged | Branch | None |
+| `conflict` | Another package from the same repository is added after the install; the shutdown commit refuses it, so the updater records an uncertain outcome. The reply said `release_enabled`; the next load settles it as `management_state_uncertain` | Branch, with the release files installed | Retained |
+| `failed-install` | `wordpress_failed` after replacement; WordPress restores 1.0.0 at shutdown | Branch | Retained |
+| `kill` | SIGKILL after the install result: 2.0.0 files, 1.0.0 backup left | Branch | Retained |
+
+The source changes only when the updater's finalisation reports a verified
+install, in the same transaction that clears native custody. That commit runs
+at shutdown, after the reply, so the page the administrator lands on reads the
+source back: every readback settles the reply as the landing page does, and
+only a package on Releases is reported enabled. In `conflict` the reply is
+`release_enabled`, the commit is refused, and the landing shows
+`management_state_uncertain`. Retained custody is the existing recovery path
+for an interrupted Update.
+
+Every readback reads the raw `_site_transient_update_*` row and fails if the
+one-off offer reached it. Each case seeds a still-fresh stored check holding an
+ordinary offer. After a refused or failed switch, the readback runs WordPress's
+`_maybe_update_*()` and requires a check newer than the readback's start that
+holds the ordinary offer again. Run against a build with Core's end-of-request
+recheck removed, `older` and `disabled` fail that assertion for both package
+types.
+
+```sh
+PHP_BIN=/path/to/php8.2 \
+RAN_RELEASE_SWITCH_PROOF_SITE=/absolute/disposable/wordpress \
+RAN_RELEASE_SWITCH_PROOF_CORE_ZIP=/absolute/ran-booster.zip \
+bash tests/WordPress/native-release-install-proof/switch.sh
+```
+
+The site is the marked disposable WordPress 7.0.3 site described above, with
+an administrator named by `RAN_RELEASE_SWITCH_PROOF_USER` (default `admin`).
+CI runs the default cases for both package types on the critical MySQL 8.4 and
+MariaDB 10.11 rows. `conflict`, `failed-install` and `kill` keep native custody, which
+blocks later native work on that site, so they run locally only, each on its own
+fresh site:
+
+```sh
+RAN_RELEASE_SWITCH_PROOF_TYPES=plugin RAN_RELEASE_SWITCH_PROOF_CASES=kill \
+bash tests/WordPress/native-release-install-proof/switch.sh
+```

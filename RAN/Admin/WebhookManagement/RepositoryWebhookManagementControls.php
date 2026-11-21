@@ -22,7 +22,8 @@ use RAN\RepositoryProvider\RepositoryWebhookSettingsLink;
  * @phpstan-import-type WebhookPanel from WebhookDisplayModel
  */
 final class RepositoryWebhookManagementControls {
-	private const ADMIN_STYLE_HANDLE = 'ran-booster-repository-webhook-management';
+	private const ADMIN_STYLE_HANDLE     = 'ran-booster-repository-webhook-management';
+	private const DELIVERY_SCRIPT_HANDLE = 'ran-booster-webhook-delivery';
 
 	private readonly WebhookManagementController $controller;
 
@@ -67,6 +68,7 @@ final class RepositoryWebhookManagementControls {
 			);
 		}
 		add_action( 'admin_post_' . WebhookManagementController::ADMIN_POST_ACTION, array( $this, 'handle_admin_post' ) );
+		add_action( 'wp_ajax_' . WebhookManagementController::DELIVERY_STATUS_ACTION, array( $this, 'handle_delivery_status' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );
 	}
 
@@ -568,6 +570,18 @@ final class RepositoryWebhookManagementControls {
 		exit;
 	}
 
+	/** Answer a result listening for its delivery: whether the stored record is verified, or 403. */
+	public function handle_delivery_status(): void {
+		$get       = $GLOBALS['_GET'] ?? null;
+		$query     = is_array( $get ) ? wp_unslash( $get ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The controller verifies the delivery-status nonce before reading the record.
+		$delivered = $this->controller->delivery_status( $query );
+		if ( null === $delivered ) {
+			wp_send_json_error( array(), 403 );
+		} else {
+			wp_send_json_success( array( 'delivered' => $delivered ) );
+		}
+	}
+
 	public function enqueue_admin_assets( string $hook_suffix ): void {
 		$query           = wp_unslash( $_GET ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only asset routing.
 		$provider_code   = is_array( $query ) && is_string( $query['tab'] ?? null ) ? trim( $query['tab'] ) : '';
@@ -591,5 +605,16 @@ final class RepositoryWebhookManagementControls {
 			array( 'ran-booster-styles' ),
 			$style_version
 		);
+		if ( $provider_screen ) {
+			// The panel renders only on a provider screen; the script lets a result listen for its delivery.
+			$script_path = $this->plugin_path . 'assets/ran-booster-webhook-delivery.js';
+			wp_enqueue_script(
+				self::DELIVERY_SCRIPT_HANDLE,
+				$this->plugin_url . 'assets/ran-booster-webhook-delivery.js',
+				array( 'ran-booster-htmx', 'ran-booster-enhanced-mutations' ),
+				file_exists( $script_path ) ? (string) filemtime( $script_path ) : null,
+				true
+			);
+		}
 	}
 }

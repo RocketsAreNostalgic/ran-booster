@@ -1942,8 +1942,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			}
 
 			$url = $controls->process_admin_post_request( $operation, $request );
-			// A confirmed release operation travels as a flash, not as signed query arguments.
-			self::assertStringNotContainsString( 'ran_booster_release_result', $url, $operation );
+			// A confirmed release operation travels as a flash, not as signed query arguments; the switch is settled where it lands.
+			self::assertSame( 'enable' === $operation, str_contains( $url, 'ran_booster_release_result=release_enabled' ), $operation );
 			self::assertStringContainsString( 'ran_booster_open_advanced=1', $url, $operation );
 			self::assertStringNotContainsString( 'release_deployments', $url, $operation );
 		}
@@ -2200,7 +2200,6 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	/** @return array<string, array{string, string, string}> */
 	public static function settings_operation_successes(): array {
 		return array(
-			'use releases'     => array( 'enable', 'release_enabled', 'Release tracking enabled.' ),
 			'change track'     => array( 'change_channel', 'release_channel_changed', 'Release track changed. The installed package was not changed and Automatic was reset to Manual.' ),
 			'return to branch' => array( 'return_to_branch', 'branch_restored', 'Branch-based package management is restored.' ),
 		);
@@ -2222,6 +2221,38 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( 'data-feedback-key="' . $code . '" data-intent="success" role="status">' . $copy . '</div>', $html );
 		self::assertSame( $copy, \RAN\Admin\Feedback\FeedbackFlash::release_operation_success( $code ) );
+	}
+
+	/** @return array<string, array{string, string, string}> Source read back, shown text, absent text. */
+	public static function switch_landings(): array {
+		return array(
+			'committed: read back on Releases'     => array( 'release_asset', 'Release tracking enabled.', 'Booster could not confirm' ),
+			'refused or not yet committed: Branch' => array( 'branch', 'Booster could not confirm the final installation or management state.', 'Release tracking enabled.' ),
+		);
+	}
+
+	#[DataProvider( 'switch_landings' )]
+	public function test_the_page_after_a_switch_says_enabled_only_when_it_reads_the_package_on_releases( string $source, string $shown, string $absent ): void {
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		// The switch replied release_enabled; its source commits at the end of that request, or is refused there.
+		$controls                   = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( $source, channel: 'stable' ) ) );
+		$request                    = $this->request( 'enable' );
+		$request['release_channel'] = 'stable';
+
+		$url = $controls->process_admin_post_request( 'enable', $request );
+
+		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'] );
+		self::assertStringContainsString( 'ran_booster_release_result=release_enabled', $url );
+		$query = (string) parse_url( $url, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Parsing the already signed local PRG fixture.
+		parse_str( $query, $_GET );
+		// The switch lands on the package's settings page, which reads the package's status for this result.
+		$package = new PackageProjection( $source );
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', $source, $package, $package->settings_url() );
+		$page = (string) ob_get_clean();
+		self::assertStringContainsString( $shown, $page );
+		self::assertStringNotContainsString( $absent, $page );
 	}
 
 	public function test_a_failed_settings_operation_keeps_its_inline_result_and_sets_no_flash(): void {

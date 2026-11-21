@@ -48,6 +48,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$GLOBALS['ran_booster_repository_webhook_management_actions']      = array();
 		$GLOBALS['ran_booster_repository_webhook_management_filters']      = array();
 		$GLOBALS['ran_booster_repository_webhook_management_styles']       = array();
+		$GLOBALS['ran_booster_repository_webhook_management_scripts']      = array();
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities'] = array();
 		$GLOBALS['ran_booster_repository_webhook_management_test_options'] = array();
 		$_GET = array();
@@ -97,7 +98,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_filters'] )
 		);
 		self::assertSame(
-			array( 'admin_post_ran_booster_repository_webhook_management_operation', 'admin_enqueue_scripts' ),
+			array( 'admin_post_ran_booster_repository_webhook_management_operation', 'wp_ajax_ran_booster_repository_webhook_delivery_status', 'admin_enqueue_scripts' ),
 			array_keys( $GLOBALS['ran_booster_repository_webhook_management_actions'] )
 		);
 		foreach ( array_merge( $GLOBALS['ran_booster_repository_webhook_management_actions'], $GLOBALS['ran_booster_repository_webhook_management_filters'] ) as $registrations ) {
@@ -134,6 +135,53 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		);
 		$controls->enqueue_admin_assets( 'ran-booster_page_ran-booster-plugins' );
 		self::assertCount( 2, $GLOBALS['ran_booster_repository_webhook_management_styles'] );
+		// Only the provider screen renders the panel, so only it listens for a delivery.
+		self::assertSame(
+			array(
+				array(
+					'handle'       => 'ran-booster-webhook-delivery',
+					'source'       => 'https://example.test/wp-content/plugins/ran-booster/assets/ran-booster-webhook-delivery.js',
+					'dependencies' => array( 'ran-booster-htmx', 'ran-booster-enhanced-mutations' ),
+					'version'      => (string) filemtime( dirname( __DIR__, 3 ) . '/assets/ran-booster-webhook-delivery.js' ),
+					'in_footer'    => true,
+				),
+			),
+			$GLOBALS['ran_booster_repository_webhook_management_scripts']
+		);
+	}
+
+	public function test_the_delivery_status_answers_json_only_to_a_capable_request_with_its_nonce(): void {
+		$controls = $this->controls( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) );
+		$_GET     = array(
+			'provider_code' => 'fixture-provider',
+			'repository_id' => '1234',
+			'_wpnonce'      => 'nonce-for-' . hash( 'sha256', 'ran_booster_repository_webhook_delivery_fixture-provider_1234' ),
+		);
+		$GLOBALS['ran_booster_repository_webhook_management_json'] = array();
+
+		$controls->handle_delivery_status();
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		// No stored record, so no delivery is confirmed.
+		$controls->handle_delivery_status();
+		$_GET['repository_id'] = '5678';
+		$controls->handle_delivery_status();
+
+		$denied = array(
+			'success' => false,
+			'data'    => array(),
+			'status'  => 403,
+		);
+		self::assertSame(
+			array(
+				$denied,
+				array(
+					'success' => true,
+					'data'    => array( 'delivered' => false ),
+				),
+				$denied,
+			),
+			$GLOBALS['ran_booster_repository_webhook_management_json']
+		);
 	}
 
 	public function test_partial_absent_missing_and_malformed_providers_receive_no_placement_before_provider_work(): void {
@@ -170,6 +218,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$controls->enqueue_admin_assets( 'toplevel_page_ran-booster' );
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_styles'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_repository_webhook_management_scripts'] );
 	}
 
 	public function test_claimed_incomplete_capability_renders_a_disabled_core_shell_without_facade_or_provider_work(): void {

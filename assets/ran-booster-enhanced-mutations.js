@@ -605,6 +605,7 @@
 			const form = requestForm(event);
 			const xhr = event.detail?.xhr;
 			// A cancelled load (a stale request) issues no follow-up to wait for.
+			const location = xhr?.getResponseHeader?.('HX-Location');
 			if (
 				!event.defaultPrevented &&
 				form?.hasAttribute?.(
@@ -612,17 +613,77 @@
 				) &&
 				xhr?.status >= 200 &&
 				xhr.status < 300 &&
-				xhr.getResponseHeader?.('HX-Location')
+				location
 			) {
-				heldSave = { form, xhr };
+				let path = location;
+				try {
+					path = JSON.parse(location).path || location;
+				} catch {
+					// A plain path is the header's other form.
+				}
+				heldSave = { form, xhr, path, followUp: null };
 			}
 		}
 
-		function releaseHeldSave(event) {
-			if (heldSave && event.detail?.xhr !== heldSave.xhr) {
-				resetBusy(heldSave.form, heldSave.xhr);
-				heldSave = null;
+		function samePage(first, second) {
+			try {
+				const a = new URL(first, window.location.href);
+				const b = new URL(second, window.location.href);
+				return a.pathname === b.pathname && a.search === b.search;
+			} catch {
+				return false;
 			}
+		}
+
+		// htmx issues the follow-up from the save's own response, before the save's
+		// afterRequest, so it is the first request for the saved address sent until then.
+		function captureFollowUp(event) {
+			if (
+				heldSave &&
+				!heldSave.followUp &&
+				samePage(event.detail?.pathInfo?.requestPath, heldSave.path)
+			) {
+				heldSave.followUp = event.detail.xhr;
+			}
+		}
+
+		// The follow-up is a page load, not a long operation, so it is bounded as the
+		// Save's own request is (30 seconds); htmx then reports it as a timeout.
+		function boundFollowUp(event) {
+			if (
+				heldSave &&
+				!heldSave.followUp &&
+				samePage(event.detail?.path, heldSave.path)
+			) {
+				event.detail.timeout = 30000;
+			}
+		}
+
+		// Only the held save's own follow-up counts. One that could not start raises
+		// its error with no request attached, before any follow-up was sent.
+		function isHeldFollowUp(event, early) {
+			return (
+				Boolean(heldSave) &&
+				(event.detail?.xhr
+					? event.detail.xhr === heldSave.followUp
+					: early && !heldSave.followUp)
+			);
+		}
+
+		function releaseHeldSave(failed = false) {
+			if (!heldSave) {
+				return false;
+			}
+			const { form, xhr, path } = heldSave;
+			heldSave = null;
+			resetBusy(form, xhr);
+			// The save went through but the page load that follows it failed:
+			// load that address the ordinary way rather than keep the stale page.
+			if (failed && path) {
+				window.location.assign(path);
+				return true;
+			}
+			return false;
 		}
 
 		function resetBusy(form, xhr) {
@@ -1318,6 +1379,9 @@
 		);
 
 		document.addEventListener('htmx:beforeOnLoad', holdSaveThroughRedirect);
+		// beforeSend fires only for a request nothing cancelled, so a held save is never waiting on one that was.
+		document.addEventListener('htmx:beforeSend', captureFollowUp);
+		document.addEventListener('htmx:configRequest', boundFollowUp);
 		document.addEventListener('htmx:afterRequest', function (event) {
 			if (event.detail?.xhr === sourceRequest && sourceRequest) {
 				const progress = document.querySelector(
@@ -1327,7 +1391,22 @@
 					progress.hidden = true;
 				}
 			}
-			releaseHeldSave(event);
+			if (
+				heldSave &&
+				event.detail?.xhr === heldSave.xhr &&
+				!heldSave.followUp
+			) {
+				// No follow-up was started, so there is nothing to wait for.
+				releaseHeldSave();
+			} else if (isHeldFollowUp(event, false)) {
+				// htmx raises a transport error right after afterRequest, so let that take the failed path first.
+				const held = heldSave;
+				queueMicrotask(() => {
+					if (heldSave === held) {
+						releaseHeldSave();
+					}
+				});
+			}
 			const form = requestForm(event);
 			if (form && heldSave?.form !== form) {
 				resetBusy(form, event.detail?.xhr);
@@ -1342,7 +1421,12 @@
 			'htmx:timeout',
 		].forEach(function (eventName) {
 			document.addEventListener(eventName, function (event) {
-				releaseHeldSave(event);
+				if (
+					isHeldFollowUp(event, 'htmx:targetError' === eventName) &&
+					releaseHeldSave(true)
+				) {
+					return;
+				}
 				const form = requestForm(event);
 				if (form) {
 					resetBusy(form, event.detail?.xhr);

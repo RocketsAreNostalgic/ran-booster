@@ -778,7 +778,7 @@ RAN Booster GitHub Replacement: 1
 		$this->selection->transition_selection( $digest, true, $reuse, $acknowledge, $this->secrets, $this->attempts, new WordPressUpdaterLock(), static fn (): bool => true );
 	}
 
-	/** @param callable():void $operation */
+	/** @param callable():mixed $operation Its result is irrelevant; only its refusal counts. */
 	private function refused( callable $operation ): void {
 		try {
 			$operation();

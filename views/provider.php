@@ -294,7 +294,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 					)
 				);
 				?>
-				</p></div></div>
+				</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'success' ); ?></div>
 			<?php } ?>
 	<?php if ( isset( $github_selection ) && is_array( $github_selection ) ) { ?>
 		<?php

@@ -13,7 +13,7 @@ $native_hold_code = is_array( $package_native_hold_result ?? null ) ? $package_n
 if ( ! is_array( $package_native_hold ?? null ) ) {
 	if ( 'released' === $native_hold_code ) {
 		?>
-<div id="ran-booster-native-hold" class="notice notice-success inline ran-wp-ui-notice ran-wp-ui-box-sizing is-success" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="success"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Hold released. GitHub installs can continue.', 'ran-booster' ); ?></p></div></div>
+<div id="ran-booster-native-hold" class="notice notice-success inline ran-wp-ui-notice ran-wp-ui-box-sizing is-success" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="success"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Hold released. GitHub installs can continue.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'success' ); ?></div>
 		<?php
 	}
 	return;

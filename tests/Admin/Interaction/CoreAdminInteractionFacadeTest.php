@@ -664,7 +664,7 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		self::assertCount( 1, $GLOBALS['ran_booster_interaction_test_actions']['admin_init'] );
 	}
 
-	public function test_core_provider_profile_save_success_uses_signed_full_page_navigation(): void {
+	public function test_core_provider_profile_success_uses_signed_full_page_navigation(): void {
 		$cases = array(
 			array(
 				'action'    => 'save-access-profile',
@@ -684,6 +684,19 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 				'action'    => 'save-webhook-profile',
 				'view'      => 'signing-secrets',
 				'message'   => 'Push-to-Deploy secret saved.',
+				'list_args' => array(),
+			),
+			// A delete answers the same way: its message is shown by the page it reloads, not by a follow-up swap.
+			array(
+				'action'    => 'delete-access-profile',
+				'view'      => 'credentials',
+				'message'   => 'Repository credential removed.',
+				'list_args' => array(),
+			),
+			array(
+				'action'    => 'delete-webhook-profile',
+				'view'      => 'signing-secrets',
+				'message'   => 'Push-to-Deploy secret removed.',
 				'list_args' => array(),
 			),
 		);
@@ -734,38 +747,6 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 			$html = (string) ob_get_clean();
 			self::assertStringContainsString( 'notice notice-success', $html );
 			self::assertStringContainsString( $case['message'], $html );
-		}
-	}
-
-	public function test_core_provider_profile_delete_success_keeps_the_authoritative_region_swap(): void {
-		foreach (
-			array(
-				array( 'delete-access-profile', 'credentials', 'Repository credential removed.' ),
-				array( 'delete-webhook-profile', 'signing-secrets', 'Push-to-Deploy secret removed.' ),
-			) as $case
-		) {
-			$this->headers                    = array();
-			$this->statuses                   = array();
-			$_GET['view']                     = $case[1];
-			$facade                           = $this->facade();
-			$request                          = $facade->provider_profile_request( $case[0], 'fixture' );
-			$_SERVER['HTTP_HX_REQUEST']       = 'true';
-			$_SERVER['HTTP_HX_TARGET']        = 'ran-booster-provider-profile-region';
-			$_POST['ran_booster_interaction'] = array(
-				'operation' => 'core:' . $case[0],
-				'target'    => ProviderProfileAdminController::TARGET_KEY,
-			);
-
-			$this->capture_termination(
-				fn () => $facade->respond_to_provider_profile_success( $request, $case[2] )
-			);
-
-			self::assertSame( array( 200 ), $this->statuses );
-			$location = json_decode( (string) $this->header( 'HX-Location' ), true );
-			self::assertIsArray( $location );
-			self::assertSame( ProviderProfileAdminController::TARGET_SELECTOR, $location['target'] );
-			self::assertSame( ProviderProfileAdminController::TARGET_SELECTOR, $location['select'] );
-			self::assertNull( $this->header( 'HX-Redirect' ) );
 		}
 	}
 

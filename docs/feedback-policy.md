@@ -398,9 +398,8 @@ standalone proof is not currently run by CI, so this property is not continuousl
 checked.
 
 For signed interactions, a missing, expired, replaced or unwritten row shows a
-fixed neutral persistent info notice on full-page and no-JavaScript landings;
-an enhanced landing shows nothing extra because success is visible in the
-swapped region. The notice says: "The result details are not available. Check
+fixed neutral persistent info notice on every landing, because an enhanced
+success reloads the page as a full page too. The notice says: "The result details are not available. Check
 the page or Activity for the current state." It does not advise a retry or say
 the operation failed.
 

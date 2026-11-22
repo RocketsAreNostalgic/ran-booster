@@ -93,33 +93,14 @@ final class SignedAdminInteractionFlow {
 	public function respond(
 		SignedAdminInteractionRequest $request,
 		string $kind,
-		string $message,
-		bool $full_page_enhanced_success = false
+		string $message
 	): never {
 		$this->assert_outcome( $kind, $message );
 		if ( $this->is_enhanced_request( $request ) ) {
 			if ( $this->has_success_feedback( $kind ) ) {
-				$outcome_url = $this->signed_outcome_url( $request, $kind, $message );
-				if ( $full_page_enhanced_success ) {
-					( $this->emit_status )( $this->status( $kind ) );
-					( $this->emit_header )( 'HX-Redirect', $outcome_url );
-					( $this->terminate )();
-				}
-
-				$location = wp_json_encode(
-					array(
-						'path'   => wp_make_link_relative( $outcome_url ),
-						'target' => $request->target_selector,
-						'select' => $request->target_selector,
-						'swap'   => 'outerHTML show:none',
-					)
-				);
-				if ( ! is_string( $location ) ) {
-					throw new InvalidArgumentException( 'Administration interaction location could not be encoded.' );
-				}
-
+				// A success reloads the page, as a provider save does: the message is held server side and shown by the page it lands on, which a located swap would reach only through its follow-up request.
 				( $this->emit_status )( $this->status( $kind ) );
-				( $this->emit_header )( 'HX-Location', $location );
+				( $this->emit_header )( 'HX-Redirect', $this->signed_outcome_url( $request, $kind, $message ) );
 				( $this->terminate )();
 			}
 

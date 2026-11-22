@@ -4,7 +4,9 @@
 // and WordPress upgrader, and the in-place release of the hold an unfinished one leaves.
 // Only remote HTTP is synthetic.
 
+use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
+use RAN\PackageOperation;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Storage\GitHubSelectionStore;
@@ -18,6 +20,15 @@ final class RAN_Booster_ReleaseSwitchProof {
 	private const VERSIONS = array( '0.5.0', '1.0.0', '2.0.0' );
 	/** Killed after the install result: the request never records its end. */
 	private const KILLED = array( 'kill', 'foreign-lock', 'expired-lock' );
+	/** Fresh starts after a release, each from the hold its base case leaves. */
+	private const FRESH = array(
+		'fresh-finished' => 'failed-install',
+		'fresh-killed'   => 'kill',
+		'fresh-damaged'  => 'kill',
+		'fresh-deleted'  => 'kill',
+	);
+	/** Held targets with no package page: removed by the operator, then confirmed absent on the provider page. */
+	private const REMOVED = array( 'fresh-damaged', 'fresh-deleted' );
 
 	private string $slug;
 	private string $identity;
@@ -26,10 +37,11 @@ final class RAN_Booster_ReleaseSwitchProof {
 	private string $metadata;
 	private string $repository_id;
 	private string $archive_root;
+	private string $scenario;
 	private bool $changed      = false;
 	private ?string $competing = null;
 
-	public function __construct( private string $kind, private string $scenario ) {
+	public function __construct( private string $kind, private string $case_name ) {
 		$site = getenv( 'RAN_RELEASE_SWITCH_PROOF_SITE' );
 		$root = is_string( $site ) ? realpath( $site ) : false;
 		if ( ! defined( 'WP_CLI' ) || ! WP_CLI || false === $root || realpath( ABSPATH ) !== $root
@@ -44,14 +56,15 @@ final class RAN_Booster_ReleaseSwitchProof {
 			throw new RuntimeException( 'Disposable WordPress 7.0.3 / PHP 8.2 administrator identity not established.' );
 		}
 		if ( ! in_array( $kind, array( 'plugin', 'theme' ), true )
-			|| ! in_array( $scenario, array( 'same', 'newer', 'active', 'older', 'disabled', 'failed-download', 'offer-removed', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock' ), true ) ) {
+			|| ! in_array( $case_name, array( 'same', 'newer', 'active', 'older', 'disabled', 'failed-download', 'offer-removed', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock', 'fresh-finished', 'fresh-killed', 'fresh-damaged', 'fresh-deleted' ), true ) ) {
 			throw new RuntimeException( 'Unknown proof case.' );
 		}
-		$run = getenv( 'RAN_RELEASE_SWITCH_PROOF_RUN' );
+		$this->scenario = self::FRESH[ $case_name ] ?? $case_name;
+		$run            = getenv( 'RAN_RELEASE_SWITCH_PROOF_RUN' );
 		if ( ! is_string( $run ) || 1 !== preg_match( '/\A[a-z0-9]{1,12}\z/D', $run ) ) {
 			throw new RuntimeException( 'Invalid proof run identity.' );
 		}
-		$this->slug          = 'switch-proof-' . $kind . '-' . $scenario . '-' . $run;
+		$this->slug          = 'switch-proof-' . $kind . '-' . $case_name . '-' . $run;
 		$this->repository_id = (string) ( 903000 + abs( crc32( $this->slug ) ) );
 		$this->metadata      = 'plugin' === $kind ? $this->slug . '.php' : 'style.css';
 		$this->identity      = 'plugin' === $kind ? $this->slug . '/' . $this->metadata : $this->slug;
@@ -210,6 +223,8 @@ final class RAN_Booster_ReleaseSwitchProof {
 			$body = '';
 		} elseif ( str_ends_with( $path, '/releases' ) ) {
 			$body = wp_json_encode( array_map( $this->release( ... ), $this->published() ) );
+		} elseif ( str_contains( $path, '/releases/tags/' ) ) {
+			$body = wp_json_encode( $this->release( (int) array_search( ltrim( basename( $path ), 'v' ), self::VERSIONS, true ) ) );
 		} elseif ( str_contains( $path, '/releases/' ) ) {
 			$body = wp_json_encode( $this->release( $number - 100 ) );
 		} elseif ( str_contains( $path, '/commits/' ) ) {
@@ -441,9 +456,13 @@ final class RAN_Booster_ReleaseSwitchProof {
 		$removal    = $container->make( PackageRemovalService::class );
 		$store      = $container->make( GitHubSelectionStore::class );
 		$authorized = static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
-		$hold       = $store->read( true )['native_mutation'] ?? null;
-		$before     = $this->managed_row();
-		$review     = $removal->native_recovery_confirmation();
+		if ( in_array( $this->case_name, self::REMOVED, true ) ) {
+			$this->remove_and_recover( $removal, $store, $authorized );
+			return;
+		}
+		$hold   = $store->read( true )['native_mutation'] ?? null;
+		$before = $this->managed_row();
+		$review = $removal->native_recovery_confirmation();
 		if ( ! is_array( $hold ) || $this->identity !== $review['identifier'] || ( 'finished' === $hold['phase'] ) !== $review['finished'] ) {
 			throw new RuntimeException( 'Unexpected hold review.' );
 		}
@@ -507,6 +526,132 @@ final class RAN_Booster_ReleaseSwitchProof {
 		$this->assert_activation();
 		$this->report( $switched ? 'switched_after_release' : 'updater_lease_held', $version );
 		$this->cleanup();
+	}
+
+	/**
+	 * A held target with no package page: the in-place release is refused, the operator deletes the folder,
+	 * confirms on the provider page, and Booster drops its record and clears the hold. The killed install's
+	 * own lock is freed at once, without waiting for the hour-old reclaim.
+	 *
+	 * @param callable():bool $authorized
+	 */
+	private function remove_and_recover( PackageRemovalService $removal, GitHubSelectionStore $store, callable $authorized ): void {
+		global $wp_filesystem;
+		WP_Filesystem();
+		if ( 'fresh-damaged' === $this->case_name ) {
+			// Enough of the held target is gone that WordPress no longer registers it.
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Damage only this proof's exclusively owned target.
+			if ( ! unlink( $this->directory . '/' . $this->metadata ) || $this->registered() ) {
+				throw new RuntimeException( 'The damaged target still registers.' );
+			}
+		} elseif ( ! $wp_filesystem->delete( $this->directory, true ) ) {
+			throw new RuntimeException( 'The held folder was not deleted first.' );
+		}
+		$hold   = $store->read( true )['native_mutation'] ?? null;
+		$review = $removal->native_recovery_confirmation();
+		if ( ! is_array( $hold ) || 'started' !== $hold['phase'] || $this->identity !== $review['identifier'] || $review['readable'] || ! $review['managed']
+			|| GitHubProviderSelection::native_lock_token( $hold ) !== $this->lock_row() ) {
+			throw new RuntimeException( 'Unexpected review of a held target with no package page.' );
+		}
+		$this->refused( fn () => $removal->release_native_hold( $review['digest'], true, true, $authorized ) );
+		if ( 'fresh-damaged' === $this->case_name ) {
+			// Removal is confirmed only once the whole folder is gone.
+			$this->refused( fn () => $removal->recover_native_removal( $review['digest'], true, true, $authorized ) );
+			if ( ! $wp_filesystem->delete( $this->directory, true ) ) {
+				throw new RuntimeException( 'The damaged folder was not deleted.' );
+			}
+		}
+		clearstatcache();
+		$this->refused( fn () => $removal->recover_native_removal( $review['digest'], true, false, $authorized ) );
+		if ( $store->read( true )['native_mutation'] !== $hold || null === $this->managed_row() ) {
+			throw new RuntimeException( 'A refused removal recovery changed the hold or the record.' );
+		}
+		$removal->recover_native_removal( $review['digest'], true, true, $authorized );
+		if ( isset( $store->read( true )['native_mutation'] ) || null !== $this->lock_row() || null !== $this->managed_row() || file_exists( $this->directory ) ) {
+			throw new RuntimeException( 'The removal recovery left the hold, a lock, the record or the folder.' );
+		}
+		$this->report( 'removed_and_recovered', 'none' );
+	}
+
+	/**
+	 * Start clean after the release without any recovery tool: Stop managing the package, delete its files the
+	 * ordinary WordPress way, then install the release through Booster as a new package.
+	 */
+	public function fresh_start(): void {
+		$this->attest();
+		WP_Filesystem();
+		$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
+		$row       = $this->managed_row();
+		$steps     = array( 'registered' => $this->registered() );
+		if ( in_array( $this->case_name, self::REMOVED, true ) ) {
+			// The provider-page removal recovery already dropped the record, and the operator deleted the folder.
+			$steps += array(
+				'stop_managing'    => 'removal_recovery',
+				'wordpress_delete' => 'deleted_by_operator',
+			);
+		} else {
+			$steps['stop_managing']    = $this->stop_managing( $container->make( PackageRemovalService::class ), $row );
+			$deleted                   = 'plugin' === $this->kind ? delete_plugins( array( $this->identity ) ) : delete_theme( $this->slug );
+			$steps['wordpress_delete'] = true === $deleted ? 'deleted' : ( is_wp_error( $deleted ) ? $deleted->get_error_code() : 'failed' );
+			wp_clean_plugins_cache( false );
+			wp_clean_themes_cache( false );
+		}
+		$steps['still_managed'] = null !== $this->managed_row();
+		clearstatcache();
+		$steps['files_left'] = file_exists( $this->directory );
+		add_filter( 'pre_http_request', $this->http( ... ), PHP_INT_MIN, 3 );
+		$facade                   = $container->make( NativeProspectiveReleaseFacade::class );
+		$request                  = array(
+			'provider'      => 'gh',
+			'repository'    => $this->repository,
+			'credential_id' => '',
+			'branch'        => 'main',
+		);
+		$review                   = $facade->inspect( $this->kind, $request, '102', 'v2.0.0', 'stable', wp_create_nonce( $facade->nonce_action( 'inspect', $this->kind, null ) ) );
+		$data                     = $review->data();
+		$install                  = $facade->install( $this->kind, $request, '102', 'v2.0.0', (string) ( $data['fingerprint'] ?? '' ), 'stable', wp_create_nonce( $facade->nonce_action( 'install', $this->kind, $data['provider_expectation'] ?? null ) ), $data['provider_expectation'] ?? null );
+		$steps['booster_install'] = $review->code() . ' ' . $install->code();
+		$installed                = $this->managed_row();
+		$steps['managed_source']  = $installed['source'] ?? null;
+		echo wp_json_encode( array( 'fresh_start' => $steps ) ) . "\n";
+		if ( ! in_array( $steps['stop_managing'], array( 'unlinked', 'removal_recovery' ), true ) || $steps['still_managed']
+			|| ! in_array( $steps['wordpress_delete'], array( 'deleted', 'deleted_by_operator' ), true ) || $steps['files_left']
+			|| 'release_ready installed' !== $steps['booster_install'] || 'release_asset' !== $steps['managed_source'] ) {
+			throw new RuntimeException( 'No clean start after the release.' );
+		}
+		$this->assert_files( '2.0.0', true, $this->directory );
+		$this->assert_activation();
+		if ( isset( $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ) || null !== $this->lock_row() ) {
+			throw new RuntimeException( 'The fresh install left a hold or a lock.' );
+		}
+		$this->report( 'fresh_start', '2.0.0' );
+		$this->cleanup();
+	}
+
+	/** @param array<string, mixed>|null $row */
+	private function stop_managing( PackageRemovalService $removal, ?array $row ): string {
+		try {
+			$result = $removal->execute(
+				PackageOperation::from_input(
+					'unlink-' . $this->kind,
+					array(
+						( 'plugin' === $this->kind ? 'file' : 'stylesheet' ) => $this->identity,
+						'confirm_package_removal'  => '1',
+						'expected_source_revision' => (string) ( $row['source_revision'] ?? '' ),
+						'expected_adoption_token'  => $row['adoption_token'] ?? null,
+					)
+				)
+			);
+			return trim( $result->status . ' ' . $result->outcome_code );
+		} catch ( Throwable $failure ) {
+			return 'refused: ' . $failure->getMessage();
+		}
+	}
+
+	private function registered(): bool {
+		wp_clean_plugins_cache( false );
+		wp_clean_themes_cache( false );
+		return 'plugin' === $this->kind ? isset( get_plugins()[ $this->identity ] ) : ( wp_get_theme( $this->slug )->exists() && false === wp_get_theme( $this->slug )->errors() );
 	}
 
 	/** @return array{0: string, 1: string, 2: bool} Result code, installed version, switched. */
@@ -730,7 +875,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 		echo wp_json_encode(
 			array(
 				'type'      => $this->kind,
-				'case'      => $this->scenario,
+				'case'      => $this->case_name,
 				'phase'     => getenv( 'RAN_RELEASE_SWITCH_PROOF_PHASE' ),
 				'outcome'   => $outcome,
 				'installed' => $version,
@@ -748,5 +893,6 @@ match ( getenv( 'RAN_RELEASE_SWITCH_PROOF_PHASE' ) ) {
 	'release' => $ran_booster_release_switch_proof->release_hold(),
 	'retry' => $ran_booster_release_switch_proof->retry_switch(),
 	'retried' => $ran_booster_release_switch_proof->retried(),
+	'fresh' => $ran_booster_release_switch_proof->fresh_start(),
 	default => throw new RuntimeException( 'Unknown proof phase.' ),
 };

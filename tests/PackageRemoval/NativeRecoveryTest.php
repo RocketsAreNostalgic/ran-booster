@@ -33,6 +33,7 @@ final class NativeRecoveryTest extends TestCase {
 	/** @var array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string}|null */
 	private ?array $record       = null;
 	private bool $present        = false;
+	private bool $registered     = false;
 	private bool $cache_failure  = false;
 	private bool $reappear       = false;
 	private bool $unlink_failure = false;
@@ -110,7 +111,15 @@ final class NativeRecoveryTest extends TestCase {
 				if ( $this->cache_failure ) {
 						throw new \RuntimeException( 'Cache invalidation failed.' );
 				}
-				$this->present = $this->reappear;
+				if ( $this->reappear ) {
+					$this->present = true;
+				}
+			}
+		);
+		$gateway->method( 'installed_targets' )->willReturnCallback(
+			function ( string $type ): array {
+				self::assertSame( 'plugin', $type );
+				return $this->registered ? array( 'target/main.php' => 'Target' ) : array();
 			}
 		);
 		$gateway->expects( self::never() )->method( 'delete_plugin' );
@@ -132,8 +141,9 @@ final class NativeRecoveryTest extends TestCase {
 		$revoked['selection_generation'] = 1;
 		self::assertTrue( $this->store->compare_and_swap( $old, $revoked ) );
 		$review = $this->service->native_recovery_confirmation();
-		self::assertSame( array( 'digest', 'type', 'identifier', 'managed', 'finished' ), array_keys( $review ) );
+		self::assertSame( array( 'digest', 'type', 'identifier', 'managed', 'finished', 'readable' ), array_keys( $review ) );
 		self::assertFalse( $review['managed'] );
+		self::assertFalse( $review['readable'] );
 		$this->recover( $review['digest'] );
 		unset( $revoked['native_mutation'] );
 		self::assertSame( $revoked, $this->store->read() );
@@ -184,7 +194,7 @@ final class NativeRecoveryTest extends TestCase {
 		foreach ( array( array( false, true, true ), array( true, false, true ), array( true, true, false ) ) as list( $stopped, $removed, $authorized ) ) {
 			$this->refused( fn () => $this->service->recover_native_removal( $digest, $stopped, $removed, static fn (): bool => $authorized ) );
 		}
-		foreach ( array( '1', 'malformed' ) as $token ) {
+		foreach ( array( (string) time(), 'malformed' ) as $token ) {
 			$this->db->option_rows['auto_updater.lock'] = $token;
 			$this->refused( fn () => $this->recover( $digest ) );
 			self::assertSame( $token, $this->db->option_rows['auto_updater.lock'] );
@@ -327,11 +337,12 @@ final class NativeRecoveryTest extends TestCase {
 
 	public function test_finished_hold_release_keeps_management_and_needs_no_stop_confirmation(): void {
 		$this->hold( str_repeat( 'a', 32 ), 'finished' );
-		$this->managed();
+		$this->readable();
 		$record = $this->record;
 		$before = $this->store->read();
 		$review = $this->service->native_recovery_confirmation();
 		self::assertTrue( $review['finished'] );
+		self::assertTrue( $review['readable'] );
 		$this->service->release_native_hold( $review['digest'], false, true, static fn (): bool => true );
 		unset( $before['native_mutation'] );
 		self::assertSame( $before, $this->store->read() );
@@ -341,7 +352,7 @@ final class NativeRecoveryTest extends TestCase {
 	}
 
 	public function test_hold_release_needs_every_confirmation_and_permission(): void {
-		$this->managed();
+		$this->readable();
 		$digest = $this->service->native_recovery_confirmation()['digest'];
 		self::assertFalse( $this->service->native_recovery_confirmation()['finished'] );
 		foreach ( array( array( false, true, true ), array( true, false, true ), array( true, true, false ) ) as list( $stopped, $checked, $authorized ) ) {
@@ -353,39 +364,49 @@ final class NativeRecoveryTest extends TestCase {
 		self::assertNotContains( 'invalidate', $this->events );
 	}
 
-	public function test_unfinished_hold_frees_its_own_lock_by_exact_value(): void {
+	/** @return iterable<string, array{string}> */
+	public static function hold_operations(): iterable {
+		yield 'in-place release' => array( 'release' );
+		yield 'removal recovery' => array( 'recover' );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'hold_operations' )]
+	public function test_unfinished_hold_frees_its_own_lock_by_exact_value( string $operation ): void {
 		$own = (string) ( time() - 10 );
 		$this->hold( self::tag( $own ), 'started' );
 		$this->db->option_rows['auto_updater.lock'] = $own;
-		$this->release();
+		$this->operate( $operation );
 		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
 		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
 	}
 
-	/** @return iterable<string, array{string, int}> */
+	/** @return iterable<string, array{string, string, int}> */
 	public static function foreign_live_locks(): iterable {
-		yield 'unfinished hold, other live lock' => array( 'started', 5 );
-		yield 'unfinished hold, tag without a token' => array( 'started', 0 );
-		yield 'finished hold, even with the same value' => array( 'finished', 0 );
+		foreach ( array( 'release', 'recover' ) as $operation ) {
+			yield "$operation: unfinished hold, other live lock" => array( $operation, 'started', 5 );
+			yield "$operation: unfinished hold, tag without a token" => array( $operation, 'started', 0 );
+			yield "$operation: finished hold, even with the same value" => array( $operation, 'finished', 0 );
+		}
 	}
 
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'foreign_live_locks' )]
-	public function test_live_lock_that_is_not_the_holds_own_is_never_removed( string $phase, int $offset ): void {
+	public function test_live_lock_that_is_not_the_holds_own_is_never_removed( string $operation, string $phase, int $offset ): void {
 		$own     = time() - 20;
 		$foreign = (string) ( $own + $offset );
 		$this->hold( 0 === $offset && 'started' === $phase ? str_repeat( 'a', 32 ) : self::tag( (string) $own ), $phase );
 		$this->db->option_rows['auto_updater.lock'] = $foreign;
-		$this->refused( fn () => $this->release() );
+		$this->refused( fn () => $this->operate( $operation ) );
 		self::assertSame( $foreign, $this->db->option_rows['auto_updater.lock'] );
 		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
 		self::assertNotContains( 'invalidate', $this->events );
 	}
 
-	public function test_hour_old_foreign_lock_is_reclaimed_by_the_release_itself(): void {
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'hold_operations' )]
+	public function test_hour_old_foreign_lock_is_reclaimed_by_the_operation_itself( string $operation ): void {
 		foreach ( array( 'started', 'finished' ) as $phase ) {
 			$this->hold( self::tag( (string) ( time() - 100 ) ), $phase );
 			$this->db->option_rows['auto_updater.lock'] = (string) ( time() - 3601 );
-			$this->release();
+			$this->operate( $operation );
 			self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
 			self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
 			$state                     = $this->store->read();
@@ -402,7 +423,8 @@ final class NativeRecoveryTest extends TestCase {
 	}
 
 	public function test_hold_release_refuses_changed_review_record_or_attempts(): void {
-		$digest = $this->service->native_recovery_confirmation()['digest'];
+		$this->registered = true;
+		$digest           = $this->service->native_recovery_confirmation()['digest'];
 		$this->managed();
 		$this->refused( fn () => $this->release( $digest ) );
 		$digest = $this->service->native_recovery_confirmation()['digest'];
@@ -442,12 +464,78 @@ final class NativeRecoveryTest extends TestCase {
 	}
 
 	public function test_hold_release_cache_failure_keeps_a_retryable_hold(): void {
+		$this->readable();
 		$this->cache_failure = true;
 		$this->refused( fn () => $this->release() );
 		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
 		$this->cache_failure = false;
 		$this->release();
 		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+	}
+
+	/** @return iterable<string, array{bool, bool, bool}> */
+	public static function unreadable_targets(): iterable {
+		yield 'never managed' => array( false, true, true );
+		yield 'missing' => array( true, false, false );
+		yield 'damaged so it no longer registers' => array( true, true, false );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'unreadable_targets' )]
+	public function test_held_target_without_a_package_page_is_only_removed( bool $managed, bool $present, bool $registered ): void {
+		if ( $managed ) {
+			$this->managed();
+		}
+		$this->present    = $present;
+		$this->registered = $registered;
+		$review           = $this->service->native_recovery_confirmation();
+		self::assertFalse( $review['readable'] );
+		$this->refused( fn () => $this->release() );
+		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+		self::assertNotContains( 'invalidate', $this->events );
+		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
+		$this->present    = false;
+		$this->registered = false;
+		$this->recover( $this->service->native_recovery_confirmation()['digest'] );
+		self::assertNull( $this->record );
+		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+	}
+
+	public function test_readable_target_is_never_removed_and_unregistering_mid_release_refuses(): void {
+		$this->readable();
+		$this->present = true;
+		$review        = $this->service->native_recovery_confirmation();
+		self::assertTrue( $review['readable'] );
+		$this->refused( fn () => $this->recover( $review['digest'] ) );
+		self::assertNotNull( $this->record );
+		$calls = 0;
+		$this->refused(
+			fn () => $this->service->release_native_hold(
+				$review['digest'],
+				true,
+				true,
+				function () use ( &$calls ): bool {
+					if ( 2 === ++$calls ) {
+						$this->registered = false;
+					}
+					return true;
+				}
+			)
+		);
+		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+	}
+
+	private function readable(): void {
+		$this->managed();
+		$this->registered = true;
+	}
+
+	private function operate( string $operation ): void {
+		if ( 'release' === $operation ) {
+			$this->readable();
+			$this->release();
+			return;
+		}
+		$this->recover( $this->service->native_recovery_confirmation()['digest'] );
 	}
 
 	private function hold( string $tag, string $phase ): void {

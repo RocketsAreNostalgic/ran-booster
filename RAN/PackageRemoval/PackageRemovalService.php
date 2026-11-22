@@ -34,7 +34,12 @@ final readonly class PackageRemovalService {
 	) {
 	}
 
-	/** @return array{digest:string,type:string,identifier:string,managed:bool,finished:bool} No credential or native owner disclosure. */
+	/**
+	 * A readable target, managed and still registered, has a package page and is released in place there.
+	 * Any other held target can only be removed and confirmed absent.
+	 *
+	 * @return array{digest:string,type:string,identifier:string,managed:bool,finished:bool,readable:bool} No credential or native owner disclosure.
+	 */
 	public function native_recovery_confirmation(): array {
 		$snapshot = $this->native_recovery_snapshot();
 		return array(
@@ -43,6 +48,7 @@ final readonly class PackageRemovalService {
 			'identifier' => $snapshot['identifier'],
 			'managed'    => null !== $snapshot['record'],
 			'finished'   => 'finished' === ( $snapshot['state']['native_mutation']['phase'] ?? null ),
+			'readable'   => $this->held_target_readable( $snapshot['type'], $snapshot['identifier'], $snapshot['record'] ),
 		);
 	}
 
@@ -65,24 +71,18 @@ final readonly class PackageRemovalService {
 		if ( ! hash_equals( $snapshot['digest'], $digest ) || ! is_array( $marker ) ) {
 			throw new \RuntimeException( 'The native hold review changed.' );
 		}
-		if ( 'finished' !== $marker['phase'] ) {
-			if ( ! $confirmed_stopped ) {
-				throw new \RuntimeException( 'The interrupted install must be confirmed stopped.' );
-			}
-			// An unfinished owner never released its lock, so a row with its exact value is still its own.
-			$own = GitHubProviderSelection::native_lock_token( $marker );
-			if ( null !== $own ) {
-				$this->updater_lock->release( $own );
-			}
+		$type       = $snapshot['type'];
+		$identifier = $snapshot['identifier'];
+		if ( ! $this->held_target_readable( $type, $identifier, $snapshot['record'] ) ) {
+			throw new \RuntimeException( 'Only a managed, registered target is released in place.' );
 		}
-		$token = $this->updater_lock->acquire();
+		$token = $this->native_hold_lock( $marker, $confirmed_stopped );
 		try {
-			$type       = $snapshot['type'];
-			$identifier = $snapshot['identifier'];
 			$repository = 'plugin' === $type ? $this->plugins : $this->themes;
 			$verify     = function () use ( $type, $identifier, $repository, $snapshot, $token, $authorized ): void {
 				if ( true !== $this->recovery_authorized( $authorized ) || null === $this->attempts || $this->attempts->has_unresolved_target_attempt( $type, $identifier, true )
-					|| $repository->native_recovery_record( $identifier, true ) !== $snapshot['record'] || $this->updater_lock->current_token() !== $token ) {
+					|| $repository->native_recovery_record( $identifier, true ) !== $snapshot['record'] || ! $this->held_target_readable( $type, $identifier, $snapshot['record'] )
+					|| $this->updater_lock->current_token() !== $token ) {
 					throw new \RuntimeException( 'The held package, its attempts or operation ownership changed.' );
 				}
 				$this->attempts->assert_selection_transition_idle( $this->github_selection );
@@ -116,15 +116,12 @@ final readonly class PackageRemovalService {
 		if ( ! $confirmed_stopped || ! $confirmed_removal || true !== $this->recovery_authorized( $authorized ) || null === $this->github_selection || null === $this->attempts || ! $this->github_selection->uses_connection( $wpdb ) ) {
 			throw new \RuntimeException( 'Explicit native recovery authority is required.' );
 		}
-		$token = $this->updater_lock->try_acquire_without_reclaim();
-		if ( null === $token ) {
-			throw new \RuntimeException( 'The updater lock requires recovery before continuing.' );
+		$snapshot = $this->native_recovery_snapshot();
+		if ( ! hash_equals( $snapshot['digest'], $digest ) || ! is_array( $snapshot['state']['native_mutation'] ) ) {
+			throw new \RuntimeException( 'The native recovery review changed.' );
 		}
+		$token = $this->native_hold_lock( $snapshot['state']['native_mutation'], $confirmed_stopped );
 		try {
-			$snapshot = $this->native_recovery_snapshot();
-			if ( ! hash_equals( $snapshot['digest'], $digest ) ) {
-				throw new \RuntimeException( 'The native recovery review changed.' );
-			}
 			$type       = $snapshot['type'];
 			$identifier = $snapshot['identifier'];
 			if ( 'plugin' === $type ) {
@@ -166,6 +163,30 @@ final readonly class PackageRemovalService {
 				throw new \RuntimeException( 'Native recovery may have completed; updater lock release requires recovery.' );
 			}
 		}
+	}
+
+	/**
+	 * An unfinished owner never released its lock, so a row with its exact value is still its own and is freed
+	 * once the operator confirms the owner stopped. Any other lock waits for the inherited hour-old reclaim.
+	 *
+	 * @param array<string, mixed> $marker
+	 */
+	private function native_hold_lock( array $marker, bool $confirmed_stopped ): string {
+		if ( 'finished' !== $marker['phase'] ) {
+			if ( ! $confirmed_stopped ) {
+				throw new \RuntimeException( 'The interrupted install must be confirmed stopped.' );
+			}
+			$own = GitHubProviderSelection::native_lock_token( $marker );
+			if ( null !== $own ) {
+				$this->updater_lock->release( $own );
+			}
+		}
+		return $this->updater_lock->acquire();
+	}
+
+	/** @param array<string, mixed>|null $record */
+	private function held_target_readable( string $type, string $identifier, ?array $record ): bool {
+		return null !== $record && array_key_exists( $identifier, $this->wordpress->installed_targets( $type ) );
 	}
 
 	/**

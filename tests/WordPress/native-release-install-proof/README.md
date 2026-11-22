@@ -237,6 +237,10 @@ load.
 | `kill` | SIGKILL after the install result: 2.0.0 files, 1.0.0 backup left | Branch | Retained, `started`, still owning its lock |
 | `foreign-lock` | As `kill`; the release then meets another operation's live lock and is refused without touching it | Branch | Retained until the lock is an hour old |
 | `expired-lock` | As `kill`; the lock row is another, hour-old value, which the release reclaims itself | Branch | Retained |
+| `fresh-finished` | As `failed-install`; after the release, a fresh start | New package on Releases | Cleared |
+| `fresh-killed` | As `kill`; after the release, a fresh start | New package on Releases | Cleared |
+| `fresh-damaged` | As `kill`; the main file is then removed so the target no longer registers, and it goes through the removal recovery | New package on Releases | Cleared |
+| `fresh-deleted` | As `kill`; the folder is deleted while the hold exists, and it goes through the removal recovery | New package on Releases | Cleared |
 
 The source changes only when the updater's finalisation reports a verified
 install, in the same transaction that clears native custody. That commit runs
@@ -260,6 +264,16 @@ files are untouched. The switch then runs again:
 - After a kill, the release updater's own ten-minute discovery lease, which the
   killed request never returned, refuses the retry (`service_unavailable`) with
   no Booster hold or lock left.
+
+The fresh-start cases prove that an operator can always start clean.
+`fresh-finished` and `fresh-killed` release the hold in place, then Stop
+managing, delete the files the WordPress way and install the release through
+Booster as a new package. A held target with no package page (`fresh-damaged`,
+`fresh-deleted`) is never released in place: the release is refused, the
+operator deletes the folder, and the provider page's removal recovery confirms
+it absent, drops the record and clears the hold. The removal recovery is
+refused while the folder exists and without the removal confirmation, and it
+frees the killed install's own lock at once. The Booster install then succeeds.
 
 Before the retry, the proof seeds an ordinary stored update check again. This
 site cannot reach WordPress.org, and after a completed install WordPress saves

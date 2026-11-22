@@ -12,16 +12,17 @@ RAN_RELEASE_SWITCH_PROOF_RUN="${RAN_RELEASE_SWITCH_PROOF_RUN:-$(date +%s)}"
 export PHP_BIN WP_CLI_BIN RAN_RELEASE_SWITCH_PROOF_SITE RAN_RELEASE_SWITCH_PROOF_CORE_ZIP RAN_RELEASE_SWITCH_PROOF_USER RAN_RELEASE_SWITCH_PROOF_RUN
 proof="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/ReleaseSwitchProof.php"
 for package_type in ${RAN_RELEASE_SWITCH_PROOF_TYPES:-plugin theme}; do
-    for scenario in ${RAN_RELEASE_SWITCH_PROOF_CASES:-same newer active older disabled failed-download offer-removed compete conflict failed-install kill foreign-lock expired-lock}; do
+    for scenario in ${RAN_RELEASE_SWITCH_PROOF_CASES:-same newer active older disabled failed-download offer-removed compete conflict failed-install kill foreign-lock expired-lock fresh-finished fresh-killed fresh-damaged fresh-deleted}; do
         phases="seed run readback"
         case "$scenario" in
             conflict|failed-install|kill|foreign-lock|expired-lock) phases="$phases release retry retried" ;;
+            fresh-*) phases="$phases release fresh" ;;
         esac
         for phase in $phases; do
             status=0
             RAN_RELEASE_SWITCH_PROOF_TYPE="$package_type" RAN_RELEASE_SWITCH_PROOF_CASE="$scenario" RAN_RELEASE_SWITCH_PROOF_PHASE="$phase" \
                 "$PHP_BIN" -d memory_limit=512M "$WP_CLI_BIN" eval-file "$proof" --path="$RAN_RELEASE_SWITCH_PROOF_SITE" --user="$RAN_RELEASE_SWITCH_PROOF_USER" || status=$?
-            if [[ "$phase" == run && "$scenario" =~ ^(kill|foreign-lock|expired-lock)$ ]]; then
+            if [[ "$phase" == run && "$scenario" =~ ^(kill|foreign-lock|expired-lock|fresh-killed|fresh-damaged|fresh-deleted)$ ]]; then
                 [[ "$status" == 137 ]] || { echo "Expected SIGKILL exit 137, got $status" >&2; exit 1; }
             elif [[ "$status" != 0 ]]; then
                 exit "$status"

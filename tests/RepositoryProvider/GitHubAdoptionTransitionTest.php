@@ -448,7 +448,7 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		$presenter = new \RAN\Admin\ProviderSettingsPresenter( new \RAN\RepositoryProvider\ProviderRegistry(), $this->secrets, new \RAN\Storage\CredentialUsageReader(), github_selection: $this->selection, package_removal: $service );
 		$data      = $presenter->build( 'gh' );
 		self::assertSame( 'recovery_required', $data['github_selection']['status']['state'] );
-		self::assertSame( array( 'digest', 'type', 'identifier', 'managed', 'finished' ), array_keys( $data['github_selection']['recovery'] ) );
+		self::assertSame( array( 'digest', 'type', 'identifier', 'managed', 'finished', 'readable' ), array_keys( $data['github_selection']['recovery'] ) );
 		self::assertSame( 'target/main.php', $data['github_selection']['recovery']['identifier'] );
 		self::assertNull( $data['github_selection']['review'] );
 		self::assertSame( array(), $data['credential_profiles'] );

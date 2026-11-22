@@ -231,6 +231,21 @@ if ( ! function_exists( 'wp_kses_post' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_kses' ) ) {
+	/** @param array<string, array<string, bool>> $allowed_html */
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
+	function wp_kses( string $content, array $allowed_html ): string {
+		return strip_tags( $content, array_keys( $allowed_html ) );
+	}
+}
+
+if ( ! function_exists( 'human_time_diff' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
+	function human_time_diff( int $from, int $to = 0 ): string {
+		return (string) intdiv( max( 0, ( 0 === $to ? time() : $to ) - $from ), 60 ) . ' mins';
+	}
+}
+
 if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function wp_strip_all_tags( mixed $value, bool $remove_breaks = false ): string {

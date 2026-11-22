@@ -102,7 +102,7 @@ final class NativeUpdateWarningTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-native-update-warning' . $hidden, $html );
-		self::assertStringContainsString( 'managed GitHub update has not been verified', $html );
+		self::assertStringContainsString( '' === $hidden ? 'GitHub installs are on hold: the last install of <a href="https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold">example-plugin</a> couldn\'t complete.' : 'managed GitHub update has not been verified', $html );
 		self::assertStringNotContainsString( 'private', $html );
 		self::assertStringNotContainsString( 'native_mutation', $html );
 	}
@@ -125,29 +125,34 @@ final class NativeUpdateWarningTest extends TestCase {
 		ob_start();
 		$this->render_warning( $booster );
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'Contact a site administrator.', $html );
-		self::assertStringNotContainsString( 'admin.php?page=ran-booster&tab=gh', $html );
+		self::assertStringContainsString( 'the last install of example-plugin couldn\'t complete. Contact a site administrator.', $html );
+		self::assertStringNotContainsString( 'href', $html );
 
 		$GLOBALS['ran_booster_native_warning_capabilities']['manage_options'] = true;
 		$GLOBALS['ran_booster_test_capabilities']['manage_options']           = true;
 		ob_start();
 		$this->render_warning( $booster );
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'admin.php?page=ran-booster&tab=gh', $html );
+		self::assertStringContainsString( 'admin.php?page=ran-booster&tab=gh#ran-booster-native-hold', $html );
+		self::assertStringNotContainsString( 'Contact a site administrator.', $html );
 	}
 
-	public function test_link_falls_back_to_overview_when_the_provider_tab_is_unavailable(): void {
+	public function test_a_readable_hold_links_its_name_to_the_package_page(): void {
 		$booster = $this->booster(
 			array(
 				'state'     => 'recovery_required',
 				'available' => false,
 			),
-			'bb'
+			'gh',
+			array(
+				'name' => 'Example Plugin',
+				'url'  => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example-plugin%2Fexample-plugin.php#ran-booster-native-hold',
+			)
 		);
 		ob_start();
 		$this->render_warning( $booster );
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'admin.php?page=ran-booster&tab=overview', $html );
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example-plugin%2Fexample-plugin.php#ran-booster-native-hold">Example Plugin</a>', $html );
 		self::assertStringNotContainsString( 'tab=gh', $html );
 	}
 
@@ -234,8 +239,11 @@ final class NativeUpdateWarningTest extends TestCase {
 		self::assertSame( '', (string) ob_get_clean() );
 	}
 
-	/** @param array<string,mixed> $status */
-	private function booster( array $status, string $tab_provider = 'gh' ): Booster {
+	/**
+	 * @param array<string,mixed> $status
+	 * @param array{name: string, url: string}|null $hold
+	 */
+	private function booster( array $status, string $tab_provider = 'gh', ?array $hold = null ): Booster {
 		$container = new CoreContainer();
 		$container->bind(
 			'RAN\\Admin\\ProviderTabLinks',
@@ -245,14 +253,25 @@ final class NativeUpdateWarningTest extends TestCase {
 		);
 		$container->bind(
 			'RAN\\Admin\\ProviderSettingsPresenter',
-			new class( $status ) {
-				/** @param array<string,mixed> $status */
-				public function __construct( private array $status ) {
+			new class( $status, $hold ?? array(
+				'name' => 'example-plugin',
+				'url'  => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold',
+			) ) {
+				/**
+				 * @param array<string,mixed> $status
+				 * @param array{name: string, url: string} $hold
+				 */
+				public function __construct( private array $status, private array $hold ) {
 				}
 
 				/** @return array<string,mixed> */
 				public function github_selection_diagnostics(): array {
 					return $this->status;
+				}
+
+				/** @return array{name: string, url: string}|null */
+				public function native_hold(): ?array {
+					return 'recovery_required' === ( $this->status['state'] ?? null ) ? $this->hold : null;
 				}
 			}
 		);

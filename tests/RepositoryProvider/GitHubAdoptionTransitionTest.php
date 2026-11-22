@@ -401,7 +401,7 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 			'confirmed_removal' => '1',
 		);
 		$dashboard = $this->createMock( \RAN\Dashboard::class );
-		$dashboard->expects( self::exactly( 9 ) )->method( 'add_message' )->with( self::callback( static fn ( mixed $message ): bool => $message instanceof \WP_Error && 'ran_booster_github_recovery' === $message->get_error_code() ) );
+		$dashboard->expects( self::never() )->method( 'add_message' );
 		$controller = $this->admin_controller( $service, $dashboard );
 		foreach ( array( 'manage_options', 'activate_plugins' ) as $capability ) {
 			$GLOBALS['ran_booster_test_capabilities'] = array( $capability => false );
@@ -418,11 +418,11 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 			foreach ( array( null, true, array( '1' ), '0' ) as $invalid ) {
 				$request           = $input;
 				$request[ $field ] = $invalid;
-				$controller->recover_github_native( $request );
+				self::assertNotSame( 'cleared', $controller->recover_github_native( $request ) );
 				self::assertArrayHasKey( 'native_mutation', ( new GitHubSelectionStore( $this->db, 'wp_options' ) )->read() );
 			}
 		}
-		$controller->recover_github_native( array_replace( $input, array( 'review_digest' => str_repeat( 'f', 64 ) ) ) );
+		self::assertNotSame( 'cleared', $controller->recover_github_native( array_replace( $input, array( 'review_digest' => str_repeat( 'f', 64 ) ) ) ) );
 		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
 		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
 	}
@@ -431,14 +431,15 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		$service   = $this->native_recovery_service();
 		$review    = $service->native_recovery_confirmation();
 		$dashboard = $this->createMock( \RAN\Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'add_message' )->with( self::callback( static fn ( mixed $message ): bool => is_string( $message ) && str_contains( $message, 'block is cleared' ) && str_contains( $message, 'temporary files from the interrupted process is unverified' ) ) );
-		$this->admin_controller( $service, $dashboard )->recover_github_native(
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$result = $this->admin_controller( $service, $dashboard )->recover_github_native(
 			array(
 				'review_digest'     => $review['digest'],
 				'confirmed_stopped' => '1',
 				'confirmed_removal' => '1',
 			)
 		);
+		self::assertSame( 'cleared', $result );
 		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
 		self::assertSame( 0, $this->store->read()['selection_generation'] );
 	}
@@ -448,7 +449,7 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		$presenter = new \RAN\Admin\ProviderSettingsPresenter( new \RAN\RepositoryProvider\ProviderRegistry(), $this->secrets, new \RAN\Storage\CredentialUsageReader(), github_selection: $this->selection, package_removal: $service );
 		$data      = $presenter->build( 'gh' );
 		self::assertSame( 'recovery_required', $data['github_selection']['status']['state'] );
-		self::assertSame( array( 'digest', 'type', 'identifier', 'managed', 'finished', 'readable', 'started_at' ), array_keys( $data['github_selection']['recovery'] ) );
+		self::assertSame( array( 'digest', 'type', 'identifier', 'managed', 'finished', 'readable', 'started_at', 'folder', 'name', 'url', 'check_url' ), array_keys( $data['github_selection']['recovery'] ) );
 		self::assertSame( 'target/main.php', $data['github_selection']['recovery']['identifier'] );
 		self::assertNull( $data['github_selection']['review'] );
 		self::assertSame( array(), $data['credential_profiles'] );

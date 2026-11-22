@@ -366,19 +366,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 								echo wp_kses( sprintf( __( 'The last install of %s couldn\'t complete, and Booster can\'t read its files. Delete its folder if it\'s still there, then confirm.', 'ran-booster' ), $native_hold_folder ), array( 'code' => array() ) );
 								?>
 						</p>
-						<form method="post" action="
-								<?php
-								echo esc_url(
-									add_query_arg(
-										array(
-											'page' => 'ran-booster',
-											'tab'  => 'gh',
-										),
-										is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
-									)
-								);
-								?>
-													" data-hx-boost="false">
+						<form method="post" action="<?php echo esc_url( is_multisite() ? network_admin_url( 'admin.php?page=ran-booster&tab=gh' ) : admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
 								<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
 							<input type="hidden" name="ran_booster[action]" value="recover-github-native">
 							<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $native_recovery['digest'] ); ?>">
@@ -452,7 +440,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 					<p><?php esc_html_e( 'Credentials this provider cannot use remain unchanged and unavailable. Packages using them stay paused; Booster will not substitute another credential. Operations this provider does not support remain unavailable.', 'ran-booster' ); ?></p>
 					<h4><?php esc_html_e( 'Approval', 'ran-booster' ); ?></h4>
 					<?php if ( ! $github_selection['available'] && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
-						<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
+						<form method="post" action="<?php echo esc_url( is_multisite() ? network_admin_url( 'admin.php?page=ran-booster&tab=gh' ) : admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
 							<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-adopt-github-' . $adoption_review['digest'] ); ?>
 							<input type="hidden" name="ran_booster[action]" value="adopt-github">
 							<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $adoption_review['digest'] ); ?>">

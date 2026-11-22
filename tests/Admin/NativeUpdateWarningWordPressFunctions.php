@@ -37,6 +37,20 @@ if ( ! function_exists( __NAMESPACE__ . '\\get_current_screen' ) ) {
 	}
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\esc_html__' ) ) {
+	function esc_html__( string $text, string $domain = 'default' ): string {
+		unset( $domain );
+		return $text;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\wp_kses' ) ) {
+	/** @param array<string, array<string, bool>> $allowed_html */
+	function wp_kses( string $content, array $allowed_html ): string {
+		return strip_tags( $content, array_keys( $allowed_html ) );
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\is_multisite' ) ) {
 	function is_multisite(): bool {
 		return false;

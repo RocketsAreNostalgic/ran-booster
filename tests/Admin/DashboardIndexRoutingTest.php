@@ -1191,20 +1191,22 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertNull( $data['review'] );
 	}
 
-	/** @return iterable<string,array{bool,bool,string,bool}> */
+	/** @return iterable<string,array{0:bool,1:bool,2:string,3:bool,4?:bool}> */
 	public static function native_recovery_permissions(): iterable {
 		yield 'authorized plugin available' => array( true, true, 'plugin', true );
 		yield 'authorized theme paused' => array( true, false, 'theme', true );
 		yield 'denied plugin paused' => array( false, false, 'plugin', true );
 		yield 'missing details' => array( true, false, 'plugin', false );
+		yield 'readable plugin' => array( true, false, 'plugin', true, true );
 	}
 
-	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
-	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	#[DataProvider( 'native_recovery_permissions' )]
-	public function test_provider_view_renders_bounded_native_recovery_confirmation( bool $authorized, bool $available, string $type, bool $has_snapshot ): void {
+	public function test_provider_view_renders_bounded_native_recovery_confirmation( bool $authorized, bool $available, string $type, bool $has_snapshot, bool $readable = false ): void {
 		$_GET['tab']                              = 'bb';
-		$GLOBALS['ran_booster_test_capabilities'] = array( 'activate_plugins' => $authorized );
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'activate_plugins' => $authorized,
+			'manage_options'   => true,
+		);
 		$data                                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
 		$data['github_selection']                 = array(
 			'available'      => $available,
@@ -1220,9 +1222,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'digest'     => str_repeat( 'b', 64 ),
 				'type'       => $type,
 				'identifier' => '<target>/main.php',
-				'managed'    => false,
+				'managed'    => $readable,
+				'finished'   => false,
+				'readable'   => $readable,
+				'started_at' => null,
+				'folder'     => '<target>',
+				'name'       => $readable ? 'Target <Plugin>' : '<target>',
+				'url'        => $readable ? 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins#ran-booster-native-hold' : 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold',
+				'check_url'  => 'https://example.test/wp-admin/plugins.php',
 			) : null,
 		);
+		$data['native_hold_result']               = null;
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
 		extract( $data );
 		ob_start();
@@ -1233,32 +1243,34 @@ final class DashboardIndexRoutingTest extends TestCase {
 			ob_end_clean();
 			unset( $GLOBALS['ran_booster_test_capabilities'] );
 		}
-		self::assertStringContainsString( 'An installation needs recovery', $html );
-		self::assertStringContainsString( 'could not confirm whether the installation or update completed', $html );
+		self::assertStringContainsString( 'GitHub installs are on a site-wide hold', $html );
 		if ( ! $available ) {
-			self::assertLessThan( strpos( $html, 'GitHub operations are paused.' ), strpos( $html, 'An installation needs recovery' ) );
+			self::assertLessThan( strpos( $html, 'GitHub operations are paused.' ), strpos( $html, 'GitHub installs are on a site-wide hold' ) );
 		}
 		if ( ! $has_snapshot ) {
 			self::assertStringContainsString( 'Native recovery details could not be verified.', $html );
 			self::assertStringNotContainsString( 'value="recover-github-native"', $html );
 			return;
 		}
-		self::assertStringContainsString( '<code>Affected ' . $type . ': &lt;target&gt;/main.php</code>', $html );
-		self::assertStringContainsString( '<summary>Recovery details</summary>', $html );
-		self::assertStringContainsString( 'A missing main file alone is insufficient for a plugin or theme with a folder.', $html );
-		self::assertStringContainsString( 'does not delete files or repair the installation', $html );
-		self::assertStringContainsString( 'Cleanup of temporary files from the interrupted process remains unverified.', $html );
-		self::assertStringContainsString( '&lt;target&gt;/main.php', $html );
-		self::assertStringNotContainsString( '<target>/main.php', $html );
+		self::assertStringNotContainsString( '<target>', $html );
 		if ( ! $authorized ) {
+			self::assertStringContainsString( 'Provider changes are on hold: the last install of &lt;target&gt; couldn\'t complete. Contact a site administrator.', $html );
 			self::assertStringNotContainsString( 'value="recover-github-native"', $html );
 			return;
 		}
+		if ( $readable ) {
+			self::assertStringContainsString( 'Provider changes are on hold: the last install of <a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins#ran-booster-native-hold">Target &lt;Plugin&gt;</a> couldn\'t complete.', $html );
+			self::assertStringNotContainsString( 'value="recover-github-native"', $html );
+			return;
+		}
+		self::assertStringContainsString( 'the last install of <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh#ran-booster-native-hold">&lt;target&gt;</a> couldn\'t complete.', $html );
+		self::assertStringContainsString( 'The last install of <code>&lt;target&gt;</code> couldn\'t complete, and Booster can\'t read its files. Delete its folder if it\'s still there, then confirm.', $html );
 		self::assertStringContainsString( 'ran-booster-recover-github-' . str_repeat( 'b', 64 ), $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="recover-github-native"', $html );
-		self::assertStringContainsString( 'name="ran_booster[confirmed_stopped]" value="1" required', $html );
-		self::assertStringContainsString( 'name="ran_booster[confirmed_removal]" value="1" required', $html );
-		self::assertStringContainsString( 'Verify removal and disconnect', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed_stopped]" value="1" required> I&#039;m sure the install is no longer running.', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed_removal]" value="1" required>', $html );
+		self::assertStringContainsString( 'The folder <code>&lt;target&gt;</code> is deleted.', $html );
+		self::assertStringContainsString( 'Clear hold and stop managing', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
 	}
 
@@ -2247,7 +2259,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $hidden_dashboard->get_index()['data']['selection_provider_tab_url'] );
 		$_GET = array( 'tab' => 'gh' );
 		foreach ( array( 'recover-github-native', 'adopt-github' ) as $action ) {
-			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->redirect_for( $hidden_dashboard, $action ), $action );
+			// The hold's result follows as query values for the control that shows it.
+			self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->redirect_for( $hidden_dashboard, $action ), $action );
 		}
 
 		$secrets = $this->createMock( SecretsFile::class );
@@ -2308,7 +2321,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $visible_dashboard->get_index()['data']['selection_provider_tab_url'] );
 		$_GET = array( 'tab' => 'gh' );
 		foreach ( array( 'recover-github-native', 'adopt-github' ) as $action ) {
-			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->redirect_for( $visible_dashboard, $action ), $action );
+			self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->redirect_for( $visible_dashboard, $action ), $action );
 		}
 		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
 		self::assertArrayNotHasKey( 'route_not_found', $data );
@@ -3186,6 +3199,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'package_extension_panels',
 				'package_source',
 				'package_paused',
+				'package_native_hold_result',
+				'package_native_hold',
 				'repository_branch_check_outcome',
 				'repository_branch_check_evidence',
 				'repository_branch_check_args',

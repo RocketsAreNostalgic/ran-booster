@@ -23,7 +23,7 @@ if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'activate_plu
 }
 $native_hold_theme  = 'theme' === $package_native_hold['type'];
 $native_hold_check  = '<a href="' . esc_url( $package_native_hold['check_url'] ) . '">';
-$native_hold_reload = '<a href="' . esc_url( $package_native_hold['url'] ) . '">';
+$native_hold_reload = '<a href="' . esc_url( explode( '#', $package_native_hold['url'] )[0] ) . '">';
 ?>
 <section id="ran-booster-native-hold" class="ran-booster-settings-section ran-booster-card" aria-labelledby="ran-booster-native-hold-heading" data-ran-booster-native-hold><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 	<h3 id="ran-booster-native-hold-heading" class="ran-booster-section__title"><?php esc_html_e( 'GitHub installs are on a site-wide hold', 'ran-booster' ); ?></h3>

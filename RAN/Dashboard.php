@@ -1246,7 +1246,7 @@ class Dashboard {
 		if ( ! in_array( $code, array( 'released', 'cleared', 'present', 'busy', 'failed' ), true ) ) {
 			return null;
 		}
-		$folder = is_string( $query['ran_booster_hold_folder'] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z#D', $query['ran_booster_hold_folder'] ) ? $query['ran_booster_hold_folder'] : '';
+		$folder = is_string( $query['ran_booster_hold_folder'] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._-]{0,190}\z#D', $query['ran_booster_hold_folder'] ) ? $query['ran_booster_hold_folder'] : '';
 		return array(
 			'code'   => $code,
 			'folder' => $folder,

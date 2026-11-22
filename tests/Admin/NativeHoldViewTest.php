@@ -30,7 +30,7 @@ final class NativeHoldViewTest extends TestCase {
 	public function test_a_killed_request_shows_when_it_started_and_needs_both_confirmations(): void {
 		$html = $this->render( $this->hold( 'theme', false ) );
 		self::assertStringContainsString( 'The last install of this theme started 12 mins ago and hasn&#039;t completed. Booster can&#039;t tell whether it&#039;s still running. <a href="https://example.test/wp-admin/plugins.php?s=Example">Check that the theme works</a>, then release the hold.', $html );
-		self::assertStringContainsString( 'If it may still be running, <a href="https://example.test/wp-admin/admin.php?page=ran-booster-themes#ran-booster-native-hold">reload this page later</a>.', $html );
+		self::assertStringContainsString( 'If it may still be running, <a href="https://example.test/wp-admin/admin.php?page=ran-booster-themes">reload this page later</a>.', $html );
 		self::assertStringContainsString( 'I&#039;m sure the install is no longer running.', $html );
 		self::assertStringContainsString( 'I&#039;ve checked this theme.', $html );
 	}
@@ -38,7 +38,7 @@ final class NativeHoldViewTest extends TestCase {
 	/** @return iterable<string, array{string, string}> */
 	public static function results(): iterable {
 		yield 'lock held' => array( 'busy', 'Another update is holding the updater lock, so Booster can&#039;t continue yet. Try again when it has finished.' );
-		yield 'other failure' => array( 'failed', 'Booster couldn&#039;t release the hold. <a href="https://example.test/wp-admin/admin.php?page=ran-booster-themes#ran-booster-native-hold">Reload this page</a> and try again.' );
+		yield 'other failure' => array( 'failed', 'Booster couldn&#039;t release the hold. <a href="https://example.test/wp-admin/admin.php?page=ran-booster-themes">Reload this page</a> and try again.' );
 	}
 
 	#[DataProvider( 'results' )]

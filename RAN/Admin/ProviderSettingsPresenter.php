@@ -282,7 +282,7 @@ final readonly class ProviderSettingsPresenter {
 			? add_query_arg(
 				array(
 					'page'    => $plugin ? 'ran-booster-plugins' : 'ran-booster-themes',
-					'package' => $hold['identifier'],
+					'package' => rawurlencode( $hold['identifier'] ),
 				),
 				$admin
 			)
@@ -293,7 +293,7 @@ final readonly class ProviderSettingsPresenter {
 			'url'       => $page . '#ran-booster-native-hold',
 			'check_url' => $plugin
 				? add_query_arg( 's', rawurlencode( $name ), is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' ) )
-				: add_query_arg( 'theme', rawurlencode( $hold['identifier'] ), is_multisite() ? network_admin_url( 'themes.php' ) : admin_url( 'themes.php' ) ),
+				: ( is_multisite() ? add_query_arg( 's', rawurlencode( $name ), network_admin_url( 'themes.php' ) ) : add_query_arg( 'theme', rawurlencode( $hold['identifier'] ), admin_url( 'themes.php' ) ) ),
 		);
 	}
 

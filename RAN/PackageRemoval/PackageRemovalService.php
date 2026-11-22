@@ -63,9 +63,12 @@ final readonly class PackageRemovalService {
 		return ( $this->wordpress->deletion_postcondition( $snapshot['type'], $snapshot['identifier'], true ) )();
 	}
 
-	/** Whether a live updater lock is held now, so a refused release can say another update holds it. */
+	/** Whether another live updater lock is held now; an unfinished hold's own lock is freed by the operation. */
 	public function native_hold_lock_busy(): bool {
-		return null !== $this->updater_lock->current_token();
+		$current = $this->updater_lock->current_token();
+		$marker  = $this->native_recovery_snapshot()['state']['native_mutation'];
+		$own     = is_array( $marker ) && 'finished' !== $marker['phase'] ? GitHubProviderSelection::native_lock_token( $marker ) : null;
+		return null !== $current && $own !== $current;
 	}
 
 	/**

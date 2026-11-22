@@ -262,7 +262,7 @@ class Dispatcher {
 			'hold_folder'  => 'ran_booster_hold_folder',
 			'package_type' => 'ran_booster_hold_type',
 		) as $field => $arg ) {
-			if ( is_string( $request[ $field ] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9][A-Za-z0-9._/-]{0,254}\z#D', $request[ $field ] ) ) {
+			if ( is_string( $request[ $field ] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}\z#D', $request[ $field ] ) ) {
 				$args[ $arg ] = $request[ $field ];
 			}
 		}

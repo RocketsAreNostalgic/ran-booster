@@ -27,6 +27,7 @@ require_once __DIR__ . '/../Support/WPError.php';
 require_once __DIR__ . '/../Deployment/PackageMutationGuardWordPressFunctions.php';
 require_once __DIR__ . '/../Admin/Interaction/AdminInteractionWordPressFunctions.php';
 require_once __DIR__ . '/../Admin/DashboardRoutingWordPressFunctions.php';
+require_once __DIR__ . '/../Admin/AdminViewWordPressFunctions.php';
 
 final class GitHubAdoptionTransitionTest extends TestCase {
 	private string $root;
@@ -418,11 +419,11 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 			foreach ( array( null, true, array( '1' ), '0' ) as $invalid ) {
 				$request           = $input;
 				$request[ $field ] = $invalid;
-				self::assertNotSame( 'cleared', $controller->recover_github_native( $request ) );
+				self::assertSame( 'failed', $controller->recover_github_native( $request ) );
 				self::assertArrayHasKey( 'native_mutation', ( new GitHubSelectionStore( $this->db, 'wp_options' ) )->read() );
 			}
 		}
-		self::assertNotSame( 'cleared', $controller->recover_github_native( array_replace( $input, array( 'review_digest' => str_repeat( 'f', 64 ) ) ) ) );
+		self::assertSame( 'failed', $controller->recover_github_native( array_replace( $input, array( 'review_digest' => str_repeat( 'f', 64 ) ) ) ) );
 		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
 		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
 	}

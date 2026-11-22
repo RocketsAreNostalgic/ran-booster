@@ -375,6 +375,7 @@ final class NativeRecoveryTest extends TestCase {
 		$own = (string) ( time() - 10 );
 		$this->hold( self::tag( $own ), 'started' );
 		$this->db->option_rows['auto_updater.lock'] = $own;
+		self::assertFalse( $this->service->native_hold_lock_busy() );
 		$this->operate( $operation );
 		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
 		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
@@ -395,6 +396,7 @@ final class NativeRecoveryTest extends TestCase {
 		$foreign = (string) ( $own + $offset );
 		$this->hold( 0 === $offset && 'started' === $phase ? str_repeat( 'a', 32 ) : self::tag( (string) $own ), $phase );
 		$this->db->option_rows['auto_updater.lock'] = $foreign;
+		self::assertTrue( $this->service->native_hold_lock_busy() );
 		$this->refused( fn () => $this->operate( $operation ) );
 		self::assertSame( $foreign, $this->db->option_rows['auto_updater.lock'] );
 		self::assertArrayHasKey( 'native_mutation', $this->store->read() );

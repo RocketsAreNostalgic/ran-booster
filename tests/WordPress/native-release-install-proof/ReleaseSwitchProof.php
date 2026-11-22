@@ -563,11 +563,11 @@ final class RAN_Booster_ReleaseSwitchProof {
 		}
 		clearstatcache();
 		$this->refused( fn () => $removal->recover_native_removal( $review['digest'], true, false, $authorized ) );
-		if ( $store->read( true )['native_mutation'] !== $hold || null === $this->managed_row() ) {
+		if ( $this->held( $store ) !== $hold || null === $this->managed_row() ) {
 			throw new RuntimeException( 'A refused removal recovery changed the hold or the record.' );
 		}
 		$removal->recover_native_removal( $review['digest'], true, true, $authorized );
-		if ( isset( $store->read( true )['native_mutation'] ) || null !== $this->lock_row() || null !== $this->managed_row() || file_exists( $this->directory ) ) {
+		if ( null !== $this->held( $store ) || null !== $this->lock_row() || null !== $this->managed_row() || file_exists( $this->directory ) ) {
 			throw new RuntimeException( 'The removal recovery left the hold, a lock, the record or the folder.' );
 		}
 		$this->report( 'removed_and_recovered', 'none' );
@@ -628,6 +628,11 @@ final class RAN_Booster_ReleaseSwitchProof {
 		$this->cleanup();
 	}
 
+	/** @phpstan-impure Reads the stored hold afresh. */
+	private function held( GitHubSelectionStore $store ): mixed {
+		return $store->read( true )['native_mutation'] ?? null;
+	}
+
 	/** @param array<string, mixed>|null $row */
 	private function stop_managing( PackageRemovalService $removal, ?array $row ): string {
 		try {
@@ -673,13 +678,20 @@ final class RAN_Booster_ReleaseSwitchProof {
 		}
 	}
 
-	/** @return array<string, mixed>|null */
+	/**
+	 * @return array<string, mixed>|null
+	 * @phpstan-impure Reads the stored row afresh.
+	 */
 	private function managed_row(): ?array {
 		global $wpdb;
 		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE package = %s', ran_booster_table_name(), $this->identity ), ARRAY_A );
 	}
 
-	/** The raw updater lock row, past every option cache. */
+	/**
+	 * The raw updater lock row, past every option cache.
+	 *
+	 * @phpstan-impure Reads the stored row afresh.
+	 */
 	private function lock_row(): ?string {
 		global $wpdb;
 		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );

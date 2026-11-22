@@ -35,6 +35,24 @@ final class NativeHoldViewTest extends TestCase {
 		self::assertStringContainsString( 'I&#039;ve checked this theme.', $html );
 	}
 
+	public function test_a_killed_request_without_a_start_time_omits_the_timing_phrase(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			$hold               = $this->hold( $type, false );
+			$hold['started_at'] = null;
+			$html               = $this->render( $hold );
+			self::assertStringContainsString(
+				'The last install of this ' . $type . ' hasn&#039;t completed. Booster can&#039;t tell whether it&#039;s still running. <a href="https://example.test/wp-admin/plugins.php?s=Example">Check that the ' . $type . ' works</a>, then release the hold.',
+				$html
+			);
+			self::assertStringNotContainsString( 'started', $html );
+			self::assertStringNotContainsString( 'ago', $html );
+			self::assertStringNotContainsString( '1 min', $html );
+			self::assertStringContainsString( 'reload this page later', $html );
+			self::assertStringContainsString( 'name="ran_booster[confirmed_stopped]"', $html );
+			self::assertStringContainsString( 'name="ran_booster[confirmed_checked]"', $html );
+		}
+	}
+
 	/** @return iterable<string, array{string, string}> */
 	public static function results(): iterable {
 		yield 'lock held' => array( 'busy', 'Another update is holding the updater lock, so Booster can&#039;t continue yet. Try again when it has finished.' );

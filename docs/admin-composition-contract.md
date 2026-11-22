@@ -1644,23 +1644,38 @@ a current context or exports this destination authority.
 
 ### Interrupted GitHub native installation
 
-The GitHub settings page exposes Core's protected removal recovery while an
-uncertain native mutation blocks further installation or implementation switching.
-It shows only the target type and installed identifier. Recovery requires both
-`manage_options` and `activate_plugins`, a fresh review-bound nonce, and explicit
-confirmation that the interrupted process stopped and the whole target was removed.
-A missing plugin entry file alone is insufficient. Core does not delete files or
-certify a retained installation through this action.
+While an uncertain GitHub native mutation keeps a site-wide hold, further
+GitHub-managed installation and provider selection switching remain blocked.
+Both recovery controls require `manage_options` and `activate_plugins`, a
+fresh review-bound nonce, and explicit confirmation matching the hold's state:
 
-Recovery takes the existing updater lock without reclaiming an occupied lock,
-verifies physical absence, disconnects only the reviewed management record, and
-clears only the exact reviewed native marker after fresh storage and operation
-checks. Ambiguous management or queued work within the affected plugin folder
-refuses recovery. Selection generation, implementation approval and credential
-material are preserved. Changed authority, uncertain storage outcomes, failed cache
-invalidation or lost lock ownership do not produce a success notice.
+- **Readable managed targets (`release-github-hold`).** Exposed on the held
+  package's own Booster page; the site-wide warning and GitHub provider page
+  link there. Requires confirming the package was checked, and when the hold's
+  `phase` is still `started`, confirming the interrupted process stopped. Keeps
+  the management record and settings byte-identical, invalidates the native
+  cache, and clears the exact reviewed hold in one store transaction.
+- **Unreadable or unmanaged targets (`recover-github-native`).** Retained on
+  the GitHub settings page only when the target is missing, damaged so it no
+  longer registers, or never became managed. Shows only the target identity
+  and requires confirming both that the interrupted process stopped and that
+  the whole target was removed; a missing plugin entry file alone is
+  insufficient. Verifies physical absence, disconnects only the reviewed
+  management record if present, and clears the exact reviewed hold. Core does
+  not delete files or certify a retained installation through either action.
 
-Successful removal recovery does not verify cleanup of temporary files left by the
+For an unfinished (`started`) hold after the stop confirmation, Core frees only
+an `auto_updater.lock` row carrying the hold's exact owner-tag lock token before
+acquiring `auto_updater.lock` normally. Automatic updates omit the lock token
+from `owner_tag` so release never frees WordPress's live multi-package
+auto-update lock. A live lock owned by another operation is never removed; any
+remaining non-matching row falls back to WordPress's inherited one-hour
+stale-lock reclaim. Ambiguous management or queued work within the affected plugin folder refuses recovery. Selection generation,
+implementation approval and credential material are preserved. Changed
+authority, uncertain storage outcomes, failed cache invalidation or lost lock
+ownership do not produce a success notice.
+
+Successful recovery does not verify cleanup of temporary files left by the
 interrupted process. Current provider availability and fresh installation review
 remain mandatory before another operation. Browser acceptance and installed
 qualification against the feature-bearing immutable dependencies are separate gates.

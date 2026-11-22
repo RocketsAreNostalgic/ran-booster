@@ -1571,6 +1571,29 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $lock->acquires );
 	}
 
+	public function test_automatic_native_update_omits_wordpress_lock_token_from_its_hold(): void {
+		$package                               = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::AUTOMATIC );
+		[ $registrar, $lock ]                  = $this->native_plugin_registrar( $package );
+		$upgrader                              = (object) array( 'skin' => new \Automatic_Upgrader_Skin() );
+		$GLOBALS['ran_booster_runtime_action'] = 'wp_maybe_auto_update';
+
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $upgrader, self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+		self::assertNotNull( $this->native_selection_store );
+		$marker = $this->native_selection_store->read()['native_mutation'] ?? null;
+		self::assertIsArray( $marker );
+		self::assertNull( GitHubProviderSelection::native_lock_token( $marker ) );
+
+		$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'uncertain' );
+		$finished = $this->native_selection_store->read()['native_mutation'] ?? null;
+		self::assertIsArray( $finished );
+		self::assertSame( 'finished', $finished['phase'] );
+		self::assertNull( GitHubProviderSelection::native_lock_token( $finished ) );
+		self::assertSame( array(), $lock->releases );
+		self::assertSame( '1700000001', $lock->token );
+	}
+
 	public function test_automatic_native_update_rejects_a_missing_or_replaced_outer_token_without_releasing_it(): void {
 		$package                               = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::AUTOMATIC );
 		$GLOBALS['ran_booster_runtime_action'] = 'wp_maybe_auto_update';

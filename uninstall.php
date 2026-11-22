@@ -23,7 +23,7 @@ try {
 		switch ( $failure->getMessage() ) {
 			case 'Booster has an unfinished native mutation that must be resolved before cleanup.':
 				$ran_booster_diagnostic = 'uninstall_native_unfinished';
-				$ran_booster_guidance   = __( 'Reactivate Booster if needed, open the Booster GitHub page, and review An installation needs recovery before retrying Delete.', 'ran-booster' );
+				$ran_booster_guidance   = __( 'Reactivate Booster if needed, open the Booster GitHub page, and release the install hold before retrying Delete.', 'ran-booster' );
 				break;
 			case 'Booster has unfinished work that must be resolved before cleanup.':
 				$ran_booster_diagnostic = 'uninstall_deployments_unfinished';

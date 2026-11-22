@@ -1363,7 +1363,10 @@ class Booster {
 				echo wp_kses( sprintf( __( 'GitHub installs are on hold: the last install of %s couldn\'t complete.', 'ran-booster' ), $name ), array( 'a' => array( 'href' => true ) ) );
 			} else {
 				// Shown later by the heartbeat, before this page knows which package is held.
-				esc_html_e( 'A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed.', 'ran-booster' );
+				esc_html_e( 'GitHub installs are on hold: the last install couldn\'t complete.', 'ran-booster' );
+				if ( $can_manage ) {
+					echo ' <a href="' . esc_url( $this->service( \RAN\Admin\ProviderTabLinks::class )->url( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ), 'gh' ) ) . '">' . esc_html__( 'Review GitHub management.', 'ran-booster' ) . '</a>';
+				}
 			}
 			if ( ! $can_manage ) {
 				echo ' ' . esc_html__( 'Contact a site administrator.', 'ran-booster' );

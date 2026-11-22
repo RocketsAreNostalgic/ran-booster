@@ -358,7 +358,12 @@ final class ManagedReleaseTargetRegistrar {
 			throw new \RuntimeException( 'The managed release authority changed after staging.' );
 		}
 		PackageMutationGuard::assert_package_mutation_allowed();
-		$owner = $this->github_selection->begin_native_mutation( $type, $identity, fn (): bool => $pending['lock'] === $this->updater_lock->current_token(), $pending['lock'] );
+		$owner = $this->github_selection->begin_native_mutation(
+			$type,
+			$identity,
+			fn (): bool => $pending['lock'] === $this->updater_lock->current_token(),
+			$pending['automatic'] ? null : $pending['lock']
+		);
 		$this->native_updates[ self::key( $type, $identity ) ]['native_owner'] = $owner;
 		return $owner;
 	}

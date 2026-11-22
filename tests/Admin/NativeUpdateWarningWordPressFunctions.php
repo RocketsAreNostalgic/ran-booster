@@ -53,13 +53,19 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_kses' ) ) {
 
 if ( ! function_exists( __NAMESPACE__ . '\\is_multisite' ) ) {
 	function is_multisite(): bool {
-		return false;
+		return (bool) ( $GLOBALS['ran_booster_native_warning_multisite'] ?? false );
 	}
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\admin_url' ) ) {
 	function admin_url( string $path = '' ): string {
 		return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\network_admin_url' ) ) {
+	function network_admin_url( string $path = '' ): string {
+		return 'https://example.test/wp-admin/network/' . ltrim( $path, '/' );
 	}
 }
 

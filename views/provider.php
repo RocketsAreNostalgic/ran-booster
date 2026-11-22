@@ -277,25 +277,13 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 	<?php } ?>
 
 
-			<?php if ( is_array( $native_hold_result ?? null ) && 'cleared' === $native_hold_result['code'] && '' !== $native_hold_result['folder'] ) { ?>
-				<div id="ran-booster-native-hold" class="notice notice-success inline ran-wp-ui-notice ran-wp-ui-box-sizing is-success" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="success"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
-				<?php
-				echo wp_kses(
-					sprintf(
-						/* translators: 1: the folder Booster no longer manages, 2: opening link to the install form, 3: closing link. */
-						__( 'Hold cleared. Booster no longer manages %1$s. %2$sInstall it again%3$s to continue.', 'ran-booster' ),
-						'<code>' . esc_html( $native_hold_result['folder'] ) . '</code>',
-						'<a href="' . esc_url( add_query_arg( 'page', 'theme' === $native_hold_result['type'] ? 'ran-booster-themes-create' : 'ran-booster-plugins-create', is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) ) . '">',
-						'</a>'
-					),
-					array(
-						'a'    => array( 'href' => true ),
-						'code' => array(),
-					)
-				);
-				?>
-				</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'success' ); ?></div>
-			<?php } ?>
+			<?php
+			$native_hold_result         = $native_hold_result ?? null;
+			$native_hold_result_surface = 'provider-notice';
+			$native_hold_reload_url     = '';
+			$native_hold_status_folder  = '';
+			require __DIR__ . '/native-hold-result.php';
+			?>
 	<?php if ( isset( $github_selection ) && is_array( $github_selection ) ) { ?>
 		<?php
 		$selection_status       = $github_selection['status'];
@@ -346,7 +334,6 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 							<?php
 							$native_hold_capable = current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
 							$native_hold_name    = $native_hold_capable ? '<a href="' . esc_url( $native_recovery['url'] ) . '">' . esc_html( $native_recovery['name'] ) . '</a>' : esc_html( $native_recovery['name'] );
-							$native_hold_code    = is_array( $native_hold_result ?? null ) ? $native_hold_result['code'] : '';
 							$native_hold_folder  = '<code>' . esc_html( $native_recovery['folder'] ) . '</code>';
 							?>
 						<p>
@@ -380,23 +367,12 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 								?>
 							</label></p>
 							<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Clear hold and stop managing', 'ran-booster' ); ?></button>
-								<?php if ( 'present' === $native_hold_code ) { ?>
-							<p role="status">
-									<?php
-									/* translators: %s: the held package's folder name. */
-									echo wp_kses( sprintf( __( 'The folder %s is still there. Delete it, then confirm again.', 'ran-booster' ), $native_hold_folder ), array( 'code' => array() ) );
-									?>
-							</p>
-								<?php } elseif ( 'busy' === $native_hold_code ) { ?>
-							<p role="status"><?php esc_html_e( 'Another update is holding the updater lock, so Booster can\'t continue yet. Try again when it has finished.', 'ran-booster' ); ?></p>
-								<?php } elseif ( 'failed' === $native_hold_code ) { ?>
-							<p role="status">
-									<?php
-									/* translators: 1: opening link that reloads this page, 2: closing link. */
-									echo wp_kses( sprintf( __( 'Booster couldn\'t release the hold. %1$sReload this page%2$s and try again.', 'ran-booster' ), '<a href="' . esc_url( $native_recovery['url'] ) . '">', '</a>' ), array( 'a' => array( 'href' => true ) ) );
-									?>
-							</p>
-								<?php } ?>
+								<?php
+								$native_hold_result_surface = 'provider-status';
+								$native_hold_reload_url     = $native_recovery['url'];
+								$native_hold_status_folder  = $native_recovery['folder'];
+								require __DIR__ . '/native-hold-result.php';
+								?>
 						</form>
 						</div>
 							<?php } ?>

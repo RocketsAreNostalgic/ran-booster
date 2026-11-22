@@ -457,6 +457,77 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		self::assertSame( array(), $data['webhook_profiles'] );
 	}
 
+	public function test_release_github_hold_checks_permissions_nonce_lock_and_releases_in_place(): void {
+		$service   = $this->readable_hold_service();
+		$review    = $service->native_recovery_confirmation();
+		$input     = array(
+			'review_digest'     => $review['digest'],
+			'confirmed_stopped' => '1',
+			'confirmed_checked' => '1',
+		);
+		$dashboard = $this->createMock( \RAN\Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$controller = $this->admin_controller( $service, $dashboard );
+
+		foreach ( array( 'manage_options', 'activate_plugins' ) as $capability ) {
+			$GLOBALS['ran_booster_test_capabilities'] = array( $capability => false );
+			$GLOBALS['ran_booster_test_nonce_checks'] = array();
+			$this->refused( fn () => $controller->release_github_hold( $input ) );
+			self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+		}
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$GLOBALS['ran_booster_test_nonce_valid']  = false;
+		$this->refused( fn () => $controller->release_github_hold( $input ) );
+		self::assertSame( array( 'ran-booster-release-github-hold-' . $review['digest'] ), $GLOBALS['ran_booster_test_nonce_checks'] );
+
+		$GLOBALS['ran_booster_test_nonce_valid'] = true;
+		foreach ( array( 'confirmed_stopped', 'confirmed_checked' ) as $field ) {
+			$request           = $input;
+			$request[ $field ] = '0';
+			self::assertSame( 'failed', $controller->release_github_hold( $request ) );
+		}
+		self::assertSame( 'failed', $controller->release_github_hold( array_replace( $input, array( 'review_digest' => str_repeat( 'f', 64 ) ) ) ) );
+
+		$foreign                                    = (string) time();
+		$this->db->option_rows['auto_updater.lock'] = $foreign;
+		self::assertSame( 'busy', $controller->release_github_hold( $input ) );
+		self::assertSame( $foreign, $this->db->option_rows['auto_updater.lock'] );
+		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+
+		unset( $this->db->option_rows['auto_updater.lock'] );
+		self::assertSame( 'released', $controller->release_github_hold( $input ) );
+		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
+	}
+
+	private function readable_hold_service(): \RAN\PackageRemoval\PackageRemovalService {
+		$state                     = $this->store->read();
+		$marked                    = $state;
+		$marked['native_mutation'] = array(
+			'selection_generation' => 0,
+			'owner_tag'            => str_repeat( 'a', 32 ),
+			'target_type'          => 'plugin',
+			'installed_identity'   => 'target/main.php',
+			'phase'                => 'started',
+		);
+		self::assertTrue( $this->store->compare_and_swap( $state, $marked ) );
+		$record  = array(
+			'id'             => '1',
+			'package'        => 'target/main.php',
+			'type'           => 1,
+			'adoption_token' => 'exact-adoption',
+			'source'         => 'release_asset',
+			'digest'         => str_repeat( 'b', 64 ),
+		);
+		$plugins = $this->createMock( \RAN\Storage\PluginRepository::class );
+		$plugins->method( 'native_recovery_record' )->willReturn( $record );
+		$gateway = $this->createMock( \RAN\PackageRemoval\PackageRemovalGateway::class );
+		$gateway->method( 'installed_targets' )->willReturn( array( 'target/main.php' => 'Target' ) );
+		$gateway->expects( self::never() )->method( 'delete_plugin' );
+		$gateway->expects( self::never() )->method( 'delete_theme' );
+		return new \RAN\PackageRemoval\PackageRemovalService( $plugins, $this->createStub( \RAN\Storage\ThemeRepository::class ), $gateway, $this->attempts, new WordPressUpdaterLock(), github_selection: $this->selection );
+	}
+
 	private function native_recovery_service(): \RAN\PackageRemoval\PackageRemovalService {
 		$state                     = $this->store->read();
 		$marked                    = $state;

@@ -348,7 +348,7 @@ class Dashboard {
 					$this->storage_status( false );
 				}
 				$data['troubleshooting']            = $this->troubleshooting->installation_payload( $this->provider_settings->github_selection_diagnostics(), $this->storage_installation_projection() );
-				$data['selection_provider_tab_url'] = $this->scoped_provider_tab_url( 'gh' );
+				$data['selection_provider_tab_url'] = $this->provider_tab_url( 'gh' );
 			} elseif ( 'support-report' === $panel ) {
 				$data['troubleshooting'] = array(
 					'report'           => $this->support_report_payload['text'] ?? '',
@@ -520,7 +520,7 @@ class Dashboard {
 		return array(
 			'troubleshooting'              => $this->troubleshooting->with_installation_context( $this->troubleshooting_payload ?? $this->troubleshooting->form_payload(), $selection ),
 			'github_selection_diagnostics' => $selection,
-			'selection_provider_tab_url'   => $this->scoped_provider_tab_url( 'gh' ),
+			'selection_provider_tab_url'   => $this->provider_tab_url( 'gh' ),
 		);
 	}
 
@@ -1682,10 +1682,6 @@ class Dashboard {
 
 	/** Return target after a provider management action. */
 	public function provider_tab_url( string $provider_code ): string {
-		return $this->tab_links()->url( admin_url( 'admin.php' ), $provider_code );
-	}
-
-	private function scoped_provider_tab_url( string $provider_code ): string {
 		return $this->tab_links()->url( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ), $provider_code );
 	}
 

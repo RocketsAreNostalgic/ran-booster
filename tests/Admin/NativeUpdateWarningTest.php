@@ -31,6 +31,7 @@ final class NativeUpdateWarningTest extends TestCase {
 		$GLOBALS['ran_booster_test_capability_checks']           = array();
 		$GLOBALS['ran_booster_test_capabilities']                = $GLOBALS['ran_booster_native_warning_capabilities'];
 		$GLOBALS['ran_booster_native_warning_screen']            = (object) array( 'id' => 'plugins' );
+		$GLOBALS['ran_booster_native_warning_multisite']         = false;
 		$GLOBALS['ran_booster_asset_test_registered_scripts']    = array();
 		$GLOBALS['ran_booster_asset_test_enqueued_scripts']      = array();
 		$GLOBALS['ran_booster_asset_test_script_events']         = array();
@@ -102,7 +103,10 @@ final class NativeUpdateWarningTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-native-update-warning' . $hidden, $html );
-		self::assertStringContainsString( '' === $hidden ? 'GitHub installs are on hold: the last install of <a href="https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold">example-plugin</a> couldn\'t complete.' : 'managed GitHub update has not been verified', $html );
+		self::assertStringContainsString( '' === $hidden ? 'GitHub installs are on hold: the last install of <a href="https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold">example-plugin</a> couldn\'t complete.' : 'GitHub installs are on hold: the last install couldn&#039;t complete.', $html );
+		if ( ' hidden' === $hidden ) {
+			self::assertStringContainsString( '<a href="https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh">Review GitHub management.</a>', $html );
+		}
 		self::assertStringNotContainsString( 'private', $html );
 		self::assertStringNotContainsString( 'native_mutation', $html );
 	}
@@ -154,6 +158,32 @@ final class NativeUpdateWarningTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( '<a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example-plugin%2Fexample-plugin.php#ran-booster-native-hold">Example Plugin</a>', $html );
 		self::assertStringNotContainsString( 'tab=gh', $html );
+	}
+
+	public function test_heartbeat_fallback_warning_uses_network_link_on_multisite_and_hides_link_without_capability(): void {
+		$booster = $this->booster(
+			array(
+				'state'     => 'available',
+				'available' => true,
+			)
+		);
+
+		$GLOBALS['ran_booster_native_warning_multisite'] = true;
+		ob_start();
+		$this->render_warning( $booster );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh">Review GitHub management.</a>', $html );
+		self::assertStringNotContainsString( 'Contact a site administrator.', $html );
+
+		$GLOBALS['ran_booster_native_warning_capabilities']['manage_options'] = false;
+		$GLOBALS['ran_booster_test_capabilities']['manage_options']           = false;
+		ob_start();
+		$this->render_warning( $booster );
+		$restricted = (string) ob_get_clean();
+		self::assertStringContainsString( 'GitHub installs are on hold: the last install couldn&#039;t complete. Contact a site administrator.', $restricted );
+		self::assertStringNotContainsString( 'until verification is complete', $restricted );
+		self::assertStringNotContainsString( 'Review GitHub management.', $restricted );
+		self::assertStringNotContainsString( 'href', $restricted );
 	}
 
 	public function test_heartbeat_omits_unknown_and_unauthorized_statuses(): void {

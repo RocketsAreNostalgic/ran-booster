@@ -1274,6 +1274,79 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
 	}
 
+	public function test_provider_view_renders_native_hold_result_notices_and_statuses(): void {
+		$_GET['tab']                              = 'bb';
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'activate_plugins' => true,
+			'manage_options'   => true,
+		);
+		$base_data                                = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
+		$render                                   = static function ( array $data ): string {
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+			extract( $data );
+			ob_start();
+			try {
+				require dirname( __DIR__, 2 ) . '/views/provider.php';
+				return (string) ob_get_contents();
+			} finally {
+				ob_end_clean();
+			}
+		};
+
+		try {
+			$cleared_data                       = $base_data;
+			$cleared_data['native_hold_result'] = array(
+				'code'   => 'cleared',
+				'folder' => '<target>',
+				'type'   => 'theme',
+			);
+			$cleared_html                       = $render( $cleared_data );
+			self::assertStringContainsString( 'Hold cleared. Booster no longer manages <code>&lt;target&gt;</code>. <a href="https://example.test/wp-admin/admin.php?page=ran-booster-themes-create">Install it again</a> to continue.', $cleared_html );
+
+			$held_data                     = $base_data;
+			$held_data['github_selection'] = array(
+				'available'      => false,
+				'status'         => array(
+					'state'      => 'recovery_required',
+					'candidates' => array(),
+					'current'    => null,
+				),
+				'error'          => '',
+				'package_counts' => null,
+				'review'         => null,
+				'recovery'       => array(
+					'digest'     => str_repeat( 'b', 64 ),
+					'type'       => 'plugin',
+					'identifier' => '<target>/main.php',
+					'managed'    => false,
+					'finished'   => false,
+					'readable'   => false,
+					'started_at' => null,
+					'folder'     => '<target>',
+					'name'       => '<target>',
+					'url'        => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold',
+					'check_url'  => 'https://example.test/wp-admin/plugins.php',
+				),
+			);
+			foreach ( array(
+				'present' => 'The folder <code>&lt;target&gt;</code> is still there. Delete it, then confirm again.',
+				'busy'    => 'Another update is holding the updater lock, so Booster can&#039;t continue yet. Try again when it has finished.',
+				'failed'  => 'Booster couldn&#039;t release the hold. <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh">Reload this page</a> and try again.',
+			) as $code => $expected ) {
+				$held_data['native_hold_result'] = array(
+					'code'   => $code,
+					'folder' => '<target>',
+					'type'   => 'plugin',
+				);
+				$html                            = $render( $held_data );
+				self::assertStringContainsString( '<p role="status">', $html, $code );
+				self::assertStringContainsString( $expected, $html, $code );
+			}
+		} finally {
+			unset( $GLOBALS['ran_booster_test_capabilities'] );
+		}
+	}
+
 	public function test_provider_tab_builds_only_the_selected_provider_settings(): void {
 		$_GET['tab'] = 'bb';
 
@@ -2399,7 +2472,87 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=overview', $data['route_not_found_url'] );
 	}
 
-	private function redirect_for( Dashboard $dashboard, string $action ): string {
+	public function test_multisite_native_hold_redirects_and_result_query_parsing(): void {
+		$GLOBALS['ran_booster_dashboard_test_multisite'] = true;
+		$dashboard                                       = $this->dashboard( $this->throwing_secrets() );
+
+		self::assertSame(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
+			$dashboard->provider_tab_url( 'gh' )
+		);
+		self::assertSame(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
+			$this->redirect_for( $dashboard, 'adopt-github' )
+		);
+		self::assertSame(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&ran_booster_hold=cleared&ran_booster_hold_folder=target-plugin&ran_booster_hold_type=plugin#ran-booster-native-hold',
+			$this->redirect_for(
+				$dashboard,
+				'recover-github-native',
+				array(
+					'hold_folder'  => 'target-plugin',
+					'package_type' => 'plugin',
+				)
+			)
+		);
+		self::assertSame(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster-plugins&ran_booster_hold=released&package=example%2Fexample.php&ran_booster_hold_type=plugin#ran-booster-native-hold',
+			$this->redirect_for(
+				$dashboard,
+				'release-github-hold',
+				array(
+					'package'      => 'example/example.php',
+					'package_type' => 'plugin',
+				)
+			)
+		);
+		self::assertSame(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster-themes&ran_booster_hold=released&package=example-theme&ran_booster_hold_type=theme#ran-booster-native-hold',
+			$this->redirect_for(
+				$dashboard,
+				'release-github-hold',
+				array(
+					'package'      => 'example-theme',
+					'package_type' => 'theme',
+				)
+			)
+		);
+
+		$parse = new ReflectionMethod( Dashboard::class, 'native_hold_result' );
+		$_GET  = array();
+		self::assertNull( $parse->invoke( $dashboard ) );
+		$_GET = array( 'ran_booster_hold' => 'unknown' );
+		self::assertNull( $parse->invoke( $dashboard ) );
+		$_GET = array(
+			'ran_booster_hold'        => 'cleared',
+			'ran_booster_hold_folder' => 'example_plugin-1.0',
+			'ran_booster_hold_type'   => 'theme',
+		);
+		self::assertSame(
+			array(
+				'code'   => 'cleared',
+				'folder' => 'example_plugin-1.0',
+				'type'   => 'theme',
+			),
+			$parse->invoke( $dashboard )
+		);
+		$_GET = array(
+			'ran_booster_hold'        => 'present',
+			'ran_booster_hold_folder' => '../bad',
+			'ran_booster_hold_type'   => 'other',
+		);
+		self::assertSame(
+			array(
+				'code'   => 'present',
+				'folder' => '',
+				'type'   => 'plugin',
+			),
+			$parse->invoke( $dashboard )
+		);
+	}
+
+	/** @param array<string, mixed> $extra */
+	private function redirect_for( Dashboard $dashboard, string $action, array $extra = array() ): string {
 		$dispatcher = new class() extends \RAN\Dispatcher {
 			public function __construct() {
 			}
@@ -2409,9 +2562,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 		};
 		$profiles   = $this->createMock( \RAN\Admin\ProviderProfileAdminController::class );
+		$profiles->method( 'recover_github_native' )->willReturn( 'cleared' );
+		$profiles->method( 'release_github_hold' )->willReturn( 'released' );
 		( new \ReflectionProperty( \RAN\Dispatcher::class, 'dashboard' ) )->setValue( $dispatcher, $dashboard );
 		( new \ReflectionProperty( \RAN\Dispatcher::class, 'provider_profiles' ) )->setValue( $dispatcher, $profiles );
-		$_POST = array( 'ran_booster' => array( 'action' => $action ) );
+		$_POST = array( 'ran_booster' => array( 'action' => $action ) + $extra );
 		try {
 			$dispatcher->dispatch_post_requests();
 		} catch ( RuntimeException $redirect ) {

@@ -467,18 +467,19 @@ final class GitHubProviderSelection {
 
 	/**
 	 * @param callable():bool $owns_lock Exact captured updater ownership, never acquisition.
-	 * @param string $lock_token The held updater lock's value, carried in the owner tag so a release can free that exact lock.
+	 * @param string|null $lock_token The held updater lock's value, carried in the owner tag so a release can free that exact lock, or null when the caller does not own WordPress's lock (automatic updates).
 	 */
-	public function begin_native_mutation( string $type, string $identity, callable $owns_lock, string $lock_token ): string {
+	public function begin_native_mutation( string $type, string $identity, callable $owns_lock, ?string $lock_token ): string {
 		$marker                                      = $this->store->selection_transaction(
 			function () use ( $type, $identity, $owns_lock, $lock_token ): array {
 				$state = $this->store->read( true );
-				if ( isset( $state['native_mutation'] ) || 1 !== preg_match( '/\A[1-9]\d{0,15}\z/D', $lock_token ) || ! $this->owns_native_lock( $owns_lock ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
+				if ( isset( $state['native_mutation'] ) || ( null !== $lock_token && 1 !== preg_match( '/\A[1-9]\d{0,15}\z/D', $lock_token ) ) || ! $this->owns_native_lock( $owns_lock ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
 						throw new \RuntimeException( 'GitHub native mutation is unavailable.' );
 				}
+				$prefix                  = null === $lock_token ? str_repeat( '0', 16 ) : sprintf( '%016x', (int) $lock_token );
 				$marker                  = array(
 					'selection_generation' => $state['selection_generation'],
-					'owner_tag'            => sprintf( '%016x', (int) $lock_token ) . bin2hex( random_bytes( 8 ) ),
+					'owner_tag'            => $prefix . bin2hex( random_bytes( 8 ) ),
 					'target_type'          => $type,
 					'installed_identity'   => $identity,
 					'phase'                => 'started',

@@ -69,7 +69,7 @@ other active PHP plugins.
 | **The selected GitHub provider could not load** | The approved replacement is active but Booster could not create it, for example because its bundled libraries differ from this Booster release. No approval is offered, because approving again runs the same load. Install a version built for this Booster release, or deactivate the replacement and review a return to bundled GitHub. Packages show the same cause. |
 | **Review GitHub provider** | Read the current review and make the consent choices above. |
 | **GitHub provider selection is unavailable** | Restore storage before continuing; do not edit selection records to force a choice. |
-| **An installation needs recovery** | Follow the recovery procedure below before switching. |
+| **GitHub installs are on a site-wide hold** | Release the hold on the held package's own page when readable, or clear it through removal recovery below before switching. |
 
 A refusal that the adoption review or credential reuse consent changed means
 the old form is stale. Reload the GitHub page, inspect the current review and
@@ -101,21 +101,39 @@ First inspect the exact plugin/theme and WordPress update result. A lost respons
 or partial installation does not mean nothing changed. Keep backups and the
 protected state; never delete locks or recovery markers to force a retry.
 
-When the GitHub page shows **An installation needs recovery**, Booster could not
-confirm whether the installation or update completed. Its supported action is
-removal verification, not repair. Confirm the interrupted process has stopped.
-Arrange removal of the **entire exact target** plugin or theme identified there,
-preserving a backup of anything needed. Remove its folder and all contents, or
-the file itself for a standalone plugin; removing only the main file of a
-plugin or theme with a folder is insufficient. Confirm both displayed
-statements, then choose **Verify removal and disconnect**. Booster verifies
-absence, clears the installation block, and disconnects that management record;
-the button does not delete files. An occupied updater lock prevents recovery
-and is not cleared merely because it is old. Temporary-file cleanup remains
-unverified.
+When Booster shows **GitHub installs are on a site-wide hold**, an install or
+update started through WordPress could not be verified. How you clear the hold
+depends on whether Booster can still read the target:
 
-After successful recovery, make a fresh installation/review. If the target
-cannot safely be removed, or the process/lock state is uncertain, stop and use
+1. **Readable managed package (in-place release).** The site-wide warning and
+   the **GitHub** page link to the held package's own Booster page. Inspect the
+   plugin or theme there. If the request ended normally, confirm you checked it
+   and choose **Release hold** to keep the package managed with its settings.
+   If the request never recorded its end, first confirm the install is no longer
+   running as well.
+2. **Missing, damaged, or never-managed package (removal recovery).** When the
+   target no longer registers as a readable managed package, recovery stays on
+   the **GitHub** page. Confirm the interrupted process has stopped. Arrange
+   removal of the **entire exact target** plugin or theme folder identified
+   there, preserving a backup of anything needed (or the file itself for a
+   standalone plugin; removing only the main file of a plugin or theme with a
+   folder is insufficient). Confirm both statements and clear the hold on the
+   **GitHub** page. Booster verifies absence, clears the hold, and disconnects
+   that management record if one exists; the action does not delete files.
+
+For a hold whose request never recorded its end, once you confirm the install
+stopped, Booster frees only a lock row matching that hold's own recorded token
+before taking the lock normally. WordPress background automatic updates omit
+that token because WordPress Core owns `auto_updater.lock` for the whole run, so
+those holds rely on WordPress freeing its lock when the run finishes or on the
+inherited one-hour stale-lock reclaim. A live lock owned by another operation is
+never removed and blocks release until that operation finishes or until
+WordPress's inherited one-hour stale-lock reclaim applies. Temporary-file cleanup
+remains unverified.
+
+After releasing or clearing the hold, inspect the package state or make a fresh
+installation/review before continuing. If the target cannot safely be inspected
+or removed, or the process/lock state is uncertain, stop and use
 [support](../SUPPORT.md). For branch attempt recovery and damaged management
 settings, use the separate [recovery steps](operator-journeys.md#handle-partial-or-uncertain-results).
 

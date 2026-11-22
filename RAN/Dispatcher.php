@@ -148,8 +148,14 @@ class Dispatcher {
 			}
 
 			if ( 'recover-github-native' === $action ) {
-				$this->provider_profiles->recover_github_native( $request );
-				$this->redirect_to( $this->dashboard->provider_tab_url( 'gh' ) );
+				$code = $this->provider_profiles->recover_github_native( $request );
+				$this->redirect_to( $this->native_hold_return( $request, $code, $this->dashboard->provider_tab_url( 'gh' ) ) );
+			}
+
+			if ( 'release-github-hold' === $action ) {
+				$code = $this->provider_profiles->release_github_hold( $request );
+				$type = 'theme' === ( $request['package_type'] ?? null ) ? 'theme' : 'plugin';
+				$this->redirect_to( $this->native_hold_return( $request, $code, add_query_arg( 'page', 'ran-booster-' . $type . 's', is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) ) );
 			}
 
 			if ( 'adopt-github' === $action ) {
@@ -241,6 +247,26 @@ class Dispatcher {
 				$this->redirect_to( $redirect );
 			}
 		}
+	}
+
+	/**
+	 * Back to the hold's control with its result. The package identity, folder and type return only as
+	 * values for that page to show; it never acts on them.
+	 *
+	 * @param array<string, mixed> $request
+	 */
+	private function native_hold_return( array $request, string $code, string $url ): string {
+		$args = array( 'ran_booster_hold' => $code );
+		foreach ( array(
+			'package'      => 'package',
+			'hold_folder'  => 'ran_booster_hold_folder',
+			'package_type' => 'ran_booster_hold_type',
+		) as $field => $arg ) {
+			if ( is_string( $request[ $field ] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9][A-Za-z0-9._/-]{0,254}\z#D', $request[ $field ] ) ) {
+				$args[ $arg ] = $request[ $field ];
+			}
+		}
+		return add_query_arg( $args, $url ) . '#ran-booster-native-hold';
 	}
 
 	protected function redirect_to( string $url ): never {

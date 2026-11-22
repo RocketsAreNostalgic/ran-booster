@@ -290,6 +290,7 @@ class Dashboard {
 			$data['provider_list_state']            = $this->requested_provider_list_state();
 			$data['replace_credential']             = $this->requested_provider_repository_id( 'replace_credential' );
 			$data['credential_form_request']        = $this->requested_credential_form( $data['provider'] );
+			$data['native_hold_result']             = $this->native_hold_result();
 
 			$data['requested_repository_id']            = $this->requested_provider_repository_id();
 			$data                                       = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );
@@ -977,6 +978,9 @@ class Dashboard {
 						$this->requested_package_source_view(),
 						$this->requested_advanced_settings_open() || null !== $save_check_sentences
 					);
+					$native_hold                                   = $this->provider_settings->native_hold();
+					$edit_data['package_native_hold_result']       = $this->native_hold_result();
+					$edit_data['package_native_hold']              = null !== $native_hold && $native_hold['readable'] && $native_hold['type'] === $type && $native_hold['identifier'] === $package->get_identifier() ? $native_hold : null;
 					$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
 					$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
 					$edit_data['repository_branch_check_args']     = PackageSource::BRANCH === $package->get_source()
@@ -1232,6 +1236,22 @@ class Dashboard {
 			$input[ $key ] = $_GET[ 'return_' . $key ] ?? '';
 		}
 		return $this->package_list_query_arguments( $input );
+	}
+
+	/** @return array{code:string,folder:string,type:string}|null The result of a hold action, shown beside its control. */
+	private function native_hold_result(): ?array {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only result display; the hold action verified its own nonce.
+		$query = wp_unslash( $_GET );
+		$code  = is_array( $query ) && is_string( $query['ran_booster_hold'] ?? null ) ? $query['ran_booster_hold'] : '';
+		if ( ! in_array( $code, array( 'released', 'cleared', 'present', 'busy', 'failed' ), true ) ) {
+			return null;
+		}
+		$folder = is_string( $query['ran_booster_hold_folder'] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z#D', $query['ran_booster_hold_folder'] ) ? $query['ran_booster_hold_folder'] : '';
+		return array(
+			'code'   => $code,
+			'folder' => $folder,
+			'type'   => 'theme' === ( $query['ran_booster_hold_type'] ?? null ) ? 'theme' : 'plugin',
+		);
 	}
 
 	private function requested_package_source_view(): string {

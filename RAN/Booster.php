@@ -1355,12 +1355,20 @@ class Booster {
 		$can_manage = current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
 		?>
 		<div class="notice notice-warning<?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-native-update-warning<?php echo true === $warning ? '' : ' hidden'; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
-			<?php esc_html_e( 'A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed.', 'ran-booster' ); ?>
-			<?php if ( $can_manage ) : ?>
-				<a href="<?php echo esc_url( $this->service( \RAN\Admin\ProviderTabLinks::class )->url( admin_url( 'admin.php' ), 'gh' ) ); ?>"><?php esc_html_e( 'Review GitHub management.', 'ran-booster' ); ?></a>
-			<?php else : ?>
-				<?php esc_html_e( 'Contact a site administrator.', 'ran-booster' ); ?>
-			<?php endif; ?>
+			<?php
+			$hold = true === $warning ? $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->native_hold() : null;
+			if ( is_array( $hold ) ) {
+				$name = $can_manage ? '<a href="' . esc_url( $hold['url'] ) . '">' . esc_html( $hold['name'] ) . '</a>' : esc_html( $hold['name'] );
+				/* translators: %s: the held package's name, linked to the page that releases the hold. */
+				echo wp_kses( sprintf( __( 'GitHub installs are on hold: the last install of %s couldn\'t complete.', 'ran-booster' ), $name ), array( 'a' => array( 'href' => true ) ) );
+			} else {
+				// Shown later by the heartbeat, before this page knows which package is held.
+				esc_html_e( 'A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed.', 'ran-booster' );
+			}
+			if ( ! $can_manage ) {
+				echo ' ' . esc_html__( 'Contact a site administrator.', 'ran-booster' );
+			}
+			?>
 		</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 		<?php
 	}

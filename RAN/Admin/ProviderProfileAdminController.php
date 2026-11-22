@@ -82,22 +82,71 @@ class ProviderProfileAdminController {
 		$this->interaction->respond_to_provider_profile_success( $interaction_request, $message );
 	}
 
-	/** @param array<string,mixed> $request Untrusted recovery confirmation. */
-	public function recover_github_native( array $request ): void {
-		$authorized = static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
-		if ( ! $authorized() ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to recover the GitHub installation.', 'ran-booster' ) );
-		}
-		$digest = is_string( $request['review_digest'] ?? null ) ? $request['review_digest'] : '';
-		check_admin_referer( 'ran-booster-recover-github-' . $digest );
+	/**
+	 * Clear the hold on a held package Booster cannot read, once its folder is gone.
+	 *
+	 * @param array<string,mixed> $request Untrusted recovery confirmation.
+	 * @return 'cleared'|'present'|'busy'|'failed' The result the provider page shows beside the control.
+	 */
+	public function recover_github_native( array $request ): string {
+		$digest = $this->native_hold_digest( $request, 'ran-booster-recover-github-' );
 		try {
-			if ( null === $this->package_removal || 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $digest ) || '1' !== ( $request['confirmed_stopped'] ?? null ) || '1' !== ( $request['confirmed_removal'] ?? null ) ) {
+			if ( null === $this->package_removal || '1' !== ( $request['confirmed_stopped'] ?? null ) || '1' !== ( $request['confirmed_removal'] ?? null ) ) {
 				throw new \RuntimeException( 'Fresh removal recovery confirmation is required.' );
 			}
-			$this->package_removal->recover_native_removal( $digest, true, true, $authorized );
-			$this->dashboard->add_message( __( 'Target removal and management disconnection verified; the native installation block is cleared. Cleanup of temporary files from the interrupted process is unverified. Review current Git provider availability before continuing.', 'ran-booster' ) );
+			$this->package_removal->recover_native_removal( $digest, true, true, static fn (): bool => self::native_hold_authorized() );
+			return 'cleared';
+		} catch ( \Throwable $failure ) {
+			return $this->native_hold_failure( $failure, 'native_removal_recovery_failed', true );
+		}
+	}
+
+	/**
+	 * Release the hold in place on a held package Booster can read.
+	 *
+	 * @param array<string,mixed> $request Untrusted release confirmation.
+	 * @return 'released'|'busy'|'failed' The result the package page shows beside the control.
+	 */
+	public function release_github_hold( array $request ): string {
+		$digest = $this->native_hold_digest( $request, 'ran-booster-release-github-hold-' );
+		try {
+			if ( null === $this->package_removal ) {
+				throw new \RuntimeException( 'Native hold release is unavailable.' );
+			}
+			$stopped = '1' === ( $request['confirmed_stopped'] ?? null );
+			$checked = '1' === ( $request['confirmed_checked'] ?? null );
+			$this->package_removal->release_native_hold( $digest, $stopped, $checked, static fn (): bool => self::native_hold_authorized() );
+			return 'released';
+		} catch ( \Throwable $failure ) {
+			$code = $this->native_hold_failure( $failure, 'native_hold_release_failed', false );
+			return 'present' !== $code ? $code : 'failed';
+		}
+	}
+
+	private static function native_hold_authorized(): bool {
+		return current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
+	}
+
+	/** @param array<string,mixed> $request */
+	private function native_hold_digest( array $request, string $nonce_action ): string {
+		if ( ! self::native_hold_authorized() ) {
+			wp_die( esc_html__( 'Contact a site administrator.', 'ran-booster' ) );
+		}
+		$digest = is_string( $request['review_digest'] ?? null ) && 1 === preg_match( '/\A[a-f0-9]{64}\z/D', $request['review_digest'] ) ? $request['review_digest'] : '';
+		check_admin_referer( $nonce_action . $digest );
+		return $digest;
+	}
+
+	/** @return 'present'|'busy'|'failed' */
+	private function native_hold_failure( \Throwable $failure, string $event, bool $removal ): string {
+		BoosterLogger::log_exception( 'native hold action failed', $failure, array( 'event' => $event ) );
+		try {
+			if ( $this->package_removal?->native_hold_lock_busy() ) {
+				return 'busy';
+			}
+			return $removal && false === $this->package_removal?->native_hold_target_absent() ? 'present' : 'failed';
 		} catch ( \Throwable ) {
-			$this->dashboard->add_message( new \WP_Error( 'ran_booster_github_recovery', __( 'Native recovery could not be verified. Review the target, management records, updater lock and current recovery status before trying again.', 'ran-booster' ) ) );
+			return 'failed';
 		}
 	}
 

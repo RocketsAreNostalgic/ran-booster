@@ -38,10 +38,14 @@ final readonly class PackageRemovalService {
 	 * A readable target, managed and still registered, has a package page and is released in place there.
 	 * Any other held target can only be removed and confirmed absent.
 	 *
-	 * @return array{digest:string,type:string,identifier:string,managed:bool,finished:bool,readable:bool} No credential or native owner disclosure.
+	 * The start time is the owner's lock value: when the install began, for the operator to judge, never proof.
+	 *
+	 * @return array{digest:string,type:string,identifier:string,managed:bool,finished:bool,readable:bool,started_at:?int} No credential or native owner disclosure.
 	 */
 	public function native_recovery_confirmation(): array {
 		$snapshot = $this->native_recovery_snapshot();
+		$marker   = $snapshot['state']['native_mutation'];
+		$start    = is_array( $marker ) ? GitHubProviderSelection::native_lock_token( $marker ) : null;
 		return array(
 			'digest'     => $snapshot['digest'],
 			'type'       => $snapshot['type'],
@@ -49,7 +53,19 @@ final readonly class PackageRemovalService {
 			'managed'    => null !== $snapshot['record'],
 			'finished'   => 'finished' === ( $snapshot['state']['native_mutation']['phase'] ?? null ),
 			'readable'   => $this->held_target_readable( $snapshot['type'], $snapshot['identifier'], $snapshot['record'] ),
+			'started_at' => null === $start ? null : (int) $start,
 		);
+	}
+
+	/** Whether the held target's folder is gone, so a refused removal can say it is still there. */
+	public function native_hold_target_absent(): bool {
+		$snapshot = $this->native_recovery_snapshot();
+		return ( $this->wordpress->deletion_postcondition( $snapshot['type'], $snapshot['identifier'], true ) )();
+	}
+
+	/** Whether a live updater lock is held now, so a refused release can say another update holds it. */
+	public function native_hold_lock_busy(): bool {
+		return null !== $this->updater_lock->current_token();
 	}
 
 	/**

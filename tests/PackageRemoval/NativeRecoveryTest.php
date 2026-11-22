@@ -141,7 +141,7 @@ final class NativeRecoveryTest extends TestCase {
 		$revoked['selection_generation'] = 1;
 		self::assertTrue( $this->store->compare_and_swap( $old, $revoked ) );
 		$review = $this->service->native_recovery_confirmation();
-		self::assertSame( array( 'digest', 'type', 'identifier', 'managed', 'finished', 'readable' ), array_keys( $review ) );
+		self::assertSame( array( 'digest', 'type', 'identifier', 'managed', 'finished', 'readable', 'started_at' ), array_keys( $review ) );
 		self::assertFalse( $review['managed'] );
 		self::assertFalse( $review['readable'] );
 		$this->recover( $review['digest'] );

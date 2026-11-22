@@ -1142,12 +1142,18 @@ class Dashboard {
 	 * @return array<string, mixed>
 	 */
 	private function package_index_data( array $packages, PackagePagePresenter $package_view ): array {
-		return $package_view->index(
-			$packages,
-			$this->provider_settings->build_package_list(),
-			$this->requested_package_list_state(),
-			$this->deployment_admin
-		);
+		$providers = $this->provider_settings->build_package_list();
+		$data      = $package_view->index( $packages, $providers, $this->requested_package_list_state(), $this->deployment_admin );
+		// Only a provider that is not registered has a restore link, so only its page is looked up.
+		$registered = array_column( $providers, 'code' );
+		foreach ( $packages as $package ) {
+			$code = (string) $package->get_provider_code();
+			if ( ! in_array( $code, $registered, true ) && ! isset( $data['provider_restore_args'][ $code ] ) ) {
+				$data['provider_restore_args'][ $code ] = $this->provider_settings->provider_restore_args( $code );
+			}
+		}
+
+		return $data;
 	}
 
 	/**

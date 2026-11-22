@@ -105,6 +105,32 @@ final class ProviderSettingsExpiryProjectionTest extends TestCase {
 		self::assertSame( 'unknown', $second['expiry_status']['stage'] );
 	}
 
+	public function test_the_package_forms_without_any_provider_are_empty_and_hold_a_stored_provider_as_unavailable(): void {
+		$presenter = new ProviderSettingsPresenter(
+			new ProviderRegistry(),
+			$this->createStub( SecretsFile::class ),
+			new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ),
+			new InMemoryPublicRepositoryLookupProfileStore(),
+			new InMemoryCredentialExpiryObservationStore()
+		);
+
+		self::assertSame(
+			array(
+				'default_provider' => '',
+				'providers'        => array(),
+				'restore_args'     => array( 'page' => 'ran-booster-extensions' ),
+			),
+			$presenter->build_package_form()
+		);
+		// With no GitHub selection to review, every provider is restored from Extensions.
+		self::assertSame( array( 'page' => 'ran-booster-extensions' ), $presenter->provider_restore_args( 'gh' ) );
+		self::assertSame( array( 'page' => 'ran-booster-extensions' ), $presenter->provider_restore_args( 'bb' ) );
+		$existing = $presenter->build_existing_package_form( 'gh' );
+		self::assertSame( 'gh', $existing['default_provider'] );
+		self::assertFalse( $existing['providers'][0]['available'] );
+		self::assertSame( array(), $presenter->build_package_list() );
+	}
+
 	public function test_profile_summaries_use_the_approved_copy(): void {
 		$presenter = $this->presenter( $this->createStub( SecretsFile::class ), new InMemoryCredentialExpiryObservationStore(), new CredentialUsageDatabase() );
 		$method    = new \ReflectionMethod( $presenter, 'profile_summaries' );

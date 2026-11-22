@@ -14,6 +14,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 $package_providers_by_code    = array_column( $package_providers, null, 'code' );
+$provider_restore_args        = isset( $provider_restore_args ) && is_array( $provider_restore_args ) ? $provider_restore_args : array();
 $package_activity_payload     = isset( $package_activity ) && is_array( $package_activity ) ? $package_activity : array();
 $package_activity_unavailable = true === ( $package_activity_payload['unavailable'] ?? false );
 $package_activity             = isset( $package_activity_payload['items'] ) && is_array( $package_activity_payload['items'] )
@@ -458,10 +459,10 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 				)
 				: '';
 			if ( $provider_unavailable ) {
-				// An unavailable provider has no page of its own; Extensions lists a first-party provider that is not installed or not active with its Install or Activate action. Every link here uses the presenter's admin base, which is the network admin on multisite.
-				[ $link_open, $link_close ] = $status_link_tags( add_query_arg( 'page', 'ran-booster-extensions', $package_admin_url ) );
+				// The link goes to where the provider is restored: the GitHub provider page while its selection needs a decision, otherwise Extensions, which lists a first-party provider that is not installed or not active. It uses the presenter's admin base, which is the network admin on multisite.
+				[ $link_open, $link_close ] = $status_link_tags( add_query_arg( $provider_restore_args[ $provider_code ] ?? array( 'page' => 'ran-booster-extensions' ), $package_admin_url ) );
 				$status_line                = sprintf(
-					/* translators: 1: opening link tag to Extensions, or nothing; 2: closing link tag, or nothing. */
+					/* translators: 1: opening link tag to where the provider is restored, or nothing; 2: closing link tag, or nothing. */
 					esc_html__( 'The saved Git provider is unavailable. %1$sRestore it%2$s before deploying this package.', 'ran-booster' ),
 					$link_open,
 					$link_close

@@ -262,9 +262,9 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 			} else {
 				echo wp_kses_post(
 					sprintf(
-						/* translators: 1: opening link tag to Extensions, or nothing; 2: closing link tag, or nothing. */
+						/* translators: 1: opening link tag to where the provider is restored, or nothing; 2: closing link tag, or nothing. */
 						esc_html__( 'This package remains linked but cannot be edited or deployed until its Git provider is %1$sregistered again%2$s.', 'ran-booster' ),
-						current_user_can( 'manage_options' ) ? '<a href="' . esc_url( add_query_arg( 'page', 'ran-booster-extensions', $package_view->get_admin_url() ) ) . '">' : '',
+						current_user_can( 'manage_options' ) ? '<a href="' . esc_url( add_query_arg( $package_provider_settings['restore_args'] ?? array( 'page' => 'ran-booster-extensions' ), $package_view->get_admin_url() ) ) . '">' : '',
 						current_user_can( 'manage_options' ) ? '</a>' : ''
 					)
 				);

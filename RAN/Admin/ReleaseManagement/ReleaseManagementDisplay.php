@@ -403,6 +403,10 @@ final class ReleaseManagementDisplay {
 			);
 		}
 
+		if ( 'theme' !== $type || ! current_user_can( 'update_themes' ) ) {
+			return '';
+		}
+
 		return wp_nonce_url(
 			add_query_arg(
 				array(

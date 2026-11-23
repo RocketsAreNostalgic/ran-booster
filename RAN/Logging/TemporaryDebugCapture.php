@@ -508,23 +508,40 @@ final class TemporaryDebugCapture {
 		}
 
 		$directory = dirname( $path );
-		$temporary = tempnam( $directory, '.ran-booster-debug-' );
-		if ( false === $temporary ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Verify the private directory before native exclusive creation so missing/unwritable paths fail closed without fallback.
+		if ( ! is_dir( $directory ) || is_link( $directory ) || ! is_writable( $directory ) ) {
+			throw new RuntimeException( 'Could not create a temporary Booster debug capture.' );
+		}
+		$temporary        = '';
+		$temporary_handle = false;
+		for ( $attempt = 0; $attempt < 8; ++$attempt ) {
+			$candidate = $directory . DIRECTORY_SEPARATOR . '.ran-booster-debug-' . bin2hex( random_bytes( 12 ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Exclusive native creation keeps the temporary file in the verified private directory without tempnam() /tmp fallback.
+			$opened = fopen( $candidate, 'x+b' );
+			if ( false !== $opened ) {
+				$temporary        = $candidate;
+				$temporary_handle = $opened;
+				break;
+			}
+		}
+		if ( false === $temporary_handle || '' === $temporary ) {
 			throw new RuntimeException( 'Could not create a temporary Booster debug capture.' );
 		}
 
 		try {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set and verify native POSIX permission bits on the private file before it can be trusted or installed.
-			if ( is_link( $temporary ) || ! chmod( $temporary, 0600 ) ) {
-				throw new RuntimeException( 'Could not secure the temporary Booster debug capture.' );
-			}
-
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The same-directory replacement requires a native stream for checked writes and flushes.
-			$temporary_handle = fopen( $temporary, 'wb' );
-			if ( false === $temporary_handle ) {
-				throw new RuntimeException( 'Could not open the temporary Booster debug capture.' );
-			}
 			try {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set and verify native POSIX permission bits on the private file before it can be trusted or installed.
+				if ( is_link( $temporary ) || ! chmod( $temporary, 0600 ) ) {
+					throw new RuntimeException( 'Could not secure the temporary Booster debug capture.' );
+				}
+				$stat = fstat( $temporary_handle );
+				if ( false === $stat
+					|| 0100000 !== ( $stat['mode'] & 0170000 )
+					|| 0600 !== ( $stat['mode'] & 0777 )
+					|| ! $this->owned_by_process( $stat )
+				) {
+					throw new RuntimeException( 'Could not verify the temporary Booster debug capture.' );
+				}
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write through the verified native handle so short writes and flush failures preserve the atomic replacement boundary.
 				$written = fwrite( $temporary_handle, $contents );
 				if ( false === $written || strlen( $contents ) !== $written || ! fflush( $temporary_handle ) ) {

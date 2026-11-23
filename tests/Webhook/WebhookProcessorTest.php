@@ -569,7 +569,7 @@ final class WebhookProcessorTest extends TestCase {
 	/** @return iterable<string, array{bool}> */
 	public static function capture_storage_failures(): iterable {
 		yield 'lock open warning' => array( false );
-		yield 'temporary file fallback notice' => array( true );
+		yield 'missing capture directory after lock' => array( true );
 	}
 
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'capture_storage_failures' )]
@@ -668,13 +668,21 @@ final class WebhookProcessorTest extends TestCase {
 				$ordinary_output = ob_get_clean();
 				$restore_capture();
 			}
-			self::assertSame( $temporary_file_failure ? array( E_NOTICE, E_WARNING ) : array( E_WARNING ), $diagnostics );
-			self::assertIsString( $ordinary_output );
-			self::assertStringContainsString( $temporary_file_failure ? 'tempnam(' : 'fopen(', $ordinary_output );
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- The identical ordinary storage failure must still reach native PHP logging.
+			if ( $temporary_file_failure ) {
+				// Missing capture directories fail closed before temporary-file creation without tempnam() /tmp fallback notices.
+				self::assertSame( array(), $diagnostics );
+				self::assertSame( '', $ordinary_output );
+			} else {
+				self::assertSame( array( E_WARNING ), $diagnostics );
+				self::assertIsString( $ordinary_output );
+				self::assertStringContainsString( 'fopen(', $ordinary_output );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect direct PHP logging after the ordinary control call.
 			$ordinary_log = file_get_contents( $directory . '/php.log' );
 			self::assertIsString( $ordinary_log );
-			self::assertStringContainsString( $capture_directory, $ordinary_log );
+			if ( ! $temporary_file_failure ) {
+				self::assertStringContainsString( $capture_directory, $ordinary_log );
+			}
 			self::assertStringContainsString( 'ordinary storage warning control', $ordinary_log );
 		} finally {
 			$restore_capture();

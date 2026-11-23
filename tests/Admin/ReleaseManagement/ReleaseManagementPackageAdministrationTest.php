@@ -22,6 +22,31 @@ use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
 use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class ReleaseManagementPackageAdministrationTest extends TestCase {
+	public function test_theme_native_update_url_requires_update_themes_capability(): void {
+		$package = new PackageProjection( 'release_asset', 'theme' );
+		$status  = ReleaseManagementFixture::status( 'release_asset', 'theme', update_available: true );
+		$nonces  = array(
+			'list_candidates'   => 'nonce-list',
+			'inspect_candidate' => 'nonce-inspect',
+		);
+
+		$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array( 'update_themes' );
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, $status, $package->settings_url(), 'stable', $nonces );
+		$denied_html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-url=""', $denied_html );
+		self::assertStringNotContainsString( 'upgrade-theme', $denied_html );
+
+		$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array();
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, $status, $package->settings_url(), 'stable', $nonces );
+		$allowed_html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'action=upgrade-theme', $allowed_html );
+		self::assertStringContainsString( 'nonce-for-upgrade-theme_example-theme', $allowed_html );
+	}
+
 	public function test_unavailable_readiness_keeps_native_text_and_explicit_badge_intent(): void {
 		$package = new PackageProjection();
 		ob_start();

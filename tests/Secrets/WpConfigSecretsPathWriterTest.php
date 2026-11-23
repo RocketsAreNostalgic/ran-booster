@@ -39,12 +39,28 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	public function test_it_adds_the_fixed_definition_and_requires_asecond_request_verification(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0640 ) );
+		$lock_path = $this->config_path . '.ran-booster.lock';
+		$writer    = new class( $lock_path ) extends WpConfigSecretsPathWriter {
+			/** @var array<string, mixed> */
+			public array $checks = array();
 
-		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->sidecar_path );
+			public function __construct( private readonly string $lock_path ) {}
+
+			protected function before_final_config_check( string $config_path ): void {
+				unset( $config_path );
+				$this->checks['exists'] = is_file( $this->lock_path );
+				$this->checks['owner']  = fileowner( $this->lock_path );
+				$this->checks['perms']  = fileperms( $this->lock_path ) & 0777;
+			}
+		};
+
+		$writer->write( $this->config_path, $this->sidecar_path );
 
 		self::assertSame( 0640, fileperms( $this->config_path ) & 0777 );
-		self::assertSame( fileowner( $this->config_path . '.ran-booster.lock' ), fileowner( $this->config_path ) );
-		self::assertSame( 0600, fileperms( $this->config_path . '.ran-booster.lock' ) & 0777 );
+		self::assertTrue( $writer->checks['exists'] ?? false );
+		self::assertSame( fileowner( $this->config_path ), $writer->checks['owner'] ?? null );
+		self::assertSame( 0600, $writer->checks['perms'] ?? null );
+		self::assertFileDoesNotExist( $lock_path );
 		self::assertSame(
 			"<?php\n\ndefine( 'DB_NAME', 'example' );\n\n"
 			. "/* RAN Booster encrypted secrets storage. */\n"

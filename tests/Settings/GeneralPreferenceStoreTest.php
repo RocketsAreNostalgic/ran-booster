@@ -878,6 +878,26 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		self::assertSame( array( 'default', null ), array( $projection[ $other ]['source'], $projection[ $other ]['error'] ) );
 	}
 
+	public function test_serialized_php_objects_are_rejected_without_instantiation(): void {
+		$GLOBALS['ran_booster_general_preference_gadget_woken'] = 0;
+		try {
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Controlled security test payload proving allowed_classes=false prevents object wakeup.
+			$GLOBALS['ran_booster_general_preference_raw'] = serialize( new GeneralPreferenceObjectGadget() );
+			$store = new GeneralPreferenceStore();
+
+			self::assertTrue( $store->snapshot()['malformed'] );
+			self::assertSame( 0, $GLOBALS['ran_booster_general_preference_gadget_woken'] );
+
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Controlled security test payload proving nested objects in an array do not wake up.
+			$GLOBALS['ran_booster_general_preference_raw'] = serialize( array( 'nested' => new GeneralPreferenceObjectGadget() ) );
+			$store->view_snapshot();
+
+			self::assertSame( 0, $GLOBALS['ran_booster_general_preference_gadget_woken'] );
+		} finally {
+			unset( $GLOBALS['ran_booster_general_preference_gadget_woken'] );
+		}
+	}
+
 	/** @param array<string,mixed> $value */
 	private function seed( array $value ): void {
 		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( $value );
@@ -934,5 +954,13 @@ final class GeneralPreferenceDatabase {
 			$GLOBALS['ran_booster_general_preference_raw'] = $arguments[1];
 		}
 		return 1;
+	}
+}
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Gadget fixture verifies GeneralPreferenceStore never instantiates serialized classes.
+final class GeneralPreferenceObjectGadget {
+	public function __wakeup(): void {
+		$current = $GLOBALS['ran_booster_general_preference_gadget_woken'] ?? 0;
+		$GLOBALS['ran_booster_general_preference_gadget_woken'] = ( is_int( $current ) ? $current : 0 ) + 1;
 	}
 }

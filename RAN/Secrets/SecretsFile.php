@@ -767,6 +767,23 @@ class SecretsFile {
 	 */
 	public function purge_expired_credentials(): array {
 		$this->assert_available();
+		if ( ! $this->has_managed_material() ) {
+			return array();
+		}
+
+		$document    = $this->file_document();
+		$has_expired = false;
+		foreach ( $document[ self::CREDENTIALS ] as $records ) {
+			foreach ( $records as $record ) {
+				if ( $this->credential_destroyed( $record ) ) {
+					$has_expired = true;
+					break 2;
+				}
+			}
+		}
+		if ( ! $has_expired ) {
+			return array();
+		}
 
 		return $this->mutate(
 			function ( #[\SensitiveParameter] array $document ): array {
@@ -2311,22 +2328,32 @@ class SecretsFile {
 
 	private function replace_ciphertext( string $path, #[\SensitiveParameter] string $contents ): void {
 		$directory = dirname( $path );
-		$temporary = tempnam( $directory, '.ran-booster-' );
-		if ( false === $temporary ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Verify the private directory before native exclusive creation so missing/unwritable paths fail closed without fallback.
+		if ( ! is_dir( $directory ) || is_link( $directory ) || ! is_writable( $directory ) ) {
+			throw $this->unavailable( 'Could not create a temporary encrypted Booster secrets file.' );
+		}
+		$temporary = '';
+		$handle    = false;
+		for ( $attempt = 0; $attempt < 8; ++$attempt ) {
+			$candidate = $directory . DIRECTORY_SEPARATOR . '.ran-booster-' . bin2hex( random_bytes( 12 ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Exclusive native creation keeps the temporary file in the verified private directory without tempnam() /tmp fallback.
+			$opened = fopen( $candidate, 'x+b' );
+			if ( false !== $opened ) {
+				$temporary = $candidate;
+				$handle    = $opened;
+				break;
+			}
+		}
+		if ( false === $handle || '' === $temporary ) {
 			throw $this->unavailable( 'Could not create a temporary encrypted Booster secrets file.' );
 		}
 
 		try {
-			if ( ! $this->change_permissions( $temporary, 0600 ) || 0600 !== ( fileperms( $temporary ) & 0777 ) ) {
-				throw $this->unavailable( 'Could not secure the temporary encrypted Booster secrets file.' );
-			}
-
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The same-directory replacement requires a native stream for checked writes, flushes and inode validation.
-			$handle = fopen( $temporary, 'wb' );
-			if ( false === $handle ) {
-				throw $this->unavailable( 'Could not open the temporary encrypted Booster secrets file.' );
-			}
 			try {
+				if ( ! $this->change_permissions( $temporary, 0600 ) || 0600 !== ( fileperms( $temporary ) & 0777 ) ) {
+					throw $this->unavailable( 'Could not secure the temporary encrypted Booster secrets file.' );
+				}
+
 				$this->assert_handle_matches_path( $handle, $temporary, 'temporary secrets file' );
 				$stat = fstat( $handle );
 				if ( false === $stat || ! $this->owned_by_process( $stat ) ) {

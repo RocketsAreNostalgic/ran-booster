@@ -173,7 +173,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_clean_check_result_is_presented_as_success(): void {
-		$_GET = array( 'webhook_management_result' => 'configuration_confirmed' );
+		$_GET = $this->signed_panel_query( 'configuration_confirmed' );
 		$html = $this->render_panel();
 
 		self::assertStringContainsString( 'notice-success', $html );
@@ -1593,7 +1593,63 @@ final class WebhookManagementControllerTest extends TestCase {
 		$_GET['webhook_management_remediation'] = 'Tampered provider guidance.';
 		$html                                   = $this->render_panel( $gateway, $store );
 		self::assertStringNotContainsString( 'Tampered provider guidance.', $html );
-		self::assertStringContainsString( 'could not confirm that the remote webhook operation succeeded', $html );
+		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__result', $html );
+	}
+
+	public function test_unsigned_or_tampered_panel_query_cannot_spoof_notices_or_lock_out_webhook_actions(): void {
+		$empty         = array(
+			'result'      => null,
+			'ping'        => null,
+			'recovery'    => null,
+			'remediation' => null,
+		);
+		$store         = new OperationStoreFixture();
+		$store->record = $this->record();
+		$controller    = $this->controller( store: $store );
+
+		// Unsigned recovery/result parameters cannot spoof notices or disable buttons.
+		$_GET = array(
+			'webhook_management_result' => 'recovery_record_failed',
+			'recovery_hook'             => '999',
+			'recovery_profile'          => 'wh_spoofed',
+			'tab'                       => 'gh',
+			'repository'                => '1234',
+		);
+		self::assertSame( $empty, $controller->panel_context( 'gh', '1234' ) );
+		$html = $this->render_panel( store: $store );
+		self::assertStringNotContainsString( 'Manual webhook recovery required', $html );
+		self::assertStringNotContainsString( 'wh_spoofed', $html );
+		self::assertStringContainsString( 'value="validate"', $html );
+		self::assertStringContainsString( 'aria-disabled="false">Validate</button>', $html );
+
+		// Tampering any signed field or replaying onto another repository fails verification.
+		$signed = $this->signed_panel_query( 'recovery_record_failed', null, '77', 'wh_0123456789abcdef01234567' );
+		$_GET   = $signed;
+		self::assertSame(
+			array(
+				'result'      => 'recovery_record_failed',
+				'ping'        => null,
+				'recovery'    => array(
+					'hook_id'    => '77',
+					'profile_id' => 'wh_0123456789abcdef01234567',
+				),
+				'remediation' => null,
+			),
+			$this->controller( gateway: $this->gateway(), store: $store )->panel_context( 'gh', '1234' )
+		);
+		self::assertSame( $empty, $this->controller( gateway: $this->gateway(), store: $store )->panel_context( 'gh', '9999' ) );
+		self::assertSame( $empty, $this->controller( gateway: $this->gateway(), store: $store )->panel_context( 'bb', '1234' ) );
+
+		foreach ( array(
+			array( 'recovery_hook' => '88' ),
+			array( 'recovery_profile' => 'wh_other' ),
+			array( 'webhook_management_result' => 'removed' ),
+			array( 'webhook_management_ping' => 'ping_requested' ),
+			array( '_ran_booster_webhook_result_nonce' => 'invalid' ),
+		) as $tamper ) {
+			$_GET = array_merge( $signed, $tamper );
+			self::assertSame( $empty, $this->controller( gateway: $this->gateway(), store: $store )->panel_context( 'gh', '1234' ) );
+		}
 	}
 
 	public function test_remediation_is_shown_only_when_the_shared_display_screen_keeps_it_whole_within_255_bytes(): void {
@@ -1696,7 +1752,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_verified_result_copy_does_not_claim_that_check_proved_signed_delivery(): void {
-		$_GET = array( 'webhook_management_result' => 'verified' );
+		$_GET = $this->signed_panel_query( 'verified' );
 		$html = $this->render_panel();
 
 		self::assertStringContainsString( '<p>Settings match</p>', $html );
@@ -1774,7 +1830,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_failed_result_renders_as_an_explicit_error_notice(): void {
-		$_GET = array( 'webhook_management_result' => 'setup_failed' );
+		$_GET = $this->signed_panel_query( 'setup_failed' );
 		$html = $this->render_panel();
 
 		self::assertStringContainsString( 'notice notice-error inline ran-booster-repository-webhook-management__notice', $html );
@@ -2214,10 +2270,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		// With the provider's webhooks page known, the failed delivery's sentence links it, and nothing else does.
 		$html = $this->render_panel( $gateway, $store, 'https://github.com/owner/repository/settings/hooks' );
 		self::assertStringContainsString( '<p>Webhook repaired, but its ping delivery failed. See <a href="https://github.com/owner/repository/settings/hooks">the delivery on GitHub</a>.</p>', $html );
-		$_GET = array(
-			'webhook_management_result' => 'repaired_pending_delivery',
-			'webhook_management_ping'   => 'ping_failed',
-		);
+		$_GET = $this->signed_panel_query( 'repaired_pending_delivery', 'ping_failed' );
 		self::assertStringContainsString( $unsent, $this->render_panel( $gateway, $store, 'https://github.com/owner/repository/settings/hooks' ) );
 
 		// A bad Test nonce runs nothing, so a Repair is never left without its ping, and Validate's Check nonce never runs a Repair.
@@ -2240,10 +2293,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 	public function test_validate_after_a_check_reporting_pending_delivery_keeps_the_settings_success(): void {
 		// The check's own code is a pending-delivery warning elsewhere; on Validate's Settings line it is a match.
-		$_GET          = array(
-			'webhook_management_result' => 'configured_pending_delivery',
-			'webhook_management_ping'   => 'ping_requested',
-		);
+		$_GET          = $this->signed_panel_query( 'configured_pending_delivery', 'ping_requested' );
 		$store         = new OperationStoreFixture();
 		$store->record = $this->record();
 		$html          = $this->render_panel( store: $store );
@@ -2254,7 +2304,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_setup_result_says_signed_delivery_received_once_the_record_is_verified(): void {
-		$_GET = array( 'webhook_management_result' => 'configured_pending_delivery' );
+		$_GET = $this->signed_panel_query( 'configured_pending_delivery' );
 
 		$store         = new OperationStoreFixture();
 		$store->record = $this->record( status: 'needs_verification' );
@@ -2360,20 +2410,16 @@ final class WebhookManagementControllerTest extends TestCase {
 			'failed set up'          => array( 'setup_failed', null, false ),
 		);
 		foreach ( $cases as $case => list( $code, $ping, $listens ) ) {
-			$_GET = array_filter(
-				array(
-					'webhook_management_result' => $code,
-					'webhook_management_ping'   => $ping,
-				)
-			);
+			$_GET = $this->signed_panel_query( $code, $ping );
 			$html = $this->render_panel( store: $store );
 			self::assertSame( $listens, str_contains( $html, 'data-ran-booster-webhook-listen=' ), $case );
 			if ( ! $listens ) {
 				self::assertStringNotContainsString( 'data-ran-booster-webhook-listen-text', $html, $case );
 				continue;
 			}
-			// The status check names this repository and carries its own nonce; the settle address repeats the result's codes only.
-			$nonce = 'nonce-for-' . hash( 'sha256', 'ran_booster_repository_webhook_delivery_gh_1234' );
+			// The status check names this repository and carries its own nonce; the settle address carries the signed result payload.
+			$nonce        = 'nonce-for-' . hash( 'sha256', 'ran_booster_repository_webhook_delivery_gh_1234' );
+			$settle_nonce = 'nonce-for-' . hash( 'sha256', WebhookManagementController::result_nonce_action( 'gh', '1234', $code, $ping ) );
 			self::assertStringContainsString( 'data-ran-booster-webhook-listen="https://example.test/wp-admin/admin-ajax.php?action=ran_booster_repository_webhook_delivery_status&amp;provider_code=gh&amp;repository_id=1234&amp;_wpnonce=' . $nonce . '"', $html, $case );
 			if ( 1 !== preg_match( '/data-ran-booster-webhook-settle="([^"]*)"/', $html, $settle ) ) {
 				self::fail( $case );
@@ -2384,12 +2430,16 @@ final class WebhookManagementControllerTest extends TestCase {
 			self::assertSame(
 				array_filter(
 					array(
-						'page'                      => 'ran-booster',
-						'tab'                       => 'gh',
-						'repository'                => '1234',
-						'webhook_management_result' => $code,
-						'webhook_management_ping'   => $ping,
-					)
+						'page'                          => 'ran-booster',
+						'tab'                           => 'gh',
+						'repository'                    => '1234',
+						'webhook_management_result'     => $code,
+						'webhook_management_ping'       => $ping,
+						'webhook_management_provider'   => 'gh',
+						'webhook_management_repository' => '1234',
+						'_ran_booster_webhook_result_nonce' => $settle_nonce,
+					),
+					static fn ( ?string $value ): bool => null !== $value
 				),
 				$settle_query,
 				$case
@@ -2398,7 +2448,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		// A record a signed delivery has verified is shown as received, with nothing to listen for.
 		$store->record = $this->record();
-		$_GET          = array( 'webhook_management_result' => 'configured_pending_delivery' );
+		$_GET          = $this->signed_panel_query( 'configured_pending_delivery' );
 		self::assertStringNotContainsString( 'data-ran-booster-webhook-listen=', $this->render_panel( store: $store ) );
 	}
 
@@ -2499,10 +2549,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'validate_result_blocks' )]
 	public function test_validate_result_block_shows_two_lines_and_never_verifies_a_ping( string $check, string $ping, string $notice_class, string $settings, string $ping_text ): void {
-		$_GET = array(
-			'webhook_management_result' => $check,
-			'webhook_management_ping'   => $ping,
-		);
+		$_GET = $this->signed_panel_query( $check, $ping );
 		$html = $this->render_panel();
 
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-notice ' ), $check );
@@ -2520,7 +2567,7 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	public function test_single_operation_result_keeps_its_one_block_rendering(): void {
-		$_GET = array( 'webhook_management_result' => 'ping_requested' );
+		$_GET = $this->signed_panel_query( 'ping_requested' );
 		$html = $this->render_panel();
 
 		self::assertStringNotContainsString( '<strong>Settings:</strong>', $html );
@@ -2675,12 +2722,46 @@ final class WebhookManagementControllerTest extends TestCase {
 		return new WebhookDisplayModel( $gateway ?? $this->gateway(), $store ?? new OperationStoreFixture() );
 	}
 
+	/** @return array<string, string> */
+	private function signed_panel_query(
+		string $result,
+		?string $ping = null,
+		?string $hook_id = null,
+		?string $profile_id = null,
+		?string $remediation = null,
+		string $provider_code = 'gh',
+		string $repository_id = '1234'
+	): array {
+		$query = array(
+			'webhook_management_result'         => $result,
+			'webhook_management_provider'       => $provider_code,
+			'webhook_management_repository'     => $repository_id,
+			'_ran_booster_webhook_result_nonce' => hash_hmac(
+				'sha256',
+				WebhookManagementController::result_nonce_action( $provider_code, $repository_id, $result, $ping, $hook_id, $profile_id, $remediation ),
+				'test-result-nonce'
+			),
+		);
+		if ( null !== $ping ) {
+			$query['webhook_management_ping'] = $ping;
+		}
+		if ( null !== $hook_id && null !== $profile_id ) {
+			$query['recovery_hook']    = $hook_id;
+			$query['recovery_profile'] = $profile_id;
+		}
+		if ( null !== $remediation ) {
+			$query['webhook_management_remediation'] = $remediation;
+		}
+
+		return $query;
+	}
+
 	private function render_panel( ?OperationGatewayFixture $gateway = null, ?OperationStoreFixture $store = null, ?string $webhooks_url = null ): string {
 		$gateway  ??= $this->gateway();
 		$store    ??= new OperationStoreFixture();
 		$display    = $this->display( $gateway, $store );
 		$controller = $this->controller( $gateway, $store );
-		$context    = $controller->panel_context();
+		$context    = $controller->panel_context( 'gh', '1234' );
 		$model      = $display->panel( 'gh', 'GitHub', '1234', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', $context['result'], $context['recovery'], true, $context['remediation'], null, $context['ping'] );
 		self::assertIsArray( $model );
 		// The controls add the provider's webhooks page after building the model, as here.

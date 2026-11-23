@@ -23,8 +23,6 @@ use Throwable;
  */
 final readonly class PackageRemovalService {
 
-	public const HOLD_CLEARED_LOCK_RELEASE_FAILED = 1;
-
 	public function __construct(
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
@@ -234,7 +232,7 @@ final readonly class PackageRemovalService {
 		}
 		if ( ! $released ) {
 			if ( $hold_cleared ) {
-				$failure = new \RuntimeException( $cleared_message, self::HOLD_CLEARED_LOCK_RELEASE_FAILED, $lock_failure );
+				$failure = new NativeHoldLockReleaseFailure( $cleared_message, $lock_failure );
 				throw $failure;
 			}
 			$failure = new \RuntimeException( $uncertain_message, 0, $lock_failure );

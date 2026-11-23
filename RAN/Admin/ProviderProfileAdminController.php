@@ -139,7 +139,7 @@ class ProviderProfileAdminController {
 
 	/** @return 'present'|'busy'|'failed'|'lock_failed' */
 	private function native_hold_failure( \Throwable $failure, string $event, bool $removal ): string {
-		$lock_failed = $failure instanceof \RuntimeException && \RAN\PackageRemoval\PackageRemovalService::HOLD_CLEARED_LOCK_RELEASE_FAILED === $failure->getCode();
+		$lock_failed = $failure instanceof \RAN\PackageRemoval\NativeHoldLockReleaseFailure;
 		$context     = array( 'event' => $event );
 		if ( $lock_failed ) {
 			$context['outcome_code'] = 'lock_failed';

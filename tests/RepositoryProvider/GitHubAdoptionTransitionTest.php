@@ -559,61 +559,79 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 				self::assertStringContainsString( '"outcome_code":"lock_failed"', $lines[0], "$mode/$failure_mode" );
 				if ( 'throw' === $failure_mode ) {
 					self::assertStringContainsString( 'DeploymentStorageFailure', $lines[0], "$mode/$failure_mode" );
+				} else {
+					self::assertStringContainsString( 'NativeHoldLockReleaseFailure', $lines[0], "$mode/$failure_mode" );
 				}
 			}
 		}
 	}
 
-	public function test_recover_and_release_github_hold_keep_pre_clear_throwing_lock_failure_distinct(): void {
+	public function test_recover_and_release_github_hold_keep_pre_clear_failures_distinct(): void {
 		$GLOBALS['ran_booster_test_capabilities'] = array();
 		$GLOBALS['ran_booster_test_nonce_valid']  = true;
 
 		foreach ( array( 'recover', 'release' ) as $mode ) {
-			unset( $this->db->option_rows['auto_updater.lock'] );
-			$service   = 'release' === $mode ? $this->readable_hold_service( true ) : $this->native_recovery_service( true );
-			$review    = $service->native_recovery_confirmation();
-			$dashboard = $this->createMock( \RAN\Dashboard::class );
-			$dashboard->expects( self::never() )->method( 'add_message' );
-			$controller = $this->admin_controller( $service, $dashboard );
-			$capture    = new TemporaryDebugCapture( $this->root . '/secrets', static fn (): int => strtotime( '2026-07-23T12:00:00Z' ) );
-			$capture->start();
-			BoosterLogger::configure_capture( $capture );
+			foreach ( array( 'clear', 'zero', 'throw' ) as $lock_mode ) {
+				unset( $this->db->option_rows['auto_updater.lock'] );
+				$service   = 'release' === $mode ? $this->readable_hold_service( true ) : $this->native_recovery_service( true );
+				$review    = $service->native_recovery_confirmation();
+				$dashboard = $this->createMock( \RAN\Dashboard::class );
+				$dashboard->expects( self::never() )->method( 'add_message' );
+				$controller = $this->admin_controller( $service, $dashboard );
+				$capture    = new TemporaryDebugCapture( $this->root . '/secrets', static fn (): int => strtotime( '2026-07-23T12:00:00Z' ) );
+				$capture->start();
+				BoosterLogger::configure_capture( $capture );
 
-			$this->db->fail_query_contains = 'DELETE FROM `wp_options`';
-			try {
-				$code = 'release' === $mode
-					? $controller->release_github_hold(
-						array(
-							'review_digest'     => $review['digest'],
-							'confirmed_stopped' => '1',
-							'confirmed_checked' => '1',
+				if ( 'throw' === $lock_mode ) {
+					$this->db->fail_query_contains = 'DELETE FROM `wp_options`';
+				} elseif ( 'zero' === $lock_mode ) {
+					$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
+				}
+				try {
+					$code = 'release' === $mode
+						? $controller->release_github_hold(
+							array(
+								'review_digest'     => $review['digest'],
+								'confirmed_stopped' => '1',
+								'confirmed_checked' => '1',
+							)
 						)
+						: $controller->recover_github_native(
+							array(
+								'review_digest'     => $review['digest'],
+								'confirmed_stopped' => '1',
+								'confirmed_removal' => '1',
+							)
+						);
+				} finally {
+					$this->db->fail_query_contains = null;
+					$this->db->zero_query_contains = null;
+					$this->db->last_error          = '';
+					BoosterLogger::configure_capture( null );
+				}
+
+				self::assertSame( 'zero' === $lock_mode ? 'busy' : 'failed', $code, "$mode/$lock_mode" );
+				self::assertArrayHasKey( 'native_mutation', $this->store->read(), "$mode/$lock_mode" );
+				if ( 'clear' === $lock_mode ) {
+					self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows, "$mode/$lock_mode" );
+				} else {
+					self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$mode/$lock_mode" );
+				}
+				$lines = array_values(
+					array_filter(
+						array_map( static fn ( array $entry ): string => (string) $entry['line'], $capture->snapshot()['entries'] ),
+						static fn ( string $line ): bool => str_contains( $line, 'native hold action failed' )
 					)
-					: $controller->recover_github_native(
-						array(
-							'review_digest'     => $review['digest'],
-							'confirmed_stopped' => '1',
-							'confirmed_removal' => '1',
-						)
-					);
-			} finally {
-				$this->db->fail_query_contains = null;
-				$this->db->last_error          = '';
-				BoosterLogger::configure_capture( null );
+				);
+				self::assertCount( 1, $lines, "$mode/$lock_mode" );
+				self::assertStringNotContainsString( '"outcome_code":"lock_failed"', $lines[0], "$mode/$lock_mode" );
+				if ( 'throw' === $lock_mode ) {
+					self::assertStringContainsString( 'DeploymentStorageFailure', $lines[0], "$mode/$lock_mode" );
+				} else {
+					self::assertStringContainsString( 'RuntimeException', $lines[0], "$mode/$lock_mode" );
+					self::assertStringContainsString( '"exception_code":"1"', $lines[0], "$mode/$lock_mode" );
+				}
 			}
-
-			self::assertSame( 'failed', $code, $mode );
-			self::assertArrayHasKey( 'native_mutation', $this->store->read(), $mode );
-			self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, $mode );
-			$lines = array_values(
-				array_filter(
-					array_map( static fn ( array $entry ): string => (string) $entry['line'], $capture->snapshot()['entries'] ),
-					static fn ( string $line ): bool => str_contains( $line, 'native hold action failed' )
-				)
-			);
-			self::assertCount( 1, $lines, $mode );
-			self::assertStringContainsString( 'DeploymentStorageFailure', $lines[0], $mode );
-			self::assertStringNotContainsString( '"outcome_code":"lock_failed"', $lines[0], $mode );
 		}
 	}
 
@@ -647,7 +665,7 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		$gateway = $this->createMock( \RAN\PackageRemoval\PackageRemovalGateway::class );
 		$gateway->method( 'installed_targets' )->willReturn( array( 'target/main.php' => 'Target' ) );
 		if ( $invalidate_failure ) {
-			$gateway->method( 'invalidate_native_target' )->willThrowException( new \RuntimeException( 'Cache invalidation failed.' ) );
+			$gateway->method( 'invalidate_native_target' )->willThrowException( new \RuntimeException( 'Cache invalidation failed.', 1 ) );
 		}
 		$gateway->expects( self::never() )->method( 'delete_plugin' );
 		$gateway->expects( self::never() )->method( 'delete_theme' );
@@ -676,7 +694,7 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		$gateway = $this->createMock( \RAN\PackageRemoval\PackageRemovalGateway::class );
 		$gateway->method( 'deletion_postcondition' )->willReturn( static fn (): bool => true );
 		if ( $invalidate_failure ) {
-			$gateway->method( 'invalidate_native_target' )->willThrowException( new \RuntimeException( 'Cache invalidation failed.' ) );
+			$gateway->method( 'invalidate_native_target' )->willThrowException( new \RuntimeException( 'Cache invalidation failed.', 1 ) );
 		}
 		$gateway->expects( self::never() )->method( 'delete_plugin' );
 		$gateway->expects( self::never() )->method( 'delete_theme' );

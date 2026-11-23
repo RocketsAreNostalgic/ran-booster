@@ -9,6 +9,7 @@ use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 use RAN\Deployment\DeploymentStorageFailure;
+use RAN\PackageRemoval\NativeHoldLockReleaseFailure;
 use RAN\PackageRemoval\PackageRemovalGateway;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\RepositoryProvider\GitHubProviderSelection;
@@ -32,12 +33,13 @@ final class NativeRecoveryTest extends TestCase {
 	private GitHubProviderSelection $selection;
 	private mixed $previous_database;
 	/** @var array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string}|null */
-	private ?array $record       = null;
-	private bool $present        = false;
-	private bool $registered     = false;
-	private bool $cache_failure  = false;
-	private bool $reappear       = false;
-	private bool $unlink_failure = false;
+	private ?array $record          = null;
+	private bool $present           = false;
+	private bool $registered        = false;
+	private bool $cache_failure     = false;
+	private int $cache_failure_code = 0;
+	private bool $reappear          = false;
+	private bool $unlink_failure    = false;
 	/** @var list<string> */
 	private array $events = array();
 	private PackageRemovalService $service;
@@ -110,7 +112,7 @@ final class NativeRecoveryTest extends TestCase {
 				self::assertArrayHasKey( 'native_mutation', $this->store->read() );
 				$this->events[] = 'invalidate';
 				if ( $this->cache_failure ) {
-						throw new \RuntimeException( 'Cache invalidation failed.' );
+						throw new \RuntimeException( 'Cache invalidation failed.', $this->cache_failure_code );
 				}
 				if ( $this->reappear ) {
 					$this->present = true;
@@ -377,8 +379,7 @@ final class NativeRecoveryTest extends TestCase {
 					$this->db->zero_query_contains = null;
 					$this->db->last_error          = '';
 				}
-				self::assertInstanceOf( \RuntimeException::class, $caught, "$operation/$failure_mode" );
-				self::assertSame( PackageRemovalService::HOLD_CLEARED_LOCK_RELEASE_FAILED, $caught->getCode(), "$operation/$failure_mode" );
+				self::assertInstanceOf( NativeHoldLockReleaseFailure::class, $caught, "$operation/$failure_mode" );
 				if ( 'throw' === $failure_mode ) {
 					self::assertInstanceOf( DeploymentStorageFailure::class, $caught->getPrevious(), "$operation/$failure_mode" );
 				} else {
@@ -390,9 +391,9 @@ final class NativeRecoveryTest extends TestCase {
 		}
 	}
 
-	public function test_pre_clear_failure_with_lock_release_failure_keeps_hold_and_distinct_code(): void {
+	public function test_pre_clear_failure_keeps_hold_and_never_emits_lock_release_failure(): void {
 		foreach ( array( 'recover', 'release' ) as $operation ) {
-			foreach ( array( 'zero', 'throw' ) as $failure_mode ) {
+			foreach ( array( 'clear', 'zero', 'throw' ) as $lock_mode ) {
 				unset( $this->db->option_rows['auto_updater.lock'] );
 				$this->hold( str_repeat( 'a', 32 ), 'started' );
 				if ( 'release' === $operation ) {
@@ -403,10 +404,11 @@ final class NativeRecoveryTest extends TestCase {
 					$this->present    = false;
 					$this->registered = false;
 				}
-				$this->cache_failure = true;
-				if ( 'throw' === $failure_mode ) {
+				$this->cache_failure      = true;
+				$this->cache_failure_code = 1;
+				if ( 'throw' === $lock_mode ) {
 					$this->db->fail_query_contains = 'DELETE FROM `wp_options`';
-				} else {
+				} elseif ( 'zero' === $lock_mode ) {
 					$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
 				}
 				$digest = $this->service->native_recovery_confirmation()['digest'];
@@ -421,22 +423,30 @@ final class NativeRecoveryTest extends TestCase {
 					$caught = $failure;
 				} finally {
 					$this->cache_failure           = false;
+					$this->cache_failure_code      = 0;
 					$this->db->fail_query_contains = null;
 					$this->db->zero_query_contains = null;
 					$this->db->last_error          = '';
 				}
-				self::assertInstanceOf( \RuntimeException::class, $caught, "$operation/$failure_mode" );
-				self::assertSame( 0, $caught->getCode(), "$operation/$failure_mode" );
-				self::assertNotSame( PackageRemovalService::HOLD_CLEARED_LOCK_RELEASE_FAILED, $caught->getCode(), "$operation/$failure_mode" );
-				$previous = $caught->getPrevious();
-				if ( 'throw' === $failure_mode ) {
-					self::assertInstanceOf( DeploymentStorageFailure::class, $previous, "$operation/$failure_mode" );
+				self::assertInstanceOf( \RuntimeException::class, $caught, "$operation/$lock_mode" );
+				self::assertNotInstanceOf( NativeHoldLockReleaseFailure::class, $caught, "$operation/$lock_mode" );
+				self::assertArrayHasKey( 'native_mutation', $this->store->read(), "$operation/$lock_mode" );
+				if ( 'clear' === $lock_mode ) {
+					self::assertSame( 1, $caught->getCode(), "$operation/$lock_mode" );
+					self::assertSame( 'Cache invalidation failed.', $caught->getMessage(), "$operation/$lock_mode" );
+					self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$lock_mode" );
+				} elseif ( 'zero' === $lock_mode ) {
+					self::assertSame( 0, $caught->getCode(), "$operation/$lock_mode" );
+					self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$lock_mode" );
+					$previous = $caught->getPrevious();
+					self::assertInstanceOf( \RuntimeException::class, $previous, "$operation/$lock_mode" );
+					self::assertSame( 1, $previous->getCode(), "$operation/$lock_mode" );
+					self::assertSame( 'Cache invalidation failed.', $previous->getMessage(), "$operation/$lock_mode" );
 				} else {
-					self::assertInstanceOf( \RuntimeException::class, $previous, "$operation/$failure_mode" );
-					self::assertSame( 'Cache invalidation failed.', $previous->getMessage(), "$operation/$failure_mode" );
+					self::assertSame( 0, $caught->getCode(), "$operation/$lock_mode" );
+					self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$lock_mode" );
+					self::assertInstanceOf( DeploymentStorageFailure::class, $caught->getPrevious(), "$operation/$lock_mode" );
 				}
-				self::assertArrayHasKey( 'native_mutation', $this->store->read(), "$operation/$failure_mode" );
-				self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$failure_mode" );
 			}
 		}
 	}

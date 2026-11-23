@@ -280,38 +280,91 @@ final class NativeUpdateWarningTest extends TestCase {
 		$booster->booster_url  = 'https://example.test/wp-content/plugins/ran-booster';
 
 		try {
-			$_GET['tab'] = 'gh';
-			foreach ( array( 'toplevel_page_ran-booster', 'toplevel_page_ran-booster-network' ) as $screen_id ) {
-				$GLOBALS['ran_booster_native_warning_screen']       = (object) array( 'id' => $screen_id );
+			foreach ( array(
+				'canonical gh'                  => array( 'tab' => 'gh' ),
+				'trimmed uppercase gh'          => array( 'tab' => ' GH ' ),
+				'gh credentials view'           => array(
+					'tab'  => 'gh',
+					'view' => 'credentials',
+				),
+				'gh signing-secrets view'       => array(
+					'tab'  => 'gh',
+					'view' => 'signing-secrets',
+				),
+				'gh repositories branch detail' => array(
+					'tab'             => 'gh',
+					'panel'           => 'repositories',
+					'repository_view' => 'branch',
+				),
+			) as $case => $query ) {
+				unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+				foreach ( $query as $key => $value ) {
+					$_GET[ $key ] = $value;
+				}
+				foreach ( array( 'toplevel_page_ran-booster', 'toplevel_page_ran-booster-network' ) as $screen_id ) {
+					$GLOBALS['ran_booster_native_warning_screen']       = (object) array( 'id' => $screen_id );
+					$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+					$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
+					self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'], $case );
+					ob_start();
+					$this->render_warning( $booster );
+					\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+					self::assertSame( '', (string) ob_get_clean(), $case );
+				}
+			}
+
+			$GLOBALS['ran_booster_native_warning_screen'] = (object) array( 'id' => 'toplevel_page_ran-booster' );
+			foreach ( array(
+				'rejected dotted tab'        => array( 'tab' => 'g.h' ),
+				'gh unknown view'            => array(
+					'tab'  => 'gh',
+					'view' => 'unknown',
+				),
+				'gh unknown panel'           => array(
+					'tab'   => 'gh',
+					'panel' => 'unknown',
+				),
+				'gh unknown repository view' => array(
+					'tab'             => 'gh',
+					'repository_view' => 'unknown',
+				),
+				'bitbucket tab'              => array( 'tab' => 'bb' ),
+				'overview default tab'       => array(),
+			) as $case => $query ) {
+				unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+				foreach ( $query as $key => $value ) {
+					$_GET[ $key ] = $value;
+				}
 				$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
 				$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
-				self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+				self::assertSame( array( 'ran-booster-native-update-warning' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'], $case );
 				ob_start();
 				$this->render_warning( $booster );
 				\RAN\Admin\BoosterNoticeScope::render_shell_notices();
-				self::assertSame( '', (string) ob_get_clean() );
+				self::assertStringContainsString( 'data-ran-booster-native-update-warning', (string) ob_get_clean(), $case );
 			}
 
-			$_GET['tab']                                        = 'bb';
-			$GLOBALS['ran_booster_native_warning_screen']       = (object) array( 'id' => 'toplevel_page_ran-booster' );
+			$without_github_tab               = $this->booster(
+				array(
+					'state'     => 'recovery_required',
+					'available' => false,
+				),
+				'bb'
+			);
+			$without_github_tab->booster_path = dirname( __DIR__, 2 );
+			$without_github_tab->booster_url  = 'https://example.test/wp-content/plugins/ran-booster';
+			unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+			$_GET['tab']                                        = 'gh';
+			$GLOBALS['ran_booster_native_warning_actions']      = array();
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
-			$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
+			$this->load_warning_asset( $without_github_tab, 'toplevel_page_ran-booster' );
 			self::assertSame( array( 'ran-booster-native-update-warning' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
 			ob_start();
-			$this->render_warning( $booster );
-			\RAN\Admin\BoosterNoticeScope::render_shell_notices();
-			self::assertStringContainsString( 'data-ran-booster-native-update-warning', (string) ob_get_clean() );
-
-			unset( $_GET['tab'] );
-			$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
-			$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
-			self::assertSame( array( 'ran-booster-native-update-warning' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
-			ob_start();
-			$this->render_warning( $booster );
+			$this->render_warning( $without_github_tab );
 			\RAN\Admin\BoosterNoticeScope::render_shell_notices();
 			self::assertStringContainsString( 'data-ran-booster-native-update-warning', (string) ob_get_clean() );
 		} finally {
-			unset( $_GET['tab'] );
+			unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
 		}
 	}
 

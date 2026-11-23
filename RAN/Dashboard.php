@@ -212,7 +212,7 @@ class Dashboard {
 			}
 		}
 
-		$requested_add_on_key = is_string( $requested_tab ) ? strtolower( trim( $requested_tab ) ) : '';
+		$requested_add_on_key = self::normalize_tab_key( $requested_tab );
 		$selected_add_on      = '' === $requested_add_on_key || null === $this->admin_add_ons
 			? null
 			: $this->admin_add_ons->get( $requested_add_on_key );
@@ -261,13 +261,14 @@ class Dashboard {
 		$repository_view = null;
 		$panel           = null;
 		if ( null !== $selected_tab && $selected_tab->is_provider() ) {
-			$provider_view   = $this->requested_route_slug( 'view', AdminRoutes::PROVIDER_VIEWS, 'overview' );
-			$provider_task   = $this->requested_route_slug( 'panel', AdminRoutes::PROVIDER_TASKS, 'status' );
-			$repository_view = $this->requested_route_slug( 'repository_view', AdminRoutes::REPOSITORY_VIEWS, 'status' );
+			$provider_route  = self::requested_provider_route();
+			$provider_view   = $provider_route['view'] ?? null;
+			$provider_task   = $provider_route['task'] ?? null;
+			$repository_view = $provider_route['repository_view'] ?? null;
 		} elseif ( null !== $selected_tab && 'troubleshooting' === $selected_tab->get_key() ) {
 			$panel = null !== $this->support_report_payload
 				? 'support-report'
-				: ( null !== $this->troubleshooting_payload ? 'diagnostics' : $this->requested_route_slug( 'panel', AdminRoutes::TROUBLESHOOTING_PANELS, 'installation' ) );
+				: ( null !== $this->troubleshooting_payload ? 'diagnostics' : self::requested_route_slug( 'panel', AdminRoutes::TROUBLESHOOTING_PANELS, 'installation' ) );
 		}
 		if ( ( null === $selected_add_on && null === $selected_tab ) || ( null !== $selected_tab && ( ( $selected_tab->is_provider() && ( null === $provider_view || null === $provider_task || null === $repository_view ) ) || ( 'troubleshooting' === $selected_tab->get_key() && null === $panel ) ) ) ) {
 			// Closed result: an unknown tab, panel or view never renders another page.
@@ -1536,13 +1537,43 @@ class Dashboard {
 		return ! $posted_package && $open_picker;
 	}
 
+	public static function normalize_tab_key( mixed $requested_tab ): string {
+		return is_string( $requested_tab ) ? strtolower( trim( $requested_tab ) ) : '';
+	}
+
+	/** @return array{view: string, task: string, repository_view: string}|null */
+	public static function requested_provider_route(): ?array {
+		$provider_view   = self::requested_route_slug( 'view', AdminRoutes::PROVIDER_VIEWS, 'overview' );
+		$provider_task   = self::requested_route_slug( 'panel', AdminRoutes::PROVIDER_TASKS, 'status' );
+		$repository_view = self::requested_route_slug( 'repository_view', AdminRoutes::REPOSITORY_VIEWS, 'status' );
+		if ( null === $provider_view || null === $provider_task || null === $repository_view ) {
+			return null;
+		}
+
+		return array(
+			'view'            => $provider_view,
+			'task'            => $provider_task,
+			'repository_view' => $repository_view,
+		);
+	}
+
+	public static function is_valid_provider_request( string $provider_code ): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation state suppresses the duplicate global banner on valid provider routes.
+		$requested_tab = isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ? wp_unslash( $_GET['tab'] ) : null;
+		if ( '' === $provider_code || self::normalize_tab_key( $requested_tab ) !== $provider_code ) {
+			return false;
+		}
+
+		return null !== self::requested_provider_route();
+	}
+
 	/**
 	 * Read one allowlisted routing slug.
 	 *
 	 * @param list<string> $allowed Fixed slugs.
 	 * @return string|null The default when absent, the slug when allowed, null when unknown.
 	 */
-	private function requested_route_slug( string $key, array $allowed, string $fallback ): ?string {
+	private static function requested_route_slug( string $key, array $allowed, string $fallback ): ?string {
 		// Read-only allowlisted routing state.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing selector; no mutation is performed.
 		if ( ! isset( $_GET[ $key ] ) ) {

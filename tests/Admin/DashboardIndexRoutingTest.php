@@ -1280,6 +1280,69 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
 	}
 
+	public function test_provider_view_github_details_link_tracks_network_admin_on_multisite(): void {
+		$_GET['tab']                = 'bb';
+		$data                       = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
+		$data['github_selection']   = array(
+			'available'      => false,
+			'status'         => array(
+				'state'      => 'recovery_required',
+				'candidates' => array(),
+				'current'    => null,
+			),
+			'error'          => '',
+			'package_counts' => null,
+			'review'         => null,
+			'recovery'       => array(
+				'digest'     => str_repeat( 'b', 64 ),
+				'type'       => 'plugin',
+				'identifier' => 'target/main.php',
+				'managed'    => false,
+				'finished'   => false,
+				'readable'   => false,
+				'started_at' => null,
+				'folder'     => 'target',
+				'name'       => 'target',
+				'url'        => 'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold',
+				'check_url'  => 'https://example.test/wp-admin/network/plugins.php',
+			),
+		);
+		$data['native_hold_result'] = null;
+		$render                     = static function ( array $payload ): string {
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+			extract( $payload );
+			ob_start();
+			try {
+				require dirname( __DIR__, 2 ) . '/views/provider.php';
+				return (string) ob_get_contents();
+			} finally {
+				ob_end_clean();
+			}
+		};
+
+		try {
+			$this->set_multisite( false );
+			$single_site_html = $render( $data );
+			self::assertStringContainsString(
+				'<p><a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=installation#ran-booster-github-provider-diagnostics">GitHub provider details</a></p>',
+				$single_site_html
+			);
+
+			$this->set_multisite( true );
+			$multisite_html = $render( $data );
+			self::assertStringContainsString(
+				'<p><a href="https://example.test/wp-admin/network/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=installation#ran-booster-github-provider-diagnostics">GitHub provider details</a></p>',
+				$multisite_html
+			);
+			self::assertStringNotContainsString(
+				'https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=installation#ran-booster-github-provider-diagnostics',
+				$multisite_html
+			);
+		} finally {
+			$this->set_multisite( false );
+		}
+	}
+
 	public function test_provider_view_renders_native_hold_result_notices_and_statuses(): void {
 		$_GET['tab']                              = 'bb';
 		$GLOBALS['ran_booster_test_capabilities'] = array(

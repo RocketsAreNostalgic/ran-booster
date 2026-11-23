@@ -1426,12 +1426,10 @@ class Booster {
 		$id         = is_object( $screen ) && is_string( $screen->id ) ? $screen->id : '';
 		$booster_id = str_ends_with( $id, '-network' ) ? substr( $id, 0, -8 ) : $id;
 
-		if ( 'toplevel_page_ran-booster' === $booster_id || 'toplevel_page_ran-booster' === $hook ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation state suppresses the duplicate global banner on the GitHub provider page.
-			$requested_tab = isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
-			if ( 'gh' === $requested_tab ) {
-				return false;
-			}
+		if ( ( 'toplevel_page_ran-booster' === $booster_id || 'toplevel_page_ran-booster' === $hook )
+			&& Dashboard::is_valid_provider_request( 'gh' )
+			&& $this->service( \RAN\Admin\ProviderTabLinks::class )->available( 'gh' ) ) {
+			return false;
 		}
 
 		return in_array( $id, array( 'plugins', 'plugins-network', 'themes', 'themes-network', 'update-core', 'update-core-network' ), true )

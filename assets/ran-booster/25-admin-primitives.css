@@ -300,6 +300,8 @@
 
 .ran-booster-admin .ran-wp-ui-notice > .ran-wp-ui-notice__title {
 	margin: 0;
+	font-size: revert-layer;
+	font-weight: revert-layer;
 }
 
 .ran-booster-admin .notice.ran-wp-ui-notice.ran-booster-native-hold {

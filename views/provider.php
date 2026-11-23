@@ -286,9 +286,12 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 			?>
 	<?php if ( isset( $github_selection ) && is_array( $github_selection ) ) { ?>
 		<?php
-		$selection_status       = $github_selection['status'];
-		$current_implementation = $selection_status['current']['declaration'] ?? null;
-		$healthy_replacement    = 'available' === $selection_status['state'] && $github_selection['available'];
+		$selection_status            = $github_selection['status'];
+		$current_implementation      = $selection_status['current']['declaration'] ?? null;
+		$healthy_replacement         = 'available' === $selection_status['state'] && $github_selection['available'];
+		$github_provider_details_url = is_multisite()
+			? network_admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' )
+			: admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' );
 		?>
 		<section class="ran-booster-provider__management" aria-label="<?php esc_attr_e( 'GitHub provider management', 'ran-booster' ); ?>">
 			<?php if ( $healthy_replacement && is_array( $current_implementation ) ) { ?>
@@ -401,11 +404,11 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 							<p><?php esc_html_e( 'GitHub operations are paused. Local records remain available. This does not pause other Git providers.', 'ran-booster' ); ?></p>
 						<?php } ?>
 						<?php if ( ! is_array( $adoption_review ) ) { ?>
-							<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
+							<p><a href="<?php echo esc_url( $github_provider_details_url ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
 						<?php } ?>
 					</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 				<?php } elseif ( ! $github_selection['available'] ) { ?>
-					<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-provider-paused-notice><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'GitHub operations are paused. Local records remain available. This does not pause other Git providers.', 'ran-booster' ); ?></p><?php echo is_array( $adoption_review ) ? '' : '<p><a href="' . esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ) . '">' . esc_html__( 'GitHub provider details', 'ran-booster' ) . '</a></p>'; ?></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
+					<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-provider-paused-notice><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'GitHub operations are paused. Local records remain available. This does not pause other Git providers.', 'ran-booster' ); ?></p><?php echo is_array( $adoption_review ) ? '' : '<p><a href="' . esc_url( $github_provider_details_url ) . '">' . esc_html__( 'GitHub provider details', 'ran-booster' ) . '</a></p>'; ?></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 				<?php } ?>
 				<?php if ( '' !== $github_selection['error'] && ! in_array( $selection_status['state'], array( 'conflict', 'incompatible', 'storage_unavailable' ), true ) ) { ?>
 					<p role="status"><?php echo esc_html( $github_selection['error'] ); ?></p>
@@ -445,17 +448,17 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 							<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Return to bundled GitHub', 'ran-booster' ) : __( 'Approve GitHub provider', 'ran-booster' ) ); ?></button>
 						</form>
 					<?php } ?>
-					<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
+					<p><a href="<?php echo esc_url( $github_provider_details_url ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
 					</div>
 					</details></div>
 				<?php } elseif ( 'decision_required' === $selection_status['state'] && $github_selection['available'] ) { ?>
-				<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
+				<p><a href="<?php echo esc_url( $github_provider_details_url ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
 				<?php } ?>
 			<?php } ?>
 			<?php
 			if ( $healthy_replacement ) {
 				?>
-				<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
+				<p><a href="<?php echo esc_url( $github_provider_details_url ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
 				</div>
 				</details></div><?php } ?>
 		</section>

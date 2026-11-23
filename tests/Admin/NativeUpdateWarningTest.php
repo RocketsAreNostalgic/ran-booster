@@ -269,6 +269,52 @@ final class NativeUpdateWarningTest extends TestCase {
 		self::assertSame( '', (string) ob_get_clean() );
 	}
 
+	public function test_global_warning_is_omitted_on_the_github_provider_page_only(): void {
+		$booster               = $this->booster(
+			array(
+				'state'     => 'recovery_required',
+				'available' => false,
+			)
+		);
+		$booster->booster_path = dirname( __DIR__, 2 );
+		$booster->booster_url  = 'https://example.test/wp-content/plugins/ran-booster';
+
+		try {
+			$_GET['tab'] = 'gh';
+			foreach ( array( 'toplevel_page_ran-booster', 'toplevel_page_ran-booster-network' ) as $screen_id ) {
+				$GLOBALS['ran_booster_native_warning_screen']       = (object) array( 'id' => $screen_id );
+				$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+				$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
+				self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+				ob_start();
+				$this->render_warning( $booster );
+				\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+				self::assertSame( '', (string) ob_get_clean() );
+			}
+
+			$_GET['tab']                                        = 'bb';
+			$GLOBALS['ran_booster_native_warning_screen']       = (object) array( 'id' => 'toplevel_page_ran-booster' );
+			$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+			$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
+			self::assertSame( array( 'ran-booster-native-update-warning' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+			ob_start();
+			$this->render_warning( $booster );
+			\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+			self::assertStringContainsString( 'data-ran-booster-native-update-warning', (string) ob_get_clean() );
+
+			unset( $_GET['tab'] );
+			$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+			$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
+			self::assertSame( array( 'ran-booster-native-update-warning' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+			ob_start();
+			$this->render_warning( $booster );
+			\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+			self::assertStringContainsString( 'data-ran-booster-native-update-warning', (string) ob_get_clean() );
+		} finally {
+			unset( $_GET['tab'] );
+		}
+	}
+
 	/**
 	 * @param array<string,mixed> $status
 	 * @param array{name: string, url: string}|null $hold

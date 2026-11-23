@@ -88,3 +88,15 @@ if ( ! function_exists( __NAMESPACE__ . '\\esc_url' ) ) {
 		return $url;
 	}
 }
+
+if ( ! function_exists( __NAMESPACE__ . '\\wp_unslash' ) ) {
+	function wp_unslash( mixed $value ): mixed {
+		return is_string( $value ) ? stripslashes( $value ) : $value;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\sanitize_key' ) ) {
+	function sanitize_key( mixed $value ): string {
+		return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( is_scalar( $value ) ? (string) $value : '' ) ) ?? '';
+	}
+}

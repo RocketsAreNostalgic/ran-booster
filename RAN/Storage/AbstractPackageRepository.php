@@ -165,24 +165,33 @@ abstract class AbstractPackageRepository {
 	 */
 	public function recover_unlink( string $identifier, string $expected_token, string $expected_record_digest, callable $guard ): PackageMutationResult {
 		RuntimeSupport::assert_managed_operations_allowed();
-		$wpdb = $this->require_recovery_storage();
+		$wpdb   = $this->require_recovery_storage();
+		$prefix = $wpdb->prefix ?? null;
+		if ( ! is_string( $prefix ) || '' === $prefix ) {
+			return $this->delete_failure_result();
+		}
+		$table = ran_booster_table_name();
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) || false === $wpdb->query( 'START TRANSACTION' ) ) {
 			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
-			$snapshot = $this->recovery_snapshot( $identifier, $this->locked_package_rows( $identifier, $wpdb ) );
+			$snapshot = $this->recovery_snapshot( $identifier, $this->locked_package_rows( $identifier, $wpdb, $table ) );
 			if ( $snapshot['adoption_token'] !== $expected_token || ! hash_equals( $snapshot['digest'], $expected_record_digest ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->delete_conflict_result();
 			}
 			$guard();
-			$query = $wpdb->prepare( 'DELETE FROM %i WHERE id = %s AND package_type = %d AND BINARY package = BINARY %s AND BINARY adoption_token = BINARY %s', ran_booster_table_name(), $snapshot['id'], $this->package_type(), $identifier, $expected_token );
+			if ( ( $GLOBALS['wpdb'] ?? null ) !== $wpdb || ( $wpdb->prefix ?? null ) !== $prefix || ran_booster_table_name() !== $table ) {
+				$wpdb->query( 'ROLLBACK' );
+				return $this->delete_conflict_result();
+			}
+			$query = $wpdb->prepare( 'DELETE FROM %i WHERE id = %s AND package_type = %d AND BINARY package = BINARY %s AND BINARY adoption_token = BINARY %s', $table, $snapshot['id'], $this->package_type(), $identifier, $expected_token );
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- All exact-record values are prepared above and the record remains locked.
 			if ( 1 !== $wpdb->query( $query ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->delete_failure_result();
 			}
-			$verified = $this->verify_package_deletion( $identifier, 1, $wpdb );
+			$verified = $this->verify_package_deletion( $identifier, $wpdb, $table );
 			if ( ! $verified->is_successful() || false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::DELETE );
@@ -1004,29 +1013,30 @@ abstract class AbstractPackageRepository {
 	 * @return list<object>
 	 * @phpstan-impure
 	 */
-	private function package_rows( ?string $identifier = null, ?PackageSource $source = null, \wpdb|SchemaConnection|null $wpdb = null ): array {
+	private function package_rows( ?string $identifier = null, ?PackageSource $source = null, \wpdb|SchemaConnection|null $wpdb = null, ?string $table = null ): array {
 		if ( null === $wpdb ) {
 			$this->require_storage_support( PackageStorageOperation::QUERY );
 			$wpdb = $GLOBALS['wpdb'];
 		}
+		$table ??= ran_booster_table_name();
 		if ( null !== $identifier ) {
 			$query = $wpdb->prepare(
 				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s',
-				ran_booster_table_name(),
+				$table,
 				$this->package_type(),
 				$identifier
 			);
 		} elseif ( null !== $source ) {
 			$query = $wpdb->prepare(
 				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND source = %s',
-				ran_booster_table_name(),
+				$table,
 				$this->package_type(),
 				$source->value
 			);
 		} else {
 			$query = $wpdb->prepare(
 				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d',
-				ran_booster_table_name(),
+				$table,
 				$this->package_type()
 			);
 		}
@@ -1052,14 +1062,14 @@ abstract class AbstractPackageRepository {
 	/**
 	 * @return list<object>
 	 */
-	private function locked_package_rows( string $identifier, \wpdb|SchemaConnection|null $wpdb = null ): array {
+	private function locked_package_rows( string $identifier, \wpdb|SchemaConnection|null $wpdb = null, ?string $table = null ): array {
 		if ( null === $wpdb ) {
 			$this->require_storage_support( PackageStorageOperation::QUERY );
 			$wpdb = $GLOBALS['wpdb'];
 		}
 		$query = $wpdb->prepare(
 			'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s FOR UPDATE',
-			ran_booster_table_name(),
+			$table ?? ran_booster_table_name(),
 			$this->package_type(),
 			$identifier
 		);
@@ -1118,13 +1128,9 @@ abstract class AbstractPackageRepository {
 			: PackageMutationResult::changed( $operation );
 	}
 
-	private function verify_package_deletion( string $identifier, int|false $write_result, \wpdb|SchemaConnection|null $connection = null ): PackageMutationResult {
-		if ( false === $write_result ) {
-			return $this->delete_failure_result();
-		}
-
+	private function verify_package_deletion( string $identifier, \wpdb|SchemaConnection $connection, string $table ): PackageMutationResult {
 		try {
-			$rows = $this->package_rows( $identifier, wpdb: $connection );
+			$rows = $this->package_rows( $identifier, wpdb: $connection, table: $table );
 		} catch ( PackageStorageFailure ) {
 			return $this->post_write_verification_failure( PackageStorageOperation::DELETE );
 		}
@@ -1133,9 +1139,7 @@ abstract class AbstractPackageRepository {
 			return $this->delete_conflict_result();
 		}
 
-		return 0 === $write_result
-			? PackageMutationResult::unchanged( PackageStorageOperation::DELETE )
-			: PackageMutationResult::changed( PackageStorageOperation::DELETE );
+		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
 	}
 
 	private function delete_failure_result(): PackageMutationResult {

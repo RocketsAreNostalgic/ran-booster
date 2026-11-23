@@ -648,6 +648,37 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertSame( 'ROLLBACK', $wpdb->queries[ array_key_last( $wpdb->queries ) ] );
 	}
 
+	public function test_recovery_rolls_back_before_deleting_when_guard_changes_the_table_prefix(): void {
+		global $wpdb;
+		$storage    = $this->storage();
+		$identifier = 'example/example.php';
+		$package    = $this->package( $identifier );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', '123', 'main' ) );
+		self::assertTrue( $storage->store_for_test( $package )->is_successful() );
+		$snapshot      = $storage->recovery_record( $identifier );
+		$rows          = $wpdb->stored_rows();
+		$prefix        = $wpdb->prefix;
+		$wpdb->queries = array();
+		try {
+			$result = $storage->recover_unlink(
+				$identifier,
+				$snapshot['adoption_token'],
+				$snapshot['digest'],
+				static function () use ( $wpdb, $prefix ): void {
+					self::assertStringContainsString( 'FROM `' . $prefix . 'ran_booster_packages`', (string) end( $wpdb->read_queries ) );
+					$wpdb->prefix = 'other_';
+				}
+			);
+			self::assertSame( 'other_', $wpdb->prefix );
+		} finally {
+			$wpdb->prefix = $prefix;
+		}
+		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
+		self::assertSame( array( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION', 'ROLLBACK' ), $wpdb->queries );
+		self::assertSame( array(), $wpdb->deletes );
+		self::assertSame( $rows, $wpdb->stored_rows() );
+	}
+
 	public function test_recovery_refuses_unknown_or_malformed_token_and_identity_disagreement(): void {
 		global $wpdb;
 		$storage = $this->storage();

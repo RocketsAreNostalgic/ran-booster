@@ -218,7 +218,7 @@ class Database {
 			$activity_table = $this->read_table_name( $activity_name );
 			if ( null !== $activity_table ) {
 				$fresh = ! $this->table_name_matches( $activity_name, $activity_table );
-				if ( $fresh && 1 === $this->lower_case_table_names() && 0 === strcasecmp( $activity_name, $activity_table ) ) {
+				if ( $fresh && ( 0 !== $this->lower_case_table_names() || 0 !== strcasecmp( $activity_name, $activity_table ) ) ) {
 					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 				}
 			}
@@ -696,9 +696,10 @@ class Database {
 		$has_drop_in    = defined( 'WP_CONTENT_DIR' )
 			&& is_string( constant( 'WP_CONTENT_DIR' ) )
 			&& is_file( rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php' );
-		$drop_in_handle = $has_drop_in ? $this->single_drop_in_handle( $database ) : null;
+		$check_drop_in  = $has_drop_in || ( $database instanceof \wpdb && \wpdb::class !== $database::class );
+		$drop_in_handle = $check_drop_in ? $this->single_drop_in_handle( $database ) : null;
 		if ( ! method_exists( $database, 'db_server_info' ) ) {
-			throw new DatabaseCompatibilityFailure( $has_drop_in ? 'database_drop_in' : 'unknown_server' );
+			throw new DatabaseCompatibilityFailure( $check_drop_in ? 'database_drop_in' : 'unknown_server' );
 		}
 
 		$previous_error    = property_exists( $database, 'last_error' ) ? (string) $database->last_error : null;
@@ -744,7 +745,7 @@ class Database {
 			$engines      = $query_results( 'SHOW ENGINES' );
 			$engine_error = trim( $this->capability_read_error( $database ) );
 			if ( ! is_array( $engines ) || '' !== $engine_error ) {
-				throw new DatabaseCompatibilityFailure( $has_drop_in ? 'database_drop_in' : 'innodb_unavailable' );
+				throw new DatabaseCompatibilityFailure( $check_drop_in ? 'database_drop_in' : 'innodb_unavailable' );
 			}
 			$innodb_supported = false;
 			foreach ( $engines as $engine ) {
@@ -758,7 +759,7 @@ class Database {
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 					$transactions = $engine->Transactions ?? null;
 					if ( null === $transactions ) {
-						if ( $has_drop_in ) {
+						if ( $check_drop_in ) {
 							throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 						}
 					} elseif ( 0 !== strcasecmp( 'YES', (string) $transactions ) ) {
@@ -852,9 +853,9 @@ class Database {
 			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 		}
 
-		$reflection = new \ReflectionObject( $database );
-		// Query Monitor's reviewed QM_DB::query() delegates to its direct wpdb parent.
-		$is_direct_qm = 'QM_DB' === $database::class && \wpdb::class === get_parent_class( $database );
+		$reflection   = new \ReflectionObject( $database );
+		$is_direct_qm = 'QM_DB' === $database::class && \wpdb::class === get_parent_class( $database )
+			&& $this->is_reviewed_query_monitor_class( $reflection );
 		foreach ( ( new \ReflectionClass( \wpdb::class ) )->getMethods() as $method ) {
 			$name = $method->getName();
 			if ( $method->isPrivate() || $method->isConstructor() || ( $is_direct_qm && 'query' === $name ) ) {
@@ -893,6 +894,34 @@ class Database {
 		}
 
 		return $handle ?? throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+	}
+
+	private function is_reviewed_query_monitor_class( \ReflectionObject $reflection ): bool {
+		$file  = $reflection->getFileName();
+		$start = $reflection->getStartLine();
+		$end   = $reflection->getEndLine();
+		if ( false === $file || false === $start || false === $end || str_ends_with( $file, "eval()'d code" ) || ! is_file( $file ) ) {
+			return false;
+		}
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A failed source read must reject the exception without leaking a path.
+		$lines = @file( $file );
+		if ( false === $lines || $end > count( $lines ) ) {
+			return false;
+		}
+		$source     = implode( '', array_slice( $lines, $start - 1, $end - $start + 1 ) );
+		$normalized = '';
+		foreach ( token_get_all( "<?php\n" . $source ) as $token ) {
+			if ( is_array( $token ) ) {
+				if ( in_array( $token[0], array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ), true ) ) {
+					continue;
+				}
+				$token = $token[1];
+			}
+			// Preserve token boundaries when removing whitespace and comments.
+			$normalized .= strlen( $token ) . ':' . $token;
+		}
+		// Query Monitor 4.1.0, classes/DB.php at 7c0b4d132b8e5df3097b412f027fd5a297d5f936.
+		return '5212b9081cbe5570b96b53badc8be35b2a6c46471ca6f5913bd510754a92d485' === hash( 'sha256', $normalized );
 	}
 
 	private function table_name_matches( string $expected, string $actual ): bool {

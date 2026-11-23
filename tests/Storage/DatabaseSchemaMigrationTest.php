@@ -752,6 +752,102 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options );
 	}
 
+	/** @return array<string, array{string}> */
+	public static function invalid_activity_table_name_provider(): array {
+		return array(
+			'empty'     => array( '' ),
+			'unrelated' => array( 'wp_other_table' ),
+		);
+	}
+
+	#[DataProvider( 'invalid_activity_table_name_provider' )]
+	public function test_invalid_activity_table_name_stops_install_before_ddl_or_onboarding( string $activity_table ): void {
+		global $ran_booster_storage_test_options, $wpdb;
+
+		$connection = new class( $activity_table ) extends StorageTestWpdb {
+			public function __construct( private string $activity_table ) {}
+
+			public function get_var( string $query ): int|string|null {
+				if ( $query === $this->prepare( 'SHOW TABLES LIKE %s', $this->esc_like( 'wp_ran_booster_activity' ) ) ) {
+					return $this->activity_table;
+				}
+				return parent::get_var( $query );
+			}
+		};
+		try {
+			( new Database( $connection, $this->declaration() ) )->install();
+			self::fail( 'An invalid activity table name must stop schema installation.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'schema_read_failed', $failure->reason() );
+		}
+		self::assertSame( array(), $wpdb->schemas );
+		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_replacement_wpdb_override_is_rejected_without_a_db_drop_in_file(): void {
+		require_once __DIR__ . '/DatabaseDropInWpdb.php';
+
+		define( 'WP_CONTENT_DIR', dirname( __DIR__ ) . '/fixtures/wordpress' );
+		self::assertFileDoesNotExist( WP_CONTENT_DIR . '/db.php' );
+		$connection      = new class() extends \wpdb {
+			public function db_connect(): bool {
+				return false;
+			}
+		};
+		$connection->dbh = self::mysqli_handle();
+		self::assert_drop_in_failure( new Database( $connection ) );
+		self::assertSame( array(), $connection->queries );
+		self::assertSame( array(), $connection->read_queries );
+	}
+
+	/** @return array<string, array{bool}> */
+	public static function query_monitor_class_provider(): array {
+		return array(
+			'reviewed class' => array( true ),
+			'altered query'  => array( false ),
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	#[DataProvider( 'query_monitor_class_provider' )]
+	public function test_query_monitor_exception_requires_the_reviewed_class( bool $reviewed ): void {
+		$this->with_drop_in(
+			static function () use ( $reviewed ): void {
+				require_once __DIR__ . '/PackageStorageFailureWordPressFunctions.php';
+
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- The isolated test reads a checked-in source fixture.
+				$source = file_get_contents( dirname( __DIR__ ) . '/fixtures/query-monitor-4.1.0-class.txt' );
+				self::assertIsString( $source );
+				if ( ! $reviewed ) {
+					$source = str_replace( '$this->num_queries - 1', '$this->num_queries - 2', $source, $replacements );
+					self::assertSame( 1, $replacements );
+				}
+				$fixture = WP_CONTENT_DIR . '/db.php';
+				$source  = "<?php declare(strict_types = 1);\n" . $source;
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Replace only the marker owned by with_drop_in() with the isolated class fixture.
+				self::assertSame( strlen( $source ), file_put_contents( $fixture, $source ) );
+				require $fixture;
+				$class = 'QM_DB';
+				self::assertTrue( class_exists( $class, false ) );
+				$connection = new $class();
+				self::assertInstanceOf( \wpdb::class, $connection );
+				$connection->dbh = self::mysqli_handle();
+				$database        = new Database( $connection );
+				if ( $reviewed ) {
+					$database->require_supported();
+					self::assertSame( array( 'SET @ran_booster_probe := CONNECTION_ID()', 'SET @ran_booster_probe := NULL' ), $connection->queries );
+				} else {
+					self::assert_drop_in_failure( $database );
+					self::assertSame( array(), $connection->queries );
+					self::assertSame( array(), $connection->read_queries );
+				}
+			}
+		);
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_db_drop_in_requires_an_initialized_mysqli_handle(): void {

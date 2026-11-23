@@ -65,6 +65,8 @@ try {
 	( new Database( $wpdb ) )->require_supported();
 
 	$ran_booster_router_proof = static function ( wpdb $package_writer ): void {
+		global $wpdb;
+		$original_wpdb = $wpdb;
 		if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' ) ) {
 			throw new RuntimeException( 'Drop-in proof requires installed WordPress database configuration.' );
 		}
@@ -90,9 +92,10 @@ try {
 
 			$router_queries = $router->num_queries;
 			$writer_queries = $package_writer->num_queries;
-			$lifecycle      = new Database( $router );
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Exercise the replacement connection through WordPress's live database binding.
+			$wpdb = $router;
 			try {
-				$lifecycle->require_supported();
+				( new Database() )->require_supported();
 				throw new RuntimeException( 'Expected the table-specific router to fail admission.' );
 			} catch ( DatabaseCompatibilityFailure $failure ) {
 				if ( 'database_drop_in' !== $failure->reason() ) {
@@ -100,7 +103,7 @@ try {
 				}
 			}
 			try {
-				( new PluginRepository( $lifecycle ) )->recover_unlink(
+				( new PluginRepository( new Database() ) )->recover_unlink(
 					'fixture/fixture.php',
 					'fixture-token',
 					'fixture-digest',
@@ -115,6 +118,8 @@ try {
 				}
 			}
 		} finally {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the original WordPress connection after the router proof.
+			$wpdb = $original_wpdb;
 			$router->close();
 		}
 	};

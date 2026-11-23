@@ -52,15 +52,13 @@ wp_cli_version="$("${php_runner[@]}" "$wp_cli" --version)" \
 grep -qx 'WP-CLI 2.12.0' <<< "$wp_cli_version" \
 	|| fail "WP-CLI 2.12.0 is required; found ${wp_cli_version}."
 cd "$source_dir"
-temporary_pot=$(mktemp "${TMPDIR:-/tmp}/ran-booster.pot.XXXXXX") \
-	|| fail 'could not create a temporary catalogue.'
-temporary_all_domains_pot=$(mktemp "${TMPDIR:-/tmp}/ran-booster-all-domains.pot.XXXXXX") \
-	|| fail 'could not create a temporary all-domain catalogue.'
-normalised_pot=$(mktemp "${TMPDIR:-/tmp}/ran-booster-normalised.pot.XXXXXX") \
-	|| fail 'could not create a temporary normalised catalogue.'
-normalised_all_domains_pot=$(mktemp "${TMPDIR:-/tmp}/ran-booster-all-domains-normalised.pot.XXXXXX") \
-	|| fail 'could not create a temporary normalised all-domain catalogue.'
-trap 'rm -f "$temporary_pot" "$temporary_all_domains_pot" "$normalised_pot" "$normalised_all_domains_pot"' EXIT HUP INT TERM
+temporary_dir=$(mktemp -d "${TMPDIR:-/tmp}/ran-booster-pot.XXXXXX") \
+	|| fail 'could not create a temporary catalogue directory.'
+trap 'rm -rf "$temporary_dir"' EXIT HUP INT TERM
+temporary_pot="$temporary_dir/ran-booster.pot"
+temporary_all_domains_pot="$temporary_dir/all-domains.pot"
+normalised_pot="$temporary_dir/normalised.pot"
+normalised_all_domains_pot="$temporary_dir/all-domains-normalised.pot"
 
 # Prefer PHP without machine-local configuration when it can run the WP-CLI
 # Phar. Otherwise, retain the configured PHP that supplies required extensions.

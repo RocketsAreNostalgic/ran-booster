@@ -60,32 +60,29 @@ final class LocalisationCatalogContractTest extends TestCase {
 
 	public function test_release_allowlist_generates_the_catalogue_instead_of_committing_it(): void {
 		$root     = dirname( __DIR__ );
-		$manifest = file( $root . '/release-files.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file -- Local release contract.
+		$manifest = file( $root . '/release-files.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
 		self::assertIsArray( $manifest );
 		self::assertContains( 'languages', $manifest );
 		$ignore = file_get_contents( $root . '/.gitignore' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
 		self::assertIsString( $ignore );
 		self::assertStringContainsString( "\n/languages/ran-booster.pot\n", $ignore );
 
-		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $script_name ) {
-			$script = file_get_contents( $root . '/scripts/' . $script_name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
-			self::assertIsString( $script );
-			self::assertSame( 1, preg_match( '/^committed_entries=\((.*?)^\)/ms', $script, $committed ), $script_name );
-			self::assertSame( 1, preg_match( '/^generated_entries=\((.*?)^\)/ms', $script, $generated ), $script_name );
-			if ( ! isset( $committed[1], $generated[1] ) ) {
-				self::fail( 'Could not read the entry lists of ' . $script_name . '.' );
-			}
-			self::assertStringNotContainsString( "'languages'", $committed[1], $script_name . ' must not archive a committed languages directory.' );
-			self::assertStringContainsString( "'languages'", $generated[1], $script_name );
-			self::assertStringContainsString( 'make-pot.sh', $script, $script_name );
-		}
-		$builder = file_get_contents( $root . '/scripts/build-release.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
-		self::assertIsString( $builder );
-		self::assertStringContainsString( '--source "$stage_root" --output "$stage_root/languages/ran-booster.pot"', $builder );
+		$builder  = file_get_contents( $root . '/scripts/build-release.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
 		$verifier = file_get_contents( $root . '/scripts/verify-release.sh' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
+		self::assertIsString( $builder );
 		self::assertIsString( $verifier );
+		self::assertSame( 1, preg_match( '/^committed_entries=\((.*?)^\)/ms', $verifier, $committed ) );
+		self::assertSame( 1, preg_match( '/^generated_entries=\((.*?)^\)/ms', $verifier, $generated ) );
+		if ( ! isset( $committed[1], $generated[1] ) ) {
+			self::fail( 'Could not read the shared release entry lists.' );
+		}
+		self::assertStringNotContainsString( "'languages'", $committed[1] );
+		self::assertStringContainsString( "'languages'", $generated[1] );
+		self::assertStringContainsString( 'source "$script_dir/verify-release.sh"', $builder );
+		self::assertStringContainsString( 'make-pot.sh" --source "$stage_root" --output "$stage_root/languages/ran-booster.pot"', $builder );
+		self::assertStringContainsString( 'make-pot.sh" --source "$pot_source" --output "$tmp_dir/expected.pot"', $verifier );
 		self::assertStringContainsString( "'ran-booster/languages/ran-booster.pot'", $verifier );
-		self::assertStringContainsString( 'git archive --format=tar "$commit" -- "${committed_entries[@]}"', $verifier );
+		self::assertStringContainsString( 'git -c core.autocrlf=false -c core.eol=lf archive --format=tar "$commit" -- "${committed_entries[@]}"', $verifier );
 		self::assertStringContainsString( 'archived translation template does not match one regenerated from the release ref.', $verifier );
 	}
 }

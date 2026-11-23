@@ -94,13 +94,13 @@ final class GitHubProviderSelection {
 						throw new \RuntimeException( 'GitHub adoption authority changed before confirmation.' );
 					}
 					$this->store->selection_transaction(
-						function () use ( $inventory, $digest, $reuse_existing, $acknowledge_incompatible, $attempts, $lock, $token ): void {
+						function ( callable $execute ) use ( $inventory, $digest, $reuse_existing, $acknowledge_incompatible, $attempts, $lock, $token ): void {
 							$review = $this->adoption_projection( $inventory );
 							if ( ! hash_equals( $review['digest'], $digest ) || ( $review['compatible_count'] > 0 && ! $reuse_existing ) || ( 0 === $review['compatible_count'] && $review['incompatible_count'] > 0 && ! $acknowledge_incompatible ) ) {
 								throw new \RuntimeException( 'GitHub adoption review or credential reuse consent changed.' );
 							}
 							$state = $this->store->read( true );
-							$attempts->assert_selection_transition_idle( $this );
+							$attempts->assert_selection_transition_idle( $this, $execute );
 							$next                         = $state;
 							$next['selection_generation'] = $review['selection_generation'] + 1;
 							$next['selected']             = $review['selected'];
@@ -108,7 +108,7 @@ final class GitHubProviderSelection {
 							unset( $next['declaration']['implementation_fingerprint'] );
 							$next['approval']             = 'approved';
 							$next['approved_api_formats'] = $review['target']['api_credential_formats'];
-							if ( $this->adoption_projection( $inventory ) !== $review || $lock->current_token() !== $token || ! $this->store->compare_and_swap( $state, $next ) ) {
+							if ( $this->adoption_projection( $inventory ) !== $review || $lock->current_token_sql( $this->uses_connection( ... ), $execute ) !== $token || ! $this->store->compare_and_swap( $state, $next ) ) {
 								throw new \RuntimeException( 'GitHub adoption authority changed before confirmation.' );
 							}
 						}
@@ -116,7 +116,7 @@ final class GitHubProviderSelection {
 				}
 			);
 		} finally {
-			if ( ! $lock->release( $token ) ) {
+			if ( ! $this->has_unclosed_transaction() && ! $lock->release( $token ) ) {
 				throw new \RuntimeException( 'GitHub selection may have changed; updater lock release requires recovery.' );
 			}
 		}
@@ -368,6 +368,10 @@ final class GitHubProviderSelection {
 		return $this->store->uses_connection( $connection, $table );
 	}
 
+	public function has_unclosed_transaction(): bool {
+		return $this->store->has_unclosed_transaction();
+	}
+
 	/** Current authority, also acquiring the first admission lock in caller's transaction. */
 	public function deployment_refusal( ?int $generation, string $type, string $identity, bool $strict_storage = false ): ?string {
 		try {
@@ -561,7 +565,11 @@ final class GitHubProviderSelection {
 			}
 			return;
 		}
-		$this->store->selection_transaction( $complete );
+		$this->store->selection_transaction(
+			static function () use ( $complete ): void {
+				$complete();
+			}
+		);
 	}
 
 	/**
@@ -637,18 +645,18 @@ final class GitHubProviderSelection {
 	}
 
 	/**
-	 * @param array<string,mixed> $expected Exact reviewed state, including marker and approval.
-	 * @param callable():void $verify Core-only physical absence/management/attempt/lock checks; no WordPress filters or callbacks.
-	 * @param (callable():void)|null $on_committed Invoked only after COMMIT succeeds and before cache invalidation.
+	 * @param array<string,mixed>                                                                                       $expected Exact reviewed state, including marker and approval.
+	 * @param callable(\Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)):void $verify Core-only physical absence/management/attempt/lock checks; no WordPress filters or callbacks.
+	 * @param (callable():void)|null                                                                                    $on_committed Invoked only after COMMIT succeeds and before cache invalidation.
 	 */
 	public function release_native_hold( array $expected, callable $verify, ?callable $on_committed = null ): void {
 		$this->store->selection_transaction(
-			function () use ( $expected, $verify ): void {
+			function ( callable $execute ) use ( $expected, $verify ): void {
 				$state = $this->native_recovery_state();
 				if ( $state !== $expected ) {
 					throw new \RuntimeException( 'Native recovery authority changed.' );
 				}
-				$verify();
+				$verify( $execute );
 				$next = $state;
 				unset( $next['native_mutation'] );
 				if ( ! $this->store->compare_and_swap( $state, $next ) ) {

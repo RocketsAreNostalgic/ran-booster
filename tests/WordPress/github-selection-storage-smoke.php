@@ -636,6 +636,49 @@ return static function ( wpdb $database ): void {
 					static fn () => $reconnected_hold_store->selection_transaction( static fn (): null => null ),
 					'mid-transaction reconnect must leave selection store uncertain and refuse reuse'
 				);
+
+				$database->options = $saved_options;
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore main $database binding before calling Storage::require_recovery_ready() against real Booster tables, then swap back to disposable options table.
+				$GLOBALS['wpdb'] = $database;
+				$smoke_plugins   = new \RAN\Storage\PluginRepository();
+				$smoke_attempts  = new \RAN\Deployment\DeploymentAttemptRepository( $database, selection: $reclaim_context );
+				$smoke_plugins->require_recovery_ready();
+				$database->options = $table;
+				$fresh_token       = (string) time();
+				$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+				$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $fresh_token, 'no' ) );
+				$expect( array() !== $store->read(), 'warm selection store before hook-free hold verification proof' );
+				$filtered_queries->exchangeArray( array() );
+				$option_hooks    = 0;
+				$record_opt_hook = static function ( mixed $value = null ) use ( &$option_hooks ): mixed {
+					++$option_hooks;
+					return $value;
+				};
+				$opt_hook_names  = array( 'pre_option_ran_booster_db_version', 'option_ran_booster_db_version', 'pre_option_auto_updater.lock', 'pre_option_ran_booster_github_selection' );
+				add_filter( 'query', $record_queries );
+				foreach ( $opt_hook_names as $hook_name ) {
+					add_filter( $hook_name, $record_opt_hook );
+				}
+				try {
+					$reclaim_context->release_native_hold(
+						$with_hold,
+						static function ( callable $execute ) use ( $smoke_plugins, $smoke_attempts, $reclaim_context, $lock, $fresh_token, $expect ): void {
+							$expect( null === $smoke_plugins->native_recovery_record( 'held-commit-smoke/held-commit-smoke.php', true, $execute ), 'pinned native_recovery_record observed absence' );
+							$smoke_attempts->assert_selection_transition_idle( $reclaim_context, $execute );
+							$expect( ! $smoke_attempts->has_unresolved_target_attempt( 'plugin', 'held-commit-smoke/held-commit-smoke.php', true, $execute ), 'pinned has_unresolved_target_attempt observed idle target' );
+							$expect( $lock->current_token_sql( $reclaim_context->uses_connection( ... ), $execute ) === $fresh_token, 'pinned current_token_sql verified active updater token' );
+						}
+					);
+				} finally {
+					foreach ( $opt_hook_names as $hook_name ) {
+						remove_filter( $hook_name, $record_opt_hook );
+					}
+					remove_filter( 'query', $record_queries );
+					$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+				}
+				$expect( 0 === $filtered_queries->count(), 'pinned hold verification and CAS must run zero WordPress query filters inside the transaction' );
+				$expect( 0 === $option_hooks, 'pinned hold verification and CAS must run zero WordPress option hooks inside the transaction' );
+				$expect( ! array_key_exists( 'native_mutation', $second->read() ), 'hook-free pinned hold verification released native_mutation cleanly' );
 			} finally {
 				$doomed_hold->close();
 				$reconnected_hold->close();

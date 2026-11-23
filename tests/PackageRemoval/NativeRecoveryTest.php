@@ -79,8 +79,13 @@ final class NativeRecoveryTest extends TestCase {
 		$this->selection = new GitHubProviderSelection( $this->store, '/unused', $bundled );
 		$plugins         = $this->createMock( PluginRepository::class );
 		$plugins->method( 'native_recovery_record' )->willReturnCallback(
-			function ( string $identifier, bool $locked = false ): ?array {
+			function ( string $identifier, bool $locked = false, ?callable $execute = null ): ?array {
 				self::assertSame( 'target/main.php', $identifier );
+				if ( $locked ) {
+					self::assertIsCallable( $execute );
+				} else {
+					self::assertNull( $execute );
+				}
 				$this->events[] = $locked ? 'locked_absence' : 'inventory';
 				return $this->record;
 			}
@@ -816,23 +821,25 @@ final class NativeRecoveryTest extends TestCase {
 	public function test_failed_rollback_skips_selection_cache_callbacks_and_never_emits_lock_release_failure(): void {
 		foreach ( array( 'recover', 'release' ) as $operation ) {
 			foreach ( array( 'fail_rollback', 'throw_rollback' ) as $rollback_mode ) {
-				foreach ( array( 'zero', 'throw' ) as $lock_mode ) {
+				foreach ( array( 'clear', 'zero', 'throw' ) as $lock_mode ) {
 					unset( $this->db->option_rows['auto_updater.lock'] );
 					$this->hold( str_repeat( 'a', 32 ), 'started' );
-					$fresh_service            = $this->uncertain_commit_service( $operation );
+					$fresh_selection          = null;
+					$fresh_service            = $this->uncertain_commit_service( $operation, $fresh_selection );
 					$digest                   = $fresh_service->native_recovery_confirmation()['digest'];
 					$this->db->fail_commit    = true;
 					$this->db->fail_rollback  = 'fail_rollback' === $rollback_mode;
 					$this->db->throw_rollback = 'throw_rollback' === $rollback_mode;
-					$selection_cache_deletes  = 0;
-					$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ) use ( &$selection_cache_deletes ): void {
-						if ( 'options' === $group && in_array( $key, array( GitHubSelectionStore::OPTION, 'alloptions' ), true ) ) {
-							++$selection_cache_deletes;
+					$this->db->queries        = array();
+					$cache_deletes_after_tx   = 0;
+					$GLOBALS['ran_booster_attempt_on_cache_delete'] = function () use ( &$cache_deletes_after_tx ): void {
+						if ( in_array( 'START TRANSACTION', $this->db->queries, true ) ) {
+							++$cache_deletes_after_tx;
 						}
 					};
 					if ( 'throw' === $lock_mode ) {
 						$this->db->fail_query_contains = 'DELETE FROM `wp_options`';
-					} else {
+					} elseif ( 'zero' === $lock_mode ) {
 						$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
 					}
 					$caught = null;
@@ -854,7 +861,8 @@ final class NativeRecoveryTest extends TestCase {
 						$this->db->last_error          = '';
 					}
 					self::assertTrue( $this->in_selection_transaction(), "$operation/$rollback_mode/$lock_mode" );
-					self::assertSame( 0, $selection_cache_deletes, "$operation/$rollback_mode/$lock_mode" );
+					self::assertTrue( $fresh_selection->has_unclosed_transaction(), "$operation/$rollback_mode/$lock_mode" );
+					self::assertSame( 0, $cache_deletes_after_tx, "$operation/$rollback_mode/$lock_mode" );
 					self::assertSame( 1, $this->db->query( 'ROLLBACK' ), "$operation/$rollback_mode/$lock_mode" );
 					self::assertInstanceOf( \RuntimeException::class, $caught, "$operation/$rollback_mode/$lock_mode" );
 					self::assertNotInstanceOf( NativeHoldLockReleaseFailure::class, $caught, "$operation/$rollback_mode/$lock_mode" );
@@ -865,8 +873,9 @@ final class NativeRecoveryTest extends TestCase {
 		}
 	}
 
-	private function uncertain_commit_service( string $operation ): PackageRemovalService {
-		$bundled     = new GitHubReplacementDeclaration(
+	/** @param-out GitHubProviderSelection $selection_ref */
+	private function uncertain_commit_service( string $operation, ?GitHubProviderSelection &$selection_ref = null ): PackageRemovalService {
+		$bundled       = new GitHubReplacementDeclaration(
 			array(
 				'plugin_basename'        => 'booster.php',
 				'implementation_id'      => 'bundled',
@@ -877,10 +886,11 @@ final class NativeRecoveryTest extends TestCase {
 				'facets'                 => array(),
 			)
 		);
-		$fresh_store = new GitHubSelectionStore( $this->db, 'wp_options' );
-		$selection   = new GitHubProviderSelection( $fresh_store, '/unused', $bundled );
-		$plugins     = $this->createMock( PluginRepository::class );
-		$gateway     = $this->createMock( PackageRemovalGateway::class );
+		$fresh_store   = new GitHubSelectionStore( $this->db, 'wp_options' );
+		$selection     = new GitHubProviderSelection( $fresh_store, '/unused', $bundled );
+		$selection_ref = $selection;
+		$plugins       = $this->createMock( PluginRepository::class );
+		$gateway       = $this->createMock( PackageRemovalGateway::class );
 		if ( 'release' === $operation ) {
 			$plugins->method( 'native_recovery_record' )->willReturn(
 				array(

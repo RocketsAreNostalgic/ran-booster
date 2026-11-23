@@ -66,17 +66,19 @@ final class DeploymentAttemptRepository {
 		$this->random_bytes       = $random_bytes ?? random_bytes( ... );
 		$this->database_lifecycle = $database_lifecycle ?? new Database( $this->database );
 	}
-	/** Caller already owns the same selection row transaction, before attempt locks. */
-	public function assert_selection_transition_idle( GitHubProviderSelection $selection ): void {
+	/**
+	 * Caller already owns the same selection row transaction, before attempt locks.
+	 *
+	 * @param (callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null))|null $execute
+	 */
+	public function assert_selection_transition_idle( GitHubProviderSelection $selection, ?callable $execute = null ): void {
 		if ( null === $this->database || ! $selection->uses_connection( $this->database ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		$rows = $this->read_rows(
-			$this->prepare(
-				"SELECT id FROM %i WHERE provider = 'gh' AND (state = 'running' OR (state = 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL))) LIMIT 1 FOR UPDATE",
-				$this->table_name
-			)
-		);
+		$query = "SELECT id FROM %i WHERE provider = 'gh' AND (state = 'running' OR (state = 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL))) LIMIT 1 FOR UPDATE";
+		$rows  = null !== $execute
+			? $this->read_rows_with_executor( $execute, $query, array( $this->table_name ) )
+			: $this->read_rows( $this->prepare( $query, $this->table_name ) );
 		if ( array() !== $rows ) {
 			throw new \RuntimeException( 'GitHub deployment recovery or completion is required before switching.' );
 		}
@@ -1184,17 +1186,18 @@ final class DeploymentAttemptRepository {
 		return $rows[0];
 	}
 
-	/** Called inside the management-row transaction; unknown legacy targets remain a hard stop. */
-	public function has_unresolved_target_attempt( string $package_type, string $identifier, bool $directory_scope = false ): bool {
+	/**
+	 * Called inside the management-row transaction; unknown legacy targets remain a hard stop.
+	 *
+	 * @param (callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null))|null $execute
+	 */
+	public function has_unresolved_target_attempt( string $package_type, string $identifier, bool $directory_scope = false, ?callable $execute = null ): bool {
 		$this->assert_package_type( $package_type );
 		$this->assert_safe_text( $identifier, 255 );
-		$rows = $this->read_rows(
-			$this->prepare(
-				"SELECT * FROM %i WHERE package_type = %s AND (state IN ('queued','running') OR (state = 'needs_attention' AND resolved_at IS NULL AND resolved_by IS NULL)) LIMIT 65 FOR UPDATE",
-				$this->table_name,
-				$package_type
-			)
-		);
+		$query = "SELECT * FROM %i WHERE package_type = %s AND (state IN ('queued','running') OR (state = 'needs_attention' AND resolved_at IS NULL AND resolved_by IS NULL)) LIMIT 65 FOR UPDATE";
+		$rows  = null !== $execute
+			? $this->read_rows_with_executor( $execute, $query, array( $this->table_name, $package_type ) )
+			: $this->read_rows( $this->prepare( $query, $this->table_name, $package_type ) );
 		if ( count( $rows ) > 64 ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
@@ -1407,6 +1410,33 @@ final class DeploymentAttemptRepository {
 
 	private function same_stored_value( mixed $stored, mixed $expected ): bool {
 		return null === $expected ? null === $stored : is_scalar( $stored ) && hash_equals( (string) $expected, (string) $stored );
+	}
+
+	/**
+	 * @param callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null) $execute
+	 * @param list<int|string>                                                                             $arguments
+	 * @return list<object>
+	 */
+	private function read_rows_with_executor( callable $execute, string $query, array $arguments ): array {
+		try {
+			$rows = $execute( $query, $arguments, 'results' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			throw $failure;
+		} catch ( Throwable ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+		if ( ! is_array( $rows ) ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+		$objects = array();
+		foreach ( $rows as $row ) {
+			if ( ! is_object( $row ) ) {
+				throw DeploymentStorageFailure::inconsistent();
+			}
+			$objects[] = $row;
+		}
+
+		return $objects;
 	}
 
 	/** @return list<object> */

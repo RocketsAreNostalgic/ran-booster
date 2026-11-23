@@ -485,13 +485,19 @@ final class GitHubSelectionStoreTest extends TestCase {
 		};
 		try {
 			$result = $store->selection_transaction(
-				fn (): bool => $store->compare_and_swap( $old, $next ),
+				static function ( callable $execute ) use ( $store, $old, $next ): bool {
+					$rows = $execute( 'SELECT option_name, option_value, autoload FROM %i WHERE option_name = %s LIMIT %d', array( 'wp_options', GitHubSelectionStore::OPTION, 1 ), 'results' );
+					self::assertIsArray( $rows );
+					self::assertCount( 1, $rows );
+					return $store->compare_and_swap( $old, $next );
+				},
 				static function ( bool $swapped ) use ( &$committed ): void {
 					$committed = $swapped;
 				}
 			);
 			self::assertTrue( $result );
 			self::assertTrue( $committed );
+			self::assertFalse( $store->has_unclosed_transaction() );
 			self::assertSame( 1, $option_deletes );
 		} finally {
 			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
@@ -589,6 +595,7 @@ final class GitHubSelectionStoreTest extends TestCase {
 				} finally {
 					unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
 				}
+				self::assertTrue( $store->has_unclosed_transaction(), "$trigger/$rollback_mode" );
 				self::assertSame( 0, $cache_deletes, "$trigger/$rollback_mode must skip cache backend while transaction stays open." );
 				if ( 'last_error' !== $rollback_mode ) {
 					self::assertNotNull( $db->transaction_rows, "$trigger/$rollback_mode" );
@@ -637,6 +644,7 @@ final class GitHubSelectionStoreTest extends TestCase {
 			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
 		}
 		self::assertSame( $rolled_old, $rolled_store->read() );
+		self::assertFalse( $rolled_store->has_unclosed_transaction() );
 		self::assertSame( 1, $rolled_option_deletes );
 
 		foreach ( array( 'false', 'throw' ) as $rollback_mode ) {
@@ -664,6 +672,7 @@ final class GitHubSelectionStoreTest extends TestCase {
 			} finally {
 				unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
 			}
+			self::assertTrue( $hold_store->has_unclosed_transaction(), "hold/$rollback_mode" );
 			self::assertSame( 0, $hold_deletes, "hold/$rollback_mode must skip cache backend while transaction stays open." );
 			self::assertNotNull( $hold_db->transaction_rows, "hold/$rollback_mode" );
 			$hold_db->fail_commit    = false;

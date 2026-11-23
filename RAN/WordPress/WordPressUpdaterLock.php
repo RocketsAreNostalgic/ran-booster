@@ -85,6 +85,35 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	}
 
 	/**
+	 * Read the active updater lock token strictly through the caller's pinned single-session SQL
+	 * executor inside an active transaction on the verified same connection.
+	 *
+	 * @param callable(object, string): bool                                                                   $same_connection
+	 * @param callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null) $execute
+	 */
+	public function current_token_sql( callable $same_connection, callable $execute ): ?string {
+		global $wpdb;
+		if ( ! isset( $wpdb ) || ! is_object( $wpdb ) || ! isset( $wpdb->options ) || ! is_string( $wpdb->options ) || '' === $wpdb->options || true !== $same_connection( $wpdb, $wpdb->options ) ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+		try {
+			$stored = $execute(
+				'SELECT option_value FROM %i WHERE option_name = %s',
+				array( $wpdb->options, self::OPTION_NAME ),
+				'var'
+			);
+		} catch ( DeploymentStorageFailure $failure ) {
+			throw $failure;
+		} catch ( Throwable ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+		if ( null !== $stored && ! is_string( $stored ) ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+		return is_string( $stored ) && 1 === preg_match( '/^\d+$/D', $stored ) && (int) $stored > time() - self::STALE_SECONDS ? $stored : null;
+	}
+
+	/**
 	 * Acquire a free lock or reclaim an expired (> 1 hour) row strictly through the caller's
 	 * pinned single-session SQL executor inside an active transaction on the verified same
 	 * connection. Callers must invoke invalidate_lock_cache() after committing when a token

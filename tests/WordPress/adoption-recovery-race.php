@@ -41,6 +41,62 @@ $ran_booster_race_plugins    = $ran_booster_race_container->make( PluginReposito
 $ran_booster_race_removal    = $ran_booster_race_container->make( PackageRemovalService::class );
 $ran_booster_race_attempts   = $ran_booster_race_container->make( DeploymentAttemptRepository::class );
 global $wpdb;
+$ran_booster_wait_for_peer_contention = static function ( string $dir, WP_Filesystem_Direct $filesystem, string $expected_info_fragment ): void {
+	$attempting_value = $filesystem->get_contents( $dir . '/attempting' );
+	if ( ! is_string( $attempting_value ) || 1 !== preg_match( '/\A[1-9]\d*\z/D', trim( $attempting_value ) ) ) {
+		return;
+	}
+	$peer_id = (int) trim( $attempting_value );
+	if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' )
+		|| ! is_string( DB_USER ) || ! is_string( DB_PASSWORD ) || ! is_string( DB_NAME ) || ! is_string( DB_HOST ) ) {
+		throw new RuntimeException( 'Race peer contention DB constants are unavailable.' );
+	}
+	global $wpdb;
+	$host_parts = $wpdb->parse_db_host( DB_HOST );
+	if ( ! is_array( $host_parts ) ) {
+		throw new RuntimeException( 'Race peer contention DB host could not be parsed.' );
+	}
+	$port   = is_string( $host_parts[1] ) && '' !== $host_parts[1] ? (int) $host_parts[1] : null;
+	$socket = is_string( $host_parts[2] ) && '' !== $host_parts[2] ? $host_parts[2] : null;
+	// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Observe peer PROCESSLIST lock contention on a raw mysqli session without invoking WordPress query hooks inside an active owner transaction.
+	$control = new \mysqli( $host_parts[0], DB_USER, DB_PASSWORD, DB_NAME, $port, $socket );
+	try {
+		$peer_deadline = microtime( true ) + 10.0;
+		$contending    = false;
+		$escaped_like  = $control->real_escape_string( '%' . str_replace( array( '\\', '%', '_' ), array( '\\\\', '\\%', '\\_' ), $expected_info_fragment ) . '%' );
+		while ( microtime( true ) < $peer_deadline ) {
+			$alive_result = $control->query( 'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = ' . $peer_id );
+			// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Read single-scalar PROCESSLIST count from mysqli_result.
+			if ( ! $alive_result instanceof \mysqli_result ) {
+				throw new RuntimeException( 'Race peer PROCESSLIST query failed.' );
+			}
+			$alive_row = $alive_result->fetch_row();
+			$alive_result->free();
+			if ( 0 === (int) ( $alive_row[0] ?? 0 ) ) {
+				throw new RuntimeException( 'Race peer exited before lock contention.' );
+			}
+			$waiting_result = $control->query(
+				'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = ' . $peer_id . " AND COMMAND = 'Query' AND INFO LIKE '" . $escaped_like . "'"
+			);
+			// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Read single-scalar PROCESSLIST contention count from mysqli_result.
+			if ( ! $waiting_result instanceof \mysqli_result ) {
+				throw new RuntimeException( 'Race peer contention query failed.' );
+			}
+			$waiting_row = $waiting_result->fetch_row();
+			$waiting_result->free();
+			if ( (int) ( $waiting_row[0] ?? 0 ) >= 1 ) {
+				$contending = true;
+				break;
+			}
+			usleep( 10000 );
+		}
+		if ( ! $contending || is_file( $dir . '/peer-result' ) ) {
+			throw new RuntimeException( 'Race peer did not block on selection lock.' );
+		}
+	} finally {
+		$control->close();
+	}
+};
 // Complete real bootstrap before the owner can hold selection authority. Otherwise
 // the peer blocks before this fixture can observe its intended transaction boundary.
 if ( str_ends_with( $ran_booster_race_action, '-peer' ) ) {
@@ -122,6 +178,15 @@ if ( str_contains( $ran_booster_race_action, 'native' ) ) {
 		if ( ! in_array( $ran_booster_native_store->read(), array( $ran_booster_native_fixture['before'], $ran_booster_native_fixture['uncertain'] ), true ) ) {
 			throw new RuntimeException( 'Native fixture cleanup refuses changed authority.' );
 		}
+		if ( is_file( $ran_booster_race_dir . '/killed-lock-token' ) ) {
+			$ran_booster_cleanup_token = $ran_booster_race_filesystem->get_contents( $ran_booster_race_dir . '/killed-lock-token' );
+			if ( is_string( $ran_booster_cleanup_token ) && 1 === preg_match( '/\A[1-9]\d*\z/D', trim( $ran_booster_cleanup_token ) ) ) {
+				$ran_booster_cleanup_lock = $ran_booster_race_container->make( \RAN\WordPress\WordPressUpdaterLock::class );
+				if ( $ran_booster_cleanup_lock->current_token() === trim( $ran_booster_cleanup_token ) && ! $ran_booster_cleanup_lock->release( trim( $ran_booster_cleanup_token ) ) ) {
+					throw new RuntimeException( 'Native killed-lock cleanup failed.' );
+				}
+			}
+		}
 		$wpdb->delete(
 			ran_booster_table_name(),
 			array(
@@ -202,9 +267,10 @@ if ( str_contains( $ran_booster_race_action, 'native' ) ) {
 							$control->close();
 							throw new \RuntimeException( 'Killed native commit session did not exit.' );
 						}
-						// Remove the updater lock via control session so post-failure cleanup observes a false release after kill.
-						$control->delete( $control->options, array( 'option_name' => 'auto_updater.lock' ) );
 						$control->close();
+						// Seed cache sentinels before the failed ROLLBACK exits so post-failure checks prove cache eviction and updater-lock release stay skipped.
+						wp_cache_set( \RAN\Storage\GitHubSelectionStore::OPTION, 'sentinel-killed-selection', 'options' );
+						wp_cache_set( 'auto_updater.lock', 'sentinel-killed-lock', 'options' );
 						$this->state->killed = true;
 						return parent::query( $query, $result_mode );
 					}
@@ -219,8 +285,9 @@ if ( str_contains( $ran_booster_race_action, 'native' ) ) {
 		$ran_booster_native_dbh_property = new ReflectionProperty( wpdb::class, 'dbh' );
 		$ran_booster_native_original_dbh = $ran_booster_native_dbh_property->getValue( $wpdb );
 		$ran_booster_native_dbh_property->setValue( $wpdb, $ran_booster_native_fixture_dbh );
-		$ran_booster_native_suppressed = $wpdb->suppress_errors( true );
-		$ran_booster_native_caught     = null;
+		$ran_booster_native_suppressed  = $wpdb->suppress_errors( true );
+		$ran_booster_native_caught      = null;
+		$ran_booster_native_reconnected = false;
 		try {
 			$ran_booster_race_removal->recover_native_removal( $ran_booster_native_fixture['review']['digest'], true, true, static fn (): bool => true );
 		} catch ( Throwable $failure ) {
@@ -228,6 +295,7 @@ if ( str_contains( $ran_booster_race_action, 'native' ) ) {
 		} finally {
 			$wpdb->suppress_errors( $ran_booster_native_suppressed );
 			$ran_booster_native_current_dbh = $ran_booster_native_dbh_property->getValue( $wpdb );
+			$ran_booster_native_reconnected = $ran_booster_native_current_dbh !== $ran_booster_native_fixture_dbh;
 			$ran_booster_native_dbh_property->setValue( $wpdb, $ran_booster_native_original_dbh );
 			// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Close disposable fixture mysqli handles restored off $wpdb.
 			if ( $ran_booster_native_current_dbh instanceof \mysqli && $ran_booster_native_current_dbh !== $ran_booster_native_original_dbh && $ran_booster_native_current_dbh !== $ran_booster_native_fixture_dbh ) {
@@ -245,9 +313,20 @@ if ( str_contains( $ran_booster_race_action, 'native' ) ) {
 		}
 		if ( $ran_booster_native_kill_mode ) {
 			if ( ! $ran_booster_native_commit_state->killed
-				|| ! $ran_booster_native_caught instanceof RuntimeException
-				|| $ran_booster_native_caught instanceof \RAN\PackageRemoval\NativeHoldLockReleaseFailure ) {
-				throw new RuntimeException( 'Killed hold-clear COMMIT was not reported as uncertain.' );
+				|| ! $ran_booster_native_caught instanceof \RAN\Storage\DatabaseLifecycleFailure
+				|| 'selection_commit_uncertain' !== $ran_booster_native_caught->reason()
+				|| ! $ran_booster_native_store->has_unclosed_transaction()
+				|| $ran_booster_native_reconnected
+				|| 'sentinel-killed-selection' !== wp_cache_get( \RAN\Storage\GitHubSelectionStore::OPTION, 'options' )
+				|| 'sentinel-killed-lock' !== wp_cache_get( 'auto_updater.lock', 'options' ) ) {
+				throw new RuntimeException( 'Killed hold-clear COMMIT was not isolated without cache or lock side effects.' );
+			}
+			wp_cache_delete( \RAN\Storage\GitHubSelectionStore::OPTION, 'options' );
+			wp_cache_delete( 'auto_updater.lock', 'options' );
+			$ran_booster_killed_token = $ran_booster_race_container->make( \RAN\WordPress\WordPressUpdaterLock::class )->current_token();
+			if ( ! is_string( $ran_booster_killed_token ) || '' === $ran_booster_killed_token
+				|| ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_dir . '/killed-lock-token', $ran_booster_killed_token, 0600 ) ) {
+				throw new RuntimeException( 'Killed hold-clear recovery did not preserve its updater lock token.' );
 			}
 			return;
 		}
@@ -266,10 +345,18 @@ if ( str_contains( $ran_booster_race_action, 'native' ) ) {
 		return;
 	}
 	if ( 'assert-native-commit-killed' === $ran_booster_race_action ) {
-		if ( $ran_booster_native_store->read() !== $ran_booster_native_fixture['uncertain'] || null !== $ran_booster_race_container->make( \RAN\WordPress\WordPressUpdaterLock::class )->current_token() ) {
-			throw new RuntimeException( 'Fresh process did not observe preserved native hold after killed COMMIT.' );
+		$ran_booster_killed_token = $ran_booster_race_filesystem->get_contents( $ran_booster_race_dir . '/killed-lock-token' );
+		$ran_booster_killed_lock  = $ran_booster_race_container->make( \RAN\WordPress\WordPressUpdaterLock::class );
+		if ( ! is_string( $ran_booster_killed_token ) || 1 !== preg_match( '/\A[1-9]\d*\z/D', trim( $ran_booster_killed_token ) ) ) {
+			throw new RuntimeException( 'Killed hold-clear lock token fixture is missing.' );
 		}
-		echo 'Killed hold-clear COMMIT preserved native hold without reconnect or lock_failed misclassification.' . PHP_EOL;
+		$ran_booster_killed_token = trim( $ran_booster_killed_token );
+		if ( $ran_booster_native_store->read() !== $ran_booster_native_fixture['uncertain']
+			|| $ran_booster_killed_lock->current_token() !== $ran_booster_killed_token
+			|| ! $ran_booster_killed_lock->release( $ran_booster_killed_token ) ) {
+			throw new RuntimeException( 'Fresh process did not observe preserved native hold and intact updater lock after killed COMMIT.' );
+		}
+		echo 'Killed hold-clear COMMIT preserved native hold and updater lock without reconnect or lock_failed misclassification.' . PHP_EOL;
 		return;
 	}
 	if ( str_starts_with( $ran_booster_race_action, 'assert-native-' ) ) {
@@ -282,101 +369,168 @@ if ( str_contains( $ran_booster_race_action, 'native' ) ) {
 		echo 'Native recovery/sibling insert ordering passed.' . PHP_EOL;
 		return;
 	}
-	$ran_booster_native_is_owner        = str_ends_with( $ran_booster_race_action, '-owner' );
-	$ran_booster_native_is_recovery     = str_starts_with( $ran_booster_race_action, 'native-recovery-' );
-	$ran_booster_native_paused          = false;
-	$ran_booster_native_management_seen = false;
-	$ran_booster_native_filter          = static function ( string $query ) use ( &$ran_booster_native_paused, &$ran_booster_native_management_seen, $ran_booster_native_is_owner, $ran_booster_race_dir, $ran_booster_race_filesystem ): string {
-		if ( str_contains( $query, ran_booster_table_name() ) && str_contains( $query, 'FOR UPDATE' ) ) {
-			$ran_booster_native_management_seen = true;
+	$ran_booster_native_is_owner    = str_ends_with( $ran_booster_race_action, '-owner' );
+	$ran_booster_native_is_recovery = str_starts_with( $ran_booster_race_action, 'native-recovery-' );
+	$ran_booster_native_paused      = false;
+	$ran_booster_native_tx_state    = (object) array(
+		'in_pinned_tx'    => false,
+		'management_seen' => false,
+		'paused'          => false,
+		'hook_hits'       => array(),
+	);
+	$ran_booster_native_result      = 'success';
+	if ( $ran_booster_native_is_owner ) {
+		if ( ! defined( 'DB_HOST' ) || ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' )
+			|| ! is_string( DB_HOST ) || ! is_string( DB_USER ) || ! is_string( DB_PASSWORD ) || ! is_string( DB_NAME ) ) {
+			throw new RuntimeException( 'Native race DB constants are unavailable.' );
 		}
-		// Owner reaches attempt locking inside selection_transaction() only after selection and scoped management FOR UPDATE reads returned.
-		$boundary = $ran_booster_native_is_owner
-			? $ran_booster_native_management_seen && str_contains( $query, Database::attempt_table_name() ) && str_contains( $query, 'FOR UPDATE' )
-			: str_contains( $query, 'ran_booster_github_selection' ) && str_contains( $query, 'FOR UPDATE' );
-		if ( ! $ran_booster_native_paused && $boundary ) {
-			$ran_booster_native_paused = true;
-			if ( ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_dir . ( $ran_booster_native_is_owner ? '/locked' : '/attempting' ), 'ready', 0600 ) ) {
-				throw new RuntimeException( 'Native race barrier unavailable.' );
+		$ran_booster_native_host_parts = $wpdb->parse_db_host( DB_HOST );
+		if ( ! is_array( $ran_booster_native_host_parts ) ) {
+			throw new RuntimeException( 'Native race DB host could not be parsed.' );
+		}
+		$ran_booster_native_db_port     = is_string( $ran_booster_native_host_parts[1] ) && '' !== $ran_booster_native_host_parts[1] ? (int) $ran_booster_native_host_parts[1] : null;
+		$ran_booster_native_db_socket   = is_string( $ran_booster_native_host_parts[2] ) && '' !== $ran_booster_native_host_parts[2] ? $ran_booster_native_host_parts[2] : null;
+		$ran_booster_native_fixture_dbh = new class(
+			$ran_booster_native_host_parts[0],
+			DB_USER,
+			DB_PASSWORD,
+			DB_NAME,
+			$ran_booster_native_db_port,
+			$ran_booster_native_db_socket,
+			ran_booster_table_name(),
+			Database::attempt_table_name(),
+			$ran_booster_race_dir,
+			$ran_booster_race_filesystem,
+			$ran_booster_wait_for_peer_contention,
+			$ran_booster_native_tx_state
+		// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Pause the owner pinned mysqli session after management FOR UPDATE and immediately before attempt FOR UPDATE while verification stays hook-free.
+		) extends \mysqli {
+			public function __construct(
+				string $host,
+				string $user,
+				string $password,
+				string $database,
+				?int $port,
+				?string $socket,
+				private string $management_table,
+				private string $attempt_table,
+				private string $dir,
+				private WP_Filesystem_Direct $filesystem,
+				private \Closure $wait_for_peer,
+				private \stdClass $state
+			) {
+				parent::__construct( $host, $user, $password, $database, $port, $socket );
 			}
-			if ( $ran_booster_native_is_owner ) {
-				$deadline = microtime( true ) + 20;
-				while ( ! is_file( $ran_booster_race_dir . '/release' ) ) {
-					if ( microtime( true ) > $deadline ) {
-						throw new RuntimeException( 'Native race barrier timed out.' );
-					}
-					usleep( 20000 );
+
+			// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Preserve mysqli::query() signature on the disposable owner race handle.
+			public function query( string $query, int $result_mode = MYSQLI_STORE_RESULT ): \mysqli_result|bool {
+				if ( 'START TRANSACTION' === $query ) {
+					$this->state->in_pinned_tx = true;
+				} elseif ( 'COMMIT' === $query || 'ROLLBACK' === $query ) {
+					$this->state->in_pinned_tx = false;
 				}
-				$attempting_value = $ran_booster_race_filesystem->get_contents( $ran_booster_race_dir . '/attempting' );
-				if ( is_string( $attempting_value ) && 1 === preg_match( '/\A[1-9]\d*\z/D', trim( $attempting_value ) ) ) {
-					$peer_id = (int) trim( $attempting_value );
-					if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' )
-						|| ! is_string( DB_USER ) || ! is_string( DB_PASSWORD ) || ! is_string( DB_NAME ) || ! is_string( DB_HOST ) ) {
-						throw new RuntimeException( 'Native race peer wait DB constants are unavailable.' );
+				if ( $this->state->in_pinned_tx && str_contains( $query, $this->management_table ) && str_contains( $query, 'FOR UPDATE' ) ) {
+					$this->state->management_seen = true;
+				}
+				if ( $this->state->in_pinned_tx && ! $this->state->paused && $this->state->management_seen
+					&& str_contains( $query, $this->attempt_table ) && str_contains( $query, 'FOR UPDATE' ) ) {
+					$this->state->paused = true;
+					if ( ! $this->filesystem->put_contents( $this->dir . '/locked', 'ready', 0600 ) ) {
+						throw new \RuntimeException( 'Native race barrier unavailable.' );
 					}
-					$control = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
-					try {
-						$peer_deadline  = microtime( true ) + 5.0;
-						$contending     = false;
-						$selection_like = '%' . $control->esc_like( 'ran_booster_github_selection' ) . '%';
-						while ( microtime( true ) < $peer_deadline ) {
-							$alive = (int) $control->get_var( $control->prepare( 'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = %d', $peer_id ) );
-							if ( 0 === $alive ) {
-								throw new RuntimeException( 'Native race peer exited before lock contention.' );
-							}
-							$waiting = (int) $control->get_var(
-								$control->prepare(
-									"SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = %d AND COMMAND = 'Query' AND INFO LIKE %s",
-									$peer_id,
-									$selection_like
-								)
-							);
-							if ( $waiting >= 1 ) {
-								$contending = true;
-								break;
-							}
-							usleep( 10000 );
+					$deadline = microtime( true ) + 20;
+					while ( ! is_file( $this->dir . '/release' ) ) {
+						if ( microtime( true ) > $deadline ) {
+							throw new \RuntimeException( 'Native race barrier timed out.' );
 						}
-						if ( ! $contending || is_file( $ran_booster_race_dir . '/peer-result' ) ) {
-							throw new RuntimeException( 'Native race peer did not block on selection lock.' );
+						usleep( 20000 );
+					}
+					( $this->wait_for_peer )( $this->dir, $this->filesystem, \RAN\Storage\GitHubSelectionStore::OPTION );
+				}
+				return parent::query( $query, $result_mode );
+			}
+		};
+		$wpdb->set_charset( $ran_booster_native_fixture_dbh );
+		$ran_booster_native_dbh_property = new ReflectionProperty( wpdb::class, 'dbh' );
+		$ran_booster_native_original_dbh = $ran_booster_native_dbh_property->getValue( $wpdb );
+		$ran_booster_native_dbh_property->setValue( $wpdb, $ran_booster_native_fixture_dbh );
+		$ran_booster_native_hook_guard = static function ( string $query ) use ( $ran_booster_native_tx_state ): string {
+			if ( $ran_booster_native_tx_state->in_pinned_tx ) {
+				$ran_booster_native_tx_state->hook_hits[] = 'query:' . $query;
+			}
+			return $query;
+		};
+		$ran_booster_native_opt_guard  = static function ( mixed $value = null ) use ( $ran_booster_native_tx_state ): mixed {
+			if ( $ran_booster_native_tx_state->in_pinned_tx ) {
+				$ran_booster_native_tx_state->hook_hits[] = 'option:' . current_filter();
+			}
+			return $value;
+		};
+		add_filter( 'query', $ran_booster_native_hook_guard );
+		foreach ( array( 'pre_option_ran_booster_db_version', 'option_ran_booster_db_version', 'pre_option_auto_updater.lock', 'pre_option_ran_booster_github_selection' ) as $ran_booster_native_hook_name ) {
+			add_filter( $ran_booster_native_hook_name, $ran_booster_native_opt_guard );
+		}
+		try {
+			if ( $ran_booster_native_is_recovery ) {
+				$ran_booster_race_removal->recover_native_removal( $ran_booster_native_fixture['review']['digest'], true, true, static fn (): bool => true );
+			} else {
+				$ran_booster_race_plugins->require_recovery_ready();
+				$ran_booster_native_store->selection_transaction(
+					static function ( callable $execute ) use ( $ran_booster_native_store, $ran_booster_native_selection, $ran_booster_race_plugins, $ran_booster_race_attempts, $ran_booster_race_identifier, $ran_booster_native_fixture, $wpdb ): void {
+						$ran_booster_native_store->read( true );
+						$ran_booster_race_plugins->native_recovery_record( $ran_booster_race_identifier, true, $execute );
+						$ran_booster_race_attempts->assert_selection_transition_idle( $ran_booster_native_selection, $execute );
+						// Deliberate fixture SQL writer, not a claim that normal adoption permits an absent target.
+						if ( 1 !== $wpdb->insert( ran_booster_table_name(), $ran_booster_native_fixture['row'] ) ) {
+							throw new RuntimeException( 'Native sibling insert failed.' );
 						}
-					} finally {
-						$control->close();
 					}
-				}
+				);
+			}
+		} catch ( Throwable ) {
+			$ran_booster_native_result = 'rejected';
+		} finally {
+			foreach ( array( 'pre_option_ran_booster_db_version', 'option_ran_booster_db_version', 'pre_option_auto_updater.lock', 'pre_option_ran_booster_github_selection' ) as $ran_booster_native_hook_name ) {
+				remove_filter( $ran_booster_native_hook_name, $ran_booster_native_opt_guard );
+			}
+			remove_filter( 'query', $ran_booster_native_hook_guard );
+			$ran_booster_native_dbh_property->setValue( $wpdb, $ran_booster_native_original_dbh );
+			try {
+				$ran_booster_native_fixture_dbh->close();
+			} catch ( Throwable ) {
+				unset( $ran_booster_native_fixture_dbh );
 			}
 		}
-		return $query;
-	};
-	add_filter( 'query', $ran_booster_native_filter );
-	$ran_booster_native_result = 'success';
-	try {
-		if ( $ran_booster_native_is_recovery ) {
-			$ran_booster_race_removal->recover_native_removal( $ran_booster_native_fixture['review']['digest'], true, true, static fn (): bool => true );
-		} else {
-			if ( ! $ran_booster_native_is_owner ) {
-				$ran_booster_native_peer_id = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
-				if ( $ran_booster_native_peer_id <= 0 || ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_dir . '/attempting', (string) $ran_booster_native_peer_id, 0600 ) ) {
-					throw new RuntimeException( 'Native peer race barrier unavailable.' );
-				}
-				$ran_booster_native_paused = true;
-			}
-			$ran_booster_native_store->selection_transaction(
-				static function () use ( $ran_booster_native_store, $ran_booster_native_selection, $ran_booster_race_plugins, $ran_booster_race_attempts, $ran_booster_race_identifier, $ran_booster_native_fixture, $wpdb ): void {
-					$ran_booster_native_store->read( true );
-					$ran_booster_race_plugins->native_recovery_record( $ran_booster_race_identifier, true );
-					$ran_booster_race_attempts->assert_selection_transition_idle( $ran_booster_native_selection );
-					// Deliberate fixture SQL writer, not a claim that normal adoption permits an absent target.
-					if ( 1 !== $wpdb->insert( ran_booster_table_name(), $ran_booster_native_fixture['row'] ) ) {
-						throw new RuntimeException( 'Native sibling insert failed.' );
-					}
-				}
-			);
+		$ran_booster_native_paused = $ran_booster_native_tx_state->paused;
+		if ( $ran_booster_native_is_recovery && array() !== $ran_booster_native_tx_state->hook_hits ) {
+			throw new RuntimeException( 'Native recovery triggered WordPress hooks inside selection_transaction(): ' . implode( '; ', $ran_booster_native_tx_state->hook_hits ) );
 		}
-	} catch ( Throwable ) {
-		$ran_booster_native_result = 'rejected';
-	} finally {
-		remove_filter( 'query', $ran_booster_native_filter );
+	} else {
+		$ran_booster_native_peer_id = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
+		if ( $ran_booster_native_peer_id <= 0 || ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_dir . '/attempting', (string) $ran_booster_native_peer_id, 0600 ) ) {
+			throw new RuntimeException( 'Native peer race barrier unavailable.' );
+		}
+		$ran_booster_native_paused = true;
+		try {
+			if ( $ran_booster_native_is_recovery ) {
+				$ran_booster_race_removal->recover_native_removal( $ran_booster_native_fixture['review']['digest'], true, true, static fn (): bool => true );
+			} else {
+				$ran_booster_race_plugins->require_recovery_ready();
+				$ran_booster_native_store->selection_transaction(
+					static function ( callable $execute ) use ( $ran_booster_native_store, $ran_booster_native_selection, $ran_booster_race_plugins, $ran_booster_race_attempts, $ran_booster_race_identifier, $ran_booster_native_fixture, $wpdb ): void {
+						$ran_booster_native_store->read( true );
+						$ran_booster_race_plugins->native_recovery_record( $ran_booster_race_identifier, true, $execute );
+						$ran_booster_race_attempts->assert_selection_transition_idle( $ran_booster_native_selection, $execute );
+						// Deliberate fixture SQL writer, not a claim that normal adoption permits an absent target.
+						if ( 1 !== $wpdb->insert( ran_booster_table_name(), $ran_booster_native_fixture['row'] ) ) {
+							throw new RuntimeException( 'Native sibling insert failed.' );
+						}
+					}
+				);
+			}
+		} catch ( Throwable ) {
+			$ran_booster_native_result = 'rejected';
+		}
 	}
 	if ( ! $ran_booster_native_paused || ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_dir . ( $ran_booster_native_is_owner ? '/owner-result' : '/peer-result' ), $ran_booster_native_result, 0600 ) ) {
 		throw new RuntimeException( 'Native race process missed its required lock schedule.' );
@@ -422,10 +576,9 @@ if ( ! is_array( $ran_booster_race_confirmation )
 }
 $ran_booster_race_owner  = str_ends_with( $ran_booster_race_action, '-owner' );
 $ran_booster_race_paused = false;
-$ran_booster_race_filter = static function ( string $query ) use ( &$ran_booster_race_paused, $ran_booster_race_action, $ran_booster_race_owner, $ran_booster_race_dir, $ran_booster_race_filesystem, $wpdb ): string {
-	$selection_peer = ! $ran_booster_race_owner && str_starts_with( $ran_booster_race_action, 'recovery-' );
-	$target         = $ran_booster_race_owner ? Database::attempt_table_name() : ( $selection_peer ? $wpdb->options : ran_booster_table_name() );
-	if ( ! $ran_booster_race_paused && str_contains( $query, $target ) && str_contains( $query, 'FOR UPDATE' ) && ( ! $selection_peer || str_contains( $query, \RAN\Storage\GitHubSelectionStore::OPTION ) ) ) {
+$ran_booster_race_filter = static function ( string $query ) use ( &$ran_booster_race_paused, $ran_booster_race_owner, $ran_booster_race_dir, $ran_booster_race_filesystem, $ran_booster_wait_for_peer_contention ): string {
+	$target = $ran_booster_race_owner ? Database::attempt_table_name() : ran_booster_table_name();
+	if ( ! $ran_booster_race_paused && str_contains( $query, $target ) && str_contains( $query, 'FOR UPDATE' ) ) {
 		$ran_booster_race_paused = true;
 		if ( ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_dir . ( $ran_booster_race_owner ? '/locked' : '/attempting' ), 'ready', 0600 ) ) {
 			throw new RuntimeException( 'Race barrier unavailable.' );
@@ -439,6 +592,7 @@ $ran_booster_race_filter = static function ( string $query ) use ( &$ran_booster
 				}
 				usleep( 20000 );
 			}
+			$ran_booster_wait_for_peer_contention( $ran_booster_race_dir, $ran_booster_race_filesystem, \RAN\Storage\GitHubSelectionStore::OPTION );
 		}
 	}
 	return $query;
@@ -447,6 +601,13 @@ add_filter( 'query', $ran_booster_race_filter );
 $ran_booster_race_result = 'success';
 try {
 	if ( str_starts_with( $ran_booster_race_action, 'recovery-' ) ) {
+		if ( ! $ran_booster_race_owner ) {
+			$ran_booster_race_peer_id = (int) $wpdb->get_var( 'SELECT CONNECTION_ID()' );
+			if ( $ran_booster_race_peer_id <= 0 || ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_dir . '/attempting', (string) $ran_booster_race_peer_id, 0600 ) ) {
+				throw new RuntimeException( 'Recovery peer race barrier unavailable.' );
+			}
+			$ran_booster_race_paused = true;
+		}
 		$ran_booster_race_removal->recover( 'plugin', $ran_booster_race_identifier, $ran_booster_race_confirmation['adoption_token'], $ran_booster_race_confirmation['digest'], $ran_booster_race_confirmation['installed_digest'] );
 	} elseif ( str_starts_with( $ran_booster_race_action, 'admission-' ) ) {
 		$ran_booster_race_request = new DeploymentRequest( 'example/' . $ran_booster_race_slug, null, false, 'main', $ran_booster_race_slug, null, DeploymentPolicy::MANUAL, null, installed_identifier: $ran_booster_race_identifier, adoption_token: $ran_booster_race_confirmation['adoption_token'] );

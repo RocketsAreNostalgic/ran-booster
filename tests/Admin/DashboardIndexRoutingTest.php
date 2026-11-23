@@ -1413,13 +1413,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 				github_selection: $bundled_selection
 			);
 			foreach ( array(
-				'unsigned cleared notice'        => array(
+				'unsigned cleared notice'                => array(
 					'tab'                     => 'gh',
 					'ran_booster_hold'        => 'cleared',
 					'ran_booster_hold_folder' => 'target-plugin',
 					'ran_booster_hold_type'   => 'plugin',
 				),
-				'tampered folder after signing'  => array(
+				'tampered folder after signing'          => array(
 					'tab'                     => 'gh',
 					'ran_booster_hold'        => 'cleared',
 					'ran_booster_hold_folder' => 'other-plugin',
@@ -1428,13 +1428,40 @@ final class DashboardIndexRoutingTest extends TestCase {
 						Dashboard::native_hold_result_nonce_action( 'cleared', 'target-plugin', 'plugin', '' )
 					),
 				),
-				'tampered package after signing' => array(
+				'tampered package after signing'         => array(
 					'tab'                     => 'gh',
 					'ran_booster_hold'        => 'cleared',
 					'ran_booster_hold_folder' => 'target-plugin',
 					'ran_booster_hold_type'   => 'plugin',
 					'_ran_booster_hold_nonce' => \RAN\wp_create_nonce(
 						Dashboard::native_hold_result_nonce_action( 'cleared', 'target-plugin', 'plugin', 'example/example.php' )
+					),
+				),
+				'malformed code normalized with canonical nonce' => array(
+					'tab'                     => 'gh',
+					'ran_booster_hold'        => 'cleared.',
+					'ran_booster_hold_folder' => 'target-plugin',
+					'ran_booster_hold_type'   => 'plugin',
+					'_ran_booster_hold_nonce' => \RAN\wp_create_nonce(
+						Dashboard::native_hold_result_nonce_action( 'cleared', 'target-plugin', 'plugin', '' )
+					),
+				),
+				'malformed type normalized with canonical nonce' => array(
+					'tab'                     => 'gh',
+					'ran_booster_hold'        => 'cleared',
+					'ran_booster_hold_folder' => 'target-plugin',
+					'ran_booster_hold_type'   => 'plugin.',
+					'_ran_booster_hold_nonce' => \RAN\wp_create_nonce(
+						Dashboard::native_hold_result_nonce_action( 'cleared', 'target-plugin', 'plugin', '' )
+					),
+				),
+				'whitespace folder with canonical nonce' => array(
+					'tab'                     => 'gh',
+					'ran_booster_hold'        => 'cleared',
+					'ran_booster_hold_folder' => ' target-plugin ',
+					'ran_booster_hold_type'   => 'plugin',
+					'_ran_booster_hold_nonce' => \RAN\wp_create_nonce(
+						Dashboard::native_hold_result_nonce_action( 'cleared', 'target-plugin', 'plugin', '' )
 					),
 				),
 			) as $rejected_case => $rejected_query ) {
@@ -3040,6 +3067,62 @@ final class DashboardIndexRoutingTest extends TestCase {
 			)
 		);
 		self::assertNull( $parse->invoke( $dashboard ) );
+
+		$canonical_folder_nonce = \RAN\wp_create_nonce(
+			Dashboard::native_hold_result_nonce_action( 'cleared', 'example_plugin-1.0', 'theme', '' )
+		);
+		$canonical_default_type = \RAN\wp_create_nonce(
+			Dashboard::native_hold_result_nonce_action( 'cleared', 'example_plugin-1.0', 'plugin', '' )
+		);
+		$canonical_package      = \RAN\wp_create_nonce(
+			Dashboard::native_hold_result_nonce_action( 'released', '', 'plugin', 'example/example.php' )
+		);
+		foreach ( array(
+			'trailing dot in code'       => array_replace( $signed_cleared, array( 'ran_booster_hold' => 'cleared.' ) ),
+			'uppercase code'             => array_replace( $signed_cleared, array( 'ran_booster_hold' => 'CLEARED' ) ),
+			'trailing dot in type'       => array_replace( $signed_cleared, array( 'ran_booster_hold_type' => 'theme.' ) ),
+			'uppercase type'             => array_replace( $signed_cleared, array( 'ran_booster_hold_type' => 'THEME' ) ),
+			'empty type with plugin sig' => array(
+				'ran_booster_hold'        => 'cleared',
+				'ran_booster_hold_folder' => 'example_plugin-1.0',
+				'ran_booster_hold_type'   => '',
+				'_ran_booster_hold_nonce' => $canonical_default_type,
+			),
+			'empty type with empty sig'  => array(
+				'ran_booster_hold'        => 'cleared',
+				'ran_booster_hold_folder' => 'example_plugin-1.0',
+				'ran_booster_hold_type'   => '',
+				'_ran_booster_hold_nonce' => \RAN\wp_create_nonce(
+					Dashboard::native_hold_result_nonce_action( 'cleared', 'example_plugin-1.0', '', '' )
+				),
+			),
+			'padded folder'              => array_replace( $signed_cleared, array( 'ran_booster_hold_folder' => ' example_plugin-1.0 ' ) ),
+			'empty folder'               => array(
+				'ran_booster_hold'        => 'cleared',
+				'ran_booster_hold_folder' => '',
+				'ran_booster_hold_type'   => 'theme',
+				'_ran_booster_hold_nonce' => \RAN\wp_create_nonce(
+					Dashboard::native_hold_result_nonce_action( 'cleared', '', 'theme', '' )
+				),
+			),
+			'padded package'             => array(
+				'ran_booster_hold'        => 'released',
+				'package'                 => ' example/example.php ',
+				'_ran_booster_hold_nonce' => $canonical_package,
+			),
+			'empty package'              => array(
+				'ran_booster_hold'        => 'released',
+				'package'                 => '',
+				'_ran_booster_hold_nonce' => \RAN\wp_create_nonce(
+					Dashboard::native_hold_result_nonce_action( 'released', '', 'plugin', '' )
+				),
+			),
+			'padded nonce'               => array_replace( $signed_cleared, array( '_ran_booster_hold_nonce' => ' ' . $canonical_folder_nonce . ' ' ) ),
+		) as $malformed_case => $malformed_query ) {
+			$_GET = $malformed_query;
+			self::assertNull( $parse->invoke( $dashboard ), $malformed_case );
+		}
+
 		$_GET = $this->signed_native_hold_query(
 			array(
 				'ran_booster_hold'        => 'lock_failed',

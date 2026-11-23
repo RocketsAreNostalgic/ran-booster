@@ -85,8 +85,9 @@ final readonly class PackageRemovalService {
 		if ( ! $confirmed_checked || true !== $this->recovery_authorized( $authorized ) || null === $this->github_selection || null === $this->attempts || ! $this->github_selection->uses_connection( $wpdb ) ) {
 			throw new \RuntimeException( 'Explicit native hold release authority is required.' );
 		}
-		$snapshot = $this->native_recovery_snapshot();
-		$marker   = $snapshot['state']['native_mutation'];
+		$selection = $this->github_selection;
+		$snapshot  = $this->native_recovery_snapshot();
+		$marker    = $snapshot['state']['native_mutation'];
 		if ( ! hash_equals( $snapshot['digest'], $digest ) || ! is_array( $marker ) ) {
 			throw new \RuntimeException( 'The native hold review changed.' );
 		}
@@ -95,17 +96,21 @@ final readonly class PackageRemovalService {
 		if ( ! $this->held_target_readable( $type, $identifier, $snapshot['record'] ) ) {
 			throw new \RuntimeException( 'Only a managed, registered target is released in place.' );
 		}
+		if ( $selection->has_unclosed_transaction() ) {
+			throw new \RuntimeException( 'GitHub selection transaction requires recovery.' );
+		}
 		$token        = $this->native_hold_lock( $marker, $confirmed_stopped );
 		$hold_cleared = false;
 		try {
 			$repository = 'plugin' === $type ? $this->plugins : $this->themes;
-			$verify     = function () use ( $type, $identifier, $repository, $snapshot, $token ): void {
-				if ( null === $this->attempts || $this->attempts->has_unresolved_target_attempt( $type, $identifier, true )
-					|| $repository->native_recovery_record( $identifier, true ) !== $snapshot['record']
-					|| $this->updater_lock->current_token() !== $token ) {
+			$verify     = function ( callable $execute ) use ( $type, $identifier, $repository, $snapshot, $token, $selection ): void {
+				if ( null === $this->attempts
+					|| $repository->native_recovery_record( $identifier, true, $execute ) !== $snapshot['record']
+					|| $this->attempts->has_unresolved_target_attempt( $type, $identifier, true, $execute )
+					|| $this->updater_lock->current_token_sql( $selection->uses_connection( ... ), $execute ) !== $token ) {
 					throw new \RuntimeException( 'The held package, its attempts or operation ownership changed.' );
 				}
-				$this->attempts->assert_selection_transition_idle( $this->github_selection );
+				$this->attempts->assert_selection_transition_idle( $selection, $execute );
 			};
 			// As in removal recovery, a failed invalidation keeps the hold so the release can be retried.
 			$this->wordpress->invalidate_native_target( $type, $identifier );
@@ -113,7 +118,8 @@ final readonly class PackageRemovalService {
 			if ( true !== $this->recovery_authorized( $authorized ) || ! $this->held_target_readable( $type, $identifier, $snapshot['record'] ) ) {
 				throw new \RuntimeException( 'The held package or release authority changed.' );
 			}
-			$this->github_selection->release_native_hold(
+			$repository->require_recovery_ready();
+			$selection->release_native_hold(
 				$snapshot['state'],
 				$verify,
 				static function () use ( &$hold_cleared ): void {
@@ -128,12 +134,14 @@ final readonly class PackageRemovalService {
 				)
 			);
 		} finally {
-			$this->release_native_hold_lock(
-				$token,
-				$hold_cleared,
-				'The native hold was released; updater lock release failed.',
-				'The native hold may be released; updater lock release requires recovery.'
-			);
+			if ( ! $selection->has_unclosed_transaction() ) {
+				$this->release_native_hold_lock(
+					$token,
+					$hold_cleared,
+					'The native hold was released; updater lock release failed.',
+					'The native hold may be released; updater lock release requires recovery.'
+				);
+			}
 		}
 	}
 
@@ -149,9 +157,13 @@ final readonly class PackageRemovalService {
 		if ( ! $confirmed_stopped || ! $confirmed_removal || true !== $this->recovery_authorized( $authorized ) || null === $this->github_selection || null === $this->attempts || ! $this->github_selection->uses_connection( $wpdb ) ) {
 			throw new \RuntimeException( 'Explicit native recovery authority is required.' );
 		}
-		$snapshot = $this->native_recovery_snapshot();
+		$selection = $this->github_selection;
+		$snapshot  = $this->native_recovery_snapshot();
 		if ( ! hash_equals( $snapshot['digest'], $digest ) || ! is_array( $snapshot['state']['native_mutation'] ) ) {
 			throw new \RuntimeException( 'The native recovery review changed.' );
+		}
+		if ( $selection->has_unclosed_transaction() ) {
+			throw new \RuntimeException( 'GitHub selection transaction requires recovery.' );
 		}
 		$token        = $this->native_hold_lock( $snapshot['state']['native_mutation'], $confirmed_stopped );
 		$hold_cleared = false;
@@ -162,15 +174,21 @@ final readonly class PackageRemovalService {
 				PackageMutationGuard::assert_plugin_file_allowed( $identifier );
 			}
 			$absent     = $this->wordpress->deletion_postcondition( $type, $identifier, true );
-			$verify     = function () use ( $type, $identifier, $absent, $token ): void {
-				if ( ! $absent() || null === $this->attempts || $this->attempts->has_unresolved_target_attempt( $type, $identifier, true ) || $this->updater_lock->current_token() !== $token ) {
+			$verify     = function ( ?callable $execute = null ) use ( $type, $identifier, $absent, $token, $selection ): void {
+				if ( ! $absent() || null === $this->attempts || $this->attempts->has_unresolved_target_attempt( $type, $identifier, true, $execute ) ) {
+					throw new \RuntimeException( 'Native target absence or operation ownership could not be verified.' );
+				}
+				$current_token = null !== $execute
+					? $this->updater_lock->current_token_sql( $selection->uses_connection( ... ), $execute )
+					: $this->updater_lock->current_token();
+				if ( $current_token !== $token ) {
 					throw new \RuntimeException( 'Native target absence or operation ownership could not be verified.' );
 				}
 			};
 			$repository = 'plugin' === $type ? $this->plugins : $this->themes;
 			$record     = $snapshot['record'];
-			$this->attempts->assert_selection_transition_idle( $this->github_selection );
-			if ( ! $absent() || true !== $this->recovery_authorized( $authorized ) || $this->github_selection->native_recovery_state() !== $snapshot['state'] ) {
+			$this->attempts->assert_selection_transition_idle( $selection );
+			if ( ! $absent() || true !== $this->recovery_authorized( $authorized ) || $selection->native_recovery_state() !== $snapshot['state'] ) {
 				throw new \RuntimeException( 'The native recovery authority changed.' );
 			}
 			if ( null !== $record ) {
@@ -182,26 +200,29 @@ final readonly class PackageRemovalService {
 			if ( true !== $this->recovery_authorized( $authorized ) ) {
 				throw new \RuntimeException( 'Native recovery permission changed.' );
 			}
-			$this->github_selection->release_native_hold(
+			$repository->require_recovery_ready();
+			$selection->release_native_hold(
 				$snapshot['state'],
-				function () use ( $repository, $identifier, $verify ): void {
-					if ( null !== $repository->native_recovery_record( $identifier, true ) ) {
+				function ( callable $execute ) use ( $repository, $identifier, $verify, $selection ): void {
+					if ( null !== $repository->native_recovery_record( $identifier, true, $execute ) ) {
 						throw new \RuntimeException( 'The removed target is still managed.' );
 					}
-					$this->attempts?->assert_selection_transition_idle( $this->github_selection );
-					$verify();
+					$this->attempts?->assert_selection_transition_idle( $selection, $execute );
+					$verify( $execute );
 				},
 				static function () use ( &$hold_cleared ): void {
 					$hold_cleared = true;
 				}
 			);
 		} finally {
-			$this->release_native_hold_lock(
-				$token,
-				$hold_cleared,
-				'Native recovery cleared the hold; updater lock release failed.',
-				'Native recovery may have completed; updater lock release requires recovery.'
-			);
+			if ( ! $selection->has_unclosed_transaction() ) {
+				$this->release_native_hold_lock(
+					$token,
+					$hold_cleared,
+					'Native recovery cleared the hold; updater lock release failed.',
+					'Native recovery may have completed; updater lock release requires recovery.'
+				);
+			}
 		}
 	}
 

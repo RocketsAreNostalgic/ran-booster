@@ -19,10 +19,11 @@ use RAN\RepositoryProvider\GitHubReplacementDeclaration;
  * through this store: exact locking and compare-and-swap depend on that shape at a write.
  */
 final class GitHubSelectionStore {
-	public const OPTION                    = 'ran_booster_github_selection';
-	private bool $commit_uncertain         = false;
-	private bool $storage_verified         = false;
-	private bool $in_selection_transaction = false;
+	public const OPTION                      = 'ran_booster_github_selection';
+	private bool $commit_uncertain           = false;
+	private bool $transaction_open_uncertain = false;
+	private bool $storage_verified           = false;
+	private bool $in_selection_transaction   = false;
 	// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Pin the active wpdb mysqli handle through COMMIT so wpdb::query() cannot invoke query filters or reconnect retries.
 	private ?\mysqli $pinned_dbh      = null;
 	private ?string $pinned_thread_id = null;
@@ -32,6 +33,10 @@ final class GitHubSelectionStore {
 
 	public function uses_connection( object $connection, ?string $table = null ): bool {
 		return $this->connection === $connection && ( null === $table || $this->table === $table );
+	}
+
+	public function has_unclosed_transaction(): bool {
+		return $this->transaction_open_uncertain;
 	}
 
 	/**
@@ -297,8 +302,8 @@ final class GitHubSelectionStore {
 	 * COMMIT or ROLLBACK closes the transaction while clearing storage_verified unconditionally.
 	 *
 	 * @template T
-	 * @param callable():T $operation No credentials, provider I/O or filesystem mutation.
-	 * @param (callable(T): void)|null $on_committed
+	 * @param callable(\Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)): T $operation No credentials, provider I/O or filesystem mutation.
+	 * @param (callable(T): void)|null                                                                                     $on_committed
 	 * @return T
 	 */
 	public function selection_transaction( callable $operation, ?callable $on_committed = null ): mixed {
@@ -331,7 +336,8 @@ final class GitHubSelectionStore {
 					$this->transaction_boundary( 'START TRANSACTION', 'selection_transaction_failed' );
 				}
 				$this->commit_uncertain = false;
-				$result                 = $operation();
+				$execute                = $this->transaction_executor( $pinned_dbh );
+				$result                 = $operation( $execute );
 				$this->assert_pinned_session();
 				// Latch before COMMIT: thrown errors and false replies are equally uncertain.
 				$this->commit_uncertain = true;
@@ -368,6 +374,8 @@ final class GitHubSelectionStore {
 			$this->storage_verified = false;
 			if ( $transaction_closed ) {
 				$this->invalidate_cache();
+			} else {
+				$this->transaction_open_uncertain = true;
 			}
 		}
 	}
@@ -432,27 +440,7 @@ final class GitHubSelectionStore {
 					return null;
 				}
 
-				$execute = function ( string $query, array $arguments, string $mode ) use ( $dbh ): int|string|null {
-					$this->assert_pinned_session();
-					$sql = $this->format_pinned_sql( $dbh, $query, array_values( $arguments ) );
-					if ( 'var' === $mode ) {
-						$result = $this->pinned_mysqli_query( $dbh, $sql, 'selection_read_failed' );
-						// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Read single-scalar row from buffered mysqli result inside pinned transaction.
-						if ( ! $result instanceof \mysqli_result ) {
-							throw new DatabaseLifecycleFailure( 'selection_read_failed' );
-						}
-						try {
-							$row = $result->fetch_row();
-							return is_array( $row ) && array_key_exists( 0, $row ) && is_string( $row[0] ) ? $row[0] : null;
-						} finally {
-							$result->free();
-						}
-					}
-					if ( 'affected' === $mode ) {
-						return $this->pinned_mysqli_affected( $dbh, $sql, 'selection_write_failed' );
-					}
-					throw new \InvalidArgumentException( 'Unsupported pinned SQL mode.' );
-				};
+				$execute = $this->scalar_transaction_executor( $dbh );
 				$result  = $operation( $execute );
 				$this->assert_pinned_session();
 				$this->commit_uncertain = true;
@@ -481,6 +469,8 @@ final class GitHubSelectionStore {
 			$this->storage_verified = false;
 			if ( $transaction_closed ) {
 				$this->invalidate_cache();
+			} else {
+				$this->transaction_open_uncertain = true;
 			}
 		}
 	}
@@ -510,30 +500,7 @@ final class GitHubSelectionStore {
 					return null;
 				}
 
-				$execute                = function ( string $query, array $arguments, string $mode ): int|string|null {
-					$sql = $this->connection->prepare( $query, ...$arguments );
-					if ( ! is_string( $sql ) || '' === $sql ) {
-						throw new DatabaseLifecycleFailure( 'selection_transaction_failed' );
-					}
-					$this->connection->last_error = '';
-					if ( 'var' === $mode ) {
-						// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared above on SchemaConnection.
-						$value = $this->connection->get_var( $sql );
-						if ( $this->read_failed() ) {
-							throw new DatabaseLifecycleFailure( 'selection_read_failed' );
-						}
-						return is_string( $value ) ? $value : null;
-					}
-					if ( 'affected' === $mode ) {
-						// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared above on SchemaConnection.
-						$affected = $this->connection->query( $sql );
-						if ( ! is_int( $affected ) || $affected < 0 || $this->read_failed() ) {
-							throw new DatabaseLifecycleFailure( 'selection_write_failed' );
-						}
-						return $affected;
-					}
-					throw new \InvalidArgumentException( 'Unsupported pinned SQL mode.' );
-				};
+				$execute                = $this->scalar_transaction_executor( null );
 				$result                 = $operation( $execute );
 				$this->commit_uncertain = true;
 				$this->transaction_boundary( 'COMMIT', 'selection_commit_uncertain' );
@@ -559,8 +526,106 @@ final class GitHubSelectionStore {
 			$this->storage_verified = false;
 			if ( $transaction_closed ) {
 				$this->invalidate_cache();
+			} else {
+				$this->transaction_open_uncertain = true;
 			}
 		}
+	}
+
+	/**
+	 * @return \Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)
+	 */
+	// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Execute prepared single-session SQL on the pinned mysqli handle or SchemaConnection inside an active transaction.
+	private function transaction_executor( ?\mysqli $dbh ): \Closure {
+		return function ( string $query, array $arguments, string $mode ) use ( $dbh ): int|string|array|null {
+			if ( null !== $dbh ) {
+				$this->assert_pinned_session();
+				$sql = $this->format_pinned_sql( $dbh, $query, array_values( $arguments ) );
+				if ( 'results' === $mode ) {
+					return $this->pinned_mysqli_objects( $dbh, $sql, 'selection_read_failed' );
+				}
+				if ( 'var' === $mode ) {
+					$result = $this->pinned_mysqli_query( $dbh, $sql, 'selection_read_failed' );
+					// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Read single-scalar row from buffered mysqli result inside pinned transaction.
+					if ( ! $result instanceof \mysqli_result ) {
+						throw new DatabaseLifecycleFailure( 'selection_read_failed' );
+					}
+					try {
+						$row = $result->fetch_row();
+						return is_array( $row ) && array_key_exists( 0, $row ) && is_string( $row[0] ) ? $row[0] : null;
+					} finally {
+						$result->free();
+					}
+				}
+				if ( 'affected' === $mode ) {
+					return $this->pinned_mysqli_affected( $dbh, $sql, 'selection_write_failed' );
+				}
+				throw new \InvalidArgumentException( 'Unsupported pinned SQL mode.' );
+			}
+
+			$sql = $this->connection->prepare( $query, ...$arguments );
+			if ( ! is_string( $sql ) || '' === $sql ) {
+				throw new DatabaseLifecycleFailure( 'selection_transaction_failed' );
+			}
+			$this->connection->last_error = '';
+			if ( 'results' === $mode ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared above on SchemaConnection.
+				$rows = $this->connection->get_results( $sql );
+				if ( ! is_array( $rows ) || $this->read_failed() ) {
+					throw new DatabaseLifecycleFailure( 'selection_read_failed' );
+				}
+				$objects = array();
+				foreach ( $rows as $row ) {
+					if ( ! is_object( $row ) ) {
+						throw new DatabaseLifecycleFailure( 'selection_read_failed' );
+					}
+					$objects[] = $row;
+				}
+				return $objects;
+			}
+			if ( 'var' === $mode ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared above on SchemaConnection.
+				$value = $this->connection->get_var( $sql );
+				if ( $this->read_failed() ) {
+					throw new DatabaseLifecycleFailure( 'selection_read_failed' );
+				}
+				return is_string( $value ) ? $value : null;
+			}
+			if ( 'affected' === $mode ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared above on SchemaConnection.
+				$affected = $this->connection->query( $sql );
+				if ( ! is_int( $affected ) || $affected < 0 || $this->read_failed() ) {
+					throw new DatabaseLifecycleFailure( 'selection_write_failed' );
+				}
+				return $affected;
+			}
+			throw new \InvalidArgumentException( 'Unsupported pinned SQL mode.' );
+		};
+	}
+
+	/**
+	 * @return \Closure(string, list<string>, 'affected'|'var'): (int|string|null)
+	 */
+	// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Narrow the shared SQL executor to scalar lock queries without changing the outer callable contract.
+	private function scalar_transaction_executor( ?\mysqli $dbh ): \Closure {
+		$execute = $this->transaction_executor( $dbh );
+		return static function ( string $query, array $arguments, string $mode ) use ( $execute ): int|string|null {
+			if ( ! in_array( $mode, array( 'affected', 'var' ), true ) ) {
+				throw new \InvalidArgumentException( 'Unsupported pinned SQL mode.' );
+			}
+			$bound = array();
+			foreach ( $arguments as $argument ) {
+				if ( ! is_string( $argument ) ) {
+					throw new \InvalidArgumentException( 'Unsupported pinned SQL argument type.' );
+				}
+				$bound[] = $argument;
+			}
+			$result = $execute( $query, $bound, $mode );
+			if ( is_array( $result ) ) {
+				throw new \InvalidArgumentException( 'Unsupported pinned SQL mode.' );
+			}
+			return $result;
+		};
 	}
 
 	/**
@@ -664,11 +729,17 @@ final class GitHubSelectionStore {
 		$formatted = preg_replace_callback(
 			'/%([A-Za-z])?/',
 			static function ( array $matches ) use ( $dbh, $arguments, &$index ): string {
-				if ( ! isset( $matches[1] ) || ! in_array( $matches[1], array( 'i', 's' ), true ) || ! array_key_exists( $index, $arguments ) ) {
+				if ( ! isset( $matches[1] ) || ! in_array( $matches[1], array( 'd', 'i', 's' ), true ) || ! array_key_exists( $index, $arguments ) ) {
 					throw new \InvalidArgumentException( 'Unsupported pinned SQL placeholder.' );
 				}
 				$value = $arguments[ $index ];
 				++$index;
+				if ( 'd' === $matches[1] ) {
+					if ( ! is_int( $value ) ) {
+						throw new \InvalidArgumentException( 'Unsupported pinned SQL argument type.' );
+					}
+					return (string) $value;
+				}
 				if ( ! is_string( $value ) ) {
 					throw new \InvalidArgumentException( 'Unsupported pinned SQL argument type.' );
 				}

@@ -1265,7 +1265,7 @@ class Dashboard {
 			self::native_hold_result_nonce_action(
 				is_string( $_GET['ran_booster_hold'] ) ? sanitize_key( wp_unslash( $_GET['ran_booster_hold'] ) ) : '',
 				isset( $_GET['ran_booster_hold_folder'] ) && is_string( $_GET['ran_booster_hold_folder'] ) ? sanitize_text_field( wp_unslash( $_GET['ran_booster_hold_folder'] ) ) : '',
-				isset( $_GET['ran_booster_hold_type'] ) && is_string( $_GET['ran_booster_hold_type'] ) && '' !== sanitize_key( wp_unslash( $_GET['ran_booster_hold_type'] ) )
+				isset( $_GET['ran_booster_hold_type'] ) && is_string( $_GET['ran_booster_hold_type'] )
 					? sanitize_key( wp_unslash( $_GET['ran_booster_hold_type'] ) )
 					: 'plugin',
 				isset( $_GET['package'] ) && is_string( $_GET['package'] ) ? sanitize_text_field( wp_unslash( $_GET['package'] ) ) : ''
@@ -1273,15 +1273,16 @@ class Dashboard {
 		) ) {
 			return null;
 		}
-		if ( ! is_string( $_GET['ran_booster_hold'] )
-			|| ! is_string( $_GET['_ran_booster_hold_nonce'] )
-			|| '' === sanitize_text_field( wp_unslash( $_GET['_ran_booster_hold_nonce'] ) )
-			|| ( isset( $_GET['package'] ) && ! is_string( $_GET['package'] ) )
-		) {
+		if ( ! is_string( $_GET['ran_booster_hold'] ) || ! is_string( $_GET['_ran_booster_hold_nonce'] ) ) {
+			return null;
+		}
+		$nonce = sanitize_text_field( wp_unslash( $_GET['_ran_booster_hold_nonce'] ) );
+		if ( '' === $nonce || wp_unslash( $_GET['_ran_booster_hold_nonce'] ) !== $nonce ) {
 			return null;
 		}
 		$code = sanitize_key( wp_unslash( $_GET['ran_booster_hold'] ) );
-		if ( ! in_array( $code, array( 'released', 'cleared', 'present', 'busy', 'failed', 'lock_failed' ), true ) ) {
+		if ( wp_unslash( $_GET['ran_booster_hold'] ) !== $code
+			|| ! in_array( $code, array( 'released', 'cleared', 'present', 'busy', 'failed', 'lock_failed' ), true ) ) {
 			return null;
 		}
 		$folder = '';
@@ -1290,7 +1291,8 @@ class Dashboard {
 				return null;
 			}
 			$candidate_folder = sanitize_text_field( wp_unslash( $_GET['ran_booster_hold_folder'] ) );
-			if ( '' !== $candidate_folder && 1 !== preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._-]{0,190}\z#D', $candidate_folder ) ) {
+			if ( wp_unslash( $_GET['ran_booster_hold_folder'] ) !== $candidate_folder
+				|| 1 !== preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._-]{0,190}\z#D', $candidate_folder ) ) {
 				return null;
 			}
 			$folder = $candidate_folder;
@@ -1301,11 +1303,20 @@ class Dashboard {
 				return null;
 			}
 			$candidate_type = sanitize_key( wp_unslash( $_GET['ran_booster_hold_type'] ) );
-			if ( '' !== $candidate_type && ! in_array( $candidate_type, array( 'plugin', 'theme' ), true ) ) {
+			if ( wp_unslash( $_GET['ran_booster_hold_type'] ) !== $candidate_type
+				|| ! in_array( $candidate_type, array( 'plugin', 'theme' ), true ) ) {
 				return null;
 			}
-			if ( 'theme' === $candidate_type ) {
-				$type = 'theme';
+			$type = $candidate_type;
+		}
+		if ( isset( $_GET['package'] ) ) {
+			if ( ! is_string( $_GET['package'] ) ) {
+				return null;
+			}
+			$candidate_package = sanitize_text_field( wp_unslash( $_GET['package'] ) );
+			if ( wp_unslash( $_GET['package'] ) !== $candidate_package
+				|| 1 !== preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}\z#D', $candidate_package ) ) {
+				return null;
 			}
 		}
 		return array(

@@ -99,6 +99,59 @@ final class WordPressUpdaterLockTest extends TestCase {
 		}
 	}
 
+	public function test_current_token_sql_uses_pinned_executor_and_validates_connection(): void {
+		$lock   = new WordPressUpdaterLock();
+		$fresh  = (string) ( time() + 600 );
+		$stale  = (string) ( time() - 7200 );
+		$store  = new GitHubSelectionStore( $this->database, 'wp_options' );
+		$bundle = new GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$store->initialize_bundled( $bundle );
+		$selection = new GitHubProviderSelection( $store, '/unused', $bundle );
+
+		$this->database->option_rows['auto_updater.lock'] = $fresh;
+		$observed = $store->selection_transaction(
+			fn ( callable $execute ): ?string => $lock->current_token_sql( $selection->uses_connection( ... ), $execute )
+		);
+		self::assertSame( $fresh, $observed );
+
+		foreach ( array( null, 'malformed', $stale ) as $inactive ) {
+			if ( null === $inactive ) {
+				unset( $this->database->option_rows['auto_updater.lock'] );
+			} else {
+				$this->database->option_rows['auto_updater.lock'] = $inactive;
+			}
+			self::assertNull(
+				$store->selection_transaction(
+					fn ( callable $execute ): ?string => $lock->current_token_sql( $selection->uses_connection( ... ), $execute )
+				)
+			);
+		}
+
+		$this->assert_core_storage_failure(
+			fn (): ?string => $store->selection_transaction(
+				fn ( callable $execute ): ?string => $lock->current_token_sql( static fn (): bool => false, $execute )
+			)
+		);
+		$this->assert_core_storage_failure(
+			static fn (): ?string => $lock->current_token_sql(
+				static fn (): bool => true,
+				static function (): never {
+					throw new RuntimeException( 'sql failure' );
+				}
+			)
+		);
+	}
+
 	public function test_fresh_and_malformed_contention_preserve_the_existing_token_and_core_message(): void {
 		$lock = new WordPressUpdaterLock();
 		foreach ( array( 'malformed', (string) ( time() + 600 ) ) as $held ) {

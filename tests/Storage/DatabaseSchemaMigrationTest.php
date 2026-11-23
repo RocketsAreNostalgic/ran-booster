@@ -656,6 +656,51 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		}
 	}
 
+	public function test_mode_two_status_fallback_suppresses_errors_and_restores_the_caller_setting(): void {
+		global $wpdb;
+
+		$this->install_current_schema();
+		$connection                         = new class() extends StorageTestWpdb {
+			public bool $fail_status_fallback        = false;
+			public ?bool $status_fallback_suppressed = null;
+
+			public function get_row( string $query ): ?object {
+				if ( str_starts_with( $query, 'SHOW TABLE STATUS WHERE LOWER(Name)' ) ) {
+					$this->status_fallback_suppressed = $this->errors_suppressed;
+					if ( $this->fail_status_fallback ) {
+						$this->last_error = 'database details must not escape';
+						return null;
+					}
+				}
+				return parent::get_row( $query );
+			}
+		};
+		$connection->lower_case_table_names = 2;
+		$connection->schema_tables          = $wpdb->schema_tables;
+		$connection->schema_tables['WP_ran_booster_packages'] = $connection->schema_tables['wp_ran_booster_packages'];
+		unset( $connection->schema_tables['wp_ran_booster_packages'] );
+
+		foreach ( array( false, true ) as $previous ) {
+			$connection->errors_suppressed          = $previous;
+			$connection->fail_status_fallback       = false;
+			$connection->status_fallback_suppressed = null;
+			( new Database( $connection ) )->require_recovery_ready();
+			self::assertTrue( $connection->status_fallback_suppressed );
+			self::assertSame( $previous, $connection->errors_suppressed );
+
+			$connection->fail_status_fallback       = true;
+			$connection->status_fallback_suppressed = null;
+			try {
+				( new Database( $connection ) )->require_recovery_ready();
+				self::fail( 'Expected a failed case-folded status read to stop recovery.' );
+			} catch ( DatabaseLifecycleFailure $failure ) {
+				self::assertSame( 'schema_read_failed', $failure->reason() );
+			}
+			self::assertTrue( $connection->status_fallback_suppressed );
+			self::assertSame( $previous, $connection->errors_suppressed );
+		}
+	}
+
 	public function test_fresh_install_activity_probe_respects_lower_case_table_names_mode(): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
@@ -684,6 +729,26 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		$wpdb->lower_case_table_names                   = 1;
 		$wpdb->schema_tables['wp_ran_booster_activity'] = $dummy_activity;
 		( new Database( $wpdb, $this->declaration() ) )->install();
+		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options );
+	}
+
+	public function test_mode_one_mixed_case_activity_table_stops_install_before_ddl_or_onboarding(): void {
+		global $ran_booster_storage_test_options, $wpdb;
+
+		$wpdb->lower_case_table_names                   = 1;
+		$wpdb->schema_tables['WP_ran_booster_activity'] = array(
+			'engine'         => 'InnoDB',
+			'columns'        => array(),
+			'columnMetadata' => array(),
+			'indexes'        => array(),
+		);
+		try {
+			( new Database( $wpdb, $this->declaration() ) )->install();
+			self::fail( 'Expected mixed-case activity metadata to contradict mode 1.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'schema_read_failed', $failure->reason() );
+		}
+		self::assertSame( array(), $wpdb->schemas );
 		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options );
 	}
 
@@ -763,11 +828,24 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_wpdb_read_and_write_overrides_block_recovery_before_the_probe(): void {
+	public function test_replacement_wpdb_with_read_or_write_overrides_blocks_recovery_before_sql(): void {
 		$this->with_drop_in(
-			static function (): void {
-				global $wpdb;
-				$connections = array(
+			function (): void {
+				$use_connection = static function ( \wpdb $connection ): void {
+					global $wpdb;
+					// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Guard and repository must see the same isolated wpdb double.
+					$wpdb            = $connection;
+					$connection->dbh = self::mysqli_handle();
+				};
+				$admitted       = new \wpdb();
+				$use_connection( $admitted );
+				$database = new Database( bundled_declaration: $this->declaration() );
+				$injected = new Database( $admitted );
+				$database->install();
+				$database->require_recovery_ready();
+				$injected->require_recovery_ready();
+				$admitted_reads = $admitted->read_queries;
+				$connections    = array(
 					new class() extends \wpdb {
 						public int $override_calls = 0;
 
@@ -791,27 +869,28 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 					},
 				);
 				foreach ( $connections as $connection ) {
-					// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Guard and repository must see the same isolated wpdb double.
-					$wpdb            = $connection;
-					$connection->dbh = self::mysqli_handle();
-					self::assert_drop_in_failure( new Database() );
-					try {
-						( new PluginRepository( new Database() ) )->recover_unlink(
-							'fixture/fixture.php',
-							'fixture-token',
-							'fixture-digest',
-							static function (): void {
-								self::fail( 'An unreviewed wpdb override must never enter guarded recovery.' );
-							}
-						);
-						self::fail( 'Expected guarded unlink to reject the overridden database method.' );
-					} catch ( PackageStorageFailure $failure ) {
-						self::assertTrue( $failure->is_database_unsupported() );
+					$use_connection( $connection );
+					foreach ( array( $database, $injected ) as $lifecycle ) {
+						try {
+							( new PluginRepository( $lifecycle ) )->recover_unlink(
+								'fixture/fixture.php',
+								'fixture-token',
+								'fixture-digest',
+								static function (): void {
+									self::fail( 'An unreviewed wpdb override must never enter guarded recovery.' );
+								}
+							);
+							self::fail( 'Expected guarded unlink to reject the replacement database connection.' );
+						} catch ( PackageStorageFailure $failure ) {
+							self::assertTrue( $failure->is_database_unsupported() );
+						}
 					}
+					self::assert_drop_in_failure( $database );
 					self::assertSame( 0, $connection->override_calls );
 					self::assertSame( array(), $connection->queries );
 					self::assertSame( array(), $connection->read_queries );
 					self::assertSame( array(), $connection->updates );
+					self::assertSame( $admitted_reads, $admitted->read_queries );
 				}
 			}
 		);

@@ -111,9 +111,9 @@ abstract class AbstractPackageRepository {
 
 	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string} */
 	public function recovery_record( string $identifier ): array {
-		$this->require_recovery_storage();
+		$connection = $this->require_recovery_storage();
 		new PackageModel( array( 'package' => $identifier ) );
-		return $this->recovery_snapshot( $identifier, $this->package_rows( $identifier ) );
+		return $this->recovery_snapshot( $identifier, $this->package_rows( $identifier, wpdb: $connection ) );
 	}
 
 	/**
@@ -123,9 +123,8 @@ abstract class AbstractPackageRepository {
 	 * @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string}|null
 	 */
 	public function native_recovery_record( string $identifier, bool $for_update = false ): ?array {
-		$this->require_recovery_storage();
+		$wpdb = $this->require_recovery_storage();
 		new PackageModel( array( 'package' => $identifier ) );
-		global $wpdb;
 		// A plugin directory can contain more than one main file. Never unlink an unreviewed sibling.
 		$scope  = 1 === $this->package_type() ? explode( '/', $identifier )[0] : $identifier;
 		$query  = $wpdb->prepare( 'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d', ran_booster_table_name(), $this->package_type() );
@@ -166,13 +165,12 @@ abstract class AbstractPackageRepository {
 	 */
 	public function recover_unlink( string $identifier, string $expected_token, string $expected_record_digest, callable $guard ): PackageMutationResult {
 		RuntimeSupport::assert_managed_operations_allowed();
-		global $wpdb;
-		$this->require_recovery_storage();
+		$wpdb = $this->require_recovery_storage();
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) || false === $wpdb->query( 'START TRANSACTION' ) ) {
 			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
 		}
 		try {
-			$snapshot = $this->recovery_snapshot( $identifier, $this->locked_package_rows( $identifier ) );
+			$snapshot = $this->recovery_snapshot( $identifier, $this->locked_package_rows( $identifier, $wpdb ) );
 			if ( $snapshot['adoption_token'] !== $expected_token || ! hash_equals( $snapshot['digest'], $expected_record_digest ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->delete_conflict_result();
@@ -184,7 +182,7 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->delete_failure_result();
 			}
-			$verified = $this->verify_package_deletion( $identifier, 1 );
+			$verified = $this->verify_package_deletion( $identifier, 1, $wpdb );
 			if ( ! $verified->is_successful() || false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::DELETE );
@@ -233,14 +231,19 @@ abstract class AbstractPackageRepository {
 		);
 	}
 
-	private function require_recovery_storage(): void {
+	private function require_recovery_storage(): \wpdb|SchemaConnection {
+		global $wpdb;
 		$this->database_lifecycle ??= new Database();
 		try {
-			$this->database_lifecycle->require_recovery_ready();
+			$connection = is_object( $wpdb ) ? $this->database_lifecycle->require_recovery_ready( $wpdb ) : null;
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
-			$failure = PackageStorageFailure::unsupported_database( PackageStorageOperation::DELETE );
-			throw $failure;
+			$connection = null;
 		}
+		if ( null !== $connection && $connection === $wpdb ) {
+			return $connection;
+		}
+		$failure = PackageStorageFailure::unsupported_database( PackageStorageOperation::DELETE );
+		throw $failure;
 	}
 
 	private function row_adoption_token( object $row ): string {
@@ -1001,10 +1004,11 @@ abstract class AbstractPackageRepository {
 	 * @return list<object>
 	 * @phpstan-impure
 	 */
-	private function package_rows( ?string $identifier = null, ?PackageSource $source = null ): array {
-		global $wpdb;
-
-		$this->require_storage_support( PackageStorageOperation::QUERY );
+	private function package_rows( ?string $identifier = null, ?PackageSource $source = null, \wpdb|SchemaConnection|null $wpdb = null ): array {
+		if ( null === $wpdb ) {
+			$this->require_storage_support( PackageStorageOperation::QUERY );
+			$wpdb = $GLOBALS['wpdb'];
+		}
 		if ( null !== $identifier ) {
 			$query = $wpdb->prepare(
 				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s',
@@ -1048,10 +1052,11 @@ abstract class AbstractPackageRepository {
 	/**
 	 * @return list<object>
 	 */
-	private function locked_package_rows( string $identifier ): array {
-		global $wpdb;
-
-		$this->require_storage_support( PackageStorageOperation::QUERY );
+	private function locked_package_rows( string $identifier, \wpdb|SchemaConnection|null $wpdb = null ): array {
+		if ( null === $wpdb ) {
+			$this->require_storage_support( PackageStorageOperation::QUERY );
+			$wpdb = $GLOBALS['wpdb'];
+		}
 		$query = $wpdb->prepare(
 			'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s FOR UPDATE',
 			ran_booster_table_name(),
@@ -1113,13 +1118,13 @@ abstract class AbstractPackageRepository {
 			: PackageMutationResult::changed( $operation );
 	}
 
-	private function verify_package_deletion( string $identifier, int|false $write_result ): PackageMutationResult {
+	private function verify_package_deletion( string $identifier, int|false $write_result, \wpdb|SchemaConnection|null $connection = null ): PackageMutationResult {
 		if ( false === $write_result ) {
 			return $this->delete_failure_result();
 		}
 
 		try {
-			$rows = $this->package_rows( $identifier );
+			$rows = $this->package_rows( $identifier, wpdb: $connection );
 		} catch ( PackageStorageFailure ) {
 			return $this->post_write_verification_failure( PackageStorageOperation::DELETE );
 		}

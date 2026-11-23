@@ -13,7 +13,7 @@ class Database {
 
 	public const VERSION_OPTION = 'ran_booster_db_version';
 
-	private bool $capability_checked                          = false;
+	private ?object $checked_connection                       = null;
 	private ?DatabaseCompatibilityFailure $capability_failure = null;
 	private bool $lifecycle_checked                           = false;
 	private bool $lifecycle_inspected                         = false;
@@ -26,21 +26,28 @@ class Database {
 	/**
 	 * Prove the request's database can satisfy Booster's MySQL-oriented storage contract.
 	 *
-	 * The result is cached on the container-shared lifecycle object. Full table
+	 * The result is cached for the current connection object. Full table
 	 * inspection remains an activation, upgrade or explicit diagnostic concern.
 	 *
 	 * @throws DatabaseCompatibilityFailure When the server is outside the supported envelope.
 	 */
 	public function require_supported(): void {
-		if ( ! $this->capability_checked ) {
+		$connection = $this->connection();
+		if ( $this->checked_connection !== $connection ) {
+			$capability_failure = null;
 			try {
-				$this->inspect_capabilities();
+				$this->inspect_capabilities( $connection );
 			} catch ( DatabaseCompatibilityFailure $failure ) {
-				$this->capability_failure = $failure;
+				$capability_failure = $failure;
 			} catch ( \Throwable ) {
-				$this->capability_failure = new DatabaseCompatibilityFailure( 'capability_probe_failed' );
+				$capability_failure = new DatabaseCompatibilityFailure( 'capability_probe_failed' );
 			}
-			$this->capability_checked = true;
+			$this->checked_connection     = $connection;
+			$this->capability_failure     = $capability_failure;
+			$this->lifecycle_checked      = false;
+			$this->lifecycle_inspected    = false;
+			$this->lifecycle_failure      = null;
+			$this->lower_case_table_names = null;
 		}
 
 		if ( null !== $this->capability_failure ) {
@@ -83,6 +90,7 @@ class Database {
 	}
 
 	private function run_lifecycle( bool $inspect_current_schema ): void {
+		$this->require_supported();
 		if ( $this->lifecycle_checked ) {
 			if ( null !== $this->lifecycle_failure ) {
 				throw $this->lifecycle_failure;
@@ -120,14 +128,20 @@ class Database {
 		$this->maybe_upgrade();
 	}
 
-	/** Recovery requires authoritative healthy tables and must never install or repair them. */
-	public function require_recovery_ready(): void {
+	/** Verify current tables without installing or repairing them, and return the inspected connection. */
+	public function require_recovery_ready( ?object $expected_connection = null ): \wpdb|SchemaConnection {
+		if ( null !== $expected_connection && $expected_connection !== $this->connection() ) {
+			throw new DatabaseCompatibilityFailure( 'database_unavailable' );
+		}
 		$this->require_supported();
+		$connection = $this->schema_connection();
 		if ( self::$booster_db_version !== $this->installed_version() ) {
 			throw new DatabaseLifecycleFailure( 'incompatible_schema' );
 		}
 		$this->verify_table( ran_booster_table_name(), $this->package_columns(), $this->package_indexes() );
 		$this->verify_table( self::attempt_table_name(), $this->attempt_columns(), $this->attempt_indexes() );
+
+		return $connection;
 	}
 
 	/**
@@ -137,12 +151,11 @@ class Database {
 	 * hooks call maybeUpgrade() before this status is presented.
 	 */
 	public function is_ready(): bool {
-		if ( $this->lifecycle_checked ) {
-			return null === $this->lifecycle_failure;
-		}
-
 		if ( ! $this->is_supported() ) {
 			return false;
+		}
+		if ( $this->lifecycle_checked ) {
+			return null === $this->lifecycle_failure;
 		}
 
 		try {
@@ -153,8 +166,6 @@ class Database {
 	}
 
 	private function prepare_schema( bool $inspect_current_schema ): bool {
-		$this->require_supported();
-
 		$installed_version = $this->installed_version();
 		if ( ! $inspect_current_schema && self::$booster_db_version === $installed_version ) {
 			return false;
@@ -205,7 +216,12 @@ class Database {
 		if ( $fresh ) {
 			$activity_name  = substr( $attempt_table, 0, -strlen( 'ran_booster_deployment_attempts' ) ) . \RAN\Activity\ActivityStore::TABLE_SUFFIX;
 			$activity_table = $this->read_table_name( $activity_name );
-			$fresh          = null === $activity_table || ! $this->table_name_matches( $activity_name, $activity_table );
+			if ( null !== $activity_table ) {
+				$fresh = ! $this->table_name_matches( $activity_name, $activity_table );
+				if ( $fresh && 1 === $this->lower_case_table_names() && 0 === strcasecmp( $activity_name, $activity_table ) ) {
+					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+				}
+			}
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -399,9 +415,17 @@ class Database {
 				$fallback_query = $wpdb->prepare( 'SHOW TABLE STATUS WHERE LOWER(Name) = %s', strtolower( $table_name ) );
 			}
 			if ( null !== $fallback_query ) {
-				$wpdb->last_error = '';
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared case-folding fallback when lower_case_table_names folds or preserves table names.
-				$status = $wpdb->get_row( $fallback_query );
+				$suppress_errors      = method_exists( $wpdb, 'suppress_errors' ) ? $wpdb->suppress_errors( ... ) : null;
+				$previous_suppression = $suppress_errors?->__invoke( true );
+				$wpdb->last_error     = '';
+				try {
+					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared case-folding fallback when lower_case_table_names folds or preserves table names.
+					$status = $wpdb->get_row( $fallback_query );
+				} catch ( \Throwable ) {
+					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+				} finally {
+					$suppress_errors?->__invoke( $previous_suppression );
+				}
 				if ( $this->identity_read_failed() ) {
 					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 				}
@@ -668,8 +692,7 @@ class Database {
 		return preg_replace( '/^(bigint|tinyint)\([0-9]+\)/', '$1', $type ) ?? $type;
 	}
 
-	private function inspect_capabilities(): void {
-		$database       = $this->connection();
+	private function inspect_capabilities( object $database ): void {
 		$has_drop_in    = defined( 'WP_CONTENT_DIR' )
 			&& is_string( constant( 'WP_CONTENT_DIR' ) )
 			&& is_file( rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php' );
@@ -950,6 +973,9 @@ class Database {
 
 	private function schema_connection(): \wpdb|SchemaConnection {
 		$database = $this->connection();
+		if ( null !== $this->checked_connection && $this->checked_connection !== $database ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
 		if ( ! $database instanceof \wpdb && ! $database instanceof SchemaConnection ) {
 			throw new DatabaseLifecycleFailure( 'schema_operation_failed' );
 		}
@@ -966,8 +992,6 @@ class Database {
 		if ( ! is_object( $wpdb ) ) {
 			throw new DatabaseCompatibilityFailure( 'database_unavailable' );
 		}
-
-		$this->database = $wpdb;
 
 		return $wpdb;
 	}

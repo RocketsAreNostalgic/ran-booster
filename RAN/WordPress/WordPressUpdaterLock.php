@@ -186,7 +186,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 			}
 
 			$deleted = $execute(
-				'DELETE FROM %i WHERE option_name = %s AND option_value = %s',
+				'DELETE FROM %i WHERE option_name = %s AND CAST(option_value AS BINARY) = CAST(%s AS BINARY)',
 				array( $options_table, self::OPTION_NAME, $stored ),
 				'affected'
 			);
@@ -251,8 +251,8 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		try {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic compare-and-set handoff for the uncached auto_updater.lock row.
-			$result = $wpdb->query( $wpdb->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s AND option_value = %s', $options_table, $replacement, self::OPTION_NAME, $expected ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic byte-exact compare-and-set handoff for the uncached auto_updater.lock row.
+			$result = $wpdb->query( $wpdb->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s AND CAST(option_value AS BINARY) = CAST(%s AS BINARY)', $options_table, $replacement, self::OPTION_NAME, $expected ) );
 		} catch ( Throwable ) {
 			throw DeploymentStorageFailure::unavailable();
 		}

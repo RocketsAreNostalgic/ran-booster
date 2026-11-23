@@ -542,9 +542,15 @@ final class WordPressUpdaterLockTest extends TestCase {
 		self::assertSame( $expected, $lock->acquire_replacing_owner( $own ) );
 		self::assertSame( $expected, $this->database->option_rows['auto_updater.lock'] );
 		self::assertSame( $caches, $GLOBALS['ran_booster_attempt_cache_deletes'] );
+		$saw_binary_update = false;
 		foreach ( $this->database->queries as $query ) {
 			self::assertStringNotContainsString( 'DELETE FROM', $query );
+			if ( str_starts_with( $query, 'UPDATE `wp_options`' ) ) {
+				self::assertStringContainsString( 'CAST(option_value AS BINARY) = CAST(', $query );
+				$saw_binary_update = true;
+			}
 		}
+		self::assertTrue( $saw_binary_update );
 
 		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
 		try {
@@ -576,7 +582,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 		self::assertSame( $own, $this->database->option_rows['auto_updater.lock'] );
 		self::assertSame( $caches, $GLOBALS['ran_booster_attempt_cache_deletes'] );
 
-		foreach ( array( 'malformed', (string) ( $fixed_now + 5 ) ) as $foreign ) {
+		foreach ( array( 'malformed', $own . ' ', (string) ( $fixed_now - 3601 ) . ' ', (string) ( $fixed_now + 5 ) ) as $foreign ) {
 			$this->database->option_rows['auto_updater.lock'] = $foreign;
 			$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
 			try {

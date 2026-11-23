@@ -229,7 +229,7 @@ namespace RAN\Tests\Deployment {
 
 				return 1;
 			}
-			if ( preg_match( "/^UPDATE `wp_options` SET option_value = '([^']*)' WHERE option_name = '([^']*)' AND option_value = '([^']*)'$/", $query, $matches ) === 1 ) {
+			if ( preg_match( "/^UPDATE `wp_options` SET option_value = '([^']*)' WHERE option_name = '([^']*)' AND CAST\\(option_value AS BINARY\\) = CAST\\('([^']*)' AS BINARY\\)$/", $query, $matches ) === 1 ) {
 				$replacement = stripslashes( $matches[1] );
 				$name        = stripslashes( $matches[2] );
 				$expected    = stripslashes( $matches[3] );
@@ -240,9 +240,10 @@ namespace RAN\Tests\Deployment {
 
 				return 1;
 			}
-			if ( preg_match( "/^DELETE FROM `wp_options` WHERE option_name = '([^']+)' AND option_value = '([^']+)'$/", $query, $matches ) === 1 ) {
-				$name  = stripslashes( $matches[1] );
-				$value = stripslashes( $matches[2] );
+			if ( preg_match( "/^DELETE FROM `wp_options` WHERE option_name = '([^']+)' AND (?:option_value = '([^']+)'|CAST\\(option_value AS BINARY\\) = CAST\\('([^']+)' AS BINARY\\))$/", $query, $matches ) === 1 ) {
+				$name      = stripslashes( $matches[1] );
+				$raw_value = $matches[2] ?? '';
+				$value     = stripslashes( '' !== $raw_value ? $raw_value : ( $matches[3] ?? '' ) );
 				if ( ! isset( $this->option_rows[ $name ] ) || ! hash_equals( $value, $this->option_rows[ $name ] ) ) {
 					return 0;
 				}

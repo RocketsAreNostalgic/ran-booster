@@ -238,8 +238,9 @@ final readonly class PackageRemovalService {
 	}
 
 	/**
-	 * An unfinished owner never released its lock, so a row with its exact value is still its own and is freed
-	 * once the operator confirms the owner stopped. Any other lock waits for the inherited hour-old reclaim.
+	 * An unfinished owner never released its lock, so a row with its exact value is still its own and is
+	 * atomically replaced with a distinct recovery token once the operator confirms the owner stopped. Any
+	 * other lock waits for the inherited hour-old reclaim.
 	 *
 	 * @param array<string, mixed> $marker
 	 */
@@ -250,7 +251,7 @@ final readonly class PackageRemovalService {
 			}
 			$own = GitHubProviderSelection::native_lock_token( $marker );
 			if ( null !== $own ) {
-				$this->updater_lock->release( $own );
+				return $this->updater_lock->acquire_replacing_owner( $own );
 			}
 		}
 		return $this->updater_lock->acquire();

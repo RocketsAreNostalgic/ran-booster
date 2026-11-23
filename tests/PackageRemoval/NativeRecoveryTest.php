@@ -44,6 +44,9 @@ final class NativeRecoveryTest extends TestCase {
 	private bool $unlink_failure    = false;
 	/** @var list<string> */
 	private array $events = array();
+	private PluginRepository $plugins;
+	private PackageRemovalGateway $gateway;
+	private DeploymentAttemptRepository $attempts;
 	private PackageRemovalService $service;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override.
@@ -135,7 +138,10 @@ final class NativeRecoveryTest extends TestCase {
 		);
 		$gateway->expects( self::never() )->method( 'delete_plugin' );
 		$gateway->expects( self::never() )->method( 'delete_theme' );
-		$this->service = new PackageRemovalService( $plugins, $this->createStub( ThemeRepository::class ), $gateway, new DeploymentAttemptRepository( $this->db, 'wp_attempts', database_lifecycle: $this->createStub( Database::class ), selection: $this->selection ), new WordPressUpdaterLock(), github_selection: $this->selection );
+		$this->plugins  = $plugins;
+		$this->gateway  = $gateway;
+		$this->attempts = new DeploymentAttemptRepository( $this->db, 'wp_attempts', database_lifecycle: $this->createStub( Database::class ), selection: $this->selection );
+		$this->service  = $this->recovery_service( new WordPressUpdaterLock() );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override.
@@ -500,6 +506,78 @@ final class NativeRecoveryTest extends TestCase {
 		$this->db->option_rows['auto_updater.lock'] = $own;
 		self::assertFalse( $this->service->native_hold_lock_busy() );
 		$this->operate( $operation );
+		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
+	}
+
+	/** @return iterable<string, array{string, bool}> */
+	public static function same_second_recovery_scenarios(): iterable {
+		foreach ( array( 'release', 'recover' ) as $operation ) {
+			yield "$operation: same-second interrupted lock present" => array( $operation, true );
+			yield "$operation: same-second interrupted lock already absent" => array( $operation, false );
+		}
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'same_second_recovery_scenarios' )]
+	public function test_same_second_concurrent_recovery_is_refused_and_preserves_live_lock( string $operation, bool $initial_lock_present ): void {
+		$fixed_now      = time();
+		$own            = (string) $fixed_now;
+		$expected_token = (string) ( $fixed_now + 1 );
+		$lock           = new class( $fixed_now ) extends WordPressUpdaterLock {
+			public function __construct( private int $fixed_now ) {}
+
+			protected function now(): int {
+				return $this->fixed_now;
+			}
+		};
+		$service        = $this->recovery_service( $lock );
+
+		$this->hold( self::tag( $own ), 'started' );
+		if ( 'release' === $operation ) {
+			$this->readable();
+		} else {
+			$this->present    = false;
+			$this->registered = false;
+		}
+		if ( $initial_lock_present ) {
+			$this->db->option_rows['auto_updater.lock'] = $own;
+		} else {
+			unset( $this->db->option_rows['auto_updater.lock'] );
+		}
+		self::assertFalse( $service->native_hold_lock_busy() );
+
+		$digest         = $service->native_recovery_confirmation()['digest'];
+		$calls          = 0;
+		$second_refused = false;
+		$authorized     = function () use ( $service, $operation, $digest, $own, $expected_token, &$calls, &$second_refused ): bool {
+			if ( 2 === ++$calls ) {
+				self::assertSame( $expected_token, $this->db->option_rows['auto_updater.lock'] ?? null );
+				self::assertNotSame( $own, $this->db->option_rows['auto_updater.lock'] ?? null );
+				self::assertTrue( $service->native_hold_lock_busy() );
+				try {
+					if ( 'release' === $operation ) {
+						$service->release_native_hold( $digest, true, true, static fn (): bool => true );
+					} else {
+						$service->recover_native_removal( $digest, true, true, static fn (): bool => true );
+					}
+					self::fail( 'Concurrent recovery against the same reviewed hold must be refused.' );
+				} catch ( \RuntimeException $failure ) {
+					$second_refused = true;
+					self::assertSame( 'The WordPress updater is already running.', $failure->getMessage() );
+				}
+				self::assertSame( $expected_token, $this->db->option_rows['auto_updater.lock'] ?? null );
+				self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+			}
+			return true;
+		};
+
+		if ( 'release' === $operation ) {
+			$service->release_native_hold( $digest, true, true, $authorized );
+		} else {
+			$service->recover_native_removal( $digest, true, true, $authorized );
+		}
+
+		self::assertTrue( $second_refused );
 		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
 		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
 	}
@@ -930,6 +1008,10 @@ final class NativeRecoveryTest extends TestCase {
 		$gateway->expects( self::never() )->method( 'delete_theme' );
 		$attempts = new DeploymentAttemptRepository( $this->db, 'wp_attempts', database_lifecycle: $this->createStub( Database::class ), selection: $selection );
 		return new PackageRemovalService( $plugins, $this->createStub( ThemeRepository::class ), $gateway, $attempts, new WordPressUpdaterLock(), github_selection: $selection );
+	}
+
+	private function recovery_service( WordPressUpdaterLock $updater_lock ): PackageRemovalService {
+		return new PackageRemovalService( $this->plugins, $this->createStub( ThemeRepository::class ), $this->gateway, $this->attempts, $updater_lock, github_selection: $this->selection );
 	}
 
 	private function readable(): void {

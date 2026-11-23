@@ -212,6 +212,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 			self::assertFalse( $called );
 			$this->assert_core_storage_failure( $lock->current_token( ... ) );
 			$this->assert_core_storage_failure( static fn (): bool => $lock->release( 'token' ) );
+			$this->assert_core_storage_failure( static fn (): string => $lock->acquire_replacing_owner( '1' ) );
 		}
 		self::assertSame( 0, $magic->reads );
 	}
@@ -517,6 +518,101 @@ final class WordPressUpdaterLockTest extends TestCase {
 		$selection->without_native_mutation_hold(
 			fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute )
 		);
+	}
+
+	public function test_acquire_replacing_owner_uses_distinct_atomic_handoff_and_refuses_concurrent_recovery(): void {
+		$fixed_now = time();
+		$lock      = new class( $fixed_now ) extends WordPressUpdaterLock {
+			public function __construct( private int $fixed_now ) {}
+
+			protected function now(): int {
+				return $this->fixed_now;
+			}
+		};
+		$own       = (string) $fixed_now;
+		$expected  = (string) ( $fixed_now + 1 );
+		$caches    = array(
+			array( 'auto_updater.lock', 'options' ),
+			array( 'notoptions', 'options' ),
+		);
+
+		$this->database->option_rows['auto_updater.lock'] = $own;
+		$this->database->queries                          = array();
+		$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
+		self::assertSame( $expected, $lock->acquire_replacing_owner( $own ) );
+		self::assertSame( $expected, $this->database->option_rows['auto_updater.lock'] );
+		self::assertSame( $caches, $GLOBALS['ran_booster_attempt_cache_deletes'] );
+		foreach ( $this->database->queries as $query ) {
+			self::assertStringNotContainsString( 'DELETE FROM', $query );
+		}
+
+		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
+		try {
+			$lock->acquire_replacing_owner( $own );
+			self::fail( 'Concurrent recovery against the same interrupted owner must be refused.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'The WordPress updater is already running.', $failure->getMessage() );
+			self::assertSame( $expected, $this->database->option_rows['auto_updater.lock'] );
+		}
+		self::assertSame( array(), $GLOBALS['ran_booster_attempt_cache_deletes'] );
+
+		unset( $this->database->option_rows['auto_updater.lock'] );
+		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
+		self::assertSame( $expected, $lock->acquire_replacing_owner( $own ) );
+		self::assertSame( $expected, $this->database->option_rows['auto_updater.lock'] );
+		self::assertSame( $caches, $GLOBALS['ran_booster_attempt_cache_deletes'] );
+		try {
+			$lock->acquire_replacing_owner( $own );
+			self::fail( 'Absent-row acquisition within the same second must still keep the recovery lock distinct.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'The WordPress updater is already running.', $failure->getMessage() );
+			self::assertSame( $expected, $this->database->option_rows['auto_updater.lock'] );
+		}
+
+		$older_own                                        = (string) ( $fixed_now - 10 );
+		$this->database->option_rows['auto_updater.lock'] = $older_own;
+		$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
+		self::assertSame( $own, $lock->acquire_replacing_owner( $older_own ) );
+		self::assertSame( $own, $this->database->option_rows['auto_updater.lock'] );
+		self::assertSame( $caches, $GLOBALS['ran_booster_attempt_cache_deletes'] );
+
+		foreach ( array( 'malformed', (string) ( $fixed_now + 5 ) ) as $foreign ) {
+			$this->database->option_rows['auto_updater.lock'] = $foreign;
+			$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
+			try {
+				$lock->acquire_replacing_owner( $own );
+				self::fail( 'Live or malformed foreign locks must never be replaced.' );
+			} catch ( RuntimeException $failure ) {
+				self::assertSame( 'The WordPress updater is already running.', $failure->getMessage() );
+				self::assertSame( $foreign, $this->database->option_rows['auto_updater.lock'] );
+			}
+			self::assertSame( array(), $GLOBALS['ran_booster_attempt_cache_deletes'] );
+		}
+
+		$expired_foreign                                  = (string) ( $fixed_now - 3601 );
+		$this->database->option_rows['auto_updater.lock'] = $expired_foreign;
+		$this->database->queries                          = array();
+		$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
+		self::assertSame( $expected, $lock->acquire_replacing_owner( $own ) );
+		self::assertSame( $expected, $this->database->option_rows['auto_updater.lock'] );
+		self::assertSame( $caches, $GLOBALS['ran_booster_attempt_cache_deletes'] );
+		foreach ( $this->database->queries as $query ) {
+			self::assertStringNotContainsString( 'DELETE FROM', $query );
+		}
+
+		$this->database->fail_query_contains = 'UPDATE';
+		$this->assert_core_storage_failure( static fn (): string => $lock->acquire_replacing_owner( $own ) );
+		$this->database->fail_query_contains = null;
+
+		unset( $this->database->option_rows['auto_updater.lock'] );
+		$this->database->fail_query_contains = 'INSERT IGNORE';
+		$this->assert_core_storage_failure( static fn (): string => $lock->acquire_replacing_owner( $own ) );
+		$this->database->fail_query_contains = null;
+
+		$this->database->option_rows['auto_updater.lock'] = 'other';
+		$this->database->fail_reads                       = true;
+		$this->assert_core_storage_failure( static fn (): string => $lock->acquire_replacing_owner( $own ) );
+		$this->database->fail_reads = false;
 	}
 
 	/** @param callable(): mixed $operation */

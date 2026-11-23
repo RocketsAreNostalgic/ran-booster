@@ -93,7 +93,7 @@ fi
 (
 	# tar can apply the caller's umask when restoring committed modes.
 	umask 022
-	git archive --format=tar --prefix=ran-booster/ "$commit" -- "${committed_entries[@]}" \
+	git -c core.autocrlf=false -c core.eol=lf archive --format=tar --prefix=ran-booster/ "$commit" -- "${committed_entries[@]}" \
 		| tar -xf - -C "$stage_dir"
 )
 

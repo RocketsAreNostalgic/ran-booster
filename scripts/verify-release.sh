@@ -451,15 +451,16 @@ extract_dir="$tmp_dir/extracted"
 mkdir -p "$extract_dir"
 unzip -q "$archive" -d "$extract_dir"
 
-# Use the same committed source for the Core byte checks and POT regeneration.
-pot_source="$tmp_dir/pot-source"
-mkdir -p "$pot_source"
-git archive --format=tar "$commit" -- "${committed_entries[@]}" | tar -xf - -C "$pot_source"
 while IFS= read -r core_file; do
-	cmp -s "$pot_source/$core_file" "$extract_dir/ran-booster/$core_file" \
+	git cat-file blob "$commit:$core_file" | cmp -s "$extract_dir/ran-booster/$core_file" - \
 		|| fail "archived Core file $core_file does not match the release ref."
 done < "$core_files"
 
+# Regenerate the POT from a separate export with the builder's line endings.
+pot_source="$tmp_dir/pot-source"
+mkdir -p "$pot_source"
+git -c core.autocrlf=false -c core.eol=lf archive --format=tar "$commit" -- "${committed_entries[@]}" \
+	| tar -xf - -C "$pot_source"
 bash "$script_dir/make-pot.sh" --source "$pot_source" --output "$tmp_dir/expected.pot"
 cmp -s "$tmp_dir/expected.pot" "$extract_dir/ran-booster/languages/ran-booster.pot" \
 	|| fail 'archived translation template does not match one regenerated from the release ref.'

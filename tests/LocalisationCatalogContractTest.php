@@ -60,7 +60,7 @@ final class LocalisationCatalogContractTest extends TestCase {
 
 	public function test_release_allowlist_generates_the_catalogue_instead_of_committing_it(): void {
 		$root     = dirname( __DIR__ );
-		$manifest = file( $root . '/release-files.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file -- Local release contract.
+		$manifest = file( $root . '/release-files.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
 		self::assertIsArray( $manifest );
 		self::assertContains( 'languages', $manifest );
 		$ignore = file_get_contents( $root . '/.gitignore' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local release contract.
@@ -82,7 +82,7 @@ final class LocalisationCatalogContractTest extends TestCase {
 		self::assertStringContainsString( 'make-pot.sh" --source "$stage_root" --output "$stage_root/languages/ran-booster.pot"', $builder );
 		self::assertStringContainsString( 'make-pot.sh" --source "$pot_source" --output "$tmp_dir/expected.pot"', $verifier );
 		self::assertStringContainsString( "'ran-booster/languages/ran-booster.pot'", $verifier );
-		self::assertStringContainsString( 'git archive --format=tar "$commit" -- "${committed_entries[@]}"', $verifier );
+		self::assertStringContainsString( 'git -c core.autocrlf=false -c core.eol=lf archive --format=tar "$commit" -- "${committed_entries[@]}"', $verifier );
 		self::assertStringContainsString( 'archived translation template does not match one regenerated from the release ref.', $verifier );
 	}
 }

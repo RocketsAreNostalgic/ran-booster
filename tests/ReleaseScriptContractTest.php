@@ -7,7 +7,7 @@ namespace RAN\Tests;
 use PHPUnit\Framework\TestCase;
 
 final class ReleaseScriptContractTest extends TestCase {
-	public function test_archive_binds_core_bytes_and_manifest_to_the_commit_across_umasks(): void {
+	public function test_archive_binds_core_bytes_and_manifest_to_the_commit_across_git_settings_and_umasks(): void {
 		$this->run_contract(
 			<<<'BASH'
 			mkdir scripts tools RAN assets views
@@ -22,6 +22,8 @@ final class ReleaseScriptContractTest extends TestCase {
 			done
 			printf 'body {}\n' > assets/release-fixture.css
 			printf '<?php // View fixture.\n' > views/release-fixture.php
+			# Make just one Core file eligible for CRLF conversion.
+			printf '\n* -text\n/assets/release-fixture.css text\n' >> .gitattributes
 
 			# Provide small local files for the committed packaging policy's surfaces.
 			# The real verifier still checks the lock, paths and archive bytes.
@@ -96,6 +98,22 @@ final class ReleaseScriptContractTest extends TestCase {
 				reject_with "archived Core file $path does not match the release ref." \
 					bash scripts/verify-release.sh "tampered/${archive##*/}" "$version" "$committed"
 			done
+
+			export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=core.autocrlf GIT_CONFIG_VALUE_0=true
+			path=assets/release-fixture.css
+			git archive --format=tar "$committed" -- "$path" | tar -xOf - "$path" > "changed/ran-booster/$path"
+			printf 'body {}\r\n' | cmp -s - "changed/ran-booster/$path"
+			cp baseline.zip "tampered/${archive##*/}"
+			(cd changed && zip -q -0 -X "../tampered/${archive##*/}" "ran-booster/$path")
+			reject_with "archived Core file $path does not match the release ref." \
+				bash scripts/verify-release.sh "tampered/${archive##*/}" "$version" "$committed"
+
+			(umask 022; bash scripts/build-release.sh "$committed" "$version")
+			cmp baseline.zip "$archive"
+			cmp baseline.sha256 "$archive.sha256"
+			git cat-file blob "$committed:$path" > committed.css
+			unzip -p "$archive" "ran-booster/$path" | cmp -s committed.css -
+			bash scripts/verify-release.sh "$archive" "$version" "$committed"
 			BASH
 		);
 	}

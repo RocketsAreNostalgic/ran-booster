@@ -1243,19 +1243,75 @@ class Dashboard {
 		return $this->package_list_query_arguments( $input );
 	}
 
+	public static function native_hold_result_nonce_action(
+		string $code,
+		string $folder = '',
+		string $type = 'plugin',
+		string $package = ''
+	): string {
+		return 'ran_booster_native_hold_result_' . hash(
+			'sha256',
+			implode( "\0", array( $code, $folder, $type, $package ) )
+		);
+	}
+
 	/** @return array{code:string,folder:string,type:string}|null The result of a hold action, shown beside its control. */
 	private function native_hold_result(): ?array {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only result display; the hold action verified its own nonce.
-		$query = wp_unslash( $_GET );
-		$code  = is_array( $query ) && is_string( $query['ran_booster_hold'] ?? null ) ? $query['ran_booster_hold'] : '';
+		if ( ! isset( $_GET['ran_booster_hold'], $_GET['_ran_booster_hold_nonce'] ) ) {
+			return null;
+		}
+		if ( false === wp_verify_nonce(
+			is_string( $_GET['_ran_booster_hold_nonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_ran_booster_hold_nonce'] ) ) : '',
+			self::native_hold_result_nonce_action(
+				is_string( $_GET['ran_booster_hold'] ) ? sanitize_key( wp_unslash( $_GET['ran_booster_hold'] ) ) : '',
+				isset( $_GET['ran_booster_hold_folder'] ) && is_string( $_GET['ran_booster_hold_folder'] ) ? sanitize_text_field( wp_unslash( $_GET['ran_booster_hold_folder'] ) ) : '',
+				isset( $_GET['ran_booster_hold_type'] ) && is_string( $_GET['ran_booster_hold_type'] ) && '' !== sanitize_key( wp_unslash( $_GET['ran_booster_hold_type'] ) )
+					? sanitize_key( wp_unslash( $_GET['ran_booster_hold_type'] ) )
+					: 'plugin',
+				isset( $_GET['package'] ) && is_string( $_GET['package'] ) ? sanitize_text_field( wp_unslash( $_GET['package'] ) ) : ''
+			)
+		) ) {
+			return null;
+		}
+		if ( ! is_string( $_GET['ran_booster_hold'] )
+			|| ! is_string( $_GET['_ran_booster_hold_nonce'] )
+			|| '' === sanitize_text_field( wp_unslash( $_GET['_ran_booster_hold_nonce'] ) )
+			|| ( isset( $_GET['package'] ) && ! is_string( $_GET['package'] ) )
+		) {
+			return null;
+		}
+		$code = sanitize_key( wp_unslash( $_GET['ran_booster_hold'] ) );
 		if ( ! in_array( $code, array( 'released', 'cleared', 'present', 'busy', 'failed', 'lock_failed' ), true ) ) {
 			return null;
 		}
-		$folder = is_string( $query['ran_booster_hold_folder'] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._-]{0,190}\z#D', $query['ran_booster_hold_folder'] ) ? $query['ran_booster_hold_folder'] : '';
+		$folder = '';
+		if ( isset( $_GET['ran_booster_hold_folder'] ) ) {
+			if ( ! is_string( $_GET['ran_booster_hold_folder'] ) ) {
+				return null;
+			}
+			$candidate_folder = sanitize_text_field( wp_unslash( $_GET['ran_booster_hold_folder'] ) );
+			if ( '' !== $candidate_folder && 1 !== preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._-]{0,190}\z#D', $candidate_folder ) ) {
+				return null;
+			}
+			$folder = $candidate_folder;
+		}
+		$type = 'plugin';
+		if ( isset( $_GET['ran_booster_hold_type'] ) ) {
+			if ( ! is_string( $_GET['ran_booster_hold_type'] ) ) {
+				return null;
+			}
+			$candidate_type = sanitize_key( wp_unslash( $_GET['ran_booster_hold_type'] ) );
+			if ( '' !== $candidate_type && ! in_array( $candidate_type, array( 'plugin', 'theme' ), true ) ) {
+				return null;
+			}
+			if ( 'theme' === $candidate_type ) {
+				$type = 'theme';
+			}
+		}
 		return array(
 			'code'   => $code,
 			'folder' => $folder,
-			'type'   => 'theme' === ( $query['ran_booster_hold_type'] ?? null ) ? 'theme' : 'plugin',
+			'type'   => $type,
 		);
 	}
 

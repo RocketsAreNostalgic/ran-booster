@@ -1367,11 +1367,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		try {
 			$bb_dashboard = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) );
 			foreach ( array( 'cleared', 'lock_failed', 'failed' ) as $bb_code ) {
-				$_GET    = array(
-					'tab'                     => 'bb',
-					'ran_booster_hold'        => $bb_code,
-					'ran_booster_hold_folder' => 'target',
-					'ran_booster_hold_type'   => 'plugin',
+				$_GET    = $this->signed_native_hold_query(
+					array(
+						'tab'                     => 'bb',
+						'ran_booster_hold'        => $bb_code,
+						'ran_booster_hold_folder' => 'target',
+						'ran_booster_hold_type'   => 'plugin',
+					)
 				);
 				$bb_data = $bb_dashboard->get_index()['data'];
 				self::assertNull( $bb_data['native_hold_result'], $bb_code );
@@ -1411,6 +1413,39 @@ final class DashboardIndexRoutingTest extends TestCase {
 				github_selection: $bundled_selection
 			);
 			foreach ( array(
+				'unsigned cleared notice'        => array(
+					'tab'                     => 'gh',
+					'ran_booster_hold'        => 'cleared',
+					'ran_booster_hold_folder' => 'target-plugin',
+					'ran_booster_hold_type'   => 'plugin',
+				),
+				'tampered folder after signing'  => array(
+					'tab'                     => 'gh',
+					'ran_booster_hold'        => 'cleared',
+					'ran_booster_hold_folder' => 'other-plugin',
+					'ran_booster_hold_type'   => 'plugin',
+					'_ran_booster_hold_nonce' => \RAN\wp_create_nonce(
+						Dashboard::native_hold_result_nonce_action( 'cleared', 'target-plugin', 'plugin', '' )
+					),
+				),
+				'tampered package after signing' => array(
+					'tab'                     => 'gh',
+					'ran_booster_hold'        => 'cleared',
+					'ran_booster_hold_folder' => 'target-plugin',
+					'ran_booster_hold_type'   => 'plugin',
+					'_ran_booster_hold_nonce' => \RAN\wp_create_nonce(
+						Dashboard::native_hold_result_nonce_action( 'cleared', 'target-plugin', 'plugin', 'example/example.php' )
+					),
+				),
+			) as $rejected_case => $rejected_query ) {
+				$_GET          = $rejected_query;
+				$rejected_data = $bundled_dashboard->get_index()['data'];
+				self::assertNull( $rejected_data['native_hold_result'], $rejected_case );
+				$rejected_html = $render( $rejected_data );
+				self::assertStringNotContainsString( 'Hold cleared.', $rejected_html, $rejected_case );
+				self::assertStringNotContainsString( 'id="ran-booster-native-hold"', $rejected_html, $rejected_case );
+			}
+			foreach ( array(
 				'bundled cleared with folder'     => array(
 					'query'    => array(
 						'tab'                     => 'gh',
@@ -1448,7 +1483,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 					'expected' => 'Booster couldn&#039;t confirm cleanup after the hold action, and WordPress&#039;s updater lock may still be held. Reload this page and verify state before retrying.',
 				),
 			) as $case => $spec ) {
-				$_GET         = $spec['query'];
+				$_GET         = $this->signed_native_hold_query( $spec['query'] );
 				$bundled_data = $bundled_dashboard->get_index()['data'];
 				self::assertSame( 'gh', $bundled_data['provider']['code'] ?? null, $case );
 				self::assertNull( $bundled_data['github_selection'], $case );
@@ -2806,11 +2841,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 				self::assertStringContainsString( 'name="ran_booster[confirmed_removal]"', $html, $tab );
 			}
 
-			$_GET              = array(
-				'tab'                     => 'gh',
-				'ran_booster_hold'        => 'cleared',
-				'ran_booster_hold_folder' => 'target',
-				'ran_booster_hold_type'   => 'plugin',
+			$_GET              = $this->signed_native_hold_query(
+				array(
+					'tab'                     => 'gh',
+					'ran_booster_hold'        => 'cleared',
+					'ran_booster_hold_folder' => 'target',
+					'ran_booster_hold_type'   => 'plugin',
+				)
 			);
 			$held_cleared_data = $dashboard->get_index()['data'];
 			self::assertNull( $held_cleared_data['native_hold_result'] );
@@ -2873,50 +2910,109 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
 			$this->redirect_for( $dashboard, 'adopt-github' )
 		);
-		self::assertSame(
-			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&ran_booster_hold=cleared&ran_booster_hold_folder=target-plugin&ran_booster_hold_type=plugin#ran-booster-native-hold',
-			$this->redirect_for(
-				$dashboard,
-				'recover-github-native',
-				array(
-					'hold_folder'  => 'target-plugin',
-					'package_type' => 'plugin',
-				)
+		$recovered_url = $this->redirect_for(
+			$dashboard,
+			'recover-github-native',
+			array(
+				'hold_folder'  => 'target-plugin',
+				'package_type' => 'plugin',
 			)
 		);
 		self::assertSame(
-			'https://example.test/wp-admin/network/admin.php?page=ran-booster-plugins&ran_booster_hold=released&package=example%2Fexample.php&ran_booster_hold_type=plugin#ran-booster-native-hold',
-			$this->redirect_for(
-				$dashboard,
-				'release-github-hold',
-				array(
-					'package'      => 'example/example.php',
-					'package_type' => 'plugin',
-				)
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh&ran_booster_hold=cleared&ran_booster_hold_folder=target-plugin&ran_booster_hold_type=plugin&_ran_booster_hold_nonce='
+				. rawurlencode( \RAN\wp_create_nonce( Dashboard::native_hold_result_nonce_action( 'cleared', 'target-plugin', 'plugin', '' ) ) )
+				. '#ran-booster-native-hold',
+			$recovered_url
+		);
+		$released_plugin_url = $this->redirect_for(
+			$dashboard,
+			'release-github-hold',
+			array(
+				'package'      => 'example/example.php',
+				'package_type' => 'plugin',
 			)
 		);
 		self::assertSame(
-			'https://example.test/wp-admin/network/admin.php?page=ran-booster-themes&ran_booster_hold=released&package=example-theme&ran_booster_hold_type=theme#ran-booster-native-hold',
-			$this->redirect_for(
-				$dashboard,
-				'release-github-hold',
-				array(
-					'package'      => 'example-theme',
-					'package_type' => 'theme',
-				)
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster-plugins&ran_booster_hold=released&package=example%2Fexample.php&ran_booster_hold_type=plugin&_ran_booster_hold_nonce='
+				. rawurlencode( \RAN\wp_create_nonce( Dashboard::native_hold_result_nonce_action( 'released', '', 'plugin', 'example/example.php' ) ) )
+				. '#ran-booster-native-hold',
+			$released_plugin_url
+		);
+		$released_theme_url = $this->redirect_for(
+			$dashboard,
+			'release-github-hold',
+			array(
+				'package'      => 'example-theme',
+				'package_type' => 'theme',
 			)
+		);
+		self::assertSame(
+			'https://example.test/wp-admin/network/admin.php?page=ran-booster-themes&ran_booster_hold=released&package=example-theme&ran_booster_hold_type=theme&_ran_booster_hold_nonce='
+				. rawurlencode( \RAN\wp_create_nonce( Dashboard::native_hold_result_nonce_action( 'released', '', 'theme', 'example-theme' ) ) )
+				. '#ran-booster-native-hold',
+			$released_theme_url
 		);
 
 		$parse = new ReflectionMethod( Dashboard::class, 'native_hold_result' );
 		$_GET  = array();
 		self::assertNull( $parse->invoke( $dashboard ) );
-		$_GET = array( 'ran_booster_hold' => 'unknown' );
+		foreach ( array(
+			array(
+				'url'      => $recovered_url,
+				'expected' => array(
+					'code'   => 'cleared',
+					'folder' => 'target-plugin',
+					'type'   => 'plugin',
+				),
+			),
+			array(
+				'url'      => $released_plugin_url,
+				'expected' => array(
+					'code'   => 'released',
+					'folder' => '',
+					'type'   => 'plugin',
+				),
+			),
+			array(
+				'url'      => $released_theme_url,
+				'expected' => array(
+					'code'   => 'released',
+					'folder' => '',
+					'type'   => 'theme',
+				),
+			),
+		) as $round_trip ) {
+			$parsed_url   = wp_parse_url( $round_trip['url'] );
+			$query_string = is_array( $parsed_url ) ? (string) ( $parsed_url['query'] ?? '' ) : '';
+			$parsed_query = array();
+			wp_parse_str( $query_string, $parsed_query );
+			$_GET = $parsed_query;
+			self::assertSame( $round_trip['expected'], $parse->invoke( $dashboard ) );
+		}
+
+		$_GET = $this->signed_native_hold_query( array( 'ran_booster_hold' => 'unknown' ) );
 		self::assertNull( $parse->invoke( $dashboard ) );
 		$_GET = array(
 			'ran_booster_hold'        => 'cleared',
 			'ran_booster_hold_folder' => 'example_plugin-1.0',
 			'ran_booster_hold_type'   => 'theme',
 		);
+		self::assertNull( $parse->invoke( $dashboard ) );
+		$_GET = array(
+			'ran_booster_hold'        => 'cleared',
+			'ran_booster_hold_folder' => 'example_plugin-1.0',
+			'ran_booster_hold_type'   => 'theme',
+			'_ran_booster_hold_nonce' => '',
+		);
+		self::assertNull( $parse->invoke( $dashboard ) );
+		$signed_cleared = $this->signed_native_hold_query(
+			array(
+				'ran_booster_hold'        => 'cleared',
+				'ran_booster_hold_folder' => 'example_plugin-1.0',
+				'ran_booster_hold_type'   => 'theme',
+			)
+		);
+		$_GET           = $signed_cleared;
 		self::assertSame(
 			array(
 				'code'   => 'cleared',
@@ -2925,23 +3021,31 @@ final class DashboardIndexRoutingTest extends TestCase {
 			),
 			$parse->invoke( $dashboard )
 		);
-		$_GET = array(
-			'ran_booster_hold'        => 'present',
-			'ran_booster_hold_folder' => '../bad',
-			'ran_booster_hold_type'   => 'other',
-		);
-		self::assertSame(
+		foreach ( array(
+			array( 'ran_booster_hold' => 'released' ),
+			array( 'ran_booster_hold_folder' => 'other-folder' ),
+			array( 'ran_booster_hold_type' => 'plugin' ),
+			array( 'package' => 'other/main.php' ),
+			array( 'ran_booster_hold_folder' => array( 'nested' ) ),
+			array( '_ran_booster_hold_nonce' => array( 'nested' ) ),
+		) as $tampered ) {
+			$_GET = $tampered + $signed_cleared;
+			self::assertNull( $parse->invoke( $dashboard ) );
+		}
+		$_GET = $this->signed_native_hold_query(
 			array(
-				'code'   => 'present',
-				'folder' => '',
-				'type'   => 'plugin',
-			),
-			$parse->invoke( $dashboard )
+				'ran_booster_hold'        => 'present',
+				'ran_booster_hold_folder' => '../bad',
+				'ran_booster_hold_type'   => 'other',
+			)
 		);
-		$_GET = array(
-			'ran_booster_hold'        => 'lock_failed',
-			'ran_booster_hold_folder' => 'target-plugin',
-			'ran_booster_hold_type'   => 'plugin',
+		self::assertNull( $parse->invoke( $dashboard ) );
+		$_GET = $this->signed_native_hold_query(
+			array(
+				'ran_booster_hold'        => 'lock_failed',
+				'ran_booster_hold_folder' => 'target-plugin',
+				'ran_booster_hold_type'   => 'plugin',
+			)
 		);
 		self::assertSame(
 			array(
@@ -2952,6 +3056,21 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$parse->invoke( $dashboard )
 		);
 		$_GET = array();
+	}
+
+	/**
+	 * @param array<string, mixed> $query
+	 * @return array<string, mixed>
+	 */
+	private function signed_native_hold_query( array $query ): array {
+		$code                             = is_string( $query['ran_booster_hold'] ?? null ) ? $query['ran_booster_hold'] : '';
+		$folder                           = is_string( $query['ran_booster_hold_folder'] ?? null ) ? $query['ran_booster_hold_folder'] : '';
+		$type                             = is_string( $query['ran_booster_hold_type'] ?? null ) && '' !== $query['ran_booster_hold_type'] ? $query['ran_booster_hold_type'] : 'plugin';
+		$package                          = is_string( $query['package'] ?? null ) ? $query['package'] : '';
+		$query['_ran_booster_hold_nonce'] = \RAN\wp_create_nonce(
+			Dashboard::native_hold_result_nonce_action( $code, $folder, $type, $package )
+		);
+		return $query;
 	}
 
 	/** @param array<string, mixed> $extra */
@@ -3818,10 +3937,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		try {
 			foreach ( array( 'released', 'lock_failed', 'busy', 'failed' ) as $code ) {
-				$_GET      = array(
-					'package'               => 'example/example.php',
-					'ran_booster_hold'      => $code,
-					'ran_booster_hold_type' => 'plugin',
+				$_GET      = $this->signed_native_hold_query(
+					array(
+						'package'               => 'example/example.php',
+						'ran_booster_hold'      => $code,
+						'ran_booster_hold_type' => 'plugin',
+					)
 				);
 				$held_edit = $dashboard->get_plugins()['data'];
 				self::assertNull( $held_edit['package_native_hold'], $code );
@@ -3833,19 +3954,42 @@ final class DashboardIndexRoutingTest extends TestCase {
 			unset( $cleared['native_mutation'] );
 			self::assertTrue( $store->compare_and_swap( $latest, $cleared ) );
 
-			$_GET       = array(
+			$_GET          = array(
 				'package'               => 'example/example.php',
 				'ran_booster_hold'      => 'released',
 				'ran_booster_hold_type' => 'plugin',
+			);
+			$unsigned_edit = $dashboard->get_plugins()['data'];
+			self::assertNull( $unsigned_edit['package_native_hold_result'] );
+
+			$_GET          = array(
+				'package'                 => 'example/example.php',
+				'ran_booster_hold'        => 'released',
+				'ran_booster_hold_type'   => 'plugin',
+				'_ran_booster_hold_nonce' => \RAN\wp_create_nonce(
+					Dashboard::native_hold_result_nonce_action( 'released', '', 'plugin', 'other/plugin.php' )
+				),
+			);
+			$tampered_edit = $dashboard->get_plugins()['data'];
+			self::assertNull( $tampered_edit['package_native_hold_result'] );
+
+			$_GET       = $this->signed_native_hold_query(
+				array(
+					'package'               => 'example/example.php',
+					'ran_booster_hold'      => 'released',
+					'ran_booster_hold_type' => 'plugin',
+				)
 			);
 			$clear_edit = $dashboard->get_plugins()['data'];
 			self::assertNull( $clear_edit['package_native_hold'] );
 			self::assertSame( 'released', $clear_edit['package_native_hold_result']['code'] ?? null );
 
-			$_GET             = array(
-				'package'               => 'example/example.php',
-				'ran_booster_hold'      => 'lock_failed',
-				'ran_booster_hold_type' => 'plugin',
+			$_GET             = $this->signed_native_hold_query(
+				array(
+					'package'               => 'example/example.php',
+					'ran_booster_hold'      => 'lock_failed',
+					'ran_booster_hold_type' => 'plugin',
+				)
 			);
 			$lock_failed_edit = $dashboard->get_plugins()['data'];
 			self::assertSame( 'lock_failed', $lock_failed_edit['package_native_hold_result']['code'] ?? null );

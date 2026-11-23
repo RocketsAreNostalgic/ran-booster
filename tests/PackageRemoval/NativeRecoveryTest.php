@@ -811,6 +811,60 @@ final class NativeRecoveryTest extends TestCase {
 		}
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_failed_rollback_skips_selection_cache_callbacks_and_never_emits_lock_release_failure(): void {
+		foreach ( array( 'recover', 'release' ) as $operation ) {
+			foreach ( array( 'fail_rollback', 'throw_rollback' ) as $rollback_mode ) {
+				foreach ( array( 'zero', 'throw' ) as $lock_mode ) {
+					unset( $this->db->option_rows['auto_updater.lock'] );
+					$this->hold( str_repeat( 'a', 32 ), 'started' );
+					$fresh_service            = $this->uncertain_commit_service( $operation );
+					$digest                   = $fresh_service->native_recovery_confirmation()['digest'];
+					$this->db->fail_commit    = true;
+					$this->db->fail_rollback  = 'fail_rollback' === $rollback_mode;
+					$this->db->throw_rollback = 'throw_rollback' === $rollback_mode;
+					$selection_cache_deletes  = 0;
+					$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ) use ( &$selection_cache_deletes ): void {
+						if ( 'options' === $group && in_array( $key, array( GitHubSelectionStore::OPTION, 'alloptions' ), true ) ) {
+							++$selection_cache_deletes;
+						}
+					};
+					if ( 'throw' === $lock_mode ) {
+						$this->db->fail_query_contains = 'DELETE FROM `wp_options`';
+					} else {
+						$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
+					}
+					$caught = null;
+					try {
+						if ( 'release' === $operation ) {
+							$fresh_service->release_native_hold( $digest, true, true, static fn (): bool => true );
+						} else {
+							$fresh_service->recover_native_removal( $digest, true, true, static fn (): bool => true );
+						}
+					} catch ( \RuntimeException $failure ) {
+						$caught = $failure;
+					} finally {
+						unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+						$this->db->fail_commit         = false;
+						$this->db->fail_rollback       = false;
+						$this->db->throw_rollback      = false;
+						$this->db->fail_query_contains = null;
+						$this->db->zero_query_contains = null;
+						$this->db->last_error          = '';
+					}
+					self::assertTrue( $this->in_selection_transaction(), "$operation/$rollback_mode/$lock_mode" );
+					self::assertSame( 0, $selection_cache_deletes, "$operation/$rollback_mode/$lock_mode" );
+					self::assertSame( 1, $this->db->query( 'ROLLBACK' ), "$operation/$rollback_mode/$lock_mode" );
+					self::assertInstanceOf( \RuntimeException::class, $caught, "$operation/$rollback_mode/$lock_mode" );
+					self::assertNotInstanceOf( NativeHoldLockReleaseFailure::class, $caught, "$operation/$rollback_mode/$lock_mode" );
+					self::assertArrayHasKey( 'native_mutation', $this->store->read(), "$operation/$rollback_mode/$lock_mode" );
+					self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$rollback_mode/$lock_mode" );
+				}
+			}
+		}
+	}
+
 	private function uncertain_commit_service( string $operation ): PackageRemovalService {
 		$bundled     = new GitHubReplacementDeclaration(
 			array(
@@ -913,6 +967,9 @@ final class NativeRecoveryTest extends TestCase {
 	}
 
 	private function in_selection_transaction(): bool {
+		if ( $this->db->in_transaction() || null !== $this->db->selection->selection->transaction_rows ) {
+			return true;
+		}
 		$depth = 0;
 		foreach ( $this->db->queries as $query ) {
 			if ( 'START TRANSACTION' === $query ) {

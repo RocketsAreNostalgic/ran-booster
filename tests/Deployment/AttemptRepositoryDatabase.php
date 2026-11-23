@@ -81,6 +81,8 @@ namespace RAN\Tests\Deployment {
 		public int $authority_reads          = 0;
 		public int $automatic_rollbacks      = 0;
 		public bool $fail_commit             = false;
+		public bool $fail_rollback           = false;
+		public bool $throw_rollback          = false;
 		public ?string $tamper_insert_column = null;
 		public mixed $tamper_insert_value    = null;
 		public ?string $tamper_update_column = null;
@@ -194,6 +196,12 @@ namespace RAN\Tests\Deployment {
 				return 1;
 			}
 			if ( 'ROLLBACK' === $query ) {
+				if ( $this->throw_rollback ) {
+					throw new \RuntimeException( 'rollback threw' );
+				}
+				if ( $this->fail_rollback ) {
+					return false;
+				}
 				$this->rollback_snapshot();
 
 				return 1;
@@ -296,6 +304,10 @@ namespace RAN\Tests\Deployment {
 			}
 
 			return 0;
+		}
+
+		public function in_transaction(): bool {
+			return null !== $this->snapshot;
 		}
 
 		private function rollback_snapshot(): void {

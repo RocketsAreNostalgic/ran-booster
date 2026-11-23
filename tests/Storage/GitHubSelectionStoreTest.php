@@ -545,4 +545,135 @@ final class GitHubSelectionStoreTest extends TestCase {
 		}
 		self::assertNull( $uncertain_committed );
 	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_failed_rollback_clears_storage_verification_without_running_cache_callbacks(): void {
+		$trigger_cases = array( 'operation_throws', 'fail_commit', 'throw_commit' );
+		foreach ( $trigger_cases as $trigger ) {
+			foreach ( array( 'false', 'throw', 'last_error' ) as $rollback_mode ) {
+				$db    = new SelectionDatabase();
+				$store = new GitHubSelectionStore( $db, 'wp_options' );
+				$old   = $store->initialize_bundled( $this->declaration() );
+				$next  = $old;
+				++$next['selection_generation'];
+				if ( 'fail_commit' === $trigger ) {
+					$db->fail_commit = true;
+				} elseif ( 'throw_commit' === $trigger ) {
+					$db->throw_commit = true;
+				}
+				$db->fail_rollback                              = 'false' === $rollback_mode;
+				$db->throw_rollback                             = 'throw' === $rollback_mode;
+				$db->boundary_error                             = 'last_error' === $rollback_mode ? 'ROLLBACK' : null;
+				$cache_deletes                                  = 0;
+				$committed                                      = false;
+				$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function () use ( &$cache_deletes ): void {
+					++$cache_deletes;
+				};
+				try {
+					$store->selection_transaction(
+						static function () use ( $store, $old, $next, $trigger ): bool {
+							$swapped = $store->compare_and_swap( $old, $next );
+							if ( 'operation_throws' === $trigger ) {
+								throw new \RuntimeException( 'operation failed' );
+							}
+							return $swapped;
+						},
+						static function () use ( &$committed ): void {
+							$committed = true;
+						}
+					);
+					self::fail( "$trigger/$rollback_mode must throw." );
+				} catch ( \RuntimeException ) {
+					self::assertFalse( $committed, "$trigger/$rollback_mode" );
+				} finally {
+					unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+				}
+				self::assertSame( 0, $cache_deletes, "$trigger/$rollback_mode must skip cache backend while transaction stays open." );
+				if ( 'last_error' !== $rollback_mode ) {
+					self::assertNotNull( $db->transaction_rows, "$trigger/$rollback_mode" );
+				}
+				$db->fail_commit    = false;
+				$db->throw_commit   = false;
+				$db->fail_rollback  = false;
+				$db->throw_rollback = false;
+				$db->boundary_error = null;
+				$db->last_error     = '';
+				$this->assert_paused( $store, $db );
+
+				// storage_verified must clear immediately even when cache eviction is skipped.
+				if ( 'last_error' !== $rollback_mode ) {
+					self::assertTrue( $db->query( 'ROLLBACK' ) );
+				}
+				$db->queries = array();
+				self::assertSame( $old, $store->read() );
+				self::assertNotEmpty( array_filter( $db->queries, static fn ( string $query ): bool => str_contains( $query, 'SHOW TABLE STATUS' ) ) );
+			}
+		}
+
+		// Successful ROLLBACK closes the transaction and then invalidates selection caches once.
+		$rolled_db    = new SelectionDatabase();
+		$rolled_store = new GitHubSelectionStore( $rolled_db, 'wp_options' );
+		$rolled_old   = $rolled_store->initialize_bundled( $this->declaration() );
+		$rolled_next  = $rolled_old;
+		++$rolled_next['selection_generation'];
+		$rolled_option_deletes                          = 0;
+		$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ) use ( $rolled_db, &$rolled_option_deletes ): void {
+			self::assertNull( $rolled_db->transaction_rows, 'Rollback cache eviction must run only after ROLLBACK closes the transaction.' );
+			if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+				++$rolled_option_deletes;
+			}
+		};
+		try {
+			$rolled_store->selection_transaction(
+				static function () use ( $rolled_store, $rolled_old, $rolled_next ): void {
+					$rolled_store->compare_and_swap( $rolled_old, $rolled_next );
+					throw new \RuntimeException( 'rollback closes cleanly' );
+				}
+			);
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'rollback closes cleanly', $failure->getMessage() );
+		} finally {
+			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+		}
+		self::assertSame( $rolled_old, $rolled_store->read() );
+		self::assertSame( 1, $rolled_option_deletes );
+
+		foreach ( array( 'false', 'throw' ) as $rollback_mode ) {
+			$hold_db                                        = new SelectionDatabase();
+			$hold_store                                     = new GitHubSelectionStore( $hold_db, 'wp_options' );
+			$hold_initial                                   = $hold_store->initialize_bundled( $this->declaration() );
+			$hold_db->fail_commit                           = true;
+			$hold_db->fail_rollback                         = 'false' === $rollback_mode;
+			$hold_db->throw_rollback                        = 'throw' === $rollback_mode;
+			$hold_deletes                                   = 0;
+			$hold_committed                                 = false;
+			$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function () use ( &$hold_deletes ): void {
+				++$hold_deletes;
+			};
+			try {
+				$hold_store->without_native_mutation_hold(
+					static fn (): string => 'token-unused',
+					static function () use ( &$hold_committed ): void {
+						$hold_committed = true;
+					}
+				);
+				self::fail( "hold/$rollback_mode must throw." );
+			} catch ( DatabaseLifecycleFailure ) {
+				self::assertFalse( $hold_committed, "hold/$rollback_mode" );
+			} finally {
+				unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+			}
+			self::assertSame( 0, $hold_deletes, "hold/$rollback_mode must skip cache backend while transaction stays open." );
+			self::assertNotNull( $hold_db->transaction_rows, "hold/$rollback_mode" );
+			$hold_db->fail_commit    = false;
+			$hold_db->fail_rollback  = false;
+			$hold_db->throw_rollback = false;
+			$this->assert_paused( $hold_store, $hold_db );
+			self::assertTrue( $hold_db->query( 'ROLLBACK' ) );
+			$hold_db->queries = array();
+			self::assertSame( $hold_initial, $hold_store->read() );
+			self::assertNotEmpty( array_filter( $hold_db->queries, static fn ( string $query ): bool => str_contains( $query, 'SHOW TABLE STATUS' ) ) );
+		}
+	}
 }

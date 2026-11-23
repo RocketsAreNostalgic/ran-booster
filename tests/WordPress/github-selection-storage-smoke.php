@@ -518,6 +518,137 @@ return static function ( wpdb $database ): void {
 				remove_filter( 'query', $record_queries );
 			}
 			$expect( 0 === $filtered_queries->count(), 'closed handle check must not run query filters' );
+
+			$doomed_hold                  = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+			$reconnected_hold             = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+			$before_hold                  = $second->read();
+			$with_hold                    = $before_hold;
+			$with_hold['native_mutation'] = array(
+				'selection_generation' => $before_hold['selection_generation'],
+				'owner_tag'            => str_repeat( '0', 16 ) . str_repeat( 'b', 16 ),
+				'target_type'          => 'plugin',
+				'installed_identity'   => 'held-commit-smoke/held-commit-smoke.php',
+				'phase'                => 'started',
+			);
+			$second->selection_transaction(
+				static function () use ( $second, $before_hold, $with_hold, $expect ): void {
+					$expect( $second->compare_and_swap( $before_hold, $with_hold ), 'seed active native_mutation hold for pinned session proofs' );
+				}
+			);
+			try {
+				$doomed_hold->options = $table;
+				$doomed_hold_store    = new GitHubSelectionStore( $doomed_hold, $table );
+				$doomed_hold_id       = (int) $doomed_hold->get_var( 'SELECT CONNECTION_ID()' );
+				$expect( $doomed_hold_id > 0, 'doomed hold-clear wpdb connection has valid MySQL session id' );
+				$expect( array() !== $doomed_hold_store->read(), 'warm doomed hold-clear store storage check before pinning session' );
+
+				wp_cache_set( GitHubSelectionStore::OPTION, 'sentinel-before-kill', 'options' );
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Bind doomed wpdb session for pinned hold-clear KILL test and restore in finally.
+				$GLOBALS['wpdb']        = $doomed_hold;
+				$doomed_hold_suppressed = $doomed_hold->suppress_errors( true );
+				$filtered_queries->exchangeArray( array() );
+				$hold_committed = false;
+				$hold_rejected  = null;
+				add_filter( 'query', $record_queries );
+				try {
+					try {
+						$doomed_hold_store->selection_transaction(
+							static function () use ( $doomed_hold_store, $second, $other, $doomed_hold_id, $expect ): void {
+								$locked  = $doomed_hold_store->read( true );
+								$cleared = $locked;
+								unset( $cleared['native_mutation'] );
+								$expect( $doomed_hold_store->compare_and_swap( $locked, $cleared ), 'pinned hold-clear CAS writes uncommitted row' );
+								$expect( array_key_exists( 'native_mutation', $second->read() ), 'uncommitted hold clear stays invisible to second connection' );
+								$kill_sql = $other->prepare( 'KILL %d', $doomed_hold_id );
+								$expect( is_string( $kill_sql ) && false !== $other->query( $kill_sql ), 'control connection kills hold-clear session before COMMIT' );
+								$deadline = microtime( true ) + 2.0;
+								while ( microtime( true ) < $deadline ) {
+									if ( 0 === (int) $other->get_var( $other->prepare( 'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = %d', $doomed_hold_id ) ) ) {
+										break;
+									}
+									usleep( 10000 );
+								}
+								$expect( 0 === (int) $other->get_var( $other->prepare( 'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = %d', $doomed_hold_id ) ), 'killed hold-clear session must exit before COMMIT' );
+							},
+							static function () use ( &$hold_committed ): void {
+								$hold_committed = true;
+							}
+						);
+					} catch ( DatabaseLifecycleFailure $failure ) {
+						$hold_rejected = $failure->reason();
+					}
+				} finally {
+					remove_filter( 'query', $record_queries );
+					$doomed_hold->suppress_errors( $doomed_hold_suppressed );
+				}
+				$expect( 'selection_commit_uncertain' === $hold_rejected && ! $hold_committed, 'killed hold-clear COMMIT must fail closed without invoking $on_committed' );
+				$expect( 'sentinel-before-kill' === wp_cache_get( GitHubSelectionStore::OPTION, 'options' ), 'failed hold-clear ROLLBACK must defer selection cache callbacks' );
+				$expect( array_key_exists( 'native_mutation', $second->read() ), 'killed hold-clear session must preserve durable hold in MySQL' );
+				foreach ( $filtered_queries as $filtered_sql ) {
+					$expect( str_starts_with( $filtered_sql, 'KILL ' ) || str_contains( $filtered_sql, 'information_schema.PROCESSLIST' ) || str_contains( $filtered_sql, 'SHOW ' ) || str_contains( $filtered_sql, 'SELECT option_name, option_value, autoload FROM' ), 'killed hold-clear session must not trigger wpdb reconnect through query filter' );
+				}
+				$reject(
+					static fn () => $doomed_hold_store->selection_transaction( static fn (): null => null ),
+					'killed hold-clear session must leave selection store uncertain and refuse reuse'
+				);
+
+				$reconnected_hold->options = $table;
+				$reconnected_hold_store    = new GitHubSelectionStore( $reconnected_hold, $table );
+				$reconnected_hold_context  = new GitHubProviderSelection( $reconnected_hold_store, $plugin_root, $declaration );
+				$reconnected_hold_id       = (int) $reconnected_hold->get_var( 'SELECT CONNECTION_ID()' );
+				$expect( $reconnected_hold_id > 0, 'reconnected hold-clear wpdb connection has valid MySQL session id' );
+				$expect( array() !== $reconnected_hold_store->read(), 'warm reconnected hold-clear store storage check before pinning session' );
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Bind wpdb session that reconnects mid-transaction and restore in finally.
+				$GLOBALS['wpdb']        = $reconnected_hold;
+				$reconnected_suppressed = $reconnected_hold->suppress_errors( true );
+				$reconnected_committed  = false;
+				$reconnected_rejected   = null;
+				try {
+					$reconnected_hold_context->release_native_hold(
+						$with_hold,
+						static function () use ( $reconnected_hold, $other, $reconnected_hold_id, $expect ): void {
+							$kill_sql = $other->prepare( 'KILL %d', $reconnected_hold_id );
+							$expect( is_string( $kill_sql ) && false !== $other->query( $kill_sql ), 'control connection kills session before verify triggers wpdb reconnect' );
+							$deadline = microtime( true ) + 2.0;
+							while ( microtime( true ) < $deadline ) {
+								if ( 0 === (int) $other->get_var( $other->prepare( 'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = %d', $reconnected_hold_id ) ) ) {
+									break;
+								}
+								usleep( 10000 );
+							}
+							$expect( 0 === (int) $other->get_var( $other->prepare( 'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = %d', $reconnected_hold_id ) ), 'killed session must exit before wpdb reconnect probe' );
+							$reconnected_hold->get_var( 'SELECT 1' );
+							$new_id = (int) $reconnected_hold->get_var( 'SELECT CONNECTION_ID()' );
+							$expect( $new_id > 0 && $new_id !== $reconnected_hold_id, 'wpdb must have reconnected onto a different MySQL session' );
+						},
+						static function () use ( &$reconnected_committed ): void {
+							$reconnected_committed = true;
+						}
+					);
+				} catch ( DatabaseLifecycleFailure $failure ) {
+					$reconnected_rejected = $failure->reason();
+				} finally {
+					$reconnected_hold->suppress_errors( $reconnected_suppressed );
+				}
+				$expect( 'selection_transaction_failed' === $reconnected_rejected && ! $reconnected_committed, 'mid-transaction wpdb reconnect must refuse hold-clear write and $on_committed' );
+				$expect( array_key_exists( 'native_mutation', $second->read() ), 'mid-transaction wpdb reconnect must preserve durable hold in MySQL' );
+				$reject(
+					static fn () => $reconnected_hold_store->selection_transaction( static fn (): null => null ),
+					'mid-transaction reconnect must leave selection store uncertain and refuse reuse'
+				);
+			} finally {
+				$doomed_hold->close();
+				$reconnected_hold->close();
+				wp_cache_delete( GitHubSelectionStore::OPTION, 'options' );
+				$second->selection_transaction(
+					static function () use ( $second, $before_hold, $expect ): void {
+						$current = $second->read( true );
+						if ( array_key_exists( 'native_mutation', $current ) ) {
+							$expect( $second->compare_and_swap( $current, $before_hold ), 'clear seeded native_mutation hold after pinned session proofs' );
+						}
+					}
+				);
+			}
 		} finally {
 			$database->options = $saved_options;
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore WordPress global wpdb after isolated smoke proof.

@@ -11,9 +11,11 @@ use RAN\PackageRemoval\PackageRemovalService;
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Storage\GitHubSelectionStore;
 
-require_once ABSPATH . 'wp-admin/includes/plugin.php';
-require_once ABSPATH . 'wp-admin/includes/theme.php';
-require_once ABSPATH . 'wp-admin/includes/file.php';
+if ( ! defined( 'RAN_BOOSTER_RELEASE_SWITCH_PROOF_LIBRARY_ONLY' ) ) {
+	require_once ABSPATH . 'wp-admin/includes/plugin.php';
+	require_once ABSPATH . 'wp-admin/includes/theme.php';
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+}
 
 final class RAN_Booster_ReleaseSwitchProof {
 
@@ -864,11 +866,16 @@ final class RAN_Booster_ReleaseSwitchProof {
 				throw new RuntimeException( 'A RAN class loaded from outside the installed Core.' );
 			}
 		}
+		if ( self::archive_bytes_match( $zip->getFromName( 'ran-booster/__missing_attestation_control__.php' ), false ) ) {
+			throw new RuntimeException( 'Archive byte attestation accepted a failed read.' );
+		}
 		$loaded = array();
 		foreach ( get_included_files() as $file ) {
 			if ( str_starts_with( $file, $plugins . 'ran-booster/' ) ) {
+				$archive_bytes = $zip->getFromName( substr( $file, strlen( $plugins ) ) );
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Compare loaded runtime bytes with the archive entry.
-				$loaded[ $file ] = $zip->getFromName( substr( $file, strlen( $plugins ) ) ) === file_get_contents( $file );
+				$file_bytes      = file_get_contents( $file );
+				$loaded[ $file ] = self::archive_bytes_match( $archive_bytes, $file_bytes );
 			}
 		}
 		$updater = $plugins . 'ran-booster/vendor/ran/wp-release-updater/src/WordPress/NativePackageUpdater.php';
@@ -881,6 +888,14 @@ final class RAN_Booster_ReleaseSwitchProof {
 				'loaded_core_files_match_count' => count( $loaded ),
 			)
 		) . "\n";
+	}
+
+	/**
+	 * Require both the archive entry and installed file read to succeed before comparing bytes,
+	 * so two failed reads (false === false) never pass attestation.
+	 */
+	public static function archive_bytes_match( string|false $archive_bytes, string|false $file_bytes ): bool {
+		return is_string( $archive_bytes ) && is_string( $file_bytes ) && $archive_bytes === $file_bytes;
 	}
 
 	private function report( string $outcome, string $version ): void {
@@ -896,15 +911,17 @@ final class RAN_Booster_ReleaseSwitchProof {
 	}
 }
 
-$ran_booster_release_switch_proof = new RAN_Booster_ReleaseSwitchProof( (string) getenv( 'RAN_RELEASE_SWITCH_PROOF_TYPE' ), (string) getenv( 'RAN_RELEASE_SWITCH_PROOF_CASE' ) );
-match ( getenv( 'RAN_RELEASE_SWITCH_PROOF_PHASE' ) ) {
-	'seed' => $ran_booster_release_switch_proof->seed(),
-	'run' => $ran_booster_release_switch_proof->run(),
-	'compete' => $ran_booster_release_switch_proof->competing(),
-	'readback' => $ran_booster_release_switch_proof->readback(),
-	'release' => $ran_booster_release_switch_proof->release_hold(),
-	'retry' => $ran_booster_release_switch_proof->retry_switch(),
-	'retried' => $ran_booster_release_switch_proof->retried(),
-	'fresh' => $ran_booster_release_switch_proof->fresh_start(),
-	default => throw new RuntimeException( 'Unknown proof phase.' ),
-};
+if ( ! defined( 'RAN_BOOSTER_RELEASE_SWITCH_PROOF_LIBRARY_ONLY' ) ) {
+	$ran_booster_release_switch_proof = new RAN_Booster_ReleaseSwitchProof( (string) getenv( 'RAN_RELEASE_SWITCH_PROOF_TYPE' ), (string) getenv( 'RAN_RELEASE_SWITCH_PROOF_CASE' ) );
+	match ( getenv( 'RAN_RELEASE_SWITCH_PROOF_PHASE' ) ) {
+		'seed' => $ran_booster_release_switch_proof->seed(),
+		'run' => $ran_booster_release_switch_proof->run(),
+		'compete' => $ran_booster_release_switch_proof->competing(),
+		'readback' => $ran_booster_release_switch_proof->readback(),
+		'release' => $ran_booster_release_switch_proof->release_hold(),
+		'retry' => $ran_booster_release_switch_proof->retry_switch(),
+		'retried' => $ran_booster_release_switch_proof->retried(),
+		'fresh' => $ran_booster_release_switch_proof->fresh_start(),
+		default => throw new RuntimeException( 'Unknown proof phase.' ),
+	};
+}

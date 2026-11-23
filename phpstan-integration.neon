@@ -18,6 +18,7 @@ parameters:
 	scanFiles:
 		- vendor/ran/wp-release-updater/src/Contract/IdentityDescriptor.php
 		- tests/WordPress/disposable-management-cleanup.php
+		- tests/WordPress/native-release-install-proof/ReleaseSwitchProof.php
 		- ran-booster.php
 		- tests/WordPress/WordPressOrgUpdateRequestFilterWordPressFunctions.php
 		- scripts/analysis-stubs/WpCliCommand.php

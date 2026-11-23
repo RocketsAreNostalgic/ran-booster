@@ -256,16 +256,25 @@ class Dispatcher {
 	 * @param array<string, mixed> $request
 	 */
 	private function native_hold_return( array $request, string $code, string $url ): string {
-		$args = array( 'ran_booster_hold' => $code );
-		foreach ( array(
-			'package'      => 'package',
-			'hold_folder'  => 'ran_booster_hold_folder',
-			'package_type' => 'ran_booster_hold_type',
-		) as $field => $arg ) {
-			if ( is_string( $request[ $field ] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}\z#D', $request[ $field ] ) ) {
-				$args[ $arg ] = $request[ $field ];
-			}
+		$args    = array( 'ran_booster_hold' => $code );
+		$package = '';
+		$folder  = '';
+		$type    = 'plugin';
+		if ( is_string( $request['package'] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}\z#D', $request['package'] ) ) {
+			$package         = $request['package'];
+			$args['package'] = $package;
 		}
+		if ( is_string( $request['hold_folder'] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._-]{0,190}\z#D', $request['hold_folder'] ) ) {
+			$folder                          = $request['hold_folder'];
+			$args['ran_booster_hold_folder'] = $folder;
+		}
+		if ( is_string( $request['package_type'] ?? null ) && in_array( $request['package_type'], array( 'plugin', 'theme' ), true ) ) {
+			$type                          = $request['package_type'];
+			$args['ran_booster_hold_type'] = $type;
+		}
+		$args['_ran_booster_hold_nonce'] = wp_create_nonce(
+			Dashboard::native_hold_result_nonce_action( $code, $folder, $type, $package )
+		);
 		return add_query_arg( $args, $url ) . '#ran-booster-native-hold';
 	}
 

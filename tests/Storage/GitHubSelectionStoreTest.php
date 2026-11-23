@@ -498,6 +498,7 @@ final class GitHubSelectionStoreTest extends TestCase {
 			self::assertTrue( $result );
 			self::assertTrue( $committed );
 			self::assertFalse( $store->has_unclosed_transaction() );
+			self::assertFalse( $store->has_uncertain_commit() );
 			self::assertSame( 1, $option_deletes );
 		} finally {
 			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
@@ -550,6 +551,8 @@ final class GitHubSelectionStoreTest extends TestCase {
 			self::assertSame( 'commit threw', $failure->getMessage() );
 		}
 		self::assertNull( $uncertain_committed );
+		self::assertTrue( $uncertain_store->has_uncertain_commit() );
+		self::assertFalse( $uncertain_store->has_unclosed_transaction() );
 	}
 
 	#[RunInSeparateProcess]
@@ -596,6 +599,7 @@ final class GitHubSelectionStoreTest extends TestCase {
 					unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
 				}
 				self::assertTrue( $store->has_unclosed_transaction(), "$trigger/$rollback_mode" );
+				self::assertTrue( $store->has_uncertain_commit(), "$trigger/$rollback_mode" );
 				self::assertSame( 0, $cache_deletes, "$trigger/$rollback_mode must skip cache backend while transaction stays open." );
 				if ( 'last_error' !== $rollback_mode ) {
 					self::assertNotNull( $db->transaction_rows, "$trigger/$rollback_mode" );

@@ -57,14 +57,25 @@ final readonly class PackageRemovalService {
 		);
 	}
 
+	/** Whether a prior GitHub selection transaction failed to close cleanly in this request. */
+	public function has_unclosed_selection_transaction(): bool {
+		return true === $this->github_selection?->has_unclosed_transaction();
+	}
+
 	/** Whether the held target's folder is gone, so a refused removal can say it is still there. */
 	public function native_hold_target_absent(): bool {
+		if ( $this->has_unclosed_selection_transaction() ) {
+			throw new \RuntimeException( 'GitHub selection transaction requires recovery.' );
+		}
 		$snapshot = $this->native_recovery_snapshot();
 		return ( $this->wordpress->deletion_postcondition( $snapshot['type'], $snapshot['identifier'], true ) )();
 	}
 
 	/** Whether another live updater lock is held now; an unfinished hold's own lock is freed by the operation. */
 	public function native_hold_lock_busy(): bool {
+		if ( $this->has_unclosed_selection_transaction() ) {
+			throw new \RuntimeException( 'GitHub selection transaction requires recovery.' );
+		}
 		$current = $this->updater_lock->current_token();
 		$marker  = $this->native_recovery_snapshot()['state']['native_mutation'];
 		$own     = is_array( $marker ) && 'finished' !== $marker['phase'] ? GitHubProviderSelection::native_lock_token( $marker ) : null;
@@ -284,7 +295,11 @@ final readonly class PackageRemovalService {
 	/** @return array{digest:string,type:string,identifier:string,state:array<string,mixed>,record:?array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string}} */
 	private function native_recovery_snapshot(): array {
 		RuntimeSupport::assert_managed_operations_allowed();
-		$state  = ( $this->github_selection ?? throw new \RuntimeException( 'Native recovery is unavailable.' ) )->native_recovery_state();
+		$selection = $this->github_selection ?? throw new \RuntimeException( 'Native recovery is unavailable.' );
+		if ( $selection->has_unclosed_transaction() ) {
+			throw new \RuntimeException( 'GitHub selection transaction requires recovery.' );
+		}
+		$state  = $selection->native_recovery_state();
 		$marker = $state['native_mutation'];
 		if ( ! is_array( $marker ) || ! is_string( $marker['target_type'] ?? null ) || ! is_string( $marker['installed_identity'] ?? null ) ) {
 			throw new \RuntimeException( 'Native recovery identity is unavailable.' );

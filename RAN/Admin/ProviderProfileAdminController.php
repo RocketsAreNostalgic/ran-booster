@@ -148,6 +148,10 @@ class ProviderProfileAdminController {
 		if ( $lock_failed ) {
 			return 'lock_failed';
 		}
+		if ( true === $this->github_selection?->has_unclosed_transaction()
+			|| true === $this->package_removal?->has_unclosed_selection_transaction() ) {
+			return 'failed';
+		}
 		try {
 			if ( $this->package_removal?->native_hold_lock_busy() ) {
 				return 'busy';

@@ -1239,4 +1239,64 @@ final class GitHubProviderSelectionTest extends TestCase {
 			self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
 		}
 	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_begin_native_mutation_notifies_committed_owner_before_cache_throw_and_never_on_uncertain_commit(): void {
+		$context                                        = $this->context();
+		$committed                                      = null;
+		$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ): void {
+			if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+				throw new \RuntimeException( 'selection cache failed after begin COMMIT' );
+			}
+		};
+		try {
+			$context->begin_native_mutation(
+				'theme',
+				'first',
+				static fn (): bool => true,
+				self::LOCK_TOKEN,
+				static function ( string $owner ) use ( &$committed ): void {
+					$committed = $owner;
+				}
+			);
+			self::fail( 'Selection cache failure after begin COMMIT must propagate.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'selection cache failed after begin COMMIT', $failure->getMessage() );
+		} finally {
+			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+		}
+		self::assertIsString( $committed );
+		self::assertFalse( $context->has_uncertain_commit() );
+		self::assertFalse( $context->has_unclosed_transaction() );
+		$context->complete_native_mutation( $committed, 'theme', 'first', 'uncertain' );
+		self::assertSame( 'finished', $this->store->read()['native_mutation']['phase'] ?? null );
+
+		$uncertain_db               = new SelectionContextDatabase();
+		$uncertain_db->active_bytes = $this->db->active_bytes;
+		$uncertain_store            = new GitHubSelectionStore( $uncertain_db, 'wp_options' );
+		$uncertain_store->initialize_bundled( $this->bundled );
+		$uncertain_context  = new GitHubProviderSelection( $uncertain_store, $this->root, $this->bundled );
+		$uncertain_registry = $this->registry( $uncertain_context );
+		$uncertain_context->complete_collection();
+		$uncertain_registry->seal();
+		$uncertain_db->selection->fail_commit = true;
+		$uncertain_committed                  = null;
+		try {
+			$uncertain_context->begin_native_mutation(
+				'theme',
+				'second',
+				static fn (): bool => true,
+				self::LOCK_TOKEN,
+				static function ( string $owner ) use ( &$uncertain_committed ): void {
+					$uncertain_committed = $owner;
+				}
+			);
+			self::fail( 'Uncertain commit must throw.' );
+		} catch ( DatabaseLifecycleFailure ) {
+			self::assertNull( $uncertain_committed );
+		}
+		self::assertTrue( $uncertain_context->has_uncertain_commit() );
+		self::assertFalse( $uncertain_context->has_unclosed_transaction() );
+	}
 }

@@ -800,6 +800,136 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		}
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_recover_and_release_github_hold_skip_diagnostic_sql_after_failed_rollback(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$GLOBALS['ran_booster_test_nonce_valid']  = true;
+		$bundled                                  = $this->declaration( 'booster.php' );
+
+		foreach ( array( 'shared', 'service_only' ) as $wiring ) {
+			foreach ( array( 'recover', 'release' ) as $mode ) {
+				foreach ( array( 'fail_rollback', 'throw_rollback' ) as $rollback_mode ) {
+					unset( $this->db->option_rows['auto_updater.lock'] );
+					$fresh_store     = new GitHubSelectionStore( $this->db, 'wp_options' );
+					$fresh_selection = new GitHubProviderSelection( $fresh_store, $this->root, $bundled );
+					$state           = $fresh_store->read();
+					if ( array_key_exists( 'native_mutation', $state ) ) {
+						$cleared = $state;
+						unset( $cleared['native_mutation'] );
+						self::assertTrue( $fresh_store->compare_and_swap( $state, $cleared ) );
+						$state = $cleared;
+					}
+					$marked                    = $state;
+					$marked['native_mutation'] = array(
+						'selection_generation' => 0,
+						'owner_tag'            => str_repeat( 'a', 32 ),
+						'target_type'          => 'plugin',
+						'installed_identity'   => 'target/main.php',
+						'phase'                => 'started',
+					);
+					self::assertTrue( $fresh_store->compare_and_swap( $state, $marked ) );
+
+					$plugins = $this->createMock( \RAN\Storage\PluginRepository::class );
+					$gateway = $this->createMock( \RAN\PackageRemoval\PackageRemovalGateway::class );
+					if ( 'release' === $mode ) {
+						$plugins->method( 'native_recovery_record' )->willReturn(
+							array(
+								'id'             => '1',
+								'package'        => 'target/main.php',
+								'type'           => 1,
+								'adoption_token' => 'exact-adoption',
+								'source'         => 'release_asset',
+								'digest'         => str_repeat( 'b', 64 ),
+							)
+						);
+						$gateway->method( 'installed_targets' )->willReturn( array( 'target/main.php' => 'Target' ) );
+					} else {
+						$plugins->method( 'native_recovery_record' )->willReturn( null );
+						$gateway->method( 'deletion_postcondition' )->willReturn( static fn (): bool => true );
+					}
+					$gateway->expects( self::never() )->method( 'delete_plugin' );
+					$gateway->expects( self::never() )->method( 'delete_theme' );
+					$fresh_attempts = new DeploymentAttemptRepository( $this->db, 'wp_attempts', database_lifecycle: $this->createStub( Database::class ), selection: $fresh_selection );
+					$service        = new \RAN\PackageRemoval\PackageRemovalService( $plugins, $this->createStub( \RAN\Storage\ThemeRepository::class ), $gateway, $fresh_attempts, new WordPressUpdaterLock(), github_selection: $fresh_selection );
+					$review         = $service->native_recovery_confirmation();
+					$dashboard      = $this->createMock( \RAN\Dashboard::class );
+					$dashboard->expects( self::never() )->method( 'add_message' );
+					$controller = new \RAN\Admin\ProviderProfileAdminController(
+						$dashboard,
+						new \RAN\RepositoryProvider\ProviderRegistry(),
+						$this->secrets,
+						new \RAN\Admin\ManagedPackageWebhookAuthorityResolver( $plugins, $this->createStub( \RAN\Storage\ThemeRepository::class ) ),
+						new WordPressUpdaterLock(),
+						new \RAN\Storage\CredentialUsageReader(),
+						new \RAN\Admin\PublicRepositoryLookupProfileStore(),
+						new \RAN\Admin\CredentialExpiryObservationStore(),
+						github_selection: 'shared' === $wiring ? $fresh_selection : $this->selection,
+						deployment_attempts: $fresh_attempts,
+						package_removal: $service
+					);
+
+					$this->db->queries                              = array();
+					$this->db->selection->selection->queries        = array();
+					$cache_deletes_after_tx                         = 0;
+					$GLOBALS['ran_booster_attempt_on_cache_delete'] = function () use ( &$cache_deletes_after_tx ): void {
+						if ( in_array( 'START TRANSACTION', $this->db->queries, true ) ) {
+							++$cache_deletes_after_tx;
+						}
+					};
+					$this->db->fail_commit                          = true;
+					$this->db->fail_rollback                        = 'fail_rollback' === $rollback_mode;
+					$this->db->throw_rollback                       = 'throw_rollback' === $rollback_mode;
+					try {
+						$code = 'release' === $mode
+							? $controller->release_github_hold(
+								array(
+									'review_digest'     => $review['digest'],
+									'confirmed_stopped' => '1',
+									'confirmed_checked' => '1',
+								)
+							)
+							: $controller->recover_github_native(
+								array(
+									'review_digest'     => $review['digest'],
+									'confirmed_stopped' => '1',
+									'confirmed_removal' => '1',
+								)
+							);
+					} finally {
+						unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+						$this->db->fail_commit    = false;
+						$this->db->fail_rollback  = false;
+						$this->db->throw_rollback = false;
+						$this->db->last_error     = '';
+					}
+
+					$case = "$wiring/$mode/$rollback_mode";
+					self::assertSame( 'failed', $code, $case );
+					self::assertTrue( $fresh_selection->has_unclosed_transaction(), $case );
+					self::assertTrue( $service->has_unclosed_selection_transaction(), $case );
+					self::assertSame( 0, $cache_deletes_after_tx, $case );
+
+					$rollback_indexes = array_keys( $this->db->queries, 'ROLLBACK', true );
+					self::assertNotEmpty( $rollback_indexes, $case );
+					$last_rollback = $rollback_indexes[ count( $rollback_indexes ) - 1 ];
+					self::assertSame( array(), array_slice( $this->db->queries, $last_rollback + 1 ), "$case must run zero DB queries after failed ROLLBACK." );
+
+					$selection_rollback_indexes = array_keys( $this->db->selection->selection->queries, 'ROLLBACK', true );
+					if ( array() !== $selection_rollback_indexes ) {
+						$last_selection_rollback = $selection_rollback_indexes[ count( $selection_rollback_indexes ) - 1 ];
+						self::assertSame( array(), array_slice( $this->db->selection->selection->queries, $last_selection_rollback + 1 ), "$case must run zero selection queries after failed ROLLBACK." );
+					}
+
+					self::assertTrue( $this->db->in_transaction() || null !== $this->db->selection->selection->transaction_rows, $case );
+					self::assertSame( 1, $this->db->query( 'ROLLBACK' ), $case );
+					self::assertArrayHasKey( 'native_mutation', $this->store->read(), $case );
+					self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, $case );
+				}
+			}
+		}
+	}
+
 	private function readable_hold_service( bool $invalidate_failure = false ): \RAN\PackageRemoval\PackageRemovalService {
 		$state = $this->store->read();
 		if ( array_key_exists( 'native_mutation', $state ) ) {

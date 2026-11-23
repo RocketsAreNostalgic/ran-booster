@@ -39,6 +39,10 @@ final class GitHubSelectionStore {
 		return $this->transaction_open_uncertain;
 	}
 
+	public function has_uncertain_commit(): bool {
+		return $this->commit_uncertain;
+	}
+
 	/**
 	 * Authoritative current read: option filters and object caches are not authority.
 	 * Only WordPress's bounded serialized integer-keyed array of plugin basenames is accepted.

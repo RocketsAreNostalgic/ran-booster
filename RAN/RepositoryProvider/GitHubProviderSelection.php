@@ -372,6 +372,10 @@ final class GitHubProviderSelection {
 		return $this->store->has_unclosed_transaction();
 	}
 
+	public function has_uncertain_commit(): bool {
+		return $this->store->has_uncertain_commit();
+	}
+
 	/** Current authority, also acquiring the first admission lock in caller's transaction. */
 	public function deployment_refusal( ?int $generation, string $type, string $identity, bool $strict_storage = false ): ?string {
 		try {
@@ -470,11 +474,12 @@ final class GitHubProviderSelection {
 	}
 
 	/**
-	 * @param callable():bool $owns_lock Exact captured updater ownership, never acquisition.
-	 * @param string|null $lock_token The held updater lock's value, carried in the owner tag so a release can free that exact lock, or null when the caller does not own WordPress's lock (automatic updates).
+	 * @param callable():bool             $owns_lock    Exact captured updater ownership, never acquisition.
+	 * @param string|null                 $lock_token   The held updater lock's value, carried in the owner tag so a release can free that exact lock, or null when the caller does not own WordPress's lock (automatic updates).
+	 * @param (callable(string):void)|null $on_committed Invoked only after COMMIT succeeds and before cache invalidation.
 	 */
-	public function begin_native_mutation( string $type, string $identity, callable $owns_lock, ?string $lock_token ): string {
-		$marker                                      = $this->store->selection_transaction(
+	public function begin_native_mutation( string $type, string $identity, callable $owns_lock, ?string $lock_token, ?callable $on_committed = null ): string {
+		$marker = $this->store->selection_transaction(
 			function () use ( $type, $identity, $owns_lock, $lock_token ): array {
 				$state = $this->store->read( true );
 				if ( isset( $state['native_mutation'] ) || ( null !== $lock_token && 1 !== preg_match( '/\A[1-9]\d{0,15}\z/D', $lock_token ) ) || ! $this->owns_native_lock( $owns_lock ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
@@ -498,9 +503,15 @@ final class GitHubProviderSelection {
 					throw new \RuntimeException( 'GitHub native mutation changed.' );
 				}
 				return $marker;
+			},
+			/** @param array{selection_generation:int,owner_tag:string,target_type:string,installed_identity:string,phase:string} $committed_marker */
+			function ( array $committed_marker ) use ( $on_committed ): void {
+				$this->native_owners[ $committed_marker['owner_tag'] ] = $committed_marker;
+				if ( null !== $on_committed ) {
+					$on_committed( $committed_marker['owner_tag'] );
+				}
 			}
 		);
-		$this->native_owners[ $marker['owner_tag'] ] = $marker;
 		return $marker['owner_tag'];
 	}
 
@@ -516,13 +527,19 @@ final class GitHubProviderSelection {
 	 * Captured completion survives guard loss and revocation; it never restores approval.
 	 *
 	 * @param (callable(callable(object,string,string):void):bool)|null $commit_source Core's source transaction invokes completion before locking its package row.
+	 * @param (callable():void)|null                                     $on_committed  Invoked only after COMMIT succeeds and before cache invalidation.
 	 */
-	public function complete_native_mutation( string $owner, string $type, string $identity, string $outcome, ?callable $commit_source = null ): void {
+	public function complete_native_mutation( string $owner, string $type, string $identity, string $outcome, ?callable $commit_source = null, ?callable $on_committed = null ): void {
 		$marker = $this->native_owners[ $owner ] ?? null;
 		if ( null === $marker || $marker['target_type'] !== $type || $marker['installed_identity'] !== $identity || ! in_array( $outcome, array( 'verified_success', 'uncertain' ), true ) ) {
 			throw new \RuntimeException( 'GitHub native completion owner changed.' );
 		}
 		unset( $this->native_owners[ $owner ] );
+		$notify_committed = null === $on_committed
+			? null
+			: static function () use ( $on_committed ): void {
+				$on_committed();
+			};
 		if ( 'uncertain' === $outcome ) {
 			// The owning request ended normally: record that, so its release needs no proof that it stopped.
 			$this->store->selection_transaction(
@@ -536,7 +553,8 @@ final class GitHubProviderSelection {
 					if ( ! $this->store->compare_and_swap( $state, $next ) ) {
 						throw new \RuntimeException( 'GitHub native completion changed.' );
 					}
-				}
+				},
+				$notify_committed
 			);
 			return;
 		}
@@ -563,12 +581,16 @@ final class GitHubProviderSelection {
 			if ( true !== $commit_source( $complete ) || ! $completed ) {
 				throw new \RuntimeException( 'Native source completion is unconfirmed.' );
 			}
+			if ( null !== $on_committed ) {
+				$on_committed();
+			}
 			return;
 		}
 		$this->store->selection_transaction(
 			static function () use ( $complete ): void {
 				$complete();
-			}
+			},
+			$notify_committed
 		);
 	}
 

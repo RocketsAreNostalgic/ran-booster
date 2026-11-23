@@ -2417,6 +2417,157 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		}
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_install_resolves_native_hold_before_releasing_lock_when_begin_cache_invalidation_throws(): void {
+		foreach ( array( 'one_shot', 'persistent', 'begin_cache_throws_then_complete_commit_fails' ) as $case ) {
+			$this->native_selection       = null;
+			$this->native_selection_store = null;
+			$this->native_selection_db    = null;
+			$plugins                      = new ProspectivePluginRepository();
+			$executor                     = new ProspectiveExecutor();
+			$lock                         = new ProspectiveUpdaterLock();
+			$lock->strict_release_token   = true;
+			$facade                       = $this->facade( $plugins, $executor, updater_lock: $lock );
+			$this->set_ready_release();
+			self::assertNotNull( $this->acquisition );
+			self::assertNotNull( $this->native_selection_db );
+			self::assertNotNull( $this->native_selection_store );
+
+			$phase_at_release = null;
+			$store            = $this->native_selection_store;
+			$lock->on_release = function () use ( $store, &$phase_at_release ): void {
+				$state            = $store->read( true );
+				$phase_at_release = is_array( $state['native_mutation'] ?? null ) ? $state['native_mutation']['phase'] : null;
+			};
+
+			$cache_throw_count = 0;
+			$db                = $this->native_selection_db;
+			$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ) use ( $case, $db, &$cache_throw_count ): void {
+				if ( GitHubSelectionStore::OPTION !== $key || 'options' !== $group ) {
+					return;
+				}
+				++$cache_throw_count;
+				if ( 1 === $cache_throw_count && 'begin_cache_throws_then_complete_commit_fails' === $case ) {
+					$db->selection->fail_commit = true;
+				}
+				if ( 'persistent' === $case || 1 === $cache_throw_count ) {
+					throw new RuntimeException( 'Selection cache invalidation failed after hold COMMIT.' );
+				}
+			};
+			try {
+				$request = $this->repository_request();
+				$result  = $facade->install(
+					'plugin',
+					$request,
+					'42',
+					'v1.2.3',
+					self::FINGERPRINT,
+					'stable',
+					'valid-nonce',
+					$this->expectation_for( $request )
+				);
+			} finally {
+				unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+				$this->native_selection_db->selection->fail_commit = false;
+			}
+
+			self::assertFalse( $result->successful(), $case );
+			self::assertSame( 0, $executor->install_calls, $case );
+			self::assertFileDoesNotExist( (string) $this->artifact_path, $case );
+
+			if ( 'begin_cache_throws_then_complete_commit_fails' === $case ) {
+				self::assertSame( 'installation_cleanup_failed', $result->code(), $case );
+				self::assertSame( 0, $lock->release_calls, $case );
+				self::assertNull( $phase_at_release, $case );
+				self::assertSame( '1700000004', $lock->active_token, $case );
+				self::assertSame( 'started', $this->native_selection_store->read( true )['native_mutation']['phase'] ?? null, $case );
+			} else {
+				self::assertSame( 'persistent' === $case ? 'installation_cleanup_failed' : 'install_failed', $result->code(), $case );
+				self::assertSame( 1, $lock->release_calls, $case );
+				self::assertSame( 'finished', $phase_at_release, $case );
+				self::assertNull( $lock->active_token, $case );
+				self::assertSame( 'finished', $this->native_selection_store->read( true )['native_mutation']['phase'] ?? null, $case );
+			}
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_install_preserves_updater_lock_when_native_hold_begin_commit_or_rollback_fails(): void {
+		foreach ( array( 'fail_commit', 'throw_commit' ) as $commit_mode ) {
+			foreach ( array( 'rollback_ok', 'rollback_applied_commit', 'fail_rollback', 'throw_rollback' ) as $rollback_mode ) {
+				$this->native_selection       = null;
+				$this->native_selection_store = null;
+				$this->native_selection_db    = null;
+				$plugins                      = new ProspectivePluginRepository();
+				$executor                     = new ProspectiveExecutor();
+				$lock                         = new ProspectiveUpdaterLock();
+				$facade                       = $this->facade( $plugins, $executor, updater_lock: $lock );
+				$this->set_ready_release();
+				self::assertNotNull( $this->acquisition );
+				self::assertNotNull( $this->native_selection_db );
+				self::assertNotNull( $this->native_selection );
+				self::assertNotNull( $this->native_selection_store );
+
+				$selection_db                                   = $this->native_selection_db->selection;
+				$selection_db->queries                          = array();
+				$cache_deletes_after_tx                         = 0;
+				$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function () use ( $selection_db, &$cache_deletes_after_tx ): void {
+					if ( in_array( 'START TRANSACTION', $selection_db->queries, true ) ) {
+						++$cache_deletes_after_tx;
+					}
+				};
+				$selection_db->fail_commit                      = 'fail_commit' === $commit_mode;
+				$selection_db->throw_commit                     = 'throw_commit' === $commit_mode;
+				$selection_db->commit_applied                   = 'rollback_applied_commit' === $rollback_mode;
+				$selection_db->fail_rollback                    = 'fail_rollback' === $rollback_mode;
+				$selection_db->throw_rollback                   = 'throw_rollback' === $rollback_mode;
+				try {
+					$request = $this->repository_request();
+					$result  = $facade->install(
+						'plugin',
+						$request,
+						'42',
+						'v1.2.3',
+						self::FINGERPRINT,
+						'stable',
+						'valid-nonce',
+						$this->expectation_for( $request )
+					);
+				} finally {
+					unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+					$selection_db->fail_commit    = false;
+					$selection_db->throw_commit   = false;
+					$selection_db->commit_applied = false;
+					$selection_db->fail_rollback  = false;
+					$selection_db->throw_rollback = false;
+				}
+
+				$case = "$commit_mode/$rollback_mode";
+				self::assertFalse( $result->successful(), $case );
+				self::assertSame( 'installation_cleanup_failed', $result->code(), $case );
+				self::assertSame( 0, $executor->install_calls, $case );
+				self::assertSame( 0, $lock->release_calls, $case );
+				self::assertSame( '1700000004', $lock->active_token, $case );
+				self::assertFileDoesNotExist( (string) $this->artifact_path, $case );
+				self::assertTrue( $this->native_selection->has_uncertain_commit(), $case );
+
+				if ( 'fail_rollback' === $rollback_mode || 'throw_rollback' === $rollback_mode ) {
+					self::assertTrue( $this->native_selection->has_unclosed_transaction(), $case );
+					self::assertNotNull( $selection_db->transaction_rows, $case );
+					self::assertSame( 0, $cache_deletes_after_tx, $case );
+					self::assertTrue( $selection_db->query( 'ROLLBACK' ), $case );
+				} else {
+					self::assertFalse( $this->native_selection->has_unclosed_transaction(), $case );
+					if ( 'rollback_applied_commit' === $rollback_mode ) {
+						self::assertSame( 'started', $this->native_selection_store->read( true )['native_mutation']['phase'] ?? null, $case );
+					}
+				}
+			}
+		}
+	}
+
 	private function seed_github_native_mutation_hold( string $type, string $identity, string $phase ): void {
 		$this->github_selection();
 		self::assertNotNull( $this->native_selection_store );
@@ -3138,6 +3289,7 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 	public ?\Closure $on_acquire            = null;
 	public ?\Closure $on_reclaim_sql        = null;
 	public ?\Closure $on_cache_invalidation = null;
+	public ?\Closure $on_release            = null;
 
 	public function current_token(): ?string {
 		if ( null !== $this->active_token ) {
@@ -3210,6 +3362,9 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 
 	public function release( string $token ): bool {
 		++$this->release_calls;
+		if ( null !== $this->on_release ) {
+			( $this->on_release )( $token );
+		}
 		if ( $this->throw_on_release ) {
 			throw new RuntimeException( 'The test lock could not be released.' );
 		}

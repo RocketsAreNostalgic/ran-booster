@@ -862,7 +862,26 @@ final class NativeRecoveryTest extends TestCase {
 					}
 					self::assertTrue( $this->in_selection_transaction(), "$operation/$rollback_mode/$lock_mode" );
 					self::assertTrue( $fresh_selection->has_unclosed_transaction(), "$operation/$rollback_mode/$lock_mode" );
+					self::assertTrue( $fresh_service->has_unclosed_selection_transaction(), "$operation/$rollback_mode/$lock_mode" );
 					self::assertSame( 0, $cache_deletes_after_tx, "$operation/$rollback_mode/$lock_mode" );
+
+					$query_count_before_diagnostics = count( $this->db->queries );
+					$selection_count_before         = count( $this->db->selection->selection->queries );
+					try {
+						$fresh_service->native_hold_lock_busy();
+						self::fail( "$operation/$rollback_mode/$lock_mode lock busy diagnostic must refuse during unclosed transaction." );
+					} catch ( \RuntimeException $busy_failure ) {
+						self::assertSame( 'GitHub selection transaction requires recovery.', $busy_failure->getMessage() );
+					}
+					try {
+						$fresh_service->native_hold_target_absent();
+						self::fail( "$operation/$rollback_mode/$lock_mode target absent diagnostic must refuse during unclosed transaction." );
+					} catch ( \RuntimeException $absent_failure ) {
+						self::assertSame( 'GitHub selection transaction requires recovery.', $absent_failure->getMessage() );
+					}
+					self::assertCount( $query_count_before_diagnostics, $this->db->queries, "$operation/$rollback_mode/$lock_mode diagnostics must issue zero queries while transaction is unclosed." );
+					self::assertCount( $selection_count_before, $this->db->selection->selection->queries, "$operation/$rollback_mode/$lock_mode diagnostics must issue zero selection queries while transaction is unclosed." );
+
 					self::assertSame( 1, $this->db->query( 'ROLLBACK' ), "$operation/$rollback_mode/$lock_mode" );
 					self::assertInstanceOf( \RuntimeException::class, $caught, "$operation/$rollback_mode/$lock_mode" );
 					self::assertNotInstanceOf( NativeHoldLockReleaseFailure::class, $caught, "$operation/$rollback_mode/$lock_mode" );

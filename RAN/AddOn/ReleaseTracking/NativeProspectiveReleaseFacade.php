@@ -380,12 +380,13 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		?string $expected_identifier,
 		DeploymentPolicy $initial_policy
 	): ProspectiveReleaseResult {
-		$artifact            = null;
-		$lock_token          = null;
-		$native_owner        = null;
-		$identifier          = '';
-		$outcome             = ProspectiveReleaseResult::failure( 'install_failed' );
-		$finalization_failed = false;
+		$artifact                 = null;
+		$lock_token               = null;
+		$native_owner             = null;
+		$identifier               = '';
+		$outcome                  = ProspectiveReleaseResult::failure( 'install_failed' );
+		$finalization_failed      = false;
+		$hold_admission_uncertain = false;
 
 		try {
 			$identifier    = $release->identifier( $type );
@@ -479,7 +480,24 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						break;
 					}
 					if ( 'gh' === (string) $repository->provider ) {
-						$native_owner = $this->github_selection->begin_native_mutation( $type, $identifier, fn (): bool => $lock_token === $this->updater_lock->current_token(), $lock_token );
+						try {
+							$native_owner = $this->github_selection->begin_native_mutation(
+								$type,
+								$identifier,
+								fn (): bool => $lock_token === $this->updater_lock->current_token(),
+								$lock_token,
+								static function ( string $committed_owner ) use ( &$native_owner ): void {
+									$native_owner = $committed_owner;
+								}
+							);
+						} catch ( Throwable $failure ) {
+							if ( null === $native_owner
+								&& ( $this->github_selection->has_uncertain_commit() || $this->github_selection->has_unclosed_transaction() ) ) {
+								$hold_admission_uncertain = true;
+								$finalization_failed      = true;
+							}
+							throw $failure;
+						}
 					} elseif ( $this->github_selection->native_mutation_blocks_target( $type, $identifier )
 						|| $lock_token !== $this->updater_lock->current_token() ) {
 						$outcome = ProspectiveReleaseResult::failure( 'install_failed' );
@@ -576,16 +594,29 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 			// Complete the hold before releasing the lock. An unfinished hold keeps the lock, so a lock still
 			// holding the owner's value always belongs to it and its release may free that exact value.
-			$hold_unfinished = false;
+			$hold_unfinished = $hold_admission_uncertain;
 			if ( null !== $native_owner ) {
+				$hold_resolved = false;
 				try {
-					$this->github_selection->complete_native_mutation( $native_owner, $type, $identifier, ! $finalization_failed && $outcome->successful() ? 'verified_success' : 'uncertain' );
+					$this->github_selection->complete_native_mutation(
+						$native_owner,
+						$type,
+						$identifier,
+						! $finalization_failed && $outcome->successful() ? 'verified_success' : 'uncertain',
+						null,
+						static function () use ( &$hold_resolved ): void {
+							$hold_resolved = true;
+						}
+					);
 				} catch ( Throwable ) {
 					$finalization_failed = true;
-					$hold_unfinished     = true;
+					$hold_unfinished     = ! $hold_resolved;
 				}
 			}
-			if ( null !== $lock_token && ! $hold_unfinished ) {
+			if ( $this->github_selection->has_unclosed_transaction() ) {
+				$finalization_failed = true;
+			}
+			if ( null !== $lock_token && ! $hold_unfinished && ! $this->github_selection->has_unclosed_transaction() ) {
 				try {
 					if ( ! $this->updater_lock->release( $lock_token ) ) {
 						$finalization_failed = true;

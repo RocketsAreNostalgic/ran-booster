@@ -527,8 +527,8 @@ final class GitHubProviderSelection {
 	/**
 	 * Captured completion survives guard loss and revocation; it never restores approval.
 	 *
-	 * @param (callable(callable(object,string,string):void):bool)|null $commit_source Core's source transaction invokes completion before locking its package row.
-	 * @param (callable():void)|null                                     $on_committed  Invoked only after COMMIT succeeds and before cache invalidation.
+	 * @param (callable(callable(object,string,string):void, \Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)):bool)|null $commit_source Core's source transaction invokes completion inside the pinned selection transaction.
+	 * @param (callable():void)|null                                                                                                                                      $on_committed  Invoked only after COMMIT succeeds and before cache invalidation.
 	 */
 	public function complete_native_mutation( string $owner, string $type, string $identity, string $outcome, ?callable $commit_source = null, ?callable $on_committed = null ): void {
 		$marker = $this->native_owners[ $owner ] ?? null;
@@ -579,12 +579,14 @@ final class GitHubProviderSelection {
 			$completed = true;
 		};
 		if ( null !== $commit_source ) {
-			if ( true !== $commit_source( $complete ) || ! $completed ) {
-				throw new \RuntimeException( 'Native source completion is unconfirmed.' );
-			}
-			if ( null !== $on_committed ) {
-				$on_committed();
-			}
+			$this->store->selection_transaction(
+				static function ( \Closure $execute ) use ( $complete, $commit_source, &$completed ): void {
+					if ( true !== $commit_source( $complete, $execute ) || ! $completed ) {
+						throw new \RuntimeException( 'Native source completion is unconfirmed.' );
+					}
+				},
+				$notify_committed
+			);
 			return;
 		}
 		$this->store->selection_transaction(

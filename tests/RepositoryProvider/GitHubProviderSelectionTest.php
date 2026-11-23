@@ -960,8 +960,83 @@ final class GitHubProviderSelectionTest extends TestCase {
 		} catch ( \RuntimeException ) {
 			self::addToAssertionCount( 1 );
 		}
-		// The fixture has no outer transaction to roll back, so only a refused completion keeps the marker here.
-		self::assertSame( $committed, isset( $this->store->read()['native_mutation'] ) );
+		// Unconfirmed commits execute inside selection_transaction() and roll back custody removal cleanly.
+		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_native_completion_commit_source_pins_transaction_and_notifies_only_after_commit(): void {
+		$context  = $this->context();
+		$owner    = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
+		$notified = 0;
+		$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ): void {
+			if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+				throw new \RuntimeException( 'selection cache failed after completion COMMIT' );
+			}
+		};
+		try {
+			$context->complete_native_mutation(
+				$owner,
+				'theme',
+				'first',
+				'verified_success',
+				function ( callable $complete, callable $execute ): bool {
+					self::assertInstanceOf( \Closure::class, $execute );
+					$complete( $this->db, 'theme', 'first' );
+					return true;
+				},
+				static function () use ( &$notified ): void {
+					++$notified;
+				}
+			);
+			self::fail( 'Post-COMMIT selection cache failure must propagate.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'selection cache failed after completion COMMIT', $failure->getMessage() );
+		} finally {
+			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+		}
+		self::assertSame( 1, $notified );
+		self::assertFalse( $context->has_uncertain_commit() );
+		self::assertFalse( $context->has_unclosed_transaction() );
+		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+
+		$uncertain_db               = new SelectionContextDatabase();
+		$uncertain_db->active_bytes = $this->db->active_bytes;
+		$uncertain_store            = new GitHubSelectionStore( $uncertain_db, 'wp_options' );
+		$uncertain_store->initialize_bundled( $this->bundled );
+		$uncertain_context  = new GitHubProviderSelection( $uncertain_store, $this->root, $this->bundled );
+		$uncertain_registry = $this->registry( $uncertain_context );
+		$uncertain_context->complete_collection();
+		$uncertain_registry->seal();
+
+		$owner2                               = $uncertain_context->begin_native_mutation( 'theme', 'second', static fn (): bool => true, self::LOCK_TOKEN );
+		$uncertain_db->selection->fail_commit = true;
+		$uncertain_notified                   = 0;
+		try {
+			$uncertain_context->complete_native_mutation(
+				$owner2,
+				'theme',
+				'second',
+				'verified_success',
+				static function ( callable $complete ) use ( $uncertain_db ): bool {
+					$complete( $uncertain_db, 'theme', 'second' );
+					return true;
+				},
+				static function () use ( &$uncertain_notified ): void {
+					++$uncertain_notified;
+				}
+			);
+			self::fail( 'Uncertain source-switch COMMIT must throw.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'selection_commit_uncertain', $failure->reason() );
+		} finally {
+			$uncertain_db->selection->fail_commit = false;
+		}
+		self::assertSame( 0, $uncertain_notified );
+		self::assertTrue( $uncertain_context->has_uncertain_commit() );
+		self::assertFalse( $uncertain_context->has_unclosed_transaction() );
+		self::assertSame( 'started', $uncertain_store->read()['native_mutation']['phase'] ?? null );
 	}
 
 	public function test_native_completion_refuses_a_source_commit_that_skipped_custody_removal(): void {

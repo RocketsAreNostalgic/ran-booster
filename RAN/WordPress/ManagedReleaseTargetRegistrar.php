@@ -443,13 +443,33 @@ final class ManagedReleaseTargetRegistrar {
 		$refused       = 'verified_success' === $outcome ? 'commit_refused' : 'outcome_uncertain';
 		try {
 			try {
-				// A switch commits its source in the transaction that ends custody; uncertain leaves both for recovery.
+				if ( null !== $switch && 'verified_success' === $outcome ) {
+					$this->store->require_transition_ready();
+				}
+				// A switch commits its source in the same pinned selection transaction that ends custody; uncertain leaves both for recovery.
 				$this->github_selection->complete_native_mutation(
 					$owner,
 					$type,
 					$identity,
 					$outcome,
-					null === $switch ? null : fn ( callable $complete ): bool => $this->store->transition( $type, $identity, PackageSource::BRANCH, $switch['revision'], PackageSource::RELEASE_ASSET, $switch['configuration'], $switch['user'], $switch['token'], $complete ),
+					null === $switch ? null : function ( callable $complete, \Closure $execute ) use ( $type, $identity, $switch ): bool {
+						$connection = $this->store->connection();
+						if ( null === $connection ) {
+							throw new \RuntimeException( 'Native source completion requires a shared connection.' );
+						}
+						$complete( $connection, $type, $identity );
+						return $this->store->transition_in_transaction(
+							$type,
+							$identity,
+							PackageSource::BRANCH,
+							$switch['revision'],
+							PackageSource::RELEASE_ASSET,
+							$switch['configuration'],
+							$switch['user'],
+							$switch['token'],
+							$execute
+						);
+					},
 					static function () use ( &$hold_resolved ): void {
 						$hold_resolved = true;
 					}

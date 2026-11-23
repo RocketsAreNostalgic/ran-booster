@@ -625,4 +625,133 @@ final class ManagedReleaseStoreTest extends TestCase {
 			}
 		}
 	}
+
+	public function test_transition_in_transaction_uses_pinned_executor_with_binary_predicates_and_verifies_readback(): void {
+		$token         = 'gh:fixture-repository:11111111-1111-4111-8111-111111111111';
+		$configuration = new ManagedReleaseConfiguration( 'installed', 'example.php', 'prerelease' );
+		$state         = (object) array(
+			'type'                   => 1,
+			'package_type'           => 1,
+			'package'                => 'installed/example.php',
+			'source'                 => 'branch',
+			'source_revision'        => 3,
+			'source_previous'        => null,
+			'source_changed_at'      => null,
+			'source_changed_by'      => null,
+			'deployment_policy'      => 'automatic',
+			'release_configuration'  => null,
+			'adoption_token'         => $token,
+			'provider'               => 'gh',
+			'provider_repository_id' => 'fixture-repository',
+			'subdirectory'           => null,
+		);
+		$store         = new ManagedReleaseStore(
+			new ManagedReleaseStoreDatabase( (array) $state ),
+			$this->createStub( Database::class ),
+			static fn (): string => '2026-11-23 18:00:00'
+		);
+		/** @var list<array{query: string, arguments: list<int|string>, mode: string}> $executed */
+		$executed = array();
+		$execute  = static function ( string $query, array $arguments, string $mode ) use ( $state, &$executed ): int|array {
+			$executed[] = array(
+				'query'     => $query,
+				'arguments' => $arguments,
+				'mode'      => $mode,
+			);
+			if ( 'results' === $mode ) {
+				return array( clone $state );
+			}
+			if ( 'affected' === $mode ) {
+				$state->source                = (string) $arguments[1];
+				$state->source_revision       = (int) $arguments[2];
+				$state->source_previous       = (string) $arguments[3];
+				$state->source_changed_at     = (string) $arguments[4];
+				$state->source_changed_by     = (int) $arguments[5];
+				$state->deployment_policy     = (string) $arguments[6];
+				$state->release_configuration = (string) $arguments[7];
+				return 1;
+			}
+			throw new RuntimeException( 'Unexpected executor mode.' );
+		};
+
+		self::assertTrue(
+			$store->transition_in_transaction(
+				'plugin',
+				'installed/example.php',
+				PackageSource::BRANCH,
+				3,
+				PackageSource::RELEASE_ASSET,
+				$configuration,
+				7,
+				$token,
+				$execute
+			)
+		);
+		self::assertSame( 'release_asset', $state->source );
+		self::assertSame( 4, $state->source_revision );
+		self::assertSame( 'manual', $state->deployment_policy );
+		self::assertSame( $configuration->to_json(), $state->release_configuration );
+		self::assertCount( 4, $executed );
+		self::assertStringContainsString( 'CAST(package AS BINARY) = CAST(%s AS BINARY)', $executed[0]['query'] );
+		self::assertStringContainsString( 'CAST(provider_repository_id AS BINARY) = CAST(%s AS BINARY)', $executed[1]['query'] );
+		self::assertSame( 'affected', $executed[2]['mode'] );
+		self::assertStringContainsString( 'CAST(adoption_token AS BINARY) = CAST(%s AS BINARY)', $executed[2]['query'] );
+		self::assertStringContainsString( 'CAST(package AS BINARY) = CAST(%s AS BINARY)', $executed[2]['query'] );
+
+		$state->deployment_policy = 'manual';
+		self::assertFalse(
+			$store->transition_in_transaction(
+				'plugin',
+				'installed/example.php',
+				PackageSource::RELEASE_ASSET,
+				3,
+				PackageSource::BRANCH,
+				null,
+				0,
+				$token,
+				$execute
+			)
+		);
+		$state->source_revision = 4;
+		/** @var list<array{query: string, arguments: array<array-key, mixed>, mode: string}> $release_executed */
+		$release_executed = array();
+		$execute_release  = static function ( string $query, array $arguments, string $mode ) use ( $state, &$release_executed ): int|array {
+			$release_executed[] = array(
+				'query'     => $query,
+				'arguments' => $arguments,
+				'mode'      => $mode,
+			);
+			if ( 'results' === $mode ) {
+				return array( clone $state );
+			}
+			$state->source                = (string) $arguments[1];
+			$state->source_revision       = (int) $arguments[2];
+			$state->source_previous       = (string) $arguments[3];
+			$state->source_changed_at     = (string) $arguments[4];
+			$state->source_changed_by     = null;
+			$state->deployment_policy     = (string) $arguments[5];
+			$state->release_configuration = null;
+			return 1;
+		};
+		self::assertTrue(
+			$store->transition_in_transaction(
+				'plugin',
+				'installed/example.php',
+				PackageSource::RELEASE_ASSET,
+				4,
+				PackageSource::BRANCH,
+				null,
+				0,
+				$token,
+				$execute_release
+			)
+		);
+		self::assertSame( 'branch', $state->source );
+		self::assertSame( 5, $state->source_revision );
+		self::assertNull( $state->source_changed_by );
+		self::assertNull( $state->release_configuration );
+		self::assertCount( 4, $release_executed );
+		self::assertStringContainsString( 'source_changed_by = NULL', $release_executed[2]['query'] );
+		self::assertStringContainsString( 'release_configuration = NULL', $release_executed[2]['query'] );
+	}
 }

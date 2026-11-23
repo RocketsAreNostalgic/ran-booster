@@ -1135,6 +1135,35 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		}
 	}
 
+	public function test_switch_completion_preserves_hold_and_manual_lock_when_pinned_commit_fails(): void {
+		$configuration        = new ManagedReleaseConfiguration( 'example', 'example.php', 'prerelease' );
+		$branch               = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH, source_revision: 3 );
+		[ $registrar, $lock ] = $this->native_plugin_registrar( $branch );
+		self::assertTrue( $registrar->admit_switch( 'plugin', $branch, $configuration, 7 ) );
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+		self::assertNotNull( $this->native_selection_db );
+		self::assertNotNull( $this->native_selection_store );
+		self::assertNotNull( $this->native_selection );
+
+		$this->native_selection_db->selection->fail_commit = true;
+		try {
+			$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'verified_success' );
+			self::fail( 'Failed source-switch COMMIT must throw.' );
+		} catch ( \RAN\Storage\DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'selection_commit_uncertain', $failure->reason() );
+		} finally {
+			$this->native_selection_db->selection->fail_commit = false;
+		}
+
+		self::assertSame( array(), $lock->releases );
+		self::assertTrue( $this->native_selection->has_uncertain_commit() );
+		self::assertSame( 'started', $this->native_selection_store->read()['native_mutation']['phase'] ?? null );
+		$registrar->complete_native_mutation( new \stdClass(), self::NATIVE_EXTRA );
+		self::assertSame( array(), $lock->releases );
+	}
+
 	public function test_staging_authority_or_policy_change_refuses_native_begin(): void {
 		foreach ( array( 'source_revision', 'disabled' ) as $change ) {
 			$first                = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );

@@ -10,8 +10,16 @@ use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\ProviderRegistrationContext;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\Deployment\DeploymentStorageFailure;
+use RAN\PackageSource;
+use RAN\Storage\Database;
 use RAN\Storage\DatabaseLifecycleFailure;
 use RAN\Storage\GitHubSelectionStore;
+use RAN\Storage\PluginRepository;
+use RAN\Storage\RepositorySourceGuard;
+use RAN\Storage\ThemeRepository;
+use RAN\WordPress\ManagedReleaseConfiguration;
+use RAN\WordPress\ManagedReleaseStore;
+use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
 
 // Installed storage/composition proof; no real plugin is activated and runtime bootstrap stays unchanged.
@@ -862,6 +870,312 @@ return static function ( wpdb $database ): void {
 				$expect( 0 === $filtered_queries->count(), 'pinned hold verification and CAS must run zero WordPress query filters inside the transaction' );
 				$expect( 0 === $option_hooks, 'pinned hold verification and CAS must run zero WordPress option hooks inside the transaction' );
 				$expect( ! array_key_exists( 'native_mutation', $second->read() ), 'hook-free pinned hold verification released native_mutation cleanly' );
+
+				// Prove source-switch completion pins one mysqli session through COMMIT across all four DB jobs.
+				$database->options = $saved_options;
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Bind main $database options table while seeding and reading Booster package table.
+				$GLOBALS['wpdb']  = $database;
+				$switch_pkg       = 'switch-commit-smoke/switch-commit-smoke.php';
+				$switch_token     = 'gh:switch-commit-smoke:11111111-1111-4111-8111-111111111111';
+				$switch_config    = new ManagedReleaseConfiguration( 'switch-commit-smoke', 'switch-commit-smoke.php', 'stable' );
+				$switch_table     = ran_booster_table_name();
+				$switch_kill_wpdb = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+				$switch_ok_wpdb   = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+				$switch_kill_wpdb->set_prefix( $database->prefix );
+				$switch_ok_wpdb->set_prefix( $database->prefix );
+				$switch_kill_dbh    = null;
+				$switch_dbh_prop    = new ReflectionProperty( wpdb::class, 'dbh' );
+				$switch_orig_dbh    = null;
+				$switch_current_dbh = null;
+				$read_switch_row    = static function () use ( $other, $switch_table, $switch_pkg ): ?object {
+					$row = $other->get_row( $other->prepare( 'SELECT source, source_revision, release_configuration FROM %i WHERE package_type = 1 AND BINARY package = BINARY %s', $switch_table, $switch_pkg ) );
+					return is_object( $row ) ? $row : null;
+				};
+				$database->delete(
+					$switch_table,
+					array(
+						'package_type' => 1,
+						'package'      => $switch_pkg,
+					)
+				);
+				$expect(
+					1 === $database->insert(
+						$switch_table,
+						array(
+							'package'                => $switch_pkg,
+							'repository'             => 'example/switch-commit-smoke',
+							'branch'                 => 'main',
+							'package_type'           => 1,
+							'deployment_policy'      => 'manual',
+							'source'                 => 'branch',
+							'source_revision'        => 1,
+							'provider'               => 'gh',
+							'provider_repository_id' => 'switch-commit-smoke',
+							'adoption_token'         => $switch_token,
+							'private'                => 0,
+							'credential_id'          => null,
+							'subdirectory'           => null,
+							'release_configuration'  => null,
+						)
+					),
+					'seed disposable Branch package row for source-switch commit proof'
+				);
+				try {
+					$switch_kill_release_store = new ManagedReleaseStore( $switch_kill_wpdb, new Database( $switch_kill_wpdb ) );
+					$switch_kill_release_store->require_transition_ready();
+					$switch_ok_release_store = new ManagedReleaseStore( $switch_ok_wpdb, new Database( $switch_ok_wpdb ) );
+					$switch_ok_release_store->require_transition_ready();
+
+					$manifest['provider_api_version'] = 15;
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Restore compatible passive manifest bytes for source-switch commit proof.
+					$write( 'b.gh-replacement.json', json_encode( $manifest, JSON_THROW_ON_ERROR ) );
+
+					$database->options         = $table;
+					$switch_kill_wpdb->options = $table;
+					// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Bind disposable options table for source-switch commit-loss proof and restore in finally.
+					$GLOBALS['wpdb']      = $switch_kill_wpdb;
+					$switch_kill_store    = new GitHubSelectionStore( $switch_kill_wpdb, $table );
+					$switch_kill_context  = new GitHubProviderSelection( $switch_kill_store, $plugin_root, $declaration );
+					$switch_kill_registry = $bind( $switch_kill_context );
+					$expect( $switch_kill_context->operation_allowed(), 'Case A context has active approved GitHub selection' );
+					$switch_kill_lock = (string) time();
+					$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+					$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $switch_kill_lock, 'no' ) );
+					$expect( array() !== $switch_kill_store->read(), 'warm switch-kill store storage before begin_native_mutation' );
+					$switch_owner     = $switch_kill_context->begin_native_mutation(
+						'plugin',
+						$switch_pkg,
+						static fn ( callable $execute ): bool => $switch_kill_lock === $lock->current_token_sql( $switch_kill_context->uses_connection( ... ), $execute ),
+						$switch_kill_lock
+					);
+					$switch_registrar = new ManagedReleaseTargetRegistrar(
+						new PluginRepository(),
+						new ThemeRepository(),
+						$switch_kill_release_store,
+						$lock,
+						$switch_kill_registry,
+						$switch_kill_context,
+						new RepositorySourceGuard( $switch_kill_wpdb )
+					);
+					$native_prop      = new ReflectionProperty( ManagedReleaseTargetRegistrar::class, 'native_updates' );
+					$native_prop->setValue(
+						$switch_registrar,
+						array(
+							"plugin\0" . $switch_pkg => array(
+								'authority'    => array( 'provider' => 'gh' ),
+								'automatic'    => false,
+								'lock'         => $switch_kill_lock,
+								'restore'      => false,
+								'native_owner' => $switch_owner,
+							),
+						)
+					);
+					$switches_prop = new ReflectionProperty( ManagedReleaseTargetRegistrar::class, 'switches' );
+					$switches_prop->setValue(
+						$switch_registrar,
+						array(
+							"plugin\0" . $switch_pkg => array(
+								'configuration' => $switch_config,
+								'revision'      => 1,
+								'token'         => $switch_token,
+								'user'          => 1,
+							),
+						)
+					);
+
+					if ( ! defined( 'DB_HOST' ) || ! is_string( DB_HOST ) ) {
+						throw new RuntimeException( 'Switch commit-loss proof requires DB_HOST constant.' );
+					}
+					$switch_host_parts = $switch_kill_wpdb->parse_db_host( DB_HOST );
+					if ( ! is_array( $switch_host_parts ) ) {
+						throw new RuntimeException( 'Switch commit-loss proof could not parse DB_HOST.' );
+					}
+					$switch_kill_dbh = new class(
+						$switch_host_parts[0],
+						DB_USER,
+						DB_PASSWORD,
+						DB_NAME,
+						is_string( $switch_host_parts[1] ) && '' !== $switch_host_parts[1] ? (int) $switch_host_parts[1] : null,
+						is_string( $switch_host_parts[2] ) && '' !== $switch_host_parts[2] ? $switch_host_parts[2] : null,
+						$other
+					// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Wrap pinned mysqli handle so COMMIT kills the active session without wpdb reconnect recovery.
+					) extends \mysqli {
+						private bool $killed = false;
+
+						public function __construct(
+							string $host,
+							string $user,
+							string $password,
+							string $database_name,
+							?int $port,
+							?string $socket,
+							private readonly wpdb $control
+						) {
+							parent::__construct( $host, $user, $password, $database_name, $port, $socket );
+						}
+
+						// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Preserve mysqli::query() contract for the disposable switch-commit-kill handle.
+						public function query( string $sql, int $result_mode = MYSQLI_STORE_RESULT ): \mysqli_result|bool {
+							if ( ! $this->killed && 'COMMIT' === $sql ) {
+								$this->killed = true;
+								$kill_sql     = $this->control->prepare( 'KILL %d', $this->thread_id );
+								if ( ! is_string( $kill_sql ) || false === $this->control->query( $kill_sql ) ) {
+									throw new RuntimeException( 'Switch commit-kill control query failed.' );
+								}
+								$deadline = microtime( true ) + 2.0;
+								while ( microtime( true ) < $deadline ) {
+									if ( 0 === (int) $this->control->get_var( $this->control->prepare( 'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = %d', $this->thread_id ) ) ) {
+										break;
+									}
+									usleep( 10000 );
+								}
+								wp_cache_set( GitHubSelectionStore::OPTION, 'sentinel-switch-kill', 'options' );
+								return parent::query( $sql, $result_mode );
+							}
+							return parent::query( $sql, $result_mode );
+						}
+					};
+					$switch_kill_wpdb->set_charset( $switch_kill_dbh );
+					$switch_orig_dbh = $switch_dbh_prop->getValue( $switch_kill_wpdb );
+					$switch_dbh_prop->setValue( $switch_kill_wpdb, $switch_kill_dbh );
+					$expect( array() !== $switch_kill_store->read(), 'warm switch-kill store after attaching commit-fault handle' );
+
+					$filtered_queries->exchangeArray( array() );
+					add_filter( 'query', $record_queries );
+					$switch_suppressed = $switch_kill_wpdb->suppress_errors( true );
+					$switch_rejected   = null;
+					try {
+						$switch_registrar->complete_provider_native_mutation( $switch_owner, 'plugin', $switch_pkg, 'verified_success' );
+					} catch ( DatabaseLifecycleFailure $failure ) {
+						$switch_rejected = $failure->reason();
+					} finally {
+						$switch_kill_wpdb->suppress_errors( $switch_suppressed );
+						remove_filter( 'query', $record_queries );
+						$switch_current_dbh = $switch_dbh_prop->getValue( $switch_kill_wpdb );
+						$switch_dbh_prop->setValue( $switch_kill_wpdb, $switch_orig_dbh );
+					}
+					$expect( 'selection_commit_uncertain' === $switch_rejected, 'killed source-switch COMMIT must fail closed as selection_commit_uncertain' );
+					$expect( $switch_current_dbh === $switch_kill_dbh, 'killed source-switch COMMIT must not trigger wpdb reconnect' );
+					$expect( $switch_kill_store->has_uncertain_commit() && $switch_kill_store->has_unclosed_transaction(), 'killed source-switch COMMIT must latch uncertain commit and unclosed transaction' );
+					$expect( 'sentinel-switch-kill' === wp_cache_get( GitHubSelectionStore::OPTION, 'options' ), 'killed source-switch COMMIT must keep option cache intact' );
+					foreach ( $filtered_queries as $filtered_sql ) {
+						$expect( str_starts_with( $filtered_sql, 'KILL ' ) || str_contains( $filtered_sql, 'information_schema.PROCESSLIST' ), 'killed source-switch transaction must not run wpdb queries or reconnect through query filter' );
+					}
+					$after_kill_selection = $second->read();
+					$after_kill_marker    = $after_kill_selection['native_mutation'] ?? null;
+					$after_kill_phase     = is_array( $after_kill_marker ) ? ( $after_kill_marker['phase'] ?? null ) : null;
+					$after_kill_owner     = is_array( $after_kill_marker ) ? ( $after_kill_marker['owner_tag'] ?? null ) : null;
+					$expect( 'started' === $after_kill_phase && $switch_owner === $after_kill_owner, 'killed source-switch COMMIT must retain started hold in MySQL' );
+					$expect( $switch_kill_lock === $lock_row(), 'killed source-switch COMMIT must keep auto_updater.lock intact' );
+					$after_kill_row = $read_switch_row();
+					$expect( null !== $after_kill_row && 'branch' === $after_kill_row->source && 1 === (int) $after_kill_row->source_revision && null === $after_kill_row->release_configuration, 'killed source-switch COMMIT must leave package source at branch revision 1' );
+
+					// Clear retained hold from Case A and prove healthy pinned source-switch COMMIT on all four DB jobs.
+					wp_cache_delete( GitHubSelectionStore::OPTION, 'options' );
+					$second->selection_transaction(
+						static function () use ( $second, $before_hold, $expect ): void {
+							$current = $second->read( true );
+							if ( array_key_exists( 'native_mutation', $current ) ) {
+								$expect( $second->compare_and_swap( $current, $before_hold ), 'clear Case A retained hold before Case B' );
+							}
+						}
+					);
+					$switch_ok_wpdb->options = $table;
+					// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Bind healthy switch wpdb instance for Case B proof and restore in finally.
+					$GLOBALS['wpdb']    = $switch_ok_wpdb;
+					$switch_ok_store    = new GitHubSelectionStore( $switch_ok_wpdb, $table );
+					$switch_ok_context  = new GitHubProviderSelection( $switch_ok_store, $plugin_root, $declaration );
+					$switch_ok_registry = $bind( $switch_ok_context );
+					$expect( $switch_ok_context->operation_allowed(), 'Case B context has active approved GitHub selection' );
+					$switch_ok_lock = (string) ( time() + 1 );
+					$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+					$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $switch_ok_lock, 'no' ) );
+					$expect( array() !== $switch_ok_store->read(), 'warm Case B store before begin_native_mutation' );
+					$ok_owner     = $switch_ok_context->begin_native_mutation(
+						'plugin',
+						$switch_pkg,
+						static fn ( callable $execute ): bool => $switch_ok_lock === $lock->current_token_sql( $switch_ok_context->uses_connection( ... ), $execute ),
+						$switch_ok_lock
+					);
+					$ok_registrar = new ManagedReleaseTargetRegistrar(
+						new PluginRepository(),
+						new ThemeRepository(),
+						$switch_ok_release_store,
+						$lock,
+						$switch_ok_registry,
+						$switch_ok_context,
+						new RepositorySourceGuard( $switch_ok_wpdb )
+					);
+					$native_prop->setValue(
+						$ok_registrar,
+						array(
+							"plugin\0" . $switch_pkg => array(
+								'authority'    => array( 'provider' => 'gh' ),
+								'automatic'    => false,
+								'lock'         => $switch_ok_lock,
+								'restore'      => false,
+								'native_owner' => $ok_owner,
+							),
+						)
+					);
+					$switches_prop->setValue(
+						$ok_registrar,
+						array(
+							"plugin\0" . $switch_pkg => array(
+								'configuration' => $switch_config,
+								'revision'      => 1,
+								'token'         => $switch_token,
+								'user'          => 1,
+							),
+						)
+					);
+					$expect( array() !== $switch_ok_store->read(), 'warm Case B store before complete_provider_native_mutation' );
+					$filtered_queries->exchangeArray( array() );
+					add_filter( 'query', $record_queries );
+					try {
+						$ok_registrar->complete_provider_native_mutation( $ok_owner, 'plugin', $switch_pkg, 'verified_success' );
+					} finally {
+						remove_filter( 'query', $record_queries );
+					}
+					foreach ( $filtered_queries as $filtered_sql ) {
+						$expect( ! str_contains( $filtered_sql, $table ) || str_contains( $filtered_sql, 'auto_updater.lock' ), 'healthy pinned source-switch must not touch selection row via wpdb query filter' );
+						$expect( ! str_contains( $filtered_sql, $switch_table ), 'healthy pinned source-switch must not run package source queries through wpdb query filter' );
+					}
+					$after_ok_selection = $second->read();
+					$expect( ! array_key_exists( 'native_mutation', $after_ok_selection ), 'healthy pinned source-switch must clear native_mutation hold atomically' );
+					$expect( null === $lock_row(), 'healthy pinned source-switch must release auto_updater.lock after COMMIT' );
+					$after_ok_row = $read_switch_row();
+					$expect( null !== $after_ok_row && 'release_asset' === $after_ok_row->source && 2 === (int) $after_ok_row->source_revision && $switch_config->to_json() === $after_ok_row->release_configuration, 'healthy pinned source-switch must commit release_asset revision 2' );
+				} finally {
+					$database->options = $saved_options;
+					// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore main $database connection for disposable package table cleanup.
+					$GLOBALS['wpdb'] = $database;
+					$database->delete(
+						$switch_table,
+						array(
+							'package_type' => 1,
+							'package'      => $switch_pkg,
+						)
+					);
+					// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Close disposable fixture mysqli handles opened for Case A switch proof.
+					if ( $switch_current_dbh instanceof \mysqli && $switch_current_dbh !== $switch_orig_dbh && $switch_current_dbh !== $switch_kill_dbh ) {
+						try {
+							$switch_current_dbh->close();
+						} catch ( Throwable ) {
+							unset( $switch_current_dbh );
+						}
+					}
+					if ( $switch_kill_dbh instanceof \mysqli ) {
+						try {
+							$switch_kill_dbh->close();
+						} catch ( Throwable ) {
+							unset( $switch_kill_dbh );
+						}
+					}
+					$switch_kill_wpdb->close();
+					$switch_ok_wpdb->close();
+					$database->options = $table;
+				}
 			} finally {
 				$doomed_hold->close();
 				$reconnected_hold->close();

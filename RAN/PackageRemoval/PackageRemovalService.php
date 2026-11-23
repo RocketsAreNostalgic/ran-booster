@@ -125,16 +125,12 @@ final readonly class PackageRemovalService {
 				)
 			);
 		} finally {
-			if ( ! $this->updater_lock->release( $token ) ) {
-				if ( $hold_cleared ) {
-					$failure = new \RuntimeException(
-						'The native hold was released; updater lock release failed.',
-						self::HOLD_CLEARED_LOCK_RELEASE_FAILED
-					);
-					throw $failure;
-				}
-				throw new \RuntimeException( 'The native hold may be released; updater lock release requires recovery.' );
-			}
+			$this->release_native_hold_lock(
+				$token,
+				$hold_cleared,
+				'The native hold was released; updater lock release failed.',
+				'The native hold may be released; updater lock release requires recovery.'
+			);
 		}
 	}
 
@@ -195,16 +191,12 @@ final readonly class PackageRemovalService {
 			);
 			$hold_cleared = true;
 		} finally {
-			if ( ! $this->updater_lock->release( $token ) ) {
-				if ( $hold_cleared ) {
-					$failure = new \RuntimeException(
-						'Native recovery cleared the hold; updater lock release failed.',
-						self::HOLD_CLEARED_LOCK_RELEASE_FAILED
-					);
-					throw $failure;
-				}
-				throw new \RuntimeException( 'Native recovery may have completed; updater lock release requires recovery.' );
-			}
+			$this->release_native_hold_lock(
+				$token,
+				$hold_cleared,
+				'Native recovery cleared the hold; updater lock release failed.',
+				'Native recovery may have completed; updater lock release requires recovery.'
+			);
 		}
 	}
 
@@ -225,6 +217,29 @@ final readonly class PackageRemovalService {
 			}
 		}
 		return $this->updater_lock->acquire();
+	}
+
+	private function release_native_hold_lock(
+		string $token,
+		bool $hold_cleared,
+		string $cleared_message,
+		string $uncertain_message
+	): void {
+		$lock_failure = null;
+		try {
+			$released = $this->updater_lock->release( $token );
+		} catch ( Throwable $failure ) {
+			$released     = false;
+			$lock_failure = $failure;
+		}
+		if ( ! $released ) {
+			if ( $hold_cleared ) {
+				$failure = new \RuntimeException( $cleared_message, self::HOLD_CLEARED_LOCK_RELEASE_FAILED, $lock_failure );
+				throw $failure;
+			}
+			$failure = new \RuntimeException( $uncertain_message, 0, $lock_failure );
+			throw $failure;
+		}
 	}
 
 	/** @param array<string, mixed>|null $record */

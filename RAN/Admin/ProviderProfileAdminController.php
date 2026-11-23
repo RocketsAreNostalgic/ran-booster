@@ -139,8 +139,13 @@ class ProviderProfileAdminController {
 
 	/** @return 'present'|'busy'|'failed'|'lock_failed' */
 	private function native_hold_failure( \Throwable $failure, string $event, bool $removal ): string {
-		BoosterLogger::log_exception( 'native hold action failed', $failure, array( 'event' => $event ) );
-		if ( \RAN\PackageRemoval\PackageRemovalService::HOLD_CLEARED_LOCK_RELEASE_FAILED === $failure->getCode() ) {
+		$lock_failed = $failure instanceof \RuntimeException && \RAN\PackageRemoval\PackageRemovalService::HOLD_CLEARED_LOCK_RELEASE_FAILED === $failure->getCode();
+		$context     = array( 'event' => $event );
+		if ( $lock_failed ) {
+			$context['outcome_code'] = 'lock_failed';
+		}
+		BoosterLogger::log_exception( 'native hold action failed', $failure->getPrevious() ?? $failure, $context );
+		if ( $lock_failed ) {
 			return 'lock_failed';
 		}
 		try {

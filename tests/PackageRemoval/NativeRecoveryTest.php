@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
+use RAN\Deployment\DeploymentStorageFailure;
 use RAN\PackageRemoval\PackageRemovalGateway;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\RepositoryProvider\GitHubProviderSelection;
@@ -330,9 +331,15 @@ final class NativeRecoveryTest extends TestCase {
 
 	public function test_lock_release_failure_does_not_report_verified_recovery(): void {
 		foreach ( array( 'recover', 'release' ) as $operation ) {
-			unset( $this->db->option_rows['auto_updater.lock'] );
-			if ( 'release' === $operation ) {
-				$state                     = $this->store->read();
+			foreach ( array( 'zero', 'throw' ) as $failure_mode ) {
+				unset( $this->db->option_rows['auto_updater.lock'] );
+				$state = $this->store->read();
+				if ( array_key_exists( 'native_mutation', $state ) ) {
+					$cleared = $state;
+					unset( $cleared['native_mutation'] );
+					self::assertTrue( $this->store->compare_and_swap( $state, $cleared ) );
+					$state = $cleared;
+				}
 				$marked                    = $state;
 				$marked['native_mutation'] = array(
 					'selection_generation' => $state['selection_generation'],
@@ -342,29 +349,95 @@ final class NativeRecoveryTest extends TestCase {
 					'phase'                => 'started',
 				);
 				self::assertTrue( $this->store->compare_and_swap( $state, $marked ) );
-				$this->readable();
-			} else {
-				$this->record  = null;
-				$this->present = false;
-			}
-			$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
-			$digest                        = $this->service->native_recovery_confirmation()['digest'];
-			$caught                        = null;
-			try {
 				if ( 'release' === $operation ) {
-					$this->release( $digest );
+					$this->present = true;
+					$this->readable();
 				} else {
-					$this->recover( $digest );
+					$this->record     = null;
+					$this->present    = false;
+					$this->registered = false;
 				}
-			} catch ( \RuntimeException $failure ) {
-				$caught = $failure;
-			} finally {
-				$this->db->zero_query_contains = null;
+				if ( 'throw' === $failure_mode ) {
+					$this->db->fail_query_contains = 'DELETE FROM `wp_options`';
+				} else {
+					$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
+				}
+				$digest = $this->service->native_recovery_confirmation()['digest'];
+				$caught = null;
+				try {
+					if ( 'release' === $operation ) {
+						$this->release( $digest );
+					} else {
+						$this->recover( $digest );
+					}
+				} catch ( \RuntimeException $failure ) {
+					$caught = $failure;
+				} finally {
+					$this->db->fail_query_contains = null;
+					$this->db->zero_query_contains = null;
+					$this->db->last_error          = '';
+				}
+				self::assertInstanceOf( \RuntimeException::class, $caught, "$operation/$failure_mode" );
+				self::assertSame( PackageRemovalService::HOLD_CLEARED_LOCK_RELEASE_FAILED, $caught->getCode(), "$operation/$failure_mode" );
+				if ( 'throw' === $failure_mode ) {
+					self::assertInstanceOf( DeploymentStorageFailure::class, $caught->getPrevious(), "$operation/$failure_mode" );
+				} else {
+					self::assertNull( $caught->getPrevious(), "$operation/$failure_mode" );
+				}
+				self::assertArrayNotHasKey( 'native_mutation', $this->store->read(), "$operation/$failure_mode" );
+				self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$failure_mode" );
 			}
-			self::assertInstanceOf( \RuntimeException::class, $caught, $operation );
-			self::assertSame( PackageRemovalService::HOLD_CLEARED_LOCK_RELEASE_FAILED, $caught->getCode(), $operation );
-			self::assertArrayNotHasKey( 'native_mutation', $this->store->read(), $operation );
-			self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, $operation );
+		}
+	}
+
+	public function test_pre_clear_failure_with_lock_release_failure_keeps_hold_and_distinct_code(): void {
+		foreach ( array( 'recover', 'release' ) as $operation ) {
+			foreach ( array( 'zero', 'throw' ) as $failure_mode ) {
+				unset( $this->db->option_rows['auto_updater.lock'] );
+				$this->hold( str_repeat( 'a', 32 ), 'started' );
+				if ( 'release' === $operation ) {
+					$this->present = true;
+					$this->readable();
+				} else {
+					$this->record     = null;
+					$this->present    = false;
+					$this->registered = false;
+				}
+				$this->cache_failure = true;
+				if ( 'throw' === $failure_mode ) {
+					$this->db->fail_query_contains = 'DELETE FROM `wp_options`';
+				} else {
+					$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
+				}
+				$digest = $this->service->native_recovery_confirmation()['digest'];
+				$caught = null;
+				try {
+					if ( 'release' === $operation ) {
+						$this->release( $digest );
+					} else {
+						$this->recover( $digest );
+					}
+				} catch ( \RuntimeException $failure ) {
+					$caught = $failure;
+				} finally {
+					$this->cache_failure           = false;
+					$this->db->fail_query_contains = null;
+					$this->db->zero_query_contains = null;
+					$this->db->last_error          = '';
+				}
+				self::assertInstanceOf( \RuntimeException::class, $caught, "$operation/$failure_mode" );
+				self::assertSame( 0, $caught->getCode(), "$operation/$failure_mode" );
+				self::assertNotSame( PackageRemovalService::HOLD_CLEARED_LOCK_RELEASE_FAILED, $caught->getCode(), "$operation/$failure_mode" );
+				$previous = $caught->getPrevious();
+				if ( 'throw' === $failure_mode ) {
+					self::assertInstanceOf( DeploymentStorageFailure::class, $previous, "$operation/$failure_mode" );
+				} else {
+					self::assertInstanceOf( \RuntimeException::class, $previous, "$operation/$failure_mode" );
+					self::assertSame( 'Cache invalidation failed.', $previous->getMessage(), "$operation/$failure_mode" );
+				}
+				self::assertArrayHasKey( 'native_mutation', $this->store->read(), "$operation/$failure_mode" );
+				self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$failure_mode" );
+			}
 		}
 	}
 

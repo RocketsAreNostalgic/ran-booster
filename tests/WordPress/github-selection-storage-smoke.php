@@ -9,8 +9,10 @@ use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\ProviderRegistrationContext;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\Deployment\DeploymentStorageFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
 use RAN\Storage\GitHubSelectionStore;
+use RAN\WordPress\WordPressUpdaterLock;
 
 // Installed storage/composition proof; no real plugin is activated and runtime bootstrap stays unchanged.
 return static function ( wpdb $database ): void {
@@ -358,6 +360,154 @@ return static function ( wpdb $database ): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Deliberately incompatible passive manifest proof bytes.
 		$write( 'b.gh-replacement.json', json_encode( $manifest, JSON_THROW_ON_ERROR ) );
 		$expect( ! $apply_request->operation_allowed() && ! $compose()->operation_allowed(), 'incompatible selected manifest pauses old and new requests' );
+
+		// Prove real wpdb + mysqli pinned stale-lock reclaim bypasses WordPress query filters,
+		// enforces native_mutation holds, refuses transparent reconnect retries after KILL, and
+		// fails closed on a closed wpdb connection.
+		$saved_wpdb    = $GLOBALS['wpdb'] ?? null;
+		$saved_options = $database->options;
+		$doomed        = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$closed        = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$lock          = new WordPressUpdaterLock();
+		$stale         = (string) ( time() - 7200 );
+		$lock_row      = static fn () => $other->get_var( $other->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+		try {
+			$database->options = $table;
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Temporarily bind the disposable smoke table connection during the installed lock proof and restore $GLOBALS['wpdb'] in finally.
+			$GLOBALS['wpdb'] = $database;
+
+			$expect( array() !== $store->read(), 'warm selection storage check before pinned reclaim' );
+			$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+			$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $stale, 'no' ) );
+
+			/** @var ArrayObject<int, string> $filtered_queries */
+			$filtered_queries = new ArrayObject();
+			$record_queries   = static function ( string $sql ) use ( $filtered_queries ): string {
+				$filtered_queries->append( $sql );
+				return $sql;
+			};
+			add_filter( 'query', $record_queries );
+			$committed_reclaim = null;
+			try {
+				$reclaimed = $compose()->without_native_mutation_hold(
+					fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $compose()->uses_connection( ... ), $execute ),
+					static function ( ?string $token ) use ( &$committed_reclaim ): void {
+						$committed_reclaim = $token;
+					}
+				);
+			} finally {
+				remove_filter( 'query', $record_queries );
+			}
+			$expect( 0 === $filtered_queries->count(), 'pinned wpdb stale-lock reclaim must not run WordPress query filters inside the transaction' );
+			$expect( is_string( $reclaimed ) && $reclaimed !== $stale && $committed_reclaim === $reclaimed && $lock_row() === $reclaimed, 'pinned wpdb stale-lock reclaim must commit exact token' );
+
+			$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+			$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $stale, 'no' ) );
+			$held_owner = $compose()->begin_native_mutation( 'plugin', 'held-smoke/held-smoke.php', static fn (): bool => true, null );
+			try {
+				$expect( array() !== $store->read(), 'warm selection storage check before held reclaim probe' );
+				$filtered_queries->exchangeArray( array() );
+				add_filter( 'query', $record_queries );
+				$held_callback = false;
+				try {
+					$held_result = $compose()->without_native_mutation_hold(
+						fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $compose()->uses_connection( ... ), $execute ),
+						static function () use ( &$held_callback ): void {
+							$held_callback = true;
+						}
+					);
+				} finally {
+					remove_filter( 'query', $record_queries );
+				}
+				$expect( null === $held_result && ! $held_callback, 'active native_mutation hold must skip reclaim and post-commit callback' );
+				$expect( 0 === $filtered_queries->count(), 'held native_mutation check must stay callback-free on pinned wpdb' );
+				$expect( $stale === $lock_row(), 'held native_mutation check must preserve expired updater lock row' );
+			} finally {
+				$compose()->complete_native_mutation( $held_owner, 'plugin', 'held-smoke/held-smoke.php', 'verified_success' );
+			}
+
+			$doomed->options = $table;
+			$doomed_store    = new GitHubSelectionStore( $doomed, $table );
+			$doomed_context  = new GitHubProviderSelection( $doomed_store, $plugin_root, $declaration );
+			$doomed_id       = (int) $doomed->get_var( 'SELECT CONNECTION_ID()' );
+			$expect( $doomed_id > 0, 'doomed wpdb connection has valid MySQL session id' );
+			$expect( array() !== $doomed_store->read(), 'warm doomed store storage verification before pinning session' );
+
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Bind doomed wpdb session for real MySQL KILL test and restore in finally.
+			$GLOBALS['wpdb']   = $doomed;
+			$doomed_suppressed = $doomed->suppress_errors( true );
+			$filtered_queries->exchangeArray( array() );
+			$killed_callback = false;
+			$killed_rejected = false;
+			add_filter( 'query', $record_queries );
+			try {
+				try {
+					$doomed_context->without_native_mutation_hold(
+						static function ( callable $execute ) use ( $doomed_context, $lock, $other, $doomed_id, $expect ): ?string {
+							$kill_sql = $other->prepare( 'KILL %d', $doomed_id );
+							$expect( is_string( $kill_sql ) && false !== $other->query( $kill_sql ), 'control connection kills doomed session inside open transaction' );
+							$deadline = microtime( true ) + 2.0;
+							while ( microtime( true ) < $deadline ) {
+								if ( 0 === (int) $other->get_var( $other->prepare( 'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = %d', $doomed_id ) ) ) {
+									break;
+								}
+								usleep( 10000 );
+							}
+							$expect( 0 === (int) $other->get_var( $other->prepare( 'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = %d', $doomed_id ) ), 'killed doomed session must exit before reclaim executes' );
+							return $lock->acquire_or_reclaim_expired_sql( $doomed_context->uses_connection( ... ), $execute );
+						},
+						static function () use ( &$killed_callback ): void {
+							$killed_callback = true;
+						}
+					);
+				} catch ( DeploymentStorageFailure ) {
+					$killed_rejected = true;
+				}
+			} finally {
+				remove_filter( 'query', $record_queries );
+				$doomed->suppress_errors( $doomed_suppressed );
+			}
+			$expect( $killed_rejected && ! $killed_callback, 'killed session reclaim must fail closed without invoking committed callback' );
+			$expect( $stale === $lock_row(), 'killed session reclaim must preserve expired lock without autocommit retry' );
+			foreach ( $filtered_queries as $filtered_sql ) {
+				$expect( str_starts_with( $filtered_sql, 'KILL ' ) || str_contains( $filtered_sql, 'information_schema.PROCESSLIST' ), 'killed session must not trigger wpdb reconnect or table queries through query filter' );
+			}
+			$reject(
+				static fn () => $doomed_context->without_native_mutation_hold( static fn (): null => null ),
+				'killed session must leave selection store uncertain and refuse reuse'
+			);
+
+			$closed->options = $table;
+			$closed_store    = new GitHubSelectionStore( $closed, $table );
+			$closed_context  = new GitHubProviderSelection( $closed_store, $plugin_root, $declaration );
+			$expect( array() !== $closed_store->read(), 'warm closed store before closing handle' );
+			$closed->close();
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Bind closed wpdb instance to verify fail-closed pinned handle check before restoring in finally.
+			$GLOBALS['wpdb'] = $closed;
+			$filtered_queries->exchangeArray( array() );
+			add_filter( 'query', $record_queries );
+			try {
+				$reject(
+					static fn () => $closed_context->without_native_mutation_hold(
+						static function (): ?string {
+							throw new RuntimeException( 'Closed handle operation must not execute.' );
+						}
+					),
+					'closed wpdb handle must fail before opening transaction or executing operation'
+				);
+			} finally {
+				remove_filter( 'query', $record_queries );
+			}
+			$expect( 0 === $filtered_queries->count(), 'closed handle check must not run query filters' );
+		} finally {
+			$database->options = $saved_options;
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore WordPress global wpdb after isolated smoke proof.
+			$GLOBALS['wpdb'] = $saved_wpdb;
+			$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+			$doomed->close();
+			$closed->close();
+		}
+
 		$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'active_plugins' ) );
 		$reject( static fn () => $store->active_plugins(), 'missing active authority must refuse rather than assume no candidates' );
 

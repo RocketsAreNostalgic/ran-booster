@@ -6,10 +6,13 @@ namespace RAN\Tests\WordPress;
 
 use PHPUnit\Framework\Attributes\After;
 use PHPUnit\Framework\Attributes\Before;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentStorageFailure;
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\GitHubReplacementDeclaration;
+use RAN\Storage\DatabaseLifecycleFailure;
 use RAN\Storage\GitHubSelectionStore;
 use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 use RAN\WordPress\WordPressUpdaterLock;
@@ -137,8 +140,23 @@ final class WordPressUpdaterLockTest extends TestCase {
 		foreach ( array( null, new \stdClass(), $magic ) as $host ) {
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Exercise the accepted fail-closed invalid-host boundary without changing a real WordPress database.
 			$GLOBALS['wpdb'] = $host;
+			$called          = false;
 			$this->assert_core_storage_failure( $lock->acquire( ... ) );
-			$this->assert_core_storage_failure( $lock->acquire_or_reclaim_expired_sql( ... ) );
+			$this->assert_core_storage_failure(
+				static function () use ( $lock, &$called ): ?string {
+					return $lock->acquire_or_reclaim_expired_sql(
+						static function () use ( &$called ): bool {
+							$called = true;
+							return true;
+						},
+						static function () use ( &$called ): null {
+							$called = true;
+							return null;
+						}
+					);
+				}
+			);
+			self::assertFalse( $called );
 			$this->assert_core_storage_failure( $lock->current_token( ... ) );
 			$this->assert_core_storage_failure( static fn (): bool => $lock->release( 'token' ) );
 		}
@@ -246,7 +264,11 @@ final class WordPressUpdaterLockTest extends TestCase {
 		foreach ( array( 'malformed', (string) ( time() + 600 ) ) as $held ) {
 			$this->database->option_rows['auto_updater.lock'] = $held;
 			$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
-			self::assertNull( $selection->without_native_mutation_hold( fn (): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ) ) ) );
+			self::assertNull(
+				$selection->without_native_mutation_hold(
+					fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute )
+				)
+			);
 			self::assertSame( $held, $this->database->option_rows['auto_updater.lock'] );
 			self::assertSame( $selection_cache_deletes, $GLOBALS['ran_booster_attempt_cache_deletes'] );
 		}
@@ -263,7 +285,11 @@ final class WordPressUpdaterLockTest extends TestCase {
 		);
 		self::assertTrue( $store->compare_and_swap( $state, $marked ) );
 		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
-		self::assertNull( $selection->without_native_mutation_hold( fn (): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ) ) ) );
+		self::assertNull(
+			$selection->without_native_mutation_hold(
+				fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute )
+			)
+		);
 		self::assertSame( $stale, $this->database->option_rows['auto_updater.lock'] );
 		self::assertSame( $selection_cache_deletes, $GLOBALS['ran_booster_attempt_cache_deletes'] );
 
@@ -273,14 +299,44 @@ final class WordPressUpdaterLockTest extends TestCase {
 
 		$this->assert_core_storage_failure(
 			fn (): ?string => $selection->without_native_mutation_hold(
-				fn (): ?string => $lock->acquire_or_reclaim_expired_sql( static fn (): bool => false )
+				fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( static fn (): bool => false, $execute )
 			)
 		);
 		self::assertSame( $stale, $this->database->option_rows['auto_updater.lock'] );
 
+		$this->assert_core_storage_failure(
+			fn (): ?string => $selection->without_native_mutation_hold(
+				fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql(
+					static fn ( object $connection ): bool => $selection->uses_connection( $connection, 'other_options' ),
+					$execute
+				)
+			)
+		);
+		self::assertSame( $stale, $this->database->option_rows['auto_updater.lock'] );
+
+		$aborted_commit_calls                = 0;
+		$this->database->fail_query_contains = 'DELETE FROM';
+		try {
+			$this->assert_core_storage_failure(
+				fn (): ?string => $selection->without_native_mutation_hold(
+					fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute ),
+					static function () use ( &$aborted_commit_calls ): void {
+						++$aborted_commit_calls;
+					}
+				)
+			);
+			self::assertSame( 0, $aborted_commit_calls );
+			self::assertSame( $stale, $this->database->option_rows['auto_updater.lock'] );
+			self::assertContains( 'ROLLBACK', $this->database->queries );
+		} finally {
+			$this->database->fail_query_contains = null;
+		}
+
 		$this->database->zero_query_contains = 'INSERT IGNORE';
 		try {
-			$selection->without_native_mutation_hold( fn (): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ) ) );
+			$selection->without_native_mutation_hold(
+				fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute )
+			);
 			self::fail( 'Failed reinsertion after expired-lock deletion must abort the transaction.' );
 		} catch ( RuntimeException $failure ) {
 			self::assertSame( 'The WordPress updater is already running.', $failure->getMessage() );
@@ -292,8 +348,15 @@ final class WordPressUpdaterLockTest extends TestCase {
 
 		$this->database->queries                      = array();
 		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
-		$reclaimed                                    = $selection->without_native_mutation_hold( fn (): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ) ) );
+		$committed_token                              = null;
+		$reclaimed                                    = $selection->without_native_mutation_hold(
+			fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute ),
+			static function ( ?string $token ) use ( &$committed_token ): void {
+				$committed_token = $token;
+			}
+		);
 		self::assertIsString( $reclaimed );
+		self::assertSame( $reclaimed, $committed_token );
 		self::assertNotSame( $stale, $reclaimed );
 		self::assertSame( $reclaimed, $this->database->option_rows['auto_updater.lock'] );
 		self::assertSame( $selection_cache_deletes, $GLOBALS['ran_booster_attempt_cache_deletes'] );
@@ -321,6 +384,85 @@ final class WordPressUpdaterLockTest extends TestCase {
 				array( 'notoptions', 'options' ),
 			),
 			$GLOBALS['ran_booster_attempt_cache_deletes']
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_without_native_mutation_hold_delivers_reclaimed_token_before_selection_cache_exception_and_skips_callback_on_uncertain_commit(): void {
+		$lock    = new WordPressUpdaterLock();
+		$store   = new GitHubSelectionStore( $this->database, 'wp_options' );
+		$bundled = new GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$store->initialize_bundled( $bundled );
+		$selection = new GitHubProviderSelection( $store, '/unused', $bundled );
+
+		$stale = (string) ( time() - 7200 );
+		$this->database->option_rows['auto_updater.lock'] = $stale;
+		$this->database->queries                          = array();
+		$committed_token                                  = null;
+		$GLOBALS['ran_booster_attempt_on_cache_delete']   = static function ( int|string $key, string $group ): void {
+			if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+				throw new RuntimeException( 'selection cache failed after commit' );
+			}
+		};
+		try {
+			$selection->without_native_mutation_hold(
+				fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute ),
+				static function ( ?string $token ) use ( &$committed_token ): void {
+					$committed_token = $token;
+				}
+			);
+			self::fail( 'Post-commit selection cache exception must propagate.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'selection cache failed after commit', $failure->getMessage() );
+		} finally {
+			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+		}
+
+		self::assertIsString( $committed_token );
+		self::assertNotSame( $stale, $committed_token );
+		self::assertSame( $committed_token, $this->database->option_rows['auto_updater.lock'] );
+		self::assertNotContains( 'ROLLBACK', $this->database->queries );
+		self::assertTrue( $lock->release( $committed_token ) );
+
+		$this->database->option_rows['auto_updater.lock'] = $stale;
+		$this->database->fail_commit                      = true;
+		$uncertain_callback_called                        = false;
+		$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
+		try {
+			$selection->without_native_mutation_hold(
+				fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute ),
+				static function () use ( &$uncertain_callback_called ): void {
+					$uncertain_callback_called = true;
+				}
+			);
+			self::fail( 'Uncertain commit must fail closed.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'selection_commit_uncertain', $failure->reason() );
+		}
+		self::assertFalse( $uncertain_callback_called );
+		self::assertSame(
+			array(
+				array( GitHubSelectionStore::OPTION, 'options' ),
+				array( 'alloptions', 'options' ),
+				array( 'notoptions', 'options' ),
+			),
+			$GLOBALS['ran_booster_attempt_cache_deletes']
+		);
+		$this->database->fail_commit = false;
+		$this->expectException( DatabaseLifecycleFailure::class );
+		$selection->without_native_mutation_hold(
+			fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute )
 		);
 	}
 

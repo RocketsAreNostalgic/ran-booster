@@ -14,6 +14,8 @@ namespace RAN\Tests\AddOn;
 	require_once __DIR__ . '/../fixtures/ran-booster-release-capability-provider/src/Providers.php';
 
 	use PHPUnit\Framework\Attributes\DataProvider;
+	use PHPUnit\Framework\Attributes\PreserveGlobalState;
+	use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 	use PHPUnit\Framework\TestCase;
 	use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
 	use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
@@ -50,6 +52,7 @@ use RAN\Deployment\ReleaseArtifactCleanupFailure;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 	use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
+	use RAN\Storage\GitHubSelectionStore;
 	use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\Database;
@@ -2309,6 +2312,111 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read( true ) );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_install_releases_committed_reclaimed_lock_when_selection_cache_invalidation_throws(): void {
+		foreach ( array( 'gh', 'bb' ) as $provider ) {
+			$this->native_selection       = null;
+			$this->native_selection_store = null;
+			$this->native_selection_db    = null;
+			$plugins                      = new ProspectivePluginRepository();
+			$executor                     = new ProspectiveExecutor();
+			$lock                         = new ProspectiveUpdaterLock();
+			$lock->expired_lock_held      = true;
+			$lock->strict_release_token   = true;
+			$facade                       = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( $provider ) );
+			$this->set_ready_release();
+			self::assertNotNull( $this->acquisition );
+			$request = 'gh' === $provider
+				? $this->repository_request()
+				: array(
+					'provider'      => 'bb',
+					'repository'    => 'owner/example',
+					'credential_id' => '',
+					'branch'        => 'main',
+				);
+
+			$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ): void {
+				if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+					throw new RuntimeException( 'Selection cache invalidation failed after COMMIT.' );
+				}
+			};
+			try {
+				$result = $facade->install(
+					'plugin',
+					$request,
+					'42',
+					'v1.2.3',
+					self::FINGERPRINT,
+					'stable',
+					'valid-nonce',
+					$this->expectation_for( $request )
+				);
+			} finally {
+				unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+			}
+
+			self::assertFalse( $result->successful(), $provider );
+			self::assertSame( 'install_failed', $result->code(), $provider );
+			self::assertSame( 1, $lock->reclaim_calls, $provider );
+			self::assertSame( 1, $lock->release_calls, $provider );
+			self::assertNull( $lock->active_token, $provider );
+			self::assertSame( 0, $lock->cache_invalidation_calls, $provider );
+			self::assertSame( 0, $executor->install_calls, $provider );
+			self::assertSame( 0, $this->acquisition->handoff_calls, $provider );
+			self::assertSame( 1, $this->acquisition->discard_calls, $provider );
+		}
+	}
+
+	public function test_install_reports_uncertain_cleanup_without_blind_release_when_reclaim_commit_is_uncertain(): void {
+		foreach ( array( 'fail_commit', 'throw_commit' ) as $mode ) {
+			foreach ( array( 'gh', 'bb' ) as $provider ) {
+				$this->native_selection       = null;
+				$this->native_selection_store = null;
+				$this->native_selection_db    = null;
+				$plugins                      = new ProspectivePluginRepository();
+				$executor                     = new ProspectiveExecutor();
+				$lock                         = new ProspectiveUpdaterLock();
+				$lock->expired_lock_held      = true;
+				$facade                       = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( $provider ) );
+				$this->set_ready_release();
+				self::assertNotNull( $this->acquisition );
+				self::assertNotNull( $this->native_selection_db );
+				$this->native_selection_db->selection->fail_commit  = 'fail_commit' === $mode;
+				$this->native_selection_db->selection->throw_commit = 'throw_commit' === $mode;
+
+				$request = 'gh' === $provider
+					? $this->repository_request()
+					: array(
+						'provider'      => 'bb',
+						'repository'    => 'owner/example',
+						'credential_id' => '',
+						'branch'        => 'main',
+					);
+				$result  = $facade->install(
+					'plugin',
+					$request,
+					'42',
+					'v1.2.3',
+					self::FINGERPRINT,
+					'stable',
+					'valid-nonce',
+					$this->expectation_for( $request )
+				);
+
+				self::assertFalse( $result->successful(), $mode . ':' . $provider );
+				self::assertSame( 'installation_cleanup_failed', $result->code(), $mode . ':' . $provider );
+				self::assertSame( 1, $lock->reclaim_calls, $mode . ':' . $provider );
+				self::assertSame( 0, $lock->release_calls, $mode . ':' . $provider );
+				self::assertSame( '1700000004', $lock->active_token, $mode . ':' . $provider );
+				self::assertSame( 0, $lock->cache_invalidation_calls, $mode . ':' . $provider );
+				self::assertSame( 0, $executor->install_calls, $mode . ':' . $provider );
+				self::assertSame( 0, $this->acquisition->handoff_calls, $mode . ':' . $provider );
+				self::assertSame( 1, $this->acquisition->discard_calls, $mode . ':' . $provider );
+			}
+		}
+	}
+
 	private function seed_github_native_mutation_hold( string $type, string $identity, string $phase ): void {
 		$this->github_selection();
 		self::assertNotNull( $this->native_selection_store );
@@ -3048,9 +3156,12 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 		return $this->acquire();
 	}
 
-	/** @param (callable(object): bool)|null $same_connection */
-	public function acquire_or_reclaim_expired_sql( ?callable $same_connection = null ): ?string {
-		unset( $same_connection );
+	/**
+	 * @param callable(object, string): bool                                       $same_connection
+	 * @param callable(string, list<string>, 'affected'|'var'): (int|string|null) $execute
+	 */
+	public function acquire_or_reclaim_expired_sql( callable $same_connection, callable $execute ): ?string {
+		unset( $same_connection, $execute );
 		++$this->acquire_calls;
 		if ( $this->throw_on_acquire ) {
 			throw new RuntimeException( 'The test lock could not be acquired.' );

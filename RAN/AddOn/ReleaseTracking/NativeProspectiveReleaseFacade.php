@@ -414,9 +414,31 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 				$lock_token = $this->updater_lock->try_acquire_without_reclaim();
 				if ( null === $lock_token ) {
-					$lock_token = $this->github_selection->without_native_mutation_hold(
-						fn (): ?string => $this->updater_lock->acquire_or_reclaim_expired_sql( $this->github_selection->uses_connection( ... ) )
-					);
+					$attempted_lock_token = null;
+					try {
+						$lock_token = $this->github_selection->without_native_mutation_hold(
+							function ( callable $execute ) use ( &$attempted_lock_token ): ?string {
+								$attempted_lock_token = $this->updater_lock->acquire_or_reclaim_expired_sql(
+									$this->github_selection->uses_connection( ... ),
+									$execute
+								);
+								return $attempted_lock_token;
+							},
+							static function ( ?string $committed_token ) use ( &$lock_token ): void {
+								$lock_token = $committed_token;
+							}
+						);
+					} catch ( Throwable $failure ) {
+						if ( null !== $attempted_lock_token && null === $lock_token ) {
+							$finalization_failed = true;
+							BoosterLogger::log_exception(
+								'prospective release updater lock commit uncertain',
+								$failure,
+								array( 'step' => 'prospective_release_lock_commit' )
+							);
+						}
+						throw $failure;
+					}
 					if ( null === $lock_token ) {
 						$outcome = ProspectiveReleaseResult::failure( 'install_failed' );
 						break;

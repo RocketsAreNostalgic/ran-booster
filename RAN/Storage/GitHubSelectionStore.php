@@ -26,8 +26,8 @@ final class GitHubSelectionStore {
 	public function __construct( private \wpdb|SchemaConnection $connection, private string $table ) {
 	}
 
-	public function uses_connection( object $connection ): bool {
-		return $this->connection === $connection;
+	public function uses_connection( object $connection, ?string $table = null ): bool {
+		return $this->connection === $connection && ( null === $table || $this->table === $table );
 	}
 
 	/**
@@ -92,7 +92,15 @@ final class GitHubSelectionStore {
 		);
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared identifiers and values; locking suffix is a closed local boolean choice.
 		$rows = $this->connection->get_results( $query );
-		if ( $this->read_failed() || ! is_array( $rows ) || 1 !== count( $rows ) ) {
+		if ( $this->read_failed() ) {
+			throw new DatabaseLifecycleFailure( 'selection_read_failed' );
+		}
+		return $this->decode_selection_rows( $rows );
+	}
+
+	/** @return array<string, mixed> */
+	private function decode_selection_rows( mixed $rows ): array {
+		if ( ! is_array( $rows ) || 1 !== count( $rows ) ) {
 			throw new DatabaseLifecycleFailure( 'selection_read_failed' );
 		}
 		$row = $rows[0];
@@ -271,6 +279,247 @@ final class GitHubSelectionStore {
 		}
 	}
 
+	/**
+	 * Run a callback-free SQL operation inside one single-session transaction when no
+	 * native_mutation hold is present. On real wpdb, pin the active mysqli handle through
+	 * COMMIT so WordPress query filters and transparent reconnect retries cannot run inside
+	 * or escape the open transaction. Invoke $on_committed only after COMMIT succeeds and
+	 * before invalidate_cache() can throw.
+	 *
+	 * @template T
+	 * @param callable(callable(string, list<string>, 'affected'|'var'): (int|string|null)): T $operation
+	 * @param (callable(T): void)|null $on_committed
+	 * @return T|null Null when a native_mutation hold exists; otherwise the operation result.
+	 * @phpstan-impure Reads and may mutate database state inside the transaction.
+	 */
+	public function without_native_mutation_hold( callable $operation, ?callable $on_committed = null ): mixed {
+		if ( $this->commit_uncertain || '' === $this->table || str_contains( $this->table, "\0" ) ) {
+			throw new DatabaseLifecycleFailure( 'selection_transaction_failed' );
+		}
+		$this->require_storage();
+		if ( $this->connection instanceof \wpdb ) {
+			return $this->without_native_mutation_hold_pinned_wpdb( $this->connection, $operation, $on_committed );
+		}
+		return $this->without_native_mutation_hold_schema_connection( $operation, $on_committed );
+	}
+
+	/**
+	 * @template T
+	 * @param callable(callable(string, list<string>, 'affected'|'var'): (int|string|null)): T $operation
+	 * @param (callable(T): void)|null $on_committed
+	 * @return T|null
+	 */
+	private function without_native_mutation_hold_pinned_wpdb( \wpdb $wpdb, callable $operation, ?callable $on_committed ): mixed {
+		$dbh = $wpdb->__get( 'dbh' );
+		// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Pin the active wpdb mysqli handle through COMMIT so wpdb::query() cannot fire query filters or reconnect into a new autocommit session.
+		if ( ! $dbh instanceof \mysqli ) {
+			throw new DatabaseLifecycleFailure( 'selection_transaction_failed' );
+		}
+		$this->pinned_mysqli_query( $dbh, 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'selection_transaction_failed' );
+		try {
+			try {
+				$this->commit_uncertain = true;
+				$this->pinned_mysqli_query( $dbh, 'START TRANSACTION', 'selection_transaction_failed' );
+				$this->commit_uncertain = false;
+
+				$selection_sql = sprintf(
+					"SELECT option_name, option_value, autoload FROM %s WHERE option_name = '%s' LIMIT 2 FOR UPDATE",
+					'`' . str_replace( '`', '``', $this->table ) . '`',
+					self::OPTION
+				);
+				$selected      = $this->pinned_mysqli_query( $dbh, $selection_sql, 'selection_read_failed' );
+				if ( ! $selected instanceof \mysqli_result ) {
+					throw new DatabaseLifecycleFailure( 'selection_read_failed' );
+				}
+				try {
+					$rows = array();
+					$row  = $selected->fetch_object();
+					while ( is_object( $row ) ) {
+						$rows[] = $row;
+						$row    = $selected->fetch_object();
+					}
+				} finally {
+					$selected->free();
+				}
+				$state = $this->decode_selection_rows( $rows );
+				if ( array_key_exists( 'native_mutation', $state ) ) {
+					$this->commit_uncertain = true;
+					$this->pinned_mysqli_query( $dbh, 'COMMIT', 'selection_commit_uncertain' );
+					$this->commit_uncertain = false;
+					return null;
+				}
+
+				$execute                = function ( string $query, array $arguments, string $mode ) use ( $dbh ): int|string|null {
+					$sql = $this->format_pinned_sql( $dbh, $query, array_values( $arguments ) );
+					if ( 'var' === $mode ) {
+						$result = $this->pinned_mysqli_query( $dbh, $sql, 'selection_read_failed' );
+						if ( ! $result instanceof \mysqli_result ) {
+							throw new DatabaseLifecycleFailure( 'selection_read_failed' );
+						}
+						try {
+							$row = $result->fetch_row();
+							return is_array( $row ) && array_key_exists( 0, $row ) && is_string( $row[0] ) ? $row[0] : null;
+						} finally {
+							$result->free();
+						}
+					}
+					if ( 'affected' === $mode ) {
+						$result = $this->pinned_mysqli_query( $dbh, $sql, 'selection_write_failed' );
+						if ( $result instanceof \mysqli_result ) {
+							$result->free();
+							throw new DatabaseLifecycleFailure( 'selection_write_failed' );
+						}
+						$affected = $dbh->affected_rows;
+						if ( ! is_int( $affected ) || $affected < 0 ) {
+							throw new DatabaseLifecycleFailure( 'selection_write_failed' );
+						}
+						return $affected;
+					}
+					throw new \InvalidArgumentException( 'Unsupported pinned SQL mode.' );
+				};
+				$result                 = $operation( $execute );
+				$this->commit_uncertain = true;
+				$this->pinned_mysqli_query( $dbh, 'COMMIT', 'selection_commit_uncertain' );
+				$this->commit_uncertain = false;
+			} catch ( \Throwable $failure ) {
+				try {
+					$this->pinned_mysqli_query( $dbh, 'ROLLBACK', 'selection_rollback_uncertain' );
+				} catch ( \Throwable ) {
+					$this->commit_uncertain = true;
+				}
+				throw $failure;
+			}
+
+			if ( null !== $on_committed ) {
+				$on_committed( $result );
+			}
+			return $result;
+		} finally {
+			$this->invalidate_cache();
+		}
+	}
+
+	/**
+	 * @template T
+	 * @param callable(callable(string, list<string>, 'affected'|'var'): (int|string|null)): T $operation
+	 * @param (callable(T): void)|null $on_committed
+	 * @return T|null
+	 */
+	private function without_native_mutation_hold_schema_connection( callable $operation, ?callable $on_committed ): mixed {
+		$this->transaction_boundary( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'selection_transaction_failed' );
+		try {
+			try {
+				$this->commit_uncertain = true;
+				$this->transaction_boundary( 'START TRANSACTION', 'selection_transaction_failed' );
+				$this->commit_uncertain = false;
+
+				$state = $this->read( true );
+				if ( array_key_exists( 'native_mutation', $state ) ) {
+					$this->commit_uncertain = true;
+					$this->transaction_boundary( 'COMMIT', 'selection_commit_uncertain' );
+					$this->commit_uncertain = false;
+					return null;
+				}
+
+				$execute                = function ( string $query, array $arguments, string $mode ): int|string|null {
+					$sql = $this->connection->prepare( $query, ...$arguments );
+					if ( ! is_string( $sql ) || '' === $sql ) {
+						throw new DatabaseLifecycleFailure( 'selection_transaction_failed' );
+					}
+					$this->connection->last_error = '';
+					if ( 'var' === $mode ) {
+						// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared above on SchemaConnection.
+						$value = $this->connection->get_var( $sql );
+						if ( $this->read_failed() ) {
+							throw new DatabaseLifecycleFailure( 'selection_read_failed' );
+						}
+						return is_string( $value ) ? $value : null;
+					}
+					if ( 'affected' === $mode ) {
+						// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared above on SchemaConnection.
+						$affected = $this->connection->query( $sql );
+						if ( ! is_int( $affected ) || $affected < 0 || $this->read_failed() ) {
+							throw new DatabaseLifecycleFailure( 'selection_write_failed' );
+						}
+						return $affected;
+					}
+					throw new \InvalidArgumentException( 'Unsupported pinned SQL mode.' );
+				};
+				$result                 = $operation( $execute );
+				$this->commit_uncertain = true;
+				$this->transaction_boundary( 'COMMIT', 'selection_commit_uncertain' );
+				$this->commit_uncertain = false;
+			} catch ( \Throwable $failure ) {
+				try {
+					$this->transaction_boundary( 'ROLLBACK', 'selection_rollback_uncertain' );
+				} catch ( \Throwable ) {
+					$this->commit_uncertain = true;
+				}
+				throw $failure;
+			}
+
+			if ( null !== $on_committed ) {
+				$on_committed( $result );
+			}
+			return $result;
+		} finally {
+			$this->invalidate_cache();
+		}
+	}
+
+	// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Run raw SQL directly on the pinned mysqli handle so wpdb::query() cannot invoke query filters or reconnect retries inside an active transaction.
+	private function pinned_mysqli_query( \mysqli $dbh, string $sql, string $reason ): \mysqli_result|bool {
+		try {
+			$result = $dbh->query( $sql );
+		} catch ( \Throwable ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- DatabaseLifecycleFailure displays fixed REQUIREMENT text; private helper supplies only internal reason codes.
+			throw new DatabaseLifecycleFailure( $reason );
+		}
+		if ( false === $result || 0 !== $dbh->errno ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- DatabaseLifecycleFailure displays fixed REQUIREMENT text; private helper supplies only internal reason codes.
+			throw new DatabaseLifecycleFailure( $reason );
+		}
+		return $result;
+	}
+
+	/**
+	 * @param list<mixed> $arguments
+	 */
+	// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Escape literals against the pinned mysqli handle so wpdb::prepare() never invokes external state inside the open transaction.
+	private function format_pinned_sql( \mysqli $dbh, string $query, array $arguments ): string {
+		$index     = 0;
+		$formatted = preg_replace_callback(
+			'/%([A-Za-z])?/',
+			static function ( array $matches ) use ( $dbh, $arguments, &$index ): string {
+				if ( ! isset( $matches[1] ) || ! in_array( $matches[1], array( 'i', 's' ), true ) || ! array_key_exists( $index, $arguments ) ) {
+					throw new \InvalidArgumentException( 'Unsupported pinned SQL placeholder.' );
+				}
+				$value = $arguments[ $index ];
+				++$index;
+				if ( ! is_string( $value ) ) {
+					throw new \InvalidArgumentException( 'Unsupported pinned SQL argument type.' );
+				}
+				if ( 'i' === $matches[1] ) {
+					if ( '' === $value || str_contains( $value, "\0" ) ) {
+						throw new DatabaseLifecycleFailure( 'selection_transaction_failed' );
+					}
+					return '`' . str_replace( '`', '``', $value ) . '`';
+				}
+				try {
+					$escaped = $dbh->real_escape_string( $value );
+				} catch ( \Throwable ) {
+					throw new DatabaseLifecycleFailure( 'selection_transaction_failed' );
+				}
+				return "'" . $escaped . "'";
+			},
+			$query
+		);
+		if ( ! is_string( $formatted ) || count( $arguments ) !== $index ) {
+			throw new \InvalidArgumentException( 'Unexpected pinned SQL argument count.' );
+		}
+		return $formatted;
+	}
+
 	private function transaction_boundary( string $statement, string $reason ): void {
 		$this->connection->last_error = '';
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Only fixed transaction statements supplied by the private lifecycle above.
@@ -303,9 +552,9 @@ final class GitHubSelectionStore {
 	 * again: a write is where exactness depends on that shape, so it is re-checked after each.
 	 */
 	public function invalidate_cache(): void {
+		$this->storage_verified = false;
 		wp_cache_delete( self::OPTION, 'options' );
 		wp_cache_delete( 'alloptions', 'options' );
 		wp_cache_delete( 'notoptions', 'options' );
-		$this->storage_verified = false;
 	}
 }

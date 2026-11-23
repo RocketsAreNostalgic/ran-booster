@@ -364,8 +364,8 @@ final class GitHubProviderSelection {
 		}
 	}
 
-	public function uses_connection( object $connection ): bool {
-		return $this->store->uses_connection( $connection );
+	public function uses_connection( object $connection, ?string $table = null ): bool {
+		return $this->store->uses_connection( $connection, $table );
 	}
 
 	/** Current authority, also acquiring the first admission lock in caller's transaction. */
@@ -583,25 +583,18 @@ final class GitHubProviderSelection {
 	}
 
 	/**
-	 * Run a callback-free operation inside selection_transaction() only when no
-	 * native_mutation hold is present. Callers must keep WordPress cache/hook
-	 * callbacks outside this transaction.
+	 * Run a callback-free SQL operation inside one single-session transaction when no
+	 * native_mutation hold is present. Callers must keep WordPress cache/hook callbacks
+	 * outside this transaction. Invokes $on_committed only after COMMIT succeeds.
 	 *
 	 * @template T
-	 * @param callable(): T $operation Core-only SQL/state work with no WordPress callbacks.
+	 * @param callable(callable(string, list<string>, 'affected'|'var'): (int|string|null)): T $operation
+	 * @param (callable(T): void)|null $on_committed
 	 * @return T|null Null when a native_mutation hold exists; otherwise the operation result.
-	 * @phpstan-impure Reads and may mutate database state inside selection_transaction().
+	 * @phpstan-impure Reads and may mutate database state inside the selection transaction.
 	 */
-	public function without_native_mutation_hold( callable $operation ): mixed {
-		return $this->store->selection_transaction(
-			function () use ( $operation ): mixed {
-				if ( array_key_exists( 'native_mutation', $this->store->read( true ) ) ) {
-					return null;
-				}
-
-				return $operation();
-			}
-		);
+	public function without_native_mutation_hold( callable $operation, ?callable $on_committed = null ): mixed {
+		return $this->store->without_native_mutation_hold( $operation, $on_committed );
 	}
 
 	public function native_mutation_blocks_target( string $type, string $identity ): bool {

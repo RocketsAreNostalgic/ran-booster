@@ -22,6 +22,9 @@ namespace {
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 		function wp_cache_delete( $key, $group = '' ) {
 			$GLOBALS['ran_booster_attempt_cache_deletes'][] = array( $key, $group );
+			if ( isset( $GLOBALS['ran_booster_attempt_on_cache_delete'] ) && is_callable( $GLOBALS['ran_booster_attempt_on_cache_delete'] ) ) {
+				( $GLOBALS['ran_booster_attempt_on_cache_delete'] )( $key, $group );
+			}
 
 			return true;
 		}

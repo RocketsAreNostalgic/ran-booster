@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Storage;
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -353,6 +355,108 @@ final class GitHubSelectionStoreTest extends TestCase {
 			self::fail( 'Uncertain connection reused.' );
 		} catch ( DatabaseLifecycleFailure ) {
 			self::assertSame( $queries, $db->queries );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_without_native_mutation_hold_verifies_storage_before_transaction_and_delivers_committed_result_before_cache_failure(): void {
+		$db          = new SelectionDatabase();
+		$store       = new GitHubSelectionStore( $db, 'wp_options' );
+		$initial     = $store->initialize_bundled( $this->declaration() );
+		$db->queries = array();
+
+		$committed                                      = null;
+		$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ): void {
+			if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+				throw new \RuntimeException( 'selection cache failed' );
+			}
+		};
+		try {
+			$store->without_native_mutation_hold(
+				static fn (): string => 'committed-token',
+				static function ( string $token ) use ( &$committed ): void {
+					$committed = $token;
+				}
+			);
+			self::fail( 'Selection cache failure after COMMIT must propagate.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'selection cache failed', $failure->getMessage() );
+		} finally {
+			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+		}
+
+		self::assertSame( 'committed-token', $committed );
+		$tx_index = array_search( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', $db->queries, true );
+		self::assertIsInt( $tx_index );
+		$show_index = array_key_first( array_filter( $db->queries, static fn ( string $query ): bool => str_contains( $query, 'SHOW TABLE STATUS' ) ) );
+		self::assertIsInt( $show_index );
+		self::assertLessThan( $tx_index, $show_index );
+
+		// invalidate_cache() must have cleared storage_verified before throwing, so the next read re-verifies storage.
+		$db->queries = array();
+		self::assertSame( $initial, $store->read() );
+		self::assertNotEmpty( array_filter( $db->queries, static fn ( string $query ): bool => str_contains( $query, 'SHOW TABLE STATUS' ) ) );
+	}
+
+	public function test_without_native_mutation_hold_skips_committed_callback_on_hold_failure_or_uncertain_commit(): void {
+		$db                        = new SelectionDatabase();
+		$store                     = new GitHubSelectionStore( $db, 'wp_options' );
+		$initial                   = $store->initialize_bundled( $this->declaration() );
+		$marked                    = $initial;
+		$marked['native_mutation'] = array(
+			'selection_generation' => 0,
+			'owner_tag'            => str_repeat( 'a', 32 ),
+			'target_type'          => 'plugin',
+			'installed_identity'   => 'one/one.php',
+			'phase'                => 'started',
+		);
+		self::assertTrue( $store->compare_and_swap( $initial, $marked ) );
+
+		$called = false;
+		$result = $store->without_native_mutation_hold(
+			static function (): string {
+				self::fail( 'Operation must not run while a hold is present.' );
+			},
+			static function () use ( &$called ): void {
+				$called = true;
+			}
+		);
+		self::assertNull( $result );
+		self::assertFalse( $called );
+
+		foreach ( array( 'operation_throws', 'fail_commit', 'throw_commit_applied', 'throw_commit_unapplied' ) as $case ) {
+			$case_db    = new SelectionDatabase();
+			$case_store = new GitHubSelectionStore( $case_db, 'wp_options' );
+			$case_store->initialize_bundled( $this->declaration() );
+			$case_called = false;
+			if ( 'fail_commit' === $case ) {
+				$case_db->fail_commit = true;
+			} elseif ( str_starts_with( $case, 'throw_commit' ) ) {
+				$case_db->throw_commit   = true;
+				$case_db->commit_applied = 'throw_commit_applied' === $case;
+			}
+			try {
+				$case_store->without_native_mutation_hold(
+					static function () use ( $case ): string {
+						if ( 'operation_throws' === $case ) {
+							throw new \RuntimeException( 'operation failed' );
+						}
+						return 'token-123';
+					},
+					static function () use ( &$case_called ): void {
+						$case_called = true;
+					}
+				);
+				self::fail( $case );
+			} catch ( \Throwable ) {
+				self::assertFalse( $case_called, $case );
+			}
+			if ( 'operation_throws' !== $case ) {
+				$case_db->fail_commit  = false;
+				$case_db->throw_commit = false;
+				$this->assert_paused( $case_store, $case_db );
+			}
 		}
 	}
 }

@@ -753,5 +753,37 @@ final class ManagedReleaseStoreTest extends TestCase {
 		self::assertCount( 4, $release_executed );
 		self::assertStringContainsString( 'source_changed_by = NULL', $release_executed[2]['query'] );
 		self::assertStringContainsString( 'release_configuration = NULL', $release_executed[2]['query'] );
+
+		$executed                                        = array();
+		$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array( \RAN\Portability\WpPusherCoexistencePolicy::WP_PUSHER_PLUGIN );
+		try {
+			$guard_rejected = false;
+			try {
+				$store->require_transition_ready();
+			} catch ( RuntimeException $failure ) {
+				$guard_rejected = str_contains( $failure->getMessage(), 'WP Pusher is active' );
+			}
+			self::assertTrue( $guard_rejected );
+
+			$GLOBALS['ran_booster_wp_pusher_active_plugins'] = 'malformed';
+			self::assertTrue(
+				$store->transition_in_transaction(
+					'plugin',
+					'installed/example.php',
+					PackageSource::BRANCH,
+					5,
+					PackageSource::RELEASE_ASSET,
+					$configuration,
+					7,
+					$token,
+					$execute
+				)
+			);
+			self::assertSame( 'release_asset', $state->source );
+			self::assertSame( 6, $state->source_revision );
+			self::assertCount( 4, $executed );
+		} finally {
+			$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array();
+		}
 	}
 }

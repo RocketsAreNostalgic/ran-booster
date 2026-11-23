@@ -8,6 +8,7 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\PackageSource;
+use RAN\Runtime\RuntimeSupport;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseLifecycleFailure;
 use RAN\Storage\SqlReadConnection;
@@ -57,13 +58,15 @@ class ManagedReleaseStore {
 	}
 
 	public function require_transition_ready(): void {
+		PackageMutationGuard::assert_package_mutation_allowed();
 		$this->write_connection();
 	}
 
 	/**
 	 * Run the source CAS transition inside a caller-owned pinned single-session transaction
 	 * (such as GitHubSelectionStore::selection_transaction()). Call require_transition_ready()
-	 * before opening the transaction; the caller owns COMMIT and ROLLBACK.
+	 * for WordPress mutation-guard and storage readiness checks before opening the transaction;
+	 * the caller owns COMMIT and ROLLBACK.
 	 *
 	 * @param callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null) $execute
 	 */
@@ -78,6 +81,7 @@ class ManagedReleaseStore {
 		string $expected_adoption_token,
 		callable $execute
 	): bool {
+		RuntimeSupport::assert_managed_operations_allowed();
 		if ( ! $this->valid_transition_arguments( $type, $identifier, $expected_source, $expected_revision, $new_source, $configuration, $user_id, $expected_adoption_token ) ) {
 			return false;
 		}
@@ -169,6 +173,7 @@ class ManagedReleaseStore {
 		string $expected_adoption_token,
 		?callable $native_complete = null
 	): bool {
+		PackageMutationGuard::assert_package_mutation_allowed();
 		if ( ! $this->valid_transition_arguments( $type, $identifier, $expected_source, $expected_revision, $new_source, $configuration, $user_id, $expected_adoption_token ) ) {
 			return false;
 		}
@@ -417,7 +422,6 @@ class ManagedReleaseStore {
 		int $user_id,
 		string $expected_adoption_token
 	): bool {
-		PackageMutationGuard::assert_package_mutation_allowed();
 		\RAN\AdoptionIdentity::parse( $expected_adoption_token );
 		$this->assert_identity( $type, $identifier );
 		if ( $expected_revision < 1 || PHP_INT_MAX === $expected_revision || $user_id < 0 || $expected_source === $new_source ) {

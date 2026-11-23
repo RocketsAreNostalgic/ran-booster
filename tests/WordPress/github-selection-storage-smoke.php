@@ -887,6 +887,8 @@ return static function ( wpdb $database ): void {
 				$switch_dbh_prop    = new ReflectionProperty( wpdb::class, 'dbh' );
 				$switch_orig_dbh    = null;
 				$switch_current_dbh = null;
+				$switch_ok_dbh      = null;
+				$switch_ok_orig_dbh = null;
 				$read_switch_row    = static function () use ( $other, $switch_table, $switch_pkg ): ?object {
 					$row = $other->get_row( $other->prepare( 'SELECT source, source_revision, release_configuration FROM %i WHERE package_type = 1 AND BINARY package = BINARY %s', $switch_table, $switch_pkg ) );
 					return is_object( $row ) ? $row : null;
@@ -990,6 +992,8 @@ return static function ( wpdb $database ): void {
 					if ( ! is_array( $switch_host_parts ) ) {
 						throw new RuntimeException( 'Switch commit-loss proof could not parse DB_HOST.' );
 					}
+					/** @var ArrayObject<string, bool> $switch_tx_state */
+					$switch_tx_state = new ArrayObject( array( 'open' => false ) );
 					$switch_kill_dbh = new class(
 						$switch_host_parts[0],
 						DB_USER,
@@ -997,11 +1001,13 @@ return static function ( wpdb $database ): void {
 						DB_NAME,
 						is_string( $switch_host_parts[1] ) && '' !== $switch_host_parts[1] ? (int) $switch_host_parts[1] : null,
 						is_string( $switch_host_parts[2] ) && '' !== $switch_host_parts[2] ? $switch_host_parts[2] : null,
-						$other
+						$other,
+						$switch_tx_state
 					// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Wrap pinned mysqli handle so COMMIT kills the active session without wpdb reconnect recovery.
 					) extends \mysqli {
 						private bool $killed = false;
 
+						/** @param ArrayObject<string, bool> $tx_state */
 						public function __construct(
 							string $host,
 							string $user,
@@ -1009,13 +1015,17 @@ return static function ( wpdb $database ): void {
 							string $database_name,
 							?int $port,
 							?string $socket,
-							private readonly wpdb $control
+							private readonly wpdb $control,
+							private readonly ArrayObject $tx_state
 						) {
 							parent::__construct( $host, $user, $password, $database_name, $port, $socket );
 						}
 
 						// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Preserve mysqli::query() contract for the disposable switch-commit-kill handle.
 						public function query( string $sql, int $result_mode = MYSQLI_STORE_RESULT ): \mysqli_result|bool {
+							if ( 'START TRANSACTION' === $sql ) {
+								$this->tx_state['open'] = true;
+							}
 							if ( ! $this->killed && 'COMMIT' === $sql ) {
 								$this->killed = true;
 								$kill_sql     = $this->control->prepare( 'KILL %d', $this->thread_id );
@@ -1040,8 +1050,35 @@ return static function ( wpdb $database ): void {
 					$switch_dbh_prop->setValue( $switch_kill_wpdb, $switch_kill_dbh );
 					$expect( array() !== $switch_kill_store->read(), 'warm switch-kill store after attaching commit-fault handle' );
 
+					/** @var ArrayObject<int, string> $in_tx_queries */
+					$in_tx_queries        = new ArrayObject();
+					$record_in_tx_queries = static function ( string $sql ) use ( $in_tx_queries, $switch_tx_state ): string {
+						if ( true === ( $switch_tx_state['open'] ?? false ) ) {
+							$in_tx_queries->append( $sql );
+						}
+						return $sql;
+					};
+					$in_tx_option_hooks   = 0;
+					$switch_tx_opt_names  = array(
+						'pre_option_active_plugins',
+						'option_active_plugins',
+						'pre_option_active_sitewide_plugins',
+						'option_active_sitewide_plugins',
+						'pre_option_auto_updater.lock',
+						'pre_option_ran_booster_github_selection',
+					);
+					$record_in_tx_opt     = static function ( mixed $value = null ) use ( &$in_tx_option_hooks, $switch_tx_state ): mixed {
+						if ( true === ( $switch_tx_state['open'] ?? false ) ) {
+							++$in_tx_option_hooks;
+						}
+						return $value;
+					};
 					$filtered_queries->exchangeArray( array() );
 					add_filter( 'query', $record_queries );
+					add_filter( 'query', $record_in_tx_queries );
+					foreach ( $switch_tx_opt_names as $hook_name ) {
+						add_filter( $hook_name, $record_in_tx_opt );
+					}
 					$switch_suppressed = $switch_kill_wpdb->suppress_errors( true );
 					$switch_rejected   = null;
 					try {
@@ -1050,6 +1087,10 @@ return static function ( wpdb $database ): void {
 						$switch_rejected = $failure->reason();
 					} finally {
 						$switch_kill_wpdb->suppress_errors( $switch_suppressed );
+						foreach ( $switch_tx_opt_names as $hook_name ) {
+							remove_filter( $hook_name, $record_in_tx_opt );
+						}
+						remove_filter( 'query', $record_in_tx_queries );
 						remove_filter( 'query', $record_queries );
 						$switch_current_dbh = $switch_dbh_prop->getValue( $switch_kill_wpdb );
 						$switch_dbh_prop->setValue( $switch_kill_wpdb, $switch_orig_dbh );
@@ -1058,8 +1099,19 @@ return static function ( wpdb $database ): void {
 					$expect( $switch_current_dbh === $switch_kill_dbh, 'killed source-switch COMMIT must not trigger wpdb reconnect' );
 					$expect( $switch_kill_store->has_uncertain_commit() && $switch_kill_store->has_unclosed_transaction(), 'killed source-switch COMMIT must latch uncertain commit and unclosed transaction' );
 					$expect( 'sentinel-switch-kill' === wp_cache_get( GitHubSelectionStore::OPTION, 'options' ), 'killed source-switch COMMIT must keep option cache intact' );
+					$expect( true === ( $switch_tx_state['open'] ?? false ), 'Case A must enter pinned START TRANSACTION' );
+					$expect( 0 === $in_tx_option_hooks, 'killed source-switch transaction must not run WordPress option hooks inside the open transaction' );
+					foreach ( $in_tx_queries as $in_tx_sql ) {
+						$expect( str_starts_with( $in_tx_sql, 'KILL ' ) || str_contains( $in_tx_sql, 'information_schema.PROCESSLIST' ), 'killed source-switch transaction must not run wpdb queries or reconnect through query filter' );
+					}
 					foreach ( $filtered_queries as $filtered_sql ) {
-						$expect( str_starts_with( $filtered_sql, 'KILL ' ) || str_contains( $filtered_sql, 'information_schema.PROCESSLIST' ), 'killed source-switch transaction must not run wpdb queries or reconnect through query filter' );
+						$expect(
+							! str_contains( $filtered_sql, $switch_table )
+								&& ! str_contains( $filtered_sql, GitHubSelectionStore::OPTION )
+								&& ! str_contains( $filtered_sql, 'auto_updater.lock' )
+								&& 1 !== preg_match( '/\b(?:START\s+TRANSACTION|COMMIT|ROLLBACK)\b/i', $filtered_sql ),
+							'killed source-switch must only permit pre-transaction non-selection checks outside the pinned handle'
+						);
 					}
 					$after_kill_selection = $second->read();
 					$after_kill_marker    = $after_kill_selection['native_mutation'] ?? null;
@@ -1129,17 +1181,104 @@ return static function ( wpdb $database ): void {
 							),
 						)
 					);
-					$expect( array() !== $switch_ok_store->read(), 'warm Case B store before complete_provider_native_mutation' );
+					/** @var ArrayObject<string, bool> $switch_ok_tx_state */
+					$switch_ok_tx_state = new ArrayObject(
+						array(
+							'open'        => false,
+							'seen_start'  => false,
+							'seen_commit' => false,
+						)
+					);
+					$switch_ok_dbh      = new class(
+						$switch_host_parts[0],
+						DB_USER,
+						DB_PASSWORD,
+						DB_NAME,
+						is_string( $switch_host_parts[1] ) && '' !== $switch_host_parts[1] ? (int) $switch_host_parts[1] : null,
+						is_string( $switch_host_parts[2] ) && '' !== $switch_host_parts[2] ? $switch_host_parts[2] : null,
+						$switch_ok_tx_state
+					// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Track pinned mysqli transaction boundaries during Case B switch proof.
+					) extends \mysqli {
+						/** @param ArrayObject<string, bool> $tx_state */
+						public function __construct(
+							string $host,
+							string $user,
+							string $password,
+							string $database_name,
+							?int $port,
+							?string $socket,
+							private readonly ArrayObject $tx_state
+						) {
+							parent::__construct( $host, $user, $password, $database_name, $port, $socket );
+						}
+
+						// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Preserve mysqli::query() contract for the disposable Case B transaction-tracking handle.
+						public function query( string $sql, int $result_mode = MYSQLI_STORE_RESULT ): \mysqli_result|bool {
+							if ( 'START TRANSACTION' === $sql ) {
+								$this->tx_state['open']       = true;
+								$this->tx_state['seen_start'] = true;
+							}
+							$result = parent::query( $sql, $result_mode );
+							if ( 'COMMIT' === $sql ) {
+								$this->tx_state['open']        = false;
+								$this->tx_state['seen_commit'] = true;
+							} elseif ( 'ROLLBACK' === $sql ) {
+								$this->tx_state['open'] = false;
+							}
+							return $result;
+						}
+					};
+					$switch_ok_wpdb->set_charset( $switch_ok_dbh );
+					$switch_ok_orig_dbh = $switch_dbh_prop->getValue( $switch_ok_wpdb );
+					$switch_dbh_prop->setValue( $switch_ok_wpdb, $switch_ok_dbh );
+					$expect( array() !== $switch_ok_store->read(), 'warm Case B store after attaching pinned tracker handle' );
+
+					/** @var ArrayObject<int, string> $ok_in_tx_queries */
+					$ok_in_tx_queries        = new ArrayObject();
+					$record_ok_in_tx_queries = static function ( string $sql ) use ( $ok_in_tx_queries, $switch_ok_tx_state ): string {
+						if ( true === ( $switch_ok_tx_state['open'] ?? false ) ) {
+							$ok_in_tx_queries->append( $sql );
+						}
+						return $sql;
+					};
+					$ok_in_tx_option_hooks   = 0;
+					$record_ok_in_tx_opt     = static function ( mixed $value = null ) use ( &$ok_in_tx_option_hooks, $switch_ok_tx_state ): mixed {
+						if ( true === ( $switch_ok_tx_state['open'] ?? false ) ) {
+							++$ok_in_tx_option_hooks;
+						}
+						return $value;
+					};
 					$filtered_queries->exchangeArray( array() );
 					add_filter( 'query', $record_queries );
+					add_filter( 'query', $record_ok_in_tx_queries );
+					foreach ( $switch_tx_opt_names as $hook_name ) {
+						add_filter( $hook_name, $record_ok_in_tx_opt );
+					}
 					try {
 						$ok_registrar->complete_provider_native_mutation( $ok_owner, 'plugin', $switch_pkg, 'verified_success' );
 					} finally {
+						foreach ( $switch_tx_opt_names as $hook_name ) {
+							remove_filter( $hook_name, $record_ok_in_tx_opt );
+						}
+						remove_filter( 'query', $record_ok_in_tx_queries );
 						remove_filter( 'query', $record_queries );
+						$switch_dbh_prop->setValue( $switch_ok_wpdb, $switch_ok_orig_dbh );
 					}
+					$expect(
+						true === ( $switch_ok_tx_state['seen_start'] ?? false )
+							&& true === ( $switch_ok_tx_state['seen_commit'] ?? false )
+							&& false === ( $switch_ok_tx_state['open'] ?? true ),
+						'Case B must open and close one pinned source-switch transaction'
+					);
+					$expect( 0 === $ok_in_tx_queries->count(), 'healthy pinned source-switch must run zero wpdb query filters inside the open transaction' );
+					$expect( 0 === $ok_in_tx_option_hooks, 'healthy pinned source-switch must run zero WordPress option hooks inside the open transaction' );
 					foreach ( $filtered_queries as $filtered_sql ) {
-						$expect( ! str_contains( $filtered_sql, $table ) || str_contains( $filtered_sql, 'auto_updater.lock' ), 'healthy pinned source-switch must not touch selection row via wpdb query filter' );
-						$expect( ! str_contains( $filtered_sql, $switch_table ), 'healthy pinned source-switch must not run package source queries through wpdb query filter' );
+						$expect(
+							! str_contains( $filtered_sql, $switch_table )
+								&& ! str_contains( $filtered_sql, GitHubSelectionStore::OPTION )
+								&& 1 !== preg_match( '/\b(?:START\s+TRANSACTION|COMMIT|ROLLBACK)\b/i', $filtered_sql ),
+							'healthy pinned source-switch must not run selection, package source, or transaction queries through wpdb query filter'
+						);
 					}
 					$after_ok_selection = $second->read();
 					$expect( ! array_key_exists( 'native_mutation', $after_ok_selection ), 'healthy pinned source-switch must clear native_mutation hold atomically' );
@@ -1157,7 +1296,7 @@ return static function ( wpdb $database ): void {
 							'package'      => $switch_pkg,
 						)
 					);
-					// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Close disposable fixture mysqli handles opened for Case A switch proof.
+					// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Close disposable fixture mysqli handles opened for Case A and Case B switch proofs.
 					if ( $switch_current_dbh instanceof \mysqli && $switch_current_dbh !== $switch_orig_dbh && $switch_current_dbh !== $switch_kill_dbh ) {
 						try {
 							$switch_current_dbh->close();
@@ -1170,6 +1309,13 @@ return static function ( wpdb $database ): void {
 							$switch_kill_dbh->close();
 						} catch ( Throwable ) {
 							unset( $switch_kill_dbh );
+						}
+					}
+					if ( $switch_ok_dbh instanceof \mysqli ) {
+						try {
+							$switch_ok_dbh->close();
+						} catch ( Throwable ) {
+							unset( $switch_ok_dbh );
 						}
 					}
 					$switch_kill_wpdb->close();

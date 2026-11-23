@@ -10,7 +10,10 @@ use RAN\Deployment\DeploymentRequest;
 use RAN\Internal\CoreContainer;
 use RAN\ManagedRepository;
 use RAN\Storage\Database;
+use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
+use RAN\Storage\PackageMutationStatus;
+use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PluginRepository;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
@@ -39,6 +42,104 @@ $ran_booster_database->require_supported();
 ( new Database() )->install();
 
 global $wpdb;
+// Prove live MySQL/MariaDB drop-in capability checks and lower_case_table_names SQL predicates against the running server.
+$ran_booster_drop_in        = rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php';
+$ran_booster_marker_created = false;
+if ( is_link( $ran_booster_drop_in ) ) {
+	throw new RuntimeException( 'The disposable site already has a db.php link.' );
+}
+// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen, WordPress.PHP.NoSilencedErrors.Discouraged -- Exclusive creation protects existing drop-ins and fails through the smoke assertion.
+$ran_booster_marker_handle = @fopen( $ran_booster_drop_in, 'xb' );
+if ( false === $ran_booster_marker_handle ) {
+	throw new RuntimeException( 'Could not exclusively create the disposable db.php smoke marker.' );
+}
+try {
+	$ran_booster_marker = "<?php\n// Disposable smoke drop-in marker.\n";
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write through the exclusively owned file handle.
+	$ran_booster_marker_written = fwrite( $ran_booster_marker_handle, $ran_booster_marker );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the exclusively owned handle before using the marker.
+	$ran_booster_marker_closed  = fclose( $ran_booster_marker_handle );
+	$ran_booster_marker_created = true;
+	if ( strlen( $ran_booster_marker ) !== $ran_booster_marker_written || ! $ran_booster_marker_closed ) {
+		throw new RuntimeException( 'Could not write the disposable db.php smoke marker.' );
+	}
+	( new Database( $wpdb ) )->require_supported();
+
+	$ran_booster_router_proof = static function ( wpdb $package_writer ): void {
+		global $wpdb;
+		$original_wpdb = $wpdb;
+		if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' ) ) {
+			throw new RuntimeException( 'Drop-in proof requires installed WordPress database configuration.' );
+		}
+		$router                 = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
+			public wpdb $package_writer;
+
+			/** @param string $query */
+			public function query( $query ): int|bool {
+				if ( str_starts_with( $query, 'DELETE FROM ' ) && str_contains( $query, 'ran_booster_packages' ) ) {
+					return $this->package_writer->query( $query );
+				}
+				return parent::query( $query );
+			}
+		};
+		$router->package_writer = $package_writer;
+		try {
+			$router->query( 'SET @ran_booster_router_test := CONNECTION_ID()' );
+			$session = $router->get_var( 'SELECT @ran_booster_router_test' );
+			if ( ! is_numeric( $session ) || $session !== $router->get_var( 'SELECT CONNECTION_ID()' )
+				|| $session === $package_writer->get_var( 'SELECT CONNECTION_ID()' ) ) {
+				throw new RuntimeException( 'Expected the router to keep its probe session separate from its package writer.' );
+			}
+
+			$router_queries = $router->num_queries;
+			$writer_queries = $package_writer->num_queries;
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Exercise the replacement connection through WordPress's live database binding.
+			$wpdb = $router;
+			try {
+				( new Database() )->require_recovery_ready();
+				throw new RuntimeException( 'Expected the table-specific router to fail admission.' );
+			} catch ( DatabaseCompatibilityFailure $failure ) {
+				if ( 'database_drop_in' !== $failure->reason() ) {
+					throw $failure;
+				}
+			}
+			try {
+				( new PluginRepository( new Database() ) )->recover_unlink(
+					'fixture/fixture.php',
+					'fixture-token',
+					'fixture-digest',
+					static function (): never {
+						throw new RuntimeException( 'The routed drop-in entered guarded recovery.' );
+					}
+				);
+				throw new RuntimeException( 'Expected guarded recovery to reject the routed drop-in.' );
+			} catch ( PackageStorageFailure $failure ) {
+				if ( ! $failure->is_database_unsupported() || $router_queries !== $router->num_queries || $writer_queries !== $package_writer->num_queries ) {
+					throw $failure;
+				}
+			}
+		} finally {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the original WordPress connection after the router proof.
+			$wpdb = $original_wpdb;
+			$router->close();
+		}
+	};
+	$ran_booster_router_proof( $wpdb );
+} finally {
+	clearstatcache( true, $ran_booster_drop_in );
+	if ( $ran_booster_marker_created && ! is_link( $ran_booster_drop_in ) ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only the disposable db.php smoke marker created above.
+		unlink( $ran_booster_drop_in );
+	}
+}
+$ran_booster_read_error = static fn (): string => (string) $wpdb->last_error;
+$wpdb->last_error       = '';
+$ran_booster_mode       = $wpdb->get_var( 'SELECT @@lower_case_table_names' );
+$ran_booster_status     = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE LOWER(Name) = %s', strtolower( $wpdb->options ) ) );
+// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native MySQL SHOW TABLE STATUS Engine column.
+if ( '' !== $ran_booster_read_error() || ! in_array( (string) $ran_booster_mode, array( '0', '1', '2' ), true ) || ! is_object( $ran_booster_status ) || ! isset( $ran_booster_status->Engine ) ) {
+	throw new RuntimeException( 'Live lower_case_table_names or case-insensitive SHOW TABLE STATUS probe failed.' );
+}
 // Exercise the installed Composer package against real WordPress storage and MySQL locks.
 $ran_booster_workflow_proof = static function ( wpdb $database ): void {
 	if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' ) ) {
@@ -503,6 +604,135 @@ try {
 	$ran_booster_finished = $ran_booster_attempts->finish( $ran_booster_attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
 	if ( $ran_booster_finished->get_id() !== $ran_booster_attempts->find_exact( $ran_booster_attempt->get_id() )?->get_id() ) {
 		throw new RuntimeException( 'The database smoke could not verify its attempt record.' );
+	}
+
+	if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' ) ) {
+		throw new RuntimeException( 'Recovery proof requires installed WordPress database configuration.' );
+	}
+	$ran_booster_snapshot       = $ran_booster_packages->recovery_record( $ran_booster_identifier );
+	$ran_booster_other_database = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+	$ran_booster_original_dbh   = $wpdb->__get( 'dbh' );
+	$ran_booster_other_dbh      = $ran_booster_other_database->__get( 'dbh' );
+	if ( ! $ran_booster_original_dbh instanceof mysqli || ! $ran_booster_other_dbh instanceof mysqli || $ran_booster_original_dbh === $ran_booster_other_dbh ) {
+		throw new RuntimeException( 'Recovery proof requires two separate native database handles.' );
+	}
+	$ran_booster_second_schema = 'ran_booster_recovery_' . bin2hex( random_bytes( 6 ) );
+	if ( false === $wpdb->query( $wpdb->prepare( 'CREATE DATABASE %i', $ran_booster_second_schema ) ) ) {
+		throw new RuntimeException( 'Could not create the second disposable database.' );
+	}
+	$ran_booster_filtered = 0;
+	$ran_booster_filter   = static function ( string $query ) use ( $ran_booster_package_table, &$ran_booster_filtered ): string {
+		if ( in_array( $query, array( 'SELECT DATABASE() AS db_name', 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION', 'COMMIT', 'ROLLBACK' ), true )
+			|| str_starts_with( $query, 'SAVEPOINT ' ) || str_starts_with( $query, 'RELEASE SAVEPOINT ' )
+			|| ( str_contains( $query, $ran_booster_package_table ) && ( str_starts_with( $query, 'SELECT ' ) || str_starts_with( $query, 'DELETE FROM ' ) ) ) ) {
+			++$ran_booster_filtered;
+		}
+		return $query;
+	};
+	try {
+		if ( false === $wpdb->query( $wpdb->prepare( 'CREATE TABLE %i.%i LIKE %i.%i', $ran_booster_second_schema, $ran_booster_package_table, DB_NAME, $ran_booster_package_table ) )
+			|| 1 !== $wpdb->query( $wpdb->prepare( 'INSERT INTO %i.%i SELECT * FROM %i.%i WHERE id = %s', $ran_booster_second_schema, $ran_booster_package_table, DB_NAME, $ran_booster_package_table, $ran_booster_snapshot['id'] ) ) ) {
+			throw new RuntimeException( 'Could not copy the management row into the second disposable database.' );
+		}
+		$ran_booster_probe_queries = array();
+		$ran_booster_thread_id     = $ran_booster_original_dbh->thread_id;
+		$ran_booster_switch_probe  = static function ( string $query ) use ( &$ran_booster_probe_queries, $ran_booster_original_dbh, $ran_booster_second_schema ): string {
+			$ran_booster_probe_queries[] = $query;
+			if ( 'SHOW ENGINES' === $query && ! $ran_booster_original_dbh->select_db( $ran_booster_second_schema ) ) {
+				throw new RuntimeException( 'Could not select the second disposable database during the capability probe.' );
+			}
+			return $query;
+		};
+		add_filter( 'query', $ran_booster_switch_probe );
+		try {
+			( new Database() )->require_recovery_ready();
+			throw new RuntimeException( 'First-call recovery readiness accepted a capability-probe database switch.' );
+		} catch ( DatabaseLifecycleFailure $ran_booster_failure ) {
+			if ( 'schema_read_failed' !== $ran_booster_failure->reason()
+				|| array( 'SHOW ENGINES' ) !== $ran_booster_probe_queries
+				|| $ran_booster_original_dbh !== $wpdb->__get( 'dbh' )
+				|| $ran_booster_thread_id !== $ran_booster_original_dbh->thread_id ) {
+				throw new RuntimeException( 'First-call recovery must reject a same-session database switch before schema verification.' );
+			}
+		} finally {
+			remove_filter( 'query', $ran_booster_switch_probe );
+			$wpdb->select( DB_NAME );
+		}
+		$ran_booster_guards = array(
+			'handle replacement' => static function () use ( $wpdb, $ran_booster_other_dbh ): void {
+				$wpdb->__set( 'dbh', $ran_booster_other_dbh );
+			},
+			'transaction loss'   => static function () use ( $ran_booster_original_dbh ): void {
+				if ( ! $ran_booster_original_dbh->rollback() ) {
+					throw new RuntimeException( 'Could not roll back the live InnoDB transaction from the guard.' );
+				}
+			},
+			'database switch'    => static function () use ( $wpdb, $ran_booster_second_schema ): void {
+				$wpdb->select( $ran_booster_second_schema );
+				if ( $ran_booster_second_schema !== $wpdb->get_var( 'SELECT DATABASE()' ) ) {
+					throw new RuntimeException( 'Could not select the second disposable database from the guard.' );
+				}
+			},
+		);
+		foreach ( $ran_booster_guards as $ran_booster_case => $ran_booster_guard ) {
+			// Session status observes native DELETE statements as well as wpdb calls.
+			$ran_booster_deletes = $wpdb->get_var( "SHOW SESSION STATUS LIKE 'Com_delete'", 1 );
+			$ran_booster_ran     = false;
+			add_filter( 'query', $ran_booster_filter );
+			try {
+				$ran_booster_conflict = $ran_booster_packages->recover_unlink(
+					$ran_booster_identifier,
+					$ran_booster_snapshot['adoption_token'],
+					$ran_booster_snapshot['digest'],
+					static function () use ( $ran_booster_guard, &$ran_booster_ran ): void {
+						$ran_booster_guard();
+						$ran_booster_ran = true;
+					}
+				);
+			} finally {
+				remove_filter( 'query', $ran_booster_filter );
+				$wpdb->__set( 'dbh', $ran_booster_original_dbh );
+				$wpdb->select( DB_NAME );
+			}
+			if ( ! $ran_booster_ran || PackageMutationStatus::CONFLICT !== $ran_booster_conflict->get_status()
+				|| ! is_numeric( $ran_booster_deletes ) || $ran_booster_deletes !== $wpdb->get_var( "SHOW SESSION STATUS LIKE 'Com_delete'", 1 )
+				|| $ran_booster_snapshot !== $ran_booster_packages->recovery_record( $ran_booster_identifier ) ) {
+				throw new RuntimeException( 'Guarded recovery must preserve the original row without issuing DELETE after ' . $ran_booster_case . '.' );
+			}
+			// A separate transaction can acquire the row lock only after the original session released it.
+			if ( false === $ran_booster_other_database->query( 'START TRANSACTION' ) ) {
+				throw new RuntimeException( 'Could not start the row lock verification transaction.' );
+			}
+			try {
+				$ran_booster_unlocked_id = $ran_booster_other_database->get_var( $ran_booster_other_database->prepare( 'SELECT id FROM %i WHERE id = %s FOR UPDATE NOWAIT', $ran_booster_package_table, $ran_booster_snapshot['id'] ) );
+			} finally {
+				$ran_booster_other_database->query( 'ROLLBACK' );
+			}
+			if ( $ran_booster_snapshot['id'] !== $ran_booster_unlocked_id ) {
+				throw new RuntimeException( 'Guarded recovery did not release the original row lock after ' . $ran_booster_case . '.' );
+			}
+		}
+		if ( $ran_booster_snapshot['adoption_token'] !== $wpdb->get_var( $wpdb->prepare( 'SELECT adoption_token FROM %i.%i WHERE id = %s', $ran_booster_second_schema, $ran_booster_package_table, $ran_booster_snapshot['id'] ) ) ) {
+			throw new RuntimeException( 'Guarded recovery must preserve the matching row in the second database.' );
+		}
+		add_filter( 'query', $ran_booster_filter );
+		$ran_booster_packages->recover_unlink(
+			$ran_booster_identifier,
+			$ran_booster_snapshot['adoption_token'],
+			$ran_booster_snapshot['digest'],
+			static function (): void {}
+		)->require_success();
+		if ( 0 !== $ran_booster_filtered ) {
+			throw new RuntimeException( 'Guarded recovery SQL reached WordPress query filters.' );
+		}
+		remove_filter( 'query', $ran_booster_filter );
+		if ( null !== $ran_booster_packages->native_recovery_record( $ran_booster_identifier ) ) {
+			throw new RuntimeException( 'Guarded recovery did not remove the verified management row.' );
+		}
+	} finally {
+		remove_filter( 'query', $ran_booster_filter );
+		$wpdb->query( $wpdb->prepare( 'DROP DATABASE %i', $ran_booster_second_schema ) );
+		$ran_booster_other_database->close();
 	}
 } finally {
 	if ( null !== $ran_booster_attempt ) {

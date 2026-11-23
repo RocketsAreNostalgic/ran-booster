@@ -13,11 +13,12 @@ class Database {
 
 	public const VERSION_OPTION = 'ran_booster_db_version';
 
-	private bool $capability_checked                          = false;
+	private ?object $checked_connection                       = null;
 	private ?DatabaseCompatibilityFailure $capability_failure = null;
 	private bool $lifecycle_checked                           = false;
 	private bool $lifecycle_inspected                         = false;
 	private ?DatabaseLifecycleFailure $lifecycle_failure      = null;
+	private ?int $lower_case_table_names                      = null;
 
 	public function __construct( private ?object $database = null, private ?GitHubReplacementDeclaration $bundled_declaration = null ) {
 	}
@@ -25,21 +26,28 @@ class Database {
 	/**
 	 * Prove the request's database can satisfy Booster's MySQL-oriented storage contract.
 	 *
-	 * The result is cached on the container-shared lifecycle object. Full table
+	 * The result is cached for the current connection object. Full table
 	 * inspection remains an activation, upgrade or explicit diagnostic concern.
 	 *
 	 * @throws DatabaseCompatibilityFailure When the server is outside the supported envelope.
 	 */
 	public function require_supported(): void {
-		if ( ! $this->capability_checked ) {
+		$connection = $this->connection();
+		if ( $this->checked_connection !== $connection ) {
+			$capability_failure = null;
 			try {
-				$this->inspect_capabilities();
+				$this->inspect_capabilities( $connection );
 			} catch ( DatabaseCompatibilityFailure $failure ) {
-				$this->capability_failure = $failure;
+				$capability_failure = $failure;
 			} catch ( \Throwable ) {
-				$this->capability_failure = new DatabaseCompatibilityFailure( 'capability_probe_failed' );
+				$capability_failure = new DatabaseCompatibilityFailure( 'capability_probe_failed' );
 			}
-			$this->capability_checked = true;
+			$this->checked_connection     = $connection;
+			$this->capability_failure     = $capability_failure;
+			$this->lifecycle_checked      = false;
+			$this->lifecycle_inspected    = false;
+			$this->lifecycle_failure      = null;
+			$this->lower_case_table_names = null;
 		}
 
 		if ( null !== $this->capability_failure ) {
@@ -82,6 +90,7 @@ class Database {
 	}
 
 	private function run_lifecycle( bool $inspect_current_schema ): void {
+		$this->require_supported();
 		if ( $this->lifecycle_checked ) {
 			if ( null !== $this->lifecycle_failure ) {
 				throw $this->lifecycle_failure;
@@ -119,14 +128,129 @@ class Database {
 		$this->maybe_upgrade();
 	}
 
-	/** Recovery requires authoritative healthy tables and must never install or repair them. */
-	public function require_recovery_ready(): void {
+	/**
+	 * Verify current tables without installing or repairing them.
+	 *
+	 * @return array{connection: \wpdb|SchemaConnection, table: string, prefix: string, database: string, handle: mixed, thread_id: ?string}
+	 */
+	public function require_recovery_ready( ?object $expected_connection = null ): array {
+		$database = $this->connection();
+		$binding  = $GLOBALS['wpdb'] ?? null;
+		if ( null !== $expected_connection && ( $expected_connection !== $database || $expected_connection !== $binding ) ) {
+			throw new DatabaseCompatibilityFailure( 'database_unavailable' );
+		}
+		// Snapshot backing values without invoking accessors on a connection we have yet to admit.
+		$entry       = is_object( $binding ) ? get_mangled_object_vars( $binding ) : array();
+		$prefix      = $entry['prefix'] ?? null;
+		$base_prefix = $entry['base_prefix'] ?? null;
+		unset( $entry );
+		try {
+			$entry_session = $database instanceof \wpdb || $database instanceof SchemaConnection
+				? $this->readiness_session( $database )
+				: null;
+		} catch ( DatabaseLifecycleFailure ) {
+			// Let capability admission report unsupported connections before rejecting an unverifiable session.
+			$entry_session = null;
+		}
 		$this->require_supported();
+		if ( null === $entry_session ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+		$connection = $this->schema_connection();
+		if ( $database !== $connection || ( $GLOBALS['wpdb'] ?? null ) !== $binding
+			|| ! is_string( $prefix ) || '' === $prefix || ( $binding->prefix ?? null ) !== $prefix
+			|| ( function_exists( 'is_multisite' ) && is_multisite() && ( $binding->base_prefix ?? null ) !== $base_prefix ) ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+		$session        = $this->readiness_session( $connection, $entry_session );
+		$table          = ran_booster_table_name();
+		$attempt_table  = self::attempt_table_name();
+		$assert_context = function () use ( $connection, $session, $binding, $prefix, $base_prefix, $table, $attempt_table ): void {
+			$this->readiness_session( $connection, $session );
+			if ( ( $GLOBALS['wpdb'] ?? null ) !== $binding || ( $binding->prefix ?? null ) !== $prefix || ran_booster_table_name() !== $table
+				|| ( function_exists( 'is_multisite' ) && is_multisite() && ( $binding->base_prefix ?? null ) !== $base_prefix )
+				|| self::attempt_table_name() !== $attempt_table ) {
+				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+			}
+		};
 		if ( self::$booster_db_version !== $this->installed_version() ) {
 			throw new DatabaseLifecycleFailure( 'incompatible_schema' );
 		}
-		$this->verify_table( ran_booster_table_name(), $this->package_columns(), $this->package_indexes() );
-		$this->verify_table( self::attempt_table_name(), $this->attempt_columns(), $this->attempt_indexes() );
+		$assert_context();
+		$this->verify_table( $table, $this->package_columns(), $this->package_indexes(), $session['database'] );
+		$assert_context();
+		$this->verify_table( $attempt_table, $this->attempt_columns(), $this->attempt_indexes(), $session['database'] );
+		$assert_context();
+
+		return array(
+			'connection' => $connection,
+			'table'      => $table,
+			'prefix'     => $prefix,
+			'database'   => $session['database'],
+			'handle'     => $session['handle'],
+			'thread_id'  => $session['thread_id'],
+		);
+	}
+
+	/**
+	 * @param array{database: string, handle: mixed, thread_id: ?string}|null $expected Original verified session, if captured.
+	 * @return array{database: string, handle: mixed, thread_id: ?string}
+	 */
+	private function readiness_session( \wpdb|SchemaConnection $connection, ?array $expected = null ): array {
+		try {
+			$handle    = $this->readiness_handle( $connection );
+			$thread_id = null;
+			if ( null !== $expected && $handle !== $expected['handle'] ) {
+				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+			}
+			if ( $connection instanceof \wpdb ) {
+				if ( ! $handle instanceof \mysqli ) {
+					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+				}
+				// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_thread_id -- Read the server session ID without WordPress callbacks.
+				$thread_id = (string) mysqli_thread_id( $handle );
+				if ( 1 !== preg_match( '/\A[1-9][0-9]*\z/', $thread_id ) || ( null !== $expected && $thread_id !== $expected['thread_id'] ) ) {
+					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+				}
+				// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_query -- Read the current database on the original session without reconnecting.
+				$result = mysqli_query( $handle, 'SELECT DATABASE() AS db_name' );
+				$row    = $result instanceof \mysqli_result ? $result->fetch_object() : null;
+				if ( $result instanceof \mysqli_result ) {
+					$result->free();
+				}
+			} else {
+				$last_error = $connection->last_error;
+				$suppress   = method_exists( $connection, 'suppress_errors' ) ? $connection->suppress_errors( ... ) : null;
+				$previous   = $suppress?->__invoke( true );
+				try {
+					$connection->last_error = '';
+					$rows                   = $connection->get_results( 'SELECT DATABASE() AS db_name' );
+					$row                    = is_array( $rows ) && 1 === count( $rows ) ? $rows[0] : null;
+					if ( '' !== trim( $connection->last_error ) ) {
+						throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+					}
+				} finally {
+					$connection->last_error = $last_error;
+					$suppress?->__invoke( $previous );
+				}
+			}
+			if ( ! is_object( $row ) || ! is_string( $row->db_name ?? null ) || '' === $row->db_name
+				|| $handle !== $this->readiness_handle( $connection ) || ( null !== $expected && $row->db_name !== $expected['database'] ) ) {
+				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+			}
+			return array(
+				'database'  => $row->db_name,
+				'handle'    => $handle,
+				'thread_id' => $thread_id,
+			);
+		} catch ( \Throwable ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+	}
+
+	private function readiness_handle( \wpdb|SchemaConnection $connection ): mixed {
+		$values = get_mangled_object_vars( $connection );
+		return $values["\0*\0dbh"] ?? $values['dbh'] ?? null;
 	}
 
 	/**
@@ -136,12 +260,11 @@ class Database {
 	 * hooks call maybeUpgrade() before this status is presented.
 	 */
 	public function is_ready(): bool {
-		if ( $this->lifecycle_checked ) {
-			return null === $this->lifecycle_failure;
-		}
-
 		if ( ! $this->is_supported() ) {
 			return false;
+		}
+		if ( $this->lifecycle_checked ) {
+			return null === $this->lifecycle_failure;
 		}
 
 		try {
@@ -152,8 +275,6 @@ class Database {
 	}
 
 	private function prepare_schema( bool $inspect_current_schema ): bool {
-		$this->require_supported();
-
 		$installed_version = $this->installed_version();
 		if ( ! $inspect_current_schema && self::$booster_db_version === $installed_version ) {
 			return false;
@@ -188,6 +309,8 @@ class Database {
 				$contract['indexes']
 			);
 		}
+		$this->lower_case_table_names();
+
 		$fresh = null === $installed_version && ! in_array( false, $missing_tables, true )
 			&& isset( $wpdb->options ) && is_string( $wpdb->options ) && '' !== $wpdb->options
 			&& ! defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) && ! defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' )
@@ -200,12 +323,14 @@ class Database {
 			$fresh           = ! $this->identity_read_failed() && null === $existing_option;
 		}
 		if ( $fresh ) {
-			$wpdb->last_error = '';
-			$activity_name    = substr( $attempt_table, 0, -strlen( 'ran_booster_deployment_attempts' ) ) . \RAN\Activity\ActivityStore::TABLE_SUFFIX;
-			$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $activity_name ) );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The table pattern is prepared above.
-			$activity_table = $wpdb->get_var( $query );
-			$fresh          = ! $this->identity_read_failed() && null === $activity_table;
+			$activity_name  = substr( $attempt_table, 0, -strlen( 'ran_booster_deployment_attempts' ) ) . \RAN\Activity\ActivityStore::TABLE_SUFFIX;
+			$activity_table = $this->read_table_name( $activity_name );
+			if ( null !== $activity_table ) {
+				$fresh = ! $this->table_name_matches( $activity_name, $activity_table );
+				if ( $fresh && ( 0 !== $this->lower_case_table_names() || 0 !== strcasecmp( $activity_name, $activity_table ) ) ) {
+					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+				}
+			}
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -329,20 +454,11 @@ class Database {
 		array $expected_columns,
 		array $expected_indexes
 	): bool {
-		$wpdb = $this->schema_connection();
-
-		$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_name ) );
-		$wpdb->last_error = '';
-		// Schema installation must inspect the authoritative database.
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the escaped LIKE value; authoritative schema installation cannot use a cached existence result.
-		$result = $wpdb->get_var( $query );
-		if ( '' !== trim( (string) $wpdb->last_error ) ) {
-			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
-		}
-		if ( ! is_string( $result ) ) {
+		$result = $this->read_table_name( $table_name );
+		if ( null === $result ) {
 			return true;
 		}
-		if ( ! hash_equals( $table_name, $result ) ) {
+		if ( ! $this->table_name_matches( $table_name, $result ) ) {
 			throw new DatabaseLifecycleFailure( 'schema_identity_failed' );
 		}
 
@@ -354,12 +470,27 @@ class Database {
 		return false;
 	}
 
+	private function read_table_name( string $table_name ): ?string {
+		$wpdb = $this->schema_connection();
+
+		$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_name ) );
+		$wpdb->last_error = '';
+		// Schema installation must inspect the authoritative database.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the escaped LIKE value; authoritative schema installation cannot use a cached existence result.
+		$result = $wpdb->get_var( $query );
+		if ( '' !== trim( $wpdb->last_error ) || ( null !== $result && ! is_string( $result ) ) ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+
+		return $result;
+	}
+
 	/**
 	 * @param array<string, array{type: string, nullable: bool, default: ?string, extra: string}> $expected_columns
 	 * @param array<string, array{0: bool, 1: list<string>}> $expected_indexes Index name to unique flag and ordered columns.
 	 */
-	private function verify_table( string $table_name, array $expected_columns, array $expected_indexes ): void {
-		$actual = $this->inspect_table( $table_name );
+	private function verify_table( string $table_name, array $expected_columns, array $expected_indexes, ?string $database = null ): void {
+		$actual = $this->inspect_table( $table_name, false, $database );
 		if ( $actual['columns'] !== $expected_columns || $actual['indexes'] !== $expected_indexes ) {
 			throw new DatabaseLifecycleFailure( 'schema_verification_failed' );
 		}
@@ -371,18 +502,47 @@ class Database {
 	 *     indexes: array<string, array{0: bool, 1: list<string>}>
 	 * }
 	 */
-	private function inspect_table( string $table_name, bool $ignore_prefix_indexes = false ): array {
+	private function inspect_table( string $table_name, bool $ignore_prefix_indexes = false, ?string $database = null ): array {
 		$wpdb = $this->schema_connection();
 
-		$status_query     = $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table_name );
-		$columns_query    = $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table_name );
-		$indexes_query    = $wpdb->prepare( 'SHOW INDEX FROM %i', $table_name );
+		$status_query     = null === $database ? $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table_name ) : $wpdb->prepare( 'SHOW TABLE STATUS FROM %i WHERE Name = %s', $database, $table_name );
+		$columns_query    = null === $database ? $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table_name ) : $wpdb->prepare( 'SHOW COLUMNS FROM %i.%i', $database, $table_name );
+		$indexes_query    = null === $database ? $wpdb->prepare( 'SHOW INDEX FROM %i', $table_name ) : $wpdb->prepare( 'SHOW INDEX FROM %i.%i', $database, $table_name );
 		$wpdb->last_error = '';
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table name as %s; inspect the live engine metadata before accepting the schema.
 		$status = $wpdb->get_row( $status_query );
 		if ( $this->identity_read_failed() ) {
 			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+		if ( null === $status ) {
+			$mode           = $this->lower_case_table_names();
+			$fallback_query = null;
+			if ( 1 === $mode && strtolower( $table_name ) !== $table_name ) {
+				$fallback_query = null === $database ? $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', strtolower( $table_name ) ) : $wpdb->prepare( 'SHOW TABLE STATUS FROM %i WHERE Name = %s', $database, strtolower( $table_name ) );
+			} elseif ( 2 === $mode ) {
+				$fallback_query = null === $database ? $wpdb->prepare( 'SHOW TABLE STATUS WHERE LOWER(Name) = %s', strtolower( $table_name ) ) : $wpdb->prepare( 'SHOW TABLE STATUS FROM %i WHERE LOWER(Name) = %s', $database, strtolower( $table_name ) );
+			}
+			if ( null !== $fallback_query ) {
+				$suppress_errors      = method_exists( $wpdb, 'suppress_errors' ) ? $wpdb->suppress_errors( ... ) : null;
+				$previous_suppression = $suppress_errors?->__invoke( true );
+				$wpdb->last_error     = '';
+				try {
+					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared case-folding fallback when lower_case_table_names folds or preserves table names.
+					$status = $wpdb->get_row( $fallback_query );
+				} catch ( \Throwable ) {
+					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+				} finally {
+					$suppress_errors?->__invoke( $previous_suppression );
+				}
+				if ( $this->identity_read_failed() ) {
+					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+				}
+			}
+		}
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
+		if ( ! is_object( $status ) || ! isset( $status->Name ) || ! is_string( $status->Name ) || ! $this->table_name_matches( $table_name, $status->Name ) ) {
+			$status = null;
 		}
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table identifier as %i; inspect live column definitions before accepting the schema.
@@ -641,13 +801,14 @@ class Database {
 		return preg_replace( '/^(bigint|tinyint)\([0-9]+\)/', '$1', $type ) ?? $type;
 	}
 
-	private function inspect_capabilities(): void {
-		$database = $this->connection();
-		if ( defined( 'WP_CONTENT_DIR' ) && is_string( constant( 'WP_CONTENT_DIR' ) ) && is_file( rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php' ) ) {
-			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
-		}
+	private function inspect_capabilities( object $database ): void {
+		$has_drop_in    = defined( 'WP_CONTENT_DIR' )
+			&& is_string( constant( 'WP_CONTENT_DIR' ) )
+			&& is_file( rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php' );
+		$check_drop_in  = $has_drop_in || ( $database instanceof \wpdb && \wpdb::class !== $database::class );
+		$drop_in_handle = $check_drop_in ? $this->single_drop_in_handle( $database ) : null;
 		if ( ! method_exists( $database, 'db_server_info' ) ) {
-			throw new DatabaseCompatibilityFailure( 'unknown_server' );
+			throw new DatabaseCompatibilityFailure( $check_drop_in ? 'database_drop_in' : 'unknown_server' );
 		}
 
 		$previous_error    = property_exists( $database, 'last_error' ) ? (string) $database->last_error : null;
@@ -662,29 +823,40 @@ class Database {
 				$errors_suppressed = (bool) $suppress_errors( true );
 			}
 
-			$server_info = $database->db_server_info();
-			if ( ! is_string( $server_info ) ) {
-				throw new DatabaseCompatibilityFailure( 'unknown_server' );
+			$query_results = array( $database, 'get_results' );
+			$live          = null;
+			if ( null !== $drop_in_handle ) {
+				if ( ! is_callable( $query_results ) ) {
+					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+				}
+				$live = $this->verify_drop_in_server( $database, $query_results, $drop_in_handle );
 			}
-			$identity = $this->classify_server( trim( $server_info ) );
+			$server_info = $database->db_server_info();
+			$identity    = is_string( $server_info ) ? $this->classify_server( trim( $server_info ) ) : null;
 			if ( null === $identity ) {
 				throw new DatabaseCompatibilityFailure( 'unknown_server' );
 			}
+			if ( null !== $live && $live['family'] !== $identity['family'] ) {
+				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+			}
 			$minimum = 'mariadb' === $identity['family'] ? '10.11.0' : '8.0.0';
-			if ( version_compare( $identity['version'], $minimum, '<' ) ) {
+			if ( version_compare( $identity['version'], $minimum, '<' ) || ( null !== $live && version_compare( $live['version'], $minimum, '<' ) ) ) {
 				throw new DatabaseCompatibilityFailure( 'unsupported_version' );
 			}
 
 			// Capability inspection must read the authoritative server engine list.
-			$query_engines = array( $database, 'get_results' );
-			if ( ! is_callable( $query_engines ) ) {
+			if ( ! is_callable( $query_results ) ) {
 				throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
 			}
-			$engines = $query_engines( 'SHOW ENGINES' );
-			$error   = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
-			if ( ! is_array( $engines ) || '' !== $error ) {
-				throw new DatabaseCompatibilityFailure( 'innodb_unavailable' );
+			if ( null !== $previous_error ) {
+				$database->last_error = '';
 			}
+			$engines      = $query_results( 'SHOW ENGINES' );
+			$engine_error = trim( $this->capability_read_error( $database ) );
+			if ( ! is_array( $engines ) || '' !== $engine_error ) {
+				throw new DatabaseCompatibilityFailure( $check_drop_in ? 'database_drop_in' : 'innodb_unavailable' );
+			}
+			$innodb_supported = false;
 			foreach ( $engines as $engine ) {
 				if ( is_object( $engine )
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
@@ -693,11 +865,23 @@ class Database {
 					&& 0 === strcasecmp( 'InnoDB', (string) $engine->Engine )
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 					&& in_array( strtoupper( (string) $engine->Support ), array( 'YES', 'DEFAULT' ), true ) ) {
-					return;
+					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
+					$transactions = $engine->Transactions ?? null;
+					if ( null === $transactions ) {
+						if ( $check_drop_in ) {
+							throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+						}
+					} elseif ( 0 !== strcasecmp( 'YES', (string) $transactions ) ) {
+						throw new DatabaseCompatibilityFailure( 'innodb_unavailable' );
+					}
+					$innodb_supported = true;
+					break;
 				}
 			}
 
-			throw new DatabaseCompatibilityFailure( 'innodb_unavailable' );
+			if ( ! $innodb_supported ) {
+				throw new DatabaseCompatibilityFailure( 'innodb_unavailable' );
+			}
 		} catch ( DatabaseCompatibilityFailure $failure ) {
 			throw $failure;
 		} catch ( \Throwable ) {
@@ -715,6 +899,186 @@ class Database {
 				}
 			}
 		}
+	}
+
+	/**
+	 * Prove that the drop-in keeps a session variable and its readback on one MySQL connection.
+	 *
+	 * @param callable(string): mixed $query_results
+	 * @return array{family: 'mysql'|'mariadb', version: string}
+	 */
+	private function verify_drop_in_server( object $database, callable $query_results, \ReflectionProperty $property ): array {
+		if ( ! method_exists( $database, 'query' ) ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		}
+		$dbh_before = $property->isInitialized( $database ) ? $property->getValue( $database ) : null;
+		if ( ! $dbh_before instanceof \mysqli ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		}
+		try {
+			if ( false === $database->query( 'SET @ran_booster_probe := CONNECTION_ID()' ) || '' !== $this->capability_read_error( $database ) ) {
+				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+			}
+			$rows = $query_results( 'SELECT @@version AS version, @@version_comment AS comment, @ran_booster_probe AS probe_connection_id, CONNECTION_ID() AS read_connection_id' );
+			if ( '' !== $this->capability_read_error( $database ) || ! is_array( $rows ) || 1 !== count( $rows ) || ! is_object( $rows[0] ?? null )
+				|| ! $property->isInitialized( $database ) || $dbh_before !== $property->getValue( $database ) ) {
+				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+			}
+		} catch ( \Throwable ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		} finally {
+			try {
+				$database->query( 'SET @ran_booster_probe := NULL' );
+			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Clearing a disposable session variable is best effort.
+			} catch ( \Throwable ) {
+				// The compatibility result remains authoritative.
+			}
+		}
+		$row     = $rows[0];
+		$probe   = $row->probe_connection_id ?? null;
+		$read    = $row->read_connection_id ?? null;
+		$version = $row->version ?? null;
+		$comment = $row->comment ?? null;
+		$live    = is_string( $version ) ? $this->classify_server( trim( $version ) ) : null;
+		if ( ( ! is_int( $probe ) && ! is_string( $probe ) ) || ( ! is_int( $read ) && ! is_string( $read ) )
+			|| 1 !== preg_match( '/\A[1-9][0-9]*\z/', (string) $probe ) || (string) $probe !== (string) $read
+			|| null === $live || ! is_string( $comment ) || '' === trim( $comment )
+			|| 1 === preg_match( '/(?:postgres|sqlite|tidb|percona)/i', $comment )
+			|| ( 'mysql' === $live['family'] && false !== stripos( $comment, 'mariadb' ) )
+			|| ( 'mariadb' === $live['family'] && false !== stripos( $comment, 'mysql' ) ) ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		}
+
+		return $live;
+	}
+
+	/** @phpstan-impure The database API mutates last_error while executing queries. */
+	private function capability_read_error( object $database ): string {
+		return (string) ( $database->last_error ?? '' );
+	}
+
+	private function single_drop_in_handle( object $database ): \ReflectionProperty {
+		if ( ! $database instanceof \wpdb ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		}
+
+		$reflection   = new \ReflectionObject( $database );
+		$native       = new \ReflectionClass( \wpdb::class );
+		$is_direct_qm = 'QM_DB' === $database::class && \wpdb::class === get_parent_class( $database )
+			&& $this->is_reviewed_query_monitor_class( $reflection );
+		foreach ( $native->getMethods() as $method ) {
+			$name = $method->getName();
+			if ( $method->isPrivate() || $method->isConstructor() || ( $is_direct_qm && 'query' === $name ) ) {
+				continue;
+			}
+			if ( \wpdb::class !== $reflection->getMethod( $name )->getDeclaringClass()->getName() ) {
+				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+			}
+		}
+
+		// Routable execution or pooled handles cannot guarantee one transaction for all Booster tables.
+		$properties = array( 'dbhs', 'hyper_servers', 'hyper_tables', 'ludicrous_servers', 'ludicrous_tables', 'srtm', 'callbacks', 'table_datasets', 'read_dbh', 'write_dbh' );
+		$methods    = array( 'add_database', 'add_table', 'add_callback', 'get_table_from_query', 'is_write_query', 'send_reads_to_masters', 'determine_dataset' );
+		$hierarchy  = array();
+		for ( ; false !== $reflection; $reflection = $reflection->getParentClass() ) {
+			$hierarchy[] = $reflection;
+			foreach ( $methods as $method ) {
+				// Core wpdb uses its table parser for charset checks. A drop-in override can route SQL.
+				if ( $reflection->hasMethod( $method )
+					&& ( 'get_table_from_query' !== $method || \wpdb::class !== $reflection->getMethod( $method )->getDeclaringClass()->getName() ) ) {
+					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+				}
+			}
+			foreach ( $reflection->getProperties() as $property ) {
+				$name = $property->getName();
+				if ( in_array( $name, $properties, true ) || ( 'dbh' === $name && \wpdb::class !== $property->getDeclaringClass()->getName() ) ) {
+					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+				}
+			}
+		}
+
+		// Read instance backing values without invoking hooks and include any static pools.
+		$values = get_mangled_object_vars( $database );
+		foreach ( $hierarchy as $class ) {
+			array_push( $values, ...array_values( $class->getStaticProperties() ) );
+		}
+		foreach ( $values as $value ) {
+			if ( is_array( $value ) && array_filter( $value, static fn ( mixed $entry ): bool => $entry instanceof \mysqli ) ) {
+				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+			}
+		}
+
+		return $native->hasProperty( 'dbh' ) ? $native->getProperty( 'dbh' ) : throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+	}
+
+	private function is_reviewed_query_monitor_class( \ReflectionObject $reflection ): bool {
+		$file  = $reflection->getFileName();
+		$start = $reflection->getStartLine();
+		$end   = $reflection->getEndLine();
+		if ( false === $file || false === $start || false === $end || str_ends_with( $file, "eval()'d code" ) || ! is_file( $file ) ) {
+			return false;
+		}
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A failed source read must reject the exception without leaking a path.
+		$lines = @file( $file );
+		if ( false === $lines || $end > count( $lines ) ) {
+			return false;
+		}
+		$source     = implode( '', array_slice( $lines, $start - 1, $end - $start + 1 ) );
+		$normalized = '';
+		foreach ( token_get_all( "<?php\n" . $source ) as $token ) {
+			if ( is_array( $token ) ) {
+				if ( in_array( $token[0], array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ), true ) ) {
+					continue;
+				}
+				$token = $token[1];
+			}
+			// Preserve token boundaries when removing whitespace and comments.
+			$normalized .= strlen( $token ) . ':' . $token;
+		}
+		// Query Monitor 4.1.0, classes/DB.php at 7c0b4d132b8e5df3097b412f027fd5a297d5f936.
+		return '5212b9081cbe5570b96b53badc8be35b2a6c46471ca6f5913bd510754a92d485' === hash( 'sha256', $normalized );
+	}
+
+	private function table_name_matches( string $expected, string $actual ): bool {
+		$mode = $this->lower_case_table_names();
+
+		return match ( $mode ) {
+			0 => hash_equals( $expected, $actual ),
+			1 => hash_equals( strtolower( $expected ), $actual ),
+			2 => 0 === strcasecmp( $expected, $actual ),
+			default => false,
+		};
+	}
+
+	private function lower_case_table_names(): int {
+		if ( null !== $this->lower_case_table_names ) {
+			return $this->lower_case_table_names;
+		}
+
+		$wpdb                 = $this->schema_connection();
+		$suppress_errors      = method_exists( $wpdb, 'suppress_errors' ) ? $wpdb->suppress_errors( ... ) : null;
+		$previous_suppression = $suppress_errors?->__invoke( true );
+		$wpdb->last_error     = '';
+		try {
+			$value = $wpdb->get_var( 'SELECT @@lower_case_table_names' );
+		} catch ( \Throwable ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		} finally {
+			$suppress_errors?->__invoke( $previous_suppression );
+		}
+		if ( $this->identity_read_failed() ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+		$mode = is_int( $value )
+			? $value
+			: ( is_string( $value ) && 1 === preg_match( '/\A[012]\z/', $value ) ? (int) $value : null );
+		if ( null === $mode || ! in_array( $mode, array( 0, 1, 2 ), true ) ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+
+		$this->lower_case_table_names = $mode;
+
+		return $mode;
 	}
 
 	/**
@@ -753,6 +1117,9 @@ class Database {
 
 	private function schema_connection(): \wpdb|SchemaConnection {
 		$database = $this->connection();
+		if ( null !== $this->checked_connection && $this->checked_connection !== $database ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
 		if ( ! $database instanceof \wpdb && ! $database instanceof SchemaConnection ) {
 			throw new DatabaseLifecycleFailure( 'schema_operation_failed' );
 		}
@@ -769,8 +1136,6 @@ class Database {
 		if ( ! is_object( $wpdb ) ) {
 			throw new DatabaseCompatibilityFailure( 'database_unavailable' );
 		}
-
-		$this->database = $wpdb;
 
 		return $wpdb;
 	}

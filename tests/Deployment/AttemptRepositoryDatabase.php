@@ -307,6 +307,9 @@ namespace RAN\Tests\Deployment {
 
 		public function get_var( string $query ): mixed {
 			$this->queries[] = $query;
+			if ( 'SELECT @@lower_case_table_names' === $query ) {
+				return $this->selection->get_var( $query );
+			}
 			if ( $this->fail_reads ) {
 				$this->last_error = 'database details must not escape';
 

@@ -680,6 +680,57 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertSame( $rows, $wpdb->stored_rows() );
 	}
 
+	/** @return array<string, array{string}> */
+	public static function recovery_handle_change_provider(): array {
+		return array(
+			'during guard'   => array( 'guard' ),
+			'during commit'  => array( 'commit' ),
+			'commit failure' => array( 'failure' ),
+		);
+	}
+
+	#[DataProvider( 'recovery_handle_change_provider' )]
+	public function test_recovery_rejects_a_replaced_database_handle_or_failed_commit( string $phase ): void {
+		global $wpdb;
+		$storage    = $this->storage();
+		$identifier = 'example/example.php';
+		$package    = $this->package( $identifier );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', '123', 'main' ) );
+		self::assertTrue( $storage->store_for_test( $package )->is_successful() );
+		$snapshot      = $storage->recovery_record( $identifier );
+		$rows          = $wpdb->stored_rows();
+		$original      = new \stdClass();
+		$wpdb->dbh     = $original;
+		$wpdb->queries = array();
+		$replacement   = new \stdClass();
+		$swap          = static function () use ( $wpdb, $replacement ): void {
+			$wpdb->dbh = $replacement;
+		};
+		if ( 'commit' === $phase ) {
+			$wpdb->before_commit = $swap;
+		}
+		$wpdb->fail_commit = 'failure' === $phase;
+		$result            = $storage->recover_unlink( $identifier, $snapshot['adoption_token'], $snapshot['digest'], 'guard' === $phase ? $swap : static function (): void {} );
+		if ( 'failure' === $phase ) {
+			self::assertSame( $original, $wpdb->dbh );
+			self::assertSame( PackageMutationStatus::FAILED, $result->get_status() );
+			self::assertSame( array( 'COMMIT', 'ROLLBACK' ), array_slice( $wpdb->queries, -2 ) );
+			self::assertSame( $rows, $wpdb->stored_rows() );
+			return;
+		}
+		self::assertSame( $replacement, $wpdb->dbh );
+		if ( 'commit' === $phase ) {
+			self::assertSame( PackageMutationStatus::FAILED, $result->get_status() );
+			self::assertCount( 4, $wpdb->queries );
+			self::assertSame( array( 'COMMIT' ), array_slice( $wpdb->queries, -1 ) );
+			return;
+		}
+		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
+		self::assertSame( array( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION' ), $wpdb->queries );
+		self::assertSame( array(), $wpdb->deletes );
+		self::assertSame( $rows, $wpdb->stored_rows() );
+	}
+
 	public function test_recovery_refuses_unknown_or_malformed_token_and_identity_disagreement(): void {
 		global $wpdb;
 		$storage = $this->storage();

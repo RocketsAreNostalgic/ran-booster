@@ -1090,7 +1090,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_split_session_blocks_recovery_and_single_session_rolls_back_the_delete(): void {
+	public function test_split_session_and_unconnected_native_handle_block_recovery(): void {
 		$this->with_drop_in(
 			function (): void {
 				global $wpdb;
@@ -1136,11 +1136,11 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 				self::assertSame( array( $row ), $wpdb->rows );
 
 				$wpdb->read_connection_id = 41;
-				$wpdb->fail_commit        = true;
+				$wpdb->queries            = array();
 				$repository               = new PluginRepository( new Database( $wpdb ) );
 				$result                   = $repository->recover_unlink( $identifier, $snapshot['adoption_token'], $snapshot['digest'], static function (): void {} );
 				self::assertSame( PackageMutationStatus::FAILED, $result->get_status() );
-				self::assertSame( array( 'COMMIT', 'ROLLBACK' ), array_slice( $wpdb->queries, -2 ) );
+				self::assertSame( array( 'SET @ran_booster_probe := CONNECTION_ID()', 'SET @ran_booster_probe := NULL' ), $wpdb->queries );
 				self::assertSame( array( $row ), $wpdb->rows );
 			}
 		);

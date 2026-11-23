@@ -12,6 +12,7 @@ use RAN\ManagedRepository;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
+use RAN\Storage\PackageMutationStatus;
 use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PluginRepository;
 
@@ -603,6 +604,71 @@ try {
 	$ran_booster_finished = $ran_booster_attempts->finish( $ran_booster_attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
 	if ( $ran_booster_finished->get_id() !== $ran_booster_attempts->find_exact( $ran_booster_attempt->get_id() )?->get_id() ) {
 		throw new RuntimeException( 'The database smoke could not verify its attempt record.' );
+	}
+
+	if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' ) ) {
+		throw new RuntimeException( 'Recovery proof requires installed WordPress database configuration.' );
+	}
+	$ran_booster_snapshot       = $ran_booster_packages->recovery_record( $ran_booster_identifier );
+	$ran_booster_other_database = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+	$ran_booster_original_dbh   = $wpdb->__get( 'dbh' );
+	$ran_booster_swap_seen      = false;
+	$ran_booster_filtered       = 0;
+	$ran_booster_filter         = static function ( string $query ) use ( $ran_booster_package_table, &$ran_booster_filtered ): string {
+		if ( in_array( $query, array( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION', 'COMMIT', 'ROLLBACK' ), true )
+			|| ( str_contains( $query, $ran_booster_package_table ) && ( str_starts_with( $query, 'SELECT ' ) || str_starts_with( $query, 'DELETE FROM ' ) ) ) ) {
+			++$ran_booster_filtered;
+		}
+		return $query;
+	};
+	add_filter( 'query', $ran_booster_filter );
+	try {
+		try {
+			$ran_booster_conflict = $ran_booster_packages->recover_unlink(
+				$ran_booster_identifier,
+				$ran_booster_snapshot['adoption_token'],
+				$ran_booster_snapshot['digest'],
+				static function () use ( $wpdb, $ran_booster_other_database, &$ran_booster_swap_seen ): void {
+					$wpdb->__set( 'dbh', $ran_booster_other_database->__get( 'dbh' ) );
+					$ran_booster_swap_seen = true;
+				}
+			);
+		} finally {
+			$wpdb->__set( 'dbh', $ran_booster_original_dbh );
+		}
+		remove_filter( 'query', $ran_booster_filter );
+		if ( ! $ran_booster_swap_seen || PackageMutationStatus::CONFLICT !== $ran_booster_conflict->get_status() || $ran_booster_snapshot !== $ran_booster_packages->recovery_record( $ran_booster_identifier ) ) {
+			throw new RuntimeException( 'A changed database session must preserve the original management row.' );
+		}
+		// A separate transaction can acquire the row lock only after the original session released it.
+		if ( false === $ran_booster_other_database->query( 'START TRANSACTION' ) ) {
+			throw new RuntimeException( 'Could not start the row lock verification transaction.' );
+		}
+		try {
+			$ran_booster_unlocked_id = $ran_booster_other_database->get_var( $ran_booster_other_database->prepare( 'SELECT id FROM %i WHERE id = %s FOR UPDATE NOWAIT', $ran_booster_package_table, $ran_booster_snapshot['id'] ) );
+		} finally {
+			$ran_booster_other_database->query( 'ROLLBACK' );
+		}
+		if ( $ran_booster_snapshot['id'] !== $ran_booster_unlocked_id ) {
+			throw new RuntimeException( 'Guarded recovery did not release the original session row lock.' );
+		}
+		add_filter( 'query', $ran_booster_filter );
+		$ran_booster_packages->recover_unlink(
+			$ran_booster_identifier,
+			$ran_booster_snapshot['adoption_token'],
+			$ran_booster_snapshot['digest'],
+			static function (): void {}
+		)->require_success();
+		if ( 0 !== $ran_booster_filtered ) {
+			throw new RuntimeException( 'Guarded recovery SQL reached WordPress query filters.' );
+		}
+		remove_filter( 'query', $ran_booster_filter );
+		if ( null !== $ran_booster_packages->native_recovery_record( $ran_booster_identifier ) ) {
+			throw new RuntimeException( 'Guarded recovery did not remove the verified management row.' );
+		}
+	} finally {
+		remove_filter( 'query', $ran_booster_filter );
+		$ran_booster_other_database->close();
 	}
 } finally {
 	if ( null !== $ran_booster_attempt ) {

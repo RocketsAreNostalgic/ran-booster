@@ -111,9 +111,9 @@ abstract class AbstractPackageRepository {
 
 	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string} */
 	public function recovery_record( string $identifier ): array {
-		$connection = $this->require_recovery_storage();
+		$storage = $this->require_recovery_storage();
 		new PackageModel( array( 'package' => $identifier ) );
-		return $this->recovery_snapshot( $identifier, $this->package_rows( $identifier, wpdb: $connection ) );
+		return $this->recovery_snapshot( $identifier, $this->package_rows( $identifier, wpdb: $storage['connection'], table: $storage['table'] ) );
 	}
 
 	/**
@@ -123,11 +123,12 @@ abstract class AbstractPackageRepository {
 	 * @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string}|null
 	 */
 	public function native_recovery_record( string $identifier, bool $for_update = false ): ?array {
-		$wpdb = $this->require_recovery_storage();
+		$storage = $this->require_recovery_storage();
+		$wpdb    = $storage['connection'];
 		new PackageModel( array( 'package' => $identifier ) );
 		// A plugin directory can contain more than one main file. Never unlink an unreviewed sibling.
 		$scope  = 1 === $this->package_type() ? explode( '/', $identifier )[0] : $identifier;
-		$query  = $wpdb->prepare( 'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d', ran_booster_table_name(), $this->package_type() );
+		$query  = $wpdb->prepare( 'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d', $storage['table'], $this->package_type() );
 		$query .= $for_update ? ' FOR UPDATE' : '';
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared package-type scope; locking suffix is a closed boolean choice.
 		$rows  = $wpdb->get_results( $query );
@@ -165,12 +166,9 @@ abstract class AbstractPackageRepository {
 	 */
 	public function recover_unlink( string $identifier, string $expected_token, string $expected_record_digest, callable $guard ): PackageMutationResult {
 		RuntimeSupport::assert_managed_operations_allowed();
-		$wpdb   = $this->require_recovery_storage();
-		$prefix = $wpdb->prefix ?? null;
-		if ( ! is_string( $prefix ) || '' === $prefix ) {
-			return $this->delete_failure_result();
-		}
-		$table = ran_booster_table_name();
+		$storage = $this->require_recovery_storage();
+		$wpdb    = $storage['connection'];
+		$table   = $storage['table'];
 		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) || false === $wpdb->query( 'START TRANSACTION' ) ) {
 			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
 		}
@@ -181,7 +179,7 @@ abstract class AbstractPackageRepository {
 				return $this->delete_conflict_result();
 			}
 			$guard();
-			if ( ( $GLOBALS['wpdb'] ?? null ) !== $wpdb || ( $wpdb->prefix ?? null ) !== $prefix || ran_booster_table_name() !== $table ) {
+			if ( ( $GLOBALS['wpdb'] ?? null ) !== $wpdb || ( $wpdb->prefix ?? null ) !== $storage['prefix'] || ran_booster_table_name() !== $table ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->delete_conflict_result();
 			}
@@ -240,16 +238,17 @@ abstract class AbstractPackageRepository {
 		);
 	}
 
-	private function require_recovery_storage(): \wpdb|SchemaConnection {
-		global $wpdb;
+	/** @return array{connection: \wpdb|SchemaConnection, table: string, prefix: string} */
+	private function require_recovery_storage(): array {
 		$this->database_lifecycle ??= new Database();
+		$wpdb                       = $GLOBALS['wpdb'] ?? null;
 		try {
-			$connection = is_object( $wpdb ) ? $this->database_lifecycle->require_recovery_ready( $wpdb ) : null;
+			$storage = is_object( $wpdb ) ? $this->database_lifecycle->require_recovery_ready( $wpdb ) : null;
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
-			$connection = null;
+			$storage = null;
 		}
-		if ( null !== $connection && $connection === $wpdb ) {
-			return $connection;
+		if ( null !== $storage && ( $GLOBALS['wpdb'] ?? null ) === $storage['connection'] ) {
+			return $storage;
 		}
 		$failure = PackageStorageFailure::unsupported_database( PackageStorageOperation::DELETE );
 		throw $failure;

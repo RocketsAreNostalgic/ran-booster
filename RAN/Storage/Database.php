@@ -128,20 +128,42 @@ class Database {
 		$this->maybe_upgrade();
 	}
 
-	/** Verify current tables without installing or repairing them, and return the inspected connection. */
-	public function require_recovery_ready( ?object $expected_connection = null ): \wpdb|SchemaConnection {
-		if ( null !== $expected_connection && $expected_connection !== $this->connection() ) {
+	/**
+	 * Verify current tables without installing or repairing them.
+	 *
+	 * @return array{connection: \wpdb|SchemaConnection, table: string, prefix: string}
+	 */
+	public function require_recovery_ready( ?object $expected_connection = null ): array {
+		$database = $this->connection();
+		$binding  = $GLOBALS['wpdb'] ?? null;
+		if ( null !== $expected_connection && ( $expected_connection !== $database || $expected_connection !== $binding ) ) {
 			throw new DatabaseCompatibilityFailure( 'database_unavailable' );
 		}
 		$this->require_supported();
 		$connection = $this->schema_connection();
+		if ( $database !== $connection || ( $GLOBALS['wpdb'] ?? null ) !== $binding ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+		$prefix = $binding->prefix ?? null;
+		if ( ! is_string( $prefix ) || '' === $prefix ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+		$table         = ran_booster_table_name();
+		$attempt_table = self::attempt_table_name();
 		if ( self::$booster_db_version !== $this->installed_version() ) {
 			throw new DatabaseLifecycleFailure( 'incompatible_schema' );
 		}
-		$this->verify_table( ran_booster_table_name(), $this->package_columns(), $this->package_indexes() );
-		$this->verify_table( self::attempt_table_name(), $this->attempt_columns(), $this->attempt_indexes() );
+		$this->verify_table( $table, $this->package_columns(), $this->package_indexes() );
+		$this->verify_table( $attempt_table, $this->attempt_columns(), $this->attempt_indexes() );
+		if ( ( $GLOBALS['wpdb'] ?? null ) !== $binding || ( $binding->prefix ?? null ) !== $prefix || ran_booster_table_name() !== $table ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
 
-		return $connection;
+		return array(
+			'connection' => $connection,
+			'table'      => $table,
+			'prefix'     => $prefix,
+		);
 	}
 
 	/**

@@ -773,6 +773,52 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertCount( 1, $wpdb->stored_rows() );
 	}
 
+	public function test_recovery_refuses_prefix_change_during_schema_verification_before_transaction(): void {
+		global $wpdb;
+		$this->install_fixture();
+		$connection                = new class() extends StorageTestWpdb {
+			public bool $change_prefix = false;
+
+			/** @return list<object>|null */
+			public function get_results( string $query ): ?array {
+				$rows = parent::get_results( $query );
+				if ( $this->change_prefix && 'SHOW INDEX FROM `wp_ran_booster_deployment_attempts`' === $query ) {
+					$this->prefix = 'other_';
+				}
+				return $rows;
+			}
+		};
+		$connection->schema_tables = $wpdb->schema_tables;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Recovery must inspect the schema through the live fixture connection.
+		$wpdb       = $connection;
+		$storage    = new ProviderIdentityTestRepository( new Database() );
+		$identifier = 'example/example.php';
+		$package    = $this->package( $identifier );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', '123', 'main' ) );
+		self::assertTrue( $storage->store_for_test( $package )->is_successful() );
+		$snapshot                  = $storage->recovery_record( $identifier );
+		$rows                      = $connection->stored_rows();
+		$connection->queries       = array();
+		$connection->change_prefix = true;
+		try {
+			$storage->recover_unlink(
+				$identifier,
+				$snapshot['adoption_token'],
+				$snapshot['digest'],
+				static function (): void {
+					self::fail( 'A changed prefix must never reach the recovery guard.' );
+				}
+			);
+			self::fail( 'Schema verification must reject a changed prefix.' );
+		} catch ( PackageStorageFailure $failure ) {
+			self::assertTrue( $failure->is_database_unsupported() );
+		}
+		self::assertSame( 'other_', $connection->prefix );
+		self::assertSame( array(), $connection->queries );
+		self::assertSame( array(), $connection->deletes );
+		self::assertSame( $rows, $connection->stored_rows() );
+	}
+
 	public function test_unhealthy_schema_refuses_recovery_before_guard_or_deletion(): void {
 		global $wpdb;
 		$this->install_fixture();
@@ -810,9 +856,15 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			public function require_ready(): void {
 			}
 
-			public function require_recovery_ready( ?object $expected_connection = null ): StorageTestWpdb {
+			/** @return array{connection: StorageTestWpdb, table: string, prefix: string} */
+			public function require_recovery_ready( ?object $expected_connection = null ): array {
 				global $wpdb;
-				return $expected_connection instanceof StorageTestWpdb ? $expected_connection : $wpdb;
+				$connection = $expected_connection instanceof StorageTestWpdb ? $expected_connection : $wpdb;
+				return array(
+					'connection' => $connection,
+					'table'      => ran_booster_table_name(),
+					'prefix'     => $connection->prefix,
+				);
 			}
 		};
 

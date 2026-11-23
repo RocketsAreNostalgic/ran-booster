@@ -82,9 +82,15 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 					public function require_ready(): void {
 					}
 
-					public function require_recovery_ready( ?object $expected_connection = null ): StorageTestWpdb {
+					/** @return array{connection: StorageTestWpdb, table: string, prefix: string} */
+					public function require_recovery_ready( ?object $expected_connection = null ): array {
 						global $wpdb;
-						return $expected_connection instanceof StorageTestWpdb ? $expected_connection : $wpdb;
+						$connection = $expected_connection instanceof StorageTestWpdb ? $expected_connection : $wpdb;
+						return array(
+							'connection' => $connection,
+							'table'      => ran_booster_table_name(),
+							'prefix'     => $connection->prefix,
+						);
 					}
 				};
 				$repository = 1 === $type ? new PluginRepository( $lifecycle ) : new ThemeRepository( $lifecycle );

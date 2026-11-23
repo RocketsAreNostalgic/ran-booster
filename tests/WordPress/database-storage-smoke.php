@@ -634,6 +634,30 @@ try {
 			|| 1 !== $wpdb->query( $wpdb->prepare( 'INSERT INTO %i.%i SELECT * FROM %i.%i WHERE id = %s', $ran_booster_second_schema, $ran_booster_package_table, DB_NAME, $ran_booster_package_table, $ran_booster_snapshot['id'] ) ) ) {
 			throw new RuntimeException( 'Could not copy the management row into the second disposable database.' );
 		}
+		$ran_booster_probe_queries = array();
+		$ran_booster_thread_id     = $ran_booster_original_dbh->thread_id;
+		$ran_booster_switch_probe  = static function ( string $query ) use ( &$ran_booster_probe_queries, $ran_booster_original_dbh, $ran_booster_second_schema ): string {
+			$ran_booster_probe_queries[] = $query;
+			if ( 'SHOW ENGINES' === $query && ! $ran_booster_original_dbh->select_db( $ran_booster_second_schema ) ) {
+				throw new RuntimeException( 'Could not select the second disposable database during the capability probe.' );
+			}
+			return $query;
+		};
+		add_filter( 'query', $ran_booster_switch_probe );
+		try {
+			( new Database() )->require_recovery_ready();
+			throw new RuntimeException( 'First-call recovery readiness accepted a capability-probe database switch.' );
+		} catch ( DatabaseLifecycleFailure $ran_booster_failure ) {
+			if ( 'schema_read_failed' !== $ran_booster_failure->reason()
+				|| array( 'SHOW ENGINES' ) !== $ran_booster_probe_queries
+				|| $ran_booster_original_dbh !== $wpdb->__get( 'dbh' )
+				|| $ran_booster_thread_id !== $ran_booster_original_dbh->thread_id ) {
+				throw new RuntimeException( 'First-call recovery must reject a same-session database switch before schema verification.' );
+			}
+		} finally {
+			remove_filter( 'query', $ran_booster_switch_probe );
+			$wpdb->select( DB_NAME );
+		}
 		$ran_booster_guards = array(
 			'handle replacement' => static function () use ( $wpdb, $ran_booster_other_dbh ): void {
 				$wpdb->__set( 'dbh', $ran_booster_other_dbh );

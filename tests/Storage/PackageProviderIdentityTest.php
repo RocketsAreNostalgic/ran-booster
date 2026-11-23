@@ -935,7 +935,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		}
 		self::assertSame( 'other_', $connection->prefix );
 		if ( 'SHOW ENGINES' === $change_prefix_query ) {
-			self::assertSame( array( 'SHOW ENGINES' ), $connection->read_queries );
+			self::assertSame( array( 'SELECT DATABASE() AS db_name', 'SHOW ENGINES' ), $connection->read_queries );
 		}
 		self::assertSame( array(), $connection->queries );
 		self::assertSame( array(), $connection->deletes );

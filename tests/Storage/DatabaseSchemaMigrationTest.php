@@ -929,7 +929,12 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 				self::assertTrue( class_exists( $class, false ) );
 				$connection = new $class( $throw_on_get, self::mysqli_handle() );
 				self::assertInstanceOf( \wpdb::class, $connection );
-				self::assert_drop_in_failure( new Database( $connection ) );
+				try {
+					( new Database( $connection ) )->require_recovery_ready();
+					self::fail( 'Recovery readiness must reject routing and pooled handles.' );
+				} catch ( DatabaseCompatibilityFailure $failure ) {
+					self::assertSame( 'database_drop_in', $failure->reason() );
+				}
 				self::assertSame( 0, get_mangled_object_vars( $connection )['getter_calls'] );
 				self::assertSame( array(), $connection->queries );
 				self::assertSame( array(), $connection->read_queries );
@@ -1810,6 +1815,56 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		self::assertContains( 'SHOW INDEX FROM `' . $wpdb->database_name . '`.`wp_ran_booster_deployment_attempts`', $wpdb->read_queries );
 	}
 
+	public function test_first_recovery_readiness_rejects_database_switch_during_capability_probe(): void {
+		global $wpdb;
+		$this->install_current_schema();
+		$connection                = new class() extends StorageTestWpdb {
+			/** @return list<object>|null */
+			public function get_results( string $query ): ?array {
+				$rows = parent::get_results( $query );
+				if ( 'SHOW ENGINES' === $query ) {
+					$this->database_name = 'other';
+				}
+				return $rows;
+			}
+		};
+		$connection->schema_tables = $wpdb->schema_tables;
+		try {
+			( new Database( $connection ) )->require_recovery_ready();
+			self::fail( 'The capability probe must not change the verified database.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'schema_read_failed', $failure->reason() );
+		}
+		self::assertSame( 'other', $connection->database_name );
+		self::assertSame( array( 'SELECT DATABASE() AS db_name', 'SHOW ENGINES', 'SELECT DATABASE() AS db_name' ), $connection->read_queries );
+		self::assertSame( array(), $connection->queries );
+	}
+
+	public function test_recovery_readiness_preserves_compatibility_failure_when_entry_capture_fails(): void {
+		global $wpdb;
+		$wpdb->database_name = '';
+		$wpdb->server_info   = '5.7.44';
+		try {
+			( new Database() )->require_recovery_ready();
+			self::fail( 'The capability result must reject an unsupported server.' );
+		} catch ( DatabaseCompatibilityFailure $failure ) {
+			self::assertSame( 'unsupported_version', $failure->reason() );
+		}
+		self::assertSame( array( 'SELECT DATABASE() AS db_name' ), $wpdb->read_queries );
+	}
+
+	public function test_recovery_readiness_requires_entry_capture_even_when_capability_passes(): void {
+		global $wpdb;
+		$wpdb->database_name = '';
+		try {
+			( new Database() )->require_recovery_ready();
+			self::fail( 'A supported server without a verified entry session must be rejected.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'schema_read_failed', $failure->reason() );
+		}
+		self::assertSame( array( 'SELECT DATABASE() AS db_name', 'SHOW ENGINES' ), $wpdb->read_queries );
+	}
+
 	#[DataProvider( 'readiness_drift_provider' )]
 	public function test_recovery_readiness_rejects_session_drift( int $read, string $drift ): void {
 		global $wpdb;
@@ -1838,9 +1893,9 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	/** @return array<string, array{int, string}> */
 	public static function readiness_drift_provider(): array {
 		return array(
-			'after version'        => array( 2, 'database' ),
-			'after package schema' => array( 3, 'handle' ),
-			'after attempt schema' => array( 4, 'prefix' ),
+			'after version'        => array( 3, 'database' ),
+			'after package schema' => array( 4, 'handle' ),
+			'after attempt schema' => array( 5, 'prefix' ),
 		);
 	}
 

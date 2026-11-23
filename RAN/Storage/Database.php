@@ -144,14 +144,25 @@ class Database {
 		$prefix      = $entry['prefix'] ?? null;
 		$base_prefix = $entry['base_prefix'] ?? null;
 		unset( $entry );
+		try {
+			$entry_session = $database instanceof \wpdb || $database instanceof SchemaConnection
+				? $this->readiness_session( $database )
+				: null;
+		} catch ( DatabaseLifecycleFailure ) {
+			// Let capability admission report unsupported connections before rejecting an unverifiable session.
+			$entry_session = null;
+		}
 		$this->require_supported();
+		if ( null === $entry_session ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
 		$connection = $this->schema_connection();
 		if ( $database !== $connection || ( $GLOBALS['wpdb'] ?? null ) !== $binding
 			|| ! is_string( $prefix ) || '' === $prefix || ( $binding->prefix ?? null ) !== $prefix
 			|| ( function_exists( 'is_multisite' ) && is_multisite() && ( $binding->base_prefix ?? null ) !== $base_prefix ) ) {
 			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 		}
-		$session        = $this->readiness_session( $connection );
+		$session        = $this->readiness_session( $connection, $entry_session );
 		$table          = ran_booster_table_name();
 		$attempt_table  = self::attempt_table_name();
 		$assert_context = function () use ( $connection, $session, $binding, $prefix, $base_prefix, $table, $attempt_table ): void {

@@ -254,9 +254,70 @@ final readonly class ProviderSettingsPresenter {
 			: array( 'page' => 'ran-booster-extensions' );
 	}
 
+	/**
+	 * The held package for the notices and its control: its name, and the page that holds the control,
+	 * which is the package's own page when Booster can read it and the GitHub provider page otherwise.
+	 *
+	 * @return array{digest:string,type:string,identifier:string,managed:bool,finished:bool,readable:bool,started_at:?int,folder:string,name:string,url:string,check_url:string}|null
+	 */
+	public function native_hold(): ?array {
+		if ( null === $this->package_removal || 'recovery_required' !== ( $this->github_selection?->status()['state'] ?? null ) ) {
+			return null;
+		}
+		try {
+			$hold = $this->package_removal->native_recovery_confirmation();
+		} catch ( Throwable ) {
+			return null;
+		}
+		$plugin = 'plugin' === $hold['type'];
+		$folder = $plugin && '.' !== dirname( $hold['identifier'] ) ? dirname( $hold['identifier'] ) : $hold['identifier'];
+		$admin  = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+		$name   = '';
+		if ( $hold['readable'] ) {
+			require_once ABSPATH . 'wp-admin/includes/plugin.php';
+			$name = $plugin ? (string) ( get_plugins()[ $hold['identifier'] ]['Name'] ?? '' ) : (string) wp_get_theme( $hold['identifier'] )->get( 'Name' );
+		}
+		$name = '' === $name ? $folder : $name;
+		$page = $hold['readable']
+			? add_query_arg(
+				array(
+					'page'    => $plugin ? 'ran-booster-plugins' : 'ran-booster-themes',
+					'package' => rawurlencode( $hold['identifier'] ),
+				),
+				$admin
+			)
+			: ProviderTabLinks::link( null, $admin, 'gh' );
+		return $hold + array(
+			'folder'    => $folder,
+			'name'      => $name,
+			'url'       => $page . '#ran-booster-native-hold',
+			'check_url' => $plugin
+				? add_query_arg( 's', rawurlencode( $name ), is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' ) )
+				: ( is_multisite() ? add_query_arg( 's', rawurlencode( $name ), network_admin_url( 'themes.php' ) ) : add_query_arg( 'theme', rawurlencode( $hold['identifier'] ), admin_url( 'themes.php' ) ) ),
+		);
+	}
+
 	/** @return array<string,mixed>|null Passive local claims; never credential material. */
 	public function github_selection_diagnostics(): ?array {
 		return $this->github_selection?->status();
+	}
+
+	/**
+	 * Scope a provider-page native hold result to the GitHub provider route and
+	 * suppress stale post-clear notices while a site-wide hold remains active.
+	 *
+	 * @param array{code:string,folder:string,type:string}|null $result
+	 * @return array{code:string,folder:string,type:string}|null
+	 */
+	public function provider_native_hold_result( string $provider_code, ?array $result ): ?array {
+		if ( null === $result || 'gh' !== $provider_code ) {
+			return null;
+		}
+		if ( 'recovery_required' === ( $this->github_selection_diagnostics()['state'] ?? null )
+			&& in_array( $result['code'], array( 'cleared', 'released', 'lock_failed' ), true ) ) {
+			return null;
+		}
+		return $result;
 	}
 
 	/** @return array<string,mixed>|null */
@@ -282,13 +343,7 @@ final readonly class ProviderSettingsPresenter {
 		$error    = '';
 		$recovery = null;
 		if ( 'recovery_required' === $status['state'] ) {
-			if ( null !== $this->package_removal ) {
-				try {
-					$recovery = $this->package_removal->native_recovery_confirmation();
-				} catch ( Throwable ) {
-					$recovery = null;
-				}
-			}
+			$recovery = $this->native_hold();
 			if ( null === $recovery ) {
 				$error = __( 'Native recovery details could not be verified. Restore access to selection and management storage before continuing.', 'ran-booster' );
 			}

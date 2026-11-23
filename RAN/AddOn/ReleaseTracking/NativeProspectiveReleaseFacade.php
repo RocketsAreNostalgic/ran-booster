@@ -380,12 +380,13 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		?string $expected_identifier,
 		DeploymentPolicy $initial_policy
 	): ProspectiveReleaseResult {
-		$artifact            = null;
-		$lock_token          = null;
-		$native_owner        = null;
-		$identifier          = '';
-		$outcome             = ProspectiveReleaseResult::failure( 'install_failed' );
-		$finalization_failed = false;
+		$artifact                 = null;
+		$lock_token               = null;
+		$native_owner             = null;
+		$identifier               = '';
+		$outcome                  = ProspectiveReleaseResult::failure( 'install_failed' );
+		$finalization_failed      = false;
+		$hold_admission_uncertain = false;
 
 		try {
 			$identifier    = $release->identifier( $type );
@@ -412,10 +413,48 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 				);
 				$user_id       = ( $this->current_user_id )();
 
-				$lock_token   = $this->updater_lock->acquire();
+				$lock_token = $this->updater_lock->try_acquire_without_reclaim();
+				if ( null === $lock_token ) {
+					$attempted_lock_token = null;
+					try {
+						$lock_token = $this->github_selection->without_native_mutation_hold(
+							function ( callable $execute ) use ( &$attempted_lock_token ): ?string {
+								$attempted_lock_token = $this->updater_lock->acquire_or_reclaim_expired_sql(
+									$this->github_selection->uses_connection( ... ),
+									$execute
+								);
+								return $attempted_lock_token;
+							},
+							static function ( ?string $committed_token ) use ( &$lock_token ): void {
+								$lock_token = $committed_token;
+							}
+						);
+					} catch ( Throwable $failure ) {
+						if ( null !== $attempted_lock_token && null === $lock_token ) {
+							$finalization_failed = true;
+							BoosterLogger::log_exception(
+								'prospective release updater lock commit uncertain',
+								$failure,
+								array( 'step' => 'prospective_release_lock_commit' )
+							);
+						}
+						throw $failure;
+					}
+					if ( null === $lock_token ) {
+						$outcome = ProspectiveReleaseResult::failure( 'install_failed' );
+						break;
+					}
+					$this->updater_lock->invalidate_lock_cache();
+				}
 				$availability = $this->release_source_available( $type, $identifier, $repository );
 				if ( true !== $availability ) {
 					$outcome = ProspectiveReleaseResult::failure( false === $availability ? 'release_repository_conflict' : 'release_unavailable' );
+					break;
+				}
+				if ( 'gh' !== (string) $repository->provider
+					&& ( $this->github_selection->native_mutation_blocks_target( $type, $identifier )
+						|| $lock_token !== $this->updater_lock->current_token() ) ) {
+					$outcome = ProspectiveReleaseResult::failure( 'install_failed' );
 					break;
 				}
 				$was_active = $this->is_active( $type, $identifier );
@@ -441,7 +480,28 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						break;
 					}
 					if ( 'gh' === (string) $repository->provider ) {
-						$native_owner = $this->github_selection->begin_native_mutation( $type, $identifier, fn (): bool => $lock_token === $this->updater_lock->current_token() );
+						try {
+							$native_owner = $this->github_selection->begin_native_mutation(
+								$type,
+								$identifier,
+								fn ( callable $execute ): bool => $lock_token === $this->updater_lock->current_token_sql( $this->github_selection->uses_connection( ... ), $execute ),
+								$lock_token,
+								static function ( string $committed_owner ) use ( &$native_owner ): void {
+									$native_owner = $committed_owner;
+								}
+							);
+						} catch ( Throwable $failure ) {
+							if ( null === $native_owner
+								&& ( $this->github_selection->has_uncertain_commit() || $this->github_selection->has_unclosed_transaction() ) ) {
+								$hold_admission_uncertain = true;
+								$finalization_failed      = true;
+							}
+							throw $failure;
+						}
+					} elseif ( $this->github_selection->native_mutation_blocks_target( $type, $identifier )
+						|| $lock_token !== $this->updater_lock->current_token() ) {
+						$outcome = ProspectiveReleaseResult::failure( 'install_failed' );
+						break;
 					}
 					$result               = 'plugin' === $type
 						? $this->executor->install_plugin( $artifact, $package_root, null )
@@ -532,9 +592,32 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 				);
 			}
 
-			if ( null !== $lock_token ) {
+			// Complete the hold before releasing the lock. An unfinished hold keeps the lock, so a lock still
+			// holding the owner's value always belongs to it and its release may free that exact value.
+			$hold_unfinished = $hold_admission_uncertain;
+			if ( null !== $native_owner ) {
+				$hold_resolved = false;
 				try {
-
+					$this->github_selection->complete_native_mutation(
+						$native_owner,
+						$type,
+						$identifier,
+						! $finalization_failed && $outcome->successful() ? 'verified_success' : 'uncertain',
+						null,
+						static function () use ( &$hold_resolved ): void {
+							$hold_resolved = true;
+						}
+					);
+				} catch ( Throwable ) {
+					$finalization_failed = true;
+					$hold_unfinished     = ! $hold_resolved;
+				}
+			}
+			if ( $this->github_selection->has_unclosed_transaction() ) {
+				$finalization_failed = true;
+			}
+			if ( null !== $lock_token && ! $hold_unfinished && ! $this->github_selection->has_unclosed_transaction() ) {
+				try {
 					if ( ! $this->updater_lock->release( $lock_token ) ) {
 						$finalization_failed = true;
 						BoosterLogger::log(
@@ -549,13 +632,6 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						$failure,
 						array( 'step' => 'prospective_release_lock_release' )
 					);
-				}
-			}
-			if ( null !== $native_owner ) {
-				try {
-					$this->github_selection->complete_native_mutation( $native_owner, $type, $identifier, ! $finalization_failed && $outcome->successful() ? 'verified_success' : 'uncertain' );
-				} catch ( Throwable ) {
-					$finalization_failed = true;
 				}
 			}
 		}

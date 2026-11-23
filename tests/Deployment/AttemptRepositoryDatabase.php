@@ -22,6 +22,9 @@ namespace {
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 		function wp_cache_delete( $key, $group = '' ) {
 			$GLOBALS['ran_booster_attempt_cache_deletes'][] = array( $key, $group );
+			if ( isset( $GLOBALS['ran_booster_attempt_on_cache_delete'] ) && is_callable( $GLOBALS['ran_booster_attempt_on_cache_delete'] ) ) {
+				( $GLOBALS['ran_booster_attempt_on_cache_delete'] )( $key, $group );
+			}
 
 			return true;
 		}
@@ -78,6 +81,8 @@ namespace RAN\Tests\Deployment {
 		public int $authority_reads          = 0;
 		public int $automatic_rollbacks      = 0;
 		public bool $fail_commit             = false;
+		public bool $fail_rollback           = false;
+		public bool $throw_rollback          = false;
 		public ?string $tamper_insert_column = null;
 		public mixed $tamper_insert_value    = null;
 		public ?string $tamper_update_column = null;
@@ -191,6 +196,12 @@ namespace RAN\Tests\Deployment {
 				return 1;
 			}
 			if ( 'ROLLBACK' === $query ) {
+				if ( $this->throw_rollback ) {
+					throw new \RuntimeException( 'rollback threw' );
+				}
+				if ( $this->fail_rollback ) {
+					return false;
+				}
 				$this->rollback_snapshot();
 
 				return 1;
@@ -218,9 +229,21 @@ namespace RAN\Tests\Deployment {
 
 				return 1;
 			}
-			if ( preg_match( "/^DELETE FROM `wp_options` WHERE option_name = '([^']+)' AND option_value = '([^']+)'$/", $query, $matches ) === 1 ) {
-				$name  = stripslashes( $matches[1] );
-				$value = stripslashes( $matches[2] );
+			if ( preg_match( "/^UPDATE `wp_options` SET option_value = '([^']*)' WHERE option_name = '([^']*)' AND CAST\\(option_value AS BINARY\\) = CAST\\('([^']*)' AS BINARY\\)$/", $query, $matches ) === 1 ) {
+				$replacement = stripslashes( $matches[1] );
+				$name        = stripslashes( $matches[2] );
+				$expected    = stripslashes( $matches[3] );
+				if ( ! isset( $this->option_rows[ $name ] ) || ! hash_equals( $expected, $this->option_rows[ $name ] ) ) {
+					return 0;
+				}
+				$this->option_rows[ $name ] = $replacement;
+
+				return 1;
+			}
+			if ( preg_match( "/^DELETE FROM `wp_options` WHERE option_name = '([^']+)' AND (?:option_value = '([^']+)'|CAST\\(option_value AS BINARY\\) = CAST\\('([^']+)' AS BINARY\\))$/", $query, $matches ) === 1 ) {
+				$name      = stripslashes( $matches[1] );
+				$raw_value = $matches[2] ?? '';
+				$value     = stripslashes( '' !== $raw_value ? $raw_value : ( $matches[3] ?? '' ) );
 				if ( ! isset( $this->option_rows[ $name ] ) || ! hash_equals( $value, $this->option_rows[ $name ] ) ) {
 					return 0;
 				}
@@ -293,6 +316,10 @@ namespace RAN\Tests\Deployment {
 			}
 
 			return 0;
+		}
+
+		public function in_transaction(): bool {
+			return null !== $this->snapshot;
 		}
 
 		private function rollback_snapshot(): void {

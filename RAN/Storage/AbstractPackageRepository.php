@@ -117,24 +117,44 @@ abstract class AbstractPackageRepository {
 	}
 
 	/**
+	 * Verify storage schema and version readiness before entering a pinned selection transaction.
+	 */
+	public function require_recovery_ready(): void {
+		$this->require_recovery_storage();
+	}
+
+	/**
 	 * Exact local recovery inventory; absence is distinct from unreadable or duplicate rows.
-	 * Caller owns the selection transaction when requesting the locking form.
+	 * Caller owns the selection transaction when requesting the locking form. Callers supplying
+	 * $execute must verify storage readiness via require_recovery_ready() before starting the transaction.
 	 *
+	 * @param (callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null))|null $execute
 	 * @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string}|null
 	 */
-	public function native_recovery_record( string $identifier, bool $for_update = false ): ?array {
-		$storage = $this->require_recovery_storage();
-		$wpdb    = $storage['connection'];
+	public function native_recovery_record( string $identifier, bool $for_update = false, ?callable $execute = null ): ?array {
 		new PackageModel( array( 'package' => $identifier ) );
 		// A plugin directory can contain more than one main file. Never unlink an unreviewed sibling.
-		$scope  = 1 === $this->package_type() ? explode( '/', $identifier )[0] : $identifier;
-		$query  = $wpdb->prepare( 'SELECT p.*, p.package_type AS type FROM %i.%i p WHERE package_type = %d', $storage['database'], $storage['table'], $this->package_type() );
-		$query .= $for_update ? ' FOR UPDATE' : '';
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared package-type scope; locking suffix is a closed boolean choice.
-		$rows  = $wpdb->get_results( $query );
-		$error = property_exists( $wpdb, 'last_error' ) ? trim( (string) $wpdb->last_error ) : '';
-		if ( '' !== $error || ! is_array( $rows ) ) {
-			throw PackageStorageFailure::query_failed();
+		$scope = 1 === $this->package_type() ? explode( '/', $identifier )[0] : $identifier;
+		if ( null !== $execute ) {
+			$rows = $execute(
+				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d' . ( $for_update ? ' FOR UPDATE' : '' ),
+				array( ran_booster_table_name(), $this->package_type() ),
+				'results'
+			);
+			if ( ! is_array( $rows ) ) {
+				throw PackageStorageFailure::query_failed();
+			}
+		} else {
+			$storage = $this->require_recovery_storage();
+			$wpdb    = $storage['connection'];
+			$query   = $wpdb->prepare( 'SELECT p.*, p.package_type AS type FROM %i.%i p WHERE package_type = %d', $storage['database'], $storage['table'], $this->package_type() );
+			$query  .= $for_update ? ' FOR UPDATE' : '';
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared package-type scope; locking suffix is a closed boolean choice.
+			$rows  = $wpdb->get_results( $query );
+			$error = property_exists( $wpdb, 'last_error' ) ? trim( (string) $wpdb->last_error ) : '';
+			if ( '' !== $error || ! is_array( $rows ) ) {
+				throw PackageStorageFailure::query_failed();
+			}
 		}
 		// Decided in PHP, not by LOWER(package): a Turkish or Azeri collation could miss a row and let recovery remove a folder still managed.
 		// The nested-path prefix folds a whole identifier, the documented collision_key() exception.

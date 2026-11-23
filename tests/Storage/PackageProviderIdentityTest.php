@@ -619,6 +619,49 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		}
 	}
 
+	public function test_native_recovery_inventory_with_executor_skips_storage_checks_and_wpdb_calls(): void {
+		global $wpdb;
+		$storage = $this->storage();
+		$package = $this->package( 'example/example.php' );
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', '123', 'main' ) );
+		self::assertTrue( $storage->store_for_test( $package )->is_successful() );
+
+		$storage->require_recovery_ready();
+
+		$wpdb->rows = array();
+		$executed   = array();
+		$row        = (object) array(
+			'id'                     => '1',
+			'package'                => 'example/example.php',
+			'package_type'           => '1',
+			'type'                   => '1',
+			'adoption_token'         => \RAN\AdoptionIdentity::of( $package ),
+			'source'                 => 'branch',
+			'provider'               => 'gh',
+			'provider_repository_id' => '123',
+		);
+		// Inject a failing Database to prove $execute bypasses require_recovery_storage() inside the transaction.
+		$GLOBALS['ran_booster_storage_test_options'][ Database::VERSION_OPTION ] = 'stale';
+		$unready_storage = new ProviderIdentityTestRepository( new Database() );
+		$record          = $unready_storage->native_recovery_record(
+			'example/example.php',
+			true,
+			static function ( string $query, array $arguments, string $mode ) use ( &$executed, $row ): array {
+				$executed[] = array( $query, $arguments, $mode );
+				return array( $row );
+			}
+		);
+		self::assertIsArray( $record );
+		self::assertSame( 'example/example.php', $record['package'] );
+		self::assertCount( 1, $executed );
+		self::assertSame( 'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d FOR UPDATE', $executed[0][0] );
+		self::assertSame( array( ran_booster_table_name(), 1 ), $executed[0][1] );
+		self::assertSame( 'results', $executed[0][2] );
+
+		$this->expectException( PackageStorageFailure::class );
+		$unready_storage->require_recovery_ready();
+	}
+
 	public function test_recovery_rejects_changed_confirmation_and_guard_failure_without_deletion(): void {
 		global $wpdb;
 		$storage = $this->storage();

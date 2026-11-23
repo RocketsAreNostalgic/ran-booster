@@ -212,21 +212,18 @@ class Dashboard {
 			}
 		}
 
-		$requested_add_on_key = is_string( $requested_tab ) ? strtolower( trim( $requested_tab ) ) : '';
-		$selected_add_on      = '' === $requested_add_on_key || null === $this->admin_add_ons
+		$requested_tab_key = self::normalize_tab_key( $requested_tab );
+		// Core and provider tabs own their keys; add-on tabs never shadow a Core route.
+		$selected_tab    = $tab_present ? $this->admin_tabs->find( $requested_tab_key ) : $this->admin_tabs->resolve( null );
+		$selected_add_on = null !== $selected_tab || '' === $requested_tab_key || null === $this->admin_add_ons
 			? null
-			: $this->admin_add_ons->get( $requested_add_on_key );
-		$selected_tab         = null;
-		if ( null === $selected_add_on ) {
-			// No tab selects Overview. A present tab must name an available tab, or the not-found result is rendered.
-			$selected_tab = $tab_present ? $this->admin_tabs->find( $requested_add_on_key ) : $this->admin_tabs->resolve( null );
-		}
-		$selected_key = $selected_add_on?->key() ?? $selected_tab?->get_key() ?? '';
-		$tabs         = $this->tab_navigation( $selected_key );
-		$admin_url    = is_multisite()
+			: $this->admin_add_ons->get( $requested_tab_key );
+		$selected_key    = $selected_tab?->get_key() ?? $selected_add_on?->key() ?? '';
+		$tabs            = $this->tab_navigation( $selected_key );
+		$admin_url       = is_multisite()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
-		$data         = array(
+		$data            = array(
 			'tab'  => $selected_key,
 			'tabs' => $tabs,
 		);
@@ -261,13 +258,14 @@ class Dashboard {
 		$repository_view = null;
 		$panel           = null;
 		if ( null !== $selected_tab && $selected_tab->is_provider() ) {
-			$provider_view   = $this->requested_route_slug( 'view', AdminRoutes::PROVIDER_VIEWS, 'overview' );
-			$provider_task   = $this->requested_route_slug( 'panel', AdminRoutes::PROVIDER_TASKS, 'status' );
-			$repository_view = $this->requested_route_slug( 'repository_view', AdminRoutes::REPOSITORY_VIEWS, 'status' );
+			$provider_route  = self::requested_provider_route();
+			$provider_view   = $provider_route['view'] ?? null;
+			$provider_task   = $provider_route['task'] ?? null;
+			$repository_view = $provider_route['repository_view'] ?? null;
 		} elseif ( null !== $selected_tab && 'troubleshooting' === $selected_tab->get_key() ) {
 			$panel = null !== $this->support_report_payload
 				? 'support-report'
-				: ( null !== $this->troubleshooting_payload ? 'diagnostics' : $this->requested_route_slug( 'panel', AdminRoutes::TROUBLESHOOTING_PANELS, 'installation' ) );
+				: ( null !== $this->troubleshooting_payload ? 'diagnostics' : self::requested_route_slug( 'panel', AdminRoutes::TROUBLESHOOTING_PANELS, 'installation' ) );
 		}
 		if ( ( null === $selected_add_on && null === $selected_tab ) || ( null !== $selected_tab && ( ( $selected_tab->is_provider() && ( null === $provider_view || null === $provider_task || null === $repository_view ) ) || ( 'troubleshooting' === $selected_tab->get_key() && null === $panel ) ) ) ) {
 			// Closed result: an unknown tab, panel or view never renders another page.
@@ -290,6 +288,9 @@ class Dashboard {
 			$data['provider_list_state']            = $this->requested_provider_list_state();
 			$data['replace_credential']             = $this->requested_provider_repository_id( 'replace_credential' );
 			$data['credential_form_request']        = $this->requested_credential_form( $data['provider'] );
+
+			$selected_provider_code     = is_string( $data['selected_provider'] ?? null ) ? $data['selected_provider'] : '';
+			$data['native_hold_result'] = $this->provider_settings->provider_native_hold_result( $selected_provider_code, $this->native_hold_result() );
 
 			$data['requested_repository_id']            = $this->requested_provider_repository_id();
 			$data                                       = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );
@@ -347,7 +348,7 @@ class Dashboard {
 					$this->storage_status( false );
 				}
 				$data['troubleshooting']            = $this->troubleshooting->installation_payload( $this->provider_settings->github_selection_diagnostics(), $this->storage_installation_projection() );
-				$data['selection_provider_tab_url'] = $this->scoped_provider_tab_url( 'gh' );
+				$data['selection_provider_tab_url'] = $this->provider_tab_url( 'gh' );
 			} elseif ( 'support-report' === $panel ) {
 				$data['troubleshooting'] = array(
 					'report'           => $this->support_report_payload['text'] ?? '',
@@ -519,7 +520,7 @@ class Dashboard {
 		return array(
 			'troubleshooting'              => $this->troubleshooting->with_installation_context( $this->troubleshooting_payload ?? $this->troubleshooting->form_payload(), $selection ),
 			'github_selection_diagnostics' => $selection,
-			'selection_provider_tab_url'   => $this->scoped_provider_tab_url( 'gh' ),
+			'selection_provider_tab_url'   => $this->provider_tab_url( 'gh' ),
 		);
 	}
 
@@ -977,6 +978,14 @@ class Dashboard {
 						$this->requested_package_source_view(),
 						$this->requested_advanced_settings_open() || null !== $save_check_sentences
 					);
+					$native_hold                                   = $this->provider_settings->native_hold();
+					$package_native_hold                           = null !== $native_hold && $native_hold['readable'] && $native_hold['type'] === $type && $native_hold['identifier'] === $package->get_identifier() ? $native_hold : null;
+					$hold_active                                   = null !== $native_hold || 'recovery_required' === ( $this->provider_settings->github_selection_diagnostics()['state'] ?? null );
+					$hold_result                                   = $this->native_hold_result();
+					$edit_data['package_native_hold_result']       = null !== $hold_result && $hold_active && ( null === $package_native_hold || in_array( $hold_result['code'], array( 'released', 'cleared', 'lock_failed' ), true ) )
+						? null
+						: $hold_result;
+					$edit_data['package_native_hold']              = $package_native_hold;
 					$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
 					$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
 					$edit_data['repository_branch_check_args']     = PackageSource::BRANCH === $package->get_source()
@@ -1232,6 +1241,89 @@ class Dashboard {
 			$input[ $key ] = $_GET[ 'return_' . $key ] ?? '';
 		}
 		return $this->package_list_query_arguments( $input );
+	}
+
+	public static function native_hold_result_nonce_action(
+		string $code,
+		string $folder = '',
+		string $type = 'plugin',
+		string $package = ''
+	): string {
+		return 'ran_booster_native_hold_result_' . hash(
+			'sha256',
+			implode( "\0", array( $code, $folder, $type, $package ) )
+		);
+	}
+
+	/** @return array{code:string,folder:string,type:string}|null The result of a hold action, shown beside its control. */
+	private function native_hold_result(): ?array {
+		if ( ! isset( $_GET['ran_booster_hold'], $_GET['_ran_booster_hold_nonce'] ) ) {
+			return null;
+		}
+		if ( false === wp_verify_nonce(
+			is_string( $_GET['_ran_booster_hold_nonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_ran_booster_hold_nonce'] ) ) : '',
+			self::native_hold_result_nonce_action(
+				is_string( $_GET['ran_booster_hold'] ) ? sanitize_key( wp_unslash( $_GET['ran_booster_hold'] ) ) : '',
+				isset( $_GET['ran_booster_hold_folder'] ) && is_string( $_GET['ran_booster_hold_folder'] ) ? sanitize_text_field( wp_unslash( $_GET['ran_booster_hold_folder'] ) ) : '',
+				isset( $_GET['ran_booster_hold_type'] ) && is_string( $_GET['ran_booster_hold_type'] )
+					? sanitize_key( wp_unslash( $_GET['ran_booster_hold_type'] ) )
+					: 'plugin',
+				isset( $_GET['package'] ) && is_string( $_GET['package'] ) ? sanitize_text_field( wp_unslash( $_GET['package'] ) ) : ''
+			)
+		) ) {
+			return null;
+		}
+		if ( ! is_string( $_GET['ran_booster_hold'] ) || ! is_string( $_GET['_ran_booster_hold_nonce'] ) ) {
+			return null;
+		}
+		$nonce = sanitize_text_field( wp_unslash( $_GET['_ran_booster_hold_nonce'] ) );
+		if ( '' === $nonce || wp_unslash( $_GET['_ran_booster_hold_nonce'] ) !== $nonce ) {
+			return null;
+		}
+		$code = sanitize_key( wp_unslash( $_GET['ran_booster_hold'] ) );
+		if ( wp_unslash( $_GET['ran_booster_hold'] ) !== $code
+			|| ! in_array( $code, array( 'released', 'cleared', 'present', 'busy', 'failed', 'lock_failed' ), true ) ) {
+			return null;
+		}
+		$folder = '';
+		if ( isset( $_GET['ran_booster_hold_folder'] ) ) {
+			if ( ! is_string( $_GET['ran_booster_hold_folder'] ) ) {
+				return null;
+			}
+			$candidate_folder = sanitize_text_field( wp_unslash( $_GET['ran_booster_hold_folder'] ) );
+			if ( wp_unslash( $_GET['ran_booster_hold_folder'] ) !== $candidate_folder
+				|| 1 !== preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._-]{0,190}\z#D', $candidate_folder ) ) {
+				return null;
+			}
+			$folder = $candidate_folder;
+		}
+		$type = 'plugin';
+		if ( isset( $_GET['ran_booster_hold_type'] ) ) {
+			if ( ! is_string( $_GET['ran_booster_hold_type'] ) ) {
+				return null;
+			}
+			$candidate_type = sanitize_key( wp_unslash( $_GET['ran_booster_hold_type'] ) );
+			if ( wp_unslash( $_GET['ran_booster_hold_type'] ) !== $candidate_type
+				|| ! in_array( $candidate_type, array( 'plugin', 'theme' ), true ) ) {
+				return null;
+			}
+			$type = $candidate_type;
+		}
+		if ( isset( $_GET['package'] ) ) {
+			if ( ! is_string( $_GET['package'] ) ) {
+				return null;
+			}
+			$candidate_package = sanitize_text_field( wp_unslash( $_GET['package'] ) );
+			if ( wp_unslash( $_GET['package'] ) !== $candidate_package
+				|| 1 !== preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}\z#D', $candidate_package ) ) {
+				return null;
+			}
+		}
+		return array(
+			'code'   => $code,
+			'folder' => $folder,
+			'type'   => $type,
+		);
 	}
 
 	private function requested_package_source_view(): string {
@@ -1516,13 +1608,43 @@ class Dashboard {
 		return ! $posted_package && $open_picker;
 	}
 
+	public static function normalize_tab_key( mixed $requested_tab ): string {
+		return is_string( $requested_tab ) ? strtolower( trim( $requested_tab ) ) : '';
+	}
+
+	/** @return array{view: string, task: string, repository_view: string}|null */
+	public static function requested_provider_route(): ?array {
+		$provider_view   = self::requested_route_slug( 'view', AdminRoutes::PROVIDER_VIEWS, 'overview' );
+		$provider_task   = self::requested_route_slug( 'panel', AdminRoutes::PROVIDER_TASKS, 'status' );
+		$repository_view = self::requested_route_slug( 'repository_view', AdminRoutes::REPOSITORY_VIEWS, 'status' );
+		if ( null === $provider_view || null === $provider_task || null === $repository_view ) {
+			return null;
+		}
+
+		return array(
+			'view'            => $provider_view,
+			'task'            => $provider_task,
+			'repository_view' => $repository_view,
+		);
+	}
+
+	public static function is_valid_provider_request( string $provider_code ): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation state suppresses the duplicate global banner on valid provider routes.
+		$requested_tab = isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ? wp_unslash( $_GET['tab'] ) : null;
+		if ( '' === $provider_code || self::normalize_tab_key( $requested_tab ) !== $provider_code ) {
+			return false;
+		}
+
+		return null !== self::requested_provider_route();
+	}
+
 	/**
 	 * Read one allowlisted routing slug.
 	 *
 	 * @param list<string> $allowed Fixed slugs.
 	 * @return string|null The default when absent, the slug when allowed, null when unknown.
 	 */
-	private function requested_route_slug( string $key, array $allowed, string $fallback ): ?string {
+	private static function requested_route_slug( string $key, array $allowed, string $fallback ): ?string {
 		// Read-only allowlisted routing state.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only routing selector; no mutation is performed.
 		if ( ! isset( $_GET[ $key ] ) ) {
@@ -1662,10 +1784,6 @@ class Dashboard {
 
 	/** Return target after a provider management action. */
 	public function provider_tab_url( string $provider_code ): string {
-		return $this->tab_links()->url( admin_url( 'admin.php' ), $provider_code );
-	}
-
-	private function scoped_provider_tab_url( string $provider_code ): string {
 		return $this->tab_links()->url( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ), $provider_code );
 	}
 
@@ -1714,6 +1832,9 @@ class Dashboard {
 		}
 		if ( null !== $this->admin_add_ons ) {
 			foreach ( $this->admin_add_ons->all() as $tab ) {
+				if ( null !== $this->admin_tabs->find( $tab->key() ) ) {
+					continue;
+				}
 				$tabs[] = array(
 					'key'      => $tab->key(),
 					'label'    => $tab->label(),

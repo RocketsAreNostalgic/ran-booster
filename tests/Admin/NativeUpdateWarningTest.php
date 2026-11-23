@@ -31,6 +31,7 @@ final class NativeUpdateWarningTest extends TestCase {
 		$GLOBALS['ran_booster_test_capability_checks']           = array();
 		$GLOBALS['ran_booster_test_capabilities']                = $GLOBALS['ran_booster_native_warning_capabilities'];
 		$GLOBALS['ran_booster_native_warning_screen']            = (object) array( 'id' => 'plugins' );
+		$GLOBALS['ran_booster_native_warning_multisite']         = false;
 		$GLOBALS['ran_booster_asset_test_registered_scripts']    = array();
 		$GLOBALS['ran_booster_asset_test_enqueued_scripts']      = array();
 		$GLOBALS['ran_booster_asset_test_script_events']         = array();
@@ -102,7 +103,10 @@ final class NativeUpdateWarningTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-native-update-warning' . $hidden, $html );
-		self::assertStringContainsString( 'managed GitHub update has not been verified', $html );
+		self::assertStringContainsString( '' === $hidden ? 'GitHub installs are on hold: the last install of <a href="https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold">example-plugin</a> couldn\'t complete.' : 'GitHub installs are on hold: the last install couldn&#039;t complete.', $html );
+		if ( ' hidden' === $hidden ) {
+			self::assertStringContainsString( '<a href="https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh">Review GitHub management.</a>', $html );
+		}
 		self::assertStringNotContainsString( 'private', $html );
 		self::assertStringNotContainsString( 'native_mutation', $html );
 	}
@@ -125,30 +129,61 @@ final class NativeUpdateWarningTest extends TestCase {
 		ob_start();
 		$this->render_warning( $booster );
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'Contact a site administrator.', $html );
-		self::assertStringNotContainsString( 'admin.php?page=ran-booster&tab=gh', $html );
+		self::assertStringContainsString( 'the last install of example-plugin couldn\'t complete. Contact a site administrator.', $html );
+		self::assertStringNotContainsString( 'href', $html );
 
 		$GLOBALS['ran_booster_native_warning_capabilities']['manage_options'] = true;
 		$GLOBALS['ran_booster_test_capabilities']['manage_options']           = true;
 		ob_start();
 		$this->render_warning( $booster );
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'admin.php?page=ran-booster&tab=gh', $html );
+		self::assertStringContainsString( 'admin.php?page=ran-booster&tab=gh#ran-booster-native-hold', $html );
+		self::assertStringNotContainsString( 'Contact a site administrator.', $html );
 	}
 
-	public function test_link_falls_back_to_overview_when_the_provider_tab_is_unavailable(): void {
+	public function test_a_readable_hold_links_its_name_to_the_package_page(): void {
 		$booster = $this->booster(
 			array(
 				'state'     => 'recovery_required',
 				'available' => false,
 			),
-			'bb'
+			'gh',
+			array(
+				'name' => 'Example Plugin',
+				'url'  => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example-plugin%2Fexample-plugin.php#ran-booster-native-hold',
+			)
 		);
 		ob_start();
 		$this->render_warning( $booster );
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'admin.php?page=ran-booster&tab=overview', $html );
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example-plugin%2Fexample-plugin.php#ran-booster-native-hold">Example Plugin</a>', $html );
 		self::assertStringNotContainsString( 'tab=gh', $html );
+	}
+
+	public function test_heartbeat_fallback_warning_uses_network_link_on_multisite_and_hides_link_without_capability(): void {
+		$booster = $this->booster(
+			array(
+				'state'     => 'available',
+				'available' => true,
+			)
+		);
+
+		$GLOBALS['ran_booster_native_warning_multisite'] = true;
+		ob_start();
+		$this->render_warning( $booster );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh">Review GitHub management.</a>', $html );
+		self::assertStringNotContainsString( 'Contact a site administrator.', $html );
+
+		$GLOBALS['ran_booster_native_warning_capabilities']['manage_options'] = false;
+		$GLOBALS['ran_booster_test_capabilities']['manage_options']           = false;
+		ob_start();
+		$this->render_warning( $booster );
+		$restricted = (string) ob_get_clean();
+		self::assertStringContainsString( 'GitHub installs are on hold: the last install couldn&#039;t complete. Contact a site administrator.', $restricted );
+		self::assertStringNotContainsString( 'until verification is complete', $restricted );
+		self::assertStringNotContainsString( 'Review GitHub management.', $restricted );
+		self::assertStringNotContainsString( 'href', $restricted );
 	}
 
 	public function test_heartbeat_omits_unknown_and_unauthorized_statuses(): void {
@@ -234,8 +269,161 @@ final class NativeUpdateWarningTest extends TestCase {
 		self::assertSame( '', (string) ob_get_clean() );
 	}
 
-	/** @param array<string,mixed> $status */
-	private function booster( array $status, string $tab_provider = 'gh' ): Booster {
+	public function test_global_warning_is_omitted_on_the_github_provider_page_only(): void {
+		$booster               = $this->booster(
+			array(
+				'state'     => 'recovery_required',
+				'available' => false,
+			)
+		);
+		$booster->booster_path = dirname( __DIR__, 2 );
+		$booster->booster_url  = 'https://example.test/wp-content/plugins/ran-booster';
+
+		try {
+			foreach ( array(
+				'canonical gh'                  => array( 'tab' => 'gh' ),
+				'trimmed uppercase gh'          => array( 'tab' => ' GH ' ),
+				'gh credentials view'           => array(
+					'tab'  => 'gh',
+					'view' => 'credentials',
+				),
+				'gh signing-secrets view'       => array(
+					'tab'  => 'gh',
+					'view' => 'signing-secrets',
+				),
+				'gh repositories branch detail' => array(
+					'tab'             => 'gh',
+					'panel'           => 'repositories',
+					'repository_view' => 'branch',
+				),
+			) as $case => $query ) {
+				unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+				foreach ( $query as $key => $value ) {
+					$_GET[ $key ] = $value;
+				}
+				foreach ( array( 'toplevel_page_ran-booster', 'toplevel_page_ran-booster-network' ) as $screen_id ) {
+					$GLOBALS['ran_booster_native_warning_screen']       = (object) array( 'id' => $screen_id );
+					$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+					$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
+					self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'], $case );
+					ob_start();
+					$this->render_warning( $booster );
+					\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+					self::assertSame( '', (string) ob_get_clean(), $case );
+				}
+			}
+
+			$GLOBALS['ran_booster_native_warning_screen'] = (object) array( 'id' => 'toplevel_page_ran-booster' );
+			foreach ( array(
+				'rejected dotted tab'        => array( 'tab' => 'g.h' ),
+				'gh unknown view'            => array(
+					'tab'  => 'gh',
+					'view' => 'unknown',
+				),
+				'gh unknown panel'           => array(
+					'tab'   => 'gh',
+					'panel' => 'unknown',
+				),
+				'gh unknown repository view' => array(
+					'tab'             => 'gh',
+					'repository_view' => 'unknown',
+				),
+				'bitbucket tab'              => array( 'tab' => 'bb' ),
+				'overview default tab'       => array(),
+			) as $case => $query ) {
+				unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+				foreach ( $query as $key => $value ) {
+					$_GET[ $key ] = $value;
+				}
+				$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+				$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
+				self::assertSame( array( 'ran-booster-native-update-warning' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'], $case );
+				ob_start();
+				$this->render_warning( $booster );
+				\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+				self::assertStringContainsString( 'data-ran-booster-native-update-warning', (string) ob_get_clean(), $case );
+			}
+
+			$without_github_tab               = $this->booster(
+				array(
+					'state'     => 'recovery_required',
+					'available' => false,
+				),
+				'bb'
+			);
+			$without_github_tab->booster_path = dirname( __DIR__, 2 );
+			$without_github_tab->booster_url  = 'https://example.test/wp-content/plugins/ran-booster';
+			unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+			$_GET['tab']                                        = 'gh';
+			$GLOBALS['ran_booster_native_warning_actions']      = array();
+			$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+			$this->load_warning_asset( $without_github_tab, 'toplevel_page_ran-booster' );
+			self::assertSame( array( 'ran-booster-native-update-warning' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+			ob_start();
+			$this->render_warning( $without_github_tab );
+			\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+			self::assertStringContainsString( 'data-ran-booster-native-update-warning', (string) ob_get_clean() );
+		} finally {
+			unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+		}
+	}
+
+	public function test_github_provider_page_keeps_heartbeat_and_hidden_warning_before_a_hold_starts(): void {
+		foreach ( array(
+			'available' => array(
+				'state'     => 'available',
+				'available' => true,
+			),
+			'conflict'  => array(
+				'state'     => 'conflict',
+				'available' => false,
+			),
+		) as $state_case => $status ) {
+			$booster               = $this->booster( $status );
+			$booster->booster_path = dirname( __DIR__, 2 );
+			$booster->booster_url  = 'https://example.test/wp-content/plugins/ran-booster';
+
+			try {
+				foreach ( array( 'gh', ' GH ' ) as $tab ) {
+					foreach ( array( 'toplevel_page_ran-booster', 'toplevel_page_ran-booster-network' ) as $screen_id ) {
+						unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+						$_GET['tab']                                        = $tab;
+						$GLOBALS['ran_booster_native_warning_screen']       = (object) array( 'id' => $screen_id );
+						$GLOBALS['ran_booster_native_warning_actions']      = array();
+						$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+						$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
+						self::assertSame(
+							array( 'ran-booster-native-update-warning' ),
+							$GLOBALS['ran_booster_asset_test_enqueued_scripts'],
+							$state_case . ' / ' . $tab . ' on ' . $screen_id
+						);
+						ob_start();
+						$this->render_warning( $booster );
+						\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+						$html = (string) ob_get_clean();
+						self::assertStringContainsString(
+							'data-ran-booster-native-update-warning hidden',
+							$html,
+							$state_case . ' / ' . $tab . ' on ' . $screen_id
+						);
+						self::assertStringContainsString(
+							'Review GitHub management.',
+							$html,
+							$state_case . ' / ' . $tab . ' on ' . $screen_id
+						);
+					}
+				}
+			} finally {
+				unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+			}
+		}
+	}
+
+	/**
+	 * @param array<string,mixed> $status
+	 * @param array{name: string, url: string}|null $hold
+	 */
+	private function booster( array $status, string $tab_provider = 'gh', ?array $hold = null ): Booster {
 		$container = new CoreContainer();
 		$container->bind(
 			'RAN\\Admin\\ProviderTabLinks',
@@ -245,14 +433,25 @@ final class NativeUpdateWarningTest extends TestCase {
 		);
 		$container->bind(
 			'RAN\\Admin\\ProviderSettingsPresenter',
-			new class( $status ) {
-				/** @param array<string,mixed> $status */
-				public function __construct( private array $status ) {
+			new class( $status, $hold ?? array(
+				'name' => 'example-plugin',
+				'url'  => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold',
+			) ) {
+				/**
+				 * @param array<string,mixed> $status
+				 * @param array{name: string, url: string} $hold
+				 */
+				public function __construct( private array $status, private array $hold ) {
 				}
 
 				/** @return array<string,mixed> */
 				public function github_selection_diagnostics(): array {
 					return $this->status;
+				}
+
+				/** @return array{name: string, url: string}|null */
+				public function native_hold(): ?array {
+					return 'recovery_required' === ( $this->status['state'] ?? null ) ? $this->hold : null;
 				}
 			}
 		);

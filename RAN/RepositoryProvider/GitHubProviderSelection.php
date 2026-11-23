@@ -94,13 +94,13 @@ final class GitHubProviderSelection {
 						throw new \RuntimeException( 'GitHub adoption authority changed before confirmation.' );
 					}
 					$this->store->selection_transaction(
-						function () use ( $inventory, $digest, $reuse_existing, $acknowledge_incompatible, $attempts, $lock, $token ): void {
+						function ( callable $execute ) use ( $inventory, $digest, $reuse_existing, $acknowledge_incompatible, $attempts, $lock, $token ): void {
 							$review = $this->adoption_projection( $inventory );
 							if ( ! hash_equals( $review['digest'], $digest ) || ( $review['compatible_count'] > 0 && ! $reuse_existing ) || ( 0 === $review['compatible_count'] && $review['incompatible_count'] > 0 && ! $acknowledge_incompatible ) ) {
 								throw new \RuntimeException( 'GitHub adoption review or credential reuse consent changed.' );
 							}
 							$state = $this->store->read( true );
-							$attempts->assert_selection_transition_idle( $this );
+							$attempts->assert_selection_transition_idle( $this, $execute );
 							$next                         = $state;
 							$next['selection_generation'] = $review['selection_generation'] + 1;
 							$next['selected']             = $review['selected'];
@@ -108,7 +108,7 @@ final class GitHubProviderSelection {
 							unset( $next['declaration']['implementation_fingerprint'] );
 							$next['approval']             = 'approved';
 							$next['approved_api_formats'] = $review['target']['api_credential_formats'];
-							if ( $this->adoption_projection( $inventory ) !== $review || $lock->current_token() !== $token || ! $this->store->compare_and_swap( $state, $next ) ) {
+							if ( $this->adoption_projection( $inventory ) !== $review || $lock->current_token_sql( $this->uses_connection( ... ), $execute ) !== $token || ! $this->store->compare_and_swap( $state, $next ) ) {
 								throw new \RuntimeException( 'GitHub adoption authority changed before confirmation.' );
 							}
 						}
@@ -116,7 +116,7 @@ final class GitHubProviderSelection {
 				}
 			);
 		} finally {
-			if ( ! $lock->release( $token ) ) {
+			if ( ! $this->has_unclosed_transaction() && ! $lock->release( $token ) ) {
 				throw new \RuntimeException( 'GitHub selection may have changed; updater lock release requires recovery.' );
 			}
 		}
@@ -364,8 +364,16 @@ final class GitHubProviderSelection {
 		}
 	}
 
-	public function uses_connection( object $connection ): bool {
-		return $this->store->uses_connection( $connection );
+	public function uses_connection( object $connection, ?string $table = null ): bool {
+		return $this->store->uses_connection( $connection, $table );
+	}
+
+	public function has_unclosed_transaction(): bool {
+		return $this->store->has_unclosed_transaction();
+	}
+
+	public function has_uncertain_commit(): bool {
+		return $this->store->has_uncertain_commit();
 	}
 
 	/** Current authority, also acquiring the first admission lock in caller's transaction. */
@@ -465,53 +473,90 @@ final class GitHubProviderSelection {
 		return $state;
 	}
 
-	/** @param callable():bool $owns_lock Exact captured updater ownership, never acquisition. */
-	public function begin_native_mutation( string $type, string $identity, callable $owns_lock ): string {
-		$marker                                      = $this->store->selection_transaction(
-			function () use ( $type, $identity, $owns_lock ): array {
+	/**
+	 * @param callable(\Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)):bool $owns_lock    Exact captured updater ownership via the pinned transaction executor, never acquisition.
+	 * @param string|null                                                                                                     $lock_token   The held updater lock's value, carried in the owner tag so a release can free that exact lock, or null when the caller does not own WordPress's lock (automatic updates).
+	 * @param (callable(string):void)|null                                                                                    $on_committed Invoked only after COMMIT succeeds and before cache invalidation.
+	 */
+	public function begin_native_mutation( string $type, string $identity, callable $owns_lock, ?string $lock_token, ?callable $on_committed = null ): string {
+		$marker = $this->store->selection_transaction(
+			function ( \Closure $execute ) use ( $type, $identity, $owns_lock, $lock_token ): array {
 				$state = $this->store->read( true );
-				if ( isset( $state['native_mutation'] ) || ! $this->owns_native_lock( $owns_lock ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
+				if ( isset( $state['native_mutation'] ) || ( null !== $lock_token && 1 !== preg_match( '/\A[1-9]\d{0,15}\z/D', $lock_token ) ) || ! $this->owns_native_lock( $owns_lock, $execute ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
 						throw new \RuntimeException( 'GitHub native mutation is unavailable.' );
 				}
+				$prefix                  = null === $lock_token ? str_repeat( '0', 16 ) : sprintf( '%016x', (int) $lock_token );
+				$nonce                   = null === $lock_token ? '' : bin2hex( random_bytes( 4 ) );
+				$owner_tag               = null === $lock_token
+					? $prefix . bin2hex( random_bytes( 8 ) )
+					: $prefix . $nonce . substr( hash( 'sha256', 'ran-booster-native-lock-v1:' . $prefix . ':' . $nonce ), 0, 8 );
 				$marker                  = array(
 					'selection_generation' => $state['selection_generation'],
-					'owner_tag'            => bin2hex( random_bytes( 16 ) ),
+					'owner_tag'            => $owner_tag,
 					'target_type'          => $type,
 					'installed_identity'   => $identity,
 					'phase'                => 'started',
 				);
 				$next                    = $state;
 				$next['native_mutation'] = $marker;
-				if ( ! $this->owns_native_lock( $owns_lock ) || ! $this->store->compare_and_swap( $state, $next ) ) {
+				if ( ! $this->owns_native_lock( $owns_lock, $execute ) || ! $this->store->compare_and_swap( $state, $next ) ) {
 					throw new \RuntimeException( 'GitHub native mutation changed.' );
 				}
 				return $marker;
+			},
+			/** @param array{selection_generation:int,owner_tag:string,target_type:string,installed_identity:string,phase:string} $committed_marker */
+			function ( array $committed_marker ) use ( $on_committed ): void {
+				$this->native_owners[ $committed_marker['owner_tag'] ] = $committed_marker;
+				if ( null !== $on_committed ) {
+					$on_committed( $committed_marker['owner_tag'] );
+				}
 			}
 		);
-		$this->native_owners[ $marker['owner_tag'] ] = $marker;
 		return $marker['owner_tag'];
 	}
 
 	/**
-	 * @param callable():bool $owns_lock
+	 * @param callable(\Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)):bool $owns_lock
+	 * @param \Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)               $execute
 	 * @phpstan-impure The captured lock can change between current reads.
 	 */
-	private function owns_native_lock( callable $owns_lock ): bool {
-		return true === $owns_lock();
+	private function owns_native_lock( callable $owns_lock, \Closure $execute ): bool {
+		return true === $owns_lock( $execute );
 	}
 
 	/**
 	 * Captured completion survives guard loss and revocation; it never restores approval.
 	 *
-	 * @param (callable(callable(object,string,string):void):bool)|null $commit_source Core's source transaction invokes completion before locking its package row.
+	 * @param (callable(callable(object,string,string):void, \Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)):bool)|null $commit_source Core's source transaction invokes completion inside the pinned selection transaction.
+	 * @param (callable():void)|null                                                                                                                                      $on_committed  Invoked only after COMMIT succeeds and before cache invalidation.
 	 */
-	public function complete_native_mutation( string $owner, string $type, string $identity, string $outcome, ?callable $commit_source = null ): void {
+	public function complete_native_mutation( string $owner, string $type, string $identity, string $outcome, ?callable $commit_source = null, ?callable $on_committed = null ): void {
 		$marker = $this->native_owners[ $owner ] ?? null;
 		if ( null === $marker || $marker['target_type'] !== $type || $marker['installed_identity'] !== $identity || ! in_array( $outcome, array( 'verified_success', 'uncertain' ), true ) ) {
 			throw new \RuntimeException( 'GitHub native completion owner changed.' );
 		}
 		unset( $this->native_owners[ $owner ] );
+		$notify_committed = null === $on_committed
+			? null
+			: static function () use ( $on_committed ): void {
+				$on_committed();
+			};
 		if ( 'uncertain' === $outcome ) {
+			// The owning request ended normally: record that, so its release needs no proof that it stopped.
+			$this->store->selection_transaction(
+				function () use ( $marker ): void {
+					$state = $this->store->read( true );
+					if ( ( $state['native_mutation'] ?? null ) !== $marker ) {
+						throw new \RuntimeException( 'GitHub native completion owner changed.' );
+					}
+					$next                             = $state;
+					$next['native_mutation']['phase'] = 'finished';
+					if ( ! $this->store->compare_and_swap( $state, $next ) ) {
+						throw new \RuntimeException( 'GitHub native completion changed.' );
+					}
+				},
+				$notify_committed
+			);
 			return;
 		}
 		$completed = false;
@@ -534,12 +579,44 @@ final class GitHubProviderSelection {
 			$completed = true;
 		};
 		if ( null !== $commit_source ) {
-			if ( true !== $commit_source( $complete ) || ! $completed ) {
-				throw new \RuntimeException( 'Native source completion is unconfirmed.' );
-			}
+			$this->store->selection_transaction(
+				static function ( \Closure $execute ) use ( $complete, $commit_source, &$completed ): void {
+					if ( true !== $commit_source( $complete, $execute ) || ! $completed ) {
+						throw new \RuntimeException( 'Native source completion is unconfirmed.' );
+					}
+				},
+				$notify_committed
+			);
 			return;
 		}
-		$this->store->selection_transaction( $complete );
+		$this->store->selection_transaction(
+			static function () use ( $complete ): void {
+				$complete();
+			},
+			$notify_committed
+		);
+	}
+
+	/**
+	 * The updater lock value the hold's owner held, or null for a tag that does not carry one.
+	 *
+	 * @param array<mixed> $marker
+	 */
+	public static function native_lock_token( array $marker ): ?string {
+		$tag = $marker['owner_tag'] ?? null;
+		if ( ! is_string( $tag ) || 1 !== preg_match( '/\A([0-9a-f]{16})([0-9a-f]{8})([0-9a-f]{8})\z/D', $tag, $matches ) ) {
+			return null;
+		}
+		$prefix = $matches[1];
+		if ( 1 !== preg_match( '/\A0+[1-9a-f][0-9a-f]{0,13}\z/D', $prefix ) ) {
+			return null;
+		}
+		$expected = substr( hash( 'sha256', 'ran-booster-native-lock-v1:' . $prefix . ':' . $matches[2] ), 0, 8 );
+		if ( ! hash_equals( $expected, $matches[3] ) ) {
+			return null;
+		}
+		$token = (string) hexdec( ltrim( $prefix, '0' ) );
+		return 1 === preg_match( '/\A[1-9]\d{0,15}\z/D', $token ) ? $token : null;
 	}
 
 	/** @return array<string,mixed> Internal recovery authority; never expose the native owner in public status. */
@@ -549,6 +626,21 @@ final class GitHubProviderSelection {
 			throw new \RuntimeException( 'No interrupted native mutation requires recovery.' );
 		}
 		return $state;
+	}
+
+	/**
+	 * Run a callback-free SQL operation inside one single-session transaction when no
+	 * native_mutation hold is present. Callers must keep WordPress cache/hook callbacks
+	 * outside this transaction. Invokes $on_committed only after COMMIT succeeds.
+	 *
+	 * @template T
+	 * @param callable(callable(string, list<string>, 'affected'|'var'): (int|string|null)): T $operation
+	 * @param (callable(T): void)|null $on_committed
+	 * @return T|null Null when a native_mutation hold exists; otherwise the operation result.
+	 * @phpstan-impure Reads and may mutate database state inside the selection transaction.
+	 */
+	public function without_native_mutation_hold( callable $operation, ?callable $on_committed = null ): mixed {
+		return $this->store->without_native_mutation_hold( $operation, $on_committed );
 	}
 
 	public function native_mutation_blocks_target( string $type, string $identity ): bool {
@@ -578,22 +670,26 @@ final class GitHubProviderSelection {
 	}
 
 	/**
-	 * @param array<string,mixed> $expected Exact reviewed state, including marker and approval.
-	 * @param callable():void $verify Core-only physical absence/management/attempt/lock checks; no permission filters.
+	 * @param array<string,mixed>                                                                                       $expected Exact reviewed state, including marker and approval.
+	 * @param callable(\Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)):void $verify Core-only physical absence/management/attempt/lock checks; no WordPress filters or callbacks.
+	 * @param (callable():void)|null                                                                                    $on_committed Invoked only after COMMIT succeeds and before cache invalidation.
 	 */
-	public function recover_native_removal( array $expected, callable $verify ): void {
+	public function release_native_hold( array $expected, callable $verify, ?callable $on_committed = null ): void {
 		$this->store->selection_transaction(
-			function () use ( $expected, $verify ): void {
+			function ( callable $execute ) use ( $expected, $verify ): void {
 				$state = $this->native_recovery_state();
 				if ( $state !== $expected ) {
 					throw new \RuntimeException( 'Native recovery authority changed.' );
 				}
-				$verify();
+				$verify( $execute );
 				$next = $state;
 				unset( $next['native_mutation'] );
 				if ( ! $this->store->compare_and_swap( $state, $next ) ) {
 					throw new \RuntimeException( 'Native recovery could not be verified.' );
 				}
+			},
+			null === $on_committed ? null : static function () use ( $on_committed ): void {
+				$on_committed();
 			}
 		);
 	}

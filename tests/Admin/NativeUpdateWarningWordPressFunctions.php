@@ -37,15 +37,35 @@ if ( ! function_exists( __NAMESPACE__ . '\\get_current_screen' ) ) {
 	}
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\esc_html__' ) ) {
+	function esc_html__( string $text, string $domain = 'default' ): string {
+		unset( $domain );
+		return $text;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\wp_kses' ) ) {
+	/** @param array<string, array<string, bool>> $allowed_html */
+	function wp_kses( string $content, array $allowed_html ): string {
+		return strip_tags( $content, array_keys( $allowed_html ) );
+	}
+}
+
 if ( ! function_exists( __NAMESPACE__ . '\\is_multisite' ) ) {
 	function is_multisite(): bool {
-		return false;
+		return (bool) ( $GLOBALS['ran_booster_native_warning_multisite'] ?? false );
 	}
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\admin_url' ) ) {
 	function admin_url( string $path = '' ): string {
 		return 'https://example.test/wp-admin/' . ltrim( $path, '/' );
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\network_admin_url' ) ) {
+	function network_admin_url( string $path = '' ): string {
+		return 'https://example.test/wp-admin/network/' . ltrim( $path, '/' );
 	}
 }
 
@@ -66,5 +86,17 @@ if ( ! function_exists( __NAMESPACE__ . '\\esc_html' ) ) {
 if ( ! function_exists( __NAMESPACE__ . '\\esc_url' ) ) {
 	function esc_url( string $url ): string {
 		return $url;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\wp_unslash' ) ) {
+	function wp_unslash( mixed $value ): mixed {
+		return is_string( $value ) ? stripslashes( $value ) : $value;
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\sanitize_key' ) ) {
+	function sanitize_key( mixed $value ): string {
+		return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( is_scalar( $value ) ? (string) $value : '' ) ) ?? '';
 	}
 }

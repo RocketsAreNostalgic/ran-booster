@@ -8,7 +8,9 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\PackageSource;
+use RAN\Runtime\RuntimeSupport;
 use RAN\Storage\Database;
+use RAN\Storage\DatabaseLifecycleFailure;
 use RAN\Storage\SqlReadConnection;
 use RAN\Storage\ManagedReleaseWriteConnection;
 use RAN\Storage\RepositorySourceGuard;
@@ -51,6 +53,114 @@ class ManagedReleaseStore {
 		return ManagedReleaseConfiguration::from_json( $value );
 	}
 
+	public function connection(): ?object {
+		return $this->database;
+	}
+
+	public function require_transition_ready(): void {
+		PackageMutationGuard::assert_package_mutation_allowed();
+		$this->write_connection();
+	}
+
+	/**
+	 * Run the source CAS transition inside a caller-owned pinned single-session transaction
+	 * (such as GitHubSelectionStore::selection_transaction()). Call require_transition_ready()
+	 * for WordPress mutation-guard and storage readiness checks before opening the transaction;
+	 * the caller owns COMMIT and ROLLBACK.
+	 *
+	 * @param callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null) $execute
+	 */
+	public function transition_in_transaction(
+		string $type,
+		string $identifier,
+		PackageSource $expected_source,
+		int $expected_revision,
+		PackageSource $new_source,
+		?ManagedReleaseConfiguration $configuration,
+		int $user_id,
+		string $expected_adoption_token,
+		callable $execute
+	): bool {
+		RuntimeSupport::assert_managed_operations_allowed();
+		if ( ! $this->valid_transition_arguments( $type, $identifier, $expected_source, $expected_revision, $new_source, $configuration, $user_id, $expected_adoption_token ) ) {
+			return false;
+		}
+		$before = $this->row( $type, $identifier, true, $expected_adoption_token, $execute );
+		if ( PackageSource::RELEASE_ASSET === $new_source ) {
+			$this->assert_release_subdirectory( $before );
+		}
+		$context = $this->transition_before_context( $before, $expected_adoption_token, $expected_source, $expected_revision );
+		if ( null === $context ) {
+			return false;
+		}
+		$assessment = ( new RepositorySourceGuard( $this->database, $this->lifecycle ) )->assess(
+			$context['provider'],
+			$context['provider_repository_id'],
+			self::type_id( $type ),
+			$identifier,
+			$new_source,
+			true,
+			$execute
+		);
+		if ( ! $assessment['allowed'] ) {
+			if ( 'repository_source_unavailable' === $assessment['code'] ) {
+				throw new ManagedReleaseRepositorySourceUnavailable( 'The repository source relationship is unavailable.' );
+			}
+			return false;
+		}
+		$policy      = is_string( $before->deployment_policy ?? null ) ? $before->deployment_policy : '';
+		$next_policy = self::next_transition_policy( $policy );
+		$config_json = $configuration?->to_json();
+		$sets        = array(
+			'source = %s',
+			'source_revision = %d',
+			'source_previous = %s',
+			'source_changed_at = %s',
+		);
+		/** @var list<int|string> $arguments */
+		$arguments = array(
+			ran_booster_table_name(),
+			$new_source->value,
+			$expected_revision + 1,
+			$expected_source->value,
+			( $this->clock )(),
+		);
+		if ( $user_id > 0 ) {
+			$sets[]      = 'source_changed_by = %d';
+			$arguments[] = $user_id;
+		} else {
+			$sets[] = 'source_changed_by = NULL';
+		}
+		$sets[]      = 'deployment_policy = %s';
+		$arguments[] = $next_policy;
+		if ( null !== $config_json ) {
+			$sets[]      = 'release_configuration = %s';
+			$arguments[] = $config_json;
+		} else {
+			$sets[] = 'release_configuration = NULL';
+		}
+		array_push(
+			$arguments,
+			$expected_adoption_token,
+			self::type_id( $type ),
+			$identifier,
+			$expected_source->value,
+			$expected_revision,
+			$policy
+		);
+		$updated = $execute(
+			'UPDATE %i SET ' . implode( ', ', $sets ) . ' WHERE CAST(adoption_token AS BINARY) = CAST(%s AS BINARY) AND package_type = %d AND CAST(package AS BINARY) = CAST(%s AS BINARY) AND source = %s AND source_revision = %d AND deployment_policy = %s',
+			$arguments,
+			'affected'
+		);
+		if ( 1 !== $updated ) {
+			return false;
+		}
+
+		$after = $this->row( $type, $identifier, true, $expected_adoption_token, $execute );
+		return $this->transition_after_matches( $after, $expected_adoption_token, $new_source, $expected_revision, $expected_source, $config_json, $next_policy );
+	}
+
 	/** @param (callable(object,string,string):void)|null $native_complete Protected native custody removal in this transaction, before the package row lock. */
 	public function transition(
 		string $type,
@@ -64,17 +174,15 @@ class ManagedReleaseStore {
 		?callable $native_complete = null
 	): bool {
 		PackageMutationGuard::assert_package_mutation_allowed();
-		\RAN\AdoptionIdentity::parse( $expected_adoption_token );
-
-		$this->assert_identity( $type, $identifier );
-		if ( $expected_revision < 1 || PHP_INT_MAX === $expected_revision || $user_id < 0 || $expected_source === $new_source ) {
-			return false;
-		}
-		if ( ( PackageSource::RELEASE_ASSET === $new_source ) !== ( null !== $configuration ) ) {
+		if ( ! $this->valid_transition_arguments( $type, $identifier, $expected_source, $expected_revision, $new_source, $configuration, $user_id, $expected_adoption_token ) ) {
 			return false;
 		}
 
 		$database = $this->write_connection();
+		$pinned   = $this->pinned_wpdb_session( $database );
+		if ( $database instanceof \wpdb && null === $pinned ) {
+			return false;
+		}
 
 		if ( false === $database->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' )
 			|| false === $database->query( 'START TRANSACTION' ) ) {
@@ -88,18 +196,15 @@ class ManagedReleaseStore {
 			if ( PackageSource::RELEASE_ASSET === $new_source ) {
 				$this->assert_release_subdirectory( $before );
 			}
-			if ( ( $before->adoption_token ?? null ) !== $expected_adoption_token
-				|| ( $before->source ?? null ) !== $expected_source->value
-				|| (int) ( $before->source_revision ?? 0 ) !== $expected_revision
-				|| ! is_string( $before->provider ?? null )
-				|| ! is_string( $before->provider_repository_id ?? null ) ) {
+			$context = $this->transition_before_context( $before, $expected_adoption_token, $expected_source, $expected_revision );
+			if ( null === $context ) {
 				$wpdb = $database;
 				$wpdb->query( 'ROLLBACK' );
 				return false;
 			}
 			$assessment = ( new RepositorySourceGuard( $this->database, $this->lifecycle ) )->assess(
-				$before->provider,
-				$before->provider_repository_id,
+				$context['provider'],
+				$context['provider_repository_id'],
 				self::type_id( $type ),
 				$identifier,
 				$new_source,
@@ -114,9 +219,7 @@ class ManagedReleaseStore {
 				return false;
 			}
 			$policy      = is_string( $before->deployment_policy ?? null ) ? $before->deployment_policy : '';
-			$next_policy = DeploymentPolicy::AUTOMATIC->value === $policy
-			? DeploymentPolicy::MANUAL->value
-			: $policy;
+			$next_policy = self::next_transition_policy( $policy );
 			$data        = array(
 				'source'                => $new_source->value,
 				'source_revision'       => $expected_revision + 1,
@@ -140,15 +243,9 @@ class ManagedReleaseStore {
 				return false;
 			}
 
-			$after = $this->row( $type, $identifier, true, $expected_adoption_token );
-
-			$verified = ( $after->adoption_token ?? null ) === $expected_adoption_token
-			&& ( $after->source ?? null ) === $new_source->value
-			&& (int) ( $after->source_revision ?? 0 ) === $expected_revision + 1
-			&& ( $after->source_previous ?? null ) === $expected_source->value
-			&& ( $after->release_configuration ?? null ) === $data['release_configuration']
-				&& ( $after->deployment_policy ?? null ) === $next_policy;
-			if ( ! $verified || false === $database->query( 'COMMIT' ) ) {
+			$after    = $this->row( $type, $identifier, true, $expected_adoption_token );
+			$verified = $this->transition_after_matches( $after, $expected_adoption_token, $new_source, $expected_revision, $expected_source, $data['release_configuration'], $next_policy );
+			if ( ! $verified || ! $this->commit_transition( $database, $pinned ) ) {
 				$database->query( 'ROLLBACK' );
 				return false;
 			}
@@ -279,14 +376,31 @@ class ManagedReleaseStore {
 		}
 	}
 
-	private function row( string $type, string $identifier, bool $lock = false, ?string $token = null ): object {
+	/** @param (callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null))|null $execute */
+	private function row( string $type, string $identifier, bool $lock = false, ?string $token = null, ?callable $execute = null ): object {
 		$this->assert_identity( $type, $identifier );
-		$database = $this->read_connection();
-		$query    = $database->prepare(
-			'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s' . ( null !== $token ? ' AND BINARY adoption_token = BINARY %s' : '' ) . ' LIMIT 2' . ( $lock ? ' FOR UPDATE' : '' ),
-			...( null === $token
+		if ( null !== $execute ) {
+			$arguments = null === $token
 				? array( ran_booster_table_name(), self::type_id( $type ), $identifier )
-				: array( ran_booster_table_name(), self::type_id( $type ), $identifier, $token ) )
+				: array( ran_booster_table_name(), self::type_id( $type ), $identifier, $token );
+			$rows      = $execute(
+				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND CAST(package AS BINARY) = CAST(%s AS BINARY)' . ( null !== $token ? ' AND CAST(adoption_token AS BINARY) = CAST(%s AS BINARY)' : '' ) . ' LIMIT 2' . ( $lock ? ' FOR UPDATE' : '' ),
+				$arguments,
+				'results'
+			);
+			if ( ! is_array( $rows ) || 1 !== count( $rows ) ) {
+				throw new RuntimeException( 'The managed release package row is unavailable.' );
+			}
+
+			return $rows[0];
+		}
+		$database  = $this->read_connection();
+		$arguments = null === $token
+			? array( ran_booster_table_name(), self::type_id( $type ), $identifier )
+			: array( ran_booster_table_name(), self::type_id( $type ), $identifier, $token );
+		$query     = $database->prepare(
+			'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s' . ( null !== $token ? ' AND BINARY adoption_token = BINARY %s' : '' ) . ' LIMIT 2' . ( $lock ? ' FOR UPDATE' : '' ),
+			...$arguments
 		);
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery -- Prepared immediately above.
 		$rows  = $database->get_results( $query );
@@ -296,6 +410,101 @@ class ManagedReleaseStore {
 		}
 
 		return $rows[0];
+	}
+
+	private function valid_transition_arguments(
+		string $type,
+		string $identifier,
+		PackageSource $expected_source,
+		int $expected_revision,
+		PackageSource $new_source,
+		?ManagedReleaseConfiguration $configuration,
+		int $user_id,
+		string $expected_adoption_token
+	): bool {
+		\RAN\AdoptionIdentity::parse( $expected_adoption_token );
+		$this->assert_identity( $type, $identifier );
+		if ( $expected_revision < 1 || PHP_INT_MAX === $expected_revision || $user_id < 0 || $expected_source === $new_source ) {
+			return false;
+		}
+		return ( PackageSource::RELEASE_ASSET === $new_source ) === ( null !== $configuration );
+	}
+
+	/** @return array{provider: string, provider_repository_id: string}|null */
+	private function transition_before_context( object $before, string $expected_adoption_token, PackageSource $expected_source, int $expected_revision ): ?array {
+		$provider               = $before->provider ?? null;
+		$provider_repository_id = $before->provider_repository_id ?? null;
+		if ( ( $before->adoption_token ?? null ) !== $expected_adoption_token
+			|| ( $before->source ?? null ) !== $expected_source->value
+			|| (int) ( $before->source_revision ?? 0 ) !== $expected_revision
+			|| ! is_string( $provider )
+			|| ! is_string( $provider_repository_id ) ) {
+			return null;
+		}
+		return array(
+			'provider'               => $provider,
+			'provider_repository_id' => $provider_repository_id,
+		);
+	}
+
+	private function transition_after_matches(
+		object $after,
+		string $expected_adoption_token,
+		PackageSource $new_source,
+		int $expected_revision,
+		PackageSource $expected_source,
+		?string $config_json,
+		string $next_policy
+	): bool {
+		return ( $after->adoption_token ?? null ) === $expected_adoption_token
+			&& ( $after->source ?? null ) === $new_source->value
+			&& (int) ( $after->source_revision ?? 0 ) === $expected_revision + 1
+			&& ( $after->source_previous ?? null ) === $expected_source->value
+			&& ( $after->release_configuration ?? null ) === $config_json
+			&& ( $after->deployment_policy ?? null ) === $next_policy;
+	}
+
+	private static function next_transition_policy( string $policy ): string {
+		return DeploymentPolicy::AUTOMATIC->value === $policy ? DeploymentPolicy::MANUAL->value : $policy;
+	}
+
+	/**
+	 * @return array{0: \mysqli, 1: string}|null
+	 */
+	// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Capture the active wpdb mysqli handle and server connection ID before starting a standalone transition.
+	private function pinned_wpdb_session( \wpdb|ManagedReleaseWriteConnection $database ): ?array {
+		if ( ! $database instanceof \wpdb ) {
+			return null;
+		}
+		$dbh = $database->__get( 'dbh' );
+		// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Fail closed if wpdb has no connected mysqli handle before starting the transaction.
+		if ( ! $dbh instanceof \mysqli ) {
+			return null;
+		}
+		$thread_id = (string) $dbh->thread_id;
+		if ( 1 !== preg_match( '/\A[1-9]\d*\z/D', $thread_id ) ) {
+			return null;
+		}
+		return array( $dbh, $thread_id );
+	}
+
+	/**
+	 * @param array{0: \mysqli, 1: string}|null $pinned
+	 */
+	// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Commit standalone wpdb transitions strictly on the pinned mysqli handle so lost sessions never retry COMMIT after rollback.
+	private function commit_transition( \wpdb|ManagedReleaseWriteConnection $database, ?array $pinned ): bool {
+		if ( null !== $pinned && $database instanceof \wpdb ) {
+			list( $pinned_dbh, $pinned_thread_id ) = $pinned;
+			if ( $database->__get( 'dbh' ) !== $pinned_dbh || (string) $pinned_dbh->thread_id !== $pinned_thread_id ) {
+				return false;
+			}
+			try {
+				return true === $pinned_dbh->query( 'COMMIT' ) && 0 === $pinned_dbh->errno;
+			} catch ( \Throwable ) {
+				return false;
+			}
+		}
+		return false !== $database->query( 'COMMIT' );
 	}
 
 	private function assert_identity( string $type, string $identifier ): void {

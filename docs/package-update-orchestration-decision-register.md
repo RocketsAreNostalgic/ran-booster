@@ -78,6 +78,7 @@ Release Deployments `main` at `986b8aa`, and updater `main` at `2d9300c`.
 | PU-035 | Current product policy | Allowing Branch companions alongside a Release package on the same site and repository | Although technically possible, mixed ownership adds supported combinations, ambiguous controls and a larger support/test burden. | One repository supplies multiple Branch packages or one Release package, never both. Reinforce existing operation and transactional storage boundaries with one shared admission helper; retain ordinary Return to Branch recovery. | Demonstrated demand justifies Branch companions beside at most one Release package, including the extra UI and support coverage. |
 | PU-036 | Deliberate non-goal | One repository release serving several managed packages | Asset-to-package mapping, coordinated versioning and additional packaging conventions would expand the release contract and support surface. | Keep workflow-independent consumption of one compatible uploaded package ZIP. Booster workflow setup is optional; users may publish manually or with their own automation. | A separate explicit product decision approves a multi-package artifact and ownership contract; relaxing PU-035 alone is not sufficient. |
 | PU-037 | Current boundary | A switch from Branch to published releases that changes only the stored source (the 2026-11-16 fallback), and any Core installer, marker file, receipt, saga or stored switch state | The owner decided on #903 (2026-11-21) that the switch installs the chosen release. WordPress's native upgrader and the existing install custody already own installation and recovery. | The registrar admits the package for this request only. The updater's exact-release filter offers the chosen release, with no refresh before the upgrade, and one native upgrade runs. The source changes only on a verified install, inside the transaction that ends the install's custody. A refused or failed switch stays on Branch, and WordPress rechecks for updates at the end of the request. An uncertain or interrupted install keeps custody and uses the existing recovery. An older release is refused until the interface passes the "older is intended" argument after the operator confirms. A package whose Updates setting is Disabled is refused; the operator sets Manual first. No failure message says the previous version was restored or implies a backup exists. | WordPress gains a supported way to install one exact version of one package; the completion can no longer stay inside the source transaction; or PU-036 changes. |
+| PU-038 | Current boundary / Deferred | A late Level B ownership hook, database named locks, arbitrary/shorter lock-age deletion, file-lock proof as P0 authority, per-package hold storage, or a third "refused before files changed" completion outcome (#987) | WordPress offers no hook between its backup move and file copy; database named locks give false proof across reconnects/pools; file locks do not generalize off single local disks; arbitrary lock deletion can remove a live update's lock; and per-package holds or a third outcome add stored/protocol complexity for rare cases. | Record `finished` vs `started` on the existing hold marker; offer in-place release on the package page for readable targets; keep removal verification on the GitHub page for missing, damaged, or unmanaged targets; carry the owner's `auto_updater.lock` token in `owner_tag` (omitted for WordPress automatic updates, which rely on WordPress's shared run lock) so confirmed release of an unfinished hold frees only its exact lock and inherits WordPress's one-hour stale-lock reclaim as fallback. | File-lock proof is justified by killed-request holds in practice (file lock), the "refused before files changed" case proves common (#987), or per-package holds are promoted (#1179). |
 
 PU-014 remains the historical reason Core must not simply omit its target
 registration. Its reconsideration trigger is satisfied by updater
@@ -414,3 +415,38 @@ state.
 **Reconsider if:** WordPress gains a supported way to install one exact version
 of one package; the completion can no longer stay inside the source
 transaction; or PU-036 changes.
+
+## 2026-11-22 interrupted native install hold release (#987)
+
+### PU-038: in-place hold release, narrowed removal recovery, and own-lock fallback
+
+An interrupted or uncertain GitHub native install or switch keeps the site-wide
+hold on the existing GitHub selection record and classifies whether the owning
+request recorded its end (`finished`) or never recorded completion (`started`).
+
+**Ruled out or deferred:**
+
+- Late Level B ownership checks (rejected: WordPress offers no hook between
+  backup move and file copying, and requires a protocol change).
+- Database named locks (rejected: false proof across reconnects and pooled
+  databases) and arbitrary or shortened lock-age deletion (rejected: can delete
+  another live operation's lock).
+- Local file locks as cross-request proof (deferred unless killed-request holds
+  become common in practice).
+- A third "refused before any file changed" completion outcome (deferred: rare
+  case, risks classifying a partly moved or stale backup as unchanged).
+- Per-package hold storage (deferred to #1179).
+
+**Accepted shape:**
+
+- Readable managed targets are released in place on the package's own Booster
+  page with one check for a `finished` hold or two confirmations (including that
+  the install stopped) for a `started` hold, leaving the management record and
+  settings unchanged.
+- Targets that are missing, too damaged to register, or never managed keep
+  removal verification on the GitHub provider page.
+- `owner_tag` carries the owning request's `auto_updater.lock` token (omitted
+  when WordPress owns the shared lock during automatic updates) so an
+  unfinished hold's confirmed recovery frees only that exact lock row before
+  taking `auto_updater.lock` normally; any other lock falls back to WordPress's
+  inherited one-hour stale-lock reclaim without relying on external cron runs.

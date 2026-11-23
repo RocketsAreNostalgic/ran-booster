@@ -298,6 +298,79 @@
 	margin-inline-start: var(--wpds-dimension-gap-xs);
 }
 
+.ran-booster-admin .ran-wp-ui-notice > .ran-wp-ui-notice__title {
+	margin: 0;
+	font-size: revert-layer;
+	font-weight: revert-layer;
+}
+
+.ran-booster-admin .notice.ran-wp-ui-notice.ran-booster-native-hold {
+	margin-inline: 0;
+	padding: var(--ran-booster-space-18) var(--ran-booster-header-inset-inline);
+	column-gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin
+	.ran-booster-provider__management
+	> .notice.ran-booster-native-hold {
+	margin-block: 0;
+}
+
+.ran-booster-admin .ran-booster-native-hold > .ran-wp-ui-notice__description {
+	margin-block-start: var(--ran-booster-space-8);
+	padding-block: 0;
+}
+
+.ran-booster-admin .ran-booster-native-hold [data-ran-booster-native-hold] {
+	margin-block-start: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-native-hold [data-ran-booster-native-hold] + p {
+	margin-block-start: var(--ran-booster-space-14);
+}
+
+.ran-booster-admin .ran-booster-native-hold__form {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-native-hold__checks {
+	display: grid;
+	justify-items: start;
+	gap: var(--ran-booster-space-10);
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-native-hold__check {
+	display: inline-flex;
+	align-items: flex-start;
+	gap: var(--ran-booster-space-8);
+	margin: 0;
+	cursor: pointer;
+}
+
+.ran-booster-admin .ran-booster-native-hold__check > input[type="checkbox"] {
+	flex-shrink: 0;
+	margin: 2px 0 0;
+}
+
+.ran-booster-admin .ran-booster-native-hold__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ran-booster-space-12);
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-native-hold__actions
+	> .ran-wp-ui-button.is-outline:not(:hover, :active, :focus, :disabled) {
+	background-color: var(--ran-booster-surface);
+}
+
+.ran-booster-admin .ran-booster-native-hold__actions > [role="status"] {
+	margin: 0;
+}
+
 [data-ran-booster-background-failure-row]
 	.update-message[data-ran-booster-ui-notice][data-ran-booster-ui-notice-scope="global"][data-ran-booster-ui-mounted]
 	[data-ran-booster-ui-notice-content]

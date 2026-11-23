@@ -14,6 +14,8 @@ namespace RAN\Tests\AddOn;
 	require_once __DIR__ . '/../fixtures/ran-booster-release-capability-provider/src/Providers.php';
 
 	use PHPUnit\Framework\Attributes\DataProvider;
+	use PHPUnit\Framework\Attributes\PreserveGlobalState;
+	use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 	use PHPUnit\Framework\TestCase;
 	use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
 	use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
@@ -50,6 +52,7 @@ use RAN\Deployment\ReleaseArtifactCleanupFailure;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 	use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 	use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
+	use RAN\Storage\GitHubSelectionStore;
 	use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\Database;
@@ -1967,11 +1970,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 					return PackageMutationResult::changed( PackageStorageOperation::INSERT );
 				}
 			);
-			$facade = $this->facade( $plugins, $executor, themes: $themes );
+			$facade = $this->facade( $plugins, $executor, themes: $themes, updater_lock: $lock = new ProspectiveUpdaterLock() );
 			$this->set_ready_release( 'theme' === $type ? 'style.css' : 'example.php' );
 			$identifier = 'theme' === $type ? 'example' : 'example/example.php';
 			$result     = $facade->install( $type, $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ), $identifier, DeploymentPolicy::DISABLED );
 			self::assertTrue( $result->successful() );
+			self::assertSame( 1, $lock->token_reads );
+			self::assertSame( 2, $lock->sql_token_reads );
 			self::assertSame( $identifier, $result->data()['identifier'] );
 			self::assertSame( 1, $executor->install_calls );
 			if ( 'plugin' === $type ) {
@@ -2080,6 +2085,514 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		++$second['selection_generation'];
 		self::assertNotSame( $facade->nonce_action( 'install', 'plugin', $first ), $facade->nonce_action( 'install', 'plugin', $second ) );
 		self::assertNotSame( $facade->nonce_action( 'install', 'plugin', $first ), $facade->nonce_action( 'install', 'plugin', null ) );
+	}
+
+	/** @return iterable<string, array{string}> */
+	public static function native_mutation_hold_phases(): iterable {
+		yield 'started' => array( 'started' );
+		yield 'finished' => array( 'finished' );
+	}
+
+	#[DataProvider( 'native_mutation_hold_phases' )]
+	public function test_non_github_install_refuses_when_github_native_mutation_hold_collides_before_handoff( string $phase ): void {
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$lock     = new ProspectiveUpdaterLock();
+		$facade   = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( 'bb' ) );
+		$this->seed_github_native_mutation_hold( 'plugin', 'example/example.php', $phase );
+		$this->set_ready_release( 'alt.php' );
+		self::assertNotNull( $this->acquisition );
+
+		$request = array(
+			'provider'      => 'bb',
+			'repository'    => 'owner/example',
+			'credential_id' => '',
+			'branch'        => 'main',
+		);
+		$result  = $facade->install( 'plugin', $request, '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', null );
+
+		self::assertFalse( $result->successful(), $phase );
+		self::assertSame( 'install_failed', $result->code(), $phase );
+		self::assertSame( 0, $this->acquisition->handoff_calls, $phase );
+		self::assertSame( 1, $this->acquisition->discard_calls, $phase );
+		self::assertSame( 0, $executor->install_calls, $phase );
+		self::assertSame( 1, $lock->release_calls, $phase );
+		self::assertNotNull( $this->native_selection_store );
+		self::assertArrayHasKey( 'native_mutation', $this->native_selection_store->read( true ), $phase );
+	}
+
+	public function test_non_github_install_refuses_when_colliding_github_native_mutation_hold_appears_during_handoff(): void {
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$lock     = new ProspectiveUpdaterLock();
+		$facade   = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( 'bb' ) );
+		$this->set_ready_release( 'alt.php' );
+		self::assertNotNull( $this->acquisition );
+		$this->acquisition->on_handoff = function (): void {
+			$this->seed_github_native_mutation_hold( 'plugin', 'example/example.php', 'started' );
+		};
+
+		$request = array(
+			'provider'      => 'bb',
+			'repository'    => 'owner/example',
+			'credential_id' => '',
+			'branch'        => 'main',
+		);
+		$result  = $facade->install( 'plugin', $request, '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', null );
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'install_failed', $result->code() );
+		self::assertSame( 1, $this->acquisition->handoff_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 1, $lock->release_calls );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
+		self::assertNotNull( $this->native_selection_store );
+		self::assertArrayHasKey( 'native_mutation', $this->native_selection_store->read( true ) );
+	}
+
+	public function test_non_github_install_succeeds_for_unrelated_folder_during_github_native_mutation_hold(): void {
+		$plugins  = new ProspectivePluginRepository();
+		$executor = new ProspectiveExecutor();
+		$lock     = new ProspectiveUpdaterLock();
+		$facade   = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( 'bb' ) );
+		$this->seed_github_native_mutation_hold( 'plugin', 'other/other.php', 'finished' );
+		$this->set_ready_release( 'example.php' );
+
+		$request = array(
+			'provider'      => 'bb',
+			'repository'    => 'owner/example',
+			'credential_id' => '',
+			'branch'        => 'main',
+		);
+		$result  = $facade->install( 'plugin', $request, '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', null );
+
+		self::assertTrue( $result->successful() );
+		self::assertSame( 'installed', $result->code() );
+		self::assertSame( 1, $executor->install_calls );
+		self::assertSame( 1, $lock->release_calls );
+		self::assertNotNull( $this->native_selection_store );
+		self::assertArrayHasKey( 'native_mutation', $this->native_selection_store->read( true ) );
+	}
+
+	public function test_install_refuses_without_reclaiming_or_releasing_held_updater_lock(): void {
+		$plugins         = new ProspectivePluginRepository();
+		$executor        = new ProspectiveExecutor();
+		$lock            = new ProspectiveUpdaterLock();
+		$lock->lock_held = true;
+		$facade          = $this->facade( $plugins, $executor, updater_lock: $lock );
+		$this->set_ready_release();
+		self::assertNotNull( $this->acquisition );
+
+		$result = $facade->install(
+			'plugin',
+			$this->repository_request(),
+			'42',
+			'v1.2.3',
+			self::FINGERPRINT,
+			'stable',
+			'valid-nonce',
+			$this->expectation_for( $this->repository_request() )
+		);
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'install_failed', $result->code() );
+		self::assertSame( 2, $lock->acquire_calls );
+		self::assertSame( 0, $lock->reclaim_calls );
+		self::assertSame( 0, $lock->cache_invalidation_calls );
+		self::assertTrue( $lock->lock_held );
+		self::assertSame( 0, $lock->release_calls );
+		self::assertSame( 0, $this->acquisition->handoff_calls );
+		self::assertSame( 1, $this->acquisition->discard_calls );
+		self::assertSame( 0, $executor->install_calls );
+	}
+
+	public function test_install_reclaims_expired_updater_lock_when_no_github_hold_exists(): void {
+		foreach ( array( 'gh', 'bb' ) as $provider ) {
+			$events                      = array();
+			$plugins                     = new ProspectivePluginRepository();
+			$executor                    = new ProspectiveExecutor();
+			$lock                        = new ProspectiveUpdaterLock();
+			$lock->expired_lock_held     = true;
+			$lock->on_reclaim_sql        = static function () use ( &$events ): void {
+				$events[] = 'reclaim_sql';
+			};
+			$lock->on_cache_invalidation = static function () use ( &$events ): void {
+				$events[] = 'invalidate_cache';
+			};
+			$facade                      = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( $provider ) );
+			$this->set_ready_release();
+			$request = 'gh' === $provider
+				? $this->repository_request()
+				: array(
+					'provider'      => 'bb',
+					'repository'    => 'owner/example',
+					'credential_id' => '',
+					'branch'        => 'main',
+				);
+
+			$result = $facade->install(
+				'plugin',
+				$request,
+				'42',
+				'v1.2.3',
+				self::FINGERPRINT,
+				'stable',
+				'valid-nonce',
+				$this->expectation_for( $request )
+			);
+
+			self::assertTrue( $result->successful(), $provider );
+			self::assertSame( 'installed', $result->code(), $provider );
+			self::assertSame( 1, $lock->reclaim_calls, $provider );
+			self::assertSame( 1, $lock->cache_invalidation_calls, $provider );
+			self::assertSame( array( 'reclaim_sql', 'invalidate_cache' ), $events, $provider );
+			self::assertFalse( $lock->expired_lock_held, $provider );
+			self::assertSame( 1, $executor->install_calls, $provider );
+			self::assertSame( 1, $lock->release_calls, $provider );
+		}
+	}
+
+	#[DataProvider( 'native_mutation_hold_phases' )]
+	public function test_install_refuses_expired_updater_lock_without_reclaim_when_github_hold_exists( string $phase ): void {
+		$plugins                 = new ProspectivePluginRepository();
+		$executor                = new ProspectiveExecutor();
+		$lock                    = new ProspectiveUpdaterLock();
+		$lock->expired_lock_held = true;
+		$facade                  = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( 'bb' ) );
+		$this->seed_github_native_mutation_hold( 'plugin', 'other/other.php', $phase );
+		$this->set_ready_release();
+		self::assertNotNull( $this->acquisition );
+
+		$request = array(
+			'provider'      => 'bb',
+			'repository'    => 'owner/example',
+			'credential_id' => '',
+			'branch'        => 'main',
+		);
+		$result  = $facade->install( 'plugin', $request, '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', null );
+
+		self::assertFalse( $result->successful(), $phase );
+		self::assertSame( 'install_failed', $result->code(), $phase );
+		self::assertSame( 1, $lock->acquire_calls, $phase );
+		self::assertSame( 0, $lock->reclaim_calls, $phase );
+		self::assertSame( 0, $lock->cache_invalidation_calls, $phase );
+		self::assertTrue( $lock->expired_lock_held, $phase );
+		self::assertSame( 0, $lock->release_calls, $phase );
+		self::assertSame( 0, $this->acquisition->handoff_calls, $phase );
+		self::assertSame( 1, $this->acquisition->discard_calls, $phase );
+		self::assertSame( 0, $executor->install_calls, $phase );
+	}
+
+	public function test_non_github_install_refuses_when_handoff_replaces_updater_lock_without_creating_hold(): void {
+		$plugins                    = new ProspectivePluginRepository();
+		$executor                   = new ProspectiveExecutor();
+		$lock                       = new ProspectiveUpdaterLock();
+		$lock->strict_release_token = true;
+		$facade                     = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( 'bb' ) );
+		$this->set_ready_release();
+		self::assertNotNull( $this->acquisition );
+		$this->acquisition->on_handoff = static function () use ( $lock ): void {
+			$lock->active_token = '1700009999';
+		};
+
+		$request = array(
+			'provider'      => 'bb',
+			'repository'    => 'owner/example',
+			'credential_id' => '',
+			'branch'        => 'main',
+		);
+		$result  = $facade->install( 'plugin', $request, '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', null );
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'installation_cleanup_failed', $result->code() );
+		self::assertSame( 1, $this->acquisition->handoff_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 1, $lock->release_calls );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
+		self::assertSame( '1700009999', $lock->current_token() );
+		self::assertNotNull( $this->native_selection_store );
+		self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read( true ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_install_releases_committed_reclaimed_lock_when_selection_cache_invalidation_throws(): void {
+		foreach ( array( 'gh', 'bb' ) as $provider ) {
+			$this->native_selection       = null;
+			$this->native_selection_store = null;
+			$this->native_selection_db    = null;
+			$plugins                      = new ProspectivePluginRepository();
+			$executor                     = new ProspectiveExecutor();
+			$lock                         = new ProspectiveUpdaterLock();
+			$lock->expired_lock_held      = true;
+			$lock->strict_release_token   = true;
+			$facade                       = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( $provider ) );
+			$this->set_ready_release();
+			self::assertNotNull( $this->acquisition );
+			$request = 'gh' === $provider
+				? $this->repository_request()
+				: array(
+					'provider'      => 'bb',
+					'repository'    => 'owner/example',
+					'credential_id' => '',
+					'branch'        => 'main',
+				);
+
+			$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ): void {
+				if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+					throw new RuntimeException( 'Selection cache invalidation failed after COMMIT.' );
+				}
+			};
+			try {
+				$result = $facade->install(
+					'plugin',
+					$request,
+					'42',
+					'v1.2.3',
+					self::FINGERPRINT,
+					'stable',
+					'valid-nonce',
+					$this->expectation_for( $request )
+				);
+			} finally {
+				unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+			}
+
+			self::assertFalse( $result->successful(), $provider );
+			self::assertSame( 'install_failed', $result->code(), $provider );
+			self::assertSame( 1, $lock->reclaim_calls, $provider );
+			self::assertSame( 1, $lock->release_calls, $provider );
+			self::assertNull( $lock->active_token, $provider );
+			self::assertSame( 0, $lock->cache_invalidation_calls, $provider );
+			self::assertSame( 0, $executor->install_calls, $provider );
+			self::assertSame( 0, $this->acquisition->handoff_calls, $provider );
+			self::assertSame( 1, $this->acquisition->discard_calls, $provider );
+		}
+	}
+
+	public function test_install_reports_uncertain_cleanup_without_blind_release_when_reclaim_commit_is_uncertain(): void {
+		foreach ( array( 'fail_commit', 'throw_commit' ) as $mode ) {
+			foreach ( array( 'gh', 'bb' ) as $provider ) {
+				$this->native_selection       = null;
+				$this->native_selection_store = null;
+				$this->native_selection_db    = null;
+				$plugins                      = new ProspectivePluginRepository();
+				$executor                     = new ProspectiveExecutor();
+				$lock                         = new ProspectiveUpdaterLock();
+				$lock->expired_lock_held      = true;
+				$facade                       = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( $provider ) );
+				$this->set_ready_release();
+				self::assertNotNull( $this->acquisition );
+				self::assertNotNull( $this->native_selection_db );
+				$this->native_selection_db->selection->fail_commit  = 'fail_commit' === $mode;
+				$this->native_selection_db->selection->throw_commit = 'throw_commit' === $mode;
+
+				$request = 'gh' === $provider
+					? $this->repository_request()
+					: array(
+						'provider'      => 'bb',
+						'repository'    => 'owner/example',
+						'credential_id' => '',
+						'branch'        => 'main',
+					);
+				$result  = $facade->install(
+					'plugin',
+					$request,
+					'42',
+					'v1.2.3',
+					self::FINGERPRINT,
+					'stable',
+					'valid-nonce',
+					$this->expectation_for( $request )
+				);
+
+				self::assertFalse( $result->successful(), $mode . ':' . $provider );
+				self::assertSame( 'installation_cleanup_failed', $result->code(), $mode . ':' . $provider );
+				self::assertSame( 1, $lock->reclaim_calls, $mode . ':' . $provider );
+				self::assertSame( 0, $lock->release_calls, $mode . ':' . $provider );
+				self::assertSame( '1700000004', $lock->active_token, $mode . ':' . $provider );
+				self::assertSame( 0, $lock->cache_invalidation_calls, $mode . ':' . $provider );
+				self::assertSame( 0, $executor->install_calls, $mode . ':' . $provider );
+				self::assertSame( 0, $this->acquisition->handoff_calls, $mode . ':' . $provider );
+				self::assertSame( 1, $this->acquisition->discard_calls, $mode . ':' . $provider );
+			}
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_install_resolves_native_hold_before_releasing_lock_when_begin_cache_invalidation_throws(): void {
+		foreach ( array( 'one_shot', 'persistent', 'begin_cache_throws_then_complete_commit_fails' ) as $case ) {
+			$this->native_selection       = null;
+			$this->native_selection_store = null;
+			$this->native_selection_db    = null;
+			$plugins                      = new ProspectivePluginRepository();
+			$executor                     = new ProspectiveExecutor();
+			$lock                         = new ProspectiveUpdaterLock();
+			$lock->strict_release_token   = true;
+			$facade                       = $this->facade( $plugins, $executor, updater_lock: $lock );
+			$this->set_ready_release();
+			self::assertNotNull( $this->acquisition );
+			self::assertNotNull( $this->native_selection_db );
+			self::assertNotNull( $this->native_selection_store );
+
+			$phase_at_release = null;
+			$store            = $this->native_selection_store;
+			$lock->on_release = function () use ( $store, &$phase_at_release ): void {
+				$state            = $store->read( true );
+				$phase_at_release = is_array( $state['native_mutation'] ?? null ) ? $state['native_mutation']['phase'] : null;
+			};
+
+			$cache_throw_count = 0;
+			$db                = $this->native_selection_db;
+			$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ) use ( $case, $db, &$cache_throw_count ): void {
+				if ( GitHubSelectionStore::OPTION !== $key || 'options' !== $group ) {
+					return;
+				}
+				++$cache_throw_count;
+				if ( 1 === $cache_throw_count && 'begin_cache_throws_then_complete_commit_fails' === $case ) {
+					$db->selection->fail_commit = true;
+				}
+				if ( 'persistent' === $case || 1 === $cache_throw_count ) {
+					throw new RuntimeException( 'Selection cache invalidation failed after hold COMMIT.' );
+				}
+			};
+			try {
+				$request = $this->repository_request();
+				$result  = $facade->install(
+					'plugin',
+					$request,
+					'42',
+					'v1.2.3',
+					self::FINGERPRINT,
+					'stable',
+					'valid-nonce',
+					$this->expectation_for( $request )
+				);
+			} finally {
+				unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+				$this->native_selection_db->selection->fail_commit = false;
+			}
+
+			self::assertFalse( $result->successful(), $case );
+			self::assertSame( 0, $executor->install_calls, $case );
+			self::assertSame( 1, $lock->token_reads, $case );
+			self::assertSame( 2, $lock->sql_token_reads, $case );
+			self::assertFileDoesNotExist( (string) $this->artifact_path, $case );
+
+			if ( 'begin_cache_throws_then_complete_commit_fails' === $case ) {
+				self::assertSame( 'installation_cleanup_failed', $result->code(), $case );
+				self::assertSame( 0, $lock->release_calls, $case );
+				self::assertNull( $phase_at_release, $case );
+				self::assertSame( '1700000004', $lock->active_token, $case );
+				self::assertSame( 'started', $this->native_selection_store->read( true )['native_mutation']['phase'] ?? null, $case );
+			} else {
+				self::assertSame( 'persistent' === $case ? 'installation_cleanup_failed' : 'install_failed', $result->code(), $case );
+				self::assertSame( 1, $lock->release_calls, $case );
+				self::assertSame( 'finished', $phase_at_release, $case );
+				self::assertNull( $lock->active_token, $case );
+				self::assertSame( 'finished', $this->native_selection_store->read( true )['native_mutation']['phase'] ?? null, $case );
+			}
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_install_preserves_updater_lock_when_native_hold_begin_commit_or_rollback_fails(): void {
+		foreach ( array( 'fail_commit', 'throw_commit' ) as $commit_mode ) {
+			foreach ( array( 'rollback_ok', 'rollback_applied_commit', 'fail_rollback', 'throw_rollback' ) as $rollback_mode ) {
+				$this->native_selection       = null;
+				$this->native_selection_store = null;
+				$this->native_selection_db    = null;
+				$plugins                      = new ProspectivePluginRepository();
+				$executor                     = new ProspectiveExecutor();
+				$lock                         = new ProspectiveUpdaterLock();
+				$facade                       = $this->facade( $plugins, $executor, updater_lock: $lock );
+				$this->set_ready_release();
+				self::assertNotNull( $this->acquisition );
+				self::assertNotNull( $this->native_selection_db );
+				self::assertNotNull( $this->native_selection );
+				self::assertNotNull( $this->native_selection_store );
+
+				$selection_db                                   = $this->native_selection_db->selection;
+				$selection_db->queries                          = array();
+				$cache_deletes_after_tx                         = 0;
+				$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function () use ( $selection_db, &$cache_deletes_after_tx ): void {
+					if ( in_array( 'START TRANSACTION', $selection_db->queries, true ) ) {
+						++$cache_deletes_after_tx;
+					}
+				};
+				$selection_db->fail_commit                      = 'fail_commit' === $commit_mode;
+				$selection_db->throw_commit                     = 'throw_commit' === $commit_mode;
+				$selection_db->commit_applied                   = 'rollback_applied_commit' === $rollback_mode;
+				$selection_db->fail_rollback                    = 'fail_rollback' === $rollback_mode;
+				$selection_db->throw_rollback                   = 'throw_rollback' === $rollback_mode;
+				try {
+					$request = $this->repository_request();
+					$result  = $facade->install(
+						'plugin',
+						$request,
+						'42',
+						'v1.2.3',
+						self::FINGERPRINT,
+						'stable',
+						'valid-nonce',
+						$this->expectation_for( $request )
+					);
+				} finally {
+					unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+					$selection_db->fail_commit    = false;
+					$selection_db->throw_commit   = false;
+					$selection_db->commit_applied = false;
+					$selection_db->fail_rollback  = false;
+					$selection_db->throw_rollback = false;
+				}
+
+				$case = "$commit_mode/$rollback_mode";
+				self::assertFalse( $result->successful(), $case );
+				self::assertSame( 'installation_cleanup_failed', $result->code(), $case );
+				self::assertSame( 0, $executor->install_calls, $case );
+				self::assertSame( 1, $lock->token_reads, $case );
+				self::assertSame( 2, $lock->sql_token_reads, $case );
+				self::assertSame( 0, $lock->release_calls, $case );
+				self::assertSame( '1700000004', $lock->active_token, $case );
+				self::assertFileDoesNotExist( (string) $this->artifact_path, $case );
+				self::assertTrue( $this->native_selection->has_uncertain_commit(), $case );
+
+				if ( 'fail_rollback' === $rollback_mode || 'throw_rollback' === $rollback_mode ) {
+					self::assertTrue( $this->native_selection->has_unclosed_transaction(), $case );
+					self::assertNotNull( $selection_db->transaction_rows, $case );
+					self::assertSame( 0, $cache_deletes_after_tx, $case );
+					self::assertTrue( $selection_db->query( 'ROLLBACK' ), $case );
+				} else {
+					self::assertFalse( $this->native_selection->has_unclosed_transaction(), $case );
+					if ( 'rollback_applied_commit' === $rollback_mode ) {
+						self::assertSame( 'started', $this->native_selection_store->read( true )['native_mutation']['phase'] ?? null, $case );
+					}
+				}
+			}
+		}
+	}
+
+	private function seed_github_native_mutation_hold( string $type, string $identity, string $phase ): void {
+		$this->github_selection();
+		self::assertNotNull( $this->native_selection_store );
+		$state                   = $this->native_selection_store->read( true );
+		$next                    = $state;
+		$next['native_mutation'] = array(
+			'selection_generation' => $state['selection_generation'],
+			'owner_tag'            => str_repeat( '0', 16 ) . str_repeat( 'a', 16 ),
+			'target_type'          => $type,
+			'installed_identity'   => $identity,
+			'phase'                => 'started',
+		);
+		self::assertTrue( $this->native_selection_store->compare_and_swap( $state, $next ) );
+		if ( 'finished' === $phase ) {
+			$started                              = $this->native_selection_store->read( true );
+			$finished                             = $started;
+			$finished['native_mutation']['phase'] = 'finished';
+			self::assertTrue( $this->native_selection_store->compare_and_swap( $started, $finished ) );
+		}
 	}
 
 	/** @param array<string,mixed> $repository
@@ -2768,34 +3281,121 @@ final class ProspectiveThemeRepository extends ThemeRepository {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 
-	public int $acquire_calls     = 0;
-	public int $release_calls     = 0;
-	public bool $release_result   = true;
-	public bool $throw_on_acquire = false;
-	public bool $throw_on_release = false;
-	public ?\Closure $on_acquire  = null;
+	public int $acquire_calls               = 0;
+	public int $reclaim_calls               = 0;
+	public int $cache_invalidation_calls    = 0;
+	public int $release_calls               = 0;
+	public int $token_reads                 = 0;
+	public int $sql_token_reads             = 0;
+	public bool $release_result             = true;
+	public bool $lock_held                  = false;
+	public bool $expired_lock_held          = false;
+	public bool $strict_release_token       = false;
+	public ?string $active_token            = null;
+	public bool $throw_on_acquire           = false;
+	public bool $throw_on_release           = false;
+	public ?\Closure $on_acquire            = null;
+	public ?\Closure $on_reclaim_sql        = null;
+	public ?\Closure $on_cache_invalidation = null;
+	public ?\Closure $on_release            = null;
 
 	public function current_token(): ?string {
-		return $this->acquire_calls > $this->release_calls ? 'test-lock-token' : null;
+		++$this->token_reads;
+		return $this->read_active_token();
 	}
 
-	public function acquire(): string {
+	/**
+	 * @param callable(object, string): bool                                                                   $same_connection
+	 * @param callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null) $execute
+	 */
+	public function current_token_sql( callable $same_connection, callable $execute ): ?string {
+		unset( $same_connection, $execute );
+		++$this->sql_token_reads;
+		return $this->read_active_token();
+	}
+
+	private function read_active_token(): ?string {
+		if ( null !== $this->active_token ) {
+			return $this->active_token;
+		}
+
+		return ! $this->lock_held && ! $this->expired_lock_held && $this->acquire_calls > $this->release_calls ? '1700000004' : null;
+	}
+
+	public function try_acquire_without_reclaim(): ?string {
+		if ( $this->lock_held || $this->expired_lock_held ) {
+			++$this->acquire_calls;
+			return null;
+		}
+
+		return $this->acquire();
+	}
+
+	/**
+	 * @param callable(object, string): bool                                       $same_connection
+	 * @param callable(string, list<string>, 'affected'|'var'): (int|string|null) $execute
+	 */
+	public function acquire_or_reclaim_expired_sql( callable $same_connection, callable $execute ): ?string {
+		unset( $same_connection, $execute );
 		++$this->acquire_calls;
 		if ( $this->throw_on_acquire ) {
 			throw new RuntimeException( 'The test lock could not be acquired.' );
 		}
+		if ( $this->lock_held ) {
+			return null;
+		}
+		if ( null !== $this->on_reclaim_sql ) {
+			( $this->on_reclaim_sql )();
+		}
+		if ( $this->expired_lock_held ) {
+			$this->expired_lock_held = false;
+			++$this->reclaim_calls;
+		}
+		$this->active_token = '1700000004';
 		if ( null !== $this->on_acquire ) {
 			( $this->on_acquire )();
 		}
 
-		return 'test-lock-token';
+		return '1700000004';
+	}
+
+	public function invalidate_lock_cache(): void {
+		++$this->cache_invalidation_calls;
+		if ( null !== $this->on_cache_invalidation ) {
+			( $this->on_cache_invalidation )();
+		}
+	}
+
+	public function acquire(): string {
+		++$this->acquire_calls;
+		if ( $this->throw_on_acquire || $this->lock_held ) {
+			throw new RuntimeException( 'The test lock could not be acquired.' );
+		}
+		if ( $this->expired_lock_held ) {
+			$this->expired_lock_held = false;
+			++$this->reclaim_calls;
+		}
+		$this->active_token = '1700000004';
+		if ( null !== $this->on_acquire ) {
+			( $this->on_acquire )();
+		}
+
+		return '1700000004';
 	}
 
 	public function release( string $token ): bool {
-		unset( $token );
 		++$this->release_calls;
+		if ( null !== $this->on_release ) {
+			( $this->on_release )( $token );
+		}
 		if ( $this->throw_on_release ) {
 			throw new RuntimeException( 'The test lock could not be released.' );
+		}
+		if ( $this->strict_release_token && $this->active_token !== $token ) {
+			return false;
+		}
+		if ( $this->active_token === $token ) {
+			$this->active_token = null;
 		}
 
 		return $this->release_result;

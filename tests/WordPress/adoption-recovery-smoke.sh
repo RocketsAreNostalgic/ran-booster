@@ -13,7 +13,7 @@ wp_cli="$(command -v "$wp_cli")"
 "$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/adoption-recovery-smoke.php" --path="$wordpress"
 
 race="$root/tests/WordPress/adoption-recovery-race.php"
-for winner in recovery admission native-recovery native-sibling native-commit-lost; do
+for winner in recovery admission native-recovery native-sibling native-commit-lost native-commit-killed; do
 	prepare=prepare
 	cleanup_action=cleanup
 	[[ "$winner" == native-* ]] && prepare=prepare-native && cleanup_action=cleanup-native
@@ -36,9 +36,9 @@ for winner in recovery admission native-recovery native-sibling native-commit-lo
 	}
 	trap cleanup EXIT INT TERM
 	"$php_bin" "$wp_cli" eval-file "$race" "$prepare" "$run_id" "$temp_dir" --path="$wordpress"
-	if [[ "$winner" == native-commit-lost ]]; then
-		"$php_bin" "$wp_cli" eval-file "$race" native-commit-lost "$run_id" "$temp_dir" --path="$wordpress"
-		"$php_bin" "$wp_cli" eval-file "$race" assert-native-commit-lost "$run_id" "$temp_dir" --path="$wordpress"
+	if [[ "$winner" == native-commit-lost || "$winner" == native-commit-killed ]]; then
+		"$php_bin" "$wp_cli" eval-file "$race" "$winner" "$run_id" "$temp_dir" --path="$wordpress"
+		"$php_bin" "$wp_cli" eval-file "$race" "assert-$winner" "$run_id" "$temp_dir" --path="$wordpress"
 		"$php_bin" "$wp_cli" eval-file "$race" "$cleanup_action" "$run_id" "$temp_dir" --path="$wordpress"
 		trap - EXIT INT TERM
 		rm -rf -- "$temp_dir"

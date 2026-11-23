@@ -345,7 +345,8 @@ final class ManagedReleaseTargetRegistrar {
 
 	/** Called only by the bound GitHub registrar after private staging verification. */
 	public function begin_provider_native_mutation( string $type, string $identity ): string {
-		$pending = $this->native_updates[ self::key( $type, $identity ) ] ?? null;
+		$key     = self::key( $type, $identity );
+		$pending = $this->native_updates[ $key ] ?? null;
 		if ( null === $pending || 'gh' !== $pending['authority']['provider'] || null === $pending['lock'] ) {
 			throw new \RuntimeException( 'GitHub native lock ownership is unavailable.' );
 		}
@@ -358,9 +359,75 @@ final class ManagedReleaseTargetRegistrar {
 			throw new \RuntimeException( 'The managed release authority changed after staging.' );
 		}
 		PackageMutationGuard::assert_package_mutation_allowed();
-		$owner = $this->github_selection->begin_native_mutation( $type, $identity, fn (): bool => $pending['lock'] === $this->updater_lock->current_token() );
-		$this->native_updates[ self::key( $type, $identity ) ]['native_owner'] = $owner;
-		return $owner;
+		$committed_owner = null;
+		try {
+			return $this->github_selection->begin_native_mutation(
+				$type,
+				$identity,
+				fn ( callable $execute ): bool => $pending['lock'] === $this->updater_lock->current_token_sql( $this->github_selection->uses_connection( ... ), $execute ),
+				$pending['automatic'] ? null : $pending['lock'],
+				function ( string $owner_tag ) use ( $key, &$committed_owner ): void {
+					$committed_owner = $owner_tag;
+					if ( isset( $this->native_updates[ $key ] ) ) {
+						$this->native_updates[ $key ]['native_owner'] = $owner_tag;
+					}
+				}
+			);
+		} catch ( Throwable $failure ) {
+			if ( null !== $committed_owner ) {
+				$this->abort_committed_provider_native_mutation( $key, $committed_owner, $type, $identity, $pending );
+			} elseif ( $this->github_selection->has_uncertain_commit() || $this->github_selection->has_unclosed_transaction() ) {
+				unset( $this->native_updates[ $key ], $this->switches[ $key ] );
+			}
+			throw $failure;
+		}
+	}
+
+	/**
+	 * Finish a confirmed hold whose admission threw after COMMIT (for example during cache
+	 * invalidation) before releasing the manual lock, or keep both custody and lock if closing fails.
+	 *
+	 * @param array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool, native_owner?:string} $pending
+	 */
+	private function abort_committed_provider_native_mutation( string $key, string $owner, string $type, string $identity, array $pending ): void {
+		$hold_resolved = false;
+		try {
+			$this->github_selection->complete_native_mutation(
+				$owner,
+				$type,
+				$identity,
+				'uncertain',
+				null,
+				static function () use ( &$hold_resolved ): void {
+					$hold_resolved = true;
+				}
+			);
+		} catch ( Throwable $abort_failure ) {
+			BoosterLogger::log_exception(
+				'native hold abort finalization failed',
+				$abort_failure,
+				array( 'step' => 'native_update_abort_hold' )
+			);
+		} finally {
+			unset( $this->native_updates[ $key ], $this->switches[ $key ] );
+		}
+		if ( ! $hold_resolved
+			|| $this->github_selection->has_unclosed_transaction()
+			|| $pending['automatic']
+			|| null === $pending['lock'] ) {
+			return;
+		}
+		try {
+			if ( ! $this->updater_lock->release( $pending['lock'] ) ) {
+				throw new \RuntimeException( 'The native update lock was replaced.' );
+			}
+		} catch ( Throwable $lock_failure ) {
+			BoosterLogger::log_exception(
+				'native update lock release failed',
+				$lock_failure,
+				array( 'step' => 'native_update_lock_release' )
+			);
+		}
 	}
 
 	/** Private updater completion, never the public WordPress diagnostic event. */
@@ -371,22 +438,59 @@ final class ManagedReleaseTargetRegistrar {
 		if ( null === $pending || ( $pending['native_owner'] ?? null ) !== $owner ) {
 			throw new \RuntimeException( 'GitHub native completion owner changed.' );
 		}
-		$committed = false;
-		$refused   = 'outcome_uncertain';
+		$committed     = false;
+		$hold_resolved = false;
+		$refused       = 'verified_success' === $outcome ? 'commit_refused' : 'outcome_uncertain';
 		try {
-			if ( ! $pending['automatic'] && null !== $pending['lock'] && ! $this->updater_lock->release( $pending['lock'] ) ) {
+			try {
+				if ( null !== $switch && 'verified_success' === $outcome ) {
+					$this->store->require_transition_ready();
+				}
+				// A switch commits its source in the same pinned selection transaction that ends custody; uncertain leaves both for recovery.
+				$this->github_selection->complete_native_mutation(
+					$owner,
+					$type,
+					$identity,
+					$outcome,
+					null === $switch ? null : function ( callable $complete, \Closure $execute ) use ( $type, $identity, $switch ): bool {
+						$connection = $this->store->connection();
+						if ( null === $connection ) {
+							throw new \RuntimeException( 'Native source completion requires a shared connection.' );
+						}
+						$complete( $connection, $type, $identity );
+						return $this->store->transition_in_transaction(
+							$type,
+							$identity,
+							PackageSource::BRANCH,
+							$switch['revision'],
+							PackageSource::RELEASE_ASSET,
+							$switch['configuration'],
+							$switch['user'],
+							$switch['token'],
+							$execute
+						);
+					},
+					static function () use ( &$hold_resolved ): void {
+						$hold_resolved = true;
+					}
+				);
+			} catch ( Throwable $failure ) {
+				if ( $hold_resolved && ! $pending['automatic'] && null !== $pending['lock'] && ! $this->github_selection->has_unclosed_transaction() ) {
+					try {
+						$this->updater_lock->release( $pending['lock'] );
+					// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Preserve the primary completion/cache failure after custody resolved.
+					} catch ( Throwable ) {
+						// Exact stale-lock recovery remains available if release also fails.
+					}
+				}
+				throw $failure;
+			}
+			$committed = 'verified_success' === $outcome;
+			// Release only after the hold is cleared or finished: a lock still holding the owner's value then
+			// always belongs to an unfinished hold, which the hold's release may free by that exact value.
+			if ( ! $pending['automatic'] && null !== $pending['lock'] && ! $this->github_selection->has_unclosed_transaction() && ! $this->updater_lock->release( $pending['lock'] ) ) {
 				throw new \RuntimeException( 'GitHub native lock release failed.' );
 			}
-			$refused = 'verified_success' === $outcome ? 'commit_refused' : 'outcome_uncertain';
-			// A switch commits its source in the transaction that ends custody; uncertain leaves both for recovery.
-			$this->github_selection->complete_native_mutation(
-				$owner,
-				$type,
-				$identity,
-				$outcome,
-				null === $switch ? null : fn ( callable $complete ): bool => $this->store->transition( $type, $identity, PackageSource::BRANCH, $switch['revision'], PackageSource::RELEASE_ASSET, $switch['configuration'], $switch['user'], $switch['token'], $complete )
-			);
-			$committed = 'verified_success' === $outcome;
 		} finally {
 			unset( $this->native_updates[ $key ], $this->switches[ $key ] );
 			if ( null !== $switch ) {
@@ -417,6 +521,10 @@ final class ManagedReleaseTargetRegistrar {
 		if ( null === $pending
 			|| $pending['automatic']
 			|| null === $pending['lock'] ) {
+			return;
+		}
+		if ( 'gh' === ( $pending['authority']['provider'] ?? null )
+			&& ( $this->github_selection->has_uncertain_commit() || $this->github_selection->has_unclosed_transaction() ) ) {
 			return;
 		}
 

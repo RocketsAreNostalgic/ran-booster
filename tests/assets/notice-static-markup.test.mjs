@@ -100,6 +100,17 @@ test('static notices hand their frame to the layer and are never a fallback', ()
 	]) {
 		assert.ok(dismiss[1].includes(`\n\t${declaration}`), declaration);
 	}
+	const title = primitives.match(
+		/\.ran-booster-admin \.ran-wp-ui-notice > \.ran-wp-ui-notice__title \{([^}]*)\}/
+	);
+	assert.ok(title, 'static notice title reset');
+	for (const declaration of [
+		'margin: 0;',
+		'font-size: revert-layer;',
+		'font-weight: revert-layer;',
+	]) {
+		assert.ok(title[1].includes(`\n\t${declaration}`), declaration);
+	}
 	for (const sheet of [
 		'assets/ran-booster/25-admin-primitives.css',
 		'assets/ran-booster-notice-compat.css',

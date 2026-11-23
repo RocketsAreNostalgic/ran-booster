@@ -113,8 +113,13 @@ final readonly class PackageRemovalService {
 			if ( true !== $this->recovery_authorized( $authorized ) || ! $this->held_target_readable( $type, $identifier, $snapshot['record'] ) ) {
 				throw new \RuntimeException( 'The held package or release authority changed.' );
 			}
-			$this->github_selection->release_native_hold( $snapshot['state'], $verify );
-			$hold_cleared = true;
+			$this->github_selection->release_native_hold(
+				$snapshot['state'],
+				$verify,
+				static function () use ( &$hold_cleared ): void {
+					$hold_cleared = true;
+				}
+			);
 			BoosterLogger::log(
 				'native hold released',
 				array(
@@ -185,9 +190,11 @@ final readonly class PackageRemovalService {
 					}
 					$this->attempts?->assert_selection_transition_idle( $this->github_selection );
 					$verify();
+				},
+				static function () use ( &$hold_cleared ): void {
+					$hold_cleared = true;
 				}
 			);
-			$hold_cleared = true;
 		} finally {
 			$this->release_native_hold_lock(
 				$token,

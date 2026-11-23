@@ -639,8 +639,9 @@ final class GitHubProviderSelection {
 	/**
 	 * @param array<string,mixed> $expected Exact reviewed state, including marker and approval.
 	 * @param callable():void $verify Core-only physical absence/management/attempt/lock checks; no WordPress filters or callbacks.
+	 * @param (callable():void)|null $on_committed Invoked only after COMMIT succeeds and before cache invalidation.
 	 */
-	public function release_native_hold( array $expected, callable $verify ): void {
+	public function release_native_hold( array $expected, callable $verify, ?callable $on_committed = null ): void {
 		$this->store->selection_transaction(
 			function () use ( $expected, $verify ): void {
 				$state = $this->native_recovery_state();
@@ -653,6 +654,9 @@ final class GitHubProviderSelection {
 				if ( ! $this->store->compare_and_swap( $state, $next ) ) {
 					throw new \RuntimeException( 'Native recovery could not be verified.' );
 				}
+			},
+			null === $on_committed ? null : static function () use ( $on_committed ): void {
+				$on_committed();
 			}
 		);
 	}

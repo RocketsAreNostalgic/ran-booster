@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace RAN\Tests\RepositoryProvider;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\Interaction\CoreAdminInteractionFacade;
 use RAN\Deployment\DeploymentAttemptRepository;
@@ -632,6 +634,169 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 					self::assertStringContainsString( '"exception_code":"1"', $lines[0], "$mode/$lock_mode" );
 				}
 			}
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_recover_and_release_github_hold_report_lock_failed_when_selection_cache_throws_after_commit(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$GLOBALS['ran_booster_test_nonce_valid']  = true;
+
+		foreach ( array( 'recover', 'release' ) as $mode ) {
+			foreach ( array( 'zero', 'throw' ) as $failure_mode ) {
+				unset( $this->db->option_rows['auto_updater.lock'] );
+				$service   = 'release' === $mode ? $this->readable_hold_service() : $this->native_recovery_service();
+				$review    = $service->native_recovery_confirmation();
+				$dashboard = $this->createMock( \RAN\Dashboard::class );
+				$dashboard->expects( self::never() )->method( 'add_message' );
+				$controller = $this->admin_controller( $service, $dashboard );
+				$capture    = new TemporaryDebugCapture( $this->root . '/secrets', static fn (): int => strtotime( '2026-07-23T12:00:00Z' ) );
+				$capture->start();
+				BoosterLogger::configure_capture( $capture );
+
+				$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ): void {
+					if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+						throw new \RuntimeException( 'selection cache failed' );
+					}
+				};
+				if ( 'throw' === $failure_mode ) {
+					$this->db->fail_query_contains = 'DELETE FROM `wp_options`';
+				} else {
+					$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
+				}
+				try {
+					$code = 'release' === $mode
+						? $controller->release_github_hold(
+							array(
+								'review_digest'     => $review['digest'],
+								'confirmed_stopped' => '1',
+								'confirmed_checked' => '1',
+							)
+						)
+						: $controller->recover_github_native(
+							array(
+								'review_digest'     => $review['digest'],
+								'confirmed_stopped' => '1',
+								'confirmed_removal' => '1',
+							)
+						);
+				} finally {
+					unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+					$this->db->fail_query_contains = null;
+					$this->db->zero_query_contains = null;
+					$this->db->last_error          = '';
+					BoosterLogger::configure_capture( null );
+				}
+
+				self::assertSame( 'lock_failed', $code, "$mode/$failure_mode" );
+				self::assertArrayNotHasKey( 'native_mutation', $this->store->read(), "$mode/$failure_mode" );
+				self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$mode/$failure_mode" );
+				$lines = array_values(
+					array_filter(
+						array_map( static fn ( array $entry ): string => (string) $entry['line'], $capture->snapshot()['entries'] ),
+						static fn ( string $line ): bool => str_contains( $line, 'native hold action failed' )
+					)
+				);
+				self::assertCount( 1, $lines, "$mode/$failure_mode" );
+				self::assertStringContainsString( '"outcome_code":"lock_failed"', $lines[0], "$mode/$failure_mode" );
+				if ( 'throw' === $failure_mode ) {
+					self::assertStringContainsString( 'DeploymentStorageFailure', $lines[0], "$mode/$failure_mode" );
+				} else {
+					self::assertStringContainsString( 'RuntimeException', $lines[0], "$mode/$failure_mode" );
+				}
+			}
+		}
+
+		$bundled = $this->declaration( 'booster.php' );
+		foreach ( array( 'recover', 'release' ) as $mode ) {
+			unset( $this->db->option_rows['auto_updater.lock'] );
+			$fresh_store     = new GitHubSelectionStore( $this->db, 'wp_options' );
+			$fresh_selection = new GitHubProviderSelection( $fresh_store, $this->root, $bundled );
+			$state           = $fresh_store->read();
+			if ( array_key_exists( 'native_mutation', $state ) ) {
+				$cleared = $state;
+				unset( $cleared['native_mutation'] );
+				self::assertTrue( $fresh_store->compare_and_swap( $state, $cleared ) );
+				$state = $cleared;
+			}
+			$marked                    = $state;
+			$marked['native_mutation'] = array(
+				'selection_generation' => 0,
+				'owner_tag'            => str_repeat( 'a', 32 ),
+				'target_type'          => 'plugin',
+				'installed_identity'   => 'target/main.php',
+				'phase'                => 'started',
+			);
+			self::assertTrue( $fresh_store->compare_and_swap( $state, $marked ) );
+
+			$plugins = $this->createMock( \RAN\Storage\PluginRepository::class );
+			$gateway = $this->createMock( \RAN\PackageRemoval\PackageRemovalGateway::class );
+			if ( 'release' === $mode ) {
+				$plugins->method( 'native_recovery_record' )->willReturn(
+					array(
+						'id'             => '1',
+						'package'        => 'target/main.php',
+						'type'           => 1,
+						'adoption_token' => 'exact-adoption',
+						'source'         => 'release_asset',
+						'digest'         => str_repeat( 'b', 64 ),
+					)
+				);
+				$gateway->method( 'installed_targets' )->willReturn( array( 'target/main.php' => 'Target' ) );
+			} else {
+				$plugins->method( 'native_recovery_record' )->willReturn( null );
+				$gateway->method( 'deletion_postcondition' )->willReturn( static fn (): bool => true );
+			}
+			$gateway->expects( self::never() )->method( 'delete_plugin' );
+			$gateway->expects( self::never() )->method( 'delete_theme' );
+			$fresh_attempts = new DeploymentAttemptRepository( $this->db, 'wp_attempts', database_lifecycle: $this->createStub( Database::class ), selection: $fresh_selection );
+			$service        = new \RAN\PackageRemoval\PackageRemovalService( $plugins, $this->createStub( \RAN\Storage\ThemeRepository::class ), $gateway, $fresh_attempts, new WordPressUpdaterLock(), github_selection: $fresh_selection );
+			$review         = $service->native_recovery_confirmation();
+			$dashboard      = $this->createMock( \RAN\Dashboard::class );
+			$dashboard->expects( self::never() )->method( 'add_message' );
+			$controller = $this->admin_controller( $service, $dashboard );
+			$capture    = new TemporaryDebugCapture( $this->root . '/secrets', static fn (): int => strtotime( '2026-07-23T12:00:00Z' ) );
+			$capture->start();
+			BoosterLogger::configure_capture( $capture );
+
+			$this->db->fail_commit         = true;
+			$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
+			try {
+				$code = 'release' === $mode
+					? $controller->release_github_hold(
+						array(
+							'review_digest'     => $review['digest'],
+							'confirmed_stopped' => '1',
+							'confirmed_checked' => '1',
+						)
+					)
+					: $controller->recover_github_native(
+						array(
+							'review_digest'     => $review['digest'],
+							'confirmed_stopped' => '1',
+							'confirmed_removal' => '1',
+						)
+					);
+			} finally {
+				$this->db->fail_commit         = false;
+				$this->db->zero_query_contains = null;
+				$this->db->last_error          = '';
+				BoosterLogger::configure_capture( null );
+			}
+
+			self::assertNotSame( 'lock_failed', $code, "$mode/uncertain_commit" );
+			self::assertSame( 'busy', $code, "$mode/uncertain_commit" );
+			self::assertArrayHasKey( 'native_mutation', $this->store->read(), "$mode/uncertain_commit" );
+			self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$mode/uncertain_commit" );
+			$lines = array_values(
+				array_filter(
+					array_map( static fn ( array $entry ): string => (string) $entry['line'], $capture->snapshot()['entries'] ),
+					static fn ( string $line ): bool => str_contains( $line, 'native hold action failed' )
+				)
+			);
+			self::assertCount( 1, $lines, "$mode/uncertain_commit" );
+			self::assertStringNotContainsString( '"outcome_code":"lock_failed"', $lines[0], "$mode/uncertain_commit" );
 		}
 	}
 

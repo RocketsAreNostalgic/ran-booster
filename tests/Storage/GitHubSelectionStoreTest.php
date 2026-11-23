@@ -465,4 +465,84 @@ final class GitHubSelectionStoreTest extends TestCase {
 			}
 		}
 	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_selection_transaction_defers_cas_cache_invalidation_after_commit_and_runs_committed_callback(): void {
+		$db                           = new SelectionDatabase();
+		$store                        = new GitHubSelectionStore( $db, 'wp_options' );
+		$old                          = $store->initialize_bundled( $this->declaration() );
+		$next                         = $old;
+		$next['selection_generation'] = 1;
+		$db->queries                  = array();
+		$option_deletes               = 0;
+		$committed                    = null;
+		$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ) use ( $db, &$option_deletes ): void {
+			self::assertContains( 'COMMIT', $db->queries, 'Selection cache invalidation must wait until after COMMIT.' );
+			if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+				++$option_deletes;
+			}
+		};
+		try {
+			$result = $store->selection_transaction(
+				fn (): bool => $store->compare_and_swap( $old, $next ),
+				static function ( bool $swapped ) use ( &$committed ): void {
+					$committed = $swapped;
+				}
+			);
+			self::assertTrue( $result );
+			self::assertTrue( $committed );
+			self::assertSame( 1, $option_deletes );
+		} finally {
+			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+		}
+
+		$next2                         = $next;
+		$next2['selection_generation'] = 2;
+		$db->queries                   = array();
+		$committed2                    = null;
+		$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ): void {
+			if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+				throw new \RuntimeException( 'selection cache failed' );
+			}
+		};
+		try {
+			$store->selection_transaction(
+				fn (): bool => $store->compare_and_swap( $next, $next2 ),
+				static function ( bool $swapped ) use ( &$committed2 ): void {
+					$committed2 = $swapped;
+				}
+			);
+			self::fail( 'Selection cache failure after COMMIT must propagate.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'selection cache failed', $failure->getMessage() );
+		} finally {
+			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+		}
+		self::assertTrue( $committed2 );
+		$db->queries = array();
+		self::assertSame( $next2, $store->read() );
+		self::assertNotEmpty( array_filter( $db->queries, static fn ( string $query ): bool => str_contains( $query, 'SHOW TABLE STATUS' ) ) );
+
+		$uncertain_db                           = new SelectionDatabase();
+		$uncertain_store                        = new GitHubSelectionStore( $uncertain_db, 'wp_options' );
+		$uncertain_old                          = $uncertain_store->initialize_bundled( $this->declaration() );
+		$uncertain_next                         = $uncertain_old;
+		$uncertain_next['selection_generation'] = 1;
+		$uncertain_db->throw_commit             = true;
+		$uncertain_db->commit_applied           = true;
+		$uncertain_committed                    = null;
+		try {
+			$uncertain_store->selection_transaction(
+				fn (): bool => $uncertain_store->compare_and_swap( $uncertain_old, $uncertain_next ),
+				static function ( bool $swapped ) use ( &$uncertain_committed ): void {
+					$uncertain_committed = $swapped;
+				}
+			);
+			self::fail( 'Thrown commit must remain uncertain.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'commit threw', $failure->getMessage() );
+		}
+		self::assertNull( $uncertain_committed );
+	}
 }

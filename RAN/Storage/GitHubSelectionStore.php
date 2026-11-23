@@ -19,9 +19,10 @@ use RAN\RepositoryProvider\GitHubReplacementDeclaration;
  * through this store: exact locking and compare-and-swap depend on that shape at a write.
  */
 final class GitHubSelectionStore {
-	public const OPTION            = 'ran_booster_github_selection';
-	private bool $commit_uncertain = false;
-	private bool $storage_verified = false;
+	public const OPTION                    = 'ran_booster_github_selection';
+	private bool $commit_uncertain         = false;
+	private bool $storage_verified         = false;
+	private bool $in_selection_transaction = false;
 
 	public function __construct( private \wpdb|SchemaConnection $connection, private string $table ) {
 	}
@@ -183,7 +184,11 @@ final class GitHubSelectionStore {
 			}
 			return true;
 		} finally {
-			$this->invalidate_cache();
+			if ( $this->in_selection_transaction ) {
+				$this->storage_verified = false;
+			} else {
+				$this->invalidate_cache();
+			}
 		}
 	}
 
@@ -247,33 +252,44 @@ final class GitHubSelectionStore {
 	/**
 	 * Internal selection transitions and native markers; never nest inside an admission transaction.
 	 * SET TRANSACTION rejects an already active transaction without committing it.
+	 * Invoke $on_committed only after COMMIT succeeds and before invalidate_cache() can throw.
 	 *
 	 * @template T
 	 * @param callable():T $operation No credentials, provider I/O or filesystem mutation.
+	 * @param (callable(T): void)|null $on_committed
 	 * @return T
 	 */
-	public function selection_transaction( callable $operation ): mixed {
+	public function selection_transaction( callable $operation, ?callable $on_committed = null ): mixed {
 		if ( $this->commit_uncertain ) {
 			throw new DatabaseLifecycleFailure( 'selection_transaction_failed' );
 		}
 		$this->transaction_boundary( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'selection_transaction_failed' );
 		try {
-			$this->commit_uncertain = true;
-			$this->transaction_boundary( 'START TRANSACTION', 'selection_transaction_failed' );
-			$this->commit_uncertain = false;
-			$result                 = $operation();
-			// Latch before COMMIT: thrown errors and false replies are equally uncertain.
-			$this->commit_uncertain = true;
-			$this->transaction_boundary( 'COMMIT', 'selection_commit_uncertain' );
-			$this->commit_uncertain = false;
-			return $result;
-		} catch ( \Throwable $failure ) {
+			$this->in_selection_transaction = true;
 			try {
-				$this->transaction_boundary( 'ROLLBACK', 'selection_rollback_uncertain' );
-			} catch ( \Throwable ) {
 				$this->commit_uncertain = true;
+				$this->transaction_boundary( 'START TRANSACTION', 'selection_transaction_failed' );
+				$this->commit_uncertain = false;
+				$result                 = $operation();
+				// Latch before COMMIT: thrown errors and false replies are equally uncertain.
+				$this->commit_uncertain = true;
+				$this->transaction_boundary( 'COMMIT', 'selection_commit_uncertain' );
+				$this->commit_uncertain = false;
+			} catch ( \Throwable $failure ) {
+				try {
+					$this->transaction_boundary( 'ROLLBACK', 'selection_rollback_uncertain' );
+				} catch ( \Throwable ) {
+					$this->commit_uncertain = true;
+				}
+				throw $failure;
+			} finally {
+				$this->in_selection_transaction = false;
 			}
-			throw $failure;
+
+			if ( null !== $on_committed ) {
+				$on_committed( $result );
+			}
+			return $result;
 		} finally {
 			$this->invalidate_cache();
 		}

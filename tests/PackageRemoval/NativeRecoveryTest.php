@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace RAN\Tests\PackageRemoval;
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
@@ -649,50 +651,202 @@ final class NativeRecoveryTest extends TestCase {
 		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_release_and_recovery_callbacks_never_run_inside_selection_transaction(): void {
-		$this->readable();
-		$digest        = $this->service->native_recovery_confirmation()['digest'];
-		$release_calls = 0;
-		$this->service->release_native_hold(
-			$digest,
-			true,
-			true,
-			function () use ( &$release_calls ): bool {
-				self::assertFalse( $this->in_selection_transaction(), 'Release authorization callback must run outside SQL transactions.' );
-				++$release_calls;
-				return true;
+		$option_deletes                                 = 0;
+		$GLOBALS['ran_booster_attempt_on_cache_delete'] = function ( int|string $key, string $group ) use ( &$option_deletes ): void {
+			self::assertFalse( $this->in_selection_transaction(), 'Selection cache invalidation must run outside SQL transactions.' );
+			if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+				++$option_deletes;
 			}
-		);
-		self::assertGreaterThanOrEqual( 2, $release_calls );
-		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+		};
+		try {
+			$this->readable();
+			$digest        = $this->service->native_recovery_confirmation()['digest'];
+			$release_calls = 0;
+			$this->service->release_native_hold(
+				$digest,
+				true,
+				true,
+				function () use ( &$release_calls ): bool {
+					self::assertFalse( $this->in_selection_transaction(), 'Release authorization callback must run outside SQL transactions.' );
+					++$release_calls;
+					return true;
+				}
+			);
+			self::assertGreaterThanOrEqual( 2, $release_calls );
+			self::assertSame( 1, $option_deletes );
+			self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
 
-		$state                     = $this->store->read();
-		$marked                    = $state;
-		$marked['native_mutation'] = array(
-			'selection_generation' => $state['selection_generation'],
-			'owner_tag'            => str_repeat( 'a', 32 ),
-			'target_type'          => 'plugin',
-			'installed_identity'   => 'target/main.php',
-			'phase'                => 'started',
-		);
-		self::assertTrue( $this->store->compare_and_swap( $state, $marked ) );
-		$this->present    = false;
-		$this->registered = false;
-		$recovery_digest  = $this->service->native_recovery_confirmation()['digest'];
-		$recovery_calls   = 0;
-		$this->service->recover_native_removal(
-			$recovery_digest,
-			true,
-			true,
-			function () use ( &$recovery_calls ): bool {
-				self::assertFalse( $this->in_selection_transaction(), 'Recovery authorization callback must run outside SQL transactions.' );
-				++$recovery_calls;
-				return true;
+			$state                     = $this->store->read();
+			$marked                    = $state;
+			$marked['native_mutation'] = array(
+				'selection_generation' => $state['selection_generation'],
+				'owner_tag'            => str_repeat( 'a', 32 ),
+				'target_type'          => 'plugin',
+				'installed_identity'   => 'target/main.php',
+				'phase'                => 'started',
+			);
+			$option_deletes            = 0;
+			self::assertTrue( $this->store->compare_and_swap( $state, $marked ) );
+			self::assertSame( 1, $option_deletes );
+			$option_deletes   = 0;
+			$this->present    = false;
+			$this->registered = false;
+			$recovery_digest  = $this->service->native_recovery_confirmation()['digest'];
+			$recovery_calls   = 0;
+			$this->service->recover_native_removal(
+				$recovery_digest,
+				true,
+				true,
+				function () use ( &$recovery_calls ): bool {
+					self::assertFalse( $this->in_selection_transaction(), 'Recovery authorization callback must run outside SQL transactions.' );
+					++$recovery_calls;
+					return true;
+				}
+			);
+			self::assertGreaterThanOrEqual( 3, $recovery_calls );
+			self::assertSame( 1, $option_deletes );
+			self::assertContains( 'COMMIT', $this->db->queries );
+			self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+		} finally {
+			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_post_commit_selection_cache_failure_preserves_lock_release_failure_while_uncertain_commit_stays_uncertain(): void {
+		foreach ( array( 'recover', 'release' ) as $operation ) {
+			foreach ( array( 'clear', 'zero', 'throw' ) as $lock_mode ) {
+				unset( $this->db->option_rows['auto_updater.lock'] );
+				$this->hold( str_repeat( 'a', 32 ), 'started' );
+				if ( 'release' === $operation ) {
+					$this->present = true;
+					$this->readable();
+				} else {
+					$this->record     = null;
+					$this->present    = false;
+					$this->registered = false;
+				}
+				if ( 'throw' === $lock_mode ) {
+					$this->db->fail_query_contains = 'DELETE FROM `wp_options`';
+				} elseif ( 'zero' === $lock_mode ) {
+					$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
+				}
+				$digest = $this->service->native_recovery_confirmation()['digest'];
+				$caught = null;
+				$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ): void {
+					if ( GitHubSelectionStore::OPTION === $key && 'options' === $group ) {
+						throw new \RuntimeException( 'selection cache failed' );
+					}
+				};
+				try {
+					if ( 'release' === $operation ) {
+						$this->release( $digest );
+					} else {
+						$this->recover( $digest );
+					}
+				} catch ( \RuntimeException $failure ) {
+					$caught = $failure;
+				} finally {
+					unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
+					$this->db->fail_query_contains = null;
+					$this->db->zero_query_contains = null;
+					$this->db->last_error          = '';
+				}
+				self::assertInstanceOf( \RuntimeException::class, $caught, "$operation/$lock_mode" );
+				self::assertArrayNotHasKey( 'native_mutation', $this->store->read(), "$operation/$lock_mode" );
+				if ( 'clear' === $lock_mode ) {
+					self::assertNotInstanceOf( NativeHoldLockReleaseFailure::class, $caught, "$operation/$lock_mode" );
+					self::assertSame( 'selection cache failed', $caught->getMessage(), "$operation/$lock_mode" );
+					self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$lock_mode" );
+				} elseif ( 'zero' === $lock_mode ) {
+					self::assertInstanceOf( NativeHoldLockReleaseFailure::class, $caught, "$operation/$lock_mode" );
+					self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$lock_mode" );
+					$previous = $caught->getPrevious();
+					self::assertInstanceOf( \RuntimeException::class, $previous, "$operation/$lock_mode" );
+					self::assertSame( 'selection cache failed', $previous->getMessage(), "$operation/$lock_mode" );
+				} else {
+					self::assertInstanceOf( NativeHoldLockReleaseFailure::class, $caught, "$operation/$lock_mode" );
+					self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$lock_mode" );
+					self::assertInstanceOf( DeploymentStorageFailure::class, $caught->getPrevious(), "$operation/$lock_mode" );
+				}
 			}
+		}
+
+		foreach ( array( 'recover', 'release' ) as $operation ) {
+			foreach ( array( 'zero', 'throw' ) as $failure_mode ) {
+				unset( $this->db->option_rows['auto_updater.lock'] );
+				$this->hold( str_repeat( 'a', 32 ), 'started' );
+				$fresh_service         = $this->uncertain_commit_service( $operation );
+				$digest                = $fresh_service->native_recovery_confirmation()['digest'];
+				$this->db->fail_commit = true;
+				if ( 'throw' === $failure_mode ) {
+					$this->db->fail_query_contains = 'DELETE FROM `wp_options`';
+				} else {
+					$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
+				}
+				$caught = null;
+				try {
+					if ( 'release' === $operation ) {
+						$fresh_service->release_native_hold( $digest, true, true, static fn (): bool => true );
+					} else {
+						$fresh_service->recover_native_removal( $digest, true, true, static fn (): bool => true );
+					}
+				} catch ( \RuntimeException $failure ) {
+					$caught = $failure;
+				} finally {
+					$this->db->fail_commit         = false;
+					$this->db->fail_query_contains = null;
+					$this->db->zero_query_contains = null;
+					$this->db->last_error          = '';
+				}
+				self::assertInstanceOf( \RuntimeException::class, $caught, "$operation/$failure_mode" );
+				self::assertNotInstanceOf( NativeHoldLockReleaseFailure::class, $caught, "$operation/$failure_mode" );
+				self::assertArrayHasKey( 'native_mutation', $this->store->read(), "$operation/$failure_mode" );
+				self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, "$operation/$failure_mode" );
+			}
+		}
+	}
+
+	private function uncertain_commit_service( string $operation ): PackageRemovalService {
+		$bundled     = new GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
 		);
-		self::assertGreaterThanOrEqual( 3, $recovery_calls );
-		self::assertContains( 'COMMIT', $this->db->queries );
-		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+		$fresh_store = new GitHubSelectionStore( $this->db, 'wp_options' );
+		$selection   = new GitHubProviderSelection( $fresh_store, '/unused', $bundled );
+		$plugins     = $this->createMock( PluginRepository::class );
+		$gateway     = $this->createMock( PackageRemovalGateway::class );
+		if ( 'release' === $operation ) {
+			$plugins->method( 'native_recovery_record' )->willReturn(
+				array(
+					'id'             => '1',
+					'package'        => 'target/main.php',
+					'type'           => 1,
+					'adoption_token' => 'exact-adoption',
+					'source'         => 'release_asset',
+					'digest'         => str_repeat( 'b', 64 ),
+				)
+			);
+			$gateway->method( 'installed_targets' )->willReturn( array( 'target/main.php' => 'Target' ) );
+		} else {
+			$plugins->method( 'native_recovery_record' )->willReturn( null );
+			$gateway->method( 'deletion_postcondition' )->willReturn( static fn (): bool => true );
+		}
+		$gateway->expects( self::never() )->method( 'delete_plugin' );
+		$gateway->expects( self::never() )->method( 'delete_theme' );
+		$attempts = new DeploymentAttemptRepository( $this->db, 'wp_attempts', database_lifecycle: $this->createStub( Database::class ), selection: $selection );
+		return new PackageRemovalService( $plugins, $this->createStub( ThemeRepository::class ), $gateway, $attempts, new WordPressUpdaterLock(), github_selection: $selection );
 	}
 
 	private function readable(): void {
@@ -710,19 +864,22 @@ final class NativeRecoveryTest extends TestCase {
 	}
 
 	private function hold( string $tag, string $phase ): void {
-		$state   = $this->store->read();
-		$cleared = $state;
-		unset( $cleared['native_mutation'] );
-		self::assertTrue( $this->store->compare_and_swap( $state, $cleared ) );
-		$marked                    = $cleared;
+		$state = $this->store->read();
+		if ( array_key_exists( 'native_mutation', $state ) ) {
+			$cleared = $state;
+			unset( $cleared['native_mutation'] );
+			self::assertTrue( $this->store->compare_and_swap( $state, $cleared ) );
+			$state = $cleared;
+		}
+		$marked                    = $state;
 		$marked['native_mutation'] = array(
-			'selection_generation' => $cleared['selection_generation'],
+			'selection_generation' => $state['selection_generation'],
 			'owner_tag'            => $tag,
 			'target_type'          => 'plugin',
 			'installed_identity'   => 'target/main.php',
 			'phase'                => 'started',
 		);
-		self::assertTrue( $this->store->compare_and_swap( $cleared, $marked ) );
+		self::assertTrue( $this->store->compare_and_swap( $state, $marked ) );
 		if ( 'finished' === $phase ) {
 			$finished                             = $marked;
 			$finished['native_mutation']['phase'] = 'finished';

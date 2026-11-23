@@ -76,6 +76,18 @@ final class NativeHoldViewTest extends TestCase {
 		self::assertStringContainsString( 'Hold released. GitHub installs can continue.', $html );
 		self::assertStringNotContainsString( '<form', $html );
 		self::assertSame( '', $this->render( null ) );
+
+		$lock_failed_html = $this->render( null, 'lock_failed' );
+		self::assertStringContainsString( 'id="ran-booster-native-hold"', $lock_failed_html );
+		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="warning"', $lock_failed_html );
+		self::assertStringContainsString( 'The GitHub install hold was released, but Booster couldn&#039;t release WordPress&#039;s updater lock. Verify that no update is running before retrying.', $lock_failed_html );
+		self::assertStringNotContainsString( '<form', $lock_failed_html );
+
+		$post_clear_failed_html = $this->render( null, 'failed' );
+		self::assertStringContainsString( 'id="ran-booster-native-hold"', $post_clear_failed_html );
+		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="warning"', $post_clear_failed_html );
+		self::assertStringContainsString( 'Booster couldn&#039;t confirm cleanup after the hold action, and WordPress&#039;s updater lock may still be held. Reload this page and verify state before retrying.', $post_clear_failed_html );
+		self::assertStringNotContainsString( '<form', $post_clear_failed_html );
 	}
 
 	public function test_a_user_without_the_capability_gets_no_control(): void {

@@ -86,7 +86,7 @@ class ProviderProfileAdminController {
 	 * Clear the hold on a held package Booster cannot read, once its folder is gone.
 	 *
 	 * @param array<string,mixed> $request Untrusted recovery confirmation.
-	 * @return 'cleared'|'present'|'busy'|'failed' The result the provider page shows beside the control.
+	 * @return 'cleared'|'present'|'busy'|'failed'|'lock_failed' The result the provider page shows beside the control.
 	 */
 	public function recover_github_native( array $request ): string {
 		$digest = $this->native_hold_digest( $request, 'ran-booster-recover-github-' );
@@ -105,7 +105,7 @@ class ProviderProfileAdminController {
 	 * Release the hold in place on a held package Booster can read.
 	 *
 	 * @param array<string,mixed> $request Untrusted release confirmation.
-	 * @return 'released'|'busy'|'failed' The result the package page shows beside the control.
+	 * @return 'released'|'busy'|'failed'|'lock_failed' The result the package page shows beside the control.
 	 */
 	public function release_github_hold( array $request ): string {
 		$digest = $this->native_hold_digest( $request, 'ran-booster-release-github-hold-' );
@@ -137,9 +137,12 @@ class ProviderProfileAdminController {
 		return $digest;
 	}
 
-	/** @return 'present'|'busy'|'failed' */
+	/** @return 'present'|'busy'|'failed'|'lock_failed' */
 	private function native_hold_failure( \Throwable $failure, string $event, bool $removal ): string {
 		BoosterLogger::log_exception( 'native hold action failed', $failure, array( 'event' => $event ) );
+		if ( \RAN\PackageRemoval\PackageRemovalService::HOLD_CLEARED_LOCK_RELEASE_FAILED === $failure->getCode() ) {
+			return 'lock_failed';
+		}
 		try {
 			if ( $this->package_removal?->native_hold_lock_busy() ) {
 				return 'busy';

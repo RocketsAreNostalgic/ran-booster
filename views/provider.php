@@ -277,13 +277,6 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 	<?php } ?>
 
 
-			<?php
-			$native_hold_result         = $native_hold_result ?? null;
-			$native_hold_result_surface = 'provider-notice';
-			$native_hold_reload_url     = '';
-			$native_hold_status_folder  = '';
-			require __DIR__ . '/native-hold-result.php';
-			?>
 	<?php if ( isset( $github_selection ) && is_array( $github_selection ) ) { ?>
 		<?php
 		$selection_status            = $github_selection['status'];
@@ -292,6 +285,13 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 		$github_provider_details_url = is_multisite()
 			? network_admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' )
 			: admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' );
+		if ( 'recovery_required' !== $selection_status['state'] ) {
+			$native_hold_result         = $native_hold_result ?? null;
+			$native_hold_result_surface = 'provider-notice';
+			$native_hold_reload_url     = '';
+			$native_hold_status_folder  = '';
+			require __DIR__ . '/native-hold-result.php';
+		}
 		?>
 		<section class="ran-booster-provider__management" aria-label="<?php esc_attr_e( 'GitHub provider management', 'ran-booster' ); ?>">
 			<?php if ( $healthy_replacement && is_array( $current_implementation ) ) { ?>

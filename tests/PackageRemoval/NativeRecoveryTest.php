@@ -329,11 +329,43 @@ final class NativeRecoveryTest extends TestCase {
 	}
 
 	public function test_lock_release_failure_does_not_report_verified_recovery(): void {
-		$digest                        = $this->service->native_recovery_confirmation()['digest'];
-		$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
-		$this->refused( fn () => $this->recover( $digest ) );
-		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
-		self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows );
+		foreach ( array( 'recover', 'release' ) as $operation ) {
+			unset( $this->db->option_rows['auto_updater.lock'] );
+			if ( 'release' === $operation ) {
+				$state                     = $this->store->read();
+				$marked                    = $state;
+				$marked['native_mutation'] = array(
+					'selection_generation' => $state['selection_generation'],
+					'owner_tag'            => str_repeat( 'a', 32 ),
+					'target_type'          => 'plugin',
+					'installed_identity'   => 'target/main.php',
+					'phase'                => 'started',
+				);
+				self::assertTrue( $this->store->compare_and_swap( $state, $marked ) );
+				$this->readable();
+			} else {
+				$this->record  = null;
+				$this->present = false;
+			}
+			$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
+			$digest                        = $this->service->native_recovery_confirmation()['digest'];
+			$caught                        = null;
+			try {
+				if ( 'release' === $operation ) {
+					$this->release( $digest );
+				} else {
+					$this->recover( $digest );
+				}
+			} catch ( \RuntimeException $failure ) {
+				$caught = $failure;
+			} finally {
+				$this->db->zero_query_contains = null;
+			}
+			self::assertInstanceOf( \RuntimeException::class, $caught, $operation );
+			self::assertSame( PackageRemovalService::HOLD_CLEARED_LOCK_RELEASE_FAILED, $caught->getCode(), $operation );
+			self::assertArrayNotHasKey( 'native_mutation', $this->store->read(), $operation );
+			self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, $operation );
+		}
 	}
 
 	public function test_finished_hold_release_keeps_management_and_needs_no_stop_confirmation(): void {

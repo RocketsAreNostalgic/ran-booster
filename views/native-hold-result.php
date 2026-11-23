@@ -11,8 +11,9 @@
 
 defined( 'WPINC' ) || die;
 
-$native_hold_code   = is_array( $native_hold_result ?? null ) ? $native_hold_result['code'] : '';
-$native_hold_notice = null;
+$native_hold_code          = is_array( $native_hold_result ?? null ) ? $native_hold_result['code'] : '';
+$native_hold_notice        = null;
+$native_hold_notice_intent = 'success';
 if ( 'package-notice' === $native_hold_result_surface && 'released' === $native_hold_code ) {
 	$native_hold_notice = esc_html__( 'Hold released. GitHub installs can continue.', 'ran-booster' );
 } elseif ( 'provider-notice' === $native_hold_result_surface && is_array( $native_hold_result ) && 'cleared' === $native_hold_code && '' !== $native_hold_result['folder'] ) {
@@ -28,10 +29,27 @@ if ( 'package-notice' === $native_hold_result_surface && 'released' === $native_
 		'<a href="' . esc_url( $native_hold_install_url ) . '">',
 		'</a>'
 	);
+} elseif ( 'package-notice' === $native_hold_result_surface && 'lock_failed' === $native_hold_code ) {
+	$native_hold_notice_intent = 'warning';
+	$native_hold_notice        = esc_html__( 'The GitHub install hold was released, but Booster couldn\'t release WordPress\'s updater lock. Verify that no update is running before retrying.', 'ran-booster' );
+} elseif ( 'provider-notice' === $native_hold_result_surface && 'lock_failed' === $native_hold_code ) {
+	$native_hold_notice_intent = 'warning';
+	if ( is_array( $native_hold_result ) && '' !== $native_hold_result['folder'] ) {
+		$native_hold_notice = sprintf(
+			/* translators: %s: the folder Booster no longer manages. */
+			__( 'The GitHub install hold was cleared and Booster no longer manages %s, but Booster couldn\'t release WordPress\'s updater lock. Verify that no update is running before retrying.', 'ran-booster' ),
+			'<code>' . esc_html( $native_hold_result['folder'] ) . '</code>'
+		);
+	} else {
+		$native_hold_notice = esc_html__( 'The GitHub install hold was cleared, but Booster couldn\'t release WordPress\'s updater lock. Verify that no update is running before retrying.', 'ran-booster' );
+	}
+} elseif ( in_array( $native_hold_result_surface, array( 'package-notice', 'provider-notice' ), true ) && 'failed' === $native_hold_code ) {
+	$native_hold_notice_intent = 'warning';
+	$native_hold_notice        = esc_html__( 'Booster couldn\'t confirm cleanup after the hold action, and WordPress\'s updater lock may still be held. Reload this page and verify state before retrying.', 'ran-booster' );
 }
 if ( null !== $native_hold_notice ) {
 	?>
-<div id="ran-booster-native-hold" class="notice notice-success inline ran-wp-ui-notice ran-wp-ui-box-sizing is-success" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="success"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
+<div id="ran-booster-native-hold" class="notice <?php echo 'warning' === $native_hold_notice_intent ? 'notice-warning' : 'notice-success'; ?> inline ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $native_hold_notice_intent ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( $native_hold_notice_intent ); ?>"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
 	<?php
 	echo wp_kses(
 		$native_hold_notice,
@@ -41,7 +59,7 @@ if ( null !== $native_hold_notice ) {
 		)
 	);
 	?>
-</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'success' ); ?></div>
+</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' === $native_hold_notice_intent ? 'warning' : 'success' ); ?></div>
 	<?php
 }
 

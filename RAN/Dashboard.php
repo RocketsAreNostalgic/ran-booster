@@ -288,7 +288,12 @@ class Dashboard {
 			$data['provider_list_state']            = $this->requested_provider_list_state();
 			$data['replace_credential']             = $this->requested_provider_repository_id( 'replace_credential' );
 			$data['credential_form_request']        = $this->requested_credential_form( $data['provider'] );
-			$data['native_hold_result']             = $this->native_hold_result();
+
+			$hold_result                = is_array( $data['github_selection'] ?? null ) ? $this->native_hold_result() : null;
+			$github_selection_state     = is_array( $data['github_selection'] ?? null ) && is_array( $data['github_selection']['status'] ?? null ) ? ( $data['github_selection']['status']['state'] ?? null ) : null;
+			$data['native_hold_result'] = null !== $hold_result && 'recovery_required' === $github_selection_state && in_array( $hold_result['code'], array( 'cleared', 'released', 'lock_failed' ), true )
+				? null
+				: $hold_result;
 
 			$data['requested_repository_id']            = $this->requested_provider_repository_id();
 			$data                                       = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );
@@ -977,8 +982,13 @@ class Dashboard {
 						$this->requested_advanced_settings_open() || null !== $save_check_sentences
 					);
 					$native_hold                                   = $this->provider_settings->native_hold();
-					$edit_data['package_native_hold_result']       = $this->native_hold_result();
-					$edit_data['package_native_hold']              = null !== $native_hold && $native_hold['readable'] && $native_hold['type'] === $type && $native_hold['identifier'] === $package->get_identifier() ? $native_hold : null;
+					$package_native_hold                           = null !== $native_hold && $native_hold['readable'] && $native_hold['type'] === $type && $native_hold['identifier'] === $package->get_identifier() ? $native_hold : null;
+					$hold_active                                   = null !== $native_hold || 'recovery_required' === ( $this->provider_settings->github_selection_diagnostics()['state'] ?? null );
+					$hold_result                                   = $this->native_hold_result();
+					$edit_data['package_native_hold_result']       = null !== $hold_result && $hold_active && ( null === $package_native_hold || in_array( $hold_result['code'], array( 'released', 'cleared', 'lock_failed' ), true ) )
+						? null
+						: $hold_result;
+					$edit_data['package_native_hold']              = $package_native_hold;
 					$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
 					$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
 					$edit_data['repository_branch_check_args']     = PackageSource::BRANCH === $package->get_source()
@@ -1241,7 +1251,7 @@ class Dashboard {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only result display; the hold action verified its own nonce.
 		$query = wp_unslash( $_GET );
 		$code  = is_array( $query ) && is_string( $query['ran_booster_hold'] ?? null ) ? $query['ran_booster_hold'] : '';
-		if ( ! in_array( $code, array( 'released', 'cleared', 'present', 'busy', 'failed' ), true ) ) {
+		if ( ! in_array( $code, array( 'released', 'cleared', 'present', 'busy', 'failed', 'lock_failed' ), true ) ) {
 			return null;
 		}
 		$folder = is_string( $query['ran_booster_hold_folder'] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._-]{0,190}\z#D', $query['ran_booster_hold_folder'] ) ? $query['ran_booster_hold_folder'] : '';

@@ -500,6 +500,45 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
 	}
 
+	public function test_recover_and_release_github_hold_report_lock_failed_when_updater_lock_release_fails(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$GLOBALS['ran_booster_test_nonce_valid']  = true;
+
+		foreach ( array( 'recover', 'release' ) as $mode ) {
+			unset( $this->db->option_rows['auto_updater.lock'] );
+			$service   = 'release' === $mode ? $this->readable_hold_service() : $this->native_recovery_service();
+			$review    = $service->native_recovery_confirmation();
+			$dashboard = $this->createMock( \RAN\Dashboard::class );
+			$dashboard->expects( self::never() )->method( 'add_message' );
+			$controller = $this->admin_controller( $service, $dashboard );
+
+			$this->db->zero_query_contains = 'DELETE FROM `wp_options`';
+			try {
+				$code = 'release' === $mode
+					? $controller->release_github_hold(
+						array(
+							'review_digest'     => $review['digest'],
+							'confirmed_stopped' => '1',
+							'confirmed_checked' => '1',
+						)
+					)
+					: $controller->recover_github_native(
+						array(
+							'review_digest'     => $review['digest'],
+							'confirmed_stopped' => '1',
+							'confirmed_removal' => '1',
+						)
+					);
+			} finally {
+				$this->db->zero_query_contains = null;
+			}
+
+			self::assertSame( 'lock_failed', $code, $mode );
+			self::assertArrayNotHasKey( 'native_mutation', $this->store->read(), $mode );
+			self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows, $mode );
+		}
+	}
+
 	private function readable_hold_service(): \RAN\PackageRemoval\PackageRemovalService {
 		$state                     = $this->store->read();
 		$marked                    = $state;

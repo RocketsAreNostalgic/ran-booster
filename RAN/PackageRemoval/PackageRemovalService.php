@@ -23,6 +23,8 @@ use Throwable;
  */
 final readonly class PackageRemovalService {
 
+	public const HOLD_CLEARED_LOCK_RELEASE_FAILED = 1;
+
 	public function __construct(
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
@@ -95,7 +97,8 @@ final readonly class PackageRemovalService {
 		if ( ! $this->held_target_readable( $type, $identifier, $snapshot['record'] ) ) {
 			throw new \RuntimeException( 'Only a managed, registered target is released in place.' );
 		}
-		$token = $this->native_hold_lock( $marker, $confirmed_stopped );
+		$token        = $this->native_hold_lock( $marker, $confirmed_stopped );
+		$hold_cleared = false;
 		try {
 			$repository = 'plugin' === $type ? $this->plugins : $this->themes;
 			$verify     = function () use ( $type, $identifier, $repository, $snapshot, $token ): void {
@@ -113,6 +116,7 @@ final readonly class PackageRemovalService {
 				throw new \RuntimeException( 'The held package or release authority changed.' );
 			}
 			$this->github_selection->release_native_hold( $snapshot['state'], $verify );
+			$hold_cleared = true;
 			BoosterLogger::log(
 				'native hold released',
 				array(
@@ -122,6 +126,12 @@ final readonly class PackageRemovalService {
 			);
 		} finally {
 			if ( ! $this->updater_lock->release( $token ) ) {
+				if ( $hold_cleared ) {
+					throw new \RuntimeException(
+						'The native hold was released; updater lock release failed.',
+						self::HOLD_CLEARED_LOCK_RELEASE_FAILED
+					);
+				}
 				throw new \RuntimeException( 'The native hold may be released; updater lock release requires recovery.' );
 			}
 		}
@@ -143,7 +153,8 @@ final readonly class PackageRemovalService {
 		if ( ! hash_equals( $snapshot['digest'], $digest ) || ! is_array( $snapshot['state']['native_mutation'] ) ) {
 			throw new \RuntimeException( 'The native recovery review changed.' );
 		}
-		$token = $this->native_hold_lock( $snapshot['state']['native_mutation'], $confirmed_stopped );
+		$token        = $this->native_hold_lock( $snapshot['state']['native_mutation'], $confirmed_stopped );
+		$hold_cleared = false;
 		try {
 			$type       = $snapshot['type'];
 			$identifier = $snapshot['identifier'];
@@ -181,8 +192,15 @@ final readonly class PackageRemovalService {
 					$verify();
 				}
 			);
+			$hold_cleared = true;
 		} finally {
 			if ( ! $this->updater_lock->release( $token ) ) {
+				if ( $hold_cleared ) {
+					throw new \RuntimeException(
+						'Native recovery cleared the hold; updater lock release failed.',
+						self::HOLD_CLEARED_LOCK_RELEASE_FAILED
+					);
+				}
 				throw new \RuntimeException( 'Native recovery may have completed; updater lock release requires recovery.' );
 			}
 		}

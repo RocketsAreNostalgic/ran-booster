@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin;
 
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\CredentialSelfDestructPurger;
@@ -122,10 +125,56 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 
 		self::assertSame( array( '[ran-booster] Expired credential purge failed. {"operation":"credential_purge","exception_class":"LogicException","exception_code":"9"}' ), $lines );
 	}
+
+	/** @return array<string, array{bool, bool, bool, int}> */
+	public static function request_gate_cases(): array {
+		return array(
+			'unauthenticated admin-ajax' => array( true, false, false, 0 ),
+			'authenticated admin-ajax'   => array( true, true, true, 0 ),
+			'unauthenticated admin'      => array( false, false, false, 0 ),
+			'non-admin user'             => array( false, true, false, 0 ),
+			'authorized admin page'      => array( false, true, true, 1 ),
+		);
+	}
+
+	#[DataProvider( 'request_gate_cases' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_purge_only_runs_for_authenticated_non_ajax_administrators(
+		bool $doing_ajax,
+		bool $logged_in,
+		bool $can_manage,
+		int $expected_calls
+	): void {
+		$GLOBALS['ran_booster_purger_test_doing_ajax'] = $doing_ajax;
+		$GLOBALS['ran_booster_purger_test_logged_in']  = $logged_in;
+		$GLOBALS['ran_booster_purger_test_can_manage'] = $can_manage;
+		// phpcs:ignore Squiz.PHP.Eval.Discouraged -- Isolated separate-process test defines namespace-local WordPress gate functions without leaking across tests.
+		eval(
+			'namespace RAN\\Admin;
+			function wp_doing_ajax(): bool { return (bool) $GLOBALS["ran_booster_purger_test_doing_ajax"]; }
+			function is_user_logged_in(): bool { return (bool) $GLOBALS["ran_booster_purger_test_logged_in"]; }
+			function current_user_can( string $cap ): bool { return "manage_options" === $cap && (bool) $GLOBALS["ran_booster_purger_test_can_manage"]; }'
+		);
+
+		$secrets = new PurgerSecretsFile( array() );
+		$purger  = new CredentialSelfDestructPurger(
+			$secrets,
+			new PurgerObservations(),
+			new PurgerLookupProfiles(),
+			new PurgerEvidenceStore()
+		);
+
+		$purger->purge();
+
+		self::assertSame( $expected_calls, $secrets->calls );
+	}
 }
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused purger collaborators stay beside the lifecycle contract test.
 final class PurgerSecretsFile extends SecretsFile {
+
+	public int $calls = 0;
 
 	/** @param array<string, list<string>> $removed */
 	public function __construct( private readonly array $removed, private readonly ?\Throwable $failure = null ) {
@@ -134,6 +183,7 @@ final class PurgerSecretsFile extends SecretsFile {
 
 	/** @return array<string, list<string>> */
 	public function purge_expired_credentials(): array {
+		++$this->calls;
 		if ( null !== $this->failure ) {
 			throw $this->failure;
 		}

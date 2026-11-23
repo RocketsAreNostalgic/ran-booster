@@ -10,6 +10,7 @@ use RAN\Deployment\DeploymentStorageFailure;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\PackageRemoval\PackageRemovalService;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
@@ -35,7 +36,8 @@ final readonly class PackageOperationService {
 		private DeploymentCoordinator $deployments,
 		private PackageRemovalService $removals,
 		private WordPressUpdaterLock $updater_lock,
-		?RepositorySourceGuard $source_guard = null
+		?RepositorySourceGuard $source_guard = null,
+		private ?GitHubProviderSelection $github_selection = null
 	) {
 
 		$this->source_guard = $source_guard ?? new RepositorySourceGuard();
@@ -55,16 +57,12 @@ final readonly class PackageOperationService {
 
 		return match ( $operation->operation ) {
 
-			'install'                         => $this->updater_lock->run(
-				fn (): array => $this->link_installed( $operation ),
-				'Another package operation is in progress.',
-				'The package operation lock could not be released.'
+			'install'                         => $this->run_with_updater_lock(
+				fn ( ?string $lock_token ): array => $this->link_installed( $operation, $lock_token )
 			),
 
-			'edit'                            => $this->updater_lock->run(
-				fn (): array => $this->edit( $operation ),
-				'Another package operation is in progress.',
-				'The package operation lock could not be released.'
+			'edit'                            => $this->run_with_updater_lock(
+				fn ( ?string $lock_token ): array => $this->edit( $operation, $lock_token )
 			),
 			'unlink', 'unlink-and-delete'     => $this->remove( $operation ),
 			default                           => throw new RuntimeException( 'The package operation is unsupported.' ),
@@ -92,8 +90,13 @@ final readonly class PackageOperationService {
 		}
 
 		try {
-			$token = $this->updater_lock->acquire();
+			$token = null === $this->github_selection
+				? $this->updater_lock->acquire()
+				: $this->updater_lock->try_acquire_without_reclaim();
 		} catch ( \Throwable ) {
+			throw new RuntimeException( 'Another package operation is in progress.' );
+		}
+		if ( null === $token ) {
 			throw new RuntimeException( 'Another package operation is in progress.' );
 		}
 		$write_attempted = false;
@@ -226,7 +229,7 @@ final readonly class PackageOperationService {
 	}
 
 	/** @return array{status: string, package: Package} */
-	private function link_installed( PackageOperation $operation ): array {
+	private function link_installed( PackageOperation $operation, ?string $lock_token ): array {
 		$slug    = $operation->package_slug ?? throw new RuntimeException( 'The package slug is unavailable.' );
 		$package = null === $operation->identifier
 			? $this->installed_by_name( $operation->package_type, $slug )
@@ -241,6 +244,7 @@ final readonly class PackageOperationService {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal domain exception; the controller escapes each value when it builds the message.
 			throw new PackageFolderMismatch( $folder, $operation->subdirectory ?? (string) $operation->repository, $slug );
 		}
+		$this->assert_native_mutation_clear( $operation->package_type, (string) $package->get_identifier(), $lock_token );
 		$this->apply_repository( $package, $operation );
 		$this->source_guard->assert_allowed( (string) $package->get_provider_code(), (string) $package->get_provider_repository_id(), 'plugin' === $operation->package_type ? 1 : 2, (string) $package->get_identifier(), PackageSource::BRANCH );
 		$adoption = $this->adopt( $operation->package_type, $package );
@@ -277,6 +281,7 @@ final readonly class PackageOperationService {
 		if ( $package instanceof Plugin ) {
 			PackageMutationGuard::assert_plugin_file_allowed( $package->get_identifier() );
 		}
+		$this->assert_native_mutation_clear( $operation->package_type, $identifier, $token );
 		$this->apply_repository( $package, $operation );
 		$package->set_subdirectory( null );
 		$package->set_source( PackageSource::RELEASE_ASSET, 1 );
@@ -302,6 +307,7 @@ final readonly class PackageOperationService {
 			|| ! hash_equals( $token, (string) $this->updater_lock->current_token() ) ) {
 			throw new RuntimeException( 'The installed package or updater lock changed during release adoption.' );
 		}
+		$this->assert_native_mutation_clear( $operation->package_type, $identifier, $token );
 		if ( 'plugin' === $operation->package_type ) {
 			if ( ! $package instanceof Plugin ) {
 				throw new RuntimeException( 'The installed plugin is unavailable.' );
@@ -356,9 +362,10 @@ final readonly class PackageOperationService {
 	}
 
 	/** @return array{status: 'edited'|'conflict', package: Package} */
-	private function edit( PackageOperation $operation ): array {
+	private function edit( PackageOperation $operation, ?string $lock_token ): array {
 		$identifier = $operation->identifier ?? throw new RuntimeException( 'The package identity is unavailable.' );
 		$existing   = $this->find( $operation->package_type, $identifier );
+		$this->assert_native_mutation_clear( $operation->package_type, $identifier, $lock_token );
 		if ( ! $this->matches_expected_package( $operation, $existing ) ) {
 			return array(
 				'status'  => 'conflict',
@@ -484,6 +491,65 @@ final readonly class PackageOperationService {
 			&& $package->get_deployment_policy() === $expected['deployment_policy']
 			&& $package->get_source() === $expected['source']
 			&& $package->get_source_revision() === $expected['source_revision'];
+	}
+
+	/**
+	 * @template TResult of array<string, mixed>
+	 * @param callable(?string): TResult $operation
+	 * @return TResult
+	 */
+	private function run_with_updater_lock( callable $operation ): array {
+		if ( null === $this->github_selection ) {
+			return $this->updater_lock->run(
+				static fn (): array => $operation( null ),
+				'Another package operation is in progress.',
+				'The package operation lock could not be released.'
+			);
+		}
+
+		try {
+			$token = $this->updater_lock->try_acquire_without_reclaim();
+		} catch ( \Throwable $failure ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal lock failures are not rendered; retain the original failure chain.
+			throw new RuntimeException( 'Another package operation is in progress.', 0, $failure );
+		}
+		if ( null === $token ) {
+			throw new RuntimeException( 'Another package operation is in progress.' );
+		}
+
+		try {
+			return $operation( $token );
+		} finally {
+			try {
+				$released = $this->updater_lock->release( $token );
+			} catch ( \Throwable $failure ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal lock failures are not rendered; retain the original failure chain.
+				throw new RuntimeException( 'The package operation lock could not be released.', 0, $failure );
+			}
+			if ( ! $released ) {
+				throw new RuntimeException( 'The package operation lock could not be released.' );
+			}
+		}
+	}
+
+	private function assert_native_mutation_clear( string $type, string $identifier, ?string $lock_token ): void {
+		if ( null === $this->github_selection ) {
+			return;
+		}
+		if ( null === $lock_token || $this->updater_lock->current_token() !== $lock_token ) {
+			throw new RuntimeException( 'Another package operation is in progress.' );
+		}
+		try {
+			$blocked = $this->github_selection->native_mutation_blocks_target( $type, $identifier );
+		} catch ( \Throwable ) {
+			throw new RuntimeException( 'Native mutation ownership could not be verified.' );
+		}
+		if ( $this->updater_lock->current_token() !== $lock_token ) {
+			throw new RuntimeException( 'Another package operation is in progress.' );
+		}
+		if ( $blocked ) {
+			throw new RuntimeException( 'A pending GitHub native update blocks changes to this package until recovery completes.' );
+		}
 	}
 
 	private function find( string $type, string $identifier ): Package {

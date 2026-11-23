@@ -687,6 +687,95 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array( 'runtime-lock' ), $lock->releases );
 	}
 
+	public function test_active_github_native_mutation_hold_blocks_change_channel_and_return_to_branch(): void {
+		$package = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'all_booster_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $package ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'all_booster_themes' )->willReturn( array() );
+
+		$store = new class() extends ManagedReleaseStore {
+			public int $channel_changes = 0;
+			public int $transitions     = 0;
+
+			public function __construct() {}
+
+			public function configuration( string $type, string $identifier ): ManagedReleaseConfiguration {
+				unset( $type, $identifier );
+				return new ManagedReleaseConfiguration( 'example', 'example/example.php', 'stable' );
+			}
+
+			public function change_channel( string $type, string $identifier, int $expected_revision, string $channel, int $user_id, string $expected_adoption_token ): bool {
+				unset( $type, $identifier, $expected_revision, $channel, $user_id, $expected_adoption_token );
+				++$this->channel_changes;
+				return true;
+			}
+
+			public function transition( string $type, string $identifier, PackageSource $expected_source, int $expected_revision, PackageSource $new_source, ?ManagedReleaseConfiguration $configuration, int $user_id, string $expected_adoption_token, ?callable $native_complete = null ): bool {
+				unset( $type, $identifier, $expected_source, $expected_revision, $new_source, $configuration, $user_id, $expected_adoption_token, $native_complete );
+				++$this->transitions;
+				return true;
+			}
+		};
+
+		$lock      = new class() extends WordPressUpdaterLock {
+			public ?string $token = null;
+			public function try_acquire_without_reclaim(): string {
+				$this->token = 'hold-test-lock';
+				return $this->token;
+			}
+			public function current_token(): ?string {
+				return $this->token;
+			}
+			public function release( string $token ): bool {
+				if ( $this->token === $token ) {
+					$this->token = null;
+					return true;
+				}
+				return false;
+			}
+		};
+		$selection = $this->github_selection();
+		self::assertNotNull( $this->native_selection_store );
+		$state                   = $this->native_selection_store->read( true );
+		$next                    = $state;
+		$next['native_mutation'] = array(
+			'selection_generation' => $state['selection_generation'],
+			'owner_tag'            => str_repeat( '0', 16 ) . str_repeat( 'b', 16 ),
+			'target_type'          => 'plugin',
+			'installed_identity'   => self::NATIVE_PLUGIN,
+			'phase'                => 'started',
+		);
+		self::assertTrue( $this->native_selection_store->compare_and_swap( $state, $next ) );
+
+		$registry  = $this->release_metadata_registry();
+		$registrar = $this->registrar( $plugins, $themes, $store, $lock, $registry );
+		$facade    = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$registrar,
+			$lock,
+			$registry,
+			static fn (): bool => true,
+			static fn (): bool => true,
+			github_selection: $selection
+		);
+
+		$channel = $facade->change_channel( 'plugin', self::NATIVE_PLUGIN, 1, 'prerelease', 'valid' );
+		self::assertFalse( $channel->successful() );
+		self::assertSame( 'release_unavailable', $channel->code() );
+
+		$return = $facade->return_to_branch( 'plugin', self::NATIVE_PLUGIN, 1, 'valid' );
+		self::assertFalse( $return->successful() );
+		self::assertSame( 'release_unavailable', $return->code() );
+
+		self::assertSame( 0, $store->channel_changes );
+		self::assertSame( 0, $store->transitions );
+		self::assertNull( $lock->token );
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_failed_manual_native_update_holds_lock_until_after_shutdown_restoration(): void {

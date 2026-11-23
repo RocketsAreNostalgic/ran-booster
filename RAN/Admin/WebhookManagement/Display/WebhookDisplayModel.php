@@ -396,10 +396,19 @@ final class WebhookDisplayModel {
 					PHP_QUERY_RFC3986
 				),
 				'settle' => add_query_arg(
-					array_filter(
-						array(
-							'webhook_management_result' => $result_code,
-							'webhook_management_ping'   => $ping_code,
+					array_map(
+						'rawurlencode',
+						array_filter(
+							array(
+								'webhook_management_result' => $result_code,
+								'webhook_management_ping' => $ping_code,
+								'webhook_management_provider' => $provider_code,
+								'webhook_management_repository' => $repository_id,
+								'_ran_booster_webhook_result_nonce' => wp_create_nonce(
+									WebhookManagementController::result_nonce_action( $provider_code, $repository_id, $result_code, $ping_code )
+								),
+							),
+							static fn ( ?string $value ): bool => null !== $value && '' !== $value
 						)
 					),
 					$this->panel_url( $return_url, $repository_id )

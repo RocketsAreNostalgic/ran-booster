@@ -140,35 +140,26 @@ class WpConfigSecretsPathWriter {
 		if ( null !== $preflight && ! $this->same_snapshot( $preflight, $writable_preflight ) ) {
 			$this->fail( 'config_changed', 'The WordPress configuration changed before it could be edited.' );
 		}
-		$preflight = $writable_preflight;
-		$lock_path = $config_path . self::LOCK_SUFFIX;
-		$lock      = $this->open_lock( $lock_path );
+		$preflight   = $writable_preflight;
+		$lock_path   = $config_path . self::LOCK_SUFFIX;
+		$lock        = null;
+		$lock_locked = false;
 
 		try {
-			$this->assert_lock_handle( $lock, $lock_path );
-			if ( ! $this->change_permissions( $lock_path, 0600 ) ) {
-				$this->fail( 'lock_permissions_failed', 'Could not secure the WordPress configuration edit lock.' );
-			}
-			$this->assert_lock_handle( $lock, $lock_path );
-			$lock_stat = fstat( $lock );
-			if ( false === $lock_stat || 0600 !== ( $lock_stat['mode'] & 0777 ) ) {
-				$this->fail( 'lock_permissions_failed', 'Could not secure the WordPress configuration edit lock.' );
-			}
-			if ( ! $this->acquire_lock( $lock ) ) {
-				$this->fail( 'lock_failed', 'Could not lock the WordPress configuration for editing.' );
-			}
+			$lock        = $this->acquire_verified_lock( $lock_path );
+			$lock_locked = true;
 
 			$locked = $this->inspect_config_path( $config_path );
 			if ( ! $this->same_snapshot( $preflight, $locked ) ) {
 				$this->fail( 'config_changed', 'The WordPress configuration changed before it could be edited.' );
 			}
 
-			$original      = $locked['contents'];
-				$candidate = $remove
-					? $this->build_removal_candidate( $original, $sidecar_path )
-					: ( null === $replacement_sidecar_path
-						? $this->build_candidate( $original, $sidecar_path )
-						: $this->build_retarget_candidate( $original, $sidecar_path, $replacement_sidecar_path ) );
+			$original  = $locked['contents'];
+			$candidate = $remove
+				? $this->build_removal_candidate( $original, $sidecar_path )
+				: ( null === $replacement_sidecar_path
+					? $this->build_candidate( $original, $sidecar_path )
+					: $this->build_retarget_candidate( $original, $sidecar_path, $replacement_sidecar_path ) );
 			if ( null === $candidate ) {
 				return false;
 			}
@@ -182,9 +173,17 @@ class WpConfigSecretsPathWriter {
 
 			$this->replace_config( $config_path, $candidate, $locked );
 		} finally {
-			$this->release_lock( $lock );
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
-			fclose( $lock );
+			if ( is_resource( $lock ) ) {
+				try {
+					if ( $lock_locked ) {
+						$this->cleanup_lock( $lock, $lock_path );
+					}
+				} finally {
+					$this->release_lock( $lock );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
+					fclose( $lock );
+				}
+			}
 		}
 
 		return true;
@@ -713,16 +712,88 @@ class WpConfigSecretsPathWriter {
 	}
 
 	/**
+	 * Acquire an exclusive lock whose inode still matches the live lock path
+	 * after flock() returns, so unlinking on release cannot race a waiter.
+	 *
+	 * @return resource
+	 */
+	private function acquire_verified_lock( string $lock_path ): mixed {
+		for ( $attempt = 0; $attempt < 4; ++$attempt ) {
+			$lock = $this->open_lock( $lock_path );
+			try {
+				$initial_stat = fstat( $lock );
+				if ( false === $initial_stat
+					|| 0100000 !== ( $initial_stat['mode'] & 0170000 )
+					|| ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $initial_stat['uid'] ) ) {
+					$this->fail( 'lock_invalid', 'The WordPress configuration edit lock is not safe.' );
+				}
+				if ( ! $this->acquire_lock( $lock ) ) {
+					$this->fail( 'lock_failed', 'Could not lock the WordPress configuration for editing.' );
+				}
+				if ( ! $this->lock_handle_matches_path( $lock, $lock_path ) ) {
+					$this->release_lock( $lock );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the stale lock descriptor before retrying after a concurrent unlink.
+					fclose( $lock );
+					continue;
+				}
+				if ( ! $this->change_permissions( $lock_path, 0600 ) ) {
+					$this->fail( 'lock_permissions_failed', 'Could not secure the WordPress configuration edit lock.' );
+				}
+				$this->assert_lock_handle( $lock, $lock_path );
+				$lock_stat = fstat( $lock );
+				if ( false === $lock_stat || 0600 !== ( $lock_stat['mode'] & 0777 ) ) {
+					$this->fail( 'lock_permissions_failed', 'Could not secure the WordPress configuration edit lock.' );
+				}
+
+				return $lock;
+			} catch ( Throwable $failure ) {
+				$this->release_lock( $lock );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the lock handle on failure before propagating the exception.
+				fclose( $lock );
+				throw $failure;
+			}
+		}
+
+		$this->fail( 'lock_invalid', 'The WordPress configuration edit lock is not safe.' );
+	}
+
+	/**
+	 * @param resource $lock
+	 */
+	private function cleanup_lock( mixed $lock, string $lock_path ): void {
+		if ( ! $this->lock_handle_matches_path( $lock, $lock_path ) ) {
+			return;
+		}
+		$lock_stat = fstat( $lock );
+		if ( false === $lock_stat || 0 !== $lock_stat['size'] || 0600 !== ( $lock_stat['mode'] & 0777 ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove our verified 0-byte 0600 edit lock while still holding LOCK_EX so ABSPATH stays clean.
+		unlink( $lock_path );
+	}
+
+	/**
+	 * @param resource $lock
+	 */
+	private function lock_handle_matches_path( mixed $lock, string $path ): bool {
+		clearstatcache( true, $path );
+		if ( ! is_file( $path ) && ! is_link( $path ) ) {
+			return false;
+		}
+		$path_stat = lstat( $path );
+		$lock_stat = fstat( $lock );
+
+		return false !== $path_stat
+			&& false !== $lock_stat
+			&& $this->same_identity( $path_stat, $lock_stat )
+			&& ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() === $path_stat['uid'] );
+	}
+
+	/**
 	 * @param resource $lock
 	 */
 	private function assert_lock_handle( mixed $lock, string $path ): void {
-		$path_stat = lstat( $path );
-		$lock_stat = fstat( $lock );
-		if ( false === $path_stat
-			|| false === $lock_stat
-			|| ! $this->same_identity( $path_stat, $lock_stat )
-			|| ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $path_stat['uid'] )
-		) {
+		if ( ! $this->lock_handle_matches_path( $lock, $path ) ) {
 			$this->fail( 'lock_invalid', 'The WordPress configuration edit lock is not safe.' );
 		}
 	}

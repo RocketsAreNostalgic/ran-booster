@@ -461,6 +461,32 @@ final class TemporaryDebugCaptureTest extends TestCase {
 		$this->assert_mutation_refused( static fn(): array => $available->start() );
 	}
 
+	public function test_write_document_never_falls_back_to_system_temp_directory(): void {
+		$before = glob( sys_get_temp_dir() . '/.ran-booster-debug-*' );
+		$before = is_array( $before ) ? $before : array();
+
+		$capture = new TemporaryDebugCapture( $this->directory . '/missing/secrets.json', fn(): int => $this->now );
+		$method  = new \ReflectionMethod( TemporaryDebugCapture::class, 'write_document' );
+
+		$this->assert_mutation_refused(
+			static fn() => $method->invoke(
+				$capture,
+				array(
+					'owner'        => 'ran-booster',
+					'format'       => 1,
+					'active_until' => '2026-07-23T13:00:00Z',
+					'expires_at'   => '2026-07-24T13:00:00Z',
+					'entries'      => array(),
+				),
+				false
+			)
+		);
+
+		$after = glob( sys_get_temp_dir() . '/.ran-booster-debug-*' );
+		$after = is_array( $after ) ? $after : array();
+		self::assertSame( $before, $after );
+	}
+
 	private function capture(): TemporaryDebugCapture {
 		return new TemporaryDebugCapture(
 			$this->secrets_path,

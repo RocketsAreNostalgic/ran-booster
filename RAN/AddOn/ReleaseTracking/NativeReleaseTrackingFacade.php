@@ -12,6 +12,7 @@ use RAN\Deployment\PackageSourceGate;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
@@ -105,7 +106,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		?callable $public_lookup_profile = null,
 		?RepositorySourceGuard $source_guard = null,
 		?callable $check_without_offer = null,
-		?callable $switch_install = null
+		?callable $switch_install = null,
+		private ?GitHubProviderSelection $github_selection = null
 	) {
 		$this->switch_install = null === $switch_install ? \Closure::fromCallable( array( self::class, 'install_release' ) ) : \Closure::fromCallable( $switch_install );
 
@@ -756,6 +758,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			$incompatible = false;
 			$changed      = $this->mutate_with_updater_lock(
+				$type,
+				$identifier,
 				function () use ( $type, $identifier, $expected_source_revision, $channel, $package, &$incompatible ): bool {
 					$token   = \RAN\AdoptionIdentity::of( $package );
 					$current = $this->package( $type, $identifier );
@@ -950,6 +954,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
 			}
 			$changed = $this->mutate_with_updater_lock(
+				$type,
+				$identifier,
 				function () use ( $type, $identifier, $expected_source_revision, $package ): bool {
 					$token = \RAN\AdoptionIdentity::of( $package );
 					if ( null === $token || \RAN\AdoptionIdentity::of( $this->package( $type, $identifier ) ) !== $token ) {
@@ -998,13 +1004,46 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(): bool $mutation
 	 * @return bool|ManagedReleaseSubdirectoryNotSupported|null
 	 */
-	private function mutate_with_updater_lock( callable $mutation ): bool|ManagedReleaseSubdirectoryNotSupported|null {
+	private function mutate_with_updater_lock( string $type, string $identifier, callable $mutation ): bool|ManagedReleaseSubdirectoryNotSupported|null {
+		if ( null === $this->github_selection ) {
+			try {
+				return $this->updater_lock->run( $mutation );
+			} catch ( ManagedReleaseSubdirectoryNotSupported $failure ) {
+				return $failure;
+			} catch ( Throwable ) {
+				return null;
+			}
+		}
+
 		try {
-			return $this->updater_lock->run( $mutation );
+			$token = $this->updater_lock->try_acquire_without_reclaim();
+		} catch ( Throwable ) {
+			return null;
+		}
+		if ( null === $token ) {
+			return null;
+		}
+
+		try {
+			if ( $this->updater_lock->current_token() !== $token
+				|| $this->github_selection->native_mutation_blocks_target( $type, $identifier )
+				|| $this->updater_lock->current_token() !== $token ) {
+				return null;
+			}
+
+			return $mutation();
 		} catch ( ManagedReleaseSubdirectoryNotSupported $failure ) {
 			return $failure;
 		} catch ( Throwable ) {
 			return null;
+		} finally {
+			try {
+				if ( ! $this->updater_lock->release( $token ) ) {
+					BoosterLogger::log( 'Managed release mutation lock could not be released.' );
+				}
+			} catch ( Throwable $failure ) {
+				BoosterLogger::log_exception( 'Managed release mutation lock release failed.', $failure );
+			}
 		}
 	}
 

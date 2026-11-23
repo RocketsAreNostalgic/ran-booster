@@ -376,6 +376,7 @@ return static function ( wpdb $database ): void {
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Temporarily bind the disposable smoke table connection during the installed lock proof and restore $GLOBALS['wpdb'] in finally.
 			$GLOBALS['wpdb'] = $database;
 
+			$reclaim_context = new GitHubProviderSelection( $store, $plugin_root, $declaration );
 			$expect( array() !== $store->read(), 'warm selection storage check before pinned reclaim' );
 			$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
 			$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $stale, 'no' ) );
@@ -389,8 +390,8 @@ return static function ( wpdb $database ): void {
 			add_filter( 'query', $record_queries );
 			$committed_reclaim = null;
 			try {
-				$reclaimed = $compose()->without_native_mutation_hold(
-					fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $compose()->uses_connection( ... ), $execute ),
+				$reclaimed = $reclaim_context->without_native_mutation_hold(
+					fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $reclaim_context->uses_connection( ... ), $execute ),
 					static function ( ?string $token ) use ( &$committed_reclaim ): void {
 						$committed_reclaim = $token;
 					}
@@ -403,15 +404,29 @@ return static function ( wpdb $database ): void {
 
 			$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
 			$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $stale, 'no' ) );
-			$held_owner = $compose()->begin_native_mutation( 'plugin', 'held-smoke/held-smoke.php', static fn (): bool => true, null );
+			$held_states = $store->selection_transaction(
+				static function () use ( $store, $expect ): array {
+					$before_hold                  = $store->read( true );
+					$with_hold                    = $before_hold;
+					$with_hold['native_mutation'] = array(
+						'selection_generation' => $before_hold['selection_generation'],
+						'owner_tag'            => str_repeat( '0', 16 ) . str_repeat( 'a', 16 ),
+						'target_type'          => 'plugin',
+						'installed_identity'   => 'held-smoke/held-smoke.php',
+						'phase'                => 'started',
+					);
+					$expect( $store->compare_and_swap( $before_hold, $with_hold ), 'seed active native_mutation hold for smoke probe' );
+					return array( $before_hold, $with_hold );
+				}
+			);
 			try {
 				$expect( array() !== $store->read(), 'warm selection storage check before held reclaim probe' );
 				$filtered_queries->exchangeArray( array() );
 				add_filter( 'query', $record_queries );
 				$held_callback = false;
 				try {
-					$held_result = $compose()->without_native_mutation_hold(
-						fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $compose()->uses_connection( ... ), $execute ),
+					$held_result = $reclaim_context->without_native_mutation_hold(
+						fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $reclaim_context->uses_connection( ... ), $execute ),
 						static function () use ( &$held_callback ): void {
 							$held_callback = true;
 						}
@@ -423,7 +438,11 @@ return static function ( wpdb $database ): void {
 				$expect( 0 === $filtered_queries->count(), 'held native_mutation check must stay callback-free on pinned wpdb' );
 				$expect( $stale === $lock_row(), 'held native_mutation check must preserve expired updater lock row' );
 			} finally {
-				$compose()->complete_native_mutation( $held_owner, 'plugin', 'held-smoke/held-smoke.php', 'verified_success' );
+				$store->selection_transaction(
+					static function () use ( $store, $held_states, $expect ): void {
+						$expect( $store->compare_and_swap( $held_states[1], $held_states[0] ), 'clear seeded native_mutation hold after smoke probe' );
+					}
+				);
 			}
 
 			$doomed->options = $table;

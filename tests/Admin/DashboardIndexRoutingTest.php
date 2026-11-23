@@ -1087,6 +1087,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertStringContainsString( 'Generic adoption error', $html );
 		}
 		if ( null === $review ) {
+			if ( 'available' !== $state ) {
+				self::assertMatchesRegularExpression( '/<div class="notice notice-warning [^"]*"[^>]*>.*?data-ran-booster-ui-notice-content>.*?GitHub provider details<\/a><\/p>\s*<\/div><svg /s', $html );
+			}
 			self::assertStringNotContainsString( 'value="adopt-github"', $html );
 			return;
 		}
@@ -1244,6 +1247,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			unset( $GLOBALS['ran_booster_test_capabilities'] );
 		}
 		self::assertStringContainsString( 'GitHub installs are on a site-wide hold', $html );
+		self::assertStringContainsString( 'is-heading-md ran-wp-ui-notice__title', $html );
+		self::assertSame( 1, substr_count( $html, 'GitHub provider details</a>' ) );
+		self::assertMatchesRegularExpression( '/<div class="notice notice-warning [^"]*"[^>]*>.*?data-ran-booster-ui-notice-content>.*?GitHub provider details<\/a><\/p>\s*<\/div><svg /s', $html );
 		if ( ! $available ) {
 			self::assertLessThan( strpos( $html, 'GitHub operations are paused.' ), strpos( $html, 'GitHub installs are on a site-wide hold' ) );
 		}

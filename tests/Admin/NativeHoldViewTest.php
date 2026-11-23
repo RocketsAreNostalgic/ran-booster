@@ -20,7 +20,7 @@ final class NativeHoldViewTest extends TestCase {
 		$html = $this->render( $this->hold( 'plugin', true ) );
 		self::assertStringContainsString( 'GitHub installs are on a site-wide hold', $html );
 		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="warning"', $html );
-		self::assertStringContainsString( 'ran-wp-ui-notice__title', $html );
+		self::assertStringContainsString( 'is-heading-md ran-wp-ui-notice__title', $html );
 		self::assertStringContainsString( 'ran-booster-native-hold__checks', $html );
 		self::assertStringContainsString( 'ran-booster-native-hold__actions', $html );
 		self::assertStringContainsString( 'ran-wp-ui-notice__icon', $html );

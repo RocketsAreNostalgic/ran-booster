@@ -25,7 +25,7 @@ $native_hold_check  = '<a href="' . esc_url( $package_native_hold['check_url'] )
 $native_hold_reload = '<a href="' . esc_url( explode( '#', $package_native_hold['url'] )[0] ) . '">';
 ?>
 <div id="ran-booster-native-hold" class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning ran-booster-native-hold" data-ran-booster-native-hold data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" role="region" aria-labelledby="ran-booster-native-hold-heading">
-	<h3 id="ran-booster-native-hold-heading" class="ran-wp-ui-text is-heading-lg ran-wp-ui-notice__title"><?php esc_html_e( 'GitHub installs are on a site-wide hold', 'ran-booster' ); ?></h3>
+	<h3 id="ran-booster-native-hold-heading" class="ran-wp-ui-text is-heading-md ran-wp-ui-notice__title"><?php esc_html_e( 'GitHub installs are on a site-wide hold', 'ran-booster' ); ?></h3>
 	<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 	<?php if ( $package_native_hold['finished'] ) { ?>
 	<p>

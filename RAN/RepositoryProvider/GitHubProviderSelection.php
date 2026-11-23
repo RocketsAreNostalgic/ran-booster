@@ -582,6 +582,15 @@ final class GitHubProviderSelection {
 		return $state;
 	}
 
+	/** Whether an interrupted GitHub native mutation hold is present. */
+	public function has_native_mutation_hold(): bool {
+		return $this->store->selection_transaction(
+			function (): bool {
+				return array_key_exists( 'native_mutation', $this->store->read( true ) );
+			}
+		);
+	}
+
 	public function native_mutation_blocks_target( string $type, string $identity ): bool {
 		return $this->store->selection_transaction(
 			function () use ( $type, $identity ): bool {
@@ -610,7 +619,7 @@ final class GitHubProviderSelection {
 
 	/**
 	 * @param array<string,mixed> $expected Exact reviewed state, including marker and approval.
-	 * @param callable():void $verify Core-only physical absence/management/attempt/lock checks; no permission filters.
+	 * @param callable():void $verify Core-only physical absence/management/attempt/lock checks; no WordPress filters or callbacks.
 	 */
 	public function release_native_hold( array $expected, callable $verify ): void {
 		$this->store->selection_transaction(

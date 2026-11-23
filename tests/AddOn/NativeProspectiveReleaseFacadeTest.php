@@ -2191,11 +2191,111 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'install_failed', $result->code() );
-		self::assertSame( 1, $lock->acquire_calls );
+		self::assertSame( 2, $lock->acquire_calls );
+		self::assertSame( 0, $lock->reclaim_calls );
+		self::assertTrue( $lock->lock_held );
 		self::assertSame( 0, $lock->release_calls );
 		self::assertSame( 0, $this->acquisition->handoff_calls );
 		self::assertSame( 1, $this->acquisition->discard_calls );
 		self::assertSame( 0, $executor->install_calls );
+	}
+
+	public function test_install_reclaims_expired_updater_lock_when_no_github_hold_exists(): void {
+		foreach ( array( 'gh', 'bb' ) as $provider ) {
+			$plugins                 = new ProspectivePluginRepository();
+			$executor                = new ProspectiveExecutor();
+			$lock                    = new ProspectiveUpdaterLock();
+			$lock->expired_lock_held = true;
+			$facade                  = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( $provider ) );
+			$this->set_ready_release();
+			$request = 'gh' === $provider
+				? $this->repository_request()
+				: array(
+					'provider'      => 'bb',
+					'repository'    => 'owner/example',
+					'credential_id' => '',
+					'branch'        => 'main',
+				);
+
+			$result = $facade->install(
+				'plugin',
+				$request,
+				'42',
+				'v1.2.3',
+				self::FINGERPRINT,
+				'stable',
+				'valid-nonce',
+				$this->expectation_for( $request )
+			);
+
+			self::assertTrue( $result->successful(), $provider );
+			self::assertSame( 'installed', $result->code(), $provider );
+			self::assertSame( 1, $lock->reclaim_calls, $provider );
+			self::assertFalse( $lock->expired_lock_held, $provider );
+			self::assertSame( 1, $executor->install_calls, $provider );
+			self::assertSame( 1, $lock->release_calls, $provider );
+		}
+	}
+
+	#[DataProvider( 'native_mutation_hold_phases' )]
+	public function test_install_refuses_expired_updater_lock_without_reclaim_when_github_hold_exists( string $phase ): void {
+		$plugins                 = new ProspectivePluginRepository();
+		$executor                = new ProspectiveExecutor();
+		$lock                    = new ProspectiveUpdaterLock();
+		$lock->expired_lock_held = true;
+		$facade                  = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( 'bb' ) );
+		$this->seed_github_native_mutation_hold( 'plugin', 'other/other.php', $phase );
+		$this->set_ready_release();
+		self::assertNotNull( $this->acquisition );
+
+		$request = array(
+			'provider'      => 'bb',
+			'repository'    => 'owner/example',
+			'credential_id' => '',
+			'branch'        => 'main',
+		);
+		$result  = $facade->install( 'plugin', $request, '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', null );
+
+		self::assertFalse( $result->successful(), $phase );
+		self::assertSame( 'install_failed', $result->code(), $phase );
+		self::assertSame( 1, $lock->acquire_calls, $phase );
+		self::assertSame( 0, $lock->reclaim_calls, $phase );
+		self::assertTrue( $lock->expired_lock_held, $phase );
+		self::assertSame( 0, $lock->release_calls, $phase );
+		self::assertSame( 0, $this->acquisition->handoff_calls, $phase );
+		self::assertSame( 1, $this->acquisition->discard_calls, $phase );
+		self::assertSame( 0, $executor->install_calls, $phase );
+	}
+
+	public function test_non_github_install_refuses_when_handoff_replaces_updater_lock_without_creating_hold(): void {
+		$plugins                    = new ProspectivePluginRepository();
+		$executor                   = new ProspectiveExecutor();
+		$lock                       = new ProspectiveUpdaterLock();
+		$lock->strict_release_token = true;
+		$facade                     = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( 'bb' ) );
+		$this->set_ready_release();
+		self::assertNotNull( $this->acquisition );
+		$this->acquisition->on_handoff = static function () use ( $lock ): void {
+			$lock->active_token = '1700009999';
+		};
+
+		$request = array(
+			'provider'      => 'bb',
+			'repository'    => 'owner/example',
+			'credential_id' => '',
+			'branch'        => 'main',
+		);
+		$result  = $facade->install( 'plugin', $request, '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', null );
+
+		self::assertFalse( $result->successful() );
+		self::assertSame( 'installation_cleanup_failed', $result->code() );
+		self::assertSame( 1, $this->acquisition->handoff_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 1, $lock->release_calls );
+		self::assertFileDoesNotExist( (string) $this->artifact_path );
+		self::assertSame( '1700009999', $lock->current_token() );
+		self::assertNotNull( $this->native_selection_store );
+		self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read( true ) );
 	}
 
 	private function seed_github_native_mutation_hold( string $type, string $identity, string $phase ): void {
@@ -2905,20 +3005,28 @@ final class ProspectiveThemeRepository extends ThemeRepository {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 
-	public int $acquire_calls     = 0;
-	public int $release_calls     = 0;
-	public bool $release_result   = true;
-	public bool $lock_held        = false;
-	public bool $throw_on_acquire = false;
-	public bool $throw_on_release = false;
-	public ?\Closure $on_acquire  = null;
+	public int $acquire_calls         = 0;
+	public int $reclaim_calls         = 0;
+	public int $release_calls         = 0;
+	public bool $release_result       = true;
+	public bool $lock_held            = false;
+	public bool $expired_lock_held    = false;
+	public bool $strict_release_token = false;
+	public ?string $active_token      = null;
+	public bool $throw_on_acquire     = false;
+	public bool $throw_on_release     = false;
+	public ?\Closure $on_acquire      = null;
 
 	public function current_token(): ?string {
-		return ! $this->lock_held && $this->acquire_calls > $this->release_calls ? '1700000004' : null;
+		if ( null !== $this->active_token ) {
+			return $this->active_token;
+		}
+
+		return ! $this->lock_held && ! $this->expired_lock_held && $this->acquire_calls > $this->release_calls ? '1700000004' : null;
 	}
 
 	public function try_acquire_without_reclaim(): ?string {
-		if ( $this->lock_held ) {
+		if ( $this->lock_held || $this->expired_lock_held ) {
 			++$this->acquire_calls;
 			return null;
 		}
@@ -2928,9 +3036,14 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 
 	public function acquire(): string {
 		++$this->acquire_calls;
-		if ( $this->throw_on_acquire ) {
+		if ( $this->throw_on_acquire || $this->lock_held ) {
 			throw new RuntimeException( 'The test lock could not be acquired.' );
 		}
+		if ( $this->expired_lock_held ) {
+			$this->expired_lock_held = false;
+			++$this->reclaim_calls;
+		}
+		$this->active_token = '1700000004';
 		if ( null !== $this->on_acquire ) {
 			( $this->on_acquire )();
 		}
@@ -2939,10 +3052,15 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 	}
 
 	public function release( string $token ): bool {
-		unset( $token );
 		++$this->release_calls;
 		if ( $this->throw_on_release ) {
 			throw new RuntimeException( 'The test lock could not be released.' );
+		}
+		if ( $this->strict_release_token && $this->active_token !== $token ) {
+			return false;
+		}
+		if ( $this->active_token === $token ) {
+			$this->active_token = null;
 		}
 
 		return $this->release_result;

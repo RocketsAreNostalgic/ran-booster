@@ -98,9 +98,9 @@ final readonly class PackageRemovalService {
 		$token = $this->native_hold_lock( $marker, $confirmed_stopped );
 		try {
 			$repository = 'plugin' === $type ? $this->plugins : $this->themes;
-			$verify     = function () use ( $type, $identifier, $repository, $snapshot, $token, $authorized ): void {
-				if ( true !== $this->recovery_authorized( $authorized ) || null === $this->attempts || $this->attempts->has_unresolved_target_attempt( $type, $identifier, true )
-					|| $repository->native_recovery_record( $identifier, true ) !== $snapshot['record'] || ! $this->held_target_readable( $type, $identifier, $snapshot['record'] )
+			$verify     = function () use ( $type, $identifier, $repository, $snapshot, $token ): void {
+				if ( null === $this->attempts || $this->attempts->has_unresolved_target_attempt( $type, $identifier, true )
+					|| $repository->native_recovery_record( $identifier, true ) !== $snapshot['record']
 					|| $this->updater_lock->current_token() !== $token ) {
 					throw new \RuntimeException( 'The held package, its attempts or operation ownership changed.' );
 				}
@@ -108,6 +108,10 @@ final readonly class PackageRemovalService {
 			};
 			// As in removal recovery, a failed invalidation keeps the hold so the release can be retried.
 			$this->wordpress->invalidate_native_target( $type, $identifier );
+			// Capability and installed-catalog filters may open SQL transactions: run callbacks before selection_transaction().
+			if ( true !== $this->recovery_authorized( $authorized ) || ! $this->held_target_readable( $type, $identifier, $snapshot['record'] ) ) {
+				throw new \RuntimeException( 'The held package or release authority changed.' );
+			}
 			$this->github_selection->release_native_hold( $snapshot['state'], $verify );
 			BoosterLogger::log(
 				'native hold released',

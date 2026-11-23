@@ -118,6 +118,7 @@ final class NativeRecoveryTest extends TestCase {
 		);
 		$gateway->method( 'installed_targets' )->willReturnCallback(
 			function ( string $type ): array {
+				self::assertFalse( $this->in_selection_transaction(), 'Catalog filters must run outside SQL transactions.' );
 				self::assertSame( 'plugin', $type );
 				return $this->registered ? array( 'target/main.php' => 'Target' ) : array();
 			}
@@ -526,6 +527,52 @@ final class NativeRecoveryTest extends TestCase {
 		self::assertArrayHasKey( 'native_mutation', $this->store->read() );
 	}
 
+	public function test_release_and_recovery_callbacks_never_run_inside_selection_transaction(): void {
+		$this->readable();
+		$digest        = $this->service->native_recovery_confirmation()['digest'];
+		$release_calls = 0;
+		$this->service->release_native_hold(
+			$digest,
+			true,
+			true,
+			function () use ( &$release_calls ): bool {
+				self::assertFalse( $this->in_selection_transaction(), 'Release authorization callback must run outside SQL transactions.' );
+				++$release_calls;
+				return true;
+			}
+		);
+		self::assertGreaterThanOrEqual( 2, $release_calls );
+		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+
+		$state                     = $this->store->read();
+		$marked                    = $state;
+		$marked['native_mutation'] = array(
+			'selection_generation' => $state['selection_generation'],
+			'owner_tag'            => str_repeat( 'a', 32 ),
+			'target_type'          => 'plugin',
+			'installed_identity'   => 'target/main.php',
+			'phase'                => 'started',
+		);
+		self::assertTrue( $this->store->compare_and_swap( $state, $marked ) );
+		$this->present    = false;
+		$this->registered = false;
+		$recovery_digest  = $this->service->native_recovery_confirmation()['digest'];
+		$recovery_calls   = 0;
+		$this->service->recover_native_removal(
+			$recovery_digest,
+			true,
+			true,
+			function () use ( &$recovery_calls ): bool {
+				self::assertFalse( $this->in_selection_transaction(), 'Recovery authorization callback must run outside SQL transactions.' );
+				++$recovery_calls;
+				return true;
+			}
+		);
+		self::assertGreaterThanOrEqual( 3, $recovery_calls );
+		self::assertContains( 'COMMIT', $this->db->queries );
+		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
+	}
+
 	private function readable(): void {
 		$this->managed();
 		$this->registered = true;
@@ -582,6 +629,19 @@ final class NativeRecoveryTest extends TestCase {
 
 	private function recover( string $digest ): void {
 		$this->service->recover_native_removal( $digest, true, true, static fn (): bool => true );
+	}
+
+	private function in_selection_transaction(): bool {
+		$depth = 0;
+		foreach ( $this->db->queries as $query ) {
+			if ( 'START TRANSACTION' === $query ) {
+				++$depth;
+			} elseif ( 'COMMIT' === $query || 'ROLLBACK' === $query ) {
+				--$depth;
+			}
+		}
+
+		return $depth > 0;
 	}
 
 	/** @param callable():void $operation */

@@ -1557,10 +1557,14 @@ class Dashboard {
 		);
 	}
 
-	public static function is_valid_provider_request( string $provider_code ): bool {
+	public static function is_valid_provider_request( string $provider_code, ?AdminAddOnRegistry $admin_add_ons = null ): bool {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation state suppresses the duplicate global banner on valid provider routes.
 		$requested_tab = isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ? wp_unslash( $_GET['tab'] ) : null;
 		if ( '' === $provider_code || self::normalize_tab_key( $requested_tab ) !== $provider_code ) {
+			return false;
+		}
+
+		if ( null !== $admin_add_ons && null !== $admin_add_ons->get( $provider_code ) ) {
 			return false;
 		}
 

@@ -436,6 +436,7 @@ final class GitHubSelectionStoreTest extends TestCase {
 				$case_db->throw_commit   = true;
 				$case_db->commit_applied = 'throw_commit_applied' === $case;
 			}
+			$caught = null;
 			try {
 				$case_store->without_native_mutation_hold(
 					static function () use ( $case ): string {
@@ -448,10 +449,15 @@ final class GitHubSelectionStoreTest extends TestCase {
 						$case_called = true;
 					}
 				);
-				self::fail( $case );
-			} catch ( \Throwable ) {
-				self::assertFalse( $case_called, $case );
+			} catch ( \Throwable $throwable ) {
+				$caught = $throwable;
 			}
+			self::assertInstanceOf(
+				'fail_commit' === $case ? DatabaseLifecycleFailure::class : \RuntimeException::class,
+				$caught,
+				$case
+			);
+			self::assertFalse( $case_called, $case );
 			if ( 'operation_throws' !== $case ) {
 				$case_db->fail_commit  = false;
 				$case_db->throw_commit = false;

@@ -368,12 +368,74 @@ final class NativeUpdateWarningTest extends TestCase {
 		}
 	}
 
+	public function test_global_warning_is_preserved_when_an_add_on_owns_the_github_tab_key(): void {
+		$add_ons = new \RAN\Admin\AdminAddOnRegistry();
+		$add_ons->register(
+			new \RAN\Admin\AdminAddOnTab(
+				'ran-booster-addon',
+				'gh',
+				'Custom Add-On',
+				static function (): void {}
+			)
+		);
+		$add_ons->seal();
+
+		$booster               = $this->booster(
+			array(
+				'state'     => 'recovery_required',
+				'available' => false,
+			),
+			'gh',
+			null,
+			$add_ons
+		);
+		$booster->booster_path = dirname( __DIR__, 2 );
+		$booster->booster_url  = 'https://example.test/wp-content/plugins/ran-booster';
+
+		try {
+			foreach ( array( 'gh', ' GH ' ) as $tab ) {
+				foreach ( array( 'toplevel_page_ran-booster', 'toplevel_page_ran-booster-network' ) as $screen_id ) {
+					unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+					$_GET['tab']                                        = $tab;
+					$GLOBALS['ran_booster_native_warning_screen']       = (object) array( 'id' => $screen_id );
+					$GLOBALS['ran_booster_native_warning_actions']      = array();
+					$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+					$this->load_warning_asset( $booster, 'toplevel_page_ran-booster' );
+					self::assertSame(
+						array( 'ran-booster-native-update-warning' ),
+						$GLOBALS['ran_booster_asset_test_enqueued_scripts'],
+						$tab . ' on ' . $screen_id
+					);
+					ob_start();
+					$this->render_warning( $booster );
+					\RAN\Admin\BoosterNoticeScope::render_shell_notices();
+					self::assertStringContainsString(
+						'data-ran-booster-native-update-warning',
+						(string) ob_get_clean(),
+						$tab . ' on ' . $screen_id
+					);
+				}
+			}
+		} finally {
+			unset( $_GET['tab'], $_GET['view'], $_GET['panel'], $_GET['repository_view'] );
+		}
+	}
+
 	/**
 	 * @param array<string,mixed> $status
 	 * @param array{name: string, url: string}|null $hold
 	 */
-	private function booster( array $status, string $tab_provider = 'gh', ?array $hold = null ): Booster {
+	private function booster(
+		array $status,
+		string $tab_provider = 'gh',
+		?array $hold = null,
+		?\RAN\Admin\AdminAddOnRegistry $add_ons = null
+	): Booster {
 		$container = new CoreContainer();
+		$container->bind(
+			'RAN\\Admin\\AdminAddOnRegistry',
+			$add_ons ?? new \RAN\Admin\AdminAddOnRegistry()
+		);
 		$container->bind(
 			'RAN\\Admin\\ProviderTabLinks',
 			new \RAN\Admin\ProviderTabLinks(

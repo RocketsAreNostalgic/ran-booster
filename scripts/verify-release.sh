@@ -153,6 +153,8 @@ load_release_metadata() {
 install_release_runtime() (
 	cd "$1"
 	export COMPOSER_HOME=$2
+	# Composer can use Info-ZIP to extract locked dependencies.
+	unset UNZIP UNZIPOPT ZIP ZIPOPT ZIPINFO ZIPINFOOPT
 	# The runtime dependencies intentionally use exact version constraints.
 	composer validate --strict --no-check-all --no-plugins --no-scripts
 	composer install \

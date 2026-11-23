@@ -30,6 +30,12 @@ final class ReleaseScriptContractTest extends TestCase {
 			cat > tools/composer <<'COMPOSER'
 			#!/usr/bin/env bash
 			set -euo pipefail
+			for option in UNZIP UNZIPOPT ZIP ZIPOPT ZIPINFO ZIPINFOOPT; do
+				if [[ -n ${!option+x} ]]; then
+					printf 'Composer %s inherited %s\n' "$1" "$option" >&2
+					exit 1
+				fi
+			done
 			case "$1" in
 				validate)
 					[[ " $* " == *' --strict '* ]]
@@ -120,7 +126,8 @@ final class ReleaseScriptContractTest extends TestCase {
 			reject_with "archived Core file $path does not match the release ref." \
 				env UNZIP=-a UNZIPOPT=-a bash scripts/verify-release.sh "tampered/${archive##*/}" "$version" "$committed"
 
-			(umask 022; ZIP=-l ZIPOPT=-l bash scripts/build-release.sh "$committed" "$version")
+			(umask 022; UNZIP=-a UNZIPOPT=-a ZIP=-l ZIPOPT=-l ZIPINFO=-l ZIPINFOOPT=-l \
+				bash scripts/build-release.sh "$committed" "$version")
 			cmp baseline.zip "$archive"
 			cmp baseline.sha256 "$archive.sha256"
 			unzip -p "$archive" "ran-booster/$path" | cmp -s committed.css -

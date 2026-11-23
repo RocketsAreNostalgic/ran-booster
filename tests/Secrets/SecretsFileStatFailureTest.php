@@ -47,4 +47,24 @@ final class SecretsFileStatFailureTest extends TestCase {
 
 		self::assertSame( array(), $warnings, 'A failed stat must be handled before reading its array offsets.' );
 	}
+
+	public function test_replace_ciphertext_never_falls_back_to_system_temp_directory(): void {
+		$before = glob( sys_get_temp_dir() . '/.ran-booster-*' );
+		$before = is_array( $before ) ? $before : array();
+
+		$reflection = new ReflectionClass( SecretsFile::class );
+		$secrets    = $reflection->newInstanceWithoutConstructor();
+		$missing    = sys_get_temp_dir() . '/ran-booster-missing-' . bin2hex( random_bytes( 8 ) ) . '/secrets.json';
+
+		try {
+			$reflection->getMethod( 'replace_ciphertext' )->invoke( $secrets, $missing, 'ciphertext' );
+			self::fail( 'replace_ciphertext() must fail when the private directory does not exist.' );
+		} catch ( SecretsStorageUnavailable $failure ) {
+			self::assertSame( 'Could not create a temporary encrypted Booster secrets file.', $failure->getMessage() );
+		}
+
+		$after = glob( sys_get_temp_dir() . '/.ran-booster-*' );
+		$after = is_array( $after ) ? $after : array();
+		self::assertSame( $before, $after );
+	}
 }

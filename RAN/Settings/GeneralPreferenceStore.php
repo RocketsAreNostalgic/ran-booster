@@ -598,8 +598,7 @@ final class GeneralPreferenceStore {
 				'token'  => hash( 'sha256', "\0missing" ),
 			);
 		}
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- Fallback only when the WordPress option decoder is unavailable.
-		$value = $this->has_function( 'maybe_unserialize' ) ? maybe_unserialize( $raw ) : unserialize( $raw );
+		$value = $this->unserialized( $raw );
 		return array(
 			'exists' => true,
 			'value'  => $value,
@@ -658,6 +657,41 @@ final class GeneralPreferenceStore {
 		}
 		$table = get_object_vars( $wpdb )['options'] ?? null;
 		return is_string( $table ) && '' !== $table ? $table : null;
+	}
+
+	private function unserialized( mixed $raw ): mixed {
+		if ( ! is_string( $raw ) ) {
+			return $raw;
+		}
+		$trimmed = trim( $raw );
+		$encoded = $this->has_function( 'is_serialized' ) ? is_serialized( $trimmed ) : $this->looks_serialized( $trimmed );
+		if ( ! $encoded ) {
+			return $raw;
+		}
+
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Suppress native unserialize notices on malformed stored bytes just as maybe_unserialize() does.
+		set_error_handler( static fn (): bool => true, E_NOTICE | E_WARNING );
+		try {
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- Decode stored scalar/array option bytes with class instantiation disabled.
+			return unserialize( $trimmed, array( 'allowed_classes' => false ) );
+		} finally {
+			restore_error_handler();
+		}
+	}
+
+	private function looks_serialized( string $value ): bool {
+		if ( 'N;' === $value ) {
+			return true;
+		}
+		if ( strlen( $value ) < 4 || ':' !== $value[1] ) {
+			return false;
+		}
+		$last = substr( $value, -1 );
+		if ( ';' !== $last && '}' !== $last ) {
+			return false;
+		}
+
+		return 1 === preg_match( '/\A(?:[aOC]:\d+:|s:\d+:"|b:[01];|i:-?\d+;|d:)/', $value );
 	}
 
 	private function serialized( mixed $value ): string {

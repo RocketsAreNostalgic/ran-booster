@@ -344,7 +344,8 @@ final class BoosterServiceProvider {
 				$container->make( ThemeRepository::class ),
 				$container->make( DeploymentCoordinator::class ),
 				$container->make( PackageRemovalService::class ),
-				$container->make( WordPressUpdaterLock::class )
+				$container->make( WordPressUpdaterLock::class ),
+				github_selection: $container->make( GitHubProviderSelection::class )
 			)
 		);
 		$container->bind( \RAN\Troubleshooting\DiagnosticRunStore::class, new \RAN\Troubleshooting\DiagnosticRunStore() );
@@ -407,7 +408,8 @@ final class BoosterServiceProvider {
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
 			public_lookup_profile: static fn ( string $provider ): ?string => $container->make( PublicRepositoryLookupProfileStore::class )->get( $provider ),
-			source_guard: new \RAN\Storage\RepositorySourceGuard( null, $database )
+			source_guard: new \RAN\Storage\RepositorySourceGuard( null, $database ),
+			github_selection: $github_selection
 		);
 		$container->bind( NativeReleaseTrackingFacade::class, $release_facade );
 		$container->bind( ReleaseTrackingFacade::class, $release_facade );

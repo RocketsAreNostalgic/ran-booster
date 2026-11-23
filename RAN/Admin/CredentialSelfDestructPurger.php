@@ -24,6 +24,10 @@ final class CredentialSelfDestructPurger {
 	}
 
 	public function purge(): void {
+		if ( ! $this->request_allowed() ) {
+			return;
+		}
+
 		try {
 			$removed = $this->secrets->purge_expired_credentials();
 			foreach ( $removed as $provider => $ids ) {
@@ -71,5 +75,23 @@ final class CredentialSelfDestructPurger {
 			return;
 		}
 		BoosterLogger::log_exception( $message, $failure, $context );
+	}
+
+	private function request_allowed(): bool {
+		if ( $this->has_function( 'wp_doing_ajax' ) && wp_doing_ajax() ) {
+			return false;
+		}
+		if ( $this->has_function( 'is_user_logged_in' ) && ! is_user_logged_in() ) {
+			return false;
+		}
+		if ( $this->has_function( 'current_user_can' ) && ! current_user_can( 'manage_options' ) ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	private function has_function( string $name ): bool {
+		return function_exists( __NAMESPACE__ . '\\' . $name ) || function_exists( $name );
 	}
 }

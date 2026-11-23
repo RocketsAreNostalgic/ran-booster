@@ -92,6 +92,60 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		rmdir( $directory );
 	}
 
+	public function test_purge_expired_credentials_avoids_creating_lock_file_when_empty_or_unexpired(): void {
+		$directory = sys_get_temp_dir() . '/ran-booster-purge-noop-' . bin2hex( random_bytes( 8 ) );
+		$path      = $directory . '/secrets.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create disposable private storage directory for lock-avoidance test.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$secrets = SecretsFileTestFactory::create( $path, array(), ShippedSecretPolicyCatalog::create() );
+
+		// Empty storage returns without creating a sidecar or lock file.
+		self::assertSame( array(), $secrets->purge_expired_credentials() );
+		self::assertFileDoesNotExist( $path );
+		self::assertFileDoesNotExist( $path . '.lock' );
+
+		// Non-expired credential reads under shared lock without acquiring an exclusive lock or rewriting the sidecar.
+		$secrets->save_credential(
+			'gh',
+			'active_profile',
+			array(
+				'label'         => 'Active credential',
+				'kind'          => 'classic',
+				'configuration' => array(),
+				'self_destruct' => true,
+				'destroy_on'    => '2099-01-01',
+			),
+			'active-secret-canary'
+		);
+		$stat_before = stat( $path );
+		self::assertIsArray( $stat_before );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Hold a real shared lock so an accidental LOCK_EX escalation would block.
+		$shared_lock = fopen( $path . '.lock', 'rb' );
+		self::assertIsResource( $shared_lock );
+		self::assertTrue( flock( $shared_lock, LOCK_SH | LOCK_NB ) );
+		try {
+			self::assertSame( array(), $secrets->purge_expired_credentials() );
+		} finally {
+			flock( $shared_lock, LOCK_UN );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close fixture shared-lock descriptor.
+			fclose( $shared_lock );
+		}
+		clearstatcache( true, $path );
+		$stat_after = stat( $path );
+		self::assertIsArray( $stat_after );
+		self::assertSame( $stat_before['ino'], $stat_after['ino'] );
+
+		InMemorySiteKeyStore::reset( $path );
+		foreach ( array( $path, $path . '.lock' ) as $file ) {
+			if ( is_file( $file ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove disposable fixture files.
+				unlink( $file );
+			}
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove disposable fixture directory.
+		rmdir( $directory );
+	}
+
 	/** @return list<array{bool, bool}> */
 	public static function unavailable_runtime_provider(): array {
 		return array(

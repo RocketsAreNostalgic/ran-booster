@@ -39,12 +39,28 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	public function test_it_adds_the_fixed_definition_and_requires_asecond_request_verification(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
 		self::assertTrue( chmod( $this->config_path, 0640 ) );
+		$lock_path = $this->config_path . '.ran-booster.lock';
+		$writer    = new class( $lock_path ) extends WpConfigSecretsPathWriter {
+			/** @var array<string, mixed> */
+			public array $checks = array();
 
-		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->sidecar_path );
+			public function __construct( private readonly string $lock_path ) {}
+
+			protected function before_final_config_check( string $config_path ): void {
+				unset( $config_path );
+				$this->checks['exists'] = is_file( $this->lock_path );
+				$this->checks['owner']  = fileowner( $this->lock_path );
+				$this->checks['perms']  = fileperms( $this->lock_path ) & 0777;
+			}
+		};
+
+		$writer->write( $this->config_path, $this->sidecar_path );
 
 		self::assertSame( 0640, fileperms( $this->config_path ) & 0777 );
-		self::assertSame( fileowner( $this->config_path . '.ran-booster.lock' ), fileowner( $this->config_path ) );
-		self::assertSame( 0600, fileperms( $this->config_path . '.ran-booster.lock' ) & 0777 );
+		self::assertTrue( $writer->checks['exists'] ?? false );
+		self::assertSame( fileowner( $this->config_path ), $writer->checks['owner'] ?? null );
+		self::assertSame( 0600, $writer->checks['perms'] ?? null );
+		self::assertFileDoesNotExist( $lock_path );
 		self::assertSame(
 			"<?php\n\ndefine( 'DB_NAME', 'example' );\n\n"
 			. "/* RAN Booster encrypted secrets storage. */\n"
@@ -54,6 +70,35 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			file_get_contents( $this->config_path )
 		);
 		self::assertSame( array(), $this->temporary_files() );
+	}
+
+	public function test_acquire_verified_lock_retries_when_a_concurrent_writer_unlinks_the_lock(): void {
+		$lock_path = $this->config_path . '.ran-booster.lock';
+		$writer    = new class( $lock_path ) extends WpConfigSecretsPathWriter {
+			public int $acquire_attempts = 0;
+
+			public function __construct( private readonly string $lock_path ) {}
+
+			protected function acquire_lock( mixed $lock ): bool {
+				++$this->acquire_attempts;
+				if ( 1 === $this->acquire_attempts && is_file( $this->lock_path ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Simulate a concurrent holder unlinking the lock file before flock() completes.
+					unlink( $this->lock_path );
+				}
+
+				return parent::acquire_lock( $lock );
+			}
+		};
+
+		$writer->write( $this->config_path, $this->sidecar_path );
+
+		self::assertSame( 2, $writer->acquire_attempts );
+		self::assertFileDoesNotExist( $lock_path );
+		self::assertStringContainsString(
+			'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR',
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture bytes after retry.
+			(string) file_get_contents( $this->config_path )
+		);
 	}
 
 	public function test_it_preserves_cr_lf_line_endings_and_safely_encodes_the_path(): void {

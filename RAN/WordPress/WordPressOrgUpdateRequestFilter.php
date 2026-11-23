@@ -45,20 +45,31 @@ final class WordPressOrgUpdateRequestFilter {
 			return $args;
 		}
 
+		$storage_failed = false;
+		$managed        = array();
 		try {
 			if ( ! $this->database->is_supported() ) {
-				return $args;
+				$storage_failed = true;
+			} else {
+				$managed = array_keys(
+					'plugin' === $type
+						? $this->plugins->all_booster_plugins()
+						: $this->themes->all_booster_themes()
+				);
 			}
-			$managed = array_keys(
-				'plugin' === $type
-					? $this->plugins->all_booster_plugins()
-					: $this->themes->all_booster_themes()
-			);
 		} catch ( Throwable ) {
-			return $args;
+			$storage_failed = true;
 		}
 
-		if ( 'plugin' === $type ) {
+		if ( $storage_failed ) {
+			if ( 'plugin' === $type ) {
+				$payload['plugins'] = new \stdClass();
+				$payload['active']  = array();
+			} else {
+				$payload['themes'] = new \stdClass();
+				unset( $payload['active'] );
+			}
+		} elseif ( 'plugin' === $type ) {
 			$managed[] = $this->booster_plugin;
 			$removed   = false;
 			foreach ( $managed as $package ) {

@@ -143,22 +143,40 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		}
 	}
 
-	public function test_storage_failure_returns_the_incoming_arguments_unchanged(): void {
-		$database = $this->createStub( Database::class );
-		$database->method( 'is_supported' )->willReturn( true );
-		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'all_booster_plugins' )->willThrowException( new RuntimeException( 'database details' ) );
-		$args = array(
+	public function test_storage_failure_and_unsupported_database_fail_closed_for_plugins_and_themes(): void {
+		$plugin_args = array(
 			'body' => array(
-				'plugins' => '{"plugins":{"managed/plugin.php":{}},"active":[]}',
+				'plugins' => '{"plugins":{"managed/plugin.php":{},"ran-booster/ran-booster.php":{},"other/plugin.php":{}},"active":["managed/plugin.php","ran-booster/ran-booster.php","other/plugin.php"]}',
+			),
+		);
+		$theme_args  = array(
+			'body' => array(
+				'themes' => '{"themes":{"managed-theme":{},"other-theme":{}},"active":"managed-theme"}',
 			),
 		);
 
-		self::assertSame(
-			$args,
-			( new WordPressOrgUpdateRequestFilter( $database, $plugins, $this->createStub( ThemeRepository::class ), 'booster.php' ) )
-				->plugins( $args, 'https://api.wordpress.org/plugins/update-check/1.1/' )
-		);
+		$throwing_db = $this->createStub( Database::class );
+		$throwing_db->method( 'is_supported' )->willReturn( true );
+		$throwing_plugins = $this->createStub( PluginRepository::class );
+		$throwing_plugins->method( 'all_booster_plugins' )->willThrowException( new RuntimeException( 'database details' ) );
+		$throwing_themes = $this->createStub( ThemeRepository::class );
+		$throwing_themes->method( 'all_booster_themes' )->willThrowException( new RuntimeException( 'database details' ) );
+
+		$unsupported_db = $this->createStub( Database::class );
+		$unsupported_db->method( 'is_supported' )->willReturn( false );
+
+		foreach (
+			array(
+				new WordPressOrgUpdateRequestFilter( $throwing_db, $throwing_plugins, $throwing_themes, 'ran-booster/ran-booster.php' ),
+				new WordPressOrgUpdateRequestFilter( $unsupported_db, $this->createStub( PluginRepository::class ), $this->createStub( ThemeRepository::class ), 'ran-booster/ran-booster.php' ),
+			) as $filter
+		) {
+			$filtered_plugins = $filter->plugins( $plugin_args, 'https://api.wordpress.org/plugins/update-check/1.1/' );
+			self::assertSame( '{"plugins":{},"active":[]}', $filtered_plugins['body']['plugins'] );
+
+			$filtered_themes = $filter->themes( $theme_args, 'https://api.wordpress.org/themes/update-check/1.1/' );
+			self::assertSame( '{"themes":{}}', $filtered_themes['body']['themes'] );
+		}
 	}
 
 	private function filter(): WordPressOrgUpdateRequestFilter {

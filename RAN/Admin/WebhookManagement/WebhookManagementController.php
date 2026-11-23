@@ -139,22 +139,26 @@ final class WebhookManagementController {
 
 		// A successful result has its own fixed sentence, so provider guidance rides only on the redirect of one that is not.
 		$remediation = false === $result['inline_safe'] && true !== $successful ? $this->safe_remediation( $result['remediation'] ) : null;
+		$hook_id     = null !== $result['recovery'] ? $result['recovery']['hook_id'] : null;
+		$profile_id  = null !== $result['recovery'] ? $result['recovery']['profile_id'] : null;
 		$args        = array( 'webhook_management_result' => $result_code );
 		if ( null !== $ping ) {
 			$args['webhook_management_ping'] = $ping;
 		}
-		if ( null !== $result['recovery'] ) {
-			$args['recovery_hook']    = $result['recovery']['hook_id'];
-			$args['recovery_profile'] = $result['recovery']['profile_id'];
+		if ( null !== $hook_id && null !== $profile_id ) {
+			$args['recovery_hook']    = $hook_id;
+			$args['recovery_profile'] = $profile_id;
 		}
 		if ( null !== $remediation ) {
-			$args['webhook_management_remediation']    = $remediation;
-			$args['webhook_management_provider']       = $provider_code;
-			$args['webhook_management_repository']     = $safe_repository_id;
-			$args['_ran_booster_webhook_result_nonce'] = ( $this->create_nonce )( $this->result_nonce_action( $provider_code, $safe_repository_id, $result_code, $remediation ) );
+			$args['webhook_management_remediation'] = $remediation;
 		}
+		$args['webhook_management_provider']       = $provider_code;
+		$args['webhook_management_repository']     = $safe_repository_id;
+		$args['_ran_booster_webhook_result_nonce'] = ( $this->create_nonce )(
+			self::result_nonce_action( $provider_code, $safe_repository_id, $result_code, $ping, $hook_id, $profile_id, $remediation )
+		);
 
-		return add_query_arg( $args, $return_url );
+		return add_query_arg( array_map( 'rawurlencode', $args ), $return_url );
 	}
 
 	/**
@@ -193,35 +197,65 @@ final class WebhookManagementController {
 	}
 
 	/** @return array{result:?string,ping:?string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string} */
-	public function panel_context(): array {
-		$get            = $GLOBALS['_GET'] ?? null;
-		$query          = is_array( $get ) ? wp_unslash( $get ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
-		$code           = $this->string_value( $query, 'webhook_management_result' );
-		$safe_reference = static fn ( mixed $value ): ?string => is_string( $value )
-			&& 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/', $value )
-			? $value
-			: null;
-		$hook_id        = $safe_reference( $query['recovery_hook'] ?? null );
-		$profile_id     = $safe_reference( $query['recovery_profile'] ?? null );
-		$provider_code  = $this->string_value( $query, 'webhook_management_provider' );
-		$repository_id  = $this->string_value( $query, 'webhook_management_repository' );
+	public function panel_context( ?string $expected_provider_code = null, ?string $expected_repository_id = null ): array {
+		$empty = array(
+			'result'      => null,
+			'ping'        => null,
+			'recovery'    => null,
+			'remediation' => null,
+		);
+		$get   = $GLOBALS['_GET'] ?? null;
+		$query = is_array( $get ) ? wp_unslash( $get ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified immediately below with _ran_booster_webhook_result_nonce.
+		$code  = $this->string_value( $query, 'webhook_management_result' );
+		if ( '' === $code ) {
+			return $empty;
+		}
+
+		$provider_code = $this->string_value( $query, 'webhook_management_provider' );
+		$repository_id = $this->string_value( $query, 'webhook_management_repository' );
 		if ( '' === $provider_code || '' === $repository_id ) {
 			$provider_code = $this->string_value( $query, 'tab' );
 			$repository_id = $this->string_value( $query, 'repository' );
 		}
-		$remediation  = $this->safe_remediation( $query['webhook_management_remediation'] ?? null );
-		$result_nonce = $this->string_value( $query, '_ran_booster_webhook_result_nonce' );
-		if ( null === $remediation
-			|| '' === $code
-			|| ! ( $this->verify_nonce )( $result_nonce, $this->result_nonce_action( $provider_code, $repository_id, $code, $remediation ) ) ) {
-			$remediation = null;
+		if ( ( null !== $expected_provider_code && ! hash_equals( $expected_provider_code, $provider_code ) )
+			|| ( null !== $expected_repository_id && ! hash_equals( $expected_repository_id, $repository_id ) ) ) {
+			return $empty;
 		}
 
-		$ping = $this->string_value( $query, 'webhook_management_ping' );
+		$safe_reference = static fn ( mixed $value ): ?string => is_string( $value )
+			&& 1 === preg_match( '/^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/', $value )
+			? $value
+			: null;
+		$raw_hook       = $query['recovery_hook'] ?? null;
+		$raw_profile    = $query['recovery_profile'] ?? null;
+		$hook_id        = null === $raw_hook ? null : $safe_reference( $raw_hook );
+		$profile_id     = null === $raw_profile ? null : $safe_reference( $raw_profile );
+		if ( ( null !== $raw_hook && null === $hook_id )
+			|| ( null !== $raw_profile && null === $profile_id )
+			|| ( null === $hook_id ) !== ( null === $profile_id ) ) {
+			return $empty;
+		}
+
+		$raw_remediation = $query['webhook_management_remediation'] ?? null;
+		$remediation     = null === $raw_remediation ? null : $this->safe_remediation( $raw_remediation );
+		if ( null !== $raw_remediation && null === $remediation ) {
+			return $empty;
+		}
+
+		$ping         = $this->string_value( $query, 'webhook_management_ping' );
+		$signed_ping  = '' === $ping ? null : $ping;
+		$result_nonce = $this->string_value( $query, '_ran_booster_webhook_result_nonce' );
+		if ( '' === $result_nonce
+			|| ! ( $this->verify_nonce )(
+				$result_nonce,
+				self::result_nonce_action( $provider_code, $repository_id, $code, $signed_ping, $hook_id, $profile_id, $remediation )
+			) ) {
+			return $empty;
+		}
 
 		return array(
-			'result'      => '' === $code ? null : $this->safe_code( $code, 'request_completed' ),
-			'ping'        => '' === $code || '' === $ping ? null : $this->safe_code( $ping, 'operation_failed' ),
+			'result'      => $this->safe_code( $code, 'request_completed' ),
+			'ping'        => null === $signed_ping ? null : $this->safe_code( $signed_ping, 'operation_failed' ),
 			'recovery'    => null !== $hook_id && null !== $profile_id ? array(
 				'hook_id'    => $hook_id,
 				'profile_id' => $profile_id,
@@ -230,8 +264,26 @@ final class WebhookManagementController {
 		);
 	}
 
-	private function result_nonce_action( string $provider_code, string $repository_id, string $code, string $remediation ): string {
-		return 'ran_booster_repository_webhook_result_' . hash( 'sha256', implode( "\0", array( $provider_code, $repository_id, $code, $remediation ) ) );
+	public static function result_nonce_action(
+		string $provider_code,
+		string $repository_id,
+		string $code,
+		?string $ping = null,
+		?string $hook_id = null,
+		?string $profile_id = null,
+		?string $remediation = null
+	): string {
+		$fields = array(
+			$provider_code,
+			$repository_id,
+			$code,
+			null === $ping ? '' : $ping,
+			null === $hook_id ? '' : $hook_id,
+			null === $profile_id ? '' : $profile_id,
+			null === $remediation ? '' : $remediation,
+		);
+
+		return 'ran_booster_repository_webhook_result_' . hash( 'sha256', implode( "\0", $fields ) );
 	}
 
 	private function safe_remediation( mixed $remediation ): ?string {

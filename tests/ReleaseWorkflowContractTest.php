@@ -223,6 +223,84 @@ final class ReleaseWorkflowContractTest extends TestCase {
 		}
 	}
 
+	public function test_quality_removes_branch_gated_fixture_token_and_redacts_http_failure_logs(): void {
+		$workflow = $this->workflow( 'quality.yml' );
+
+		self::assertStringNotContainsString( 'RAN_PRIVATE_MIGRATOR', $workflow );
+		self::assertStringNotContainsString( 'UPSTREAM_FIXTURES_CLIENT_ID', $workflow );
+		self::assertStringNotContainsString( 'UPSTREAM_FIXTURES_PRIVATE_KEY', $workflow );
+		self::assertStringNotContainsString( 'actions/create-github-app-token', $workflow );
+		self::assertStringNotContainsString( 'refs/heads/integration/171-github-blueprint', $workflow );
+		self::assertStringNotContainsString( 'cat build/portability-http.log', $workflow );
+
+		$matches = array();
+		self::assertSame(
+			1,
+			preg_match( '/emit_redacted_http_log\(\)\s*\{\n(.*?)\n\s*\}/s', $workflow, $matches )
+		);
+		if ( ! isset( $matches[1] ) ) {
+			self::fail( 'Expected the shared HTTP log redaction helper.' );
+		}
+		self::assertSame( 4, substr_count( $workflow, 'emit_redacted_http_log' ) );
+
+		$temp_dir = sys_get_temp_dir() . '/ran-http-log-redact-' . bin2hex( random_bytes( 6 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Temporary fixture directory for redaction helper verification.
+		self::assertTrue( mkdir( $temp_dir . '/build', 0700, true ) );
+		try {
+			$sample_log = implode(
+				"\n",
+				array(
+					'[Mon Nov 23 01:00:00 2026] 127.0.0.1:41234 [200]: GET /wp-login.php?token=secret-value-123',
+					'[Mon Nov 23 01:00:01 2026] [::1]:41235 [500]: POST /wp-admin/admin-post.php?secret=do-not-leak',
+					'PHP Fatal error: Authorization: Bearer top-secret-token in /var/www/wp-config.php',
+				)
+			) . "\n";
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write temporary HTTP log fixture.
+			self::assertNotFalse( file_put_contents( $temp_dir . '/build/portability-http.log', $sample_log ) );
+
+			$helper_script = "emit_redacted_http_log() {\n" . $matches[1] . "\n}\nemit_redacted_http_log\n";
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Execute the workflow's exact log redaction helper.
+			$process = proc_open(
+				array( '/bin/bash', '-c', $helper_script ),
+				array(
+					1 => array( 'pipe', 'w' ),
+					2 => array( 'pipe', 'w' ),
+				),
+				$pipes,
+				$temp_dir
+			);
+			self::assertIsResource( $process );
+			$stdout = (string) stream_get_contents( $pipes[1] );
+			$stderr = (string) stream_get_contents( $pipes[2] );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close subprocess stdout pipe.
+			fclose( $pipes[1] );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close subprocess stderr pipe.
+			fclose( $pipes[2] );
+			$exit_code = proc_close( $process );
+
+			self::assertSame( 0, $exit_code );
+			self::assertSame( '', $stdout );
+			self::assertStringContainsString( 'PHP server access: method=GET status=200', $stderr );
+			self::assertStringContainsString( 'PHP server access: method=POST status=500', $stderr );
+			self::assertStringNotContainsString( 'secret-value-123', $stderr );
+			self::assertStringNotContainsString( 'do-not-leak', $stderr );
+			self::assertStringNotContainsString( 'top-secret-token', $stderr );
+		} finally {
+			if ( file_exists( $temp_dir . '/build/portability-http.log' ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove temporary fixture file.
+				unlink( $temp_dir . '/build/portability-http.log' );
+			}
+			if ( is_dir( $temp_dir . '/build' ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove temporary fixture directory.
+				rmdir( $temp_dir . '/build' );
+			}
+			if ( is_dir( $temp_dir ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove temporary fixture directory.
+				rmdir( $temp_dir );
+			}
+		}
+	}
+
 	private function workflow( string $name ): string {
 		$workflow = file_get_contents( dirname( __DIR__ ) . '/.github/workflows/' . $name ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local workflow contract.
 		self::assertIsString( $workflow );

@@ -178,15 +178,17 @@ namespace RAN\Tests\Storage {
 		 *     indexes: array<string, array{unique: bool, columns: list<string>, prefixes: list<?int>}>
 		 * }>
 		 */
-		public array $schema_tables          = array();
-		public string $schema_engine         = 'InnoDB';
-		public string $options_engine        = 'InnoDB';
-		public ?string $stored_options_table = null;
-		public string $server_info           = '8.4.6';
-		public string $innodb_support        = 'DEFAULT';
-		public ?string $innodb_transactions  = 'YES';
-		public ?string $live_version         = null;
-		public ?string $live_version_comment = 'MySQL Community Server - GPL';
+		public array $schema_tables            = array();
+		public string $schema_engine           = 'InnoDB';
+		public string $options_engine          = 'InnoDB';
+		public ?string $stored_options_table   = null;
+		public string $server_info             = '8.4.6';
+		public string $database_name           = 'test_db';
+		public ?\Closure $before_database_read = null;
+		public string $innodb_support          = 'DEFAULT';
+		public ?string $innodb_transactions    = 'YES';
+		public ?string $live_version           = null;
+		public ?string $live_version_comment   = 'MySQL Community Server - GPL';
 		/** @var list<object>|null */
 		public ?array $live_version_rows           = null;
 		public bool $fail_live_version_probe       = false;
@@ -407,6 +409,9 @@ namespace RAN\Tests\Storage {
 			if ( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' === $query ) {
 				return 1;
 			}
+			if ( str_starts_with( $query, 'SAVEPOINT ' ) || str_starts_with( $query, 'RELEASE SAVEPOINT ' ) ) {
+				return 1;
+			}
 			if ( 'START TRANSACTION' === $query ) {
 				$this->transaction_rows                   = $this->rows;
 				$this->transaction_general_settings_value = $this->general_settings_value;
@@ -447,7 +452,7 @@ namespace RAN\Tests\Storage {
 					)
 				);
 			}
-			if ( 1 === preg_match( "/^DELETE FROM `[^`]+` WHERE id = '([0-9]+)' AND package_type = ([12]) AND BINARY package = BINARY '([^']+)' AND BINARY adoption_token = BINARY '([^']+)'$/", $query, $matches ) ) {
+			if ( 1 === preg_match( "/^DELETE FROM (?:`[^`]+`\.)?`[^`]+` WHERE id = '([0-9]+)' AND package_type = ([12]) AND BINARY package = BINARY '([^']+)' AND BINARY adoption_token = BINARY '([^']+)'$/", $query, $matches ) ) {
 				return $this->delete(
 					'wp_ran_booster_packages',
 					array(
@@ -611,7 +616,7 @@ namespace RAN\Tests\Storage {
 			if ( str_starts_with( $query, 'SHOW TABLE STATUS' ) && null !== $this->forced_table_status ) {
 				return $this->forced_table_status;
 			}
-			if ( 1 === preg_match( "/^SHOW TABLE STATUS WHERE Name = '([^']+)'$/", $query, $matches ) ) {
+			if ( 1 === preg_match( "/^SHOW TABLE STATUS (?:FROM `[^`]+` )?WHERE Name = '([^']+)'$/", $query, $matches ) ) {
 				$table        = stripslashes( $matches[1] );
 				$options_name = $this->stored_options_table ?? ( 1 === $this->lower_case_table_names ? strtolower( $this->options ) : $this->options );
 				if ( $options_name === $table ) {
@@ -628,7 +633,7 @@ namespace RAN\Tests\Storage {
 					)
 					: null;
 			}
-			if ( 1 === preg_match( "/^SHOW TABLE STATUS WHERE LOWER\(Name\) = '([^']+)'$/", $query, $matches ) ) {
+			if ( 1 === preg_match( "/^SHOW TABLE STATUS (?:FROM `[^`]+` )?WHERE LOWER\(Name\) = '([^']+)'$/", $query, $matches ) ) {
 				$needle       = stripslashes( $matches[1] );
 				$options_name = $this->stored_options_table ?? ( 1 === $this->lower_case_table_names ? strtolower( $this->options ) : $this->options );
 				if ( strtolower( $options_name ) === $needle ) {
@@ -655,6 +660,12 @@ namespace RAN\Tests\Storage {
 		/** @return list<object>|null */
 		public function get_results( string $query ): ?array {
 			$this->read_queries[] = $query;
+			if ( 'SELECT DATABASE() AS db_name' === $query ) {
+				if ( null !== $this->before_database_read ) {
+					( $this->before_database_read )();
+				}
+				return array( (object) array( 'db_name' => $this->database_name ) );
+			}
 			if ( 'SHOW ENGINES' === $query ) {
 				$this->connection_warmed = true;
 				++$this->capability_reads;
@@ -721,7 +732,7 @@ namespace RAN\Tests\Storage {
 					),
 				);
 			}
-			if ( 1 === preg_match( '/^SHOW COLUMNS FROM `([^`]+)`$/', $query, $matches ) ) {
+			if ( 1 === preg_match( '/^SHOW COLUMNS FROM (?:`[^`]+`\.)?`([^`]+)`$/', $query, $matches ) ) {
 				if ( $matches[1] === $this->options || ( 0 !== $this->lower_case_table_names && 0 === strcasecmp( $matches[1], $this->options ) ) ) {
 					return array_map(
 						static fn ( string $name ): object => (object) array(
@@ -754,7 +765,7 @@ namespace RAN\Tests\Storage {
 				return $rows;
 			}
 
-			if ( 1 === preg_match( '/^SHOW INDEX FROM `([^`]+)`$/', $query, $matches ) ) {
+			if ( 1 === preg_match( '/^SHOW INDEX FROM (?:`[^`]+`\.)?`([^`]+)`$/', $query, $matches ) ) {
 				if ( $matches[1] === $this->options || ( 0 !== $this->lower_case_table_names && 0 === strcasecmp( $matches[1], $this->options ) ) ) {
 					return array(
 						(object) array(

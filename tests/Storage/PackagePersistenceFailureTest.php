@@ -82,7 +82,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 					public function require_ready(): void {
 					}
 
-					/** @return array{connection: StorageTestWpdb, table: string, prefix: string} */
+					/** @return array{connection: StorageTestWpdb, table: string, prefix: string, database: string, handle: mixed, thread_id: null} */
 					public function require_recovery_ready( ?object $expected_connection = null ): array {
 						global $wpdb;
 						$connection = $expected_connection instanceof StorageTestWpdb ? $expected_connection : $wpdb;
@@ -90,6 +90,9 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 							'connection' => $connection,
 							'table'      => ran_booster_table_name(),
 							'prefix'     => $connection->prefix,
+							'database'   => $connection->database_name,
+							'handle'     => $connection->dbh,
+							'thread_id'  => null,
 						);
 					}
 				};

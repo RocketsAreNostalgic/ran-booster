@@ -612,45 +612,84 @@ try {
 	$ran_booster_snapshot       = $ran_booster_packages->recovery_record( $ran_booster_identifier );
 	$ran_booster_other_database = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 	$ran_booster_original_dbh   = $wpdb->__get( 'dbh' );
-	$ran_booster_swap_seen      = false;
-	$ran_booster_filtered       = 0;
-	$ran_booster_filter         = static function ( string $query ) use ( $ran_booster_package_table, &$ran_booster_filtered ): string {
-		if ( in_array( $query, array( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION', 'COMMIT', 'ROLLBACK' ), true )
+	$ran_booster_other_dbh      = $ran_booster_other_database->__get( 'dbh' );
+	if ( ! $ran_booster_original_dbh instanceof mysqli || ! $ran_booster_other_dbh instanceof mysqli || $ran_booster_original_dbh === $ran_booster_other_dbh ) {
+		throw new RuntimeException( 'Recovery proof requires two separate native database handles.' );
+	}
+	$ran_booster_second_schema = 'ran_booster_recovery_' . bin2hex( random_bytes( 6 ) );
+	if ( false === $wpdb->query( $wpdb->prepare( 'CREATE DATABASE %i', $ran_booster_second_schema ) ) ) {
+		throw new RuntimeException( 'Could not create the second disposable database.' );
+	}
+	$ran_booster_filtered = 0;
+	$ran_booster_filter   = static function ( string $query ) use ( $ran_booster_package_table, &$ran_booster_filtered ): string {
+		if ( in_array( $query, array( 'SELECT DATABASE() AS db_name', 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION', 'COMMIT', 'ROLLBACK' ), true )
+			|| str_starts_with( $query, 'SAVEPOINT ' ) || str_starts_with( $query, 'RELEASE SAVEPOINT ' )
 			|| ( str_contains( $query, $ran_booster_package_table ) && ( str_starts_with( $query, 'SELECT ' ) || str_starts_with( $query, 'DELETE FROM ' ) ) ) ) {
 			++$ran_booster_filtered;
 		}
 		return $query;
 	};
-	add_filter( 'query', $ran_booster_filter );
 	try {
-		try {
-			$ran_booster_conflict = $ran_booster_packages->recover_unlink(
-				$ran_booster_identifier,
-				$ran_booster_snapshot['adoption_token'],
-				$ran_booster_snapshot['digest'],
-				static function () use ( $wpdb, $ran_booster_other_database, &$ran_booster_swap_seen ): void {
-					$wpdb->__set( 'dbh', $ran_booster_other_database->__get( 'dbh' ) );
-					$ran_booster_swap_seen = true;
+		if ( false === $wpdb->query( $wpdb->prepare( 'CREATE TABLE %i.%i LIKE %i.%i', $ran_booster_second_schema, $ran_booster_package_table, DB_NAME, $ran_booster_package_table ) )
+			|| 1 !== $wpdb->query( $wpdb->prepare( 'INSERT INTO %i.%i SELECT * FROM %i.%i WHERE id = %s', $ran_booster_second_schema, $ran_booster_package_table, DB_NAME, $ran_booster_package_table, $ran_booster_snapshot['id'] ) ) ) {
+			throw new RuntimeException( 'Could not copy the management row into the second disposable database.' );
+		}
+		$ran_booster_guards = array(
+			'handle replacement' => static function () use ( $wpdb, $ran_booster_other_dbh ): void {
+				$wpdb->__set( 'dbh', $ran_booster_other_dbh );
+			},
+			'transaction loss'   => static function () use ( $ran_booster_original_dbh ): void {
+				if ( ! $ran_booster_original_dbh->rollback() ) {
+					throw new RuntimeException( 'Could not roll back the live InnoDB transaction from the guard.' );
 				}
-			);
-		} finally {
-			$wpdb->__set( 'dbh', $ran_booster_original_dbh );
+			},
+			'database switch'    => static function () use ( $wpdb, $ran_booster_second_schema ): void {
+				$wpdb->select( $ran_booster_second_schema );
+				if ( $ran_booster_second_schema !== $wpdb->get_var( 'SELECT DATABASE()' ) ) {
+					throw new RuntimeException( 'Could not select the second disposable database from the guard.' );
+				}
+			},
+		);
+		foreach ( $ran_booster_guards as $ran_booster_case => $ran_booster_guard ) {
+			// Session status observes native DELETE statements as well as wpdb calls.
+			$ran_booster_deletes = $wpdb->get_var( "SHOW SESSION STATUS LIKE 'Com_delete'", 1 );
+			$ran_booster_ran     = false;
+			add_filter( 'query', $ran_booster_filter );
+			try {
+				$ran_booster_conflict = $ran_booster_packages->recover_unlink(
+					$ran_booster_identifier,
+					$ran_booster_snapshot['adoption_token'],
+					$ran_booster_snapshot['digest'],
+					static function () use ( $ran_booster_guard, &$ran_booster_ran ): void {
+						$ran_booster_guard();
+						$ran_booster_ran = true;
+					}
+				);
+			} finally {
+				remove_filter( 'query', $ran_booster_filter );
+				$wpdb->__set( 'dbh', $ran_booster_original_dbh );
+				$wpdb->select( DB_NAME );
+			}
+			if ( ! $ran_booster_ran || PackageMutationStatus::CONFLICT !== $ran_booster_conflict->get_status()
+				|| ! is_numeric( $ran_booster_deletes ) || $ran_booster_deletes !== $wpdb->get_var( "SHOW SESSION STATUS LIKE 'Com_delete'", 1 )
+				|| $ran_booster_snapshot !== $ran_booster_packages->recovery_record( $ran_booster_identifier ) ) {
+				throw new RuntimeException( 'Guarded recovery must preserve the original row without issuing DELETE after ' . $ran_booster_case . '.' );
+			}
+			// A separate transaction can acquire the row lock only after the original session released it.
+			if ( false === $ran_booster_other_database->query( 'START TRANSACTION' ) ) {
+				throw new RuntimeException( 'Could not start the row lock verification transaction.' );
+			}
+			try {
+				$ran_booster_unlocked_id = $ran_booster_other_database->get_var( $ran_booster_other_database->prepare( 'SELECT id FROM %i WHERE id = %s FOR UPDATE NOWAIT', $ran_booster_package_table, $ran_booster_snapshot['id'] ) );
+			} finally {
+				$ran_booster_other_database->query( 'ROLLBACK' );
+			}
+			if ( $ran_booster_snapshot['id'] !== $ran_booster_unlocked_id ) {
+				throw new RuntimeException( 'Guarded recovery did not release the original row lock after ' . $ran_booster_case . '.' );
+			}
 		}
-		remove_filter( 'query', $ran_booster_filter );
-		if ( ! $ran_booster_swap_seen || PackageMutationStatus::CONFLICT !== $ran_booster_conflict->get_status() || $ran_booster_snapshot !== $ran_booster_packages->recovery_record( $ran_booster_identifier ) ) {
-			throw new RuntimeException( 'A changed database session must preserve the original management row.' );
-		}
-		// A separate transaction can acquire the row lock only after the original session released it.
-		if ( false === $ran_booster_other_database->query( 'START TRANSACTION' ) ) {
-			throw new RuntimeException( 'Could not start the row lock verification transaction.' );
-		}
-		try {
-			$ran_booster_unlocked_id = $ran_booster_other_database->get_var( $ran_booster_other_database->prepare( 'SELECT id FROM %i WHERE id = %s FOR UPDATE NOWAIT', $ran_booster_package_table, $ran_booster_snapshot['id'] ) );
-		} finally {
-			$ran_booster_other_database->query( 'ROLLBACK' );
-		}
-		if ( $ran_booster_snapshot['id'] !== $ran_booster_unlocked_id ) {
-			throw new RuntimeException( 'Guarded recovery did not release the original session row lock.' );
+		if ( $ran_booster_snapshot['adoption_token'] !== $wpdb->get_var( $wpdb->prepare( 'SELECT adoption_token FROM %i.%i WHERE id = %s', $ran_booster_second_schema, $ran_booster_package_table, $ran_booster_snapshot['id'] ) ) ) {
+			throw new RuntimeException( 'Guarded recovery must preserve the matching row in the second database.' );
 		}
 		add_filter( 'query', $ran_booster_filter );
 		$ran_booster_packages->recover_unlink(
@@ -668,6 +707,7 @@ try {
 		}
 	} finally {
 		remove_filter( 'query', $ran_booster_filter );
+		$wpdb->query( $wpdb->prepare( 'DROP DATABASE %i', $ran_booster_second_schema ) );
 		$ran_booster_other_database->close();
 	}
 } finally {

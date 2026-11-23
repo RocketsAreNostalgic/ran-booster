@@ -666,7 +666,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 			public ?bool $status_fallback_suppressed = null;
 
 			public function get_row( string $query ): ?object {
-				if ( str_starts_with( $query, 'SHOW TABLE STATUS WHERE LOWER(Name)' ) ) {
+				if ( str_contains( $query, 'WHERE LOWER(Name)' ) ) {
 					$this->status_fallback_suppressed = $this->errors_suppressed;
 					if ( $this->fail_status_fallback ) {
 						$this->last_error = 'database details must not escape';
@@ -1006,8 +1006,14 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 				$database = new Database( bundled_declaration: $this->declaration() );
 				$injected = new Database( $admitted );
 				$database->install();
-				$database->require_recovery_ready();
-				$injected->require_recovery_ready();
+				foreach ( array( $database, $injected ) as $lifecycle ) {
+					try {
+						$lifecycle->require_recovery_ready();
+						self::fail( 'An unconnected native handle must fail before inspection.' );
+					} catch ( DatabaseLifecycleFailure $failure ) {
+						self::assertSame( 'schema_read_failed', $failure->reason() );
+					}
+				}
 				$admitted_reads = $admitted->read_queries;
 				$connections    = array(
 					new class() extends \wpdb {
@@ -1112,7 +1118,16 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 					'source_revision'        => 1,
 				);
 				$wpdb->rows = array( $row );
-				$snapshot   = $repository->recovery_record( $identifier );
+				try {
+					$database->require_recovery_ready();
+					self::fail( 'An unconnected native handle must fail before inspection.' );
+				} catch ( DatabaseLifecycleFailure $failure ) {
+					self::assertSame( 'schema_read_failed', $failure->reason() );
+				}
+				$snapshot = array(
+					'adoption_token' => $row['adoption_token'],
+					'digest'         => 'fixture-digest',
+				);
 
 				// This drop-in keeps the same exposed handle but routes SELECT to a separate session.
 				$wpdb->read_connection_id = 42;
@@ -1138,8 +1153,12 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 				$wpdb->read_connection_id = 41;
 				$wpdb->queries            = array();
 				$repository               = new PluginRepository( new Database( $wpdb ) );
-				$result                   = $repository->recover_unlink( $identifier, $snapshot['adoption_token'], $snapshot['digest'], static function (): void {} );
-				self::assertSame( PackageMutationStatus::FAILED, $result->get_status() );
+				try {
+					$repository->recover_unlink( $identifier, $snapshot['adoption_token'], $snapshot['digest'], static function (): void {} );
+					self::fail( 'An unconnected native handle must reject recovery.' );
+				} catch ( PackageStorageFailure $failure ) {
+					self::assertTrue( $failure->is_database_unsupported() );
+				}
 				self::assertSame( array( 'SET @ran_booster_probe := CONNECTION_ID()', 'SET @ran_booster_probe := NULL' ), $wpdb->queries );
 				self::assertSame( array( $row ), $wpdb->rows );
 			}
@@ -1776,6 +1795,53 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		}
 		self::assertNull( $wpdb->stored_rows()[0]['adoption_token'] );
 		self::assertSame( '13.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+	}
+
+	public function test_recovery_readiness_pins_and_qualifies_database(): void {
+		global $wpdb;
+		$this->install_current_schema();
+		$wpdb->dbh          = (object) array( 'fixture' => true );
+		$wpdb->read_queries = array();
+		$result             = ( new Database() )->require_recovery_ready();
+		self::assertSame( $wpdb->database_name, $result['database'] );
+		self::assertSame( $wpdb->dbh, $result['handle'] );
+		self::assertNull( $result['thread_id'] );
+		self::assertContains( 'SHOW COLUMNS FROM `' . $wpdb->database_name . '`.`wp_ran_booster_packages`', $wpdb->read_queries );
+		self::assertContains( 'SHOW INDEX FROM `' . $wpdb->database_name . '`.`wp_ran_booster_deployment_attempts`', $wpdb->read_queries );
+	}
+
+	#[DataProvider( 'readiness_drift_provider' )]
+	public function test_recovery_readiness_rejects_session_drift( int $read, string $drift ): void {
+		global $wpdb;
+		$this->install_current_schema();
+		$wpdb->dbh                  = (object) array();
+		$count                      = 0;
+		$wpdb->before_database_read = static function () use ( $wpdb, &$count, $read, $drift ): void {
+			if ( ++$count === $read ) {
+				if ( 'database' === $drift ) {
+					$wpdb->database_name = 'other';
+				} elseif ( 'handle' === $drift ) {
+					$wpdb->dbh = (object) array();
+				} else {
+					$wpdb->prefix = 'other_';
+				}
+			}
+		};
+		try {
+			( new Database() )->require_recovery_ready();
+			self::fail( 'A changed readiness context must be rejected.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'schema_read_failed', $failure->reason() );
+		}
+	}
+
+	/** @return array<string, array{int, string}> */
+	public static function readiness_drift_provider(): array {
+		return array(
+			'after version'        => array( 2, 'database' ),
+			'after package schema' => array( 3, 'handle' ),
+			'after attempt schema' => array( 4, 'prefix' ),
+		);
 	}
 
 	public function test_recovery_readiness_never_migrates_or_repairs_tables(): void {

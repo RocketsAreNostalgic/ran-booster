@@ -113,7 +113,7 @@ abstract class AbstractPackageRepository {
 	public function recovery_record( string $identifier ): array {
 		$storage = $this->require_recovery_storage();
 		new PackageModel( array( 'package' => $identifier ) );
-		return $this->recovery_snapshot( $identifier, $this->package_rows( $identifier, wpdb: $storage['connection'], table: $storage['table'] ) );
+		return $this->recovery_snapshot( $identifier, $this->recovery_package_rows( $identifier, $storage['connection'], $storage['database'], $storage['table'] ) );
 	}
 
 	/**
@@ -128,7 +128,7 @@ abstract class AbstractPackageRepository {
 		new PackageModel( array( 'package' => $identifier ) );
 		// A plugin directory can contain more than one main file. Never unlink an unreviewed sibling.
 		$scope  = 1 === $this->package_type() ? explode( '/', $identifier )[0] : $identifier;
-		$query  = $wpdb->prepare( 'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d', $storage['table'], $this->package_type() );
+		$query  = $wpdb->prepare( 'SELECT p.*, p.package_type AS type FROM %i.%i p WHERE package_type = %d', $storage['database'], $storage['table'], $this->package_type() );
 		$query .= $for_update ? ' FOR UPDATE' : '';
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared package-type scope; locking suffix is a closed boolean choice.
 		$rows  = $wpdb->get_results( $query );
@@ -166,33 +166,40 @@ abstract class AbstractPackageRepository {
 	 */
 	public function recover_unlink( string $identifier, string $expected_token, string $expected_record_digest, callable $guard ): PackageMutationResult {
 		RuntimeSupport::assert_managed_operations_allowed();
-		$storage = $this->require_recovery_storage();
-		$wpdb    = $storage['connection'];
-		$table   = $storage['table'];
-		$session = $this->recovery_session( $wpdb );
-		if ( null === $session || false === $session['execute']( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) ) {
+		$storage  = $this->require_recovery_storage();
+		$wpdb     = $storage['connection'];
+		$database = $storage['database'];
+		$table    = $storage['table'];
+		$execute  = $this->recovery_session( $wpdb, $storage['handle'], $storage['thread_id'] );
+		if ( null === $execute ) {
 			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
 		}
-		$execute   = $session['execute'];
-		$read      = static fn ( string $sql ): mixed => $execute( $sql, true );
+		$read = static fn ( string $sql ): array|int|bool => $execute( $sql, true );
+		if ( ! $this->recovery_context_matches( $storage, $read ) || false === $execute( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) ) {
+			return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
+		}
 		$committed = false;
 		try {
-			if ( false === $execute( 'START TRANSACTION' ) ) {
+			if ( false === $execute( 'START TRANSACTION' ) || ! $this->recovery_context_matches( $storage, $read ) ) {
 				return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
 			}
-			$snapshot = $this->recovery_snapshot( $identifier, $this->locked_package_rows( $identifier, $wpdb, $table, $read ) );
+			$snapshot = $this->recovery_snapshot( $identifier, $this->recovery_package_rows( $identifier, $wpdb, $database, $table, $read, true ) );
 			if ( $snapshot['adoption_token'] !== $expected_token || ! hash_equals( $snapshot['digest'], $expected_record_digest ) ) {
 				return $this->delete_conflict_result();
 			}
+			// A guard can lose the transaction without replacing the database session.
+			if ( false === $execute( 'SAVEPOINT ran_booster_recovery_guard' ) ) {
+				return $this->failure_result( PackageStorageFailure::transaction_unavailable() );
+			}
 			$guard();
-			if ( ! $session['matches']() || ( $wpdb->prefix ?? null ) !== $storage['prefix'] || ran_booster_table_name() !== $table ) {
+			if ( ! $this->recovery_context_matches( $storage, $read ) || false === $execute( 'RELEASE SAVEPOINT ran_booster_recovery_guard' ) ) {
 				return $this->delete_conflict_result();
 			}
-			$query = $wpdb->prepare( 'DELETE FROM %i WHERE id = %s AND package_type = %d AND BINARY package = BINARY %s AND BINARY adoption_token = BINARY %s', $table, $snapshot['id'], $this->package_type(), $identifier, $expected_token );
+			$query = $wpdb->prepare( 'DELETE FROM %i.%i WHERE id = %s AND package_type = %d AND BINARY package = BINARY %s AND BINARY adoption_token = BINARY %s', $database, $table, $snapshot['id'], $this->package_type(), $identifier, $expected_token );
 			if ( 1 !== $execute( $query ) ) {
 				return $this->delete_failure_result();
 			}
-			$verified = $this->verify_package_deletion( $identifier, $wpdb, $table, $read );
+			$verified = $this->verify_package_deletion( $identifier, $wpdb, $database, $table, $read );
 			if ( ! $verified->is_successful() || false === $execute( 'COMMIT' ) ) {
 				return $this->post_write_verification_failure( PackageStorageOperation::DELETE );
 			}
@@ -205,17 +212,26 @@ abstract class AbstractPackageRepository {
 		}
 	}
 
-	/** @return array{matches: \Closure(): bool, execute: \Closure(string, bool=): (list<object>|int|bool)}|null */
-	private function recovery_session( \wpdb|SchemaConnection $wpdb ): ?array {
-		$handle = $this->recovery_handle( $wpdb );
+	/**
+	 * @param array{connection: \wpdb|SchemaConnection, database: string, prefix: string, table: string, handle: mixed, thread_id: ?string} $storage Verified storage binding.
+	 * @param callable(string): (list<object>|int|bool) $read Query on the pinned recovery session.
+	 * @phpstan-impure
+	 */
+	private function recovery_context_matches( array $storage, callable $read ): bool {
+		$rows = $read( 'SELECT DATABASE() AS db_name' );
+		return is_array( $rows ) && 1 === count( $rows ) && ( $rows[0]->db_name ?? null ) === $storage['database']
+			&& ( $storage['connection']->prefix ?? null ) === $storage['prefix'] && ran_booster_table_name() === $storage['table'];
+	}
+
+	/** @return (\Closure(string, bool=): (list<object>|int|bool))|null */
+	private function recovery_session( \wpdb|SchemaConnection $wpdb, mixed $handle, ?string $thread ): ?\Closure {
 		$native = $wpdb instanceof \wpdb && $handle instanceof \mysqli ? $handle : null;
-		$thread = null === $native ? null : $this->recovery_thread_id( $native );
-		if ( $wpdb instanceof \wpdb && null === $thread ) {
+		if ( $wpdb instanceof \wpdb && ( null === $native || null === $thread ) ) {
 			return null;
 		}
 		$matches = fn (): bool => ( $GLOBALS['wpdb'] ?? null ) === $wpdb && $this->recovery_handle( $wpdb ) === $handle
 			&& ( null === $native || $this->recovery_thread_id( $native ) === $thread );
-		$execute = function ( string $sql, bool $read = false ) use ( $wpdb, $native, $thread, $matches ): array|int|bool {
+		return function ( string $sql, bool $read = false ) use ( $wpdb, $native, $thread, $matches ): array|int|bool {
 			try {
 				$rollback = 'ROLLBACK' === $sql;
 				if ( null !== $native && $wpdb instanceof \wpdb ) {
@@ -237,10 +253,6 @@ abstract class AbstractPackageRepository {
 				return false;
 			}
 		};
-		return array(
-			'matches' => $matches,
-			'execute' => $execute,
-		);
 	}
 
 	private function recovery_handle( \wpdb|SchemaConnection $wpdb ): mixed {
@@ -311,7 +323,7 @@ abstract class AbstractPackageRepository {
 		);
 	}
 
-	/** @return array{connection: \wpdb|SchemaConnection, table: string, prefix: string} */
+	/** @return array{connection: \wpdb|SchemaConnection, table: string, prefix: string, database: string, handle: mixed, thread_id: ?string} */
 	private function require_recovery_storage(): array {
 		$this->database_lifecycle ??= new Database();
 		$wpdb                       = $GLOBALS['wpdb'] ?? null;
@@ -1082,16 +1094,13 @@ abstract class AbstractPackageRepository {
 	/**
 	 * Each call observes the current database state, including intervening writes.
 	 *
-	 * @param (callable(string): mixed)|null $read Query on the pinned recovery session when supplied.
 	 * @return list<object>
 	 * @phpstan-impure
 	 */
-	private function package_rows( ?string $identifier = null, ?PackageSource $source = null, \wpdb|SchemaConnection|null $wpdb = null, ?string $table = null, ?callable $read = null ): array {
-		if ( null === $wpdb ) {
-			$this->require_storage_support( PackageStorageOperation::QUERY );
-			$wpdb = $GLOBALS['wpdb'];
-		}
-		$table ??= ran_booster_table_name();
+	private function package_rows( ?string $identifier = null, ?PackageSource $source = null ): array {
+		$this->require_storage_support( PackageStorageOperation::QUERY );
+		$wpdb  = $GLOBALS['wpdb'];
+		$table = ran_booster_table_name();
 		if ( null !== $identifier ) {
 			$query = $wpdb->prepare(
 				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s',
@@ -1113,24 +1122,37 @@ abstract class AbstractPackageRepository {
 				$this->package_type()
 			);
 		}
-		return $this->package_query_rows( $wpdb, $query, $read );
+		return $this->package_query_rows( $wpdb, $query );
+	}
+
+	/**
+	 * @return list<object>
+	 */
+	private function locked_package_rows( string $identifier ): array {
+		$this->require_storage_support( PackageStorageOperation::QUERY );
+		$wpdb  = $GLOBALS['wpdb'];
+		$query = $wpdb->prepare(
+			'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s FOR UPDATE',
+			ran_booster_table_name(),
+			$this->package_type(),
+			$identifier
+		);
+		return $this->package_query_rows( $wpdb, $query );
 	}
 
 	/**
 	 * @param (callable(string): mixed)|null $read Query on the pinned recovery session when supplied.
 	 * @return list<object>
 	 */
-	private function locked_package_rows( string $identifier, \wpdb|SchemaConnection|null $wpdb = null, ?string $table = null, ?callable $read = null ): array {
-		if ( null === $wpdb ) {
-			$this->require_storage_support( PackageStorageOperation::QUERY );
-			$wpdb = $GLOBALS['wpdb'];
-		}
-		$query = $wpdb->prepare(
-			'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND package = %s FOR UPDATE',
-			$table ?? ran_booster_table_name(),
+	private function recovery_package_rows( string $identifier, \wpdb|SchemaConnection $wpdb, string $database, string $table, ?callable $read = null, bool $lock = false ): array {
+		$query  = $wpdb->prepare(
+			'SELECT p.*, p.package_type AS type FROM %i.%i p WHERE package_type = %d AND package = %s',
+			$database,
+			$table,
 			$this->package_type(),
 			$identifier
 		);
+		$query .= $lock ? ' FOR UPDATE' : '';
 		return $this->package_query_rows( $wpdb, $query, $read );
 	}
 
@@ -1196,9 +1218,9 @@ abstract class AbstractPackageRepository {
 	}
 
 	/** @param callable(string): mixed $read Readback on the pinned recovery session. */
-	private function verify_package_deletion( string $identifier, \wpdb|SchemaConnection $connection, string $table, callable $read ): PackageMutationResult {
+	private function verify_package_deletion( string $identifier, \wpdb|SchemaConnection $connection, string $database, string $table, callable $read ): PackageMutationResult {
 		try {
-			$rows = $this->package_rows( $identifier, wpdb: $connection, table: $table, read: $read );
+			$rows = $this->recovery_package_rows( $identifier, $connection, $database, $table, $read );
 		} catch ( PackageStorageFailure ) {
 			return $this->post_write_verification_failure( PackageStorageOperation::DELETE );
 		}

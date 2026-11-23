@@ -131,7 +131,7 @@ class Database {
 	/**
 	 * Verify current tables without installing or repairing them.
 	 *
-	 * @return array{connection: \wpdb|SchemaConnection, table: string, prefix: string}
+	 * @return array{connection: \wpdb|SchemaConnection, table: string, prefix: string, database: string, handle: mixed, thread_id: ?string}
 	 */
 	public function require_recovery_ready( ?object $expected_connection = null ): array {
 		$database = $this->connection();
@@ -151,22 +151,95 @@ class Database {
 			|| ( function_exists( 'is_multisite' ) && is_multisite() && ( $binding->base_prefix ?? null ) !== $base_prefix ) ) {
 			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 		}
-		$table         = ran_booster_table_name();
-		$attempt_table = self::attempt_table_name();
+		$session        = $this->readiness_session( $connection );
+		$table          = ran_booster_table_name();
+		$attempt_table  = self::attempt_table_name();
+		$assert_context = function () use ( $connection, $session, $binding, $prefix, $base_prefix, $table, $attempt_table ): void {
+			$this->readiness_session( $connection, $session );
+			if ( ( $GLOBALS['wpdb'] ?? null ) !== $binding || ( $binding->prefix ?? null ) !== $prefix || ran_booster_table_name() !== $table
+				|| ( function_exists( 'is_multisite' ) && is_multisite() && ( $binding->base_prefix ?? null ) !== $base_prefix )
+				|| self::attempt_table_name() !== $attempt_table ) {
+				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+			}
+		};
 		if ( self::$booster_db_version !== $this->installed_version() ) {
 			throw new DatabaseLifecycleFailure( 'incompatible_schema' );
 		}
-		$this->verify_table( $table, $this->package_columns(), $this->package_indexes() );
-		$this->verify_table( $attempt_table, $this->attempt_columns(), $this->attempt_indexes() );
-		if ( ( $GLOBALS['wpdb'] ?? null ) !== $binding || ( $binding->prefix ?? null ) !== $prefix || ran_booster_table_name() !== $table ) {
-			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
-		}
+		$assert_context();
+		$this->verify_table( $table, $this->package_columns(), $this->package_indexes(), $session['database'] );
+		$assert_context();
+		$this->verify_table( $attempt_table, $this->attempt_columns(), $this->attempt_indexes(), $session['database'] );
+		$assert_context();
 
 		return array(
 			'connection' => $connection,
 			'table'      => $table,
 			'prefix'     => $prefix,
+			'database'   => $session['database'],
+			'handle'     => $session['handle'],
+			'thread_id'  => $session['thread_id'],
 		);
+	}
+
+	/**
+	 * @param array{database: string, handle: mixed, thread_id: ?string}|null $expected Original verified session, if captured.
+	 * @return array{database: string, handle: mixed, thread_id: ?string}
+	 */
+	private function readiness_session( \wpdb|SchemaConnection $connection, ?array $expected = null ): array {
+		try {
+			$handle    = $this->readiness_handle( $connection );
+			$thread_id = null;
+			if ( null !== $expected && $handle !== $expected['handle'] ) {
+				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+			}
+			if ( $connection instanceof \wpdb ) {
+				if ( ! $handle instanceof \mysqli ) {
+					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+				}
+				// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_thread_id -- Read the server session ID without WordPress callbacks.
+				$thread_id = (string) mysqli_thread_id( $handle );
+				if ( 1 !== preg_match( '/\A[1-9][0-9]*\z/', $thread_id ) || ( null !== $expected && $thread_id !== $expected['thread_id'] ) ) {
+					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+				}
+				// phpcs:ignore WordPress.DB.RestrictedFunctions.mysql_mysqli_query -- Read the current database on the original session without reconnecting.
+				$result = mysqli_query( $handle, 'SELECT DATABASE() AS db_name' );
+				$row    = $result instanceof \mysqli_result ? $result->fetch_object() : null;
+				if ( $result instanceof \mysqli_result ) {
+					$result->free();
+				}
+			} else {
+				$last_error = $connection->last_error;
+				$suppress   = method_exists( $connection, 'suppress_errors' ) ? $connection->suppress_errors( ... ) : null;
+				$previous   = $suppress?->__invoke( true );
+				try {
+					$connection->last_error = '';
+					$rows                   = $connection->get_results( 'SELECT DATABASE() AS db_name' );
+					$row                    = is_array( $rows ) && 1 === count( $rows ) ? $rows[0] : null;
+					if ( '' !== trim( $connection->last_error ) ) {
+						throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+					}
+				} finally {
+					$connection->last_error = $last_error;
+					$suppress?->__invoke( $previous );
+				}
+			}
+			if ( ! is_object( $row ) || ! is_string( $row->db_name ?? null ) || '' === $row->db_name
+				|| $handle !== $this->readiness_handle( $connection ) || ( null !== $expected && $row->db_name !== $expected['database'] ) ) {
+				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+			}
+			return array(
+				'database'  => $row->db_name,
+				'handle'    => $handle,
+				'thread_id' => $thread_id,
+			);
+		} catch ( \Throwable ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+	}
+
+	private function readiness_handle( \wpdb|SchemaConnection $connection ): mixed {
+		$values = get_mangled_object_vars( $connection );
+		return $values["\0*\0dbh"] ?? $values['dbh'] ?? null;
 	}
 
 	/**
@@ -405,8 +478,8 @@ class Database {
 	 * @param array<string, array{type: string, nullable: bool, default: ?string, extra: string}> $expected_columns
 	 * @param array<string, array{0: bool, 1: list<string>}> $expected_indexes Index name to unique flag and ordered columns.
 	 */
-	private function verify_table( string $table_name, array $expected_columns, array $expected_indexes ): void {
-		$actual = $this->inspect_table( $table_name );
+	private function verify_table( string $table_name, array $expected_columns, array $expected_indexes, ?string $database = null ): void {
+		$actual = $this->inspect_table( $table_name, false, $database );
 		if ( $actual['columns'] !== $expected_columns || $actual['indexes'] !== $expected_indexes ) {
 			throw new DatabaseLifecycleFailure( 'schema_verification_failed' );
 		}
@@ -418,12 +491,12 @@ class Database {
 	 *     indexes: array<string, array{0: bool, 1: list<string>}>
 	 * }
 	 */
-	private function inspect_table( string $table_name, bool $ignore_prefix_indexes = false ): array {
+	private function inspect_table( string $table_name, bool $ignore_prefix_indexes = false, ?string $database = null ): array {
 		$wpdb = $this->schema_connection();
 
-		$status_query     = $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table_name );
-		$columns_query    = $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table_name );
-		$indexes_query    = $wpdb->prepare( 'SHOW INDEX FROM %i', $table_name );
+		$status_query     = null === $database ? $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table_name ) : $wpdb->prepare( 'SHOW TABLE STATUS FROM %i WHERE Name = %s', $database, $table_name );
+		$columns_query    = null === $database ? $wpdb->prepare( 'SHOW COLUMNS FROM %i', $table_name ) : $wpdb->prepare( 'SHOW COLUMNS FROM %i.%i', $database, $table_name );
+		$indexes_query    = null === $database ? $wpdb->prepare( 'SHOW INDEX FROM %i', $table_name ) : $wpdb->prepare( 'SHOW INDEX FROM %i.%i', $database, $table_name );
 		$wpdb->last_error = '';
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table name as %s; inspect the live engine metadata before accepting the schema.
@@ -435,9 +508,9 @@ class Database {
 			$mode           = $this->lower_case_table_names();
 			$fallback_query = null;
 			if ( 1 === $mode && strtolower( $table_name ) !== $table_name ) {
-				$fallback_query = $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', strtolower( $table_name ) );
+				$fallback_query = null === $database ? $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', strtolower( $table_name ) ) : $wpdb->prepare( 'SHOW TABLE STATUS FROM %i WHERE Name = %s', $database, strtolower( $table_name ) );
 			} elseif ( 2 === $mode ) {
-				$fallback_query = $wpdb->prepare( 'SHOW TABLE STATUS WHERE LOWER(Name) = %s', strtolower( $table_name ) );
+				$fallback_query = null === $database ? $wpdb->prepare( 'SHOW TABLE STATUS WHERE LOWER(Name) = %s', strtolower( $table_name ) ) : $wpdb->prepare( 'SHOW TABLE STATUS FROM %i WHERE LOWER(Name) = %s', $database, strtolower( $table_name ) );
 			}
 			if ( null !== $fallback_query ) {
 				$suppress_errors      = method_exists( $wpdb, 'suppress_errors' ) ? $wpdb->suppress_errors( ... ) : null;

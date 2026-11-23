@@ -541,18 +541,24 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 					'adoption_token' => 'historical-untouched',
 				);
 				$before                           = $storage->recovery_record( 'example/example.php' );
-				$guarded                          = false;
-				$result                           = $storage->recover_unlink(
+				self::assertStringContainsString( 'FROM `test_db`.`wp_ran_booster_packages`', (string) end( $wpdb->read_queries ) );
+				$guarded            = false;
+				$wpdb->read_queries = array();
+				$query_offset       = count( $wpdb->queries );
+				$result             = $storage->recover_unlink(
 					'example/example.php',
 					$token,
 					$before['digest'],
 					static function () use ( &$guarded, $wpdb ): void {
 						$guarded = true;
-						self::assertSame( 'START TRANSACTION', $wpdb->queries[ array_key_last( $wpdb->queries ) ] );
+						self::assertSame( 'SAVEPOINT ran_booster_recovery_guard', end( $wpdb->queries ) );
 					}
 				);
 				self::assertTrue( $guarded );
 				self::assertTrue( $result->is_successful() );
+				self::assertCount( 2, array_filter( $wpdb->read_queries, static fn ( string $query ): bool => str_contains( $query, 'FROM `test_db`.`wp_ran_booster_packages`' ) ) );
+				self::assertNotEmpty( array_filter( $wpdb->read_queries, static fn ( string $query ): bool => str_contains( $query, 'FROM `test_db`.`wp_ran_booster_packages`' ) && str_contains( $query, 'FOR UPDATE' ) ) );
+				self::assertNotEmpty( array_filter( array_slice( $wpdb->queries, $query_offset ), static fn ( string $query ): bool => str_starts_with( $query, 'DELETE FROM `test_db`.`wp_ran_booster_packages`' ) ) );
 				self::assertCount( 1, $wpdb->stored_rows() );
 				self::assertSame( 'historical-untouched', $wpdb->stored_rows()[0]['adoption_token'] );
 				$replacement = $this->package( 'example/example.php' );
@@ -666,7 +672,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 				$snapshot['adoption_token'],
 				$snapshot['digest'],
 				static function () use ( $wpdb, $prefix ): void {
-					self::assertStringContainsString( 'FROM `' . $prefix . 'ran_booster_packages`', (string) end( $wpdb->read_queries ) );
+					self::assertStringContainsString( 'FROM `test_db`.`' . $prefix . 'ran_booster_packages`', (string) end( $wpdb->read_queries ) );
 					$wpdb->prefix = 'other_';
 				}
 			);
@@ -675,7 +681,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			$wpdb->prefix = $prefix;
 		}
 		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
-		self::assertSame( array( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION', 'ROLLBACK' ), $wpdb->queries );
+		self::assertSame( array( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION', 'SAVEPOINT ran_booster_recovery_guard', 'ROLLBACK' ), $wpdb->queries );
 		self::assertSame( array(), $wpdb->deletes );
 		self::assertSame( $rows, $wpdb->stored_rows() );
 	}
@@ -721,14 +727,60 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertSame( $replacement, $wpdb->dbh );
 		if ( 'commit' === $phase ) {
 			self::assertSame( PackageMutationStatus::FAILED, $result->get_status() );
-			self::assertCount( 4, $wpdb->queries );
+			self::assertCount( 6, $wpdb->queries );
 			self::assertSame( array( 'COMMIT' ), array_slice( $wpdb->queries, -1 ) );
 			return;
 		}
 		self::assertSame( PackageMutationStatus::CONFLICT, $result->get_status() );
-		self::assertSame( array( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION' ), $wpdb->queries );
+		self::assertSame( array( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', 'START TRANSACTION', 'SAVEPOINT ran_booster_recovery_guard' ), $wpdb->queries );
 		self::assertSame( array(), $wpdb->deletes );
 		self::assertSame( $rows, $wpdb->stored_rows() );
+	}
+
+	public function test_recovery_refuses_database_drift_and_failed_guard_release(): void {
+		global $wpdb;
+		foreach ( array( 'before transaction', 'during guard', 'release' ) as $phase ) {
+			$wpdb->rows                   = array();
+			$wpdb->database_name          = 'test_db';
+			$wpdb->before_database_read   = null;
+			$wpdb->query_failure_contains = null;
+			$storage                      = $this->storage();
+			$package                      = $this->package( 'example/example.php' );
+			$package->set_repository( new ManagedRepository( 'gh', 'owner/example', '123', 'main' ) );
+			self::assertTrue( $storage->store_for_test( $package )->is_successful() );
+			$snapshot      = $storage->recovery_record( 'example/example.php' );
+			$wpdb->queries = array();
+			$wpdb->deletes = array();
+			if ( 'before transaction' === $phase ) {
+				$wpdb->before_database_read = static function () use ( $wpdb ): void {
+					$wpdb->database_name = 'other';
+				};
+			}
+			if ( 'release' === $phase ) {
+				$wpdb->query_failure_contains = 'RELEASE SAVEPOINT';
+			}
+			$result = $storage->recover_unlink(
+				'example/example.php',
+				$snapshot['adoption_token'],
+				$snapshot['digest'],
+				static function () use ( $wpdb, $phase ): void {
+					if ( 'during guard' === $phase ) {
+						$wpdb->database_name = 'other';
+					}
+				}
+			);
+			self::assertSame( 'before transaction' === $phase ? PackageMutationStatus::FAILED : PackageMutationStatus::CONFLICT, $result->get_status(), $phase );
+			self::assertSame( array(), $wpdb->deletes, $phase );
+			self::assertSame( array(), array_values( array_filter( $wpdb->queries, static fn ( string $query ): bool => str_starts_with( $query, 'DELETE ' ) ) ), $phase );
+			if ( 'before transaction' === $phase ) {
+				self::assertNotContains( 'START TRANSACTION', $wpdb->queries );
+			}
+			if ( 'release' === $phase ) {
+				self::assertContains( 'RELEASE SAVEPOINT ran_booster_recovery_guard', $wpdb->queries );
+			}
+			self::assertNotContains( 'COMMIT', $wpdb->queries, $phase );
+			self::assertCount( 1, $wpdb->stored_rows(), $phase );
+		}
 	}
 
 	public function test_recovery_refuses_unknown_or_malformed_token_and_identity_disagreement(): void {
@@ -829,7 +881,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 	public static function recovery_prefix_change_queries(): array {
 		return array(
 			'capability probe' => array( 'SHOW ENGINES' ),
-			'schema read'      => array( 'SHOW INDEX FROM `wp_ran_booster_deployment_attempts`' ),
+			'schema read'      => array( 'SHOW INDEX FROM `test_db`.`wp_ran_booster_deployment_attempts`' ),
 		);
 	}
 
@@ -927,7 +979,7 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 			public function require_ready(): void {
 			}
 
-			/** @return array{connection: StorageTestWpdb, table: string, prefix: string} */
+			/** @return array{connection: StorageTestWpdb, table: string, prefix: string, database: string, handle: mixed, thread_id: null} */
 			public function require_recovery_ready( ?object $expected_connection = null ): array {
 				global $wpdb;
 				$connection = $expected_connection instanceof StorageTestWpdb ? $expected_connection : $wpdb;
@@ -935,6 +987,9 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 					'connection' => $connection,
 					'table'      => ran_booster_table_name(),
 					'prefix'     => $connection->prefix,
+					'database'   => $connection->database_name,
+					'handle'     => $connection->dbh,
+					'thread_id'  => null,
 				);
 			}
 		};

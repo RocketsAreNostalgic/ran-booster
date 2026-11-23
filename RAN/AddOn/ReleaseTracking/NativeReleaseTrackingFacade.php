@@ -1038,9 +1038,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return null;
 		} finally {
 			try {
-				$this->updater_lock->release( $token );
-			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Release errors are non-fatal once the bounded mutation return value is decided.
-			} catch ( Throwable ) {
+				if ( ! $this->updater_lock->release( $token ) ) {
+					BoosterLogger::log( 'Managed release mutation lock could not be released.' );
+				}
+			} catch ( Throwable $failure ) {
+				BoosterLogger::log_exception( 'Managed release mutation lock release failed.', $failure );
 			}
 		}
 	}

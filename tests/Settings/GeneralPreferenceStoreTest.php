@@ -893,6 +893,22 @@ final class GeneralPreferenceStoreTest extends TestCase {
 			$store->view_snapshot();
 
 			self::assertSame( 0, $GLOBALS['ran_booster_general_preference_gadget_woken'] );
+
+			$warnings = array();
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Assert truncated serialized bytes fail closed without leaking E_NOTICE/E_WARNING.
+			set_error_handler(
+				static function ( int $severity, string $message ) use ( &$warnings ): bool {
+					$warnings[] = array( $severity, $message );
+					return true;
+				}
+			);
+			try {
+				$GLOBALS['ran_booster_general_preference_raw'] = 'a:2:{s:4:"hide";b:1;';
+				self::assertTrue( $store->snapshot()['malformed'] );
+			} finally {
+				restore_error_handler();
+			}
+			self::assertSame( array(), $warnings );
 		} finally {
 			unset( $GLOBALS['ran_booster_general_preference_gadget_woken'] );
 		}

@@ -767,9 +767,6 @@ class SecretsFile {
 	 */
 	public function purge_expired_credentials(): array {
 		$this->assert_available();
-		if ( ! $this->has_managed_material() ) {
-			return array();
-		}
 
 		$document    = $this->file_document();
 		$has_expired = false;
@@ -2350,13 +2347,13 @@ class SecretsFile {
 
 		try {
 			try {
-				if ( ! $this->change_permissions( $temporary, 0600 ) || 0600 !== ( fileperms( $temporary ) & 0777 ) ) {
+				if ( ! $this->change_permissions( $temporary, 0600 ) ) {
 					throw $this->unavailable( 'Could not secure the temporary encrypted Booster secrets file.' );
 				}
 
 				$this->assert_handle_matches_path( $handle, $temporary, 'temporary secrets file' );
 				$stat = fstat( $handle );
-				if ( false === $stat || ! $this->owned_by_process( $stat ) ) {
+				if ( false === $stat || 0600 !== ( $stat['mode'] & 0777 ) || ! $this->owned_by_process( $stat ) ) {
 					throw $this->unavailable( 'Could not verify the temporary encrypted Booster secrets file.' );
 				}
 				$offset = 0;

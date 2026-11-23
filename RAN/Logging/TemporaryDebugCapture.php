@@ -534,9 +534,15 @@ final class TemporaryDebugCapture {
 				if ( is_link( $temporary ) || ! chmod( $temporary, 0600 ) ) {
 					throw new RuntimeException( 'Could not secure the temporary Booster debug capture.' );
 				}
-				$stat = fstat( $temporary_handle );
+				$stat      = fstat( $temporary_handle );
+				$path_stat = lstat( $temporary );
 				if ( false === $stat
+					|| false === $path_stat
 					|| 0100000 !== ( $stat['mode'] & 0170000 )
+					|| 0100000 !== ( $path_stat['mode'] & 0170000 )
+					|| $stat['dev'] !== $path_stat['dev']
+					|| $stat['ino'] !== $path_stat['ino']
+					|| 1 !== $path_stat['nlink']
 					|| 0600 !== ( $stat['mode'] & 0777 )
 					|| ! $this->owned_by_process( $stat )
 				) {

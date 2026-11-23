@@ -72,6 +72,35 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertSame( array(), $this->temporary_files() );
 	}
 
+	public function test_acquire_verified_lock_retries_when_a_concurrent_writer_unlinks_the_lock(): void {
+		$lock_path = $this->config_path . '.ran-booster.lock';
+		$writer    = new class( $lock_path ) extends WpConfigSecretsPathWriter {
+			public int $acquire_attempts = 0;
+
+			public function __construct( private readonly string $lock_path ) {}
+
+			protected function acquire_lock( mixed $lock ): bool {
+				++$this->acquire_attempts;
+				if ( 1 === $this->acquire_attempts && is_file( $this->lock_path ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Simulate a concurrent holder unlinking the lock file before flock() completes.
+					unlink( $this->lock_path );
+				}
+
+				return parent::acquire_lock( $lock );
+			}
+		};
+
+		$writer->write( $this->config_path, $this->sidecar_path );
+
+		self::assertSame( 2, $writer->acquire_attempts );
+		self::assertFileDoesNotExist( $lock_path );
+		self::assertStringContainsString(
+			'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR',
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture bytes after retry.
+			(string) file_get_contents( $this->config_path )
+		);
+	}
+
 	public function test_it_preserves_cr_lf_line_endings_and_safely_encodes_the_path(): void {
 		$config  = str_replace( "\n", "\r\n", $this->valid_config() );
 		$sidecar = $this->directory . "/private/agency's\\directory/secrets.json";

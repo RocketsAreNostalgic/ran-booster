@@ -669,8 +669,14 @@ final class GeneralPreferenceStore {
 			return $raw;
 		}
 
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- Decode stored scalar/array option bytes with class instantiation disabled.
-		return unserialize( $trimmed, array( 'allowed_classes' => false ) );
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Suppress native unserialize notices on malformed stored bytes just as maybe_unserialize() does.
+		set_error_handler( static fn (): bool => true, E_NOTICE | E_WARNING );
+		try {
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- Decode stored scalar/array option bytes with class instantiation disabled.
+			return unserialize( $trimmed, array( 'allowed_classes' => false ) );
+		} finally {
+			restore_error_handler();
+		}
 	}
 
 	private function looks_serialized( string $value ): bool {

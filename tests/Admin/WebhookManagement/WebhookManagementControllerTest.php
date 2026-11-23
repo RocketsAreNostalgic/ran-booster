@@ -1596,6 +1596,72 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__result', $html );
 	}
 
+	public function test_signed_redirect_and_settle_urls_preserve_reserved_query_characters(): void {
+		$remediation     = 'Retry in 5+ minutes for hook #2.';
+		$repository_id   = 'repo+1#2&3=4';
+		$gateway         = $this->gateway( repository_id: $repository_id );
+		$gateway->result = $this->operation_result( 'ambiguous', 'fixture_reconfigure_uncertain', '77', remediation: $remediation );
+		$store           = new OperationStoreFixture();
+		$store->record   = new InstallationRecord( 'gh', $repository_id, 'owner/repository', '77', 'credential_1', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/previous', 'configured', '2026-07-23T16:00:00Z', '2026-07-23T17:00:00Z' );
+		$controller      = $this->controller( gateway: $gateway, store: $store, admin_interaction: new CapturingAdminInteractionFacade(), repository_id: $repository_id );
+
+		$redirect = $controller->handle_admin_post(
+			$this->request(
+				array(
+					'repository_webhook_management_operation' => 'reconfigure',
+					'repository_id' => $repository_id,
+					'return_url'    => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=' . rawurlencode( $repository_id ),
+				)
+			),
+			'valid'
+		);
+
+		self::assertStringNotContainsString( '#', $redirect );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test verifies signed redirect query round-tripping with reserved remediation and repository characters.
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
+		$context = $controller->panel_context( 'gh', $repository_id );
+		self::assertSame( 'fixture_reconfigure_uncertain', $context['result'] );
+		self::assertSame( $remediation, $context['remediation'] );
+
+		$store->record = new InstallationRecord( 'gh', $repository_id, 'owner/repository', '77', 'credential_1', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/webhook', 'needs_verification', '2026-07-23T16:00:00Z', '2026-07-23T17:00:00Z' );
+		$model         = $this->display( $gateway, $store )->panel(
+			'gh',
+			'GitHub',
+			$repository_id,
+			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh',
+			'configured_pending_delivery',
+			null,
+			true,
+			null,
+			null,
+			null
+		);
+		self::assertIsArray( $model );
+		self::assertIsArray( $model['result'] );
+		$listen = $model['result']['listen'] ?? null;
+		self::assertIsArray( $listen );
+		$settle_url = $listen['settle'];
+		self::assertStringNotContainsString( '#', $settle_url );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Test verifies signed settle URL round-tripping with reserved characters.
+		parse_str( (string) parse_url( $settle_url, PHP_URL_QUERY ), $settle_query );
+		self::assertSame( $repository_id, $settle_query['webhook_management_repository'] ?? null );
+		self::assertSame(
+			'nonce-for-' . hash( 'sha256', WebhookManagementController::result_nonce_action( 'gh', $repository_id, 'configured_pending_delivery' ) ),
+			$settle_query['_ran_booster_webhook_result_nonce'] ?? null
+		);
+		$_GET              = $settle_query;
+		$settle_controller = new WebhookManagementController(
+			new WebhookOperationCoordinator( $gateway, $store ),
+			$this->display( $gateway, $store ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'gh', 'GitHub' ) ) ),
+			$this->package_authorities( array( 'example/example.php' => array( 'gh', $repository_id ) ) ),
+			static fn (): bool => true,
+			static fn ( string $nonce, string $action ): bool => hash_equals( 'nonce-for-' . hash( 'sha256', $action ), $nonce )
+		);
+		$settle_context    = $settle_controller->panel_context( 'gh', $repository_id );
+		self::assertSame( 'configured_pending_delivery', $settle_context['result'] );
+	}
+
 	public function test_unsigned_or_tampered_panel_query_cannot_spoof_notices_or_lock_out_webhook_actions(): void {
 		$empty         = array(
 			'result'      => null,
@@ -2642,11 +2708,11 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 	}
 
-	private function readiness( string $provider_code = 'gh' ): AssistanceReadiness {
+	private function readiness( string $provider_code = 'gh', string $repository_id = '1234' ): AssistanceReadiness {
 		$projection = $this->repository_projection( $provider_code );
 		$repository = array(
 			'provider_code'         => $projection['provider_code'],
-			'repository_id'         => $projection['repository_id'],
+			'repository_id'         => $repository_id,
 			'repository'            => $projection['repository'],
 			'label'                 => $projection['label'],
 			'package_references'    => $projection['package_references'],
@@ -2659,10 +2725,10 @@ final class WebhookManagementControllerTest extends TestCase {
 		return new AssistanceReadiness( array(), 'https://hooks.example.test/webhook', array( $repository ) );
 	}
 
-	private function target( string $provider_code = 'gh' ): AssistanceTarget {
+	private function target( string $provider_code = 'gh', string $repository_id = '1234' ): AssistanceTarget {
 		return new AssistanceTarget(
 			$provider_code,
-			'1234',
+			$repository_id,
 			'owner/repository',
 			'Repository',
 			array( 'plugin/example.php' ),
@@ -2714,8 +2780,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		return new RepositoryWebhookFitnessResult( $support, $suitability, 'unknown', $evidence, 'fitness_result', '2026-08-02T20:00:00Z', 'Review the bounded assessment.' );
 	}
 
-	private function gateway( string $provider_code = 'gh' ): OperationGatewayFixture {
-		return new OperationGatewayFixture( $this->readiness( $provider_code ), $this->target( $provider_code ), $this->operation_result( provider_code: $provider_code ) );
+	private function gateway( string $provider_code = 'gh', string $repository_id = '1234' ): OperationGatewayFixture {
+		return new OperationGatewayFixture( $this->readiness( $provider_code, $repository_id ), $this->target( $provider_code, $repository_id ), $this->operation_result( provider_code: $provider_code ) );
 	}
 
 	private function display( ?OperationGatewayFixture $gateway = null, ?OperationStoreFixture $store = null ): WebhookDisplayModel {
@@ -2776,29 +2842,29 @@ final class WebhookManagementControllerTest extends TestCase {
 		return (string) ob_get_clean();
 	}
 
-	private function controller( ?OperationGatewayFixture $gateway = null, ?OperationStoreFixture $store = null, ?AdminInteractionFacade $admin_interaction = null, string $provider_code = 'gh', string $provider_label = 'GitHub', ?ManagedPackageWebhookAuthorityResolver $authorities = null, ?\RAN\Activity\ActivityStore $activity = null ): WebhookManagementController {
-		$gateway  ??= $this->gateway();
+	private function controller( ?OperationGatewayFixture $gateway = null, ?OperationStoreFixture $store = null, ?AdminInteractionFacade $admin_interaction = null, string $provider_code = 'gh', string $provider_label = 'GitHub', ?ManagedPackageWebhookAuthorityResolver $authorities = null, ?\RAN\Activity\ActivityStore $activity = null, string $repository_id = '1234' ): WebhookManagementController {
+		$gateway  ??= $this->gateway( $provider_code, $repository_id );
 		$store    ??= new OperationStoreFixture();
 		$controller = new WebhookManagementController(
 			new WebhookOperationCoordinator( $gateway, $store, $activity ),
 			$this->display( $gateway, $store ),
 			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( $provider_code, $provider_label ) ) ),
-			$authorities ?? $this->package_authorities( array( 'example/example.php' => array( $provider_code, '1234' ) ) ),
+			$authorities ?? $this->package_authorities( array( 'example/example.php' => array( $provider_code, $repository_id ) ) ),
 			static fn (): bool => true,
 			static fn ( string $nonce, string $action ): bool => ( 'valid' === $nonce && in_array(
 				$action,
 				array(
-					'ran_booster_repository_webhook_setup_' . $provider_code . '_1234',
-					'ran_booster_repository_webhook_check_' . $provider_code . '_1234',
-					'ran_booster_repository_webhook_reconfigure_' . $provider_code . '_1234',
-					'ran_booster_repository_webhook_remove_' . $provider_code . '_1234',
-					'ran_booster_repository_webhook_test_' . $provider_code . '_1234',
+					'ran_booster_repository_webhook_setup_' . $provider_code . '_' . $repository_id,
+					'ran_booster_repository_webhook_check_' . $provider_code . '_' . $repository_id,
+					'ran_booster_repository_webhook_reconfigure_' . $provider_code . '_' . $repository_id,
+					'ran_booster_repository_webhook_remove_' . $provider_code . '_' . $repository_id,
+					'ran_booster_repository_webhook_test_' . $provider_code . '_' . $repository_id,
 				),
 				true
-			) ) || ( 'check_nonce' === $nonce && 'ran_booster_repository_webhook_check_' . $provider_code . '_1234' === $action )
-				|| ( 'forget_nonce' === $nonce && 'ran_booster_repository_webhook_forget_' . $provider_code . '_1234' === $action )
-				|| ( 'test_nonce' === $nonce && 'ran_booster_repository_webhook_test_' . $provider_code . '_1234' === $action )
-				|| ( 'delivery_nonce' === $nonce && 'ran_booster_repository_webhook_delivery_' . $provider_code . '_1234' === $action )
+			) ) || ( 'check_nonce' === $nonce && 'ran_booster_repository_webhook_check_' . $provider_code . '_' . $repository_id === $action )
+				|| ( 'forget_nonce' === $nonce && 'ran_booster_repository_webhook_forget_' . $provider_code . '_' . $repository_id === $action )
+				|| ( 'test_nonce' === $nonce && 'ran_booster_repository_webhook_test_' . $provider_code . '_' . $repository_id === $action )
+				|| ( 'delivery_nonce' === $nonce && 'ran_booster_repository_webhook_delivery_' . $provider_code . '_' . $repository_id === $action )
 				|| ( str_starts_with( $action, 'ran_booster_repository_webhook_result_' )
 				&& hash_equals( hash_hmac( 'sha256', $action, 'test-result-nonce' ), $nonce ) ),
 			static fn ( string $action ): string => hash_hmac( 'sha256', $action, 'test-result-nonce' )

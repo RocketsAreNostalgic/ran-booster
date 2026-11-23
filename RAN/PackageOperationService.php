@@ -510,6 +510,7 @@ final readonly class PackageOperationService {
 		try {
 			$token = $this->updater_lock->try_acquire_without_reclaim();
 		} catch ( \Throwable $failure ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal lock failures are not rendered; retain the original failure chain.
 			throw new RuntimeException( 'Another package operation is in progress.', 0, $failure );
 		}
 		if ( null === $token ) {
@@ -522,6 +523,7 @@ final readonly class PackageOperationService {
 			try {
 				$released = $this->updater_lock->release( $token );
 			} catch ( \Throwable $failure ) {
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal lock failures are not rendered; retain the original failure chain.
 				throw new RuntimeException( 'The package operation lock could not be released.', 0, $failure );
 			}
 			if ( ! $released ) {

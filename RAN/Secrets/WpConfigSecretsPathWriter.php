@@ -174,12 +174,15 @@ class WpConfigSecretsPathWriter {
 			$this->replace_config( $config_path, $candidate, $locked );
 		} finally {
 			if ( is_resource( $lock ) ) {
-				if ( $lock_locked ) {
-					$this->cleanup_lock( $lock, $lock_path );
+				try {
+					if ( $lock_locked ) {
+						$this->cleanup_lock( $lock, $lock_path );
+					}
+				} finally {
+					$this->release_lock( $lock );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
+					fclose( $lock );
 				}
-				$this->release_lock( $lock );
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native handle acquired for bounded reads, exclusive locking or atomic local replacement.
-				fclose( $lock );
 			}
 		}
 
@@ -718,7 +721,21 @@ class WpConfigSecretsPathWriter {
 		for ( $attempt = 0; $attempt < 4; ++$attempt ) {
 			$lock = $this->open_lock( $lock_path );
 			try {
-				$this->assert_lock_handle( $lock, $lock_path );
+				$initial_stat = fstat( $lock );
+				if ( false === $initial_stat
+					|| 0100000 !== ( $initial_stat['mode'] & 0170000 )
+					|| ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $initial_stat['uid'] ) ) {
+					$this->fail( 'lock_invalid', 'The WordPress configuration edit lock is not safe.' );
+				}
+				if ( ! $this->acquire_lock( $lock ) ) {
+					$this->fail( 'lock_failed', 'Could not lock the WordPress configuration for editing.' );
+				}
+				if ( ! $this->lock_handle_matches_path( $lock, $lock_path ) ) {
+					$this->release_lock( $lock );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the stale lock descriptor before retrying after a concurrent unlink.
+					fclose( $lock );
+					continue;
+				}
 				if ( ! $this->change_permissions( $lock_path, 0600 ) ) {
 					$this->fail( 'lock_permissions_failed', 'Could not secure the WordPress configuration edit lock.' );
 				}
@@ -727,15 +744,8 @@ class WpConfigSecretsPathWriter {
 				if ( false === $lock_stat || 0600 !== ( $lock_stat['mode'] & 0777 ) ) {
 					$this->fail( 'lock_permissions_failed', 'Could not secure the WordPress configuration edit lock.' );
 				}
-				if ( ! $this->acquire_lock( $lock ) ) {
-					$this->fail( 'lock_failed', 'Could not lock the WordPress configuration for editing.' );
-				}
-				if ( $this->lock_handle_matches_path( $lock, $lock_path ) ) {
-					return $lock;
-				}
-				$this->release_lock( $lock );
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the stale lock descriptor before retrying after a concurrent unlink.
-				fclose( $lock );
+
+				return $lock;
 			} catch ( Throwable $failure ) {
 				$this->release_lock( $lock );
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the lock handle on failure before propagating the exception.
@@ -767,6 +777,9 @@ class WpConfigSecretsPathWriter {
 	 */
 	private function lock_handle_matches_path( mixed $lock, string $path ): bool {
 		clearstatcache( true, $path );
+		if ( ! is_file( $path ) && ! is_link( $path ) ) {
+			return false;
+		}
 		$path_stat = lstat( $path );
 		$lock_stat = fstat( $lock );
 

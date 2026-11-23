@@ -158,7 +158,7 @@ final class WebhookManagementController {
 			self::result_nonce_action( $provider_code, $safe_repository_id, $result_code, $ping, $hook_id, $profile_id, $remediation )
 		);
 
-		return add_query_arg( $args, $return_url );
+		return add_query_arg( array_map( 'rawurlencode', $args ), $return_url );
 	}
 
 	/**

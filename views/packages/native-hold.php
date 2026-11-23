@@ -24,11 +24,9 @@ $native_hold_theme  = 'theme' === $package_native_hold['type'];
 $native_hold_check  = '<a href="' . esc_url( $package_native_hold['check_url'] ) . '">';
 $native_hold_reload = '<a href="' . esc_url( explode( '#', $package_native_hold['url'] )[0] ) . '">';
 ?>
-<section id="ran-booster-native-hold" class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="package-edit" aria-labelledby="ran-booster-native-hold-heading" data-ran-booster-native-hold><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
-	<header class="ran-booster-settings-section__header">
-		<h3 id="ran-booster-native-hold-heading" class="ran-booster-section__title"><?php esc_html_e( 'GitHub installs are on a site-wide hold', 'ran-booster' ); ?></h3>
-	</header>
-	<div class="ran-booster-settings-section__body">
+<div id="ran-booster-native-hold" class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning ran-booster-native-hold" data-ran-booster-native-hold data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" role="region" aria-labelledby="ran-booster-native-hold-heading">
+	<h3 id="ran-booster-native-hold-heading" class="ran-wp-ui-text is-heading-lg ran-wp-ui-notice__title"><?php esc_html_e( 'GitHub installs are on a site-wide hold', 'ran-booster' ); ?></h3>
+	<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 	<?php if ( $package_native_hold['finished'] ) { ?>
 	<p>
 		<?php
@@ -82,16 +80,19 @@ $native_hold_reload = '<a href="' . esc_url( explode( '#', $package_native_hold[
 		?>
 	</p>
 	<?php } ?>
-	<form method="post" action="" data-hx-boost="false">
+	<form method="post" action="" class="ran-booster-native-hold__form" data-hx-boost="false">
 		<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-release-github-hold-' . $package_native_hold['digest'] ); ?>
 		<input type="hidden" name="ran_booster[action]" value="release-github-hold">
 		<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $package_native_hold['digest'] ); ?>">
 		<input type="hidden" name="ran_booster[package]" value="<?php echo esc_attr( $package_native_hold['identifier'] ); ?>">
 		<input type="hidden" name="ran_booster[package_type]" value="<?php echo esc_attr( $package_native_hold['type'] ); ?>">
+		<div class="ran-booster-native-hold__checks">
 		<?php if ( ! $package_native_hold['finished'] ) { ?>
-		<p><label><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required> <?php esc_html_e( 'I\'m sure the install is no longer running.', 'ran-booster' ); ?></label></p>
+		<label class="ran-booster-native-hold__check"><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required><span><?php esc_html_e( 'I\'m sure the install is no longer running.', 'ran-booster' ); ?></span></label>
 		<?php } ?>
-		<p><label><input type="checkbox" name="ran_booster[confirmed_checked]" value="1" required> <?php $native_hold_theme ? esc_html_e( 'I\'ve checked this theme.', 'ran-booster' ) : esc_html_e( 'I\'ve checked this plugin.', 'ran-booster' ); ?></label></p>
+		<label class="ran-booster-native-hold__check"><input type="checkbox" name="ran_booster[confirmed_checked]" value="1" required><span><?php $native_hold_theme ? esc_html_e( 'I\'ve checked this theme.', 'ran-booster' ) : esc_html_e( 'I\'ve checked this plugin.', 'ran-booster' ); ?></span></label>
+		</div>
+		<div class="ran-booster-native-hold__actions">
 		<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Release hold', 'ran-booster' ); ?></button>
 		<?php
 		$native_hold_result         = $package_native_hold_result ?? null;
@@ -100,6 +101,7 @@ $native_hold_reload = '<a href="' . esc_url( explode( '#', $package_native_hold[
 		$native_hold_status_folder  = '';
 		require dirname( __DIR__ ) . '/native-hold-result.php';
 		?>
+		</div>
 	</form>
-	</div>
-</div></div></section>
+	</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?>
+</div>

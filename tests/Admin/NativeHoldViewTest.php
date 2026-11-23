@@ -19,11 +19,13 @@ final class NativeHoldViewTest extends TestCase {
 	public function test_a_finished_request_needs_only_the_check(): void {
 		$html = $this->render( $this->hold( 'plugin', true ) );
 		self::assertStringContainsString( 'GitHub installs are on a site-wide hold', $html );
-		self::assertStringContainsString( 'data-ran-booster-card="package-edit"', $html );
-		self::assertStringContainsString( 'ran-booster-settings-section__header', $html );
-		self::assertStringContainsString( 'ran-booster-settings-section__body', $html );
+		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="warning"', $html );
+		self::assertStringContainsString( 'ran-wp-ui-notice__title', $html );
+		self::assertStringContainsString( 'ran-booster-native-hold__checks', $html );
+		self::assertStringContainsString( 'ran-booster-native-hold__actions', $html );
+		self::assertStringContainsString( 'ran-wp-ui-notice__icon', $html );
 		self::assertStringContainsString( 'The last install of this plugin couldn&#039;t complete. <a href="https://example.test/wp-admin/plugins.php?s=Example">Check that it works</a>, then release the hold.', $html );
-		self::assertStringContainsString( 'name="ran_booster[confirmed_checked]" value="1" required> I&#039;ve checked this plugin.', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed_checked]" value="1" required><span>I&#039;ve checked this plugin.</span>', $html );
 		self::assertStringNotContainsString( 'confirmed_stopped', $html );
 		self::assertStringContainsString( 'value="release-github-hold"', $html );
 		self::assertStringContainsString( 'ran-booster-release-github-hold-' . str_repeat( 'c', 64 ), $html );

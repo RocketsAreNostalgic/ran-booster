@@ -300,36 +300,41 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 			<?php } else { ?>
 				<?php $native_recovery = $github_selection['recovery'] ?? null; ?>
 				<?php if ( 'decision_required' !== $selection_status['state'] ) { ?>
-					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning<?php echo 'recovery_required' === $selection_status['state'] ? ' ran-booster-native-hold' : ''; ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
+						<?php if ( 'recovery_required' === $selection_status['state'] ) { ?>
+						<h3 class="ran-wp-ui-text is-heading-lg ran-wp-ui-notice__title"><?php esc_html_e( 'GitHub installs are on a site-wide hold', 'ran-booster' ); ?></h3>
+						<?php } ?>
+						<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+						<?php if ( 'recovery_required' !== $selection_status['state'] ) { ?>
 						<h3>
-						<?php
-						echo esc_html(
-							match ( $selection_status['state'] ) {
-							'conflict' => __( 'Multiple GitHub providers are active', 'ran-booster' ),
-							'incompatible' => __( 'A GitHub provider is incompatible', 'ran-booster' ),
-							'missing' => __( 'The selected GitHub provider is missing', 'ran-booster' ),
-							'replacement_load_failed' => __( 'The selected GitHub provider could not load', 'ran-booster' ),
-							'storage_unavailable' => __( 'GitHub provider selection is unavailable', 'ran-booster' ),
-							'recovery_required' => __( 'GitHub installs are on a site-wide hold', 'ran-booster' ),
-							default => __( 'GitHub provider unavailable', 'ran-booster' ),
-							}
-						);
-						?>
+							<?php
+							echo esc_html(
+								match ( $selection_status['state'] ) {
+								'conflict' => __( 'Multiple GitHub providers are active', 'ran-booster' ),
+								'incompatible' => __( 'A GitHub provider is incompatible', 'ran-booster' ),
+								'missing' => __( 'The selected GitHub provider is missing', 'ran-booster' ),
+								'replacement_load_failed' => __( 'The selected GitHub provider could not load', 'ran-booster' ),
+								'storage_unavailable' => __( 'GitHub provider selection is unavailable', 'ran-booster' ),
+								default => __( 'GitHub provider unavailable', 'ran-booster' ),
+								}
+							);
+							?>
 						</h3>
 						<p>
-						<?php
-						echo esc_html(
-							match ( $selection_status['state'] ) {
-							'conflict' => __( 'Deactivate the extra provider plugins, then return here to review your selection.', 'ran-booster' ),
-							'incompatible' => __( 'Deactivate the incompatible provider plugin, then return here to review your selection.', 'ran-booster' ),
-							'missing' => __( 'Restore the selected plugin or deactivate all replacement plugins, then review a return to bundled GitHub.', 'ran-booster' ),
-							'replacement_load_failed' => __( 'Install a version built for this Booster release, or deactivate the replacement plugin and review a return to bundled GitHub.', 'ran-booster' ),
-							'storage_unavailable' => __( 'Booster could not verify its saved GitHub provider choice. Review GitHub provider details before continuing.', 'ran-booster' ),
-							default => '',
-							}
-						);
-						?>
+							<?php
+							echo esc_html(
+								match ( $selection_status['state'] ) {
+								'conflict' => __( 'Deactivate the extra provider plugins, then return here to review your selection.', 'ran-booster' ),
+								'incompatible' => __( 'Deactivate the incompatible provider plugin, then return here to review your selection.', 'ran-booster' ),
+								'missing' => __( 'Restore the selected plugin or deactivate all replacement plugins, then review a return to bundled GitHub.', 'ran-booster' ),
+								'replacement_load_failed' => __( 'Install a version built for this Booster release, or deactivate the replacement plugin and review a return to bundled GitHub.', 'ran-booster' ),
+								'storage_unavailable' => __( 'Booster could not verify its saved GitHub provider choice. Review GitHub provider details before continuing.', 'ran-booster' ),
+								default => '',
+								}
+							);
+							?>
 						</p>
+						<?php } ?>
 						<?php if ( 'recovery_required' === $selection_status['state'] && is_array( $native_recovery ) ) { ?>
 							<?php
 							$native_hold_capable = current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
@@ -353,19 +358,22 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 								echo wp_kses( sprintf( __( 'The last install of %s couldn\'t complete, and Booster can\'t read its files. Delete its folder if it\'s still there, then confirm.', 'ran-booster' ), $native_hold_folder ), array( 'code' => array() ) );
 								?>
 						</p>
-						<form method="post" action="<?php echo esc_url( is_multisite() ? network_admin_url( 'admin.php?page=ran-booster&tab=gh' ) : admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
+						<form method="post" action="<?php echo esc_url( is_multisite() ? network_admin_url( 'admin.php?page=ran-booster&tab=gh' ) : admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" class="ran-booster-native-hold__form" data-hx-boost="false">
 								<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
 							<input type="hidden" name="ran_booster[action]" value="recover-github-native">
 							<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $native_recovery['digest'] ); ?>">
 							<input type="hidden" name="ran_booster[hold_folder]" value="<?php echo esc_attr( $native_recovery['folder'] ); ?>">
 							<input type="hidden" name="ran_booster[package_type]" value="<?php echo esc_attr( $native_recovery['type'] ); ?>">
-							<p><label><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required> <?php esc_html_e( 'I\'m sure the install is no longer running.', 'ran-booster' ); ?></label></p>
-							<p><label><input type="checkbox" name="ran_booster[confirmed_removal]" value="1" required>
+							<div class="ran-booster-native-hold__checks">
+							<label class="ran-booster-native-hold__check"><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required><span><?php esc_html_e( 'I\'m sure the install is no longer running.', 'ran-booster' ); ?></span></label>
+							<label class="ran-booster-native-hold__check"><input type="checkbox" name="ran_booster[confirmed_removal]" value="1" required><span>
 								<?php
 								/* translators: %s: the held package's folder name. */
 								echo wp_kses( sprintf( __( 'The folder %s is deleted.', 'ran-booster' ), $native_hold_folder ), array( 'code' => array() ) );
 								?>
-							</label></p>
+							</span></label>
+							</div>
+							<div class="ran-booster-native-hold__actions">
 							<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Clear hold and stop managing', 'ran-booster' ); ?></button>
 								<?php
 								$native_hold_result_surface = 'provider-status';
@@ -373,6 +381,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 								$native_hold_status_folder  = $native_recovery['folder'];
 								require __DIR__ . '/native-hold-result.php';
 								?>
+							</div>
 						</form>
 						</div>
 							<?php } ?>

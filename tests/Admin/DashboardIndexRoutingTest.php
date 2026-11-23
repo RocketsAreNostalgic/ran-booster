@@ -1267,7 +1267,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'The last install of <code>&lt;target&gt;</code> couldn\'t complete, and Booster can\'t read its files. Delete its folder if it\'s still there, then confirm.', $html );
 		self::assertStringContainsString( 'ran-booster-recover-github-' . str_repeat( 'b', 64 ), $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="recover-github-native"', $html );
-		self::assertStringContainsString( 'name="ran_booster[confirmed_stopped]" value="1" required> I&#039;m sure the install is no longer running.', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed_stopped]" value="1" required><span>I&#039;m sure the install is no longer running.</span>', $html );
 		self::assertStringContainsString( 'name="ran_booster[confirmed_removal]" value="1" required>', $html );
 		self::assertStringContainsString( 'The folder <code>&lt;target&gt;</code> is deleted.', $html );
 		self::assertStringContainsString( 'Clear hold and stop managing', $html );

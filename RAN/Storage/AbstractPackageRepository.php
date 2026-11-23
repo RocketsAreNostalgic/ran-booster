@@ -109,6 +109,33 @@ abstract class AbstractPackageRepository {
 		return $packages;
 	}
 
+	/**
+	 * Return managed database rows whose WordPress target is absent or unreadable.
+	 * Never hydrates packages or mutates storage.
+	 *
+	 * @return list<array{identifier:string,repository:string,provider:string,source:string}>
+	 */
+	public function unavailable_managed_records(): array {
+		$rows    = $this->package_rows();
+		$records = array();
+
+		foreach ( $rows as $row ) {
+			$identifier = $this->string_from_row( $row, 'package' );
+			if ( '' === trim( $identifier ) || isset( $records[ $identifier ] ) || $this->package_exists( $identifier ) ) {
+				continue;
+			}
+
+			$records[ $identifier ] = array(
+				'identifier' => $identifier,
+				'repository' => $this->string_from_row( $row, 'repository' ),
+				'provider'   => $this->string_from_row( $row, 'provider' ),
+				'source'     => $this->string_from_row( $row, 'source' ),
+			);
+		}
+
+		return array_values( $records );
+	}
+
 	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string} */
 	public function recovery_record( string $identifier ): array {
 		$storage = $this->require_recovery_storage();

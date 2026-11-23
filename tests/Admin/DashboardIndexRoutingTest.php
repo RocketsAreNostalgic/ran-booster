@@ -3518,6 +3518,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array( $this->package );
 			}
 
+			/** @return array{} */
+			public function unavailable_managed_records(): array {
+				return array();
+			}
+
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 				++$this->inventory_reads;
@@ -3531,6 +3536,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 
 			public function all_booster_themes(): array {
+				return array();
+			}
+
+			/** @return array{} */
+			public function unavailable_managed_records(): array {
 				return array();
 			}
 
@@ -4608,6 +4618,172 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 		self::assertArrayNotHasKey( 'recovery_targets', $result['data'] );
 		self::assertNotEmpty( array_filter( $attempt_database->queries, static fn ( string $query ): bool => str_contains( $query, "state IN ('queued','running')" ) ) );
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_unregistered_managed_package_routes_to_recovery_and_indexes_unavailable_callout( string $type ): void {
+		$GLOBALS['ran_booster_test_capabilities'][ 'update_' . $type . 's' ] = true;
+		$identifier = 'plugin' === $type ? 'broken-plugin/broken-plugin.php' : 'broken-theme';
+		$slug       = 'plugin' === $type ? 'broken-plugin' : 'broken-theme';
+		$record     = array(
+			'id'             => '42',
+			'package'        => $identifier,
+			'type'           => 'plugin' === $type ? 1 : 2,
+			'adoption_token' => 'gh:repo-42:11111111-1111-4111-8111-111111111111',
+			'source'         => 'release_asset',
+			'digest'         => str_repeat( 'a', 64 ),
+		);
+		$store      = new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' );
+		$bundled    = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$store->initialize_bundled( $bundled );
+		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( $store, '/unused', $bundled );
+
+		// 1. Package index projects unavailable_packages alongside strictly healthy rows.
+		$_GET    = array();
+		$plugins = $this->createMock( PluginRepository::class );
+		$themes  = $this->createMock( ThemeRepository::class );
+		$repo    = 'plugin' === $type ? $plugins : $themes;
+		$repo->method( 'plugin' === $type ? 'all_booster_plugins' : 'all_booster_themes' )->willReturn( array() );
+		$repo->method( 'unavailable_managed_records' )->willReturn(
+			array(
+				array(
+					'identifier' => $identifier,
+					'repository' => 'org/broken',
+					'provider'   => 'gh',
+					'source'     => 'release_asset',
+				),
+			)
+		);
+		$index_result = ( 'plugin' === $type
+			? $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes )->get_plugins()
+			: $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes )->get_themes() );
+		self::assertSame( 'packages/index', $index_result['view'] );
+		self::assertSame( array(), $index_result['data']['packages'] );
+		self::assertCount( 1, $index_result['data']['unavailable_packages'] );
+		self::assertSame( $identifier, $index_result['data']['unavailable_packages'][0]['identifier'] );
+
+		// 2. Direct ?package=<id> and ?recovery=1&recovery_target=<id> route unregistered rows to recovery.php.
+		foreach ( array(
+			array( 'package' => $identifier ),
+			array(
+				'recovery'        => '1',
+				'recovery_target' => $identifier,
+			),
+		) as $query ) {
+			foreach ( array( true, false ) as $folder_absent ) {
+				$_GET    = $query;
+				$plugins = $this->createMock( PluginRepository::class );
+				$themes  = $this->createMock( ThemeRepository::class );
+				$repo    = 'plugin' === $type ? $plugins : $themes;
+				$repo->expects( self::once() )->method( 'plugin' === $type ? 'booster_plugin_from_file' : 'booster_theme_from_stylesheet' )
+					->with( $identifier )
+					->willThrowException( 'plugin' === $type ? new PluginNotFound( 'Missing.' ) : new ThemeNotFound( 'Missing.' ) );
+				$repo->expects( self::once() )->method( 'has_management_record' )->with( $identifier )->willReturn( true );
+				$repo->expects( self::once() )->method( 'recovery_record' )->with( $identifier )->willReturn( $record );
+				$gateway = $this->createMock( PackageRemovalGateway::class );
+				$gateway->method( 'installed_targets' )->with( $type )->willReturn( array() );
+				$gateway->method( 'deletion_postcondition' )->with( $type, $identifier, true )->willReturn( static fn (): bool => $folder_absent );
+				$attempts  = new DeploymentAttemptRepository( new AttemptRepositoryDatabase(), 'wp_ran_booster_attempts', database_lifecycle: $this->createStub( Database::class ) );
+				$removals  = new PackageRemovalService( $plugins, $themes, $gateway, $attempts, $this->createStub( WordPressUpdaterLock::class ), github_selection: $selection );
+				$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes, removals: $removals, github_selection: $selection );
+				$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+				self::assertSame( 'packages/recovery', $result['view'] );
+				self::assertSame( 'unregistered', $result['data']['recovery_state'] );
+				self::assertSame( $identifier, $result['data']['recovery_identifier'] );
+				self::assertSame( $slug, $result['data']['recovery_name'] );
+				self::assertSame( $record + array( 'folder_absent' => $folder_absent ), $result['data']['recovery_confirmation'] );
+				self::assertNull( $result['data']['recovery_blocker'] );
+			}
+		}
+
+		// 3. Active #987 native hold blocks unregistered recovery and links to GitHub provider hold recovery.
+		$state                   = $store->read();
+		$held                    = $state;
+		$held['native_mutation'] = array(
+			'selection_generation' => 0,
+			'owner_tag'            => str_repeat( 'b', 32 ),
+			'target_type'          => $type,
+			'installed_identity'   => $identifier,
+			'phase'                => 'started',
+		);
+		self::assertTrue( $store->compare_and_swap( $state, $held ) );
+		$_GET    = array( 'package' => $identifier );
+		$plugins = $this->createMock( PluginRepository::class );
+		$themes  = $this->createMock( ThemeRepository::class );
+		$repo    = 'plugin' === $type ? $plugins : $themes;
+		$repo->method( 'plugin' === $type ? 'booster_plugin_from_file' : 'booster_theme_from_stylesheet' )
+			->willThrowException( 'plugin' === $type ? new PluginNotFound( 'Missing.' ) : new ThemeNotFound( 'Missing.' ) );
+		$repo->method( 'has_management_record' )->with( $identifier )->willReturn( true );
+		$repo->method( 'recovery_record' )->with( $identifier )->willReturn( $record );
+		$repo->method( 'native_recovery_record' )->willReturn( $record );
+		$gateway = $this->createStub( PackageRemovalGateway::class );
+		$gateway->method( 'installed_targets' )->willReturn( array() );
+		$attempts  = new DeploymentAttemptRepository( new AttemptRepositoryDatabase(), 'wp_ran_booster_attempts', database_lifecycle: $this->createStub( Database::class ) );
+		$removals  = new PackageRemovalService( $plugins, $themes, $gateway, $attempts, $this->createStub( WordPressUpdaterLock::class ), github_selection: $selection );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes, removals: $removals, github_selection: $selection );
+		$blocked   = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+		self::assertSame( 'packages/recovery', $blocked['view'] );
+		self::assertSame( 'blocked', $blocked['data']['recovery_state'] );
+		self::assertNull( $blocked['data']['recovery_confirmation'] );
+		self::assertStringContainsString( 'GitHub install hold', (string) $blocked['data']['recovery_blocker'] );
+		self::assertStringContainsString( 'tab=gh#ran-booster-native-hold', (string) $blocked['data']['recovery_action_url'] );
+		self::assertSame( 'Open GitHub hold recovery', $blocked['data']['recovery_action_label'] );
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_signed_unregistered_unlink_notices_use_distinct_absent_and_on_disk_copy( string $type ): void {
+		$identifier = 'plugin' === $type ? 'broken-plugin/broken-plugin.php' : 'broken-theme';
+		$slug       = 'plugin' === $type ? 'broken-plugin' : 'broken-theme';
+		foreach ( array(
+			'unlink-absent'  => array(
+				'success',
+				'package_unlink_absent',
+				'Booster stopped managing ' . $slug . '. You can install it again.',
+			),
+			'unlink-on-disk' => array(
+				'warning',
+				'package_unlink_on_disk',
+				'Booster stopped managing ' . $slug . ' without deleting files. Remove its folder from disk before reinstalling.',
+			),
+		) as $operation => list( $expected_type, $expected_feedback, $expected_message ) ) {
+			$_GET      = array(
+				'ran_booster_result'        => $operation,
+				'ran_booster_package'       => $identifier,
+				'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ),
+			);
+			$dashboard = $this->dashboard( $this->throwing_secrets() );
+			$notice    = ( new \RAN\Admin\PackageAdminController() )->add_success_notice( $dashboard, $type );
+
+			self::assertSame(
+				array(
+					'operation'  => $operation,
+					'identifier' => $identifier,
+				),
+				$notice
+			);
+			self::assertCount( 1, $dashboard->messages );
+			self::assertSame( $expected_type, $dashboard->messages[0]['type'] );
+			self::assertSame( $expected_feedback, $dashboard->messages[0]['feedback'] );
+			self::assertSame( $expected_message, $dashboard->messages[0]['message'] );
+			self::assertArrayNotHasKey( 'saved_package', $dashboard->messages[0] );
+
+			$_GET['_ran_booster_notice_nonce'] = 'forged';
+			$forged_dashboard                  = $this->dashboard( $this->throwing_secrets() );
+			self::assertNull( ( new \RAN\Admin\PackageAdminController() )->add_success_notice( $forged_dashboard, $type ) );
+			self::assertSame( array(), $forged_dashboard->messages );
+		}
 	}
 
 	#[DataProvider( 'package_type_provider' )]
@@ -5767,6 +5943,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array();
 			}
 
+			/** @return array{} */
+			public function unavailable_managed_records(): array {
+				return array();
+			}
+
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
 				return array();
@@ -5778,6 +5959,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 
 			public function all_booster_themes(): array {
+				return array();
+			}
+
+			/** @return array{} */
+			public function unavailable_managed_records(): array {
 				return array();
 			}
 

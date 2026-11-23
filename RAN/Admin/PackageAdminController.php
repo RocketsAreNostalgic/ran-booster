@@ -19,6 +19,7 @@ use RAN\PackageRepositoryChangeRejected;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\{InvalidProviderCode, ProviderFailure, ProviderRegistry, UnknownProvider, UnsupportedProviderCapability};
 use RAN\Storage\{PackageStorageFailure, PluginRepository, ThemeRepository};
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RuntimeException;
 use Throwable;
 use WP_Error;
@@ -114,18 +115,44 @@ final class PackageAdminController {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage this package.', 'ran-booster' ) );
 		}
 		try {
-			$fields = array();
-			foreach ( array( 'identifier', 'adoption_token', 'digest', 'installed_digest' ) as $field ) {
+			$unregistered = 'unregistered' === ( $request['recovery_mode'] ?? null );
+			$fields       = array();
+			foreach ( array( 'identifier', 'adoption_token', 'digest' ) as $field ) {
 				if ( ! is_string( $request[ $field ] ?? null ) || '' === $request[ $field ] ) {
 					throw new InvalidArgumentException( 'The recovery confirmation is incomplete.' );
 				}
 				$fields[ $field ] = wp_unslash( $request[ $field ] );
 			}
-			check_admin_referer( self::recovery_action( $type, $fields['identifier'], $fields['adoption_token'], $fields['digest'], $fields['installed_digest'] ) );
+			$installed_digest = '';
+			if ( ! $unregistered ) {
+				if ( ! is_string( $request['installed_digest'] ?? null ) || '' === $request['installed_digest'] ) {
+					throw new InvalidArgumentException( 'The recovery confirmation is incomplete.' );
+				}
+				$installed_digest = wp_unslash( $request['installed_digest'] );
+			}
+			check_admin_referer(
+				$unregistered
+					? self::unregistered_recovery_action( $type, $fields['identifier'], $fields['adoption_token'], $fields['digest'] )
+					: self::recovery_action( $type, $fields['identifier'], $fields['adoption_token'], $fields['digest'], $installed_digest )
+			);
 			if ( '1' !== ( $request['confirm_package_removal'] ?? null ) ) {
 				throw new InvalidArgumentException( 'Confirm that Booster should stop managing this exact package.' );
 			}
-			( $this->removals ?? throw new LogicException( 'Recovery is unavailable.' ) )->recover( $type, $fields['identifier'], $fields['adoption_token'], $fields['digest'], $fields['installed_digest'] );
+			$removals = $this->removals ?? throw new LogicException( 'Recovery is unavailable.' );
+			if ( $unregistered ) {
+				$folder_absent = $removals->recover_unregistered( $type, $fields['identifier'], $fields['adoption_token'], $fields['digest'] );
+				$result        = $folder_absent ? 'unlink-absent' : 'unlink-on-disk';
+				return add_query_arg(
+					array(
+						'page'                      => 'ran-booster-' . $type . 's',
+						'ran_booster_result'        => $result,
+						'ran_booster_package'       => $fields['identifier'],
+						'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $result . '|' . $fields['identifier'] ),
+					),
+					is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
+				);
+			}
+			$removals->recover( $type, $fields['identifier'], $fields['adoption_token'], $fields['digest'], $installed_digest );
 			return add_query_arg(
 				array(
 					'page'                      => 'ran-booster-' . $type . 's-create',
@@ -144,6 +171,10 @@ final class PackageAdminController {
 
 	public static function recovery_action( string $type, string $identifier, string $token, string $digest, string $installed_digest ): string {
 		return 'ran-booster-recover|' . hash( 'sha256', http_build_query( array( $type, $identifier, $token, $digest, $installed_digest ), '', '&', PHP_QUERY_RFC3986 ) );
+	}
+
+	public static function unregistered_recovery_action( string $type, string $identifier, string $token, string $digest ): string {
+		return 'ran-booster-recover-unregistered|' . hash( 'sha256', http_build_query( array( $type, $identifier, $token, $digest ), '', '&', PHP_QUERY_RFC3986 ) );
 	}
 
 	/** @param array<string, mixed> $request */
@@ -356,7 +387,7 @@ final class PackageAdminController {
 		$operation  = sanitize_key( wp_unslash( (string) $_GET['ran_booster_result'] ) );
 		$identifier = sanitize_text_field( wp_unslash( (string) $_GET['ran_booster_package'] ) );
 		$nonce      = wp_unslash( (string) $_GET['_ran_booster_notice_nonce'] );
-		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'edit-unverified', 'edit-unchecked', 'unlink', 'unlink-and-delete', 'already-managed' ), true )
+		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'edit-unverified', 'edit-unchecked', 'unlink', 'unlink-absent', 'unlink-on-disk', 'unlink-and-delete', 'already-managed' ), true )
 			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) ) {
 			return null;
 		}
@@ -364,6 +395,39 @@ final class PackageAdminController {
 		$repository_not_checked   = 'edit-unchecked' === $operation;
 		if ( $repository_check_skipped || $repository_not_checked ) {
 			$operation = 'edit';
+		}
+		if ( in_array( $operation, array( 'unlink-absent', 'unlink-on-disk' ), true ) ) {
+			$slug = PackageDirectory::installed_slug( $type, $identifier );
+			$slug = '' !== $slug ? $slug : $identifier;
+			if ( 'unlink-absent' === $operation ) {
+				$dashboard->add_message(
+					array(
+						'type'     => 'success',
+						'feedback' => 'package_unlink_absent',
+						'message'  => sprintf(
+							/* translators: %s: package folder slug. */
+							__( 'Booster stopped managing %s. You can install it again.', 'ran-booster' ),
+							$slug
+						),
+					)
+				);
+			} else {
+				$dashboard->add_message(
+					array(
+						'type'     => 'warning',
+						'feedback' => 'package_unlink_on_disk',
+						'message'  => esc_html(
+							sprintf(
+								/* translators: %s: package folder slug. */
+								__( 'Booster stopped managing %s without deleting files. Remove its folder from disk before reinstalling.', 'ran-booster' ),
+								$slug
+							)
+						),
+					)
+				);
+			}
+
+			return compact( 'operation', 'identifier' );
 		}
 		if ( 'already-managed' === $operation ) {
 			$dashboard->add_message(

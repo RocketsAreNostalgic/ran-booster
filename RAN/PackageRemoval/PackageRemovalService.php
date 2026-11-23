@@ -367,6 +367,95 @@ final readonly class PackageRemovalService {
 		}
 	}
 
+	/**
+	 * Build confirmation state for a managed record whose files are absent or unreadable in WordPress.
+	 * Never deletes files or mutates storage.
+	 *
+	 * @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string,folder_absent:bool}
+	 */
+	public function unregistered_recovery_confirmation( string $type, string $identifier ): array {
+		RuntimeSupport::assert_managed_operations_allowed();
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
+			throw new \InvalidArgumentException( 'The package type is invalid.' );
+		}
+		if ( 'plugin' === $type ) {
+			PackageMutationGuard::assert_plugin_file_allowed( $identifier );
+		}
+		if ( array_key_exists( $identifier, $this->wordpress->installed_targets( $type ) ) ) {
+			throw new \RuntimeException( 'The package is registered in WordPress.' );
+		}
+		$record = ( 'plugin' === $type ? $this->plugins : $this->themes )->recovery_record( $identifier );
+		if ( null === $this->github_selection ) {
+			throw new \RuntimeException( 'Native mutation ownership is unavailable.' );
+		}
+		if ( $this->github_selection->native_mutation_blocks_target( $type, $identifier ) ) {
+			throw new \RuntimeException( 'Native install hold prevents recovery.' );
+		}
+		if ( null === $this->attempts ) {
+			throw new \RuntimeException( 'The recovery operation state is unavailable.' );
+		}
+		if ( $this->attempts->has_unresolved_target_attempt( $type, $identifier ) ) {
+			throw new \RuntimeException( 'Unresolved deployment work prevents recovery.' );
+		}
+		$record['folder_absent'] = $this->target_folder_absent( $type, $identifier );
+		return $record;
+	}
+
+	/**
+	 * Drop Booster's management record for an unregistered package without touching disk files.
+	 *
+	 * @return bool True when the package folder was confirmed absent from disk; false when still present or unverified.
+	 */
+	public function recover_unregistered( string $type, string $identifier, string $token, string $digest ): bool {
+		RuntimeSupport::assert_managed_operations_allowed();
+		PackageMutationGuard::assert_admin_action_allowed( 'unlink-' . $type, array( 'file' => $identifier ) );
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || null === $this->attempts ) {
+			throw new \RuntimeException( 'The recovery operation state is unavailable.' );
+		}
+		$lock_token = $this->updater_lock->try_acquire_without_reclaim();
+		if ( null === $lock_token ) {
+			throw new \RuntimeException( 'The updater lock requires recovery before continuing.' );
+		}
+		$folder_absent = false;
+		try {
+			if ( null !== $this->native_mutation_refusal( $type, $identifier, $lock_token ) ) {
+				throw new \RuntimeException( 'Native mutation ownership prevents recovery.' );
+			}
+			( 'plugin' === $type ? $this->plugins : $this->themes )->recover_unlink(
+				$identifier,
+				$token,
+				$digest,
+				function () use ( $type, $identifier, $token, $lock_token, &$folder_absent ): void {
+					if ( array_key_exists( $identifier, $this->wordpress->installed_targets( $type ) ) ) {
+						throw new \RuntimeException( 'The package is now registered in WordPress.' );
+					}
+					if ( $this->updater_lock->current_token() !== $lock_token ) {
+						throw new \RuntimeException( 'The updater lock ownership changed.' );
+					}
+					if ( null === $this->attempts || $this->attempts->has_unresolved_target_attempt( $type, $identifier ) ) {
+						throw new \RuntimeException( 'Unresolved deployment work prevents recovery.' );
+					}
+					$folder_absent = $this->target_folder_absent( $type, $identifier );
+					$this->clear_observations( $type, $identifier, $token );
+				}
+			)->require_success();
+			return $folder_absent;
+		} finally {
+			if ( ! $this->updater_lock->release( $lock_token ) ) {
+				throw new \RuntimeException( 'Recovery may have completed; updater lock release requires recovery.' );
+			}
+		}
+	}
+
+	/** Report true only when the target folder or standalone plugin file is verified absent from disk. */
+	private function target_folder_absent( string $type, string $identifier ): bool {
+		try {
+			return ( $this->wordpress->deletion_postcondition( $type, $identifier, true ) )();
+		} catch ( Throwable ) {
+			return false;
+		}
+	}
+
 	private function recover_locked( string $type, string $identifier, string $token, string $digest, string $installed_digest, ?int $source_revision = null ): void {
 		( 'plugin' === $type ? $this->plugins : $this->themes )->recover_unlink(
 			$identifier,

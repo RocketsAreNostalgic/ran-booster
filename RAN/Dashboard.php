@@ -926,9 +926,15 @@ class Dashboard {
 					$package = 'plugin' === $type
 						? $this->plugins->booster_plugin_from_file( $identifier )
 						: $this->themes->booster_theme_from_stylesheet( $identifier );
-				// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A missing package intentionally falls back to the index.
 				} catch ( PluginNotFound | ThemeNotFound ) {
-					// An absent package returns to the matching list.
+					try {
+						if ( ( 'plugin' === $type ? $this->plugins : $this->themes )->has_management_record( $identifier ) ) {
+							return $this->render_recovery( $package_view, $identifier, null, true );
+						}
+					} catch ( PackageStorageFailure $storage_failure ) {
+						return $this->render_recovery( $package_view, $identifier, $storage_failure );
+					}
+					// An absent package with no management record returns to the matching list.
 				} catch ( PackageStorageFailure | \InvalidArgumentException $failure ) {
 					return $this->render_recovery( $package_view, $identifier, $failure );
 				}
@@ -1002,22 +1008,25 @@ class Dashboard {
 		}
 
 		try {
-			$packages = 'plugin' === $type
+			$packages    = 'plugin' === $type
 				? $this->plugins->all_booster_plugins()
 				: $this->themes->all_booster_themes();
+			$unavailable = ( 'plugin' === $type ? $this->plugins : $this->themes )->unavailable_managed_records();
 		} catch ( PackageStorageFailure | \InvalidArgumentException $failure ) {
 			return $this->package_storage_failure_index( $package_view, $type, $failure );
 		}
 
-		return $this->render( 'packages/index', $this->package_index_data( $packages, $package_view ) );
+		$data                         = $this->package_index_data( $packages, $package_view );
+		$data['unavailable_packages'] = $unavailable;
+		return $this->render( 'packages/index', $data );
 	}
 
-	private function render_recovery( PackagePagePresenter $package_view, ?string $identifier = null, ?Throwable $failure = null ): mixed {
+	private function render_recovery( PackagePagePresenter $package_view, ?string $identifier = null, ?Throwable $failure = null, bool $unregistered = false ): mixed {
 		$type = $package_view->get_type();
 		if ( ! current_user_can( 'update_' . $type . 's' ) ) {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage these packages.', 'ran-booster' ) );
 		}
-		if ( null === $failure ) {
+		if ( null === $failure && ! $unregistered ) {
 			$this->package_admin?->add_success_notice( $this, $type );
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only target selection; POST verifies the full confirmation nonce.
@@ -1027,25 +1036,58 @@ class Dashboard {
 		$confirmation = null;
 		$reason       = __( 'Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package.', 'ran-booster' );
 		$blocker      = null;
+		$action_url   = null;
+		$action_label = null;
 		if ( '' !== $identifier ) {
 			$state = 'blocked';
 			try {
 				new \RAN\Storage\PackageModel( array( 'package' => $identifier ) );
-				if ( null === $failure ) {
+				$package = null;
+				if ( null === $failure && ! $unregistered ) {
 					try {
 						$package = 'plugin' === $type ? $this->plugins->booster_plugin_from_file( $identifier ) : $this->themes->booster_theme_from_stylesheet( $identifier );
 						if ( ! $package instanceof Package ) {
 							throw new LogicException( 'The management record is unavailable.' );
 						}
+					} catch ( PluginNotFound | ThemeNotFound $missing ) {
+						if ( ( 'plugin' === $type ? $this->plugins : $this->themes )->has_management_record( $identifier ) ) {
+							$unregistered = true;
+						} else {
+							throw $missing;
+						}
 					} catch ( PackageStorageFailure | \InvalidArgumentException $read_failure ) {
 						$failure = $read_failure;
 					}
 				}
-				if ( null === $failure ) {
+				if ( $unregistered && null === $failure ) {
+					$slug     = \RAN\UpdaterSupport\V1\PackageDirectory::installed_slug( $type, $identifier );
+					$name     = '' !== $slug ? $slug : $identifier;
+					$reason   = 'plugin' === $type
+						? __( 'WordPress can’t load this managed plugin because its files are missing or damaged. Booster still holds its management record, which blocks reinstalling it.', 'ran-booster' )
+						: __( 'WordPress can’t load this managed theme because its files are missing or damaged. Booster still holds its management record, which blocks reinstalling it.', 'ran-booster' );
+					$removals = $this->removals ?? throw new LogicException( 'Recovery is unavailable.' );
+					try {
+						$confirmation = $removals->unregistered_recovery_confirmation( $type, $identifier );
+						$state        = 'unregistered';
+					} catch ( Throwable $unsafe ) {
+						if ( 'Native install hold prevents recovery.' === $unsafe->getMessage() ) {
+							$blocker      = __( 'A GitHub install hold is active for this package. Use GitHub provider hold recovery to clear the hold and stop managing it.', 'ran-booster' );
+							$native_hold  = $this->provider_settings->native_hold();
+							$action_url   = is_array( $native_hold ) && '' !== $native_hold['url']
+								? $native_hold['url']
+								: ( $this->provider_tab_url( 'gh' ) . '#ran-booster-native-hold' );
+							$action_label = __( 'Open GitHub hold recovery', 'ran-booster' );
+						} elseif ( 'Unresolved deployment work prevents recovery.' === $unsafe->getMessage() ) {
+							$blocker = __( 'Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again.', 'ran-booster' );
+						} else {
+							$blocker = __( 'Booster cannot verify the exact management record or operation state needed for safe disconnection. Resolve this uncertainty before trying again.', 'ran-booster' );
+						}
+					}
+				} elseif ( null === $failure && $package instanceof Package ) {
 					$state  = 'healthy';
 					$name   = (string) $package->name;
 					$reason = __( 'Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it.', 'ran-booster' );
-				} else {
+				} elseif ( null !== $failure ) {
 					$reason   = $this->package_settings_failure_reason( $failure );
 					$removals = $this->removals ?? throw new LogicException( 'Recovery is unavailable.' );
 					$targets  = $removals->recovery_targets( $type );
@@ -1081,6 +1123,8 @@ class Dashboard {
 				'recovery_reason'       => $reason,
 				'recovery_blocker'      => $blocker,
 				'recovery_confirmation' => $confirmation,
+				'recovery_action_url'   => $action_url,
+				'recovery_action_label' => $action_label,
 			)
 		);
 	}

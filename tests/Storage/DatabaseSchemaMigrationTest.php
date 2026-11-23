@@ -7,6 +7,7 @@ namespace RAN\Tests\Storage;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RequiresPhp;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use RAN\Storage\Database;
 use RAN\Admin\OnboardingPresenter;
@@ -880,6 +881,63 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		);
 	}
 
+	/** @return array<string, array{bool, bool}> */
+	public static function drop_in_property_hook_provider(): array {
+		return array(
+			'routing marker'                => array( true, false ),
+			'routing marker, throwing hook' => array( true, true ),
+			'pool, throwing hook'           => array( false, true ),
+		);
+	}
+
+	#[RequiresPhp( '>=8.4' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	#[DataProvider( 'drop_in_property_hook_provider' )]
+	public function test_drop_in_admission_does_not_invoke_property_hooks( bool $routing_marker, bool $throw_on_get ): void {
+		// Keep PHP 8.4 syntax inside the version-gated fixture.
+		$source = <<<'PHP'
+			class RAN_Booster_Hooked_Wpdb_Fixture extends wpdb {
+				public int $getter_calls = 0;
+				public string $canary = '' {
+					get {
+						++$this->getter_calls;
+						if ( $this->throw_on_get ) {
+							throw new RuntimeException( 'Unexpected property getter.' );
+						}
+						return $this->canary;
+					}
+				}
+				public array $read_dbh;
+
+				public function __construct( private bool $throw_on_get, mysqli $handle ) {
+					$this->prefix   = '';
+					$this->dbh      = $handle;
+					$this->read_dbh = array( $handle );
+				}
+			}
+			return RAN_Booster_Hooked_Wpdb_Fixture::class;
+			PHP;
+		if ( ! $routing_marker ) {
+			$source = str_replace( 'read_dbh', 'pool', $source );
+		}
+
+		$this->with_drop_in(
+			static function () use ( $throw_on_get ): void {
+				$class = require WP_CONTENT_DIR . '/db.php';
+				self::assertIsString( $class );
+				self::assertTrue( class_exists( $class, false ) );
+				$connection = new $class( $throw_on_get, self::mysqli_handle() );
+				self::assertInstanceOf( \wpdb::class, $connection );
+				self::assert_drop_in_failure( new Database( $connection ) );
+				self::assertSame( 0, get_mangled_object_vars( $connection )['getter_calls'] );
+				self::assertSame( array(), $connection->queries );
+				self::assertSame( array(), $connection->read_queries );
+			},
+			source: "<?php\n" . $source
+		);
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_routing_properties_methods_and_connection_pools_refuse_before_the_probe(): void {
@@ -905,6 +963,16 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 						public function __construct( \mysqli $handle ) {
 							$this->pool = array( $handle );
 						}
+					},
+					new class( self::mysqli_handle() ) extends \wpdb {
+						/** @var list<\mysqli> */
+						public static array $pool = array();
+						public function __construct( \mysqli $handle ) {
+							self::$pool = array( $handle );
+						}
+					},
+					new class() extends \wpdb {
+						public mixed $dbh = null;
 					},
 					new class() extends \wpdb {
 						public function db_connect(): bool {
@@ -1094,7 +1162,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	}
 
 	/** @param callable(): void $test */
-	private function with_drop_in( callable $test, bool $symlink = false ): void {
+	private function with_drop_in( callable $test, bool $symlink = false, string $source = "<?php\n// Database drop-in fixture.\n" ): void {
 		require_once __DIR__ . '/DatabaseDropInWpdb.php';
 
 		$content_dir = sys_get_temp_dir() . '/ran-booster-db-dropin-' . bin2hex( random_bytes( 6 ) );
@@ -1104,7 +1172,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		$target  = $symlink ? $content_dir . '/real-db.php' : $drop_in;
 		try {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable db.php marker for capability verification.
-			self::assertNotFalse( file_put_contents( $target, "<?php\n// Database drop-in fixture.\n" ) );
+			self::assertSame( strlen( $source ), file_put_contents( $target, $source ) );
 			if ( $symlink ) {
 				self::assertTrue( symlink( $target, $drop_in ) );
 			}

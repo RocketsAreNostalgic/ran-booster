@@ -879,9 +879,10 @@ class Database {
 		}
 
 		$reflection   = new \ReflectionObject( $database );
+		$native       = new \ReflectionClass( \wpdb::class );
 		$is_direct_qm = 'QM_DB' === $database::class && \wpdb::class === get_parent_class( $database )
 			&& $this->is_reviewed_query_monitor_class( $reflection );
-		foreach ( ( new \ReflectionClass( \wpdb::class ) )->getMethods() as $method ) {
+		foreach ( $native->getMethods() as $method ) {
 			$name = $method->getName();
 			if ( $method->isPrivate() || $method->isConstructor() || ( $is_direct_qm && 'query' === $name ) ) {
 				continue;
@@ -894,8 +895,9 @@ class Database {
 		// Routable execution or pooled handles cannot guarantee one transaction for all Booster tables.
 		$properties = array( 'dbhs', 'hyper_servers', 'hyper_tables', 'ludicrous_servers', 'ludicrous_tables', 'srtm', 'callbacks', 'table_datasets', 'read_dbh', 'write_dbh' );
 		$methods    = array( 'add_database', 'add_table', 'add_callback', 'get_table_from_query', 'is_write_query', 'send_reads_to_masters', 'determine_dataset' );
-		$handle     = null;
+		$hierarchy  = array();
 		for ( ; false !== $reflection; $reflection = $reflection->getParentClass() ) {
+			$hierarchy[] = $reflection;
 			foreach ( $methods as $method ) {
 				// Core wpdb uses its table parser for charset checks. A drop-in override can route SQL.
 				if ( $reflection->hasMethod( $method )
@@ -905,20 +907,24 @@ class Database {
 			}
 			foreach ( $reflection->getProperties() as $property ) {
 				$name = $property->getName();
-				if ( in_array( $name, $properties, true ) ) {
-					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
-				}
-				if ( 'dbh' === $name ) {
-					$handle ??= $property;
-				}
-				$value = $property->isInitialized( $database ) ? $property->getValue( $database ) : null;
-				if ( is_array( $value ) && array_filter( $value, static fn ( mixed $entry ): bool => $entry instanceof \mysqli ) ) {
+				if ( in_array( $name, $properties, true ) || ( 'dbh' === $name && \wpdb::class !== $property->getDeclaringClass()->getName() ) ) {
 					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 				}
 			}
 		}
 
-		return $handle ?? throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		// Read instance backing values without invoking hooks and include any static pools.
+		$values = get_mangled_object_vars( $database );
+		foreach ( $hierarchy as $class ) {
+			array_push( $values, ...array_values( $class->getStaticProperties() ) );
+		}
+		foreach ( $values as $value ) {
+			if ( is_array( $value ) && array_filter( $value, static fn ( mixed $entry ): bool => $entry instanceof \mysqli ) ) {
+				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+			}
+		}
+
+		return $native->hasProperty( 'dbh' ) ? $native->getProperty( 'dbh' ) : throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 	}
 
 	private function is_reviewed_query_monitor_class( \ReflectionObject $reflection ): bool {

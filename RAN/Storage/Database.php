@@ -411,7 +411,7 @@ class Database {
 			}
 		}
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
-		if ( is_object( $status ) && isset( $status->Name ) && is_string( $status->Name ) && ! $this->table_name_matches( $table_name, $status->Name ) ) {
+		if ( ! is_object( $status ) || ! isset( $status->Name ) || ! is_string( $status->Name ) || ! $this->table_name_matches( $table_name, $status->Name ) ) {
 			$status = null;
 		}
 		// Schema installation must inspect the authoritative database.
@@ -677,7 +677,7 @@ class Database {
 			&& is_string( constant( 'WP_CONTENT_DIR' ) )
 			&& is_file( rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php' );
 		if ( ! method_exists( $database, 'db_server_info' ) ) {
-			throw new DatabaseCompatibilityFailure( 'unknown_server' );
+			throw new DatabaseCompatibilityFailure( $has_drop_in ? 'database_drop_in' : 'unknown_server' );
 		}
 
 		$previous_error    = property_exists( $database, 'last_error' ) ? (string) $database->last_error : null;
@@ -692,51 +692,36 @@ class Database {
 				$errors_suppressed = (bool) $suppress_errors( true );
 			}
 
-			$query_engines = array( $database, 'get_results' );
-			$engines       = null;
-			$engine_error  = null;
-			$server_info   = null;
-			$info_error    = null;
-			try {
-				$server_info = $database->db_server_info();
-			} catch ( \Throwable $caught ) {
-				$info_error = $caught;
-			}
-			// Lazy-connecting db.php drop-ins (such as HyperDB) may establish their handle on the first query.
-			if ( $has_drop_in && ( null !== $info_error || ! is_string( $server_info ) || '' === trim( $server_info ) ) ) {
-				if ( ! is_callable( $query_engines ) ) {
-					throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
+			$query_results = array( $database, 'get_results' );
+			$live          = null;
+			if ( $has_drop_in ) {
+				if ( ! is_callable( $query_results ) ) {
+					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 				}
-				$engines      = $query_engines( 'SHOW ENGINES' );
-				$engine_error = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
-				$info_error   = null;
-				$server_info  = $database->db_server_info();
-			} elseif ( null !== $info_error ) {
-				throw $info_error;
+				$live = $this->verify_drop_in_server( $database, $query_results );
 			}
-			if ( ! is_string( $server_info ) ) {
-				throw new DatabaseCompatibilityFailure( 'unknown_server' );
-			}
-			$identity = $this->classify_server( trim( $server_info ) );
+			$server_info = $database->db_server_info();
+			$identity    = is_string( $server_info ) ? $this->classify_server( trim( $server_info ) ) : null;
 			if ( null === $identity ) {
 				throw new DatabaseCompatibilityFailure( 'unknown_server' );
 			}
+			if ( null !== $live && $live['family'] !== $identity['family'] ) {
+				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+			}
 			$minimum = 'mariadb' === $identity['family'] ? '10.11.0' : '8.0.0';
-			if ( version_compare( $identity['version'], $minimum, '<' ) ) {
+			if ( version_compare( $identity['version'], $minimum, '<' ) || ( null !== $live && version_compare( $live['version'], $minimum, '<' ) ) ) {
 				throw new DatabaseCompatibilityFailure( 'unsupported_version' );
 			}
 
 			// Capability inspection must read the authoritative server engine list.
-			if ( null === $engine_error ) {
-				if ( ! is_callable( $query_engines ) ) {
-					throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
-				}
-				if ( null !== $previous_error ) {
-					$database->last_error = '';
-				}
-				$engines      = $query_engines( 'SHOW ENGINES' );
-				$engine_error = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
+			if ( ! is_callable( $query_results ) ) {
+				throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
 			}
+			if ( null !== $previous_error ) {
+				$database->last_error = '';
+			}
+			$engines      = $query_results( 'SHOW ENGINES' );
+			$engine_error = trim( $this->capability_read_error( $database ) );
 			if ( ! is_array( $engines ) || '' !== $engine_error ) {
 				throw new DatabaseCompatibilityFailure( $has_drop_in ? 'database_drop_in' : 'innodb_unavailable' );
 			}
@@ -766,15 +751,6 @@ class Database {
 			if ( ! $innodb_supported ) {
 				throw new DatabaseCompatibilityFailure( 'innodb_unavailable' );
 			}
-
-			if ( $has_drop_in ) {
-				if ( ! is_callable( $query_engines ) ) {
-					throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
-				}
-				$this->verify_drop_in_server( $database, $query_engines, $identity, $minimum );
-			}
-
-			return;
 		} catch ( DatabaseCompatibilityFailure $failure ) {
 			throw $failure;
 		} catch ( \Throwable ) {
@@ -795,58 +771,109 @@ class Database {
 	}
 
 	/**
-	 * Verify that a db.php drop-in talks to a real supported MySQL or MariaDB server rather
-	 * than spoofing db_server_info() in front of SQLite, PostgreSQL or another translator.
+	 * Prove that the drop-in keeps a session variable and its readback on one MySQL connection.
 	 *
-	 * @param callable(string): mixed                       $query_results
-	 * @param array{family: 'mysql'|'mariadb', version: string} $identity
+	 * @param callable(string): mixed $query_results
+	 * @return array{family: 'mysql'|'mariadb', version: string}
 	 */
-	private function verify_drop_in_server( object $database, callable $query_results, array $identity, string $minimum ): void {
-		$reflection = new \ReflectionObject( $database );
-		if ( $reflection->hasProperty( 'dbh' ) ) {
-			$property = $reflection->getProperty( 'dbh' );
-			if ( $property->isInitialized( $database ) ) {
-				$dbh = $property->getValue( $database );
-				if ( is_object( $dbh ) && ! $dbh instanceof \mysqli ) {
+	private function verify_drop_in_server( object $database, callable $query_results ): array {
+		if ( ! method_exists( $database, 'query' ) ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		}
+		$property   = $this->single_drop_in_handle( $database );
+		$dbh_before = $property->isInitialized( $database ) ? $property->getValue( $database ) : null;
+		if ( ! $dbh_before instanceof \mysqli ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		}
+		try {
+			if ( false === $database->query( 'SET @ran_booster_probe := CONNECTION_ID()' ) || '' !== $this->capability_read_error( $database ) ) {
+				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+			}
+			$rows = $query_results( 'SELECT @@version AS version, @@version_comment AS comment, @ran_booster_probe AS probe_connection_id, CONNECTION_ID() AS read_connection_id' );
+			if ( '' !== $this->capability_read_error( $database ) || ! is_array( $rows ) || 1 !== count( $rows ) || ! is_object( $rows[0] ?? null )
+				|| ! $property->isInitialized( $database ) || $dbh_before !== $property->getValue( $database ) ) {
+				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+			}
+		} catch ( \Throwable ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		} finally {
+			try {
+				$database->query( 'SET @ran_booster_probe := NULL' );
+			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Clearing a disposable session variable is best effort.
+			} catch ( \Throwable ) {
+				// The compatibility result remains authoritative.
+			}
+		}
+		$row     = $rows[0];
+		$probe   = $row->probe_connection_id ?? null;
+		$read    = $row->read_connection_id ?? null;
+		$version = $row->version ?? null;
+		$comment = $row->comment ?? null;
+		$live    = is_string( $version ) ? $this->classify_server( trim( $version ) ) : null;
+		if ( ( ! is_int( $probe ) && ! is_string( $probe ) ) || ( ! is_int( $read ) && ! is_string( $read ) )
+			|| 1 !== preg_match( '/\A[1-9][0-9]*\z/', (string) $probe ) || (string) $probe !== (string) $read
+			|| null === $live || ! is_string( $comment ) || '' === trim( $comment )
+			|| 1 === preg_match( '/(?:postgres|sqlite|tidb|percona)/i', $comment )
+			|| ( 'mysql' === $live['family'] && false !== stripos( $comment, 'mariadb' ) )
+			|| ( 'mariadb' === $live['family'] && false !== stripos( $comment, 'mysql' ) ) ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		}
+
+		return $live;
+	}
+
+	/** @phpstan-impure The database API mutates last_error while executing queries. */
+	private function capability_read_error( object $database ): string {
+		return (string) ( $database->last_error ?? '' );
+	}
+
+	private function single_drop_in_handle( object $database ): \ReflectionProperty {
+		// Routed drop-ins cannot guarantee that options and Booster tables share a transaction.
+		$properties = array( 'dbhs', 'hyper_servers', 'hyper_tables', 'ludicrous_servers', 'ludicrous_tables', 'srtm', 'callbacks', 'table_datasets', 'read_dbh', 'write_dbh' );
+		$methods    = array( 'add_database', 'add_table', 'add_callback', 'get_table_from_query', 'is_write_query', 'send_reads_to_masters', 'determine_dataset' );
+		$handle     = null;
+		for ( $reflection = new \ReflectionObject( $database ); false !== $reflection; $reflection = $reflection->getParentClass() ) {
+			if ( $reflection->hasMethod( 'db_connect' ) ) {
+				$connect = $reflection->getMethod( 'db_connect' );
+				if ( ( $database instanceof \wpdb && \wpdb::class !== $connect->getDeclaringClass()->getName() )
+					|| 'query' === ( $connect->getParameters()[0] ?? null )?->getName() ) {
+					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+				}
+			}
+			foreach ( $methods as $method ) {
+				// Core wpdb uses its table parser for charset checks. A drop-in override can route SQL.
+				if ( $reflection->hasMethod( $method )
+					&& ( 'get_table_from_query' !== $method || \wpdb::class !== $reflection->getMethod( $method )->getDeclaringClass()->getName() ) ) {
+					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+				}
+			}
+			foreach ( $reflection->getProperties() as $property ) {
+				$name = $property->getName();
+				if ( in_array( $name, $properties, true ) ) {
+					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+				}
+				if ( 'dbh' === $name ) {
+					$handle ??= $property;
+				}
+				$value = $property->isInitialized( $database ) ? $property->getValue( $database ) : null;
+				if ( is_array( $value ) && array_filter( $value, static fn ( mixed $entry ): bool => $entry instanceof \mysqli ) ) {
 					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 				}
 			}
 		}
-		if ( property_exists( $database, 'last_error' ) ) {
-			$database->last_error = '';
-		}
-		$rows  = $query_results( 'SELECT @@version AS version, @@version_comment AS comment' );
-		$error = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
-		if ( '' !== $error || ! is_array( $rows ) || 1 !== count( $rows ) || ! is_object( $rows[0] ) || ! is_string( $rows[0]->version ?? null ) ) {
-			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
-		}
-		$live = $this->classify_server( trim( $rows[0]->version ) );
-		if ( null === $live || $live['family'] !== $identity['family'] ) {
-			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
-		}
-		if ( version_compare( $live['version'], $minimum, '<' ) ) {
-			throw new DatabaseCompatibilityFailure( 'unsupported_version' );
-		}
-		$comment = $rows[0]->comment ?? null;
-		if ( ! is_string( $comment ) || '' === trim( $comment ) || 1 === preg_match( '/(?:postgres|sqlite|tidb|percona)/i', $comment ) ) {
-			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
-		}
+
+		return $handle ?? throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 	}
 
 	private function table_name_matches( string $expected, string $actual ): bool {
-		if ( hash_equals( $expected, $actual ) ) {
-			return true;
-		}
-		if ( 0 !== strcasecmp( $expected, $actual ) ) {
-			return false;
-		}
-
 		$mode = $this->lower_case_table_names();
-		if ( 1 === $mode ) {
-			return hash_equals( strtolower( $expected ), $actual );
-		}
 
-		return 2 === $mode;
+		return match ( $mode ) {
+			0 => hash_equals( $expected, $actual ),
+			1 => hash_equals( strtolower( $expected ), $actual ),
+			2 => 0 === strcasecmp( $expected, $actual ),
+			default => false,
+		};
 	}
 
 	private function lower_case_table_names(): int {

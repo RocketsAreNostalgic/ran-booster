@@ -40,19 +40,32 @@ $ran_booster_database->require_supported();
 
 global $wpdb;
 // Prove live MySQL/MariaDB drop-in capability checks and lower_case_table_names SQL predicates against the running server.
-$ran_booster_drop_in = rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php';
-if ( ! file_exists( $ran_booster_drop_in ) ) {
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable CI site proves live drop-in capability SQL on real MySQL/MariaDB.
-	if ( false === file_put_contents( $ran_booster_drop_in, "<?php\n// Disposable smoke drop-in marker.\n" ) ) {
-		throw new RuntimeException( 'Could not create disposable db.php drop-in smoke marker.' );
+$ran_booster_drop_in        = rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php';
+$ran_booster_marker_created = false;
+if ( is_link( $ran_booster_drop_in ) ) {
+	throw new RuntimeException( 'The disposable site already has a db.php link.' );
+}
+// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen, WordPress.PHP.NoSilencedErrors.Discouraged -- Exclusive creation protects existing drop-ins and fails through the smoke assertion.
+$ran_booster_marker_handle = @fopen( $ran_booster_drop_in, 'xb' );
+if ( false === $ran_booster_marker_handle ) {
+	throw new RuntimeException( 'Could not exclusively create the disposable db.php smoke marker.' );
+}
+try {
+	$ran_booster_marker = "<?php\n// Disposable smoke drop-in marker.\n";
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write through the exclusively owned file handle.
+	$ran_booster_marker_written = fwrite( $ran_booster_marker_handle, $ran_booster_marker );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the exclusively owned handle before using the marker.
+	$ran_booster_marker_closed  = fclose( $ran_booster_marker_handle );
+	$ran_booster_marker_created = true;
+	if ( strlen( $ran_booster_marker ) !== $ran_booster_marker_written || ! $ran_booster_marker_closed ) {
+		throw new RuntimeException( 'Could not write the disposable db.php smoke marker.' );
 	}
-	try {
-		( new Database( $wpdb ) )->require_supported();
-	} finally {
-		if ( is_file( $ran_booster_drop_in ) ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only the disposable db.php smoke marker created above.
-			unlink( $ran_booster_drop_in );
-		}
+	( new Database( $wpdb ) )->require_supported();
+} finally {
+	clearstatcache( true, $ran_booster_drop_in );
+	if ( $ran_booster_marker_created && ! is_link( $ran_booster_drop_in ) ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only the disposable db.php smoke marker created above.
+		unlink( $ran_booster_drop_in );
 	}
 }
 $ran_booster_read_error = static fn (): string => (string) $wpdb->last_error;

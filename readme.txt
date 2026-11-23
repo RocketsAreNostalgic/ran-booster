@@ -152,7 +152,8 @@ content, plugin and theme directories must be available. Multisite and network
 activation are not supported for package deployment.
 
 MySQL 8.0 is the tested compatibility floor and MySQL 8.4 LTS is recommended
-for production. SQLite, PostgreSQL and unverified db.php database translators
+for production. A db.php drop-in must use a verified single MySQL or MariaDB
+connection through mysqli. SQLite, PostgreSQL and query-routing drop-ins
 are unsupported. Unsupported fresh activation stops before schema changes. If
 an active site's database becomes unsupported, Booster leaves stored data
 unchanged, pauses package storage, Transporter and all deployment paths, and

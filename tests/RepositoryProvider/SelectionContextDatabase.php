@@ -31,7 +31,7 @@ final class SelectionContextDatabase extends SchemaConnection {
 		return $this->selection->prepare( $query, ...$arguments );
 	}
 	public function get_var( string $query ): mixed {
-		throw new \LogicException( $query );
+		return $this->selection->get_var( $query );
 	}
 	public function get_row( string $query ): object {
 		return $this->selection->get_row( $query );

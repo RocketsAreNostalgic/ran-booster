@@ -154,7 +154,7 @@ namespace {
 namespace RAN\Tests\Storage {
 
 	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
-	final class StorageTestWpdb extends \RAN\Storage\SchemaConnection {
+	class StorageTestWpdb extends \RAN\Storage\SchemaConnection {
 
 		public string $prefix                            = 'wp_';
 		public string $base_prefix                       = 'wp_';
@@ -188,18 +188,23 @@ namespace RAN\Tests\Storage {
 		public ?string $live_version         = null;
 		public ?string $live_version_comment = 'MySQL Community Server - GPL';
 		/** @var list<object>|null */
-		public ?array $live_version_rows          = null;
-		public bool $fail_live_version_probe      = false;
-		public bool $fail_engines_probe           = false;
-		public mixed $dbh                         = null;
-		public bool $lazy_server_info             = false;
-		public bool $lazy_server_info_throws      = false;
-		private bool $connection_warmed           = false;
-		public int $lower_case_table_names        = 0;
-		public mixed $lower_case_table_names_raw  = false;
-		public bool $fail_lower_case_table_names  = false;
-		public bool $case_insensitive_show_tables = false;
-		public int $capability_reads              = 0;
+		public ?array $live_version_rows           = null;
+		public bool $fail_live_version_probe       = false;
+		public bool $fail_engines_probe            = false;
+		public mixed $dbh                          = null;
+		public int|string|null $read_connection_id = 41;
+		public string $probe_write_error           = '';
+		public bool $swap_probe_handle             = false;
+		private ?int $session_probe                = null;
+		public ?object $forced_table_status        = null;
+		public bool $lazy_server_info              = false;
+		public bool $lazy_server_info_throws       = false;
+		private bool $connection_warmed            = false;
+		public int $lower_case_table_names         = 0;
+		public mixed $lower_case_table_names_raw   = false;
+		public bool $fail_lower_case_table_names   = false;
+		public bool $case_insensitive_show_tables  = false;
+		public int $capability_reads               = 0;
 
 		/** @var list<string> */
 		public array $queries = array();
@@ -296,6 +301,16 @@ namespace RAN\Tests\Storage {
 			$this->queries[] = $query;
 			if ( null !== $this->query_failure_contains && str_contains( $query, $this->query_failure_contains ) ) {
 				return false;
+			}
+			if ( 'SET @ran_booster_probe := CONNECTION_ID()' === $query ) {
+				$this->connection_warmed = true;
+				$this->session_probe     = 41;
+				$this->last_error        = $this->probe_write_error;
+				return 0;
+			}
+			if ( 'SET @ran_booster_probe := NULL' === $query ) {
+				$this->session_probe = null;
+				return 0;
 			}
 			if ( 'START TRANSACTION' === $query ) {
 				$this->presentation_before_transaction = $this->presentation_value;
@@ -584,6 +599,9 @@ namespace RAN\Tests\Storage {
 		}
 
 		public function get_row( string $query ): ?object {
+			if ( str_starts_with( $query, 'SHOW TABLE STATUS' ) && null !== $this->forced_table_status ) {
+				return $this->forced_table_status;
+			}
 			if ( 1 === preg_match( "/^SHOW TABLE STATUS WHERE Name = '([^']+)'$/", $query, $matches ) ) {
 				$table        = stripslashes( $matches[1] );
 				$options_name = $this->stored_options_table ?? ( 1 === $this->lower_case_table_names ? strtolower( $this->options ) : $this->options );
@@ -647,10 +665,14 @@ namespace RAN\Tests\Storage {
 				return array( (object) $row );
 			}
 
-			if ( 'SELECT @@version AS version, @@version_comment AS comment' === $query ) {
+			if ( 'SELECT @@version AS version, @@version_comment AS comment, @ran_booster_probe AS probe_connection_id, CONNECTION_ID() AS read_connection_id' === $query ) {
 				if ( $this->fail_live_version_probe ) {
 					$this->last_error = 'unsupported syntax';
 					return array();
+				}
+				if ( $this->swap_probe_handle ) {
+					// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Swap in a distinct unconnected driver handle to model a reconnect.
+					$this->dbh = new \mysqli();
 				}
 				if ( null !== $this->live_version_rows ) {
 					return $this->live_version_rows;
@@ -658,8 +680,10 @@ namespace RAN\Tests\Storage {
 
 				return array(
 					(object) array(
-						'version' => $this->live_version ?? $this->server_info,
-						'comment' => $this->live_version_comment,
+						'version'             => $this->live_version ?? $this->server_info,
+						'comment'             => $this->live_version_comment,
+						'probe_connection_id' => 41 === $this->read_connection_id || '41' === $this->read_connection_id ? $this->session_probe : null,
+						'read_connection_id'  => $this->read_connection_id,
 					),
 				);
 			}

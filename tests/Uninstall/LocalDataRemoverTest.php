@@ -241,7 +241,7 @@ final class LocalDataRemoverTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_read_errors_and_unexpected_missing_journal_refuse_before_cleanup(): void {
-		foreach ( array( 'SELECT option_name FROM', 'SELECT option_name, option_value, autoload', 'information_schema.TABLES', 'SELECT id FROM' ) as $failure ) {
+		foreach ( array( 'SELECT option_name FROM', 'SELECT option_name, option_value, autoload', 'SELECT @@lower_case_table_names', 'information_schema.TABLES', 'SELECT id FROM' ) as $failure ) {
 			$this->setUp();
 			$this->database->read_failure_contains = $failure;
 			$this->assert_preflight_refuses_without_mutation();
@@ -333,6 +333,27 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function test_partial_cleanup_refuses_unverified_casing_before_checking_the_surviving_journal(): void {
+		foreach ( array( null, '3', '01' ) as $mode ) {
+			$this->setUp();
+			unset( $GLOBALS['ran_booster_uninstall_options'][ Database::VERSION_OPTION ], $GLOBALS['ran_booster_uninstall_options'][ GitHubSelectionStore::OPTION ] );
+			$this->database->lower_case_table_names = $mode;
+			$this->database->attempts               = array(
+				array(
+					'provider'    => 'gh',
+					'state'       => 'running',
+					'resolved_at' => null,
+					'resolved_by' => null,
+				),
+			);
+
+			$this->assert_preflight_refuses_without_mutation( 'Booster could not verify recorded work before cleanup.' );
+			self::assertSame( 'SELECT @@lower_case_table_names AS lower_case_table_names', end( $this->database->reads ) );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_mode_two_accepts_preserved_mixed_case_journal_table_for_lowercase_prefix(): void {
 		$this->setUp();
 		$this->database->lower_case_table_names = 2;
@@ -419,7 +440,7 @@ final class LocalDataRemoverTest extends TestCase {
 		self::assertSame( 'preserved', $GLOBALS['ran_booster_uninstall_options']['unrelated_option'] );
 	}
 
-	private function assert_preflight_refuses_without_mutation(): void {
+	private function assert_preflight_refuses_without_mutation( string $message = 'before cleanup' ): void {
 		$options = $GLOBALS['ran_booster_uninstall_options'];
 		$tables  = $this->database->tables;
 		$secrets = $this->createMock( SecretsFile::class );
@@ -429,7 +450,7 @@ final class LocalDataRemoverTest extends TestCase {
 			$this->remover( $secrets, $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
 			self::fail( 'Unverifiable or unfinished custody must refuse cleanup.' );
 		} catch ( RuntimeException $failure ) {
-			self::assertStringContainsString( 'before cleanup', $failure->getMessage() );
+			self::assertStringContainsString( $message, $failure->getMessage() );
 		}
 		self::assertSame( $options, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertSame( $tables, $this->database->tables );

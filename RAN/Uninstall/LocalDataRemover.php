@@ -149,13 +149,19 @@ class LocalDataRemover {
 				throw new RuntimeException( 'Booster has an unfinished native mutation that must be resolved before cleanup.' );
 			}
 		}
+		$mode_rows = $this->custody_rows( $database, 'SELECT @@lower_case_table_names AS lower_case_table_names' );
+		$value     = $mode_rows[0]->lower_case_table_names ?? null;
+		if ( 1 !== count( $mode_rows ) || ! in_array( $value, array( 0, 1, 2, '0', '1', '2' ), true ) ) {
+			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+		}
+
+		$mode  = (int) $value;
 		$table = $this->verified_table_prefix . 'ran_booster_deployment_attempts';
-		$lower = strtolower( $table );
 		$query = $database->prepare(
-			'SELECT TABLE_NAME AS table_name, @@lower_case_table_names AS lower_case_table_names FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND ( ( 0 = @@lower_case_table_names AND CAST(TABLE_NAME AS BINARY) = CAST(%s AS BINARY) ) OR ( 1 = @@lower_case_table_names AND CAST(TABLE_NAME AS BINARY) = CAST(%s AS BINARY) ) OR ( 2 = @@lower_case_table_names AND CAST(LOWER(TABLE_NAME) AS BINARY) = CAST(%s AS BINARY) ) )',
-			$table,
-			$lower,
-			$lower
+			2 === $mode
+				? 'SELECT TABLE_NAME AS table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND CAST(LOWER(TABLE_NAME) AS BINARY) = CAST(%s AS BINARY)'
+				: 'SELECT TABLE_NAME AS table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND CAST(TABLE_NAME AS BINARY) = CAST(%s AS BINARY)',
+			0 === $mode ? $table : strtolower( $table )
 		);
 		$found = $this->custody_rows( $database, $query );
 		if ( array() === $found ) {
@@ -164,7 +170,7 @@ class LocalDataRemover {
 			}
 			return;
 		}
-		if ( 1 !== count( $found ) || ! $this->table_name_matches_mode( $table, $found[0]->table_name ?? null, $found[0]->lower_case_table_names ?? null ) ) {
+		if ( 1 !== count( $found ) || ! $this->table_name_matches_mode( $table, $found[0]->table_name ?? null, $mode ) ) {
 			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
 		}
 		$query = $database->prepare( "SELECT id FROM %i WHERE state IS NULL OR BINARY state NOT IN (BINARY 'succeeded', BINARY 'failed', BINARY 'needs_attention') OR (BINARY state = BINARY 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL)) LIMIT 1", $table );
@@ -173,15 +179,12 @@ class LocalDataRemover {
 		}
 	}
 
-	private function table_name_matches_mode( string $expected, mixed $actual, mixed $mode ): bool {
+	private function table_name_matches_mode( string $expected, mixed $actual, int $mode ): bool {
 		if ( ! is_string( $actual ) ) {
 			return false;
 		}
-		$parsed = is_int( $mode )
-			? $mode
-			: ( is_string( $mode ) && 1 === preg_match( '/\A[012]\z/', $mode ) ? (int) $mode : null );
 
-		return match ( $parsed ) {
+		return match ( $mode ) {
 			0 => hash_equals( $expected, $actual ),
 			1 => hash_equals( strtolower( $expected ), $actual ),
 			2 => 0 === strcasecmp( $expected, $actual ),

@@ -203,13 +203,9 @@ class Database {
 			$fresh           = ! $this->identity_read_failed() && null === $existing_option;
 		}
 		if ( $fresh ) {
-			$wpdb->last_error = '';
-			$activity_name    = substr( $attempt_table, 0, -strlen( 'ran_booster_deployment_attempts' ) ) . \RAN\Activity\ActivityStore::TABLE_SUFFIX;
-			$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $activity_name ) );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The table pattern is prepared above.
-			$activity_table = $wpdb->get_var( $query );
-			$fresh          = ! $this->identity_read_failed() && ( null === $activity_table
-				|| ( is_string( $activity_table ) && ! $this->table_name_matches( $activity_name, $activity_table ) ) );
+			$activity_name  = substr( $attempt_table, 0, -strlen( 'ran_booster_deployment_attempts' ) ) . \RAN\Activity\ActivityStore::TABLE_SUFFIX;
+			$activity_table = $this->read_table_name( $activity_name );
+			$fresh          = null === $activity_table || ! $this->table_name_matches( $activity_name, $activity_table );
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -333,17 +329,8 @@ class Database {
 		array $expected_columns,
 		array $expected_indexes
 	): bool {
-		$wpdb = $this->schema_connection();
-
-		$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_name ) );
-		$wpdb->last_error = '';
-		// Schema installation must inspect the authoritative database.
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the escaped LIKE value; authoritative schema installation cannot use a cached existence result.
-		$result = $wpdb->get_var( $query );
-		if ( '' !== trim( (string) $wpdb->last_error ) ) {
-			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
-		}
-		if ( ! is_string( $result ) ) {
+		$result = $this->read_table_name( $table_name );
+		if ( null === $result ) {
 			return true;
 		}
 		if ( ! $this->table_name_matches( $table_name, $result ) ) {
@@ -356,6 +343,21 @@ class Database {
 		}
 
 		return false;
+	}
+
+	private function read_table_name( string $table_name ): ?string {
+		$wpdb = $this->schema_connection();
+
+		$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table_name ) );
+		$wpdb->last_error = '';
+		// Schema installation must inspect the authoritative database.
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the escaped LIKE value; authoritative schema installation cannot use a cached existence result.
+		$result = $wpdb->get_var( $query );
+		if ( '' !== trim( $wpdb->last_error ) || ( null !== $result && ! is_string( $result ) ) ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
+
+		return $result;
 	}
 
 	/**
@@ -667,10 +669,11 @@ class Database {
 	}
 
 	private function inspect_capabilities(): void {
-		$database    = $this->connection();
-		$has_drop_in = defined( 'WP_CONTENT_DIR' )
+		$database       = $this->connection();
+		$has_drop_in    = defined( 'WP_CONTENT_DIR' )
 			&& is_string( constant( 'WP_CONTENT_DIR' ) )
 			&& is_file( rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php' );
+		$drop_in_handle = $has_drop_in ? $this->single_drop_in_handle( $database ) : null;
 		if ( ! method_exists( $database, 'db_server_info' ) ) {
 			throw new DatabaseCompatibilityFailure( $has_drop_in ? 'database_drop_in' : 'unknown_server' );
 		}
@@ -689,11 +692,11 @@ class Database {
 
 			$query_results = array( $database, 'get_results' );
 			$live          = null;
-			if ( $has_drop_in ) {
+			if ( null !== $drop_in_handle ) {
 				if ( ! is_callable( $query_results ) ) {
 					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 				}
-				$live = $this->verify_drop_in_server( $database, $query_results );
+				$live = $this->verify_drop_in_server( $database, $query_results, $drop_in_handle );
 			}
 			$server_info = $database->db_server_info();
 			$identity    = is_string( $server_info ) ? $this->classify_server( trim( $server_info ) ) : null;
@@ -771,11 +774,10 @@ class Database {
 	 * @param callable(string): mixed $query_results
 	 * @return array{family: 'mysql'|'mariadb', version: string}
 	 */
-	private function verify_drop_in_server( object $database, callable $query_results ): array {
+	private function verify_drop_in_server( object $database, callable $query_results, \ReflectionProperty $property ): array {
 		if ( ! method_exists( $database, 'query' ) ) {
 			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 		}
-		$property   = $this->single_drop_in_handle( $database );
 		$dbh_before = $property->isInitialized( $database ) ? $property->getValue( $database ) : null;
 		if ( ! $dbh_before instanceof \mysqli ) {
 			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
@@ -823,18 +825,21 @@ class Database {
 	}
 
 	private function single_drop_in_handle( object $database ): \ReflectionProperty {
+		if ( ! $database instanceof \wpdb ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		}
+
 		$reflection = new \ReflectionObject( $database );
-		if ( $database instanceof \wpdb ) {
-			$query_owner = $reflection->getMethod( 'query' )->getDeclaringClass()->getName();
-			// Query Monitor's reviewed QM_DB::query() delegates to its direct wpdb parent.
-			if ( \wpdb::class !== $reflection->getMethod( 'db_connect' )->getDeclaringClass()->getName()
-				|| ( \wpdb::class !== $query_owner
-					&& ( 'QM_DB' !== $reflection->getName() || 'QM_DB' !== $query_owner || \wpdb::class !== get_parent_class( $database ) ) ) ) {
+		// Query Monitor's reviewed QM_DB::query() delegates to its direct wpdb parent.
+		$is_direct_qm = 'QM_DB' === $database::class && \wpdb::class === get_parent_class( $database );
+		foreach ( ( new \ReflectionClass( \wpdb::class ) )->getMethods() as $method ) {
+			$name = $method->getName();
+			if ( $method->isPrivate() || $method->isConstructor() || ( $is_direct_qm && 'query' === $name ) ) {
+				continue;
+			}
+			if ( \wpdb::class !== $reflection->getMethod( $name )->getDeclaringClass()->getName() ) {
 				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 			}
-		} elseif ( ! $database instanceof SchemaConnection || class_exists( \wpdb::class, false )
-			|| ! defined( 'PHPUNIT_COMPOSER_INSTALL' ) || $reflection->hasMethod( 'db_connect' ) ) {
-			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 		}
 
 		// Routable execution or pooled handles cannot guarantee one transaction for all Booster tables.
@@ -888,7 +893,6 @@ class Database {
 		$previous_suppression = $suppress_errors?->__invoke( true );
 		$wpdb->last_error     = '';
 		try {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read the server's live table-name casing mode once per request.
 			$value = $wpdb->get_var( 'SELECT @@lower_case_table_names' );
 		} catch ( \Throwable ) {
 			throw new DatabaseLifecycleFailure( 'schema_read_failed' );

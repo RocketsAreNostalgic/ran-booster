@@ -150,11 +150,11 @@ namespace {
 	}
 }
 
-// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound, Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden -- The global WordPress doubles and namespaced database fake are loaded together by this fixture.
+// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound, Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden -- The global WordPress doubles and namespaced database fixture are loaded together by this fixture.
 namespace RAN\Tests\Storage {
 
-	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
-	class StorageTestWpdb extends \RAN\Storage\SchemaConnection {
+	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with shared database behavior for isolated storage tests.
+	trait StorageTestDatabaseBehavior {
 
 		public string $prefix                            = 'wp_';
 		public string $base_prefix                       = 'wp_';

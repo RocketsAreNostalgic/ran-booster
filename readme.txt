@@ -152,9 +152,10 @@ content, plugin and theme directories must be available. Multisite and network
 activation are not supported for package deployment.
 
 MySQL 8.0 is the tested compatibility floor and MySQL 8.4 LTS is recommended
-for production. With a db.php drop-in, Booster requires WordPress wpdb, a
-subclass that inherits wpdb's query() and db_connect() methods, or Query
-Monitor's QM_DB with its pass-through query() and inherited db_connect().
+for production. With a db.php drop-in, Booster requires WordPress wpdb or
+a subclass that inherits every non-private wpdb method except the constructor.
+Query Monitor's direct QM_DB subclass may also override query() with its
+reviewed pass-through implementation.
 Each must pass a same-session mysqli probe and the server and InnoDB checks.
 SQLite, PostgreSQL and query-routing drop-ins are unsupported. Unsupported
 fresh activation stops before schema changes. If an active site's database

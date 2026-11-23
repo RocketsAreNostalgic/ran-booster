@@ -235,22 +235,42 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		}
 	}
 
-	public function test_malformed_activity_table_result_keeps_fresh_install_presentation_neutral(): void {
+	/** @return array<string, array{string}> */
+	public static function table_lookup_provider(): array {
+		return array(
+			'package table'  => array( 'packages' ),
+			'journal table'  => array( 'deployment_attempts' ),
+			'activity table' => array( 'activity' ),
+		);
+	}
+
+	#[DataProvider( 'table_lookup_provider' )]
+	public function test_malformed_table_lookup_stops_install_before_ddl_or_onboarding( string $suffix ): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- dbDelta and the table helpers share this isolated connection.
-		$wpdb = new class() extends StorageTestWpdb {
+		$wpdb = new class( $suffix ) extends StorageTestWpdb {
+			public function __construct( private string $suffix ) {
+			}
+
 			public function get_var( string $query ): int|string|null {
-				if ( str_starts_with( $query, 'SHOW TABLES LIKE ' ) && str_ends_with( $query, "activity'" ) ) {
+				if ( $this->prepare( 'SHOW TABLES LIKE %s', $this->esc_like( 'wp_ran_booster_' . $this->suffix ) ) === $query ) {
 					return 1;
 				}
+
 				return parent::get_var( $query );
 			}
 		};
 
-		( new Database( $wpdb, $this->declaration() ) )->install();
-		self::assertCount( 2, $wpdb->schemas );
-		self::assertSame( Database::$booster_db_version, $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		try {
+			( new Database( $wpdb, $this->declaration() ) )->install();
+			self::fail( 'Expected the malformed table lookup to stop setup.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'schema_read_failed', $failure->reason() );
+		}
+		self::assertSame( array(), $wpdb->schemas );
+		self::assertSame( array(), $wpdb->schema_tables );
+		self::assertArrayNotHasKey( Database::VERSION_OPTION, $ran_booster_storage_test_options );
 		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options );
 	}
 
@@ -387,24 +407,23 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		string $live_comment,
 		bool $symlink_drop_in
 	): void {
-		global $wpdb;
-
 		$this->with_drop_in(
-			static function () use ( $wpdb, $server_info, $live_version, $live_comment ): void {
-				$wpdb->dbh                  = self::mysqli_handle();
-				$wpdb->server_info          = $server_info;
-				$wpdb->live_version         = $live_version;
-				$wpdb->live_version_comment = $live_comment;
-				$wpdb->read_connection_id   = '41';
-				$wpdb->last_error           = 'previous error';
+			static function () use ( $server_info, $live_version, $live_comment, $symlink_drop_in ): void {
+				$connection                       = $symlink_drop_in ? new class() extends \wpdb {} : new \wpdb();
+				$connection->dbh                  = self::mysqli_handle();
+				$connection->server_info          = $server_info;
+				$connection->live_version         = $live_version;
+				$connection->live_version_comment = $live_comment;
+				$connection->read_connection_id   = '41';
+				$connection->last_error           = 'previous error';
 
-				$database = new Database( $wpdb );
+				$database = new Database( $connection );
 				$database->require_supported();
 
 				self::assertTrue( $database->is_supported() );
-				self::assertContains( 'SELECT @@version AS version, @@version_comment AS comment, @ran_booster_probe AS probe_connection_id, CONNECTION_ID() AS read_connection_id', $wpdb->read_queries );
-				self::assertSame( array( 'SET @ran_booster_probe := CONNECTION_ID()', 'SET @ran_booster_probe := NULL' ), $wpdb->queries );
-				self::assertSame( 'previous error', $wpdb->last_error );
+				self::assertContains( 'SELECT @@version AS version, @@version_comment AS comment, @ran_booster_probe AS probe_connection_id, CONNECTION_ID() AS read_connection_id', $connection->read_queries );
+				self::assertSame( array( 'SET @ran_booster_probe := CONNECTION_ID()', 'SET @ran_booster_probe := NULL' ), $connection->queries );
+				self::assertSame( 'previous error', $connection->last_error );
 			},
 			$symlink_drop_in
 		);
@@ -428,21 +447,20 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		string $live_comment,
 		string $expected_failure
 	): void {
-		global $wpdb;
-
 		$this->with_drop_in(
-			static function () use ( $wpdb, $throws_before_query, $server_info, $live_comment, $expected_failure ): void {
-				$wpdb->dbh                     = self::mysqli_handle();
-				$wpdb->server_info             = $server_info;
-				$wpdb->live_version            = $server_info;
-				$wpdb->live_version_comment    = $live_comment;
-				$wpdb->lazy_server_info        = ! $throws_before_query;
-				$wpdb->lazy_server_info_throws = $throws_before_query;
+			static function () use ( $throws_before_query, $server_info, $live_comment, $expected_failure ): void {
+				$connection                          = new \wpdb();
+				$connection->dbh                     = self::mysqli_handle();
+				$connection->server_info             = $server_info;
+				$connection->live_version            = $server_info;
+				$connection->live_version_comment    = $live_comment;
+				$connection->lazy_server_info        = ! $throws_before_query;
+				$connection->lazy_server_info_throws = $throws_before_query;
 
-				$database = new Database( $wpdb );
+				$database = new Database( $connection );
 				if ( '' === $expected_failure ) {
 					$database->require_supported();
-					self::assertSame( 1, $wpdb->capability_reads );
+					self::assertSame( 1, $connection->capability_reads );
 				} else {
 					self::assert_drop_in_failure( $database, $expected_failure );
 				}
@@ -508,20 +526,19 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		?array $live_version_rows,
 		string $expected_reason
 	): void {
-		global $wpdb;
-
 		$this->with_drop_in(
-			static function () use ( $wpdb, $server_info, $live_version, $live_comment, $live_version_rows, $fail_live_version_probe, $fail_engines_probe, $innodb_transactions, $expected_reason ): void {
-				$wpdb->dbh                     = self::mysqli_handle();
-				$wpdb->server_info             = $server_info;
-				$wpdb->live_version            = $live_version;
-				$wpdb->live_version_comment    = $live_comment;
-				$wpdb->live_version_rows       = $live_version_rows;
-				$wpdb->fail_live_version_probe = $fail_live_version_probe;
-				$wpdb->fail_engines_probe      = $fail_engines_probe;
-				$wpdb->innodb_transactions     = $innodb_transactions;
+			static function () use ( $server_info, $live_version, $live_comment, $live_version_rows, $fail_live_version_probe, $fail_engines_probe, $innodb_transactions, $expected_reason ): void {
+				$connection                          = new \wpdb();
+				$connection->dbh                     = self::mysqli_handle();
+				$connection->server_info             = $server_info;
+				$connection->live_version            = $live_version;
+				$connection->live_version_comment    = $live_comment;
+				$connection->live_version_rows       = $live_version_rows;
+				$connection->fail_live_version_probe = $fail_live_version_probe;
+				$connection->fail_engines_probe      = $fail_engines_probe;
+				$connection->innodb_transactions     = $innodb_transactions;
 
-				self::assert_drop_in_failure( new Database( $wpdb ), $expected_reason );
+				self::assert_drop_in_failure( new Database( $connection ), $expected_reason );
 			}
 		);
 	}
@@ -673,20 +690,19 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_db_drop_in_requires_an_initialized_mysqli_handle(): void {
-		global $wpdb;
-
 		$this->with_drop_in(
-			static function () use ( $wpdb ): void {
-				self::assert_drop_in_failure( new Database( $wpdb ) );
+			static function (): void {
+				$connection = new \wpdb();
+				self::assert_drop_in_failure( new Database( $connection ) );
 				foreach ( array( 1, new \stdClass() ) as $handle ) {
-					$wpdb->dbh = $handle;
-					self::assert_drop_in_failure( new Database( $wpdb ) );
+					$connection->dbh = $handle;
+					self::assert_drop_in_failure( new Database( $connection ) );
 				}
-				unset( $wpdb->dbh );
-				self::assert_drop_in_failure( new Database( $wpdb ) );
-				self::assertSame( array(), $wpdb->queries );
+				unset( $connection->dbh );
+				self::assert_drop_in_failure( new Database( $connection ) );
+				self::assertSame( array(), $connection->queries );
 
-				$connection = new class() {
+				$non_native = new class() {
 					public function db_server_info(): string {
 						return '8.4.6';
 					}
@@ -698,7 +714,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 						throw new \LogicException( 'Unexpected read on a connection with no handle.' );
 					}
 				};
-				self::assert_drop_in_failure( new Database( $connection ) );
+				self::assert_drop_in_failure( new Database( $non_native ) );
 			}
 		);
 	}
@@ -709,29 +725,29 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		$this->with_drop_in(
 			static function (): void {
 				$connections = array(
-					new class() extends StorageTestWpdb {
+					new class() extends \wpdb {
 						/** @var list<\mysqli> */
 						public array $dbhs = array();
 					},
-					new class() extends StorageTestWpdb {
+					new class() extends \wpdb {
 						/** @var list<string> */
 						public array $ludicrous_servers = array();
 					},
-					new class() extends StorageTestWpdb {
+					new class() extends \wpdb {
 						public function determine_dataset(): string {
 							return 'default';
 						}
 					},
-					new class( self::mysqli_handle() ) extends StorageTestWpdb {
+					new class( self::mysqli_handle() ) extends \wpdb {
 						/** @var list<\mysqli> */
 						public array $pool;
 						public function __construct( \mysqli $handle ) {
 							$this->pool = array( $handle );
 						}
 					},
-					new class() extends StorageTestWpdb {
-						public function db_connect( string $query ): string {
-							return $query;
+					new class() extends \wpdb {
+						public function db_connect(): bool {
+							return false;
 						}
 					},
 				);
@@ -747,29 +763,84 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_probe_rejects_a_swapped_handle_and_a_failed_session_write(): void {
-		global $wpdb;
-
+	public function test_wpdb_read_and_write_overrides_block_recovery_before_the_probe(): void {
 		$this->with_drop_in(
-			static function () use ( $wpdb ): void {
-				$wpdb->dbh               = self::mysqli_handle();
-				$wpdb->swap_probe_handle = true;
-				self::assert_drop_in_failure( new Database( $wpdb ) );
-				self::assertSame( 'SET @ran_booster_probe := NULL', end( $wpdb->queries ) );
+			static function (): void {
+				global $wpdb;
+				$connections = array(
+					new class() extends \wpdb {
+						public int $override_calls = 0;
 
-				$wpdb->query_failure_contains = 'SET @ran_booster_probe := CONNECTION_ID()';
-				$wpdb->last_error             = 'previous error';
-				$reads                        = $wpdb->read_queries;
-				self::assert_drop_in_failure( new Database( $wpdb ) );
-				self::assertSame( $reads, $wpdb->read_queries );
-				self::assertSame( 'SET @ran_booster_probe := NULL', end( $wpdb->queries ) );
-				self::assertSame( 'previous error', $wpdb->last_error );
+						/** @return list<object>|null */
+						public function get_results( string $query ): ?array {
+							++$this->override_calls;
+							return parent::get_results( $query );
+						}
+					},
+					new class() extends \wpdb {
+						public int $override_calls = 0;
 
-				$wpdb->query_failure_contains = null;
-				$wpdb->probe_write_error      = 'database details must not escape';
-				self::assert_drop_in_failure( new Database( $wpdb ) );
-				self::assertSame( $reads, $wpdb->read_queries );
-				self::assertSame( 'previous error', $wpdb->last_error );
+						/**
+						 * @param array<string, mixed> $data
+						 * @param array<string, mixed> $where
+						 */
+						public function update( string $table, array $data, array $where ): int|false {
+							++$this->override_calls;
+							return parent::update( $table, $data, $where );
+						}
+					},
+				);
+				foreach ( $connections as $connection ) {
+					// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Guard and repository must see the same isolated wpdb double.
+					$wpdb            = $connection;
+					$connection->dbh = self::mysqli_handle();
+					self::assert_drop_in_failure( new Database() );
+					try {
+						( new PluginRepository( new Database() ) )->recover_unlink(
+							'fixture/fixture.php',
+							'fixture-token',
+							'fixture-digest',
+							static function (): void {
+								self::fail( 'An unreviewed wpdb override must never enter guarded recovery.' );
+							}
+						);
+						self::fail( 'Expected guarded unlink to reject the overridden database method.' );
+					} catch ( PackageStorageFailure $failure ) {
+						self::assertTrue( $failure->is_database_unsupported() );
+					}
+					self::assertSame( 0, $connection->override_calls );
+					self::assertSame( array(), $connection->queries );
+					self::assertSame( array(), $connection->read_queries );
+					self::assertSame( array(), $connection->updates );
+				}
+			}
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_probe_rejects_a_swapped_handle_and_a_failed_session_write(): void {
+		$this->with_drop_in(
+			static function (): void {
+				$connection                    = new \wpdb();
+				$connection->dbh               = self::mysqli_handle();
+				$connection->swap_probe_handle = true;
+				self::assert_drop_in_failure( new Database( $connection ) );
+				self::assertSame( 'SET @ran_booster_probe := NULL', end( $connection->queries ) );
+
+				$connection->query_failure_contains = 'SET @ran_booster_probe := CONNECTION_ID()';
+				$connection->last_error             = 'previous error';
+				$reads                              = $connection->read_queries;
+				self::assert_drop_in_failure( new Database( $connection ) );
+				self::assertSame( $reads, $connection->read_queries );
+				self::assertSame( 'SET @ran_booster_probe := NULL', end( $connection->queries ) );
+				self::assertSame( 'previous error', $connection->last_error );
+
+				$connection->query_failure_contains = null;
+				$connection->probe_write_error      = 'database details must not escape';
+				self::assert_drop_in_failure( new Database( $connection ) );
+				self::assertSame( $reads, $connection->read_queries );
+				self::assertSame( 'previous error', $connection->last_error );
 			}
 		);
 	}
@@ -777,10 +848,11 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_split_session_blocks_recovery_and_single_session_rolls_back_the_delete(): void {
-		global $wpdb;
-
 		$this->with_drop_in(
-			function () use ( $wpdb ): void {
+			function (): void {
+				global $wpdb;
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Recovery and dbDelta share the isolated native drop-in double.
+				$wpdb       = new \wpdb();
 				$wpdb->dbh  = self::mysqli_handle();
 				$database   = new Database( $wpdb, $this->declaration() );
 				$repository = new PluginRepository( $database );
@@ -848,6 +920,8 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 
 	/** @param callable(): void $test */
 	private function with_drop_in( callable $test, bool $symlink = false ): void {
+		require_once __DIR__ . '/DatabaseDropInWpdb.php';
+
 		$content_dir = sys_get_temp_dir() . '/ran-booster-db-dropin-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated temporary WP_CONTENT_DIR fixture.
 		self::assertTrue( mkdir( $content_dir, 0700 ) );
@@ -859,7 +933,6 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 			if ( $symlink ) {
 				self::assertTrue( symlink( $target, $drop_in ) );
 			}
-			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Isolated process tests WordPress's WP_CONTENT_DIR drop-in contract.
 			define( 'WP_CONTENT_DIR', $content_dir );
 			$test();
 		} finally {

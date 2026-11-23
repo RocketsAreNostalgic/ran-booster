@@ -171,6 +171,9 @@ fi
 
 set -euo pipefail
 
+# Caller options can convert text on extraction or change ZIP listings.
+unset UNZIP UNZIPOPT ZIPINFO ZIPINFOOPT
+
 fail() {
 	printf 'verify-release: %s
 ' "$*" >&2

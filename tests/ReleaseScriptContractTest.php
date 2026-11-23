@@ -103,15 +103,26 @@ final class ReleaseScriptContractTest extends TestCase {
 			path=assets/release-fixture.css
 			git archive --format=tar "$committed" -- "$path" | tar -xOf - "$path" > "changed/ran-booster/$path"
 			printf 'body {}\r\n' | cmp -s - "changed/ran-booster/$path"
+			git cat-file blob "$committed:$path" > committed.css
+			cp committed.css "changed/ran-booster/$path"
 			cp baseline.zip "tampered/${archive##*/}"
-			(cd changed && zip -q -0 -X "../tampered/${archive##*/}" "ran-booster/$path")
+			(cd changed && zip -q -X -l "../tampered/${archive##*/}" "ran-booster/$path")
+			unzip -p "tampered/${archive##*/}" "ran-booster/$path" | cmp -s - <(printf 'body {}\r\n')
+			# Prove the ZIP entry is marked as text and Info-ZIP would mask the mismatch.
+			UNZIP=-a UNZIPOPT=-a unzip -q "tampered/${archive##*/}" -d converted
+			cmp committed.css "converted/ran-booster/$path"
 			reject_with "archived Core file $path does not match the release ref." \
 				bash scripts/verify-release.sh "tampered/${archive##*/}" "$version" "$committed"
+			for option in UNZIP UNZIPOPT; do
+				reject_with "archived Core file $path does not match the release ref." \
+					env "$option=-a" bash scripts/verify-release.sh "tampered/${archive##*/}" "$version" "$committed"
+			done
+			reject_with "archived Core file $path does not match the release ref." \
+				env UNZIP=-a UNZIPOPT=-a bash scripts/verify-release.sh "tampered/${archive##*/}" "$version" "$committed"
 
-			(umask 022; bash scripts/build-release.sh "$committed" "$version")
+			(umask 022; ZIP=-l ZIPOPT=-l bash scripts/build-release.sh "$committed" "$version")
 			cmp baseline.zip "$archive"
 			cmp baseline.sha256 "$archive.sha256"
-			git cat-file blob "$committed:$path" > committed.css
 			unzip -p "$archive" "ran-booster/$path" | cmp -s committed.css -
 			bash scripts/verify-release.sh "$archive" "$version" "$committed"
 			BASH
@@ -195,6 +206,7 @@ final class ReleaseScriptContractTest extends TestCase {
 		$setup = <<<'BASH'
 			exec 2>&1
 			set -euo pipefail
+			unset ZIP ZIPOPT UNZIP UNZIPOPT ZIPINFO ZIPINFOOPT
 			source_root=$1
 			work_dir=$(mktemp -d "${TMPDIR:-/tmp}/ran-booster-release-contract.XXXXXX")
 			trap 'rm -rf "$work_dir"' EXIT

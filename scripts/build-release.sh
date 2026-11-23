@@ -208,6 +208,8 @@ tmp_archive="$tmp_dir/$archive_name"
 
 (
 	cd "$stage_dir"
+	# Caller ZIP options can change the stored bytes or archive layout.
+	unset ZIP ZIPOPT
 	find ran-booster -print \
 		| LC_ALL=C sort \
 		| zip -q -0 -X "$tmp_archive" -@

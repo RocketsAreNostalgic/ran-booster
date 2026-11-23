@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+unset UNZIP UNZIPOPT
 fail() { printf 'bitbucket-selection-installed: %s\n' "$*" >&2; exit 2; }
 [[ "${RAN_BOOSTER_BITBUCKET_TEST_DISPOSABLE:-}" == 1 ]] || fail 'Explicit disposable-site consent is required.'
 wordpress=${RAN_BOOSTER_WORDPRESS_PATH:?Set the exact disposable site path.}

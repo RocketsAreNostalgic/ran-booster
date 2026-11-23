@@ -14,6 +14,8 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 	/** Optional override to simulate an unexpected table-name row returned by information_schema. */
 	public ?string $forced_information_schema_table = null;
 	public bool $omit_information_schema_mode       = false;
+	public bool $errors_suppressed                  = false;
+	public ?bool $lower_case_read_suppressed        = null;
 
 	/** @var list<string> */
 	public array $tables = array();
@@ -61,8 +63,17 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 		);
 	}
 
+	public function suppress_errors( bool $suppress = true ): bool {
+		$previous                = $this->errors_suppressed;
+		$this->errors_suppressed = $suppress;
+		return $previous;
+	}
+
 	public function get_results( string $query ): mixed {
 		$this->reads[] = $query;
+		if ( 'SELECT @@lower_case_table_names AS lower_case_table_names' === $query ) {
+			$this->lower_case_read_suppressed = $this->errors_suppressed;
+		}
 		if ( null !== $this->read_failure_contains && str_contains( $query, $this->read_failure_contains ) ) {
 			$this->last_error = 'synthetic read failure';
 			return null;

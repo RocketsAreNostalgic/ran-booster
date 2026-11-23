@@ -196,6 +196,64 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		self::assertSame( '15.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 	}
 
+	public function test_invalid_casing_mode_stops_fresh_install_before_db_delta(): void {
+		global $ran_booster_storage_test_options, $wpdb;
+
+		$wpdb->lower_case_table_names_raw = '3';
+		try {
+			( new Database( $wpdb, $this->declaration() ) )->install();
+			self::fail( 'Expected invalid casing metadata to stop setup.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'schema_read_failed', $failure->reason() );
+		}
+
+		self::assertSame( array(), $wpdb->schemas );
+		self::assertSame( array(), $wpdb->schema_tables );
+		self::assertSame( array(), $ran_booster_storage_test_options );
+	}
+
+	public function test_casing_read_suppresses_database_errors_and_restores_the_caller_setting(): void {
+		global $wpdb;
+
+		( new Database( $wpdb, $this->declaration() ) )->install();
+		self::assertTrue( $wpdb->lower_case_read_suppressed );
+		self::assertFalse( $wpdb->errors_suppressed );
+
+		foreach ( array( false, true ) as $previous ) {
+			$wpdb->errors_suppressed           = $previous;
+			$wpdb->lower_case_read_suppressed  = null;
+			$wpdb->fail_lower_case_table_names = true;
+			try {
+				( new Database( $wpdb ) )->require_recovery_ready();
+				self::fail( 'Expected a failed casing metadata read to stop recovery.' );
+			} catch ( DatabaseLifecycleFailure $failure ) {
+				self::assertSame( 'schema_read_failed', $failure->reason() );
+				self::assertStringNotContainsString( 'database details', $failure->getMessage() );
+			}
+			self::assertTrue( $wpdb->lower_case_read_suppressed );
+			self::assertSame( $previous, $wpdb->errors_suppressed );
+		}
+	}
+
+	public function test_malformed_activity_table_result_keeps_fresh_install_presentation_neutral(): void {
+		global $ran_booster_storage_test_options, $wpdb;
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- dbDelta and the table helpers share this isolated connection.
+		$wpdb = new class() extends StorageTestWpdb {
+			public function get_var( string $query ): int|string|null {
+				if ( str_starts_with( $query, 'SHOW TABLES LIKE ' ) && str_ends_with( $query, "activity'" ) ) {
+					return 1;
+				}
+				return parent::get_var( $query );
+			}
+		};
+
+		( new Database( $wpdb, $this->declaration() ) )->install();
+		self::assertCount( 2, $wpdb->schemas );
+		self::assertSame( Database::$booster_db_version, $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options );
+	}
+
 	public function test_fresh_install_initializes_automatic_overview_presentation(): void {
 		global $ran_booster_storage_test_options;
 

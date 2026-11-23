@@ -189,6 +189,8 @@ class Database {
 				$contract['indexes']
 			);
 		}
+		$this->lower_case_table_names();
+
 		$fresh = null === $installed_version && ! in_array( false, $missing_tables, true )
 			&& isset( $wpdb->options ) && is_string( $wpdb->options ) && '' !== $wpdb->options
 			&& ! defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) && ! defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' )
@@ -206,15 +208,8 @@ class Database {
 			$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $activity_name ) );
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The table pattern is prepared above.
 			$activity_table = $wpdb->get_var( $query );
-			if ( $this->identity_read_failed() ) {
-				$fresh = false;
-			} elseif ( is_string( $activity_table ) ) {
-				try {
-					$fresh = ! $this->table_name_matches( $activity_name, $activity_table );
-				} catch ( DatabaseLifecycleFailure ) {
-					$fresh = false;
-				}
-			}
+			$fresh          = ! $this->identity_read_failed() && ( null === $activity_table
+				|| ( is_string( $activity_table ) && ! $this->table_name_matches( $activity_name, $activity_table ) ) );
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -828,18 +823,25 @@ class Database {
 	}
 
 	private function single_drop_in_handle( object $database ): \ReflectionProperty {
-		// Routed drop-ins cannot guarantee that options and Booster tables share a transaction.
+		$reflection = new \ReflectionObject( $database );
+		if ( $database instanceof \wpdb ) {
+			$query_owner = $reflection->getMethod( 'query' )->getDeclaringClass()->getName();
+			// Query Monitor's reviewed QM_DB::query() delegates to its direct wpdb parent.
+			if ( \wpdb::class !== $reflection->getMethod( 'db_connect' )->getDeclaringClass()->getName()
+				|| ( \wpdb::class !== $query_owner
+					&& ( 'QM_DB' !== $reflection->getName() || 'QM_DB' !== $query_owner || \wpdb::class !== get_parent_class( $database ) ) ) ) {
+				throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+			}
+		} elseif ( ! $database instanceof SchemaConnection || class_exists( \wpdb::class, false )
+			|| ! defined( 'PHPUNIT_COMPOSER_INSTALL' ) || $reflection->hasMethod( 'db_connect' ) ) {
+			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+		}
+
+		// Routable execution or pooled handles cannot guarantee one transaction for all Booster tables.
 		$properties = array( 'dbhs', 'hyper_servers', 'hyper_tables', 'ludicrous_servers', 'ludicrous_tables', 'srtm', 'callbacks', 'table_datasets', 'read_dbh', 'write_dbh' );
 		$methods    = array( 'add_database', 'add_table', 'add_callback', 'get_table_from_query', 'is_write_query', 'send_reads_to_masters', 'determine_dataset' );
 		$handle     = null;
-		for ( $reflection = new \ReflectionObject( $database ); false !== $reflection; $reflection = $reflection->getParentClass() ) {
-			if ( $reflection->hasMethod( 'db_connect' ) ) {
-				$connect = $reflection->getMethod( 'db_connect' );
-				if ( ( $database instanceof \wpdb && \wpdb::class !== $connect->getDeclaringClass()->getName() )
-					|| 'query' === ( $connect->getParameters()[0] ?? null )?->getName() ) {
-					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
-				}
-			}
+		for ( ; false !== $reflection; $reflection = $reflection->getParentClass() ) {
 			foreach ( $methods as $method ) {
 				// Core wpdb uses its table parser for charset checks. A drop-in override can route SQL.
 				if ( $reflection->hasMethod( $method )
@@ -881,10 +883,18 @@ class Database {
 			return $this->lower_case_table_names;
 		}
 
-		$wpdb             = $this->schema_connection();
-		$wpdb->last_error = '';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read the server's live table-name casing mode once per request.
-		$value = $wpdb->get_var( 'SELECT @@lower_case_table_names' );
+		$wpdb                 = $this->schema_connection();
+		$suppress_errors      = method_exists( $wpdb, 'suppress_errors' ) ? $wpdb->suppress_errors( ... ) : null;
+		$previous_suppression = $suppress_errors?->__invoke( true );
+		$wpdb->last_error     = '';
+		try {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read the server's live table-name casing mode once per request.
+			$value = $wpdb->get_var( 'SELECT @@lower_case_table_names' );
+		} catch ( \Throwable ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		} finally {
+			$suppress_errors?->__invoke( $previous_suppression );
+		}
 		if ( $this->identity_read_failed() ) {
 			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 		}

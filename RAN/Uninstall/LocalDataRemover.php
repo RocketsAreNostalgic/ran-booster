@@ -149,8 +149,16 @@ class LocalDataRemover {
 				throw new RuntimeException( 'Booster has an unfinished native mutation that must be resolved before cleanup.' );
 			}
 		}
-		$mode_rows = $this->custody_rows( $database, 'SELECT @@lower_case_table_names AS lower_case_table_names' );
-		$value     = $mode_rows[0]->lower_case_table_names ?? null;
+		$suppress_errors      = method_exists( $database, 'suppress_errors' ) ? $database->suppress_errors( ... ) : null;
+		$previous_suppression = $suppress_errors?->__invoke( true );
+		try {
+			$mode_rows = $this->custody_rows( $database, 'SELECT @@lower_case_table_names AS lower_case_table_names' );
+		} catch ( \Throwable ) {
+			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+		} finally {
+			$suppress_errors?->__invoke( $previous_suppression );
+		}
+		$value = $mode_rows[0]->lower_case_table_names ?? null;
 		if ( 1 !== count( $mode_rows ) || ! in_array( $value, array( 0, 1, 2, '0', '1', '2' ), true ) ) {
 			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
 		}

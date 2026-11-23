@@ -10,7 +10,9 @@ use RAN\Deployment\DeploymentRequest;
 use RAN\Internal\CoreContainer;
 use RAN\ManagedRepository;
 use RAN\Storage\Database;
+use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
+use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PluginRepository;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
@@ -61,6 +63,62 @@ try {
 		throw new RuntimeException( 'Could not write the disposable db.php smoke marker.' );
 	}
 	( new Database( $wpdb ) )->require_supported();
+
+	$ran_booster_router_proof = static function ( wpdb $package_writer ): void {
+		if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' ) ) {
+			throw new RuntimeException( 'Drop-in proof requires installed WordPress database configuration.' );
+		}
+		$router                 = new class( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST ) extends wpdb {
+			public wpdb $package_writer;
+
+			/** @param string $query */
+			public function query( $query ): int|bool {
+				if ( str_starts_with( $query, 'DELETE FROM ' ) && str_contains( $query, 'ran_booster_packages' ) ) {
+					return $this->package_writer->query( $query );
+				}
+				return parent::query( $query );
+			}
+		};
+		$router->package_writer = $package_writer;
+		try {
+			$router->query( 'SET @ran_booster_router_test := CONNECTION_ID()' );
+			$session = $router->get_var( 'SELECT @ran_booster_router_test' );
+			if ( ! is_numeric( $session ) || $session !== $router->get_var( 'SELECT CONNECTION_ID()' )
+				|| $session === $package_writer->get_var( 'SELECT CONNECTION_ID()' ) ) {
+				throw new RuntimeException( 'Expected the router to keep its probe session separate from its package writer.' );
+			}
+
+			$router_queries = $router->num_queries;
+			$writer_queries = $package_writer->num_queries;
+			$lifecycle      = new Database( $router );
+			try {
+				$lifecycle->require_supported();
+				throw new RuntimeException( 'Expected the table-specific router to fail admission.' );
+			} catch ( DatabaseCompatibilityFailure $failure ) {
+				if ( 'database_drop_in' !== $failure->reason() ) {
+					throw $failure;
+				}
+			}
+			try {
+				( new PluginRepository( $lifecycle ) )->recover_unlink(
+					'fixture/fixture.php',
+					'fixture-token',
+					'fixture-digest',
+					static function (): never {
+						throw new RuntimeException( 'The routed drop-in entered guarded recovery.' );
+					}
+				);
+				throw new RuntimeException( 'Expected guarded recovery to reject the routed drop-in.' );
+			} catch ( PackageStorageFailure $failure ) {
+				if ( ! $failure->is_database_unsupported() || $router_queries !== $router->num_queries || $writer_queries !== $package_writer->num_queries ) {
+					throw $failure;
+				}
+			}
+		} finally {
+			$router->close();
+		}
+	};
+	$ran_booster_router_proof( $wpdb );
 } finally {
 	clearstatcache( true, $ran_booster_drop_in );
 	if ( $ran_booster_marker_created && ! is_link( $ran_booster_drop_in ) ) {

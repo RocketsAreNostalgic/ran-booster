@@ -256,6 +256,23 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function test_casing_preflight_suppresses_database_errors_and_restores_the_caller_setting(): void {
+		$this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
+		self::assertTrue( $this->database->lower_case_read_suppressed );
+		self::assertFalse( $this->database->errors_suppressed );
+
+		foreach ( array( false, true ) as $previous ) {
+			$this->setUp();
+			$this->database->errors_suppressed     = $previous;
+			$this->database->read_failure_contains = 'SELECT @@lower_case_table_names';
+			$this->assert_preflight_refuses_without_mutation( 'Booster could not verify recorded work before cleanup.' );
+			self::assertTrue( $this->database->lower_case_read_suppressed );
+			self::assertSame( $previous, $this->database->errors_suppressed );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_absent_journal_and_authorities_allow_repeat_cleanup(): void {
 		$this->setUp();
 		unset( $GLOBALS['ran_booster_uninstall_options'][ GitHubSelectionStore::OPTION ], $GLOBALS['ran_booster_uninstall_options'][ Database::VERSION_OPTION ] );

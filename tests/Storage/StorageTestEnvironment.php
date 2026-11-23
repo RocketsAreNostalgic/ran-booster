@@ -203,6 +203,8 @@ namespace RAN\Tests\Storage {
 		public int $lower_case_table_names         = 0;
 		public mixed $lower_case_table_names_raw   = false;
 		public bool $fail_lower_case_table_names   = false;
+		public bool $errors_suppressed             = false;
+		public ?bool $lower_case_read_suppressed   = null;
 		public bool $case_insensitive_show_tables  = false;
 		public int $capability_reads               = 0;
 
@@ -466,12 +468,19 @@ namespace RAN\Tests\Storage {
 			return 0;
 		}
 
+		public function suppress_errors( bool $suppress = true ): bool {
+			$previous                = $this->errors_suppressed;
+			$this->errors_suppressed = $suppress;
+			return $previous;
+		}
+
 		public function get_var( string $query ): int|string|null {
 			if ( $this->read_failure ) {
 				$this->last_error = 'database details must not escape';
 				return null;
 			}
 			if ( 'SELECT @@lower_case_table_names' === $query ) {
+				$this->lower_case_read_suppressed = $this->errors_suppressed;
 				if ( $this->fail_lower_case_table_names ) {
 					$this->last_error = 'database details must not escape';
 					return null;

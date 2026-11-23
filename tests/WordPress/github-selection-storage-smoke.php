@@ -57,7 +57,7 @@ return static function ( wpdb $database ): void {
 	$saved_cache  = array();
 	$plugin_root  = null;
 	$plugin_files = array();
-	foreach ( array( GitHubSelectionStore::OPTION, 'alloptions', 'notoptions', 'active_plugins' ) as $key ) {
+	foreach ( array( GitHubSelectionStore::OPTION, 'alloptions', 'notoptions', 'active_plugins', 'auto_updater.lock' ) as $key ) {
 		$found               = false;
 		$value               = wp_cache_get( $key, 'options', false, $found );
 		$saved_cache[ $key ] = array( $found, $value );
@@ -490,6 +490,100 @@ return static function ( wpdb $database ): void {
 			}
 			$expect( 0 === $filtered_queries->count(), 'pinned wpdb stale-lock reclaim must not run WordPress query filters inside the transaction' );
 			$expect( is_string( $reclaimed ) && $reclaimed !== $stale && $committed_reclaim === $reclaimed && $lock_row() === $reclaimed, 'pinned wpdb stale-lock reclaim must commit exact token' );
+
+			$prime_lock_cache  = static function (): void {
+				wp_cache_set( 'auto_updater.lock', 'smoke-lock-cache', 'options' );
+				wp_cache_set( 'notoptions', array( 'smoke-lock-cache' => true ), 'options' );
+			};
+			$expect_lock_cache = static function ( bool $expected, string $reason ) use ( $expect ): void {
+				foreach ( array( 'auto_updater.lock', 'notoptions' ) as $cache_key ) {
+					$found = false;
+					wp_cache_get( $cache_key, 'options', false, $found );
+					$expect( $expected === $found, $reason );
+				}
+			};
+			$expected_owner    = (string) time();
+			$stale_base        = (string) ( time() - 3601 );
+			foreach (
+				array(
+					array( $expected_owner, $expected_owner . ' ' ),
+					array( $stale_base, $stale_base . ' ' ),
+					array( $expected_owner, $stale_base . ' ' ),
+				) as list( $candidate_owner, $padded_malformed )
+			) {
+				$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+				$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $padded_malformed, 'no' ) );
+				try {
+					$prime_lock_cache();
+					$expect_lock_cache( true, 'prime lock cache before trailing-space handoff check' );
+					$padded_rejected = false;
+					try {
+						$lock->acquire_replacing_owner( $candidate_owner );
+					} catch ( RuntimeException $failure ) {
+						$padded_rejected = 'The WordPress updater is already running.' === $failure->getMessage();
+					}
+					$expect( $padded_rejected, 'byte-exact handoff must refuse trailing-space malformed lock on real options collation' );
+					$expect( $padded_malformed === $lock_row(), 'byte-exact handoff must preserve trailing-space malformed lock bytes' );
+					$expect_lock_cache( true, 'refused trailing-space handoff must keep option cache intact' );
+				} finally {
+					$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s AND CAST(option_value AS BINARY) = CAST(%s AS BINARY)', $table, 'auto_updater.lock', $padded_malformed ) );
+				}
+				$expect( null === $lock_row(), 'clean up trailing-space malformed lock fixture' );
+			}
+
+			$fixed_now         = time();
+			$own               = (string) $fixed_now;
+			$expected_recovery = (string) ( $fixed_now + 1 );
+			$fixed_lock        = new class( $fixed_now ) extends WordPressUpdaterLock {
+				public function __construct( private readonly int $fixed_now ) {}
+
+				protected function now(): int {
+					return $this->fixed_now;
+				}
+			};
+			$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+			$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $own, 'no' ) );
+			try {
+				$prime_lock_cache();
+				$acquired = $fixed_lock->acquire_replacing_owner( $own );
+				$expect( $expected_recovery === $acquired && $expected_recovery === $lock_row() && $expected_recovery === $lock->current_token(), 'same-second handoff must atomically install distinct recovery token' );
+				$expect_lock_cache( false, 'successful same-second handoff must invalidate option cache' );
+				$prime_lock_cache();
+				$concurrent_refused = false;
+				try {
+					$fixed_lock->acquire_replacing_owner( $own );
+				} catch ( RuntimeException $failure ) {
+					$concurrent_refused = 'The WordPress updater is already running.' === $failure->getMessage();
+				}
+				$expect( $concurrent_refused, 'concurrent same-second recovery against replaced owner must be refused' );
+				$expect( $expected_recovery === $lock_row(), 'refused concurrent recovery must preserve active recovery lock' );
+				$expect_lock_cache( true, 'refused concurrent recovery must leave option cache intact' );
+				$expect( $lock->release( $expected_recovery ), 'release active recovery lock cleanly' );
+				$expect( null === $lock_row(), 'releasing active recovery lock removes auto_updater.lock' );
+			} finally {
+				$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+			}
+
+			$update_injected   = false;
+			$update_filter     = static function ( string $sql ) use ( $table, &$update_injected ): string {
+				if ( str_starts_with( $sql, 'UPDATE' ) && str_contains( $sql, $table ) && str_contains( $sql, 'auto_updater.lock' ) ) {
+					$update_injected = true;
+					return 'SELECT /* smoke updater lock update failure */ FROM';
+				}
+				return $sql;
+			};
+			$suppressed_update = $database->suppress_errors( true );
+			add_filter( 'query', $update_filter );
+			$update_failed_safely = false;
+			try {
+				$lock->acquire_replacing_owner( $expected_owner );
+			} catch ( DeploymentStorageFailure $failure ) {
+				$update_failed_safely = 'RAN Booster could not safely store deployment state.' === $failure->getMessage();
+			} finally {
+				remove_filter( 'query', $update_filter );
+				$database->suppress_errors( $suppressed_update );
+			}
+			$expect( $update_injected && $update_failed_safely, 'UPDATE failure in acquire_replacing_owner must translate to Core storage failure' );
 
 			$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
 			$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $stale, 'no' ) );

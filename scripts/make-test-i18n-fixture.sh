@@ -43,14 +43,13 @@ chmod 0644 "$temporary_dir"/*
 shopt -s nullglob
 temporary_json=( "$temporary_dir"/*.json )
 fixture_json=( "$fixture_dir"/ran-booster-fr_FR-*.json )
-shopt -u nullglob
 
 if [[ "$mode" == '--check' ]]; then
 	cmp -s "$temporary_dir/ran-booster-fr_FR.mo" "$fixture_mo" \
 		|| fail 'the MO fixture is stale; run scripts/make-test-i18n-fixture.sh.'
 	[[ ${#temporary_json[@]} -eq ${#fixture_json[@]} ]] \
 		|| fail 'the Jed JSON fixture set is stale; run scripts/make-test-i18n-fixture.sh.'
-	for generated_json in "${temporary_json[@]}"; do
+	for generated_json in "$temporary_dir"/*.json; do
 		cmp -s "$generated_json" "$fixture_dir/$(basename "$generated_json")" \
 			|| fail 'a Jed JSON fixture is stale; run scripts/make-test-i18n-fixture.sh.'
 	done
@@ -58,7 +57,9 @@ if [[ "$mode" == '--check' ]]; then
 fi
 
 mv "$temporary_dir/ran-booster-fr_FR.mo" "$fixture_mo"
-for existing_json in "${fixture_json[@]}"; do
+for existing_json in "$fixture_dir"/ran-booster-fr_FR-*.json; do
 	rm -f -- "$existing_json"
 done
-mv "${temporary_json[@]}" "$fixture_dir/"
+for generated_json in "$temporary_dir"/*.json; do
+	mv "$generated_json" "$fixture_dir/"
+done

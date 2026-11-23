@@ -7,6 +7,8 @@ archive=${RAN_BOOSTER_BITBUCKET_ARCHIVE:?Set the immutable beta17 ZIP path.}
 php_bin=${PHP_BIN:?Set PHP.}
 wp_cli=${WP_CLI_BIN:?Set WP-CLI.}
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+# shellcheck source=scripts/verify-release.sh
+source "$root/scripts/verify-release.sh"
 phase="$root/tests/WordPress/github-replacement-installed-smoke.php"
 proof="$root/tests/WordPress/bitbucket-selection-installed-smoke.php"
 fixture="$wordpress/wp-content/plugins/github-replacement"
@@ -19,7 +21,8 @@ done
 [[ -f "$phase" && -f "$proof" ]] || fail 'Shared replacement phases and Bitbucket proof are required.'
 [[ ! -e "$target" && ! -L "$target" ]] || fail 'Refusing an existing Bitbucket target.'
 [[ -f "$archive" && ! -L "$archive" ]] || fail 'Immutable archive must be a regular local file.'
-[[ "$(sha256sum "$archive" | cut -d ' ' -f 1)" == b7963f335c624cf08124040a24a9d51d80c26640faee46e75334783f0547bc5a ]] || fail 'Immutable Bitbucket beta17 ZIP digest mismatch.'
+archive_hash=$(sha256_file "$archive")
+[[ "$archive_hash" == b7963f335c624cf08124040a24a9d51d80c26640faee46e75334783f0547bc5a ]] || fail 'Immutable Bitbucket beta17 ZIP digest mismatch.'
 unzip -tqq "$archive"
 diff -qr "$root/tests/fixtures/github-replacement" "$fixture"
 wp() { "$php_bin" "$wp_cli" "$@" --user=fixture-admin --path="$wordpress"; }

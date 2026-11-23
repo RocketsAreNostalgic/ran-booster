@@ -7,39 +7,35 @@
 # Defaults: ref=HEAD; expected-version=the plugin Version at ref; archive=the
 # corresponding versioned file under build/.
 
-set -euo pipefail
-
-fail() {
-	printf 'verify-release: %s\n' "$*" >&2
-	exit 1
-}
-
+# Sourced by the builder, candidate validator, and installed smoke for shared
+# release parsing and hashing. Verification runs only when invoked directly.
 sha256_file() {
 	if command -v sha256sum >/dev/null 2>&1; then
-		sha256sum "$1" | awk '{ print $1 }'
+		sha256sum < "$1" | awk '{ print $1 }'
 	elif command -v shasum >/dev/null 2>&1; then
-		shasum -a 256 "$1" | awk '{ print $1 }'
+		shasum -a 256 < "$1" | awk '{ print $1 }'
 	else
 		fail 'sha256sum or shasum is required.'
 	fi
 }
 
-script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
-repo_root=$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null) \
-	|| fail 'run this script from a Git checkout.'
-cd "$repo_root"
+plugin_version_header='[[:space:]]*[*][[:space:]]*Version'
 
-manifest="$repo_root/release-files.txt"
-[[ -f "$manifest" ]] || fail 'release-files.txt is missing.'
-for command_name in cmp composer diff git php tar unzip zipinfo; do
-	command -v "$command_name" >/dev/null 2>&1 \
-		|| fail "$command_name is required."
-done
-
-ref=${3:-HEAD}
-[[ "$ref" != -* ]] || fail 'release ref must not begin with a hyphen.'
-commit=$(git rev-parse --verify "${ref}^{commit}" 2>/dev/null) \
-	|| fail "release ref does not identify a commit: $ref"
+read_release_header() {
+	LC_ALL=C awk -v "header=^$1:" '
+		$0 ~ header {
+			count++
+			sub(header, "")
+			sub(/^[[:space:]]+/, "")
+			sub(/[[:space:]]+$/, "")
+			value = $0
+		}
+		END {
+			if (count != 1 || value !~ /^[^[:space:]]+$/) exit 1
+			print value
+		}
+	'
+}
 
 committed_entries=(
 	'NOTICE.md'
@@ -60,54 +56,144 @@ generated_entries=(
 )
 allowed_entries=( "${committed_entries[@]}" "${generated_entries[@]}" )
 
-plugin_version=$(
-	git show "$commit:ran-booster.php" \
-		| sed -n 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
+is_allowed_entry() {
+	local candidate=$1
+	local allowed
+
+	for allowed in "${allowed_entries[@]}"; do
+		[[ "$candidate" == "$allowed" ]] && return 0
+	done
+
+	return 1
+}
+
+is_generated_entry() {
+	local candidate=$1
+	local generated_entry
+
+	for generated_entry in "${generated_entries[@]}"; do
+		[[ "$candidate" == "$generated_entry" ]] && return 0
+	done
+
+	return 1
+}
+
+load_release_manifest() {
+	local manifest entry existing tree_entry
+	local -a entries=()
+	manifest=$(git show "$commit:release-files.txt") \
+		|| fail 'release ref is missing release-files.txt.'
+	while IFS= read -r entry || [[ -n "$entry" ]]; do
+		[[ -z "$entry" || "$entry" == \#* ]] && continue
+		is_allowed_entry "$entry" \
+			|| fail "unexpected Core runtime allowlist entry: $entry"
+
+		for existing in "${entries[@]:-}"; do
+			[[ "$entry" != "$existing" ]] \
+				|| fail "duplicate allowlist entry: $entry"
+		done
+
+		if ! is_generated_entry "$entry"; then
+			git cat-file -e "$commit:$entry" 2>/dev/null \
+				|| fail "allowlist path is missing from release ref: $entry"
+		fi
+		entries+=( "$entry" )
+	done <<< "$manifest"
+
+	[[ ${#entries[@]} -eq ${#allowed_entries[@]} ]] \
+		|| fail 'release-files.txt does not contain the complete Core runtime allowlist.'
+
+	local tree
+	tree=$(git ls-tree -r "$commit" -- "${committed_entries[@]}")
+	while IFS= read -r tree_entry; do
+		[[ "${tree_entry%% *}" != '120000' ]] \
+			|| fail 'release files must not contain symbolic links.'
+	done <<< "$tree"
+}
+
+load_release_metadata() {
+	local stable_tag requires_wordpress requires_php tested_wordpress manifest_version compatibility_version
+	plugin_version=$(git show "$commit:ran-booster.php" | read_release_header "$plugin_version_header") \
+		|| fail 'ran-booster.php must contain exactly one plugin Version header with a single value.'
+	stable_tag=$(git show "$commit:readme.txt" | read_release_header 'Stable tag') \
+		|| fail 'readme.txt must contain exactly one Stable tag with a single value.'
+	requires_wordpress=$(git show "$commit:ran-booster.php" | read_release_header '[[:space:]]*[*][[:space:]]*Requires at least') \
+		|| fail 'ran-booster.php must contain exactly one Requires at least header with a single value.'
+	requires_php=$(git show "$commit:ran-booster.php" | read_release_header '[[:space:]]*[*][[:space:]]*Requires PHP') \
+		|| fail 'ran-booster.php must contain exactly one Requires PHP header with a single value.'
+	tested_wordpress=$(git show "$commit:readme.txt" | read_release_header 'Tested up to') \
+		|| fail 'readme.txt must contain exactly one Tested up to header with a single value.'
+	# The single-quoted program is PHP and must not be expanded by the shell.
+	# shellcheck disable=SC2016
+	if ! manifest_version=$(
+		git show "$commit:.release-please-manifest.json" \
+			| php -r '
+				$document = json_decode( stream_get_contents( STDIN ), true, 512, JSON_THROW_ON_ERROR );
+				if ( ! is_array( $document ) || ! isset( $document["."] ) || ! is_string( $document["."] ) ) {
+					exit( 1 );
+				}
+				echo $document["."];
+			'
+	); then
+		fail 'release ref must contain a valid root manifest version.'
+	fi
+
+	[[ "$plugin_version" == "$stable_tag" ]] \
+		|| fail "plugin Version ($plugin_version) does not match Stable tag ($stable_tag)."
+	[[ "$plugin_version" == "$manifest_version" ]] \
+		|| fail "plugin Version ($plugin_version) does not match manifest version ($manifest_version)."
+	[[ "$plugin_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] \
+		|| fail "unsupported release version: $plugin_version"
+	for compatibility_version in "$requires_wordpress" "$requires_php" "$tested_wordpress"; do
+		[[ "$compatibility_version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] \
+			|| fail "unsupported compatibility version: $compatibility_version"
+	done
+}
+
+install_release_runtime() (
+	cd "$1"
+	export COMPOSER_HOME=$2
+	# The runtime dependencies intentionally use exact version constraints.
+	composer validate --strict --no-check-all --no-plugins --no-scripts
+	composer install \
+		--no-dev \
+		--prefer-dist \
+		--no-interaction \
+		--no-progress \
+		--no-scripts \
+		--no-plugins \
+		--no-autoloader
 )
-stable_tag=$(
-	git show "$commit:readme.txt" \
-		| sed -n 's/^Stable tag:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
-requires_wordpress=$(
-	git show "$commit:ran-booster.php" \
-		| sed -n 's/^[[:space:]]*\*[[:space:]]*Requires at least:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
-requires_php=$(
-	git show "$commit:ran-booster.php" \
-		| sed -n 's/^[[:space:]]*\*[[:space:]]*Requires PHP:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
-tested_wordpress=$(
-	git show "$commit:readme.txt" \
-		| sed -n 's/^Tested up to:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
-# shellcheck disable=SC2016
-if ! manifest_version=$(
-	git show "$commit:.release-please-manifest.json" \
-		| php -r '
-			$document = json_decode( stream_get_contents( STDIN ), true, 512, JSON_THROW_ON_ERROR );
-			if ( ! is_array( $document ) || ! isset( $document["."] ) || ! is_string( $document["."] ) ) {
-				exit( 1 );
-			}
-			echo $document["."];
-		'
-); then
-	fail 'release ref must contain a valid root manifest version.'
+
+if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
+	return 0
 fi
 
-[[ -n "$plugin_version" && "$plugin_version" != *$'\n'* ]] \
-	|| fail 'ran-booster.php must contain exactly one plugin Version header.'
-[[ -n "$stable_tag" && "$stable_tag" != *$'\n'* ]] \
-	|| fail 'readme.txt must contain exactly one Stable tag.'
-[[ "$plugin_version" == "$stable_tag" ]] \
-	|| fail "plugin Version ($plugin_version) does not match Stable tag ($stable_tag)."
-[[ "$plugin_version" == "$manifest_version" ]] \
-	|| fail "plugin Version ($plugin_version) does not match manifest version ($manifest_version)."
-[[ "$plugin_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] \
-	|| fail "unsupported release version: $plugin_version"
-for compatibility_version in "$requires_wordpress" "$requires_php" "$tested_wordpress"; do
-	[[ "$compatibility_version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] \
-		|| fail "unsupported compatibility version: $compatibility_version"
+set -euo pipefail
+
+fail() {
+	printf 'verify-release: %s
+' "$*" >&2
+	exit 1
+}
+
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null) \
+	|| fail 'run this script from a Git checkout.'
+cd "$repo_root"
+
+for command_name in cmp composer diff git php tar unzip zipinfo; do
+	command -v "$command_name" >/dev/null 2>&1 \
+		|| fail "$command_name is required."
 done
+
+ref=${3:-HEAD}
+[[ "$ref" != -* ]] || fail 'release ref must not begin with a hyphen.'
+commit=$(git rev-parse --verify "${ref}^{commit}" 2>/dev/null) \
+	|| fail "release ref does not identify a commit: $ref"
+
+load_release_manifest
+load_release_metadata
 
 bootstrap_source=$(git show "$commit:ran-booster.php")
 for required_api_marker in \
@@ -237,57 +323,17 @@ while IFS=$'\t' read -r package_name package_version package_reference package_r
 	package_installed+=( "$composer_dir/$package_root" )
 done < "$packaging_records"
 
-(
-	cd "$composer_dir"
-	COMPOSER_HOME="$composer_home" composer install \
-		--no-dev \
-		--prefer-dist \
-		--no-interaction \
-		--no-progress \
-		--no-scripts \
-		--no-plugins \
-		--no-autoloader
-)
+install_release_runtime "$composer_dir" "$composer_home"
 
 if ! php "$repo_root/scripts/verify-runtime-dependencies.php" --verify-install "$composer_dir" "$composer_dir/composer.lock" "$policy_file"; then
 	fail 'installed runtime package surfaces do not match the locked runtime packaging policy.'
 fi
 
-for index in "${!package_roots[@]}"; do
-	installed_package=${package_installed[$index]}
-	[[ -d "$installed_package" && ! -L "$installed_package" ]] \
-		|| fail "committed lock did not install a regular runtime package root: $installed_package"
-	IFS=',' read -r -a surface_specs <<< "${package_surface_specs[$index]}"
-	for surface_spec in "${surface_specs[@]}"; do
-		surface_kind=${surface_spec%%:*}
-		surface=${surface_spec#*:}
-		required_runtime_path="$installed_package/$surface"
-		case "$surface_kind" in
-			file)
-				[[ -f "$required_runtime_path" && ! -L "$required_runtime_path" ]] \
-					|| fail "locked runtime package file surface is missing or changed kind: $required_runtime_path"
-				;;
-			directory)
-				[[ -d "$required_runtime_path" && ! -L "$required_runtime_path" ]] \
-					|| fail "locked runtime package directory surface is missing or changed kind: $required_runtime_path"
-				find "$required_runtime_path" -type f -print -quit | grep -q . \
-					|| fail "locked runtime package directory surface is empty: $required_runtime_path"
-				if find "$required_runtime_path" -type l -print -quit | grep -q .; then
-					fail 'runtime dependency allowlist must not contain symbolic links.'
-				fi
-				;;
-			*)
-				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
-				;;
-		esac
-	done
-done
-
 archive_paths="$tmp_dir/archive-paths.txt"
 archive_files="$tmp_dir/archive-files.txt"
 expected_files="$tmp_dir/expected-files.txt"
 expected_paths="$tmp_dir/expected-paths.txt"
-entries_file="$tmp_dir/entries.txt"
+core_files="$tmp_dir/core-files.txt"
 contents_file="$tmp_dir/archive-contents.bin"
 
 unzip -Z1 "$archive" > "$archive_paths"
@@ -327,41 +373,8 @@ if zipinfo -l "$archive" | awk '$1 ~ /^l/ { found = 1 } END { exit !found }'; th
 	fail 'release archive must not contain symbolic links.'
 fi
 
-while IFS= read -r entry || [[ -n "$entry" ]]; do
-	[[ -z "$entry" || "$entry" == \#* ]] && continue
-	[[ "$entry" =~ ^[A-Za-z0-9._/-]+$ ]] \
-		|| fail "unsafe allowlist path: $entry"
-
-	allowed=false
-	for expected in "${allowed_entries[@]}"; do
-		if [[ "$entry" == "$expected" ]]; then
-			allowed=true
-			break
-		fi
-	done
-	[[ "$allowed" == true ]] \
-		|| fail "unexpected Core runtime allowlist entry: $entry"
-	grep -Fqx "$entry" "$entries_file" 2>/dev/null \
-		&& fail "duplicate allowlist entry: $entry"
-	printf '%s\n' "$entry" >> "$entries_file"
-done < "$manifest"
-
-[[ $(awk 'END { print NR }' "$entries_file") -eq ${#allowed_entries[@]} ]] \
-	|| fail 'release-files.txt does not contain the complete Core runtime allowlist.'
-for required in "${allowed_entries[@]}"; do
-	grep -Fqx "$required" "$entries_file" \
-		|| fail "required Core allowlist entry is missing: $required"
-done
-
-while IFS= read -r tree_entry; do
-	mode=${tree_entry%% *}
-	[[ "$mode" != '120000' ]] \
-		|| fail 'release files must not contain symbolic links.'
-done < <(git ls-tree -r "$commit" -- "${committed_entries[@]}")
-
-git ls-tree -r --name-only "$commit" -- "${committed_entries[@]}" \
-	| sed 's#^#ran-booster/#' \
-	> "$expected_files"
+git ls-tree -r --name-only "$commit" -- "${committed_entries[@]}" > "$core_files"
+sed 's#^#ran-booster/#' "$core_files" > "$expected_files"
 append_runtime_files() {
 	local installed_root=$1
 	local package_root=$2
@@ -383,7 +396,10 @@ append_runtime_files() {
 				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
 				;;
 		esac
-	done | sed "s#^$installed_root/#ran-booster/$package_root/#" >> "$expected_files"
+	done | while IFS= read -r runtime_file; do
+		printf '%s
+' "ran-booster/$package_root/${runtime_file#"$installed_root/"}"
+	done >> "$expected_files"
 }
 for index in "${!package_roots[@]}"; do
 	append_runtime_files \
@@ -422,14 +438,10 @@ for required_path in \
 	grep -Fqx "$required_path" "$archive_files" \
 		|| fail "required runtime file is missing: $required_path"
 done
-archive_plugin_version=$(
-	unzip -p "$archive" ran-booster/ran-booster.php \
-		| sed -n 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
-archive_stable_tag=$(
-	unzip -p "$archive" ran-booster/readme.txt \
-		| sed -n 's/^Stable tag:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
+archive_plugin_version=$(unzip -p "$archive" ran-booster/ran-booster.php | read_release_header "$plugin_version_header") \
+	|| fail 'archive plugin Version must have exactly one header with a single value.'
+archive_stable_tag=$(unzip -p "$archive" ran-booster/readme.txt | read_release_header 'Stable tag') \
+	|| fail 'archive Stable tag must have exactly one header with a single value.'
 [[ "$archive_plugin_version" == "$plugin_version" ]] \
 	|| fail 'archive plugin Version does not match the release ref.'
 [[ "$archive_stable_tag" == "$plugin_version" ]] \
@@ -439,11 +451,15 @@ extract_dir="$tmp_dir/extracted"
 mkdir -p "$extract_dir"
 unzip -q "$archive" -d "$extract_dir"
 
-# The translation template is generated, not committed. Regenerate it from the
-# release commit's own files and compare the bytes with the archived copy.
+# Use the same committed source for the Core byte checks and POT regeneration.
 pot_source="$tmp_dir/pot-source"
 mkdir -p "$pot_source"
 git archive --format=tar "$commit" -- "${committed_entries[@]}" | tar -xf - -C "$pot_source"
+while IFS= read -r core_file; do
+	cmp -s "$pot_source/$core_file" "$extract_dir/ran-booster/$core_file" \
+		|| fail "archived Core file $core_file does not match the release ref."
+done < "$core_files"
+
 bash "$script_dir/make-pot.sh" --source "$pot_source" --output "$tmp_dir/expected.pot"
 cmp -s "$tmp_dir/expected.pot" "$extract_dir/ran-booster/languages/ran-booster.pot" \
 	|| fail 'archived translation template does not match one regenerated from the release ref.'

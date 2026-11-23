@@ -1360,41 +1360,107 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 		};
 
-		try {
-			$_GET    = array(
-				'tab'                     => 'bb',
-				'ran_booster_hold'        => 'cleared',
-				'ran_booster_hold_folder' => 'target',
-				'ran_booster_hold_type'   => 'plugin',
-			);
-			$bb_data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
-			self::assertNull( $bb_data['native_hold_result'] );
-			$bb_html = $render( $bb_data );
-			self::assertStringNotContainsString( 'Hold cleared.', $bb_html );
-			self::assertStringNotContainsString( 'id="ran-booster-native-hold"', $bb_html );
+		$directory = sys_get_temp_dir() . '/ran-booster-bundled-hold-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable private sidecar fixture.
+		mkdir( $directory, 0700 );
 
-			$bb_injected                       = $bb_data;
-			$bb_injected['native_hold_result'] = array(
-				'code'   => 'cleared',
-				'folder' => '<target>',
-				'type'   => 'plugin',
+		try {
+			$bb_dashboard = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) );
+			foreach ( array( 'cleared', 'lock_failed', 'failed' ) as $bb_code ) {
+				$_GET    = array(
+					'tab'                     => 'bb',
+					'ran_booster_hold'        => $bb_code,
+					'ran_booster_hold_folder' => 'target',
+					'ran_booster_hold_type'   => 'plugin',
+				);
+				$bb_data = $bb_dashboard->get_index()['data'];
+				self::assertNull( $bb_data['native_hold_result'], $bb_code );
+				$bb_html = $render( $bb_data );
+				self::assertStringNotContainsString( 'Hold cleared.', $bb_html, $bb_code );
+				self::assertStringNotContainsString( 'The GitHub install hold was cleared', $bb_html, $bb_code );
+				self::assertStringNotContainsString( 'updater lock', $bb_html, $bb_code );
+				self::assertStringNotContainsString( 'id="ran-booster-native-hold"', $bb_html, $bb_code );
+			}
+
+			$bundled_db = new \RAN\Tests\RepositoryProvider\SelectionContextDatabase();
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact WordPress option bytes.
+			$bundled_db->active_bytes = serialize( array( 'booster.php' ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable passive fixture.
+			file_put_contents( $directory . '/booster.php', '<?php // bundled host' );
+			$bundled_store = new \RAN\Storage\GitHubSelectionStore( $bundled_db, 'wp_options' );
+			$bundled_decl  = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+				array(
+					'plugin_basename'        => 'booster.php',
+					'implementation_id'      => 'bundled',
+					'compatibility_revision' => '1',
+					'provider_api_version'   => 15,
+					'api_credential_formats' => array(),
+					'webhook_signing_format' => null,
+					'facets'                 => array(),
+				)
 			);
-			$bb_injected_html                  = $render( $bb_injected );
-			self::assertStringNotContainsString( 'Hold cleared.', $bb_injected_html );
-			self::assertStringNotContainsString( 'id="ran-booster-native-hold"', $bb_injected_html );
+			$bundled_store->initialize_bundled( $bundled_decl );
+			$bundled_providers = $this->providers( true );
+			$bundled_selection = new \RAN\RepositoryProvider\GitHubProviderSelection( $bundled_store, $directory, $bundled_decl );
+			$bundled_selection->bind_registry( $bundled_providers );
+			$bundled_selection->complete_collection();
+			$bundled_providers->seal();
+			$bundled_dashboard = $this->dashboard(
+				new SecretsFile( $directory . '/secrets', array(), ShippedSecretPolicyCatalog::create() ),
+				providers: $bundled_providers,
+				github_selection: $bundled_selection
+			);
+			foreach ( array(
+				'bundled cleared with folder'     => array(
+					'query'    => array(
+						'tab'                     => 'gh',
+						'ran_booster_hold'        => 'cleared',
+						'ran_booster_hold_folder' => 'target-plugin',
+						'ran_booster_hold_type'   => 'theme',
+					),
+					'intent'   => 'success',
+					'expected' => 'Hold cleared. Booster no longer manages <code>target-plugin</code>. <a href="https://example.test/wp-admin/admin.php?page=ran-booster-themes-create">Install it again</a> to continue.',
+				),
+				'bundled lock_failed with folder' => array(
+					'query'    => array(
+						'tab'                     => 'gh',
+						'ran_booster_hold'        => 'lock_failed',
+						'ran_booster_hold_folder' => 'target-plugin',
+						'ran_booster_hold_type'   => 'plugin',
+					),
+					'intent'   => 'warning',
+					'expected' => 'The GitHub install hold was cleared and Booster no longer manages <code>target-plugin</code>, but Booster couldn\'t release WordPress\'s updater lock. Verify that no update is running before retrying.',
+				),
+				'bundled lock_failed no folder'   => array(
+					'query'    => array(
+						'tab'              => 'gh',
+						'ran_booster_hold' => 'lock_failed',
+					),
+					'intent'   => 'warning',
+					'expected' => 'The GitHub install hold was cleared, but Booster couldn&#039;t release WordPress&#039;s updater lock. Verify that no update is running before retrying.',
+				),
+				'bundled failed post-clear'       => array(
+					'query'    => array(
+						'tab'              => 'gh',
+						'ran_booster_hold' => 'failed',
+					),
+					'intent'   => 'warning',
+					'expected' => 'Booster couldn&#039;t confirm cleanup after the hold action, and WordPress&#039;s updater lock may still be held. Reload this page and verify state before retrying.',
+				),
+			) as $case => $spec ) {
+				$_GET         = $spec['query'];
+				$bundled_data = $bundled_dashboard->get_index()['data'];
+				self::assertSame( 'gh', $bundled_data['provider']['code'] ?? null, $case );
+				self::assertNull( $bundled_data['github_selection'], $case );
+				$bundled_html = $render( $bundled_data );
+				self::assertSame( 1, substr_count( $bundled_html, 'id="ran-booster-native-hold"' ), $case );
+				self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="' . $spec['intent'] . '"', $bundled_html, $case );
+				self::assertStringContainsString( $spec['expected'], $bundled_html, $case );
+			}
 
 			$cleared_data                     = $bb_data;
-			$cleared_data['github_selection'] = array(
-				'available'      => true,
-				'status'         => array(
-					'state'      => 'available',
-					'candidates' => array(),
-					'current'    => null,
-				),
-				'error'          => '',
-				'package_counts' => null,
-				'review'         => null,
-			);
+			$cleared_data['provider']         = array( 'code' => 'gh' ) + $bb_data['provider'];
+			$cleared_data['github_selection'] = null;
 			foreach ( array(
 				'cleared with folder'     => array(
 					'result'   => array(
@@ -1441,6 +1507,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 
 			$held_data                     = $bb_data;
+			$held_data['provider']         = array( 'code' => 'gh' ) + $bb_data['provider'];
 			$held_data['github_selection'] = array(
 				'available'      => false,
 				'status'         => array(
@@ -1495,6 +1562,16 @@ final class DashboardIndexRoutingTest extends TestCase {
 		} finally {
 			$_GET = array();
 			unset( $GLOBALS['ran_booster_test_capabilities'] );
+			if ( is_file( $directory . '/booster.php' ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable passive fixture.
+				unlink( $directory . '/booster.php' );
+			}
+			if ( is_file( $directory . '/secrets.lock' ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture lock.
+				unlink( $directory . '/secrets.lock' );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable private sidecar fixture.
+			rmdir( $directory );
 		}
 	}
 

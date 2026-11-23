@@ -302,6 +302,24 @@ final readonly class ProviderSettingsPresenter {
 		return $this->github_selection?->status();
 	}
 
+	/**
+	 * Scope a provider-page native hold result to the GitHub provider route and
+	 * suppress stale post-clear notices while a site-wide hold remains active.
+	 *
+	 * @param array{code:string,folder:string,type:string}|null $result
+	 * @return array{code:string,folder:string,type:string}|null
+	 */
+	public function provider_native_hold_result( string $provider_code, ?array $result ): ?array {
+		if ( null === $result || 'gh' !== $provider_code ) {
+			return null;
+		}
+		if ( 'recovery_required' === ( $this->github_selection_diagnostics()['state'] ?? null )
+			&& in_array( $result['code'], array( 'cleared', 'released', 'lock_failed' ), true ) ) {
+			return null;
+		}
+		return $result;
+	}
+
 	/** @return array<string,mixed>|null */
 	private function github_selection_review(): ?array {
 		if ( null === $this->github_selection ) {

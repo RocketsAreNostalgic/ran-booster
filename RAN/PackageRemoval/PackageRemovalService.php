@@ -127,10 +127,11 @@ final readonly class PackageRemovalService {
 		} finally {
 			if ( ! $this->updater_lock->release( $token ) ) {
 				if ( $hold_cleared ) {
-					throw new \RuntimeException(
+					$failure = new \RuntimeException(
 						'The native hold was released; updater lock release failed.',
 						self::HOLD_CLEARED_LOCK_RELEASE_FAILED
 					);
+					throw $failure;
 				}
 				throw new \RuntimeException( 'The native hold may be released; updater lock release requires recovery.' );
 			}
@@ -196,10 +197,11 @@ final readonly class PackageRemovalService {
 		} finally {
 			if ( ! $this->updater_lock->release( $token ) ) {
 				if ( $hold_cleared ) {
-					throw new \RuntimeException(
+					$failure = new \RuntimeException(
 						'Native recovery cleared the hold; updater lock release failed.',
 						self::HOLD_CLEARED_LOCK_RELEASE_FAILED
 					);
+					throw $failure;
 				}
 				throw new \RuntimeException( 'Native recovery may have completed; updater lock release requires recovery.' );
 			}

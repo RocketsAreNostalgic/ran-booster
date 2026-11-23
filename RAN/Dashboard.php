@@ -289,11 +289,8 @@ class Dashboard {
 			$data['replace_credential']             = $this->requested_provider_repository_id( 'replace_credential' );
 			$data['credential_form_request']        = $this->requested_credential_form( $data['provider'] );
 
-			$hold_result                = is_array( $data['github_selection'] ?? null ) ? $this->native_hold_result() : null;
-			$github_selection_state     = is_array( $data['github_selection'] ?? null ) && is_array( $data['github_selection']['status'] ?? null ) ? ( $data['github_selection']['status']['state'] ?? null ) : null;
-			$data['native_hold_result'] = null !== $hold_result && 'recovery_required' === $github_selection_state && in_array( $hold_result['code'], array( 'cleared', 'released', 'lock_failed' ), true )
-				? null
-				: $hold_result;
+			$selected_provider_code     = is_string( $data['selected_provider'] ?? null ) ? $data['selected_provider'] : '';
+			$data['native_hold_result'] = $this->provider_settings->provider_native_hold_result( $selected_provider_code, $this->native_hold_result() );
 
 			$data['requested_repository_id']            = $this->requested_provider_repository_id();
 			$data                                       = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );

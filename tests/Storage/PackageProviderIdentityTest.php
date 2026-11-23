@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Storage;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use RAN\AbstractPackage;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\ManagedRepository;
@@ -773,22 +774,36 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		self::assertCount( 1, $wpdb->stored_rows() );
 	}
 
-	public function test_recovery_refuses_prefix_change_during_schema_verification_before_transaction(): void {
+	/** @return array<string, array{string}> */
+	public static function recovery_prefix_change_queries(): array {
+		return array(
+			'capability probe' => array( 'SHOW ENGINES' ),
+			'schema read'      => array( 'SHOW INDEX FROM `wp_ran_booster_deployment_attempts`' ),
+		);
+	}
+
+	#[DataProvider( 'recovery_prefix_change_queries' )]
+	public function test_recovery_refuses_prefix_change_during_admission_before_transaction( string $change_prefix_query ): void {
 		global $wpdb;
 		$this->install_fixture();
-		$connection                = new class() extends StorageTestWpdb {
+		$connection                = new class( $change_prefix_query ) extends StorageTestWpdb {
 			public bool $change_prefix = false;
+
+			public function __construct( private string $change_prefix_query ) {
+			}
 
 			/** @return list<object>|null */
 			public function get_results( string $query ): ?array {
 				$rows = parent::get_results( $query );
-				if ( $this->change_prefix && 'SHOW INDEX FROM `wp_ran_booster_deployment_attempts`' === $query ) {
+				if ( $this->change_prefix && $this->change_prefix_query === $query ) {
 					$this->prefix = 'other_';
 				}
 				return $rows;
 			}
 		};
 		$connection->schema_tables = $wpdb->schema_tables;
+		$connection->schema_tables['other_ran_booster_packages']            = $wpdb->schema_tables['wp_ran_booster_packages'];
+		$connection->schema_tables['other_ran_booster_deployment_attempts'] = $wpdb->schema_tables['wp_ran_booster_deployment_attempts'];
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Recovery must inspect the schema through the live fixture connection.
 		$wpdb       = $connection;
 		$storage    = new ProviderIdentityTestRepository( new Database() );
@@ -797,8 +812,10 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', '123', 'main' ) );
 		self::assertTrue( $storage->store_for_test( $package )->is_successful() );
 		$snapshot                  = $storage->recovery_record( $identifier );
+		$storage                   = new ProviderIdentityTestRepository( new Database() );
 		$rows                      = $connection->stored_rows();
 		$connection->queries       = array();
+		$connection->read_queries  = array();
 		$connection->change_prefix = true;
 		try {
 			$storage->recover_unlink(
@@ -809,11 +826,14 @@ final class PackageProviderIdentityTest extends RANBoosterTestCase {
 					self::fail( 'A changed prefix must never reach the recovery guard.' );
 				}
 			);
-			self::fail( 'Schema verification must reject a changed prefix.' );
+			self::fail( 'Recovery admission must reject a changed prefix.' );
 		} catch ( PackageStorageFailure $failure ) {
 			self::assertTrue( $failure->is_database_unsupported() );
 		}
 		self::assertSame( 'other_', $connection->prefix );
+		if ( 'SHOW ENGINES' === $change_prefix_query ) {
+			self::assertSame( array( 'SHOW ENGINES' ), $connection->read_queries );
+		}
 		self::assertSame( array(), $connection->queries );
 		self::assertSame( array(), $connection->deletes );
 		self::assertSame( $rows, $connection->stored_rows() );

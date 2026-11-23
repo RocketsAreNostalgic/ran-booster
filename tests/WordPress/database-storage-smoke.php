@@ -95,7 +95,7 @@ try {
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Exercise the replacement connection through WordPress's live database binding.
 			$wpdb = $router;
 			try {
-				( new Database() )->require_supported();
+				( new Database() )->require_recovery_ready();
 				throw new RuntimeException( 'Expected the table-specific router to fail admission.' );
 			} catch ( DatabaseCompatibilityFailure $failure ) {
 				if ( 'database_drop_in' !== $failure->reason() ) {

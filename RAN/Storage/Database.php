@@ -139,13 +139,16 @@ class Database {
 		if ( null !== $expected_connection && ( $expected_connection !== $database || $expected_connection !== $binding ) ) {
 			throw new DatabaseCompatibilityFailure( 'database_unavailable' );
 		}
+		// Snapshot backing values without invoking accessors on a connection we have yet to admit.
+		$entry       = is_object( $binding ) ? get_mangled_object_vars( $binding ) : array();
+		$prefix      = $entry['prefix'] ?? null;
+		$base_prefix = $entry['base_prefix'] ?? null;
+		unset( $entry );
 		$this->require_supported();
 		$connection = $this->schema_connection();
-		if ( $database !== $connection || ( $GLOBALS['wpdb'] ?? null ) !== $binding ) {
-			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
-		}
-		$prefix = $binding->prefix ?? null;
-		if ( ! is_string( $prefix ) || '' === $prefix ) {
+		if ( $database !== $connection || ( $GLOBALS['wpdb'] ?? null ) !== $binding
+			|| ! is_string( $prefix ) || '' === $prefix || ( $binding->prefix ?? null ) !== $prefix
+			|| ( function_exists( 'is_multisite' ) && is_multisite() && ( $binding->base_prefix ?? null ) !== $base_prefix ) ) {
 			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 		}
 		$table         = ran_booster_table_name();

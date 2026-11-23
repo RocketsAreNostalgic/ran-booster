@@ -50,7 +50,13 @@ namespace {
 		 * @return string
 		 */
 		function ran_booster_table_name() {
-			return 'wp_ran_booster_packages';
+			global $wpdb;
+
+			$prefix = is_object( $wpdb ) && isset( $wpdb->prefix ) && is_string( $wpdb->prefix ) && '' !== $wpdb->prefix
+				? $wpdb->prefix
+				: 'wp_';
+
+			return $prefix . 'ran_booster_packages';
 		}
 	}
 
@@ -172,12 +178,18 @@ namespace RAN\Tests\Storage {
 		 *     indexes: array<string, array{unique: bool, columns: list<string>, prefixes: list<?int>}>
 		 * }>
 		 */
-		public array $schema_tables   = array();
-		public string $schema_engine  = 'InnoDB';
-		public string $options_engine = 'InnoDB';
-		public string $server_info    = '8.4.6';
-		public string $innodb_support = 'DEFAULT';
-		public int $capability_reads  = 0;
+		public array $schema_tables               = array();
+		public string $schema_engine              = 'InnoDB';
+		public string $options_engine             = 'InnoDB';
+		public string $server_info                = '8.4.6';
+		public string $innodb_support             = 'DEFAULT';
+		public ?string $innodb_transactions       = 'YES';
+		public ?string $live_version              = null;
+		public string $live_version_comment       = 'MySQL Community Server - GPL';
+		public bool $fail_live_version_probe      = false;
+		public int $lower_case_table_names        = 0;
+		public bool $case_insensitive_show_tables = false;
+		public int $capability_reads              = 0;
 
 		/** @var list<string> */
 		public array $queries = array();
@@ -301,7 +313,7 @@ namespace RAN\Tests\Storage {
 				$this->general_settings_value = stripslashes( substr( $query, $new_start, $new_end - $new_start ) );
 				return 1;
 			}
-			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('ran_booster_github_selection', '(.*)', 'no'\)$/", $query, $selection ) ) {
+			if ( preg_match( '/^INSERT IGNORE INTO `[^`]+` .* VALUES \(\'ran_booster_github_selection\', \'(.*)\', \'no\'\)$/', $query, $selection ) ) {
 				if ( null !== $this->selection_value ) {
 					return 0;
 				}
@@ -425,7 +437,10 @@ namespace RAN\Tests\Storage {
 				$this->last_error = 'database details must not escape';
 				return null;
 			}
-			if ( str_starts_with( $query, 'SELECT option_name FROM `wp_options` WHERE option_name LIKE' ) ) {
+			if ( 'SELECT @@lower_case_table_names' === $query ) {
+				return (string) $this->lower_case_table_names;
+			}
+			if ( 1 === preg_match( '/^SELECT option_name FROM `[^`]+` WHERE option_name LIKE/', $query ) ) {
 				if ( $this->fresh_option_read_failure ) {
 					$this->last_error = 'database details must not escape';
 					return null;
@@ -459,7 +474,18 @@ namespace RAN\Tests\Storage {
 				}
 				$table = stripslashes( str_replace( array( '\\_', '\\%' ), array( '_', '%' ), $matches[1] ) );
 
-				return isset( $this->schema_tables[ $table ] ) ? $table : null;
+				if ( isset( $this->schema_tables[ $table ] ) ) {
+					return $table;
+				}
+				if ( 0 !== $this->lower_case_table_names || $this->case_insensitive_show_tables ) {
+					foreach ( array_keys( $this->schema_tables ) as $existing ) {
+						if ( 0 === strcasecmp( $existing, $table ) ) {
+							return $existing;
+						}
+					}
+				}
+
+				return null;
 			}
 
 			if ( preg_match( "/type = (\\d+) AND package = '([^']+)'/", $query, $matches ) !== 1 ) {
@@ -532,7 +558,7 @@ namespace RAN\Tests\Storage {
 		public function get_row( string $query ): ?object {
 			if ( 1 === preg_match( "/^SHOW TABLE STATUS WHERE Name = '([^']+)'$/", $query, $matches ) ) {
 				$table = stripslashes( $matches[1] );
-				if ( $this->options === $table ) {
+				if ( $this->options === $table || ( 0 !== $this->lower_case_table_names && strtolower( $this->options ) === $table ) ) {
 					return (object) array( 'Engine' => $this->options_engine );
 				}
 
@@ -550,10 +576,27 @@ namespace RAN\Tests\Storage {
 			if ( 'SHOW ENGINES' === $query ) {
 				++$this->capability_reads;
 
+				$row = array(
+					'Engine'  => 'InnoDB',
+					'Support' => $this->innodb_support,
+				);
+				if ( null !== $this->innodb_transactions ) {
+					$row['Transactions'] = $this->innodb_transactions;
+				}
+
+				return array( (object) $row );
+			}
+
+			if ( 'SELECT @@version AS version, @@version_comment AS comment' === $query ) {
+				if ( $this->fail_live_version_probe ) {
+					$this->last_error = 'unsupported syntax';
+					return array();
+				}
+
 				return array(
 					(object) array(
-						'Engine'  => 'InnoDB',
-						'Support' => $this->innodb_support,
+						'version' => $this->live_version ?? $this->server_info,
+						'comment' => $this->live_version_comment,
 					),
 				);
 			}
@@ -571,7 +614,9 @@ namespace RAN\Tests\Storage {
 				return $this->forced_results;
 			}
 
-			if ( str_starts_with( $query, 'SELECT option_name, option_value, autoload FROM `wp_options`' ) ) {
+			if ( 1 === preg_match( '/^SELECT option_name, option_value, autoload FROM `([^`]+)`/', $query, $options_match )
+				&& ( $options_match[1] === $this->options || ( 0 !== $this->lower_case_table_names && 0 === strcasecmp( $options_match[1], $this->options ) ) )
+			) {
 				return null === $this->selection_value ? array() : array(
 					(object) array(
 						'option_name'  => 'ran_booster_github_selection',
@@ -580,37 +625,27 @@ namespace RAN\Tests\Storage {
 					),
 				);
 			}
-			if ( 'SHOW COLUMNS FROM `wp_options`' === $query ) {
-				return array_map(
-					static fn ( string $name ): object => (object) array(
-						'Field'   => $name,
-						'Type'    => 'longtext',
-						'Null'    => 'NO',
-						'Default' => null,
-						'Extra'   => '',
-					),
-					array( 'option_name', 'option_value', 'autoload' )
-				);
-			}
-			if ( 'SHOW INDEX FROM `wp_options`' === $query ) {
-				return array(
-					(object) array(
-						'Key_name'     => 'option_name',
-						'Non_unique'   => 0,
-						'Seq_in_index' => 1,
-						'Column_name'  => 'option_name',
-						'Sub_part'     => null,
-					),
-				);
-			}
 			if ( 1 === preg_match( '/^SHOW COLUMNS FROM `([^`]+)`$/', $query, $matches ) ) {
-				if ( ! isset( $this->schema_tables[ $matches[1] ] ) ) {
+				if ( $matches[1] === $this->options || ( 0 !== $this->lower_case_table_names && 0 === strcasecmp( $matches[1], $this->options ) ) ) {
+					return array_map(
+						static fn ( string $name ): object => (object) array(
+							'Field'   => $name,
+							'Type'    => 'longtext',
+							'Null'    => 'NO',
+							'Default' => null,
+							'Extra'   => '',
+						),
+						array( 'option_name', 'option_value', 'autoload' )
+					);
+				}
+				$table_key = $this->resolve_schema_table( $matches[1] );
+				if ( null === $table_key ) {
 					return null;
 				}
 
 				$rows = array();
-				foreach ( $this->schema_tables[ $matches[1] ]['columns'] as $column => $type ) {
-					$metadata = $this->schema_tables[ $matches[1] ]['columnMetadata'][ $column ];
+				foreach ( $this->schema_tables[ $table_key ]['columns'] as $column => $type ) {
+					$metadata = $this->schema_tables[ $table_key ]['columnMetadata'][ $column ];
 					$rows[]   = (object) array(
 						'Field'   => $column,
 						'Type'    => $type,
@@ -624,12 +659,24 @@ namespace RAN\Tests\Storage {
 			}
 
 			if ( 1 === preg_match( '/^SHOW INDEX FROM `([^`]+)`$/', $query, $matches ) ) {
-				if ( ! isset( $this->schema_tables[ $matches[1] ] ) ) {
+				if ( $matches[1] === $this->options || ( 0 !== $this->lower_case_table_names && 0 === strcasecmp( $matches[1], $this->options ) ) ) {
+					return array(
+						(object) array(
+							'Key_name'     => 'option_name',
+							'Non_unique'   => 0,
+							'Seq_in_index' => 1,
+							'Column_name'  => 'option_name',
+							'Sub_part'     => null,
+						),
+					);
+				}
+				$table_key = $this->resolve_schema_table( $matches[1] );
+				if ( null === $table_key ) {
 					return null;
 				}
 
 				$rows = array();
-				foreach ( $this->schema_tables[ $matches[1] ]['indexes'] as $name => $index ) {
+				foreach ( $this->schema_tables[ $table_key ]['indexes'] as $name => $index ) {
 					foreach ( $index['columns'] as $offset => $column ) {
 						$rows[] = (object) array(
 							'Key_name'     => $name,
@@ -707,12 +754,30 @@ namespace RAN\Tests\Storage {
 			);
 		}
 
+		private function resolve_schema_table( string $table ): ?string {
+			if ( isset( $this->schema_tables[ $table ] ) ) {
+				return $table;
+			}
+			if ( 0 !== $this->lower_case_table_names ) {
+				foreach ( array_keys( $this->schema_tables ) as $existing ) {
+					if ( 0 === strcasecmp( $existing, $table ) ) {
+						return $existing;
+					}
+				}
+			}
+
+			return null;
+		}
+
 		public function install_schema( string $sql ): void {
 			if ( 1 !== preg_match( '/CREATE TABLE ([^\s(]+)\s*\((.*)\) ENGINE=/s', $sql, $matches ) ) {
 				return;
 			}
 
-			$table           = trim( $matches[1], '`' );
+			$table = trim( $matches[1], '`' );
+			if ( 1 === $this->lower_case_table_names ) {
+				$table = strtolower( $table );
+			}
 			$columns         = array();
 			$column_metadata = array();
 			$indexes         = array();

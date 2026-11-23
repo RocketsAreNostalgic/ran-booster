@@ -293,6 +293,161 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		self::assertSame( 1, $wpdb->capability_reads );
 	}
 
+	/** @return array<string, array{string, string, string}> */
+	public static function compatible_drop_in_provider(): array {
+		return array(
+			'MySQL 8.4 Query Monitor or HyperDB drop-in' => array(
+				'8.4.6',
+				'8.4.6',
+				'MySQL Community Server - GPL',
+			),
+			'MariaDB 10.11 drop-in with wire prefix'     => array(
+				'5.5.5-10.11.13-MariaDB-0ubuntu0.24.04.1',
+				'10.11.13-MariaDB-0ubuntu0.24.04.1',
+				'mariadb.org binary distribution',
+			),
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	#[DataProvider( 'compatible_drop_in_provider' )]
+	public function test_mysql_and_mariadb_db_drop_ins_pass_live_capability_verification(
+		string $server_info,
+		string $live_version,
+		string $live_comment
+	): void {
+		global $wpdb;
+
+		$content_dir = sys_get_temp_dir() . '/ran-booster-db-dropin-' . bin2hex( random_bytes( 6 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated temporary WP_CONTENT_DIR fixture for db.php drop-in verification.
+		self::assertTrue( mkdir( $content_dir, 0700, true ) );
+		$drop_in = $content_dir . '/db.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Isolated temporary db.php marker for drop-in capability tests.
+		self::assertNotFalse( file_put_contents( $drop_in, "<?php\n// MySQL-compatible drop-in fixture.\n" ) );
+		try {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Isolated process tests WordPress's WP_CONTENT_DIR drop-in contract.
+			define( 'WP_CONTENT_DIR', $content_dir );
+			$wpdb->server_info          = $server_info;
+			$wpdb->live_version         = $live_version;
+			$wpdb->live_version_comment = $live_comment;
+			$wpdb->innodb_transactions  = 'YES';
+
+			$database = new Database( $wpdb );
+			$database->require_supported();
+
+			self::assertTrue( $database->is_supported() );
+			self::assertContains( 'SELECT @@version AS version, @@version_comment AS comment', $wpdb->read_queries );
+		} finally {
+			if ( is_file( $drop_in ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Clean up disposable db.php test fixture.
+				unlink( $drop_in );
+			}
+			if ( is_dir( $content_dir ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Clean up disposable WP_CONTENT_DIR test fixture.
+				rmdir( $content_dir );
+			}
+		}
+	}
+
+	/** @return array<string, array{bool, string, string, ?string, string}> */
+	public static function incompatible_drop_in_provider(): array {
+		return array(
+			'SQLite translator failing @@version'      => array( true, '8.4.6', 'MySQL Community Server - GPL', 'YES', 'database_drop_in' ),
+			'Spoofed server_info hiding SQLite'        => array( false, '3.49.1 SQLite', '', 'YES', 'database_drop_in' ),
+			'Spoofed server_info hiding MariaDB'       => array( false, '10.11.13-MariaDB', 'mariadb.org binary distribution', 'YES', 'database_drop_in' ),
+			'Spoofed server_info hiding old MySQL'     => array( false, '5.7.44', 'MySQL Community Server - GPL', 'YES', 'unsupported_version' ),
+			'Percona server comment behind drop-in'    => array( false, '8.0.36-28', 'Percona Server (GPL), Release 28', 'YES', 'database_drop_in' ),
+			'PostgreSQL comment behind drop-in'        => array( false, '8.4.6', 'PostgreSQL translation layer', 'YES', 'database_drop_in' ),
+			'Missing Transactions flag behind drop-in' => array( false, '8.4.6', 'MySQL Community Server - GPL', null, 'innodb_unavailable' ),
+			'Non-transactional InnoDB behind drop-in'  => array( false, '8.4.6', 'MySQL Community Server - GPL', 'NO', 'innodb_unavailable' ),
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	#[DataProvider( 'incompatible_drop_in_provider' )]
+	public function test_unverified_or_non_mysql_db_drop_in_fails_closed(
+		bool $fail_live_version_probe,
+		string $live_version,
+		string $live_comment,
+		?string $innodb_transactions,
+		string $expected_reason
+	): void {
+		global $wpdb;
+
+		$content_dir = sys_get_temp_dir() . '/ran-booster-db-dropin-' . bin2hex( random_bytes( 6 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated temporary WP_CONTENT_DIR fixture for db.php drop-in verification.
+		self::assertTrue( mkdir( $content_dir, 0700, true ) );
+		$drop_in = $content_dir . '/db.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Isolated temporary db.php marker for drop-in capability tests.
+		self::assertNotFalse( file_put_contents( $drop_in, "<?php\n// Unverified translation drop-in fixture.\n" ) );
+		try {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Isolated process tests WordPress's WP_CONTENT_DIR drop-in contract.
+			define( 'WP_CONTENT_DIR', $content_dir );
+			$wpdb->server_info             = '8.4.6';
+			$wpdb->live_version            = $live_version;
+			$wpdb->live_version_comment    = $live_comment;
+			$wpdb->fail_live_version_probe = $fail_live_version_probe;
+			$wpdb->innodb_transactions     = $innodb_transactions;
+
+			try {
+				( new Database( $wpdb ) )->require_supported();
+				self::fail( 'Expected an unverified or non-MySQL drop-in to fail closed.' );
+			} catch ( DatabaseCompatibilityFailure $failure ) {
+				self::assertSame( $expected_reason, $failure->reason() );
+			}
+		} finally {
+			if ( is_file( $drop_in ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Clean up disposable db.php test fixture.
+				unlink( $drop_in );
+			}
+			if ( is_dir( $content_dir ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Clean up disposable WP_CONTENT_DIR test fixture.
+				rmdir( $content_dir );
+			}
+		}
+	}
+
+	public function test_mixed_case_table_prefix_respects_lower_case_table_names_mode(): void {
+		global $ran_booster_storage_test_options, $wpdb;
+
+		// Mode 1: MySQL stores table names lowercase even when $wpdb->prefix has uppercase letters.
+		$wpdb->prefix                 = 'WP_';
+		$wpdb->base_prefix            = 'WP_';
+		$wpdb->options                = 'WP_options';
+		$wpdb->lower_case_table_names = 1;
+
+		$database = new Database( $wpdb, $this->declaration() );
+		$database->install();
+
+		self::assertArrayHasKey( 'wp_ran_booster_packages', $wpdb->schema_tables );
+		self::assertArrayHasKey( 'wp_ran_booster_deployment_attempts', $wpdb->schema_tables );
+		self::assertSame( Database::$booster_db_version, $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+
+		// Re-install and recovery readiness must accept the stored lowercase tables without recreating them.
+		$wpdb->schemas = array();
+		( new Database( $wpdb, $this->declaration() ) )->install();
+		self::assertSame( array(), $wpdb->schemas );
+		( new Database( $wpdb, $this->declaration() ) )->require_recovery_ready();
+
+		// Mode 2: Case-preserving filesystem with case-insensitive lookups accepts stored lowercase tables.
+		$wpdb->lower_case_table_names = 2;
+		$wpdb->schemas                = array();
+		( new Database( $wpdb, $this->declaration() ) )->install();
+		self::assertSame( array(), $wpdb->schemas );
+
+		// Mode 0: Case-sensitive server must still reject a differently cased table name.
+		$wpdb->lower_case_table_names       = 0;
+		$wpdb->case_insensitive_show_tables = true;
+		try {
+			( new Database( $wpdb, $this->declaration() ) )->install();
+			self::fail( 'Case-sensitive servers must reject differently cased table names.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'schema_identity_failed', $failure->reason() );
+		}
+	}
+
 	/** @return array<string, array{bool, string}> */
 	public static function capability_probe_failure_provider(): array {
 		return array(

@@ -6,10 +6,13 @@ namespace RAN\Tests\Uninstall;
 
 final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 
-	public string $prefix      = 'wp_';
-	public string $base_prefix = 'wp_';
-	public string $options     = 'wp_options';
-	public string $usermeta    = 'wp_usermeta';
+	public string $prefix              = 'wp_';
+	public string $base_prefix         = 'wp_';
+	public string $options             = 'wp_options';
+	public string $usermeta            = 'wp_usermeta';
+	public int $lower_case_table_names = 0;
+	/** Optional override to simulate an unexpected table-name row returned under mode 0. */
+	public ?string $forced_information_schema_table = null;
 
 	/** @var list<string> */
 	public array $tables = array();
@@ -78,8 +81,8 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 			);
 		}
 		$options = $GLOBALS['ran_booster_uninstall_options'];
-		if ( preg_match( "/^SELECT option_name FROM `wp_options` WHERE BINARY option_name = BINARY '([^']+)' LIMIT 1$/", $query, $matches ) === 1 ) {
-			$name = stripslashes( $matches[1] );
+		if ( preg_match( '/^SELECT option_name FROM `([^`]+)` WHERE BINARY option_name = BINARY \'([^\']+)\' LIMIT 1$/', $query, $matches ) === 1 && $matches[1] === $this->options ) {
+			$name = stripslashes( $matches[2] );
 			return array_key_exists( $name, $options ) ? array( (object) array( 'option_name' => $name ) ) : array();
 		}
 		if ( str_starts_with( $query, 'SELECT option_name FROM ' ) ) {
@@ -97,8 +100,29 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 			) : array();
 		}
 		if ( str_contains( $query, 'information_schema.TABLES' ) ) {
+			if ( null !== $this->forced_information_schema_table ) {
+				return array(
+					(object) array(
+						'table_name'             => $this->forced_information_schema_table,
+						'lower_case_table_names' => (string) $this->lower_case_table_names,
+					),
+				);
+			}
 			$table = $this->prefix . 'ran_booster_deployment_attempts';
-			return in_array( $table, $this->tables, true ) ? array( (object) array( 'table_name' => $table ) ) : array();
+			foreach ( $this->tables as $existing ) {
+				$matched = 0 === $this->lower_case_table_names
+					? $existing === $table
+					: 0 === strcasecmp( $existing, $table );
+				if ( $matched ) {
+					return array(
+						(object) array(
+							'table_name'             => $existing,
+							'lower_case_table_names' => (string) $this->lower_case_table_names,
+						),
+					);
+				}
+			}
+			return array();
 		}
 		if ( str_starts_with( $query, 'SELECT id FROM ' ) ) {
 			$expected = "SELECT id FROM `{$this->prefix}ran_booster_deployment_attempts` WHERE state IS NULL OR BINARY state NOT IN (BINARY 'succeeded', BINARY 'failed', BINARY 'needs_attention') OR (BINARY state = BINARY 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL)) LIMIT 1";
@@ -131,11 +155,18 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 			return false;
 		}
 		if ( 1 === preg_match( '/^DROP TABLE IF EXISTS `([^`]+)`$/', $query, $matches ) ) {
-			$this->tables = array_values( array_diff( $this->tables, array( $matches[1] ) ) );
+			$this->tables = array_values(
+				array_filter(
+					$this->tables,
+					fn ( string $existing ): bool => 0 === $this->lower_case_table_names
+						? $existing !== $matches[1]
+						: 0 !== strcasecmp( $existing, $matches[1] )
+				)
+			);
 			return 1;
 		}
-		if ( 1 === preg_match( "/^DELETE FROM `wp_usermeta` WHERE meta_key = '([^']+)'$/", $query, $matches ) ) {
-			unset( $this->user_meta[ stripslashes( $matches[1] ) ] );
+		if ( 1 === preg_match( '/^DELETE FROM `([^`]+)` WHERE meta_key = \'([^\']+)\'$/', $query, $matches ) && $matches[1] === $this->usermeta ) {
+			unset( $this->user_meta[ stripslashes( $matches[2] ) ] );
 			return 1;
 		}
 

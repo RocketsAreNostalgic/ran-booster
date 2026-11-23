@@ -150,7 +150,11 @@ class LocalDataRemover {
 			}
 		}
 		$table = $this->verified_table_prefix . 'ran_booster_deployment_attempts';
-		$query = $database->prepare( 'SELECT TABLE_NAME AS table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND BINARY TABLE_NAME = BINARY %s', $table );
+		$query = $database->prepare(
+			'SELECT TABLE_NAME AS table_name, @@lower_case_table_names AS lower_case_table_names FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND ( ( 0 = @@lower_case_table_names AND BINARY TABLE_NAME = BINARY %s ) OR ( 0 <> @@lower_case_table_names AND BINARY LOWER(TABLE_NAME) = BINARY %s ) )',
+			$table,
+			strtolower( $table )
+		);
 		$found = $this->custody_rows( $database, $query );
 		if ( array() === $found ) {
 			if ( array() !== $present ) {
@@ -158,13 +162,29 @@ class LocalDataRemover {
 			}
 			return;
 		}
-		if ( 1 !== count( $found ) || ( $found[0]->table_name ?? null ) !== $table ) {
+		if ( 1 !== count( $found ) || ! $this->table_name_matches_mode( $table, $found[0]->table_name ?? null, $found[0]->lower_case_table_names ?? 0 ) ) {
 			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
 		}
 		$query = $database->prepare( "SELECT id FROM %i WHERE state IS NULL OR BINARY state NOT IN (BINARY 'succeeded', BINARY 'failed', BINARY 'needs_attention') OR (BINARY state = BINARY 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL)) LIMIT 1", $table );
 		if ( array() !== $this->custody_rows( $database, $query ) ) {
 			throw new RuntimeException( 'Booster has unfinished work that must be resolved before cleanup.' );
 		}
+	}
+
+	private function table_name_matches_mode( string $expected, mixed $actual, mixed $mode ): bool {
+		if ( ! is_string( $actual ) ) {
+			return false;
+		}
+		$parsed = is_int( $mode )
+			? $mode
+			: ( is_string( $mode ) && 1 === preg_match( '/\A[012]\z/', $mode ) ? (int) $mode : null );
+
+		return match ( $parsed ) {
+			0 => hash_equals( $expected, $actual ),
+			1 => hash_equals( strtolower( $expected ), $actual ),
+			2 => 0 === strcasecmp( $expected, $actual ),
+			default => false,
+		};
 	}
 
 	/** @return list<object> */

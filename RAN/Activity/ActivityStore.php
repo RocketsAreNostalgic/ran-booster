@@ -688,11 +688,12 @@ final class ActivityStore {
 		if ( null === $this->rows( "SELECT id FROM {$this->table} WHERE id = 0" ) ) {
 			return false;
 		}
-		$rows = $this->rows( $this->prepare( 'SELECT ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND BINARY TABLE_NAME = %s', $this->table ) );
+		$lower = strtolower( $this->table );
+		$rows  = $this->rows( $this->prepare( 'SELECT ENGINE AS engine FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND ( ( 0 = @@lower_case_table_names AND BINARY TABLE_NAME = BINARY %s ) OR ( 0 <> @@lower_case_table_names AND BINARY LOWER(TABLE_NAME) = BINARY %s ) )', $this->table, $lower ) );
 		if ( 1 !== count( $rows ?? array() ) || ! is_string( $rows[0]['engine'] ?? null ) || 0 !== strcasecmp( 'InnoDB', $rows[0]['engine'] ) ) {
 			return false;
 		}
-		$indexes  = $this->rows( $this->prepare( 'SELECT INDEX_NAME AS index_name, NON_UNIQUE AS non_unique, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS columns, SUM(SUB_PART IS NOT NULL) AS prefixes FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND BINARY TABLE_NAME = %s GROUP BY INDEX_NAME, NON_UNIQUE', $this->table ) );
+		$indexes  = $this->rows( $this->prepare( 'SELECT INDEX_NAME AS index_name, NON_UNIQUE AS non_unique, GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) AS columns, SUM(SUB_PART IS NOT NULL) AS prefixes FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND ( ( 0 = @@lower_case_table_names AND BINARY TABLE_NAME = BINARY %s ) OR ( 0 <> @@lower_case_table_names AND BINARY LOWER(TABLE_NAME) = BINARY %s ) ) GROUP BY INDEX_NAME, NON_UNIQUE', $this->table, $lower ) );
 		$required = array(
 			'PRIMARY'     => array( '0', 'id' ),
 			'correlation' => array( '0', 'correlation' ),

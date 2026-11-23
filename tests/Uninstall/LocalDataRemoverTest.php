@@ -266,6 +266,53 @@ final class LocalDataRemoverTest extends TestCase {
 		self::assertSame( 'preserved', $GLOBALS['ran_booster_uninstall_options']['unrelated_option'] );
 	}
 
+	/** @return iterable<string, array{int}> */
+	public static function case_folding_modes(): iterable {
+		yield 'lower_case_table_names=1' => array( 1 );
+		yield 'lower_case_table_names=2' => array( 2 );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	#[DataProvider( 'case_folding_modes' )]
+	public function test_lower_case_table_names_mode_allows_mixed_case_prefix_cleanup_and_still_blocks_unfinished_work( int $mode ): void {
+		$this->setUp();
+		$this->database->prefix                 = 'WP_';
+		$this->database->base_prefix            = 'WP_';
+		$this->database->options                = 'WP_options';
+		$this->database->usermeta               = 'WP_usermeta';
+		$this->database->lower_case_table_names = $mode;
+		$this->database->attempts               = array(
+			array(
+				'provider'    => 'gh',
+				'state'       => 'running',
+				'resolved_at' => null,
+				'resolved_by' => null,
+			),
+		);
+		$this->assert_preflight_refuses_without_mutation();
+
+		$this->database->attempts = array();
+		$this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
+		self::assertArrayNotHasKey( Database::VERSION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertNotContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
+		self::assertNotContains( 'wp_ran_booster_packages', $this->database->tables );
+		self::assertNotContains( 'wp_ran_booster_activity', $this->database->tables );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_case_sensitive_mode_rejects_mismatched_case_journal_table_before_cleanup(): void {
+		$this->setUp();
+		$this->database->prefix                          = 'WP_';
+		$this->database->base_prefix                     = 'WP_';
+		$this->database->options                         = 'WP_options';
+		$this->database->usermeta                        = 'WP_usermeta';
+		$this->database->lower_case_table_names          = 0;
+		$this->database->forced_information_schema_table = 'wp_ran_booster_deployment_attempts';
+		$this->assert_preflight_refuses_without_mutation();
+	}
+
 	/** @return iterable<string, array{string}> */
 	public static function late_option_delete_targets(): iterable {
 		yield 'selection' => array( 'selection' );

@@ -246,6 +246,28 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertSame( array(), $this->connection->inserted );
 	}
 
+	public function test_transactional_storage_handles_lower_case_table_names_for_mixed_case_table(): void {
+		$store       = new ActivityStore( $this->connection, 'WP_ran_booster_activity' );
+		$correlation = str_repeat( 'e', 32 );
+
+		self::assertTrue( $store->install() );
+		self::assertSame( 1, $store->begin( 'gh', self::request(), self::capture(), $correlation ) );
+
+		$metadata_queries = array_values(
+			array_filter(
+				$this->connection->prepared,
+				static fn ( array $entry ): bool => str_contains( $entry['sql'], 'information_schema.TABLES' )
+					|| str_contains( $entry['sql'], 'information_schema.STATISTICS' )
+			)
+		);
+		self::assertGreaterThanOrEqual( 2, count( $metadata_queries ) );
+		foreach ( $metadata_queries as $entry ) {
+			self::assertStringContainsString( '0 = @@lower_case_table_names AND BINARY TABLE_NAME = BINARY %s', $entry['sql'] );
+			self::assertStringContainsString( '0 <> @@lower_case_table_names AND BINARY LOWER(TABLE_NAME) = BINARY %s', $entry['sql'] );
+			self::assertSame( array( 'WP_ran_booster_activity', 'wp_ran_booster_activity' ), $entry['args'] );
+		}
+	}
+
 	public function test_install_and_coupled_writes_reject_missing_or_weakened_indexes(): void {
 		$indexes = $this->connection->indexes;
 		self::assertNotNull( $indexes );

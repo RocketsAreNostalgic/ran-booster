@@ -1380,4 +1380,71 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertTrue( $uncertain_context->has_uncertain_commit() );
 		self::assertFalse( $uncertain_context->has_unclosed_transaction() );
 	}
+
+	public function test_unrelated_valid_active_plugin_paths_and_off_autoload_allow_github_admission(): void {
+		$dirs      = array(
+			$this->root . '/my plugin',
+			$this->root . '/my+plugin',
+			$this->root . '/_private',
+			$this->root . '/plügîn',
+			$this->root . '/vendor',
+			$this->root . '/vendor/sub',
+		);
+		$unrelated = array(
+			'my plugin/my plugin.php',
+			'my+plugin/@entry (2).php',
+			'_private/.hidden.php',
+			'plügîn/màin.php',
+			'vendor/sub/nested.php',
+		);
+
+		try {
+			foreach ( $dirs as $dir ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated passive plugin-path fixture directory.
+				self::assertTrue( mkdir( $dir, 0700 ) );
+			}
+			foreach ( $unrelated as $basename ) {
+				$this->write( $basename, '<?php /* Plugin Name: Ordinary */' );
+			}
+
+			$this->activate( array_merge( array( 'booster.php' ), $unrelated ) );
+
+			foreach ( array( 'no', 'off' ) as $autoload ) {
+				$this->db->selection->rows[0]->autoload = $autoload;
+				$context                                = $this->context();
+				self::assertTrue( $context->operation_allowed(), "Admission must succeed for autoload={$autoload}." );
+
+				$current = $this->store->read();
+				$next    = $current;
+				++$next['selection_generation'];
+				self::assertTrue( $this->store->compare_and_swap( $current, $next ), $autoload );
+				self::assertSame( $next, $this->store->read(), $autoload );
+			}
+
+			// A replacement header on an unrelated basename still fails closed.
+			$this->write( 'vendor/sub/nested.php', "<?php\n/* RAN Booster GitHub Replacement: 1 */" );
+			self::assertFalse( $this->context()->operation_allowed() );
+
+			// Restoring ordinary content restores admission, and deleting an active file fails closed.
+			$this->write( 'vendor/sub/nested.php', '<?php /* Plugin Name: Ordinary */' );
+			self::assertTrue( $this->context()->operation_allowed() );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Verify missing active plugin still fails closed.
+			unlink( $this->root . '/vendor/sub/nested.php' );
+			self::assertFalse( $this->context()->operation_allowed() );
+		} finally {
+			foreach ( $unrelated as $basename ) {
+				$path = $this->root . '/' . $basename;
+				if ( is_file( $path ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test's passive fixture files.
+					unlink( $path );
+				}
+			}
+			foreach ( array_reverse( $dirs ) as $dir ) {
+				if ( is_dir( $dir ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only this test's nested directories before tearDown().
+					rmdir( $dir );
+				}
+			}
+		}
+	}
 }

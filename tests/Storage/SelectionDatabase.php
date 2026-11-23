@@ -72,7 +72,7 @@ final class SelectionDatabase extends SchemaConnection {
 		} elseif ( str_starts_with( $data[0], 'UPDATE' ) ) {
 			$result = 0;
 			foreach ( $this->rows as $row ) {
-				if ( $row->option_name === $data[1][2] && $row->option_value === $data[1][3] && $row->autoload === $data[1][4] ) {
+				if ( $row->option_name === $data[1][2] && $row->option_value === $data[1][3] && in_array( $row->autoload, array( $data[1][4], $data[1][5] ), true ) ) {
 					$row->option_value = (string) $data[1][1];
 					++$result;
 				}

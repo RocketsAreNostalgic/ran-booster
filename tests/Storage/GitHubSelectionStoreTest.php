@@ -43,7 +43,7 @@ final class GitHubSelectionStoreTest extends TestCase {
 		$db      = new SelectionDatabase();
 		$store   = new GitHubSelectionStore( $db, 'wp_options' );
 		$initial = $store->initialize_bundled( $this->declaration() );
-		self::assertSame( 'no', $db->rows[0]->autoload );
+		self::assertSame( 'off', $db->rows[0]->autoload );
 		self::assertSame( 'test-1', $initial['declaration']['compatibility_revision'] );
 		$next                         = $initial;
 		$next['selection_generation'] = 1;
@@ -233,25 +233,175 @@ final class GitHubSelectionStoreTest extends TestCase {
 		}
 	}
 
-	public function test_serialized_active_plugins_identity_length_boundary(): void {
-		foreach ( array( 195, 255, 256 ) as $length ) {
-			$identity = 195 === $length ? str_repeat( 'A', 100 ) . '/' . str_repeat( 'b', 90 ) . '.php' : str_repeat( 'A', $length - 105 ) . '/' . str_repeat( 'b', 100 ) . '.php';
+	public function test_autoload_accepts_no_and_off_across_read_cas_and_hold_while_refusing_others(): void {
+		$db      = new SelectionDatabase();
+		$store   = new GitHubSelectionStore( $db, 'wp_options' );
+		$current = $store->initialize_bundled( $this->declaration() );
+
+		foreach ( array( 'no', 'off' ) as $autoload ) {
+			$db->rows[0]->autoload = $autoload;
+			self::assertSame( $current, $store->read(), $autoload );
+			$next = $current;
+			++$next['selection_generation'];
+			self::assertTrue( $store->compare_and_swap( $current, $next ), $autoload );
+			self::assertSame( $autoload, $db->rows[0]->autoload );
+			self::assertSame( 'ok-' . $autoload, $store->without_native_mutation_hold( static fn (): string => 'ok-' . $autoload ) );
+			$current = $next;
+		}
+
+		foreach ( array( 'yes', 'on', 'auto', 'auto-on', 'auto-off', 'NO', 'OFF', '' ) as $rejected ) {
+			$db->rows[0]->autoload = $rejected;
+			try {
+				$store->read();
+				self::fail( "Autoload value {$rejected} must refuse read()." );
+			} catch ( DatabaseLifecycleFailure $failure ) {
+				self::assertSame( 'selection_invalid', $failure->reason(), $rejected );
+			}
+			$bad = $current;
+			++$bad['selection_generation'];
+			self::assertFalse( $store->compare_and_swap( $current, $bad ), "Autoload value {$rejected} must not match CAS." );
+			$callback_ran = false;
+			try {
+				$store->without_native_mutation_hold(
+					static function () use ( &$callback_ran ): string {
+						$callback_ran = true;
+						return 'unused';
+					}
+				);
+				self::fail( "Autoload value {$rejected} must refuse without_native_mutation_hold()." );
+			} catch ( DatabaseLifecycleFailure $failure ) {
+				self::assertSame( 'selection_invalid', $failure->reason(), $rejected );
+				self::assertFalse( $callback_ran );
+			}
+		}
+	}
+
+	public function test_active_plugins_accepts_valid_wordpress_paths_and_refuses_unsafe_or_noncanonical_bytes(): void {
+		$many = array();
+		for ( $i = 0; $i < 1030; ++$i ) {
+			$many[] = 'bulk-' . $i . '/plugin-' . $i . '.php';
+		}
+		$valid_sets = array(
+			'sparse keys'          => array(
+				2           => 'b/b.php',
+				9           => 'a/a.php',
+				PHP_INT_MAX => 'c.php',
+			),
+			'long identity'        => array(
+				str_repeat( 'A', 100 ) . '/' . str_repeat( 'b', 90 ) . '.php',
+				str_repeat( 'A', 150 ) . '/' . str_repeat( 'b', 100 ) . '.php',
+				str_repeat( 'A', 190 ) . '/' . str_repeat( 'b', 110 ) . '.php',
+			),
+			'third-party variants' => array(
+				'my plugin/my plugin.php',
+				'my+plugin/main.php',
+				'@scope/plugin.php',
+				'plugin (v2)/plugin (v2).php',
+				'_private/.hidden.php',
+				'plügîn/màin.php',
+				'vendor/sub/nested/plugin.php',
+			),
+			'over 1024 plugins'    => $many,
+		);
+
+		foreach ( $valid_sets as $label => $plugins ) {
 			$db       = new SelectionDatabase();
 			$db->rows = array(
 				(object) array(
 					'option_name'  => 'active_plugins',
 					// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- The WordPress option uses this format.
-					'option_value' => serialize( array( $identity ) ),
+					'option_value' => serialize( $plugins ),
+					'autoload'     => 'yes',
+				),
+			);
+			$expected = array_values( $plugins );
+			sort( $expected, SORT_STRING );
+			self::assertSame( $expected, ( new GitHubSelectionStore( $db, 'wp_options' ) )->active_plugins(), $label );
+		}
+
+		$unsafe_basenames = array(
+			'',
+			'dir/',
+			'dir/sub',
+			'plugin.txt',
+			'../a.php',
+			'a/../b.php',
+			'./a.php',
+			'a/./b.php',
+			'/a.php',
+			'a//b.php',
+			'a\\b.php',
+			'C:/a.php',
+			"bad\0.php",
+			"bad\n.php",
+		);
+		$invalid_bytes    = array();
+		foreach ( $unsafe_basenames as $unsafe ) {
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Intentional malformed WordPress option fixture.
+			$invalid_bytes[ 'unsafe:' . addcslashes( $unsafe, "\0..\37" ) ] = serialize( array( $unsafe ) );
+		}
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Intentional malformed WordPress option fixture.
+		$invalid_bytes['duplicate value'] = serialize( array( 'a/a.php', 'a/a.php' ) );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Intentional malformed WordPress option fixture.
+		$invalid_bytes['int value'] = serialize( array( 123 ) );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Intentional malformed WordPress option fixture.
+		$invalid_bytes['nested array'] = serialize( array( array( 'a/a.php' ) ) );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Intentional malformed WordPress option fixture.
+		$invalid_bytes['object value'] = serialize( array( new \stdClass() ) );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Intentional malformed WordPress option fixture.
+		$invalid_bytes['negative key']           = serialize( array( -1 => 'a/a.php' ) );
+		$invalid_bytes['string key']             = 'a:1:{s:1:"1";s:7:"a/a.php";}';
+		$invalid_bytes['plain bool']             = 'b:0;';
+		$invalid_bytes['leading zero key']       = 'a:1:{i:01;s:5:"a.php";}';
+		$invalid_bytes['plus signed key']        = 'a:1:{i:+1;s:5:"a.php";}';
+		$invalid_bytes['duplicate serialized k'] = 'a:2:{i:0;s:5:"a.php";i:0;s:5:"b.php";}';
+		$invalid_bytes['trailing bytes']         = 'a:1:{i:0;s:5:"a.php";}trailing';
+		$invalid_bytes['corrupt serialized']     = 'a:1:{i:0;s:99:"a.php";}';
+		$invalid_bytes['raw string']             = 'not-serialized';
+
+		foreach ( $invalid_bytes as $label => $bytes ) {
+			$db       = new SelectionDatabase();
+			$db->rows = array(
+				(object) array(
+					'option_name'  => 'active_plugins',
+					'option_value' => $bytes,
 					'autoload'     => 'yes',
 				),
 			);
 			try {
-				self::assertSame( array( $identity ), ( new GitHubSelectionStore( $db, 'wp_options' ) )->active_plugins() );
-				self::assertLessThanOrEqual( 255, $length );
+				( new GitHubSelectionStore( $db, 'wp_options' ) )->active_plugins();
+				self::fail( "Invalid active_plugins fixture accepted: {$label}" );
 			} catch ( DatabaseLifecycleFailure $failure ) {
-				self::assertSame( 256, $length );
+				self::assertSame( 'active_plugins_invalid', $failure->reason(), $label );
+			}
+		}
+
+		// Verify object-bearing active_plugins payloads never invoke PHP class autoloaders.
+		$autoload_triggered = false;
+		$spy                = static function ( string $class_name ) use ( &$autoload_triggered ): void {
+			if ( 'RanTestForbiddenActivePluginsGadget' === $class_name ) {
+				$autoload_triggered = true;
+			}
+		};
+		spl_autoload_register( $spy );
+		try {
+			$db       = new SelectionDatabase();
+			$db->rows = array(
+				(object) array(
+					'option_name'  => 'active_plugins',
+					'option_value' => 'a:1:{i:0;O:35:"RanTestForbiddenActivePluginsGadget":0:{}}',
+					'autoload'     => 'yes',
+				),
+			);
+			try {
+				( new GitHubSelectionStore( $db, 'wp_options' ) )->active_plugins();
+				self::fail( 'Object payload must fail.' );
+			} catch ( DatabaseLifecycleFailure $failure ) {
 				self::assertSame( 'active_plugins_invalid', $failure->reason() );
 			}
+			self::assertFalse( $autoload_triggered );
+		} finally {
+			spl_autoload_unregister( $spy );
 		}
 	}
 

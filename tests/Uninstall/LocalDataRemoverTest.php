@@ -313,6 +313,40 @@ final class LocalDataRemoverTest extends TestCase {
 		$this->assert_preflight_refuses_without_mutation();
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_mode_one_rejects_mixed_case_journal_row_and_missing_mode_fails_closed(): void {
+		$this->setUp();
+		$this->database->prefix                          = 'WP_';
+		$this->database->base_prefix                     = 'WP_';
+		$this->database->options                         = 'WP_options';
+		$this->database->usermeta                        = 'WP_usermeta';
+		$this->database->lower_case_table_names          = 1;
+		$this->database->forced_information_schema_table = 'WP_ran_booster_deployment_attempts';
+		$this->assert_preflight_refuses_without_mutation();
+
+		$this->setUp();
+		$this->database->forced_information_schema_table = 'wp_ran_booster_deployment_attempts';
+		$this->database->omit_information_schema_mode    = true;
+		$this->assert_preflight_refuses_without_mutation();
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_mode_two_accepts_preserved_mixed_case_journal_table_for_lowercase_prefix(): void {
+		$this->setUp();
+		$this->database->lower_case_table_names = 2;
+		$this->database->tables                 = array(
+			'WP_ran_booster_packages',
+			'WP_ran_booster_deployment_attempts',
+			'WP_ran_booster_activity',
+		);
+
+		$this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
+		self::assertArrayNotHasKey( Database::VERSION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertSame( array(), $this->database->tables );
+	}
+
 	/** @return iterable<string, array{string}> */
 	public static function late_option_delete_targets(): iterable {
 		yield 'selection' => array( 'selection' );

@@ -11,8 +11,9 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 	public string $options             = 'wp_options';
 	public string $usermeta            = 'wp_usermeta';
 	public int $lower_case_table_names = 0;
-	/** Optional override to simulate an unexpected table-name row returned under mode 0. */
+	/** Optional override to simulate an unexpected table-name row returned by information_schema. */
 	public ?string $forced_information_schema_table = null;
+	public bool $omit_information_schema_mode       = false;
 
 	/** @var list<string> */
 	public array $tables = array();
@@ -100,26 +101,37 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 			) : array();
 		}
 		if ( str_contains( $query, 'information_schema.TABLES' ) ) {
-			if ( null !== $this->forced_information_schema_table ) {
-				return array(
-					(object) array(
-						'table_name'             => $this->forced_information_schema_table,
-						'lower_case_table_names' => (string) $this->lower_case_table_names,
-					),
-				);
+			$table    = $this->prefix . 'ran_booster_deployment_attempts';
+			$lower    = strtolower( $table );
+			$expected = sprintf(
+				"SELECT TABLE_NAME AS table_name, @@lower_case_table_names AS lower_case_table_names FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND ( ( 0 = @@lower_case_table_names AND CAST(TABLE_NAME AS BINARY) = CAST('%s' AS BINARY) ) OR ( 1 = @@lower_case_table_names AND CAST(TABLE_NAME AS BINARY) = CAST('%s' AS BINARY) ) OR ( 2 = @@lower_case_table_names AND CAST(LOWER(TABLE_NAME) AS BINARY) = CAST('%s' AS BINARY) ) )",
+				addslashes( $table ),
+				addslashes( $lower ),
+				addslashes( $lower )
+			);
+			if ( $expected !== $query ) {
+				throw new \LogicException( 'Unexpected information_schema custody predicate.' );
 			}
-			$table = $this->prefix . 'ran_booster_deployment_attempts';
+			if ( null !== $this->forced_information_schema_table ) {
+				$row = array( 'table_name' => $this->forced_information_schema_table );
+				if ( ! $this->omit_information_schema_mode ) {
+					$row['lower_case_table_names'] = (string) $this->lower_case_table_names;
+				}
+				return array( (object) $row );
+			}
 			foreach ( $this->tables as $existing ) {
-				$matched = 0 === $this->lower_case_table_names
-					? $existing === $table
-					: 0 === strcasecmp( $existing, $table );
+				$matched = match ( $this->lower_case_table_names ) {
+					0 => hash_equals( $table, $existing ),
+					1 => hash_equals( $lower, $existing ),
+					2 => 0 === strcasecmp( $existing, $table ),
+					default => false,
+				};
 				if ( $matched ) {
-					return array(
-						(object) array(
-							'table_name'             => $existing,
-							'lower_case_table_names' => (string) $this->lower_case_table_names,
-						),
-					);
+					$row = array( 'table_name' => $existing );
+					if ( ! $this->omit_information_schema_mode ) {
+						$row['lower_case_table_names'] = (string) $this->lower_case_table_names;
+					}
+					return array( (object) $row );
 				}
 			}
 			return array();

@@ -18,7 +18,6 @@ class Database {
 	private bool $lifecycle_checked                           = false;
 	private bool $lifecycle_inspected                         = false;
 	private ?DatabaseLifecycleFailure $lifecycle_failure      = null;
-	private bool $lower_case_table_names_checked              = false;
 	private ?int $lower_case_table_names                      = null;
 
 	public function __construct( private ?object $database = null, private ?GitHubReplacementDeclaration $bundled_declaration = null ) {
@@ -207,7 +206,15 @@ class Database {
 			$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $activity_name ) );
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The table pattern is prepared above.
 			$activity_table = $wpdb->get_var( $query );
-			$fresh          = ! $this->identity_read_failed() && null === $activity_table;
+			if ( $this->identity_read_failed() ) {
+				$fresh = false;
+			} elseif ( is_string( $activity_table ) ) {
+				try {
+					$fresh = ! $this->table_name_matches( $activity_name, $activity_table );
+				} catch ( DatabaseLifecycleFailure ) {
+					$fresh = false;
+				}
+			}
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -386,14 +393,26 @@ class Database {
 		if ( $this->identity_read_failed() ) {
 			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 		}
-		if ( null === $status && strtolower( $table_name ) !== $table_name && in_array( $this->lower_case_table_names(), array( 1, 2 ), true ) ) {
-			$lower_status_query = $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', strtolower( $table_name ) );
-			$wpdb->last_error   = '';
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared lowercase fallback when lower_case_table_names folds table names.
-			$status = $wpdb->get_row( $lower_status_query );
-			if ( $this->identity_read_failed() ) {
-				throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		if ( null === $status ) {
+			$mode           = $this->lower_case_table_names();
+			$fallback_query = null;
+			if ( 1 === $mode && strtolower( $table_name ) !== $table_name ) {
+				$fallback_query = $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', strtolower( $table_name ) );
+			} elseif ( 2 === $mode ) {
+				$fallback_query = $wpdb->prepare( 'SHOW TABLE STATUS WHERE LOWER(Name) = %s', strtolower( $table_name ) );
 			}
+			if ( null !== $fallback_query ) {
+				$wpdb->last_error = '';
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared case-folding fallback when lower_case_table_names folds or preserves table names.
+				$status = $wpdb->get_row( $fallback_query );
+				if ( $this->identity_read_failed() ) {
+					throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+				}
+			}
+		}
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
+		if ( is_object( $status ) && isset( $status->Name ) && is_string( $status->Name ) && ! $this->table_name_matches( $table_name, $status->Name ) ) {
+			$status = null;
 		}
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table identifier as %i; inspect live column definitions before accepting the schema.
@@ -673,7 +692,28 @@ class Database {
 				$errors_suppressed = (bool) $suppress_errors( true );
 			}
 
-			$server_info = $database->db_server_info();
+			$query_engines = array( $database, 'get_results' );
+			$engines       = null;
+			$engine_error  = null;
+			$server_info   = null;
+			$info_error    = null;
+			try {
+				$server_info = $database->db_server_info();
+			} catch ( \Throwable $caught ) {
+				$info_error = $caught;
+			}
+			// Lazy-connecting db.php drop-ins (such as HyperDB) may establish their handle on the first query.
+			if ( $has_drop_in && ( null !== $info_error || ! is_string( $server_info ) || '' === trim( $server_info ) ) ) {
+				if ( ! is_callable( $query_engines ) ) {
+					throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
+				}
+				$engines      = $query_engines( 'SHOW ENGINES' );
+				$engine_error = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
+				$info_error   = null;
+				$server_info  = $database->db_server_info();
+			} elseif ( null !== $info_error ) {
+				throw $info_error;
+			}
 			if ( ! is_string( $server_info ) ) {
 				throw new DatabaseCompatibilityFailure( 'unknown_server' );
 			}
@@ -687,13 +727,17 @@ class Database {
 			}
 
 			// Capability inspection must read the authoritative server engine list.
-			$query_engines = array( $database, 'get_results' );
-			if ( ! is_callable( $query_engines ) ) {
-				throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
+			if ( null === $engine_error ) {
+				if ( ! is_callable( $query_engines ) ) {
+					throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
+				}
+				if ( null !== $previous_error ) {
+					$database->last_error = '';
+				}
+				$engines      = $query_engines( 'SHOW ENGINES' );
+				$engine_error = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
 			}
-			$engines = $query_engines( 'SHOW ENGINES' );
-			$error   = property_exists( $database, 'last_error' ) ? trim( (string) $database->last_error ) : '';
-			if ( ! is_array( $engines ) || '' !== $error ) {
+			if ( ! is_array( $engines ) || '' !== $engine_error ) {
 				throw new DatabaseCompatibilityFailure( $has_drop_in ? 'database_drop_in' : 'innodb_unavailable' );
 			}
 			$innodb_supported = false;
@@ -707,7 +751,11 @@ class Database {
 					&& in_array( strtoupper( (string) $engine->Support ), array( 'YES', 'DEFAULT' ), true ) ) {
 					// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 					$transactions = $engine->Transactions ?? null;
-					if ( ( null !== $transactions || $has_drop_in ) && 0 !== strcasecmp( 'YES', (string) $transactions ) ) {
+					if ( null === $transactions ) {
+						if ( $has_drop_in ) {
+							throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+						}
+					} elseif ( 0 !== strcasecmp( 'YES', (string) $transactions ) ) {
 						throw new DatabaseCompatibilityFailure( 'innodb_unavailable' );
 					}
 					$innodb_supported = true;
@@ -720,6 +768,9 @@ class Database {
 			}
 
 			if ( $has_drop_in ) {
+				if ( ! is_callable( $query_engines ) ) {
+					throw new DatabaseCompatibilityFailure( 'capability_probe_failed' );
+				}
 				$this->verify_drop_in_server( $database, $query_engines, $identity, $minimum );
 			}
 
@@ -751,6 +802,16 @@ class Database {
 	 * @param array{family: 'mysql'|'mariadb', version: string} $identity
 	 */
 	private function verify_drop_in_server( object $database, callable $query_results, array $identity, string $minimum ): void {
+		$reflection = new \ReflectionObject( $database );
+		if ( $reflection->hasProperty( 'dbh' ) ) {
+			$property = $reflection->getProperty( 'dbh' );
+			if ( $property->isInitialized( $database ) ) {
+				$dbh = $property->getValue( $database );
+				if ( is_object( $dbh ) && ! $dbh instanceof \mysqli ) {
+					throw new DatabaseCompatibilityFailure( 'database_drop_in' );
+				}
+			}
+		}
 		if ( property_exists( $database, 'last_error' ) ) {
 			$database->last_error = '';
 		}
@@ -767,7 +828,7 @@ class Database {
 			throw new DatabaseCompatibilityFailure( 'unsupported_version' );
 		}
 		$comment = $rows[0]->comment ?? null;
-		if ( is_string( $comment ) && 1 === preg_match( '/(?:postgres|sqlite|tidb|percona)/i', $comment ) ) {
+		if ( ! is_string( $comment ) || '' === trim( $comment ) || 1 === preg_match( '/(?:postgres|sqlite|tidb|percona)/i', $comment ) ) {
 			throw new DatabaseCompatibilityFailure( 'database_drop_in' );
 		}
 	}
@@ -788,8 +849,8 @@ class Database {
 		return 2 === $mode;
 	}
 
-	private function lower_case_table_names(): ?int {
-		if ( $this->lower_case_table_names_checked ) {
+	private function lower_case_table_names(): int {
+		if ( null !== $this->lower_case_table_names ) {
 			return $this->lower_case_table_names;
 		}
 
@@ -798,17 +859,16 @@ class Database {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Read the server's live table-name casing mode once per request.
 		$value = $wpdb->get_var( 'SELECT @@lower_case_table_names' );
 		if ( $this->identity_read_failed() ) {
-			return null;
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 		}
 		$mode = is_int( $value )
 			? $value
 			: ( is_string( $value ) && 1 === preg_match( '/\A[012]\z/', $value ) ? (int) $value : null );
 		if ( null === $mode || ! in_array( $mode, array( 0, 1, 2 ), true ) ) {
-			return null;
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
 		}
 
-		$this->lower_case_table_names         = $mode;
-		$this->lower_case_table_names_checked = true;
+		$this->lower_case_table_names = $mode;
 
 		return $mode;
 	}

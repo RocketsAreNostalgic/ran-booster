@@ -262,9 +262,10 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		);
 		self::assertGreaterThanOrEqual( 2, count( $metadata_queries ) );
 		foreach ( $metadata_queries as $entry ) {
-			self::assertStringContainsString( '0 = @@lower_case_table_names AND BINARY TABLE_NAME = BINARY %s', $entry['sql'] );
-			self::assertStringContainsString( '0 <> @@lower_case_table_names AND BINARY LOWER(TABLE_NAME) = BINARY %s', $entry['sql'] );
-			self::assertSame( array( 'WP_ran_booster_activity', 'wp_ran_booster_activity' ), $entry['args'] );
+			self::assertStringContainsString( '0 = @@lower_case_table_names AND CAST(TABLE_NAME AS BINARY) = CAST(%s AS BINARY)', $entry['sql'] );
+			self::assertStringContainsString( '1 = @@lower_case_table_names AND CAST(TABLE_NAME AS BINARY) = CAST(%s AS BINARY)', $entry['sql'] );
+			self::assertStringContainsString( '2 = @@lower_case_table_names AND CAST(LOWER(TABLE_NAME) AS BINARY) = CAST(%s AS BINARY)', $entry['sql'] );
+			self::assertSame( array( 'WP_ran_booster_activity', 'wp_ran_booster_activity', 'wp_ran_booster_activity' ), $entry['args'] );
 		}
 	}
 

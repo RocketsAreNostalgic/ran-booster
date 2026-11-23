@@ -178,16 +178,26 @@ namespace RAN\Tests\Storage {
 		 *     indexes: array<string, array{unique: bool, columns: list<string>, prefixes: list<?int>}>
 		 * }>
 		 */
-		public array $schema_tables               = array();
-		public string $schema_engine              = 'InnoDB';
-		public string $options_engine             = 'InnoDB';
-		public string $server_info                = '8.4.6';
-		public string $innodb_support             = 'DEFAULT';
-		public ?string $innodb_transactions       = 'YES';
-		public ?string $live_version              = null;
-		public string $live_version_comment       = 'MySQL Community Server - GPL';
+		public array $schema_tables          = array();
+		public string $schema_engine         = 'InnoDB';
+		public string $options_engine        = 'InnoDB';
+		public ?string $stored_options_table = null;
+		public string $server_info           = '8.4.6';
+		public string $innodb_support        = 'DEFAULT';
+		public ?string $innodb_transactions  = 'YES';
+		public ?string $live_version         = null;
+		public ?string $live_version_comment = 'MySQL Community Server - GPL';
+		/** @var list<object>|null */
+		public ?array $live_version_rows          = null;
 		public bool $fail_live_version_probe      = false;
+		public bool $fail_engines_probe           = false;
+		public mixed $dbh                         = null;
+		public bool $lazy_server_info             = false;
+		public bool $lazy_server_info_throws      = false;
+		private bool $connection_warmed           = false;
 		public int $lower_case_table_names        = 0;
+		public mixed $lower_case_table_names_raw  = false;
+		public bool $fail_lower_case_table_names  = false;
 		public bool $case_insensitive_show_tables = false;
 		public int $capability_reads              = 0;
 
@@ -243,6 +253,15 @@ namespace RAN\Tests\Storage {
 		}
 
 		public function db_server_info(): string {
+			if ( ! $this->connection_warmed ) {
+				if ( $this->lazy_server_info_throws ) {
+					throw new \TypeError( 'mysqli_get_server_info(): Argument #1 ($mysql) must be of type mysqli, null given' );
+				}
+				if ( $this->lazy_server_info ) {
+					return '';
+				}
+			}
+
 			return $this->server_info;
 		}
 
@@ -438,6 +457,15 @@ namespace RAN\Tests\Storage {
 				return null;
 			}
 			if ( 'SELECT @@lower_case_table_names' === $query ) {
+				if ( $this->fail_lower_case_table_names ) {
+					$this->last_error = 'database details must not escape';
+					return null;
+				}
+				if ( false !== $this->lower_case_table_names_raw ) {
+					return is_int( $this->lower_case_table_names_raw ) || is_string( $this->lower_case_table_names_raw )
+						? $this->lower_case_table_names_raw
+						: null;
+				}
 				return (string) $this->lower_case_table_names;
 			}
 			if ( 1 === preg_match( '/^SELECT option_name FROM `[^`]+` WHERE option_name LIKE/', $query ) ) {
@@ -557,14 +585,41 @@ namespace RAN\Tests\Storage {
 
 		public function get_row( string $query ): ?object {
 			if ( 1 === preg_match( "/^SHOW TABLE STATUS WHERE Name = '([^']+)'$/", $query, $matches ) ) {
-				$table = stripslashes( $matches[1] );
-				if ( $this->options === $table || ( 0 !== $this->lower_case_table_names && strtolower( $this->options ) === $table ) ) {
-					return (object) array( 'Engine' => $this->options_engine );
+				$table        = stripslashes( $matches[1] );
+				$options_name = $this->stored_options_table ?? ( 1 === $this->lower_case_table_names ? strtolower( $this->options ) : $this->options );
+				if ( $options_name === $table ) {
+					return (object) array(
+						'Name'   => $options_name,
+						'Engine' => $this->options_engine,
+					);
 				}
 
 				return isset( $this->schema_tables[ $table ] )
-					? (object) array( 'Engine' => $this->schema_tables[ $table ]['engine'] )
+					? (object) array(
+						'Name'   => $table,
+						'Engine' => $this->schema_tables[ $table ]['engine'],
+					)
 					: null;
+			}
+			if ( 1 === preg_match( "/^SHOW TABLE STATUS WHERE LOWER\(Name\) = '([^']+)'$/", $query, $matches ) ) {
+				$needle       = stripslashes( $matches[1] );
+				$options_name = $this->stored_options_table ?? ( 1 === $this->lower_case_table_names ? strtolower( $this->options ) : $this->options );
+				if ( strtolower( $options_name ) === $needle ) {
+					return (object) array(
+						'Name'   => $options_name,
+						'Engine' => $this->options_engine,
+					);
+				}
+				foreach ( $this->schema_tables as $existing => $table_definition ) {
+					if ( strtolower( $existing ) === $needle ) {
+						return (object) array(
+							'Name'   => $existing,
+							'Engine' => $table_definition['engine'],
+						);
+					}
+				}
+
+				return null;
 			}
 
 			return $this->row;
@@ -574,7 +629,12 @@ namespace RAN\Tests\Storage {
 		public function get_results( string $query ): ?array {
 			$this->read_queries[] = $query;
 			if ( 'SHOW ENGINES' === $query ) {
+				$this->connection_warmed = true;
 				++$this->capability_reads;
+				if ( $this->fail_engines_probe ) {
+					$this->last_error = 'engines probe failed';
+					return array();
+				}
 
 				$row = array(
 					'Engine'  => 'InnoDB',
@@ -591,6 +651,9 @@ namespace RAN\Tests\Storage {
 				if ( $this->fail_live_version_probe ) {
 					$this->last_error = 'unsupported syntax';
 					return array();
+				}
+				if ( null !== $this->live_version_rows ) {
+					return $this->live_version_rows;
 				}
 
 				return array(

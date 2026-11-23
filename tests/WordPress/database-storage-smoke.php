@@ -39,6 +39,30 @@ $ran_booster_database->require_supported();
 ( new Database() )->install();
 
 global $wpdb;
+// Prove live MySQL/MariaDB drop-in capability checks and lower_case_table_names SQL predicates against the running server.
+$ran_booster_drop_in = rtrim( WP_CONTENT_DIR, '/\\' ) . '/db.php';
+if ( ! file_exists( $ran_booster_drop_in ) ) {
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable CI site proves live drop-in capability SQL on real MySQL/MariaDB.
+	if ( false === file_put_contents( $ran_booster_drop_in, "<?php\n// Disposable smoke drop-in marker.\n" ) ) {
+		throw new RuntimeException( 'Could not create disposable db.php drop-in smoke marker.' );
+	}
+	try {
+		( new Database( $wpdb ) )->require_supported();
+	} finally {
+		if ( is_file( $ran_booster_drop_in ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only the disposable db.php smoke marker created above.
+			unlink( $ran_booster_drop_in );
+		}
+	}
+}
+$ran_booster_read_error = static fn (): string => (string) $wpdb->last_error;
+$wpdb->last_error       = '';
+$ran_booster_mode       = $wpdb->get_var( 'SELECT @@lower_case_table_names' );
+$ran_booster_status     = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS WHERE LOWER(Name) = %s', strtolower( $wpdb->options ) ) );
+// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native MySQL SHOW TABLE STATUS Engine column.
+if ( '' !== $ran_booster_read_error() || ! in_array( (string) $ran_booster_mode, array( '0', '1', '2' ), true ) || ! is_object( $ran_booster_status ) || ! isset( $ran_booster_status->Engine ) ) {
+	throw new RuntimeException( 'Live lower_case_table_names or case-insensitive SHOW TABLE STATUS probe failed.' );
+}
 // Exercise the installed Composer package against real WordPress storage and MySQL locks.
 $ran_booster_workflow_proof = static function ( wpdb $database ): void {
 	if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' ) ) {

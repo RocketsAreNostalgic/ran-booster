@@ -150,10 +150,12 @@ class LocalDataRemover {
 			}
 		}
 		$table = $this->verified_table_prefix . 'ran_booster_deployment_attempts';
+		$lower = strtolower( $table );
 		$query = $database->prepare(
-			'SELECT TABLE_NAME AS table_name, @@lower_case_table_names AS lower_case_table_names FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND ( ( 0 = @@lower_case_table_names AND BINARY TABLE_NAME = BINARY %s ) OR ( 0 <> @@lower_case_table_names AND BINARY LOWER(TABLE_NAME) = BINARY %s ) )',
+			'SELECT TABLE_NAME AS table_name, @@lower_case_table_names AS lower_case_table_names FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND ( ( 0 = @@lower_case_table_names AND CAST(TABLE_NAME AS BINARY) = CAST(%s AS BINARY) ) OR ( 1 = @@lower_case_table_names AND CAST(TABLE_NAME AS BINARY) = CAST(%s AS BINARY) ) OR ( 2 = @@lower_case_table_names AND CAST(LOWER(TABLE_NAME) AS BINARY) = CAST(%s AS BINARY) ) )',
 			$table,
-			strtolower( $table )
+			$lower,
+			$lower
 		);
 		$found = $this->custody_rows( $database, $query );
 		if ( array() === $found ) {
@@ -162,7 +164,7 @@ class LocalDataRemover {
 			}
 			return;
 		}
-		if ( 1 !== count( $found ) || ! $this->table_name_matches_mode( $table, $found[0]->table_name ?? null, $found[0]->lower_case_table_names ?? 0 ) ) {
+		if ( 1 !== count( $found ) || ! $this->table_name_matches_mode( $table, $found[0]->table_name ?? null, $found[0]->lower_case_table_names ?? null ) ) {
 			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
 		}
 		$query = $database->prepare( "SELECT id FROM %i WHERE state IS NULL OR BINARY state NOT IN (BINARY 'succeeded', BINARY 'failed', BINARY 'needs_attention') OR (BINARY state = BINARY 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL)) LIMIT 1", $table );

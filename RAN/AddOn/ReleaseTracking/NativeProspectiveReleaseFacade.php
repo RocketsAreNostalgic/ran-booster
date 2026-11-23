@@ -412,10 +412,20 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 				);
 				$user_id       = ( $this->current_user_id )();
 
-				$lock_token   = $this->updater_lock->acquire();
+				$lock_token = $this->updater_lock->try_acquire_without_reclaim();
+				if ( null === $lock_token ) {
+					$outcome = ProspectiveReleaseResult::failure( 'install_failed' );
+					break;
+				}
 				$availability = $this->release_source_available( $type, $identifier, $repository );
 				if ( true !== $availability ) {
 					$outcome = ProspectiveReleaseResult::failure( false === $availability ? 'release_repository_conflict' : 'release_unavailable' );
+					break;
+				}
+				if ( 'gh' !== (string) $repository->provider
+					&& ( $this->github_selection->native_mutation_blocks_target( $type, $identifier )
+						|| $lock_token !== $this->updater_lock->current_token() ) ) {
+					$outcome = ProspectiveReleaseResult::failure( 'install_failed' );
 					break;
 				}
 				$was_active = $this->is_active( $type, $identifier );
@@ -442,6 +452,10 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 					}
 					if ( 'gh' === (string) $repository->provider ) {
 						$native_owner = $this->github_selection->begin_native_mutation( $type, $identifier, fn (): bool => $lock_token === $this->updater_lock->current_token(), $lock_token );
+					} elseif ( $this->github_selection->native_mutation_blocks_target( $type, $identifier )
+						|| $lock_token !== $this->updater_lock->current_token() ) {
+						$outcome = ProspectiveReleaseResult::failure( 'install_failed' );
+						break;
 					}
 					$result               = 'plugin' === $type
 						? $this->executor->install_plugin( $artifact, $package_root, null )

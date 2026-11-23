@@ -382,6 +382,13 @@ final class NativeRecoveryTest extends TestCase {
 		self::assertArrayNotHasKey( 'auto_updater.lock', $this->db->option_rows );
 	}
 
+	public function test_untagged_legacy_owner_tag_reports_unknown_start_time(): void {
+		foreach ( array( '00abcd1234567890' . str_repeat( 'f', 16 ), '000000006553f100' . str_repeat( 'b', 16 ) ) as $legacy_tag ) {
+			$this->hold( $legacy_tag, 'started' );
+			self::assertNull( $this->service->native_recovery_confirmation()['started_at'] );
+		}
+	}
+
 	/** @return iterable<string, array{string, string, int}> */
 	public static function foreign_live_locks(): iterable {
 		foreach ( array( 'release', 'recover' ) as $operation ) {
@@ -609,7 +616,9 @@ final class NativeRecoveryTest extends TestCase {
 	}
 
 	private static function tag( string $lock_token ): string {
-		return sprintf( '%016x', (int) $lock_token ) . str_repeat( 'b', 16 );
+		$prefix = sprintf( '%016x', (int) $lock_token );
+		$nonce  = 'bbbbbbbb';
+		return $prefix . $nonce . substr( hash( 'sha256', 'ran-booster-native-lock-v1:' . $prefix . ':' . $nonce ), 0, 8 );
 	}
 
 	private function release( ?string $digest = null ): void {

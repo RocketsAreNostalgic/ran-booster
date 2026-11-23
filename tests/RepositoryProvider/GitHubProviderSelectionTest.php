@@ -1013,10 +1013,12 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$this->context()->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
 		$marker = $this->store->read()['native_mutation'];
 		self::assertIsArray( $marker );
-		self::assertMatchesRegularExpression( '/\A000000006553f100[0-9a-f]{16}\z/D', (string) $marker['owner_tag'] );
+		$owner_tag = (string) $marker['owner_tag'];
+		self::assertMatchesRegularExpression( '/\A000000006553f100[0-9a-f]{16}\z/D', $owner_tag );
 		self::assertSame( self::LOCK_TOKEN, GitHubProviderSelection::native_lock_token( $marker ) );
-		// A tag that never carried a token is never mistaken for one.
-		foreach ( array( str_repeat( 'a', 32 ), str_repeat( '0', 32 ), str_repeat( '0', 16 ) . str_repeat( 'f', 16 ), str_repeat( '0', 20 ) . str_repeat( 'f', 12 ), 'not-a-tag' ) as $tag ) {
+		$tampered = substr( $owner_tag, 0, -1 ) . ( '0' === substr( $owner_tag, -1 ) ? '1' : '0' );
+		// A tag that never carried a validated lock token is never mistaken for one.
+		foreach ( array( str_repeat( 'a', 32 ), str_repeat( '0', 32 ), str_repeat( '0', 16 ) . str_repeat( 'f', 16 ), str_repeat( '0', 20 ) . str_repeat( 'f', 12 ), '00abcd1234567890' . str_repeat( 'f', 16 ), '000000006553f100' . str_repeat( '0', 16 ), $tampered, 'not-a-tag' ) as $tag ) {
 			self::assertNull( GitHubProviderSelection::native_lock_token( array( 'owner_tag' => $tag ) ) );
 		}
 	}

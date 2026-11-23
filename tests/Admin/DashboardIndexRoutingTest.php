@@ -2523,6 +2523,145 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
+	public function test_core_github_tab_and_native_hold_recovery_win_when_an_add_on_registers_gh(): void {
+		$registry = new AdminAddOnRegistry( array(), 7, 7 );
+		$registry->register(
+			new AdminAddOnTab(
+				'ran-booster-collision',
+				'gh',
+				'Colliding Add-On',
+				static function (): void {
+					self::fail( 'Colliding add-on tab must never override Core GitHub routing.' );
+				},
+				7,
+				7,
+				7,
+				7
+			)
+		);
+		$registry->seal();
+
+		$providers                 = $this->providers( true );
+		$db                        = new AttemptRepositoryDatabase();
+		$store                     = new \RAN\Storage\GitHubSelectionStore( $db, 'wp_options' );
+		$bundled                   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$state                     = $store->initialize_bundled( $bundled );
+		$marked                    = $state;
+		$marked['native_mutation'] = array(
+			'selection_generation' => 0,
+			'owner_tag'            => str_repeat( '0', 16 ) . str_repeat( 'a', 16 ),
+			'target_type'          => 'plugin',
+			'installed_identity'   => 'target/main.php',
+			'phase'                => 'started',
+		);
+		self::assertTrue( $store->compare_and_swap( $state, $marked ) );
+		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( $store, '/unused', $bundled );
+		$plugins   = $this->createMock( PluginRepository::class );
+		$plugins->method( 'native_recovery_record' )->willReturn( null );
+		$themes   = $this->createStub( ThemeRepository::class );
+		$gateway  = $this->createStub( \RAN\PackageRemoval\PackageRemovalGateway::class );
+		$removals = new PackageRemovalService( $plugins, $themes, $gateway, null, new WordPressUpdaterLock(), github_selection: $selection );
+		$secrets  = new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() );
+
+		$presenter = new ProviderSettingsPresenter(
+			$providers,
+			$secrets,
+			new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ),
+			new InMemoryPublicRepositoryLookupProfileStore(),
+			new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(),
+			null,
+			$plugins,
+			$themes,
+			null,
+			new DashboardBranchCheckEvidenceStore(),
+			new DashboardBranchCheckUpdaterLock(),
+			$selection,
+			package_removal: $removals
+		);
+		$hold      = $presenter->native_hold();
+		self::assertIsArray( $hold );
+		$parts = wp_parse_url( $hold['url'] );
+		self::assertIsArray( $parts );
+		$query = array();
+		wp_parse_str( $parts['query'] ?? '', $query );
+		self::assertSame( 'gh', $query['tab'] ?? null );
+
+		$dashboard                                = $this->dashboard(
+			$secrets,
+			plugins: $plugins,
+			themes: $themes,
+			admin_add_ons: $registry,
+			provider_credentials: true,
+			providers: $providers,
+			github_selection: $selection,
+			removals: $removals
+		);
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'activate_plugins' => true,
+			'manage_options'   => true,
+		);
+		$render                                   = static function ( array $data ): string {
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+			extract( $data );
+			ob_start();
+			try {
+				require dirname( __DIR__, 2 ) . '/views/provider.php';
+				return (string) ob_get_contents();
+			} finally {
+				ob_end_clean();
+			}
+		};
+
+		try {
+			foreach ( array( (string) $query['tab'], ' GH ' ) as $tab ) {
+				$_GET = array( 'tab' => $tab );
+				$data = $dashboard->get_index()['data'];
+				self::assertArrayNotHasKey( 'route_not_found', $data, $tab );
+				self::assertArrayNotHasKey( 'add_on_tab', $data, $tab );
+				self::assertSame( 'gh', $data['tab'], $tab );
+				self::assertSame( 'provider.php', $data['tab_view'], $tab );
+				$gh_tabs = array_values(
+					array_filter(
+						$data['tabs'],
+						static fn ( array $entry ): bool => 'gh' === $entry['key']
+					)
+				);
+				self::assertCount( 1, $gh_tabs, $tab );
+				self::assertTrue( $gh_tabs[0]['provider'], $tab );
+				$html = $render( $data );
+				self::assertStringContainsString( 'id="ran-booster-native-hold"', $html, $tab );
+				self::assertStringContainsString( 'value="recover-github-native"', $html, $tab );
+				self::assertStringContainsString( 'name="ran_booster[confirmed_removal]"', $html, $tab );
+			}
+
+			$_GET         = array(
+				'tab'                     => 'gh',
+				'ran_booster_hold'        => 'cleared',
+				'ran_booster_hold_folder' => 'target',
+				'ran_booster_hold_type'   => 'plugin',
+			);
+			$cleared_data = $dashboard->get_index()['data'];
+			self::assertArrayNotHasKey( 'add_on_tab', $cleared_data );
+			self::assertSame( 'provider.php', $cleared_data['tab_view'] );
+			self::assertSame( 'cleared', $cleared_data['native_hold_result']['code'] ?? null );
+			$cleared_html = $render( $cleared_data );
+			self::assertStringContainsString( 'Hold cleared. Booster no longer manages <code>target</code>.', $cleared_html );
+		} finally {
+			$_GET = array();
+			unset( $GLOBALS['ran_booster_test_capabilities'] );
+		}
+	}
+
 	public function test_a_forced_tab_is_unchanged_by_the_query_string(): void {
 		$_GET['tab'] = 'nonexistent';
 		$data        = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index( 'portability' )['data'];

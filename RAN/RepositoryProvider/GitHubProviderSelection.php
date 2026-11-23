@@ -477,9 +477,13 @@ final class GitHubProviderSelection {
 						throw new \RuntimeException( 'GitHub native mutation is unavailable.' );
 				}
 				$prefix                  = null === $lock_token ? str_repeat( '0', 16 ) : sprintf( '%016x', (int) $lock_token );
+				$nonce                   = null === $lock_token ? '' : bin2hex( random_bytes( 4 ) );
+				$owner_tag               = null === $lock_token
+					? $prefix . bin2hex( random_bytes( 8 ) )
+					: $prefix . $nonce . substr( hash( 'sha256', 'ran-booster-native-lock-v1:' . $prefix . ':' . $nonce ), 0, 8 );
 				$marker                  = array(
 					'selection_generation' => $state['selection_generation'],
-					'owner_tag'            => $prefix . bin2hex( random_bytes( 8 ) ),
+					'owner_tag'            => $owner_tag,
 					'target_type'          => $type,
 					'installed_identity'   => $identity,
 					'phase'                => 'started',
@@ -567,10 +571,19 @@ final class GitHubProviderSelection {
 	 */
 	public static function native_lock_token( array $marker ): ?string {
 		$tag = $marker['owner_tag'] ?? null;
-		if ( ! is_string( $tag ) || 1 !== preg_match( '/\A0*([1-9a-f][0-9a-f]{0,13})[0-9a-f]{16}\z/D', $tag, $matches ) ) {
+		if ( ! is_string( $tag ) || 1 !== preg_match( '/\A([0-9a-f]{16})([0-9a-f]{8})([0-9a-f]{8})\z/D', $tag, $matches ) ) {
 			return null;
 		}
-		return (string) hexdec( $matches[1] );
+		$prefix = $matches[1];
+		if ( 1 !== preg_match( '/\A0+[1-9a-f][0-9a-f]{0,13}\z/D', $prefix ) ) {
+			return null;
+		}
+		$expected = substr( hash( 'sha256', 'ran-booster-native-lock-v1:' . $prefix . ':' . $matches[2] ), 0, 8 );
+		if ( ! hash_equals( $expected, $matches[3] ) ) {
+			return null;
+		}
+		$token = (string) hexdec( ltrim( $prefix, '0' ) );
+		return 1 === preg_match( '/\A[1-9]\d{0,15}\z/D', $token ) ? $token : null;
 	}
 
 	/** @return array<string,mixed> Internal recovery authority; never expose the native owner in public status. */

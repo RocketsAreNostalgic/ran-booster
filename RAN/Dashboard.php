@@ -212,21 +212,18 @@ class Dashboard {
 			}
 		}
 
-		$requested_add_on_key = self::normalize_tab_key( $requested_tab );
-		$selected_add_on      = '' === $requested_add_on_key || null === $this->admin_add_ons
+		$requested_tab_key = self::normalize_tab_key( $requested_tab );
+		// Core and provider tabs own their keys; add-on tabs never shadow a Core route.
+		$selected_tab    = $tab_present ? $this->admin_tabs->find( $requested_tab_key ) : $this->admin_tabs->resolve( null );
+		$selected_add_on = null !== $selected_tab || '' === $requested_tab_key || null === $this->admin_add_ons
 			? null
-			: $this->admin_add_ons->get( $requested_add_on_key );
-		$selected_tab         = null;
-		if ( null === $selected_add_on ) {
-			// No tab selects Overview. A present tab must name an available tab, or the not-found result is rendered.
-			$selected_tab = $tab_present ? $this->admin_tabs->find( $requested_add_on_key ) : $this->admin_tabs->resolve( null );
-		}
-		$selected_key = $selected_add_on?->key() ?? $selected_tab?->get_key() ?? '';
-		$tabs         = $this->tab_navigation( $selected_key );
-		$admin_url    = is_multisite()
+			: $this->admin_add_ons->get( $requested_tab_key );
+		$selected_key    = $selected_tab?->get_key() ?? $selected_add_on?->key() ?? '';
+		$tabs            = $this->tab_navigation( $selected_key );
+		$admin_url       = is_multisite()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
-		$data         = array(
+		$data            = array(
 			'tab'  => $selected_key,
 			'tabs' => $tabs,
 		);
@@ -1557,14 +1554,10 @@ class Dashboard {
 		);
 	}
 
-	public static function is_valid_provider_request( string $provider_code, ?AdminAddOnRegistry $admin_add_ons = null ): bool {
+	public static function is_valid_provider_request( string $provider_code ): bool {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation state suppresses the duplicate global banner on valid provider routes.
 		$requested_tab = isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ? wp_unslash( $_GET['tab'] ) : null;
 		if ( '' === $provider_code || self::normalize_tab_key( $requested_tab ) !== $provider_code ) {
-			return false;
-		}
-
-		if ( null !== $admin_add_ons && null !== $admin_add_ons->get( $provider_code ) ) {
 			return false;
 		}
 
@@ -1765,6 +1758,9 @@ class Dashboard {
 		}
 		if ( null !== $this->admin_add_ons ) {
 			foreach ( $this->admin_add_ons->all() as $tab ) {
+				if ( null !== $this->admin_tabs->find( $tab->key() ) ) {
+					continue;
+				}
 				$tabs[] = array(
 					'key'      => $tab->key(),
 					'label'    => $tab->label(),

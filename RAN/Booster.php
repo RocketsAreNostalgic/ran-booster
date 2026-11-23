@@ -1426,13 +1426,11 @@ class Booster {
 		$id         = is_object( $screen ) && is_string( $screen->id ) ? $screen->id : '';
 		$booster_id = str_ends_with( $id, '-network' ) ? substr( $id, 0, -8 ) : $id;
 
-		if ( 'toplevel_page_ran-booster' === $booster_id || 'toplevel_page_ran-booster' === $hook ) {
-			$add_ons = $this->service( \RAN\Admin\AdminAddOnRegistry::class );
-			if ( $add_ons instanceof \RAN\Admin\AdminAddOnRegistry
-				&& Dashboard::is_valid_provider_request( 'gh', $add_ons )
-				&& $this->service( \RAN\Admin\ProviderTabLinks::class )->available( 'gh' ) ) {
-				return false;
-			}
+		if ( ( 'toplevel_page_ran-booster' === $booster_id || 'toplevel_page_ran-booster' === $hook )
+			&& Dashboard::is_valid_provider_request( 'gh' )
+			&& $this->service( \RAN\Admin\ProviderTabLinks::class )->available( 'gh' )
+			&& true === $this->native_update_warning_state() ) {
+			return false;
 		}
 
 		return in_array( $id, array( 'plugins', 'plugins-network', 'themes', 'themes-network', 'update-core', 'update-core-network' ), true )

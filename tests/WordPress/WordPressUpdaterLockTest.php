@@ -8,6 +8,9 @@ use PHPUnit\Framework\Attributes\After;
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentStorageFailure;
+use RAN\RepositoryProvider\GitHubProviderSelection;
+use RAN\RepositoryProvider\GitHubReplacementDeclaration;
+use RAN\Storage\GitHubSelectionStore;
 use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\WPBranchUpdater\V1\Contract\MutationLock;
@@ -135,6 +138,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Exercise the accepted fail-closed invalid-host boundary without changing a real WordPress database.
 			$GLOBALS['wpdb'] = $host;
 			$this->assert_core_storage_failure( $lock->acquire( ... ) );
+			$this->assert_core_storage_failure( $lock->acquire_or_reclaim_expired_sql( ... ) );
 			$this->assert_core_storage_failure( $lock->current_token( ... ) );
 			$this->assert_core_storage_failure( static fn (): bool => $lock->release( 'token' ) );
 		}
@@ -215,6 +219,109 @@ final class WordPressUpdaterLockTest extends TestCase {
 			}
 		};
 		$this->assert_core_storage_failure( $lock->acquire( ... ) );
+	}
+
+	public function test_acquire_or_reclaim_expired_sql_is_atomic_inside_selection_transaction_without_cache_callbacks(): void {
+		$lock      = new WordPressUpdaterLock();
+		$store     = new GitHubSelectionStore( $this->database, 'wp_options' );
+		$bundled   = new GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$state     = $store->initialize_bundled( $bundled );
+		$selection = new GitHubProviderSelection( $store, '/unused', $bundled );
+
+		$selection_cache_deletes = array(
+			array( 'ran_booster_github_selection', 'options' ),
+			array( 'alloptions', 'options' ),
+			array( 'notoptions', 'options' ),
+		);
+		foreach ( array( 'malformed', (string) ( time() + 600 ) ) as $held ) {
+			$this->database->option_rows['auto_updater.lock'] = $held;
+			$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
+			self::assertNull( $selection->without_native_mutation_hold( fn (): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ) ) ) );
+			self::assertSame( $held, $this->database->option_rows['auto_updater.lock'] );
+			self::assertSame( $selection_cache_deletes, $GLOBALS['ran_booster_attempt_cache_deletes'] );
+		}
+
+		$stale = (string) ( time() - 7200 );
+		$this->database->option_rows['auto_updater.lock'] = $stale;
+		$marked                    = $state;
+		$marked['native_mutation'] = array(
+			'selection_generation' => 0,
+			'owner_tag'            => str_repeat( '0', 16 ) . str_repeat( 'a', 16 ),
+			'target_type'          => 'plugin',
+			'installed_identity'   => 'other/other.php',
+			'phase'                => 'started',
+		);
+		self::assertTrue( $store->compare_and_swap( $state, $marked ) );
+		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
+		self::assertNull( $selection->without_native_mutation_hold( fn (): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ) ) ) );
+		self::assertSame( $stale, $this->database->option_rows['auto_updater.lock'] );
+		self::assertSame( $selection_cache_deletes, $GLOBALS['ran_booster_attempt_cache_deletes'] );
+
+		$cleared = $marked;
+		unset( $cleared['native_mutation'] );
+		self::assertTrue( $store->compare_and_swap( $marked, $cleared ) );
+
+		$this->assert_core_storage_failure(
+			fn (): ?string => $selection->without_native_mutation_hold(
+				fn (): ?string => $lock->acquire_or_reclaim_expired_sql( static fn (): bool => false )
+			)
+		);
+		self::assertSame( $stale, $this->database->option_rows['auto_updater.lock'] );
+
+		$this->database->zero_query_contains = 'INSERT IGNORE';
+		try {
+			$selection->without_native_mutation_hold( fn (): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ) ) );
+			self::fail( 'Failed reinsertion after expired-lock deletion must abort the transaction.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'The WordPress updater is already running.', $failure->getMessage() );
+			self::assertSame( $stale, $this->database->option_rows['auto_updater.lock'] );
+			self::assertContains( 'ROLLBACK', $this->database->queries );
+		} finally {
+			$this->database->zero_query_contains = null;
+		}
+
+		$this->database->queries                      = array();
+		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
+		$reclaimed                                    = $selection->without_native_mutation_hold( fn (): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ) ) );
+		self::assertIsString( $reclaimed );
+		self::assertNotSame( $stale, $reclaimed );
+		self::assertSame( $reclaimed, $this->database->option_rows['auto_updater.lock'] );
+		self::assertSame( $selection_cache_deletes, $GLOBALS['ran_booster_attempt_cache_deletes'] );
+
+		$start_index  = array_search( 'START TRANSACTION', $this->database->queries, true );
+		$commit_index = array_search( 'COMMIT', $this->database->queries, true );
+		$delete_index = null;
+		foreach ( $this->database->queries as $index => $query ) {
+			if ( str_starts_with( $query, 'DELETE FROM `wp_options` WHERE option_name = \'auto_updater.lock\'' ) ) {
+				$delete_index = $index;
+				break;
+			}
+		}
+		self::assertIsInt( $start_index );
+		self::assertIsInt( $delete_index );
+		self::assertIsInt( $commit_index );
+		self::assertGreaterThan( $start_index, $delete_index );
+		self::assertLessThan( $commit_index, $delete_index );
+
+		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
+		$lock->invalidate_lock_cache();
+		self::assertSame(
+			array(
+				array( 'auto_updater.lock', 'options' ),
+				array( 'notoptions', 'options' ),
+			),
+			$GLOBALS['ran_booster_attempt_cache_deletes']
+		);
 	}
 
 	/** @param callable(): mixed $operation */

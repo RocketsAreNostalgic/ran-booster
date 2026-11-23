@@ -414,11 +414,14 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 
 				$lock_token = $this->updater_lock->try_acquire_without_reclaim();
 				if ( null === $lock_token ) {
-					if ( $this->github_selection->has_native_mutation_hold() ) {
+					$lock_token = $this->github_selection->without_native_mutation_hold(
+						fn (): ?string => $this->updater_lock->acquire_or_reclaim_expired_sql( $this->github_selection->uses_connection( ... ) )
+					);
+					if ( null === $lock_token ) {
 						$outcome = ProspectiveReleaseResult::failure( 'install_failed' );
 						break;
 					}
-					$lock_token = $this->updater_lock->acquire();
+					$this->updater_lock->invalidate_lock_cache();
 				}
 				$availability = $this->release_source_available( $type, $identifier, $repository );
 				if ( true !== $availability ) {

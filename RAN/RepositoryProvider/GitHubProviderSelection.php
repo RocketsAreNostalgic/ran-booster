@@ -582,11 +582,24 @@ final class GitHubProviderSelection {
 		return $state;
 	}
 
-	/** Whether an interrupted GitHub native mutation hold is present. */
-	public function has_native_mutation_hold(): bool {
+	/**
+	 * Run a callback-free operation inside selection_transaction() only when no
+	 * native_mutation hold is present. Callers must keep WordPress cache/hook
+	 * callbacks outside this transaction.
+	 *
+	 * @template T
+	 * @param callable(): T $operation Core-only SQL/state work with no WordPress callbacks.
+	 * @return T|null Null when a native_mutation hold exists; otherwise the operation result.
+	 * @phpstan-impure Reads and may mutate database state inside selection_transaction().
+	 */
+	public function without_native_mutation_hold( callable $operation ): mixed {
 		return $this->store->selection_transaction(
-			function (): bool {
-				return array_key_exists( 'native_mutation', $this->store->read( true ) );
+			function () use ( $operation ): mixed {
+				if ( array_key_exists( 'native_mutation', $this->store->read( true ) ) ) {
+					return null;
+				}
+
+				return $operation();
 			}
 		);
 	}

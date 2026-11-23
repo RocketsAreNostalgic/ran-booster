@@ -2193,6 +2193,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'install_failed', $result->code() );
 		self::assertSame( 2, $lock->acquire_calls );
 		self::assertSame( 0, $lock->reclaim_calls );
+		self::assertSame( 0, $lock->cache_invalidation_calls );
 		self::assertTrue( $lock->lock_held );
 		self::assertSame( 0, $lock->release_calls );
 		self::assertSame( 0, $this->acquisition->handoff_calls );
@@ -2202,11 +2203,18 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	public function test_install_reclaims_expired_updater_lock_when_no_github_hold_exists(): void {
 		foreach ( array( 'gh', 'bb' ) as $provider ) {
-			$plugins                 = new ProspectivePluginRepository();
-			$executor                = new ProspectiveExecutor();
-			$lock                    = new ProspectiveUpdaterLock();
-			$lock->expired_lock_held = true;
-			$facade                  = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( $provider ) );
+			$events                      = array();
+			$plugins                     = new ProspectivePluginRepository();
+			$executor                    = new ProspectiveExecutor();
+			$lock                        = new ProspectiveUpdaterLock();
+			$lock->expired_lock_held     = true;
+			$lock->on_reclaim_sql        = static function () use ( &$events ): void {
+				$events[] = 'reclaim_sql';
+			};
+			$lock->on_cache_invalidation = static function () use ( &$events ): void {
+				$events[] = 'invalidate_cache';
+			};
+			$facade                      = $this->facade( $plugins, $executor, updater_lock: $lock, provider: new ProspectiveRepositoryProvider( $provider ) );
 			$this->set_ready_release();
 			$request = 'gh' === $provider
 				? $this->repository_request()
@@ -2231,6 +2239,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			self::assertTrue( $result->successful(), $provider );
 			self::assertSame( 'installed', $result->code(), $provider );
 			self::assertSame( 1, $lock->reclaim_calls, $provider );
+			self::assertSame( 1, $lock->cache_invalidation_calls, $provider );
+			self::assertSame( array( 'reclaim_sql', 'invalidate_cache' ), $events, $provider );
 			self::assertFalse( $lock->expired_lock_held, $provider );
 			self::assertSame( 1, $executor->install_calls, $provider );
 			self::assertSame( 1, $lock->release_calls, $provider );
@@ -2260,6 +2270,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'install_failed', $result->code(), $phase );
 		self::assertSame( 1, $lock->acquire_calls, $phase );
 		self::assertSame( 0, $lock->reclaim_calls, $phase );
+		self::assertSame( 0, $lock->cache_invalidation_calls, $phase );
 		self::assertTrue( $lock->expired_lock_held, $phase );
 		self::assertSame( 0, $lock->release_calls, $phase );
 		self::assertSame( 0, $this->acquisition->handoff_calls, $phase );
@@ -3005,17 +3016,20 @@ final class ProspectiveThemeRepository extends ThemeRepository {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
 final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 
-	public int $acquire_calls         = 0;
-	public int $reclaim_calls         = 0;
-	public int $release_calls         = 0;
-	public bool $release_result       = true;
-	public bool $lock_held            = false;
-	public bool $expired_lock_held    = false;
-	public bool $strict_release_token = false;
-	public ?string $active_token      = null;
-	public bool $throw_on_acquire     = false;
-	public bool $throw_on_release     = false;
-	public ?\Closure $on_acquire      = null;
+	public int $acquire_calls               = 0;
+	public int $reclaim_calls               = 0;
+	public int $cache_invalidation_calls    = 0;
+	public int $release_calls               = 0;
+	public bool $release_result             = true;
+	public bool $lock_held                  = false;
+	public bool $expired_lock_held          = false;
+	public bool $strict_release_token       = false;
+	public ?string $active_token            = null;
+	public bool $throw_on_acquire           = false;
+	public bool $throw_on_release           = false;
+	public ?\Closure $on_acquire            = null;
+	public ?\Closure $on_reclaim_sql        = null;
+	public ?\Closure $on_cache_invalidation = null;
 
 	public function current_token(): ?string {
 		if ( null !== $this->active_token ) {
@@ -3032,6 +3046,38 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 		}
 
 		return $this->acquire();
+	}
+
+	/** @param (callable(object): bool)|null $same_connection */
+	public function acquire_or_reclaim_expired_sql( ?callable $same_connection = null ): ?string {
+		unset( $same_connection );
+		++$this->acquire_calls;
+		if ( $this->throw_on_acquire ) {
+			throw new RuntimeException( 'The test lock could not be acquired.' );
+		}
+		if ( $this->lock_held ) {
+			return null;
+		}
+		if ( null !== $this->on_reclaim_sql ) {
+			( $this->on_reclaim_sql )();
+		}
+		if ( $this->expired_lock_held ) {
+			$this->expired_lock_held = false;
+			++$this->reclaim_calls;
+		}
+		$this->active_token = '1700000004';
+		if ( null !== $this->on_acquire ) {
+			( $this->on_acquire )();
+		}
+
+		return '1700000004';
+	}
+
+	public function invalidate_lock_cache(): void {
+		++$this->cache_invalidation_calls;
+		if ( null !== $this->on_cache_invalidation ) {
+			( $this->on_cache_invalidation )();
+		}
 	}
 
 	public function acquire(): string {

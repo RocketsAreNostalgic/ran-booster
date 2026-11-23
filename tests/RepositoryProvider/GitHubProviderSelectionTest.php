@@ -1250,11 +1250,16 @@ final class GitHubProviderSelectionTest extends TestCase {
 				throw new \RuntimeException( 'selection cache failed after begin COMMIT' );
 			}
 		};
+		$executor_calls                                 = 0;
 		try {
 			$context->begin_native_mutation(
 				'theme',
 				'first',
-				static fn (): bool => true,
+				static function ( callable $execute ) use ( &$executor_calls ): bool {
+					unset( $execute );
+					++$executor_calls;
+					return true;
+				},
 				self::LOCK_TOKEN,
 				static function ( string $owner ) use ( &$committed ): void {
 					$committed = $owner;
@@ -1266,6 +1271,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		} finally {
 			unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
 		}
+		self::assertSame( 2, $executor_calls );
 		self::assertIsString( $committed );
 		self::assertFalse( $context->has_uncertain_commit() );
 		self::assertFalse( $context->has_unclosed_transaction() );

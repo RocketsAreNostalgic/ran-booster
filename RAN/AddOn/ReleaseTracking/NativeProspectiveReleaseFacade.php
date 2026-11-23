@@ -484,7 +484,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 							$native_owner = $this->github_selection->begin_native_mutation(
 								$type,
 								$identifier,
-								fn (): bool => $lock_token === $this->updater_lock->current_token(),
+								fn ( callable $execute ): bool => $lock_token === $this->updater_lock->current_token_sql( $this->github_selection->uses_connection( ... ), $execute ),
 								$lock_token,
 								static function ( string $committed_owner ) use ( &$native_owner ): void {
 									$native_owner = $committed_owner;

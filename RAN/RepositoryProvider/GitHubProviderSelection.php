@@ -474,15 +474,15 @@ final class GitHubProviderSelection {
 	}
 
 	/**
-	 * @param callable():bool             $owns_lock    Exact captured updater ownership, never acquisition.
-	 * @param string|null                 $lock_token   The held updater lock's value, carried in the owner tag so a release can free that exact lock, or null when the caller does not own WordPress's lock (automatic updates).
-	 * @param (callable(string):void)|null $on_committed Invoked only after COMMIT succeeds and before cache invalidation.
+	 * @param callable(\Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)):bool $owns_lock    Exact captured updater ownership via the pinned transaction executor, never acquisition.
+	 * @param string|null                                                                                                     $lock_token   The held updater lock's value, carried in the owner tag so a release can free that exact lock, or null when the caller does not own WordPress's lock (automatic updates).
+	 * @param (callable(string):void)|null                                                                                    $on_committed Invoked only after COMMIT succeeds and before cache invalidation.
 	 */
 	public function begin_native_mutation( string $type, string $identity, callable $owns_lock, ?string $lock_token, ?callable $on_committed = null ): string {
 		$marker = $this->store->selection_transaction(
-			function () use ( $type, $identity, $owns_lock, $lock_token ): array {
+			function ( \Closure $execute ) use ( $type, $identity, $owns_lock, $lock_token ): array {
 				$state = $this->store->read( true );
-				if ( isset( $state['native_mutation'] ) || ( null !== $lock_token && 1 !== preg_match( '/\A[1-9]\d{0,15}\z/D', $lock_token ) ) || ! $this->owns_native_lock( $owns_lock ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
+				if ( isset( $state['native_mutation'] ) || ( null !== $lock_token && 1 !== preg_match( '/\A[1-9]\d{0,15}\z/D', $lock_token ) ) || ! $this->owns_native_lock( $owns_lock, $execute ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
 						throw new \RuntimeException( 'GitHub native mutation is unavailable.' );
 				}
 				$prefix                  = null === $lock_token ? str_repeat( '0', 16 ) : sprintf( '%016x', (int) $lock_token );
@@ -499,7 +499,7 @@ final class GitHubProviderSelection {
 				);
 				$next                    = $state;
 				$next['native_mutation'] = $marker;
-				if ( ! $this->owns_native_lock( $owns_lock ) || ! $this->store->compare_and_swap( $state, $next ) ) {
+				if ( ! $this->owns_native_lock( $owns_lock, $execute ) || ! $this->store->compare_and_swap( $state, $next ) ) {
 					throw new \RuntimeException( 'GitHub native mutation changed.' );
 				}
 				return $marker;
@@ -516,11 +516,12 @@ final class GitHubProviderSelection {
 	}
 
 	/**
-	 * @param callable():bool $owns_lock
+	 * @param callable(\Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)):bool $owns_lock
+	 * @param \Closure(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null)               $execute
 	 * @phpstan-impure The captured lock can change between current reads.
 	 */
-	private function owns_native_lock( callable $owns_lock ): bool {
-		return true === $owns_lock();
+	private function owns_native_lock( callable $owns_lock, \Closure $execute ): bool {
+		return true === $owns_lock( $execute );
 	}
 
 	/**

@@ -253,7 +253,24 @@ try {
 				throw new RuntimeException( 'Managed fixture updater lock is unavailable.' );
 			}
 			try {
-				$ran_booster_owner = $ran_booster_selection->begin_native_mutation( $type, $ran_booster_identifier, static fn (): bool => $ran_booster_token === $ran_booster_lock->current_token(), $ran_booster_token );
+				$ran_booster_selection_store->read();
+				$ran_booster_admission_queries = array();
+				$ran_booster_admission_filter  = static function ( string $sql ) use ( &$ran_booster_admission_queries ): string {
+					$ran_booster_admission_queries[] = $sql;
+					return $sql;
+				};
+				add_filter( 'query', $ran_booster_admission_filter );
+				try {
+					$ran_booster_owner = $ran_booster_selection->begin_native_mutation(
+						$type,
+						$ran_booster_identifier,
+						static fn ( callable $execute ): bool => $ran_booster_token === $ran_booster_lock->current_token_sql( $ran_booster_selection->uses_connection( ... ), $execute ),
+						$ran_booster_token
+					);
+				} finally {
+					remove_filter( 'query', $ran_booster_admission_filter );
+				}
+				$ran_booster_assert( array() === $ran_booster_admission_queries, 'Native begin_native_mutation invoked WordPress query hooks during selection transaction.' );
 				$ran_booster_selection->complete_native_mutation( $ran_booster_owner, $type, $ran_booster_identifier, 'uncertain' );
 			} finally {
 				$ran_booster_assert( $ran_booster_lock->release( $ran_booster_token ), 'Managed fixture lock cleanup failed.' );

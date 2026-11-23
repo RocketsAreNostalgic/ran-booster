@@ -137,7 +137,12 @@ if ( in_array( $ran_booster_race_action, array( 'prepare', 'prepare-native' ), t
 			throw new RuntimeException( 'Native race requires idle, recoverable fixture authority.' );
 		}
 		try {
-			$ran_booster_native_owner = $ran_booster_native_selection->begin_native_mutation( 'plugin', $ran_booster_race_identifier, static fn (): bool => $ran_booster_native_token === $ran_booster_native_lock->current_token(), $ran_booster_native_token );
+			$ran_booster_native_owner = $ran_booster_native_selection->begin_native_mutation(
+				'plugin',
+				$ran_booster_race_identifier,
+				static fn ( callable $execute ): bool => $ran_booster_native_token === $ran_booster_native_lock->current_token_sql( $ran_booster_native_selection->uses_connection( ... ), $execute ),
+				$ran_booster_native_token
+			);
 			$ran_booster_native_selection->complete_native_mutation( $ran_booster_native_owner, 'plugin', $ran_booster_race_identifier, 'uncertain' );
 		} finally {
 			if ( ! $ran_booster_native_lock->release( $ran_booster_native_token ) ) {

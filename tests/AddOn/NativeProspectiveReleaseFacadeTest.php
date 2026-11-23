@@ -1970,11 +1970,13 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 					return PackageMutationResult::changed( PackageStorageOperation::INSERT );
 				}
 			);
-			$facade = $this->facade( $plugins, $executor, themes: $themes );
+			$facade = $this->facade( $plugins, $executor, themes: $themes, updater_lock: $lock = new ProspectiveUpdaterLock() );
 			$this->set_ready_release( 'theme' === $type ? 'style.css' : 'example.php' );
 			$identifier = 'theme' === $type ? 'example' : 'example/example.php';
 			$result     = $facade->install( $type, $this->repository_request(), '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $this->repository_request() ), $identifier, DeploymentPolicy::DISABLED );
 			self::assertTrue( $result->successful() );
+			self::assertSame( 1, $lock->token_reads );
+			self::assertSame( 2, $lock->sql_token_reads );
 			self::assertSame( $identifier, $result->data()['identifier'] );
 			self::assertSame( 1, $executor->install_calls );
 			if ( 'plugin' === $type ) {
@@ -2474,6 +2476,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 			self::assertFalse( $result->successful(), $case );
 			self::assertSame( 0, $executor->install_calls, $case );
+			self::assertSame( 1, $lock->token_reads, $case );
+			self::assertSame( 2, $lock->sql_token_reads, $case );
 			self::assertFileDoesNotExist( (string) $this->artifact_path, $case );
 
 			if ( 'begin_cache_throws_then_complete_commit_fails' === $case ) {
@@ -2548,6 +2552,8 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				self::assertFalse( $result->successful(), $case );
 				self::assertSame( 'installation_cleanup_failed', $result->code(), $case );
 				self::assertSame( 0, $executor->install_calls, $case );
+				self::assertSame( 1, $lock->token_reads, $case );
+				self::assertSame( 2, $lock->sql_token_reads, $case );
 				self::assertSame( 0, $lock->release_calls, $case );
 				self::assertSame( '1700000004', $lock->active_token, $case );
 				self::assertFileDoesNotExist( (string) $this->artifact_path, $case );
@@ -3279,6 +3285,8 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 	public int $reclaim_calls               = 0;
 	public int $cache_invalidation_calls    = 0;
 	public int $release_calls               = 0;
+	public int $token_reads                 = 0;
+	public int $sql_token_reads             = 0;
 	public bool $release_result             = true;
 	public bool $lock_held                  = false;
 	public bool $expired_lock_held          = false;
@@ -3292,6 +3300,21 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 	public ?\Closure $on_release            = null;
 
 	public function current_token(): ?string {
+		++$this->token_reads;
+		return $this->read_active_token();
+	}
+
+	/**
+	 * @param callable(object, string): bool                                                                   $same_connection
+	 * @param callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null) $execute
+	 */
+	public function current_token_sql( callable $same_connection, callable $execute ): ?string {
+		unset( $same_connection, $execute );
+		++$this->sql_token_reads;
+		return $this->read_active_token();
+	}
+
+	private function read_active_token(): ?string {
 		if ( null !== $this->active_token ) {
 			return $this->active_token;
 		}

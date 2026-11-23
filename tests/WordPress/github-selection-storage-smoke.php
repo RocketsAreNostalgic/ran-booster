@@ -246,6 +246,95 @@ return static function ( wpdb $database ): void {
 		$lock_proof = require __DIR__ . '/github-selection-lock-smoke.php';
 		$lock_proof( $database, $table, $context, $plugin_root );
 
+		// Prove pinned native_mutation begin and completion run zero WordPress query/option hooks.
+		$admission_wpdb    = $GLOBALS['wpdb'] ?? null;
+		$admission_options = $database->options;
+		$admission_lock    = new WordPressUpdaterLock();
+		$admission_token   = (string) time();
+		/** @var ArrayObject<int, string> $admission_queries */
+		$admission_queries    = new ArrayObject();
+		$record_admission_sql = static function ( string $sql ) use ( $admission_queries ): string {
+			$admission_queries->append( $sql );
+			return $sql;
+		};
+		/** @var ArrayObject<int, true> $admission_option_hits */
+		$admission_option_hits = new ArrayObject();
+		$record_admission_opt  = static function ( mixed $value = null ) use ( $admission_option_hits ): mixed {
+			$admission_option_hits->append( true );
+			return $value;
+		};
+		$admission_opt_hooks   = array(
+			'pre_option_auto_updater.lock',
+			'option_auto_updater.lock',
+			'pre_option_active_plugins',
+			'option_active_plugins',
+			'pre_option_ran_booster_github_selection',
+			'option_ran_booster_github_selection',
+		);
+		try {
+			$database->options = $table;
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Temporarily bind the smoke table connection during the isolated native-admission proof and restore in finally.
+			$GLOBALS['wpdb'] = $database;
+			$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+			$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $admission_token, 'no' ) );
+			$expect( array() !== $store->read(), 'warm selection store before hook-free native-admission proof' );
+			$admitted_owner = null;
+			add_filter( 'query', $record_admission_sql );
+			foreach ( $admission_opt_hooks as $hook_name ) {
+				add_filter( $hook_name, $record_admission_opt );
+			}
+			try {
+				$owner_tag = $context->begin_native_mutation(
+					'plugin',
+					'admitted-smoke/admitted-smoke.php',
+					static fn ( callable $execute ): bool => $admission_token === $admission_lock->current_token_sql( $context->uses_connection( ... ), $execute ),
+					$admission_token,
+					static function ( string $committed_owner ) use ( &$admitted_owner ): void {
+						$admitted_owner = $committed_owner;
+					}
+				);
+			} finally {
+				foreach ( $admission_opt_hooks as $hook_name ) {
+					remove_filter( $hook_name, $record_admission_opt );
+				}
+				remove_filter( 'query', $record_admission_sql );
+			}
+			$expect( 0 === $admission_queries->count(), 'pinned begin_native_mutation must run zero WordPress query filters inside the transaction' );
+			$expect( 0 === $admission_option_hits->count(), 'pinned begin_native_mutation must run zero WordPress option hooks inside the transaction' );
+			$admitted_state = $store->read();
+			$admitted_hold  = $admitted_state['native_mutation'] ?? null;
+			$expect(
+				$admitted_owner === $owner_tag
+					&& is_array( $admitted_hold )
+					&& 'started' === $admitted_hold['phase']
+					&& GitHubProviderSelection::native_lock_token( $admitted_hold ) === $admission_token,
+				'pinned begin_native_mutation recorded exact started hold and owner tag'
+			);
+
+			$admission_queries->exchangeArray( array() );
+			$admission_option_hits->exchangeArray( array() );
+			add_filter( 'query', $record_admission_sql );
+			foreach ( $admission_opt_hooks as $hook_name ) {
+				add_filter( $hook_name, $record_admission_opt );
+			}
+			try {
+				$context->complete_native_mutation( $owner_tag, 'plugin', 'admitted-smoke/admitted-smoke.php', 'verified_success' );
+			} finally {
+				foreach ( $admission_opt_hooks as $hook_name ) {
+					remove_filter( $hook_name, $record_admission_opt );
+				}
+				remove_filter( 'query', $record_admission_sql );
+			}
+			$expect( 0 === $admission_queries->count(), 'pinned complete_native_mutation must run zero WordPress query filters inside the transaction' );
+			$expect( 0 === $admission_option_hits->count(), 'pinned complete_native_mutation must run zero WordPress option hooks inside the transaction' );
+			$expect( ! array_key_exists( 'native_mutation', $store->read() ), 'hook-free native completion cleared admitted hold cleanly' );
+		} finally {
+			$query( $database->prepare( 'DELETE FROM %i WHERE option_name = %s', $table, 'auto_updater.lock' ) );
+			$database->options = $admission_options;
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore WordPress global wpdb after isolated native-admission proof.
+			$GLOBALS['wpdb'] = $admission_wpdb;
+		}
+
 		$fake_active = static fn (): array => array( 'not-installed.php' );
 		add_filter( 'pre_option_active_plugins', $fake_active );
 		wp_cache_set( 'active_plugins', array( 'cached-missing.php' ), 'options' );

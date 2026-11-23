@@ -345,7 +345,8 @@ final class ManagedReleaseTargetRegistrar {
 
 	/** Called only by the bound GitHub registrar after private staging verification. */
 	public function begin_provider_native_mutation( string $type, string $identity ): string {
-		$pending = $this->native_updates[ self::key( $type, $identity ) ] ?? null;
+		$key     = self::key( $type, $identity );
+		$pending = $this->native_updates[ $key ] ?? null;
 		if ( null === $pending || 'gh' !== $pending['authority']['provider'] || null === $pending['lock'] ) {
 			throw new \RuntimeException( 'GitHub native lock ownership is unavailable.' );
 		}
@@ -358,19 +359,75 @@ final class ManagedReleaseTargetRegistrar {
 			throw new \RuntimeException( 'The managed release authority changed after staging.' );
 		}
 		PackageMutationGuard::assert_package_mutation_allowed();
-		$key   = self::key( $type, $identity );
-		$owner = $this->github_selection->begin_native_mutation(
-			$type,
-			$identity,
-			fn (): bool => $pending['lock'] === $this->updater_lock->current_token(),
-			$pending['automatic'] ? null : $pending['lock'],
-			function ( string $committed_owner ) use ( $key ): void {
-				if ( isset( $this->native_updates[ $key ] ) ) {
-					$this->native_updates[ $key ]['native_owner'] = $committed_owner;
+		$committed_owner = null;
+		try {
+			return $this->github_selection->begin_native_mutation(
+				$type,
+				$identity,
+				fn ( callable $execute ): bool => $pending['lock'] === $this->updater_lock->current_token_sql( $this->github_selection->uses_connection( ... ), $execute ),
+				$pending['automatic'] ? null : $pending['lock'],
+				function ( string $owner_tag ) use ( $key, &$committed_owner ): void {
+					$committed_owner = $owner_tag;
+					if ( isset( $this->native_updates[ $key ] ) ) {
+						$this->native_updates[ $key ]['native_owner'] = $owner_tag;
+					}
 				}
+			);
+		} catch ( Throwable $failure ) {
+			if ( null !== $committed_owner ) {
+				$this->abort_committed_provider_native_mutation( $key, $committed_owner, $type, $identity, $pending );
+			} elseif ( $this->github_selection->has_uncertain_commit() || $this->github_selection->has_unclosed_transaction() ) {
+				unset( $this->native_updates[ $key ], $this->switches[ $key ] );
 			}
-		);
-		return $owner;
+			throw $failure;
+		}
+	}
+
+	/**
+	 * Finish a confirmed hold whose admission threw after COMMIT (for example during cache
+	 * invalidation) before releasing the manual lock, or keep both custody and lock if closing fails.
+	 *
+	 * @param array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool, native_owner?:string} $pending
+	 */
+	private function abort_committed_provider_native_mutation( string $key, string $owner, string $type, string $identity, array $pending ): void {
+		$hold_resolved = false;
+		try {
+			$this->github_selection->complete_native_mutation(
+				$owner,
+				$type,
+				$identity,
+				'uncertain',
+				null,
+				static function () use ( &$hold_resolved ): void {
+					$hold_resolved = true;
+				}
+			);
+		} catch ( Throwable $abort_failure ) {
+			BoosterLogger::log_exception(
+				'native hold abort finalization failed',
+				$abort_failure,
+				array( 'step' => 'native_update_abort_hold' )
+			);
+		} finally {
+			unset( $this->native_updates[ $key ], $this->switches[ $key ] );
+		}
+		if ( ! $hold_resolved
+			|| $this->github_selection->has_unclosed_transaction()
+			|| $pending['automatic']
+			|| null === $pending['lock'] ) {
+			return;
+		}
+		try {
+			if ( ! $this->updater_lock->release( $pending['lock'] ) ) {
+				throw new \RuntimeException( 'The native update lock was replaced.' );
+			}
+		} catch ( Throwable $lock_failure ) {
+			BoosterLogger::log_exception(
+				'native update lock release failed',
+				$lock_failure,
+				array( 'step' => 'native_update_lock_release' )
+			);
+		}
 	}
 
 	/** Private updater completion, never the public WordPress diagnostic event. */

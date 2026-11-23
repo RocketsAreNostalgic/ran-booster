@@ -53,7 +53,7 @@ final class HostSelectionDatabase extends SchemaConnection {
 		return $this->authority->prepare( $query, ...$arguments );
 	}
 	public function get_var( string $query ): mixed {
-		throw new \LogicException( $query );
+		return $this->authority->get_var( $query );
 	}
 	public function get_row( string $query ): object {
 		return $this->authority->get_row( $query );

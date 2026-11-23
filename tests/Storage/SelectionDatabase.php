@@ -97,11 +97,17 @@ final class SelectionDatabase extends SchemaConnection {
 		return json_encode( array( $query, $arguments ), JSON_THROW_ON_ERROR );
 	}
 	public function get_var( string $query ): mixed {
+		if ( 'SELECT @@lower_case_table_names' === $query ) {
+			return '0';
+		}
 		throw new \LogicException( $query );
 	}
 	public function get_row( string $query ): object {
 		$this->queries[] = $query;
-		return (object) array( 'Engine' => $this->engine );
+		return (object) array(
+			'Name'   => $this->decode( $query )[1][0],
+			'Engine' => $this->engine,
+		);
 	}
 
 	/** @return list<object> */

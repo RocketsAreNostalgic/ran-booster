@@ -295,13 +295,18 @@ final class ReleasePlatformContractTest extends TestCase {
 	}
 
 	public function test_release_scripts_preserve_surface_kinds_and_reject_symlinks(): void {
+		$root = dirname( __DIR__ ) . '/scripts/';
 		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $script_name ) {
-			$script = $this->read_text( dirname( __DIR__ ) . '/scripts/' . $script_name );
-			self::assertStringContainsString( 'changed kind', $script );
-			self::assertStringContainsString( 'directory surface is empty', $script );
-			self::assertStringContainsString( '! -L "$installed_package"', $script );
-			self::assertStringContainsString( '-type l -print -quit | grep -q .', $script );
+			$script = $this->read_text( $root . $script_name );
+			self::assertStringContainsString( 'verify-runtime-dependencies.php" --verify-install', $script );
 		}
+		$dependency_verifier = $this->read_text( $root . 'verify-runtime-dependencies.php' );
+		self::assertStringContainsString( 'surface is missing or changed kind', $dependency_verifier );
+		self::assertStringContainsString( 'directory surface contains an empty directory', $dependency_verifier );
+		self::assertStringContainsString( 'package root is missing or symbolic', $dependency_verifier );
+		self::assertStringContainsString( 'directory surface contains a symbolic link', $dependency_verifier );
+		self::assertStringContainsString( '-type l -print -quit | grep -q .', $this->read_text( $root . 'build-release.sh' ) );
+		self::assertStringContainsString( 'release archive must not contain symbolic links', $this->read_text( $root . 'verify-release.sh' ) );
 	}
 
 	public function test_core_release_file_manifest_does_not_duplicate_package_surfaces(): void {
@@ -313,12 +318,12 @@ final class ReleasePlatformContractTest extends TestCase {
 	public function test_the_generated_built_with_record_is_declared_built_and_verified(): void {
 		$root = dirname( __DIR__ );
 		self::assertStringContainsString( 'ran-booster-packages.json', $this->read_text( $root . '/release-files.txt' ) );
-		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $script_name ) {
-			$script = $this->read_text( $root . '/scripts/' . $script_name );
-			self::assertStringContainsString( "'ran-booster-packages.json'", $script, $script_name );
-			self::assertStringContainsString( 'ran-booster-built-with', $script, $script_name );
-		}
+		$builder  = $this->read_text( $root . '/scripts/build-release.sh' );
 		$verifier = $this->read_text( $root . '/scripts/verify-release.sh' );
+		self::assertStringContainsString( '"$stage_root/ran-booster-packages.json"', $builder );
+		self::assertStringContainsString( 'ran-booster-built-with', $builder );
+		self::assertStringContainsString( "'ran-booster-packages.json'", $verifier );
+		self::assertStringContainsString( 'ran-booster-built-with', $verifier );
 		self::assertStringContainsString( "'ran-booster/ran-booster-packages.json'", $verifier );
 		self::assertStringContainsString( 'installed built-with package record does not match composer.lock', $verifier );
 		self::assertStringNotContainsString( 'ran-booster-packages.json', $this->read_text( $root . '/.gitattributes' ), 'The record is generated only; it is never a source file.' );

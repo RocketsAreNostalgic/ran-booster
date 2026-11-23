@@ -776,7 +776,7 @@ return static function ( wpdb $database ): void {
 				$expect( 'sentinel-before-kill' === wp_cache_get( GitHubSelectionStore::OPTION, 'options' ), 'failed hold-clear ROLLBACK must defer selection cache callbacks' );
 				$expect( array_key_exists( 'native_mutation', $second->read() ), 'killed hold-clear session must preserve durable hold in MySQL' );
 				foreach ( $filtered_queries as $filtered_sql ) {
-					$expect( str_starts_with( $filtered_sql, 'KILL ' ) || str_contains( $filtered_sql, 'information_schema.PROCESSLIST' ) || str_contains( $filtered_sql, 'SHOW ' ) || str_contains( $filtered_sql, 'SELECT option_name, option_value, autoload FROM' ), 'killed hold-clear session must not trigger wpdb reconnect through query filter' );
+					$expect( str_starts_with( $filtered_sql, 'KILL ' ) || str_contains( $filtered_sql, 'information_schema.PROCESSLIST' ) || str_contains( $filtered_sql, 'SHOW ' ) || 'SELECT @@lower_case_table_names' === $filtered_sql || str_contains( $filtered_sql, 'SELECT option_name, option_value, autoload FROM' ), 'killed hold-clear session must not trigger wpdb reconnect through query filter' );
 				}
 				$reject(
 					static fn () => $doomed_hold_store->selection_transaction( static fn (): null => null ),

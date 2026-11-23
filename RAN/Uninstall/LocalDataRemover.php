@@ -149,8 +149,28 @@ class LocalDataRemover {
 				throw new RuntimeException( 'Booster has an unfinished native mutation that must be resolved before cleanup.' );
 			}
 		}
+		$suppress_errors      = method_exists( $database, 'suppress_errors' ) ? $database->suppress_errors( ... ) : null;
+		$previous_suppression = $suppress_errors?->__invoke( true );
+		try {
+			$mode_rows = $this->custody_rows( $database, 'SELECT @@lower_case_table_names AS lower_case_table_names' );
+		} catch ( \Throwable ) {
+			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+		} finally {
+			$suppress_errors?->__invoke( $previous_suppression );
+		}
+		$value = $mode_rows[0]->lower_case_table_names ?? null;
+		if ( 1 !== count( $mode_rows ) || ! in_array( $value, array( 0, 1, 2, '0', '1', '2' ), true ) ) {
+			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+		}
+
+		$mode  = (int) $value;
 		$table = $this->verified_table_prefix . 'ran_booster_deployment_attempts';
-		$query = $database->prepare( 'SELECT TABLE_NAME AS table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND BINARY TABLE_NAME = BINARY %s', $table );
+		$query = $database->prepare(
+			2 === $mode
+				? 'SELECT TABLE_NAME AS table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND CAST(LOWER(TABLE_NAME) AS BINARY) = CAST(%s AS BINARY)'
+				: 'SELECT TABLE_NAME AS table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND CAST(TABLE_NAME AS BINARY) = CAST(%s AS BINARY)',
+			0 === $mode ? $table : strtolower( $table )
+		);
 		$found = $this->custody_rows( $database, $query );
 		if ( array() === $found ) {
 			if ( array() !== $present ) {
@@ -158,13 +178,26 @@ class LocalDataRemover {
 			}
 			return;
 		}
-		if ( 1 !== count( $found ) || ( $found[0]->table_name ?? null ) !== $table ) {
+		if ( 1 !== count( $found ) || ! $this->table_name_matches_mode( $table, $found[0]->table_name ?? null, $mode ) ) {
 			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
 		}
 		$query = $database->prepare( "SELECT id FROM %i WHERE state IS NULL OR BINARY state NOT IN (BINARY 'succeeded', BINARY 'failed', BINARY 'needs_attention') OR (BINARY state = BINARY 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL)) LIMIT 1", $table );
 		if ( array() !== $this->custody_rows( $database, $query ) ) {
 			throw new RuntimeException( 'Booster has unfinished work that must be resolved before cleanup.' );
 		}
+	}
+
+	private function table_name_matches_mode( string $expected, mixed $actual, int $mode ): bool {
+		if ( ! is_string( $actual ) ) {
+			return false;
+		}
+
+		return match ( $mode ) {
+			0 => hash_equals( $expected, $actual ),
+			1 => hash_equals( strtolower( $expected ), $actual ),
+			2 => 0 === strcasecmp( $expected, $actual ),
+			default => false,
+		};
 	}
 
 	/** @return list<object> */

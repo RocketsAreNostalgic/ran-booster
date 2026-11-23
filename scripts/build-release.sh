@@ -26,8 +26,9 @@ repo_root=$(git -C "$script_dir" rev-parse --show-toplevel 2>/dev/null) \
 	|| fail 'run this script from a Git checkout.'
 cd "$repo_root"
 
-manifest="$repo_root/release-files.txt"
-[[ -f "$manifest" ]] || fail 'release-files.txt is missing.'
+# shellcheck source=scripts/verify-release.sh
+source "$script_dir/verify-release.sh"
+
 for command_name in composer git php tar unzip zip zipinfo; do
 	command -v "$command_name" >/dev/null 2>&1 \
 		|| fail "$command_name is required."
@@ -38,144 +39,12 @@ ref=${1:-HEAD}
 commit=$(git rev-parse --verify "${ref}^{commit}" 2>/dev/null) \
 	|| fail "release ref does not identify a commit: $ref"
 
-committed_entries=(
-	'NOTICE.md'
-	'RAN'
-	'assets'
-	'autoload.php'
-	'index.php'
-	'license.txt'
-	'ran-booster.php'
-	'readme.txt'
-	'uninstall.php'
-	'views'
-)
-generated_entries=(
-	'languages'
-	'ran-booster-packages.json'
-	'ran-booster-release.json'
-)
-allowed_entries=( "${committed_entries[@]}" "${generated_entries[@]}" )
-entries=()
-
-is_allowed_entry() {
-	local candidate=$1
-	local allowed
-
-	for allowed in "${allowed_entries[@]}"; do
-		[[ "$candidate" == "$allowed" ]] && return 0
-	done
-
-	return 1
-}
-
-is_generated_entry() {
-	local candidate=$1
-	local generated_entry
-
-	for generated_entry in "${generated_entries[@]}"; do
-		[[ "$candidate" == "$generated_entry" ]] && return 0
-	done
-
-	return 1
-}
-
-while IFS= read -r entry || [[ -n "$entry" ]]; do
-	[[ -z "$entry" || "$entry" == \#* ]] && continue
-	[[ "$entry" =~ ^[A-Za-z0-9._/-]+$ ]] \
-		|| fail "unsafe allowlist path: $entry"
-	[[ "$entry" != /* && "$entry" != ./* && "$entry" != *'//'* ]] \
-		|| fail "unsafe allowlist path: $entry"
-	[[ "$entry" != '..' && "$entry" != ../* && "$entry" != */../* && "$entry" != */.. ]] \
-		|| fail "unsafe allowlist path: $entry"
-	is_allowed_entry "$entry" \
-		|| fail "unexpected Core runtime allowlist entry: $entry"
-
-	for existing in "${entries[@]:-}"; do
-		[[ "$entry" != "$existing" ]] \
-			|| fail "duplicate allowlist entry: $entry"
-	done
-
-	if ! is_generated_entry "$entry"; then
-		git cat-file -e "$commit:$entry" 2>/dev/null \
-			|| fail "allowlist path is missing from release ref: $entry"
-	fi
-	entries+=( "$entry" )
-done < "$manifest"
-
-[[ ${#entries[@]} -eq ${#allowed_entries[@]} ]] \
-	|| fail 'release-files.txt does not contain the complete Core runtime allowlist.'
-
-for required in "${allowed_entries[@]}"; do
-	found=false
-	for entry in "${entries[@]}"; do
-		if [[ "$entry" == "$required" ]]; then
-			found=true
-			break
-		fi
-	done
-	[[ "$found" == true ]] || fail "required Core allowlist entry is missing: $required"
-done
+load_release_manifest
+load_release_metadata
 
 for required_source in composer.json composer.lock .release-please-manifest.json runtime-packaging-policy.json; do
 	git cat-file -e "$commit:$required_source" 2>/dev/null \
 		|| fail "release ref is missing $required_source."
-done
-
-while IFS= read -r tree_entry; do
-	mode=${tree_entry%% *}
-	[[ "$mode" != '120000' ]] \
-		|| fail 'release files must not contain symbolic links.'
-done < <(git ls-tree -r "$commit" -- "${committed_entries[@]}")
-
-plugin_version=$(
-	git show "$commit:ran-booster.php" \
-		| sed -n 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
-stable_tag=$(
-	git show "$commit:readme.txt" \
-		| sed -n 's/^Stable tag:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
-requires_wordpress=$(
-	git show "$commit:ran-booster.php" \
-		| sed -n 's/^[[:space:]]*\*[[:space:]]*Requires at least:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
-requires_php=$(
-	git show "$commit:ran-booster.php" \
-		| sed -n 's/^[[:space:]]*\*[[:space:]]*Requires PHP:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
-tested_wordpress=$(
-	git show "$commit:readme.txt" \
-		| sed -n 's/^Tested up to:[[:space:]]*\([^[:space:]]*\)[[:space:]]*$/\1/p'
-)
-# The single-quoted program is PHP and must not be expanded by the shell.
-# shellcheck disable=SC2016
-if ! manifest_version=$(
-	git show "$commit:.release-please-manifest.json" \
-		| php -r '
-			$document = json_decode( stream_get_contents( STDIN ), true, 512, JSON_THROW_ON_ERROR );
-			if ( ! is_array( $document ) || ! isset( $document["."] ) || ! is_string( $document["."] ) ) {
-				exit( 1 );
-			}
-			echo $document["."];
-		'
-); then
-	fail 'release ref must contain a valid root manifest version.'
-fi
-
-[[ -n "$plugin_version" && "$plugin_version" != *$'\n'* ]] \
-	|| fail 'ran-booster.php must contain exactly one plugin Version header.'
-[[ -n "$stable_tag" && "$stable_tag" != *$'\n'* ]] \
-	|| fail 'readme.txt must contain exactly one Stable tag.'
-[[ "$plugin_version" == "$stable_tag" ]] \
-	|| fail "plugin Version ($plugin_version) does not match Stable tag ($stable_tag)."
-[[ "$plugin_version" == "$manifest_version" ]] \
-	|| fail "plugin Version ($plugin_version) does not match manifest version ($manifest_version)."
-[[ "$plugin_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] \
-	|| fail "unsupported release version: $plugin_version"
-for compatibility_version in "$requires_wordpress" "$requires_php" "$tested_wordpress"; do
-	[[ "$compatibility_version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] \
-		|| fail "unsupported compatibility version: $compatibility_version"
 done
 
 expected_version=${2:-$plugin_version}
@@ -215,58 +84,18 @@ while IFS=$'\t' read -r package_name package_version package_reference package_r
 	package_installed+=( "$composer_dir/$package_root" )
 done < "$packaging_records"
 
-(
-	cd "$composer_dir"
-	COMPOSER_HOME="$composer_home" composer install \
-		--no-dev \
-		--prefer-dist \
-		--no-interaction \
-		--no-progress \
-		--no-scripts \
-		--no-plugins \
-		--no-autoloader
-)
+install_release_runtime "$composer_dir" "$composer_home"
 
 if ! php "$repo_root/scripts/verify-runtime-dependencies.php" --verify-install "$composer_dir" "$composer_dir/composer.lock" "$policy_file"; then
 	fail 'installed runtime package surfaces do not match the locked runtime packaging policy.'
 fi
 
-for index in "${!package_roots[@]}"; do
-	installed_package=${package_installed[$index]}
-	[[ -d "$installed_package" && ! -L "$installed_package" ]] \
-		|| fail "locked runtime package root is missing or symbolic: $installed_package"
-	IFS=',' read -r -a surface_specs <<< "${package_surface_specs[$index]}"
-	for surface_spec in "${surface_specs[@]}"; do
-		surface_kind=${surface_spec%%:*}
-		surface=${surface_spec#*:}
-		required_path="$installed_package/$surface"
-		case "$surface_kind" in
-			file)
-				[[ -f "$required_path" && ! -L "$required_path" ]] \
-					|| fail "locked runtime package file surface is missing or changed kind: $required_path"
-				;;
-			directory)
-				[[ -d "$required_path" && ! -L "$required_path" ]] \
-					|| fail "locked runtime package directory surface is missing or changed kind: $required_path"
-				find "$required_path" -type f -print -quit | grep -q . \
-					|| fail "locked runtime package directory surface is empty: $required_path"
-				if find "$required_path" -type l -print -quit | grep -q .; then
-					fail 'runtime dependency allowlist must not contain symbolic links.'
-				fi
-				;;
-			*)
-				fail "runtime packaging projection contains an unsupported surface kind: $surface_kind"
-				;;
-		esac
-	done
-done
-
-git archive \
-	--format=tar \
-	--prefix=ran-booster/ \
-	"$commit" \
-	-- "${committed_entries[@]}" \
-	| tar -xf - -C "$stage_dir"
+(
+	# tar can apply the caller's umask when restoring committed modes.
+	umask 022
+	git -c core.autocrlf=false -c core.eol=lf archive --format=tar --prefix=ran-booster/ "$commit" -- "${committed_entries[@]}" \
+		| tar -xf - -C "$stage_dir"
+)
 
 for index in "${!package_roots[@]}"; do
 	package_root=${package_roots[$index]}
@@ -343,6 +172,8 @@ if find "$stage_root" -type l -print -quit | grep -q .; then
 	fail 'release files must not contain symbolic links.'
 fi
 
+chmod 0755 "$stage_root" "$stage_root/vendor" "$stage_root/vendor/ran"
+
 commit_epoch=$(git show -s --format=%ct "$commit")
 # Normalize generated package modes and every ZIP timestamp. The archive's
 # committed Core modes still come from git archive.
@@ -377,6 +208,8 @@ tmp_archive="$tmp_dir/$archive_name"
 
 (
 	cd "$stage_dir"
+	# Caller ZIP options can change the stored bytes or archive layout.
+	unset ZIP ZIPOPT
 	find ran-booster -print \
 		| LC_ALL=C sort \
 		| zip -q -0 -X "$tmp_archive" -@
@@ -387,9 +220,8 @@ archive_size=$(wc -c < "$tmp_archive" | tr -d '[:space:]')
 
 bash "$script_dir/verify-release.sh" "$tmp_archive" "$expected_version" "$commit"
 
+archive_sha256=$(sha256_file "$tmp_archive")
 mv -f "$tmp_archive" "$build_dir/$archive_name"
-
-archive_sha256=$(sha256sum "$build_dir/$archive_name" | awk '{ print $1 }')
 printf '%s  %s\n' "$archive_sha256" "$archive_name" > "$build_dir/${archive_name}.sha256"
 
 printf 'Built %s\n' "$build_dir/$archive_name"

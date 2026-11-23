@@ -50,7 +50,13 @@ namespace {
 		 * @return string
 		 */
 		function ran_booster_table_name() {
-			return 'wp_ran_booster_packages';
+			global $wpdb;
+
+			$prefix = is_object( $wpdb ) && isset( $wpdb->prefix ) && is_string( $wpdb->prefix ) && '' !== $wpdb->prefix
+				? $wpdb->prefix
+				: 'wp_';
+
+			return $prefix . 'ran_booster_packages';
 		}
 	}
 
@@ -147,11 +153,11 @@ namespace {
 	}
 }
 
-// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound, Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden -- The global WordPress doubles and namespaced database fake are loaded together by this fixture.
+// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound, Universal.Namespaces.DisallowCurlyBraceSyntax.Forbidden -- The global WordPress doubles and namespaced database fixture are loaded together by this fixture.
 namespace RAN\Tests\Storage {
 
-	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
-	final class StorageTestWpdb extends \RAN\Storage\SchemaConnection {
+	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with shared database behavior for isolated storage tests.
+	trait StorageTestDatabaseBehavior {
 
 		public string $prefix                            = 'wp_';
 		public string $base_prefix                       = 'wp_';
@@ -175,12 +181,37 @@ namespace RAN\Tests\Storage {
 		 *     indexes: array<string, array{unique: bool, columns: list<string>, prefixes: list<?int>}>
 		 * }>
 		 */
-		public array $schema_tables   = array();
-		public string $schema_engine  = 'InnoDB';
-		public string $options_engine = 'InnoDB';
-		public string $server_info    = '8.4.6';
-		public string $innodb_support = 'DEFAULT';
-		public int $capability_reads  = 0;
+		public array $schema_tables            = array();
+		public string $schema_engine           = 'InnoDB';
+		public string $options_engine          = 'InnoDB';
+		public ?string $stored_options_table   = null;
+		public string $server_info             = '8.4.6';
+		public string $database_name           = 'test_db';
+		public ?\Closure $before_database_read = null;
+		public string $innodb_support          = 'DEFAULT';
+		public ?string $innodb_transactions    = 'YES';
+		public ?string $live_version           = null;
+		public ?string $live_version_comment   = 'MySQL Community Server - GPL';
+		/** @var list<object>|null */
+		public ?array $live_version_rows           = null;
+		public bool $fail_live_version_probe       = false;
+		public bool $fail_engines_probe            = false;
+		public mixed $dbh                          = null;
+		public int|string|null $read_connection_id = 41;
+		public string $probe_write_error           = '';
+		public bool $swap_probe_handle             = false;
+		private ?int $session_probe                = null;
+		public ?object $forced_table_status        = null;
+		public bool $lazy_server_info              = false;
+		public bool $lazy_server_info_throws       = false;
+		private bool $connection_warmed            = false;
+		public int $lower_case_table_names         = 0;
+		public mixed $lower_case_table_names_raw   = false;
+		public bool $fail_lower_case_table_names   = false;
+		public bool $errors_suppressed             = false;
+		public ?bool $lower_case_read_suppressed   = null;
+		public bool $case_insensitive_show_tables  = false;
+		public int $capability_reads               = 0;
 
 		/** @var list<string> */
 		public array $queries = array();
@@ -234,6 +265,15 @@ namespace RAN\Tests\Storage {
 		}
 
 		public function db_server_info(): string {
+			if ( ! $this->connection_warmed ) {
+				if ( $this->lazy_server_info_throws ) {
+					throw new \TypeError( 'mysqli_get_server_info(): Argument #1 ($mysql) must be of type mysqli, null given' );
+				}
+				if ( $this->lazy_server_info ) {
+					return '';
+				}
+			}
+
 			return $this->server_info;
 		}
 
@@ -268,6 +308,16 @@ namespace RAN\Tests\Storage {
 			$this->queries[] = $query;
 			if ( null !== $this->query_failure_contains && str_contains( $query, $this->query_failure_contains ) ) {
 				return false;
+			}
+			if ( 'SET @ran_booster_probe := CONNECTION_ID()' === $query ) {
+				$this->connection_warmed = true;
+				$this->session_probe     = 41;
+				$this->last_error        = $this->probe_write_error;
+				return 0;
+			}
+			if ( 'SET @ran_booster_probe := NULL' === $query ) {
+				$this->session_probe = null;
+				return 0;
 			}
 			if ( 'START TRANSACTION' === $query ) {
 				$this->presentation_before_transaction = $this->presentation_value;
@@ -304,7 +354,7 @@ namespace RAN\Tests\Storage {
 				$this->general_settings_value = stripslashes( substr( $query, $new_start, $new_end - $new_start ) );
 				return 1;
 			}
-			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('ran_booster_github_selection', '(.*)', 'no'\)$/", $query, $selection ) ) {
+			if ( preg_match( '/^INSERT IGNORE INTO `[^`]+` .* VALUES \(\'ran_booster_github_selection\', \'(.*)\', \'no\'\)$/', $query, $selection ) ) {
 				if ( null !== $this->selection_value ) {
 					return 0;
 				}
@@ -362,6 +412,9 @@ namespace RAN\Tests\Storage {
 			if ( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' === $query ) {
 				return 1;
 			}
+			if ( str_starts_with( $query, 'SAVEPOINT ' ) || str_starts_with( $query, 'RELEASE SAVEPOINT ' ) ) {
+				return 1;
+			}
 			if ( 'START TRANSACTION' === $query ) {
 				$this->transaction_rows                   = $this->rows;
 				$this->transaction_general_settings_value = $this->general_settings_value;
@@ -402,7 +455,7 @@ namespace RAN\Tests\Storage {
 					)
 				);
 			}
-			if ( 1 === preg_match( "/^DELETE FROM `[^`]+` WHERE id = '([0-9]+)' AND package_type = ([12]) AND BINARY package = BINARY '([^']+)' AND BINARY adoption_token = BINARY '([^']+)'$/", $query, $matches ) ) {
+			if ( 1 === preg_match( "/^DELETE FROM (?:`[^`]+`\.)?`[^`]+` WHERE id = '([0-9]+)' AND package_type = ([12]) AND BINARY package = BINARY '([^']+)' AND BINARY adoption_token = BINARY '([^']+)'$/", $query, $matches ) ) {
 				return $this->delete(
 					'wp_ran_booster_packages',
 					array(
@@ -423,12 +476,31 @@ namespace RAN\Tests\Storage {
 			return 0;
 		}
 
+		public function suppress_errors( bool $suppress = true ): bool {
+			$previous                = $this->errors_suppressed;
+			$this->errors_suppressed = $suppress;
+			return $previous;
+		}
+
 		public function get_var( string $query ): int|string|null {
 			if ( $this->read_failure ) {
 				$this->last_error = 'database details must not escape';
 				return null;
 			}
-			if ( str_starts_with( $query, 'SELECT option_name FROM `wp_options` WHERE option_name LIKE' ) ) {
+			if ( 'SELECT @@lower_case_table_names' === $query ) {
+				$this->lower_case_read_suppressed = $this->errors_suppressed;
+				if ( $this->fail_lower_case_table_names ) {
+					$this->last_error = 'database details must not escape';
+					return null;
+				}
+				if ( false !== $this->lower_case_table_names_raw ) {
+					return is_int( $this->lower_case_table_names_raw ) || is_string( $this->lower_case_table_names_raw )
+						? $this->lower_case_table_names_raw
+						: null;
+				}
+				return (string) $this->lower_case_table_names;
+			}
+			if ( 1 === preg_match( '/^SELECT option_name FROM `[^`]+` WHERE option_name LIKE/', $query ) ) {
 				if ( $this->fresh_option_read_failure ) {
 					$this->last_error = 'database details must not escape';
 					return null;
@@ -462,7 +534,18 @@ namespace RAN\Tests\Storage {
 				}
 				$table = stripslashes( str_replace( array( '\\_', '\\%' ), array( '_', '%' ), $matches[1] ) );
 
-				return isset( $this->schema_tables[ $table ] ) ? $table : null;
+				if ( isset( $this->schema_tables[ $table ] ) ) {
+					return $table;
+				}
+				if ( 0 !== $this->lower_case_table_names || $this->case_insensitive_show_tables ) {
+					foreach ( array_keys( $this->schema_tables ) as $existing ) {
+						if ( 0 === strcasecmp( $existing, $table ) ) {
+							return $existing;
+						}
+					}
+				}
+
+				return null;
 			}
 
 			if ( preg_match( "/type = (\\d+) AND package = '([^']+)'/", $query, $matches ) !== 1 ) {
@@ -533,15 +616,45 @@ namespace RAN\Tests\Storage {
 		}
 
 		public function get_row( string $query ): ?object {
-			if ( 1 === preg_match( "/^SHOW TABLE STATUS WHERE Name = '([^']+)'$/", $query, $matches ) ) {
-				$table = stripslashes( $matches[1] );
-				if ( $this->options === $table ) {
-					return (object) array( 'Engine' => $this->options_engine );
+			if ( str_starts_with( $query, 'SHOW TABLE STATUS' ) && null !== $this->forced_table_status ) {
+				return $this->forced_table_status;
+			}
+			if ( 1 === preg_match( "/^SHOW TABLE STATUS (?:FROM `[^`]+` )?WHERE Name = '([^']+)'$/", $query, $matches ) ) {
+				$table        = stripslashes( $matches[1] );
+				$options_name = $this->stored_options_table ?? ( 1 === $this->lower_case_table_names ? strtolower( $this->options ) : $this->options );
+				if ( $options_name === $table ) {
+					return (object) array(
+						'Name'   => $options_name,
+						'Engine' => $this->options_engine,
+					);
 				}
 
 				return isset( $this->schema_tables[ $table ] )
-					? (object) array( 'Engine' => $this->schema_tables[ $table ]['engine'] )
+					? (object) array(
+						'Name'   => $table,
+						'Engine' => $this->schema_tables[ $table ]['engine'],
+					)
 					: null;
+			}
+			if ( 1 === preg_match( "/^SHOW TABLE STATUS (?:FROM `[^`]+` )?WHERE LOWER\(Name\) = '([^']+)'$/", $query, $matches ) ) {
+				$needle       = stripslashes( $matches[1] );
+				$options_name = $this->stored_options_table ?? ( 1 === $this->lower_case_table_names ? strtolower( $this->options ) : $this->options );
+				if ( strtolower( $options_name ) === $needle ) {
+					return (object) array(
+						'Name'   => $options_name,
+						'Engine' => $this->options_engine,
+					);
+				}
+				foreach ( $this->schema_tables as $existing => $table_definition ) {
+					if ( strtolower( $existing ) === $needle ) {
+						return (object) array(
+							'Name'   => $existing,
+							'Engine' => $table_definition['engine'],
+						);
+					}
+				}
+
+				return null;
 			}
 
 			return $this->row;
@@ -550,13 +663,50 @@ namespace RAN\Tests\Storage {
 		/** @return list<object>|null */
 		public function get_results( string $query ): ?array {
 			$this->read_queries[] = $query;
+			if ( 'SELECT DATABASE() AS db_name' === $query ) {
+				if ( null !== $this->before_database_read ) {
+					( $this->before_database_read )();
+				}
+				return array( (object) array( 'db_name' => $this->database_name ) );
+			}
 			if ( 'SHOW ENGINES' === $query ) {
+				$this->connection_warmed = true;
 				++$this->capability_reads;
+				if ( $this->fail_engines_probe ) {
+					$this->last_error = 'engines probe failed';
+					return array();
+				}
+
+				$row = array(
+					'Engine'  => 'InnoDB',
+					'Support' => $this->innodb_support,
+				);
+				if ( null !== $this->innodb_transactions ) {
+					$row['Transactions'] = $this->innodb_transactions;
+				}
+
+				return array( (object) $row );
+			}
+
+			if ( 'SELECT @@version AS version, @@version_comment AS comment, @ran_booster_probe AS probe_connection_id, CONNECTION_ID() AS read_connection_id' === $query ) {
+				if ( $this->fail_live_version_probe ) {
+					$this->last_error = 'unsupported syntax';
+					return array();
+				}
+				if ( $this->swap_probe_handle ) {
+					// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Swap in a distinct unconnected driver handle to model a reconnect.
+					$this->dbh = new \mysqli();
+				}
+				if ( null !== $this->live_version_rows ) {
+					return $this->live_version_rows;
+				}
 
 				return array(
 					(object) array(
-						'Engine'  => 'InnoDB',
-						'Support' => $this->innodb_support,
+						'version'             => $this->live_version ?? $this->server_info,
+						'comment'             => $this->live_version_comment,
+						'probe_connection_id' => 41 === $this->read_connection_id || '41' === $this->read_connection_id ? $this->session_probe : null,
+						'read_connection_id'  => $this->read_connection_id,
 					),
 				);
 			}
@@ -574,7 +724,9 @@ namespace RAN\Tests\Storage {
 				return $this->forced_results;
 			}
 
-			if ( str_starts_with( $query, 'SELECT option_name, option_value, autoload FROM `wp_options`' ) ) {
+			if ( 1 === preg_match( '/^SELECT option_name, option_value, autoload FROM `([^`]+)`/', $query, $options_match )
+				&& ( $options_match[1] === $this->options || ( 0 !== $this->lower_case_table_names && 0 === strcasecmp( $options_match[1], $this->options ) ) )
+			) {
 				return null === $this->selection_value ? array() : array(
 					(object) array(
 						'option_name'  => 'ran_booster_github_selection',
@@ -583,37 +735,27 @@ namespace RAN\Tests\Storage {
 					),
 				);
 			}
-			if ( 'SHOW COLUMNS FROM `wp_options`' === $query ) {
-				return array_map(
-					static fn ( string $name ): object => (object) array(
-						'Field'   => $name,
-						'Type'    => 'longtext',
-						'Null'    => 'NO',
-						'Default' => null,
-						'Extra'   => '',
-					),
-					array( 'option_name', 'option_value', 'autoload' )
-				);
-			}
-			if ( 'SHOW INDEX FROM `wp_options`' === $query ) {
-				return array(
-					(object) array(
-						'Key_name'     => 'option_name',
-						'Non_unique'   => 0,
-						'Seq_in_index' => 1,
-						'Column_name'  => 'option_name',
-						'Sub_part'     => null,
-					),
-				);
-			}
-			if ( 1 === preg_match( '/^SHOW COLUMNS FROM `([^`]+)`$/', $query, $matches ) ) {
-				if ( ! isset( $this->schema_tables[ $matches[1] ] ) ) {
+			if ( 1 === preg_match( '/^SHOW COLUMNS FROM (?:`[^`]+`\.)?`([^`]+)`$/', $query, $matches ) ) {
+				if ( $matches[1] === $this->options || ( 0 !== $this->lower_case_table_names && 0 === strcasecmp( $matches[1], $this->options ) ) ) {
+					return array_map(
+						static fn ( string $name ): object => (object) array(
+							'Field'   => $name,
+							'Type'    => 'longtext',
+							'Null'    => 'NO',
+							'Default' => null,
+							'Extra'   => '',
+						),
+						array( 'option_name', 'option_value', 'autoload' )
+					);
+				}
+				$table_key = $this->resolve_schema_table( $matches[1] );
+				if ( null === $table_key ) {
 					return null;
 				}
 
 				$rows = array();
-				foreach ( $this->schema_tables[ $matches[1] ]['columns'] as $column => $type ) {
-					$metadata = $this->schema_tables[ $matches[1] ]['columnMetadata'][ $column ];
+				foreach ( $this->schema_tables[ $table_key ]['columns'] as $column => $type ) {
+					$metadata = $this->schema_tables[ $table_key ]['columnMetadata'][ $column ];
 					$rows[]   = (object) array(
 						'Field'   => $column,
 						'Type'    => $type,
@@ -626,13 +768,25 @@ namespace RAN\Tests\Storage {
 				return $rows;
 			}
 
-			if ( 1 === preg_match( '/^SHOW INDEX FROM `([^`]+)`$/', $query, $matches ) ) {
-				if ( ! isset( $this->schema_tables[ $matches[1] ] ) ) {
+			if ( 1 === preg_match( '/^SHOW INDEX FROM (?:`[^`]+`\.)?`([^`]+)`$/', $query, $matches ) ) {
+				if ( $matches[1] === $this->options || ( 0 !== $this->lower_case_table_names && 0 === strcasecmp( $matches[1], $this->options ) ) ) {
+					return array(
+						(object) array(
+							'Key_name'     => 'option_name',
+							'Non_unique'   => 0,
+							'Seq_in_index' => 1,
+							'Column_name'  => 'option_name',
+							'Sub_part'     => null,
+						),
+					);
+				}
+				$table_key = $this->resolve_schema_table( $matches[1] );
+				if ( null === $table_key ) {
 					return null;
 				}
 
 				$rows = array();
-				foreach ( $this->schema_tables[ $matches[1] ]['indexes'] as $name => $index ) {
+				foreach ( $this->schema_tables[ $table_key ]['indexes'] as $name => $index ) {
 					foreach ( $index['columns'] as $offset => $column ) {
 						$rows[] = (object) array(
 							'Key_name'     => $name,
@@ -710,12 +864,30 @@ namespace RAN\Tests\Storage {
 			);
 		}
 
+		private function resolve_schema_table( string $table ): ?string {
+			if ( isset( $this->schema_tables[ $table ] ) ) {
+				return $table;
+			}
+			if ( 0 !== $this->lower_case_table_names ) {
+				foreach ( array_keys( $this->schema_tables ) as $existing ) {
+					if ( 0 === strcasecmp( $existing, $table ) ) {
+						return $existing;
+					}
+				}
+			}
+
+			return null;
+		}
+
 		public function install_schema( string $sql ): void {
 			if ( 1 !== preg_match( '/CREATE TABLE ([^\s(]+)\s*\((.*)\) ENGINE=/s', $sql, $matches ) ) {
 				return;
 			}
 
-			$table           = trim( $matches[1], '`' );
+			$table = trim( $matches[1], '`' );
+			if ( 1 === $this->lower_case_table_names ) {
+				$table = strtolower( $table );
+			}
 			$columns         = array();
 			$column_metadata = array();
 			$indexes         = array();

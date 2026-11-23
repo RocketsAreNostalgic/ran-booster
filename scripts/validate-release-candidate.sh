@@ -6,6 +6,10 @@ fail() {
 	exit 1
 }
 
+script_dir=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=scripts/verify-release.sh
+source "$script_dir/verify-release.sh"
+
 [[ $# -eq 2 ]] || fail 'expected <base-commit> <release-commit>.'
 base_commit=$(git rev-parse --verify "$1^{commit}") \
 	|| fail 'base commit is unavailable.'
@@ -20,6 +24,9 @@ expected_changes=$(printf '%s\n' \
 actual_changes=$(git diff --name-status "$base_commit" "$release_commit" -- | LC_ALL=C sort -k2)
 [[ "$actual_changes" == "$expected_changes" ]] \
 	|| fail 'release candidate must change exactly the four generated release files.'
+mode_changes=$(git diff --summary "$base_commit" "$release_commit" --)
+[[ -z "$mode_changes" ]] \
+	|| fail 'release candidate must preserve generated release file modes.'
 
 manifest_version() {
 	git show "$1:.release-please-manifest.json" \
@@ -28,12 +35,12 @@ manifest_version() {
 
 plugin_version() {
 	git show "$1:ran-booster.php" \
-		| sed -nE 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*([^[:space:]]+).*/\1/p'
+		| read_release_header "$plugin_version_header"
 }
 
 stable_tag() {
 	git show "$1:readme.txt" \
-		| sed -nE 's/^Stable tag:[[:space:]]*([^[:space:]]+).*/\1/p'
+		| read_release_header 'Stable tag'
 }
 
 base_version=$(manifest_version "$base_commit") \
@@ -55,17 +62,17 @@ release_version=$(manifest_version "$release_commit") \
 
 diff -u \
 	<(git show "$base_commit:ran-booster.php" \
-		| sed -E 's/^([[:space:]]*\*[[:space:]]*Version:).*/\1 __RELEASE_VERSION__/') \
+		| sed -E "s/^($plugin_version_header:[[:space:]]*)[^[:space:]]+([[:space:]]*)$/\1__RELEASE_VERSION__\2/") \
 	<(git show "$release_commit:ran-booster.php" \
-		| sed -E 's/^([[:space:]]*\*[[:space:]]*Version:).*/\1 __RELEASE_VERSION__/') \
+		| sed -E "s/^($plugin_version_header:[[:space:]]*)[^[:space:]]+([[:space:]]*)$/\1__RELEASE_VERSION__\2/") \
 	>/dev/null \
 	|| fail 'plugin bootstrap changed beyond the generated Version value.'
 
 diff -u \
 	<(git show "$base_commit:readme.txt" \
-		| sed -E 's/^(Stable tag:).*/\1 __RELEASE_VERSION__/') \
+		| sed -E 's/^(Stable tag:[[:space:]]*)[^[:space:]]+([[:space:]]*)$/\1__RELEASE_VERSION__\2/') \
 	<(git show "$release_commit:readme.txt" \
-		| sed -E 's/^(Stable tag:).*/\1 __RELEASE_VERSION__/') \
+		| sed -E 's/^(Stable tag:[[:space:]]*)[^[:space:]]+([[:space:]]*)$/\1__RELEASE_VERSION__\2/') \
 	>/dev/null \
 	|| fail 'readme changed beyond the generated Stable tag value.'
 

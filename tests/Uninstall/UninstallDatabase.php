@@ -6,10 +6,16 @@ namespace RAN\Tests\Uninstall;
 
 final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 
-	public string $prefix      = 'wp_';
-	public string $base_prefix = 'wp_';
-	public string $options     = 'wp_options';
-	public string $usermeta    = 'wp_usermeta';
+	public string $prefix                          = 'wp_';
+	public string $base_prefix                     = 'wp_';
+	public string $options                         = 'wp_options';
+	public string $usermeta                        = 'wp_usermeta';
+	public int|string|null $lower_case_table_names = 0;
+	/** Optional override to simulate an unexpected table-name row returned by information_schema. */
+	public ?string $forced_information_schema_table = null;
+	public bool $omit_information_schema_mode       = false;
+	public bool $errors_suppressed                  = false;
+	public ?bool $lower_case_read_suppressed        = null;
 
 	/** @var list<string> */
 	public array $tables = array();
@@ -33,6 +39,9 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 	public function get_var( string $query ): mixed {
 		$this->reads[]    = $query;
 		$this->last_error = '';
+		if ( 'SELECT @@lower_case_table_names' === $query ) {
+			return $this->lower_case_table_names;
+		}
 		if ( null !== $this->read_failure_contains && str_contains( $query, $this->read_failure_contains ) ) {
 			$this->last_error = 'synthetic read failure';
 			return null;
@@ -45,11 +54,26 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 	}
 	public function get_row( string $query ): mixed {
 		unset( $query );
-		return (object) array( 'Engine' => 'InnoDB' );
+		return (object) array(
+			'Name'   => match ( $this->lower_case_table_names ) {
+				1 => strtolower( $this->options ),
+				default => $this->options,
+			},
+			'Engine' => 'InnoDB',
+		);
+	}
+
+	public function suppress_errors( bool $suppress = true ): bool {
+		$previous                = $this->errors_suppressed;
+		$this->errors_suppressed = $suppress;
+		return $previous;
 	}
 
 	public function get_results( string $query ): mixed {
 		$this->reads[] = $query;
+		if ( 'SELECT @@lower_case_table_names AS lower_case_table_names' === $query ) {
+			$this->lower_case_read_suppressed = $this->errors_suppressed;
+		}
 		if ( null !== $this->read_failure_contains && str_contains( $query, $this->read_failure_contains ) ) {
 			$this->last_error = 'synthetic read failure';
 			return null;
@@ -78,8 +102,8 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 			);
 		}
 		$options = $GLOBALS['ran_booster_uninstall_options'];
-		if ( preg_match( "/^SELECT option_name FROM `wp_options` WHERE BINARY option_name = BINARY '([^']+)' LIMIT 1$/", $query, $matches ) === 1 ) {
-			$name = stripslashes( $matches[1] );
+		if ( preg_match( '/^SELECT option_name FROM `([^`]+)` WHERE BINARY option_name = BINARY \'([^\']+)\' LIMIT 1$/', $query, $matches ) === 1 && $matches[1] === $this->options ) {
+			$name = stripslashes( $matches[2] );
 			return array_key_exists( $name, $options ) ? array( (object) array( 'option_name' => $name ) ) : array();
 		}
 		if ( str_starts_with( $query, 'SELECT option_name FROM ' ) ) {
@@ -96,9 +120,35 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 				),
 			) : array();
 		}
+		if ( 'SELECT @@lower_case_table_names AS lower_case_table_names' === $query ) {
+			return array(
+				(object) ( $this->omit_information_schema_mode ? array() : array( 'lower_case_table_names' => $this->lower_case_table_names ) ),
+			);
+		}
 		if ( str_contains( $query, 'information_schema.TABLES' ) ) {
-			$table = $this->prefix . 'ran_booster_deployment_attempts';
-			return in_array( $table, $this->tables, true ) ? array( (object) array( 'table_name' => $table ) ) : array();
+			$table    = $this->prefix . 'ran_booster_deployment_attempts';
+			$lower    = strtolower( $table );
+			$column   = 2 === $this->lower_case_table_names ? 'LOWER(TABLE_NAME)' : 'TABLE_NAME';
+			$needle   = 0 === $this->lower_case_table_names ? $table : $lower;
+			$expected = "SELECT TABLE_NAME AS table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND CAST($column AS BINARY) = CAST('" . addslashes( $needle ) . "' AS BINARY)";
+			if ( $expected !== $query ) {
+				throw new \LogicException( 'Unexpected information_schema custody predicate.' );
+			}
+			if ( null !== $this->forced_information_schema_table ) {
+				return array( (object) array( 'table_name' => $this->forced_information_schema_table ) );
+			}
+			foreach ( $this->tables as $existing ) {
+				$matched = match ( $this->lower_case_table_names ) {
+					0 => hash_equals( $table, $existing ),
+					1 => hash_equals( $lower, $existing ),
+					2 => 0 === strcasecmp( $existing, $table ),
+					default => false,
+				};
+				if ( $matched ) {
+					return array( (object) array( 'table_name' => $existing ) );
+				}
+			}
+			return array();
 		}
 		if ( str_starts_with( $query, 'SELECT id FROM ' ) ) {
 			$expected = "SELECT id FROM `{$this->prefix}ran_booster_deployment_attempts` WHERE state IS NULL OR BINARY state NOT IN (BINARY 'succeeded', BINARY 'failed', BINARY 'needs_attention') OR (BINARY state = BINARY 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL)) LIMIT 1";
@@ -131,11 +181,18 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 			return false;
 		}
 		if ( 1 === preg_match( '/^DROP TABLE IF EXISTS `([^`]+)`$/', $query, $matches ) ) {
-			$this->tables = array_values( array_diff( $this->tables, array( $matches[1] ) ) );
+			$this->tables = array_values(
+				array_filter(
+					$this->tables,
+					fn ( string $existing ): bool => 0 === $this->lower_case_table_names
+						? $existing !== $matches[1]
+						: 0 !== strcasecmp( $existing, $matches[1] )
+				)
+			);
 			return 1;
 		}
-		if ( 1 === preg_match( "/^DELETE FROM `wp_usermeta` WHERE meta_key = '([^']+)'$/", $query, $matches ) ) {
-			unset( $this->user_meta[ stripslashes( $matches[1] ) ] );
+		if ( 1 === preg_match( '/^DELETE FROM `([^`]+)` WHERE meta_key = \'([^\']+)\'$/', $query, $matches ) && $matches[1] === $this->usermeta ) {
+			unset( $this->user_meta[ stripslashes( $matches[2] ) ] );
 			return 1;
 		}
 

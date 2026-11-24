@@ -11,6 +11,14 @@ namespace RAN\Secrets;
  */
 final class PrivateLocationCandidateResolver {
 
+	/** @var list<string> */
+	private const PUBLIC_WEB_ROOT_BASENAMES = array(
+		'public_html',
+		'htdocs',
+		'www',
+		'httpdocs',
+	);
+
 	private string $temporary_root;
 
 	public function __construct( ?string $temporary_root = null ) {
@@ -40,13 +48,8 @@ final class PrivateLocationCandidateResolver {
 			return null;
 		}
 
-		$fingerprint = substr(
-			hash( 'sha256', implode( "\0", array_map( array( $this, 'canonical_directory' ), array( $wordpress_root, $content_dir, $plugin_dir ) ) ) ),
-			0,
-			16
-		);
-
-		$candidate = $private_base . '/.ran-booster/' . $fingerprint . '/ran-booster-store.json';
+		$token     = bin2hex( random_bytes( 16 ) );
+		$candidate = $private_base . '/.ran-booster/' . $token . '/ran-booster-store.json';
 		$failure   = $this->configured_path_failure( $candidate, $boundaries, $private_base );
 		if ( null !== $failure ) {
 			$discarded[] = array(
@@ -77,10 +80,7 @@ final class PrivateLocationCandidateResolver {
 			return false;
 		}
 
-		$private_base = $this->automatic_private_base( $boundaries );
-		$anchor       = null !== $private_base && $this->contains( $private_base, $candidate )
-			? $private_base
-			: null;
+		$anchor = $this->configured_private_anchor( $candidate );
 
 		return null === $this->configured_path_failure( $candidate, $boundaries, $anchor );
 	}
@@ -204,9 +204,50 @@ final class PrivateLocationCandidateResolver {
 
 		$private_base = dirname( $outermost );
 
-		return '/' === $private_base || $this->is_temporary_directory( $private_base )
+		return '/' === $private_base
+			|| $this->is_temporary_directory( $private_base )
+			|| $this->is_public_web_root_basename( $private_base )
 			? null
 			: $private_base;
+	}
+
+	private function configured_private_anchor( string $candidate ): ?string {
+		if ( ! $this->valid_absolute_file_path( $candidate ) || ! function_exists( 'posix_geteuid' ) ) {
+			return null;
+		}
+
+		$effective_user = posix_geteuid();
+		$anchor         = null;
+		$current        = dirname( $candidate );
+		while ( '/' !== $current && '' !== $current ) {
+			if ( ! file_exists( $current ) && ! is_link( $current ) ) {
+				if ( null !== $anchor ) {
+					break;
+				}
+				$current = dirname( $current );
+				continue;
+			}
+
+			$stat = lstat( $current );
+			if ( false === $stat || is_link( $current ) || 0040000 !== ( $stat['mode'] & 0170000 ) ) {
+				return null;
+			}
+			if ( $effective_user !== $stat['uid']
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The trust boundary depends on writability by the actual PHP process, including host-group ancestor checks.
+				|| ! is_writable( $current )
+			) {
+				break;
+			}
+
+			$anchor  = $current;
+			$current = dirname( $current );
+		}
+
+		return $anchor;
+	}
+
+	private function is_public_web_root_basename( string $path ): bool {
+		return in_array( strtolower( basename( $path ) ), self::PUBLIC_WEB_ROOT_BASENAMES, true );
 	}
 
 	/**

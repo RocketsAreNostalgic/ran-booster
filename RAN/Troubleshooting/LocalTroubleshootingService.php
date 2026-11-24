@@ -528,8 +528,7 @@ class LocalTroubleshootingService {
 		return is_array( $path_stat )
 			&& 0100000 === ( $path_stat['mode'] & 0170000 )
 			&& 1 === $path_stat['nlink']
-			&& $path_stat['dev'] === $handle_stat['dev']
-			&& $path_stat['ino'] === $handle_stat['ino'];
+			&& $this->same_file( $path_stat, $handle_stat );
 	}
 
 	/** @param array<string|int, int> $handle_stat */
@@ -555,7 +554,10 @@ class LocalTroubleshootingService {
 	 * @param array<string|int, int> $right
 	 */
 	private function same_file( array $left, array $right ): bool {
-		return $left['dev'] === $right['dev'] && $left['ino'] === $right['ino'];
+		return 0 !== $left['ino']
+			&& 0 !== $right['ino']
+			&& $left['dev'] === $right['dev']
+			&& $left['ino'] === $right['ino'];
 	}
 
 	/**

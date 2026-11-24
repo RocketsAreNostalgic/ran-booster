@@ -414,12 +414,13 @@ class LocalDataRemover {
 	private function remove_empty_automatic_directories( ?string $sidecar_path ): void {
 		$automatic_path = $this->automatic_sidecar_path();
 		if ( null === $automatic_path
-			|| ( null !== $sidecar_path && $sidecar_path !== $automatic_path )
+			|| ( null !== $sidecar_path && ! $this->matches_automatic_sidecar_path( $sidecar_path, $automatic_path ) )
 		) {
 			return;
 		}
 
-		$site_directory = dirname( $automatic_path );
+		$target_path    = $sidecar_path ?? $automatic_path;
+		$site_directory = dirname( $target_path );
 		$base_directory = dirname( $site_directory );
 		$this->remove_directory_if_empty( $site_directory );
 		$this->remove_directory_if_empty( $base_directory );
@@ -488,13 +489,28 @@ class LocalDataRemover {
 	private function assert_automatic_directories_removable( ?string $sidecar_path ): void {
 		$automatic_path = $this->automatic_sidecar_path();
 		if ( null === $automatic_path
-			|| ( null !== $sidecar_path && $sidecar_path !== $automatic_path )
+			|| ( null !== $sidecar_path && ! $this->matches_automatic_sidecar_path( $sidecar_path, $automatic_path ) )
 		) {
 			return;
 		}
 
-		$this->assert_directory_removal_safe( dirname( $automatic_path ) );
-		$this->assert_directory_removal_safe( dirname( dirname( $automatic_path ) ) );
+		$target_path = $sidecar_path ?? $automatic_path;
+		$this->assert_directory_removal_safe( dirname( $target_path ) );
+		$this->assert_directory_removal_safe( dirname( dirname( $target_path ) ) );
+	}
+
+	private function matches_automatic_sidecar_path( string $sidecar_path, string $automatic_path ): bool {
+		if ( $sidecar_path === $automatic_path ) {
+			return true;
+		}
+
+		$sidecar_site = dirname( $sidecar_path );
+		$sidecar_base = dirname( $sidecar_site );
+
+		return 'ran-booster-store.json' === basename( $sidecar_path )
+			&& '.ran-booster' === basename( $sidecar_base )
+			&& dirname( dirname( $automatic_path ) ) === $sidecar_base
+			&& 1 === preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', basename( $sidecar_site ) );
 	}
 
 	private function assert_directory_removal_safe( string $directory ): bool {

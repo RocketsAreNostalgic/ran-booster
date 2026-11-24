@@ -23,6 +23,8 @@ final class PosixFilesystemProbe {
 			$root_directory = dirname( $site_directory );
 			if ( ! $this->safe_directory( dirname( $root_directory ), false )
 				|| ! $this->ensure_private_directory( $root_directory )
+				|| ! $this->ensure_deny_stub( $root_directory . '/.htaccess', "Require all denied\n" )
+				|| ! $this->ensure_deny_stub( $root_directory . '/index.php', "<?php\n// Silence is golden.\n" )
 				|| ! $this->ensure_private_directory( $site_directory )
 			) {
 				return false;
@@ -66,7 +68,7 @@ final class PosixFilesystemProbe {
 		return str_starts_with( $path, '/' )
 			&& 'ran-booster-store.json' === basename( $path )
 			&& '.ran-booster' === basename( dirname( dirname( $path ) ) )
-			&& 1 === preg_match( '/^[a-f0-9]{16}$/D', basename( dirname( $path ) ) )
+			&& 1 === preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', basename( dirname( $path ) ) )
 			&& ! str_contains( $path, "\0" )
 			&& ! str_contains( $path, '//' )
 			&& 0 === preg_match( '#(?:^|/)\.{1,2}(?:/|$)#', $path );
@@ -95,6 +97,42 @@ final class PosixFilesystemProbe {
 		return mkdir( $path, 0700 ) && $this->safe_directory( $path, true );
 	}
 
+	private function ensure_deny_stub( string $path, string $contents ): bool {
+		clearstatcache( true, $path );
+		if ( file_exists( $path ) || is_link( $path ) ) {
+			return ! is_link( $path ) && is_file( $path );
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Exclusive native creation writes the defense-in-depth deny stub without clobbering existing files or following symlinks.
+		$handle = fopen( $path, 'xb' );
+		if ( false === $handle ) {
+			clearstatcache( true, $path );
+
+			return ! is_link( $path ) && is_file( $path );
+		}
+
+		$written = false;
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Restrict the defense-in-depth deny stub to owner-only permissions before verifying handle identity.
+			if ( ! chmod( $path, 0600 ) || ! $this->safe_file( $path, $handle ) ) {
+				return false;
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write exact bytes to the newly created exclusive handle.
+			$bytes   = fwrite( $handle, $contents );
+			$written = false !== $bytes && strlen( $contents ) === $bytes && fflush( $handle );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native stub handle after flushing.
+			fclose( $handle );
+			clearstatcache( true, $path );
+			if ( ! $written && is_file( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove a partially written deny stub created by this probe.
+				unlink( $path );
+			}
+		}
+
+		return $written;
+	}
+
 	/** @param resource $handle */
 	private function safe_file( string $path, mixed $handle ): bool {
 		$path_stat   = lstat( $path );
@@ -105,6 +143,8 @@ final class PosixFilesystemProbe {
 			&& 0100000 === ( $path_stat['mode'] & 0170000 )
 			&& 1 === $path_stat['nlink']
 			&& 0600 === ( $path_stat['mode'] & 0777 )
+			&& 0 !== $path_stat['ino']
+			&& 0 !== $handle_stat['ino']
 			&& $path_stat['dev'] === $handle_stat['dev']
 			&& $path_stat['ino'] === $handle_stat['ino']
 			&& ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() === $path_stat['uid'] );

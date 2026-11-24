@@ -2197,6 +2197,8 @@ class SecretsFile {
 			|| false === $handle_stat
 			|| 0100000 !== ( $path_stat['mode'] & 0170000 )
 			|| 1 !== $path_stat['nlink']
+			|| 0 === $path_stat['ino']
+			|| 0 === $handle_stat['ino']
 			|| $path_stat['dev'] !== $handle_stat['dev']
 			|| $path_stat['ino'] !== $handle_stat['ino']
 		) {
@@ -2477,6 +2479,8 @@ class SecretsFile {
 		clearstatcache( true, $path );
 		$current = lstat( $path );
 		if ( false === $current
+			|| 0 === $expected['ino']
+			|| 0 === $current['ino']
 			|| $expected['dev'] !== $current['dev']
 			|| $expected['ino'] !== $current['ino']
 			|| $expected['mode'] !== $current['mode']

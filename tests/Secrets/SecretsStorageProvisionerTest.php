@@ -1090,6 +1090,30 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertStringContainsString( 'do not pass their current Git provider policy', $recovery['message'] );
 	}
 
+	public function test_sibling_recovery_supports_128_bit_directories_and_ignores_deny_stubs(): void {
+		$current_128 = dirname( dirname( $this->candidate ) ) . '/' . str_repeat( '1', 32 ) . '/ran-booster-store.json';
+		$sibling_128 = $this->recovery_store( str_repeat( '2', 32 ) );
+		$base_dir    = dirname( dirname( $current_128 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the active 128-bit storage directory without ciphertext.
+		self::assertTrue( mkdir( dirname( $current_128 ), 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Place deny stubs inside .ran-booster/ to prove recovery skips them cleanly.
+		self::assertNotFalse( file_put_contents( $base_dir . '/.htaccess', "Require all denied\n" ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Place deny stubs inside .ran-booster/ to prove recovery skips them cleanly.
+		self::assertNotFalse( file_put_contents( $base_dir . '/index.php', "<?php\n// Silence is golden.\n" ) );
+		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $current_128 );
+
+		$provisioner                        = $this->provisioner();
+		$provisioner->configured            = $current_128;
+		$provisioner->health_failure        = true;
+		$provisioner->health_failure_reason = 'storage_file_missing';
+
+		$recovery = $provisioner->recovery_state( $provisioner->status() );
+
+		self::assertIsArray( $recovery );
+		self::assertSame( 'available', $recovery['state'] );
+		self::assertSame( $sibling_128, $recovery['candidate_path'] );
+	}
+
 	private function managed_diagnostic_message_for_code( string $code ): string {
 		return array(
 			'storage_key_missing'           => 'ran-booster-store.json and ran-booster-store.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext.',

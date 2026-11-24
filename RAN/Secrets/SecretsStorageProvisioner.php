@@ -586,8 +586,15 @@ class SecretsStorageProvisioner {
 			if ( null !== $config && $this->writer->has_owned_definition( $config, $configured ) ) {
 				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
 			}
-			if ( $path_is_safe && $configured === $this->resolve_candidate() ) {
-				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
+			if ( $path_is_safe ) {
+				$resolved = $this->resolve_candidate();
+				if ( null !== $resolved
+					&& ( $configured === $resolved
+						|| ( dirname( dirname( $configured ) ) === dirname( dirname( $resolved ) )
+							&& null !== $this->automatic_storage_base( $configured ) ) )
+				) {
+					return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
+				}
 			}
 		} catch ( Throwable ) {
 			return SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN;
@@ -621,7 +628,7 @@ class SecretsStorageProvisioner {
 
 		$candidates = array();
 		foreach ( $entries as $entry ) {
-			if ( 1 !== preg_match( '/\A[a-f0-9]{16}\z/D', $entry )
+			if ( 1 !== preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', $entry )
 				|| dirname( $current ) === $base . '/' . $entry
 			) {
 				continue;
@@ -676,7 +683,7 @@ class SecretsStorageProvisioner {
 		$base      = dirname( $directory );
 
 		return 'ran-booster-store.json' === basename( $current )
-			&& 1 === preg_match( '/\A[a-f0-9]{16}\z/D', basename( $directory ) )
+			&& 1 === preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', basename( $directory ) )
 			&& '.ran-booster' === basename( $base )
 			? $base
 			: null;

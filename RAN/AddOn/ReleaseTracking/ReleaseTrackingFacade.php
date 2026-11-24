@@ -55,7 +55,8 @@ interface ReleaseTrackingFacade {
 		int $expected_source_revision,
 		string $channel,
 		string $nonce,
-		bool $allow_older = false
+		string $confirmed_older_release_identity = '',
+		string $confirmed_older_release_tag = ''
 	): ReleaseTrackingResult;
 
 	public function change_channel(

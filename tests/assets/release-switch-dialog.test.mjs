@@ -563,10 +563,10 @@ test('same version shows notice copy without consent checkbox', async () => {
 	assert.equal(footer.children[1].disabled, false);
 });
 
-test('older release disables confirm until consent checkbox is checked and sends confirm_older_release=1', async () => {
+test('older release disables confirm until consent checkbox is checked and sends signed older tokens', async () => {
 	let dialogBody = null;
 	let footer = null;
-	let submittedOlder = null;
+	let submittedFields = null;
 	const env = bootSwitchRuntime({
 		async fetchImpl() {
 			return {
@@ -578,7 +578,11 @@ test('older release disables confirm until consent checkbox is checked and sends
 						data: {
 							installed_version: '2.0.0',
 							release_version: '1.9.0',
+							release_identity: '101',
+							release_tag: 'v1.9.0',
+							older_release_nonce: 'older-nonce-101',
 							version_relationship: 'older',
+							channel: 'prerelease',
 						},
 					};
 				},
@@ -593,9 +597,15 @@ test('older release disables confirm until consent checkbox is checked and sends
 	env.radioStable.checked = false;
 	env.radioPreview.checked = true;
 	env.form.requestSubmit = function () {
-		submittedOlder = env.form.querySelector(
-			'input[type="hidden"][name="confirm_older_release"]'
-		)?.value;
+		const val = (name) =>
+			env.form.querySelector('input[type="hidden"][name="' + name + '"]')
+				?.value ?? null;
+		submittedFields = {
+			confirm_older_release: val('confirm_older_release'),
+			identity: val('confirmed_older_release_identity'),
+			tag: val('confirmed_older_release_tag'),
+			nonce: val('confirmed_older_release_nonce'),
+		};
 	};
 
 	await env.triggerSubmit();
@@ -610,7 +620,7 @@ test('older release disables confirm until consent checkbox is checked and sends
 	const confirmBtn = footer.children[1];
 	assert.equal(confirmBtn.disabled, true);
 	confirmBtn.dispatchClick();
-	assert.equal(submittedOlder, null);
+	assert.equal(submittedFields, null);
 
 	const checkbox = dialogBody.findAll((el) => el.tagName === 'INPUT')[0];
 	assert.ok(checkbox);
@@ -618,7 +628,90 @@ test('older release disables confirm until consent checkbox is checked and sends
 	checkbox.dispatchChange();
 	assert.equal(confirmBtn.disabled, false);
 	confirmBtn.dispatchClick();
-	assert.equal(submittedOlder, '1');
+	assert.deepEqual(submittedFields, {
+		confirm_older_release: '1',
+		identity: '101',
+		tag: 'v1.9.0',
+		nonce: 'older-nonce-101',
+	});
+});
+
+test('older release fails closed without identity/tag/nonce and does not open dialog', async () => {
+	let dialogOpened = 0;
+	const env = bootSwitchRuntime({
+		async fetchImpl() {
+			return {
+				ok: true,
+				async json() {
+					return {
+						successful: true,
+						code: 'ready',
+						data: {
+							installed_version: '2.0.0',
+							release_version: '1.9.0',
+							version_relationship: 'older',
+							channel: 'stable',
+						},
+					};
+				},
+			};
+		},
+		openDialogImpl() {
+			dialogOpened += 1;
+			return { close() {}, teardown() {} };
+		},
+	});
+
+	await env.triggerSubmit();
+	assert.equal(dialogOpened, 0);
+	assert.equal(env.doc.sharedErrorHost.hidden, false);
+	assert.match(
+		env.doc.sharedErrorHost.textContent,
+		/Published releases could not be checked\./
+	);
+});
+
+test('track radios lock during pending preflight, restore afterwards, and discard mismatched responses', async () => {
+	let resolveFetch;
+	let dialogOpened = 0;
+	const env = bootSwitchRuntime({
+		fetchImpl() {
+			return new Promise((resolve) => {
+				resolveFetch = resolve;
+			});
+		},
+		openDialogImpl() {
+			dialogOpened += 1;
+			return { close() {}, teardown() {} };
+		},
+	});
+
+	const pending = env.triggerSubmit();
+	assert.equal(env.radioStable.disabled, true);
+	assert.equal(env.radioPreview.disabled, true);
+
+	// Simulate an external script mutating the selected radio mid-flight.
+	env.radioStable.checked = false;
+	env.radioPreview.checked = true;
+	resolveFetch({
+		ok: true,
+		async json() {
+			return {
+				successful: true,
+				code: 'ready',
+				data: {
+					installed_version: '1.0.0',
+					release_version: '2.0.0',
+					version_relationship: 'newer',
+					channel: 'stable',
+				},
+			};
+		},
+	});
+	await pending;
+	assert.equal(env.radioStable.disabled, false);
+	assert.equal(env.radioPreview.disabled, false);
+	assert.equal(dialogOpened, 0);
 });
 
 test('cancel closes dialog without mutating hidden inputs or submitting', async () => {

@@ -63,9 +63,9 @@ final class ReleaseTrackingOperations {
 	}
 
 	/** @return array{type:string,identifier:string,code:string,successful:bool,reason?:string,check_reason?:string,detail?:string} */
-	public function execute( string $operation, string $type, string $identifier, int $revision, string $channel, string $nonce, bool $allow_older = false ): array {
+	public function execute( string $operation, string $type, string $identifier, int $revision, string $channel, string $nonce, string $confirmed_older_release_identity = '', string $confirmed_older_release_tag = '' ): array {
 		$result = match ( $operation ) {
-			'enable' => $this->releases->enable( $type, $identifier, $revision, $channel, $nonce, $allow_older ),
+			'enable' => $this->releases->enable( $type, $identifier, $revision, $channel, $nonce, $confirmed_older_release_identity, $confirmed_older_release_tag ),
 			'change_channel' => $this->releases->change_channel( $type, $identifier, $revision, $channel, $nonce ),
 			'refresh' => $this->releases->refresh( $type, $identifier, $revision, $nonce ),
 			'return_to_branch' => $this->releases->return_to_branch( $type, $identifier, $revision, $nonce ),

@@ -346,7 +346,7 @@ final class ReleaseManagementDisplay {
 	/**
 	 * Inline fallback confirmation step when the switch runs without JavaScript.
 	 *
-	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string} $confirmation
+	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity?:string,release_tag?:string,older_release_nonce?:string} $confirmation
 	 */
 	private function render_switch_confirmation(
 		PackageDisplayProjection $package,
@@ -374,11 +374,14 @@ final class ReleaseManagementDisplay {
 			<?php } elseif ( 'older' === $relationship ) { ?>
 				<p class="ran-booster-switch-confirmation__note"><?php esc_html_e( 'This release is older than what\'s installed.', 'ran-booster' ); ?></p>
 			<?php } ?>
-			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="ran-booster-switch-confirmation__form" data-ran-booster-package-mutation>
+			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="ran-booster-switch-confirmation__form" data-ran-booster-source-transition data-ran-booster-package-mutation>
 				<?php $this->admin_post_fields( 'enable', $package, $nonce_action ); ?>
 				<input type="hidden" name="release_channel" value="<?php echo esc_attr( $confirmation['channel'] ); ?>">
 				<input type="hidden" name="confirm_switch" value="1">
 				<?php if ( 'older' === $relationship ) { ?>
+					<input type="hidden" name="confirmed_older_release_identity" value="<?php echo esc_attr( (string) ( $confirmation['release_identity'] ?? '' ) ); ?>">
+					<input type="hidden" name="confirmed_older_release_tag" value="<?php echo esc_attr( (string) ( $confirmation['release_tag'] ?? '' ) ); ?>">
+					<input type="hidden" name="confirmed_older_release_nonce" value="<?php echo esc_attr( (string) ( $confirmation['older_release_nonce'] ?? '' ) ); ?>">
 					<label class="ran-booster-switch-confirmation__consent">
 						<input type="checkbox" name="confirm_older_release" value="1" required>
 						<span><?php esc_html_e( 'I understand the database won\'t be rolled back.', 'ran-booster' ); ?></span>
@@ -510,12 +513,7 @@ final class ReleaseManagementDisplay {
 	 * @param array<string,string> $nonce_actions
 	 * @param array{providers?:list<string>,list_candidates?:string,inspect?:string,install?:string} $prospective
 	 * @param list<array{name:string,url:string,type:string,view_all?:bool}> $repository_conflict
-	 */
-	/**
-	 * @param array<string,string> $nonce_actions
-	 * @param array<string,mixed> $prospective
-	 * @param list<array{name:string,url:string,type:string,view_all?:bool}> $repository_conflict
-	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string}|null $switch_confirmation
+	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity?:string,release_tag?:string,older_release_nonce?:string}|null $switch_confirmation
 	 */
 	public function render_advanced_source_section(
 		string $mode,
@@ -1024,7 +1022,6 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Retain the existing positional package identifier slot; naming does not alter notice arguments.
 	/** @param array<string, mixed>|null $native_hold */
 	public function render_operation_notice(
 		string $code,

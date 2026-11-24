@@ -222,7 +222,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'confirm_switch'           => '1',
 		);
 		ReleaseManagementFixture::controls( $tracking )->process_admin_post_request( 'enable', $request );
-		self::assertSame( array( array( 'enable', $type, $package->identifier(), 3, $channel, $nonce, false ) ), $tracking->calls );
+		self::assertSame( array( array( 'enable', $type, $package->identifier(), 3, $channel, $nonce, '', '' ) ), $tracking->calls );
 	}
 
 	/** @return array<string,array{string,string}> */
@@ -1983,7 +1983,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		self::assertSame(
 			array(
-				array( 'enable', 'plugin', 'example/example.php', 3, 'stable', $this->nonce( 'enable' ), false ),
+				array( 'enable', 'plugin', 'example/example.php', 3, 'stable', $this->nonce( 'enable' ), '', '' ),
 				array( 'change_channel', 'plugin', 'example/example.php', 3, 'prerelease', $this->nonce( 'change_channel' ) ),
 				array( 'refresh', 'plugin', 'example/example.php', 3, $this->nonce( 'refresh' ) ),
 				array( 'return_to_branch', 'plugin', 'example/example.php', 3, $this->nonce( 'return_to_branch' ) ),
@@ -2522,7 +2522,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 				'https://github.com/example/example/releases/tag/v' . $version,
 				'v' . $version,
 				$version,
-				$relationship
+				$relationship,
+				release_identity: 'rel-' . $version
 			);
 			$controls            = ReleaseManagementFixture::controls( $tracking );
 			$response            = $controls->process_switch_preflight_request( $preflight_request( 'prerelease' ) );
@@ -2531,9 +2532,32 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			self::assertSame( 'ready', $response['code'] );
 			self::assertSame( '1.0.0', $response['data']['installed_version'] );
 			self::assertSame( $version, $response['data']['release_version'] );
+			self::assertSame( 'rel-' . $version, $response['data']['release_identity'] );
+			self::assertSame( 'v' . $version, $response['data']['release_tag'] );
 			self::assertSame( $relationship, $response['data']['version_relationship'] );
 			self::assertSame( 'prerelease', $response['data']['channel'] );
+			if ( 'older' === $relationship ) {
+				self::assertIsString( $response['data']['older_release_nonce'] ?? null );
+				self::assertNotSame( '', $response['data']['older_release_nonce'] );
+			} else {
+				self::assertArrayNotHasKey( 'older_release_nonce', $response['data'] );
+			}
 		}
+
+		// Older preflight without release identity/tag fails closed.
+		$incomplete_older            = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) );
+		$incomplete_older->preflight = new ReleaseTrackingPreflight(
+			ReleaseTrackingPreflight::READY,
+			'example-plugin',
+			'0.9.0',
+			'https://github.com/example/example/releases/tag/v0.9.0',
+			'v0.9.0',
+			'0.9.0',
+			'older'
+		);
+		$incomplete_res              = ReleaseManagementFixture::controls( $incomplete_older )->process_switch_preflight_request( $preflight_request( 'stable' ) );
+		self::assertFalse( $incomplete_res['successful'] );
+		self::assertSame( 'unable_to_check', $incomplete_res['code'] );
 
 		// Invalid nonce & missing capability.
 		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
@@ -2619,7 +2643,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 				'https://github.com/example/example/releases/tag/v' . $version,
 				'v' . $version,
 				$version,
-				$relationship
+				$relationship,
+				release_identity: 'rel-' . $version
 			);
 			$controls                   = ReleaseManagementFixture::controls( $tracking );
 			$request                    = $this->request( 'enable' );
@@ -2646,29 +2671,85 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			$html = (string) ob_get_clean();
 
 			self::assertStringContainsString( 'data-ran-booster-switch-confirmation', $html );
+			self::assertStringContainsString( 'class="ran-booster-switch-confirmation__form" data-ran-booster-source-transition data-ran-booster-package-mutation', $html );
 			self::assertStringContainsString( 'Switch to releases?', $html );
 			self::assertStringContainsString( 'Installed: 1.0.0 from branch. Installing: release ' . $version . '.', $html );
 			self::assertStringContainsString( 'cannot roll back database changes', $html );
 			self::assertSame( $expects_same_copy, str_contains( $html, 'Same version: this replaces the branch build with the release.' ), $relationship );
 			self::assertSame( $expects_checkbox, str_contains( $html, 'name="confirm_older_release" value="1" required' ), $relationship );
 			self::assertSame( $expects_checkbox, str_contains( $html, 'This release is older than what&#039;s installed.' ), $relationship );
+			if ( $expects_checkbox ) {
+				self::assertStringContainsString( 'name="confirmed_older_release_identity" value="rel-' . $version . '"', $html );
+				self::assertStringContainsString( 'name="confirmed_older_release_tag" value="v' . $version . '"', $html );
+				self::assertMatchesRegularExpression( '/name="confirmed_older_release_nonce" value="[^"]+"/', $html );
+
+				// Tampered release identity query argument invalidates the signed PRG result.
+				$_GET['ran_booster_release_id'] = 'rel-other';
+				ob_start();
+				$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+				self::assertStringNotContainsString( 'data-ran-booster-switch-confirmation', (string) ob_get_clean() );
+			} else {
+				self::assertStringNotContainsString( 'name="confirmed_older_release_identity"', $html );
+			}
 			self::assertStringContainsString( 'Switch and install</button>', $html );
 			self::assertStringContainsString( '>Cancel</a>', $html );
 		}
 
-		// Confirmed older switch without checkbox passes allow_older=false; with checkbox passes allow_older=true.
-		$tracking                     = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) );
-		$controls                     = ReleaseManagementFixture::controls( $tracking );
-		$confirmed_without            = $this->request( 'enable' ) + array(
+		// Confirmed older switch validates signed identity/tag nonce and forwards empty tokens unless legitimately signed.
+		$tracking            = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) );
+		$tracking->preflight = new ReleaseTrackingPreflight(
+			ReleaseTrackingPreflight::READY,
+			'example-plugin',
+			'0.9.0',
+			'https://github.com/example/example/releases/tag/v0.9.0',
+			'v0.9.0',
+			'0.9.0',
+			'older',
+			release_identity: 'rel-0.9.0'
+		);
+		$controls            = ReleaseManagementFixture::controls( $tracking );
+		$preflight_res       = $controls->process_switch_preflight_request(
+			array(
+				'expected_type'            => 'plugin',
+				'expected_identifier'      => 'example/example.php',
+				'expected_source_revision' => '3',
+				'release_channel'          => 'stable',
+				'_wpnonce'                 => 'nonce-for-release-tracking-preflight-plugin-example/example.php-3-stable',
+			)
+		);
+		$valid_older_nonce   = (string) ( $preflight_res['data']['older_release_nonce'] ?? '' );
+		self::assertNotSame( '', $valid_older_nonce );
+
+		$confirmed_without = $this->request( 'enable' ) + array(
 			'release_channel' => 'stable',
 			'confirm_switch'  => '1',
 		);
-		$confirmed_with_older_consent = $confirmed_without + array( 'confirm_older_release' => '1' );
-		$controls->process_admin_post_request( 'enable', $confirmed_without );
-		$controls->process_admin_post_request( 'enable', $confirmed_with_older_consent );
+		// Missing or mismatched older consent nonce refuses before enable() without forwarding older consent.
+		$tampered_tag = $confirmed_without + array(
+			'confirm_older_release'            => '1',
+			'confirmed_older_release_identity' => 'rel-0.9.0',
+			'confirmed_older_release_tag'      => 'v0.8.0',
+			'confirmed_older_release_nonce'    => $valid_older_nonce,
+		);
+		$tampered_url = $controls->process_admin_post_request( 'enable', $tampered_tag );
+		self::assertStringContainsString( 'ran_booster_release_result=release_older', $tampered_url );
+		self::assertCount( 1, $tracking->calls, 'Only preflight ran; tampered older nonce must not reach enable().' );
 
-		self::assertFalse( $tracking->calls[0][6] );
-		self::assertTrue( $tracking->calls[1][6] );
+		$controls->process_admin_post_request( 'enable', $confirmed_without );
+		$controls->process_admin_post_request(
+			'enable',
+			$confirmed_without + array(
+				'confirm_older_release'            => '1',
+				'confirmed_older_release_identity' => 'rel-0.9.0',
+				'confirmed_older_release_tag'      => 'v0.9.0',
+				'confirmed_older_release_nonce'    => $valid_older_nonce,
+			)
+		);
+
+		self::assertSame( '', $tracking->calls[1][6] );
+		self::assertSame( '', $tracking->calls[1][7] );
+		self::assertSame( 'rel-0.9.0', $tracking->calls[2][6] );
+		self::assertSame( 'v0.9.0', $tracking->calls[2][7] );
 	}
 
 	public function test_post_switch_top_of_page_outcomes_and_settled_states(): void {

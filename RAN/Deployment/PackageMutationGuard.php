@@ -62,7 +62,10 @@ final class PackageMutationGuard {
 	}
 
 	/**
-	 * Re-check the WordPress mutation policy immediately before an upgrader.
+	 * Report whether site configuration disables filesystem modifications.
+	 *
+	 * `wp_is_file_mod_allowed()` is always available in WordPress core; checking
+	 * `function_exists()` keeps isolated unit tests runnable without WP bootstrap.
 	 */
 	public static function file_mods_disabled(): bool {
 		if ( defined( 'DISALLOW_FILE_MODS' ) && (bool) constant( 'DISALLOW_FILE_MODS' ) ) {
@@ -75,6 +78,9 @@ final class PackageMutationGuard {
 		return false;
 	}
 
+	/**
+	 * Re-check the WordPress mutation policy immediately before an upgrader.
+	 */
 	public static function assert_filesystem_mutation_allowed(): void {
 		self::assert_package_mutation_allowed();
 

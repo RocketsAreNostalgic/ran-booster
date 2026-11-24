@@ -5353,9 +5353,19 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 		[ $facade ]                             = $this->switch_facade( null );
 
-		$refused = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid', false );
+		$refused = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
 		self::assertFalse( $refused->successful() );
 		self::assertSame( 'release_older', $refused->code() );
+		self::assertCount( 1, $this->shutdown_rechecks() );
+		$GLOBALS['ran_booster_runtime_actions'] = array();
+
+		// Mismatched older identity or tag fails closed before admission or updater offer.
+		[ $mismatched_facade ] = $this->switch_facade( null );
+		$mismatched            = $mismatched_facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid', 'wrong-id', 'v2.0.0' );
+		self::assertFalse( $mismatched->successful() );
+		self::assertSame( 'release_older', $mismatched->code() );
+		self::assertCount( 1, $this->shutdown_rechecks() );
+		$GLOBALS['ran_booster_runtime_actions'] = array();
 
 		$GLOBALS['ran_booster_read_only_check']['answer'] = array(
 			'status' => 'refused',
@@ -5363,7 +5373,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 
 		[ $confirmed_facade ] = $this->switch_facade( null );
-		$allowed              = $confirmed_facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid', true );
+		$allowed              = $confirmed_facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid', '101', 'v2.0.0' );
 		self::assertFalse( $allowed->successful() );
 
 		self::assertSame(
@@ -5375,8 +5385,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_enable_refuses_disabled_policy_and_active_github_native_hold_before_install(): void {
 		$installs      = 0;
+		$invalidated   = array();
 		$disabled      = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::DISABLED, source: PackageSource::BRANCH );
 		$disabled_repo = $this->createStub( PluginRepository::class );
 		$disabled_repo->method( 'booster_plugin_from_file' )->willReturn( $disabled );
@@ -5395,7 +5408,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			static fn (): bool => true,
 			static fn ( string $nonce ): bool => 'valid' === $nonce,
 			metadata_eligible: static fn (): bool => true,
-			invalidate_native: static function (): void {
+			invalidate_native: static function ( string $type ) use ( &$invalidated ): void {
+				$invalidated[] = $type;
 			},
 			switch_install: static function () use ( &$installs ): string {
 				++$installs;
@@ -5406,6 +5420,12 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertFalse( $disabled_result->successful() );
 		self::assertSame( 'policy_disabled', $disabled_result->code() );
 		self::assertSame( 0, $installs );
+		$disabled_rechecks = $this->shutdown_rechecks();
+		self::assertCount( 1, $disabled_rechecks );
+		( $disabled_rechecks[0]['callback'] )();
+		self::assertSame( array( 'plugin' ), $invalidated );
+		$GLOBALS['ran_booster_runtime_actions'] = array();
+		$invalidated                            = array();
 
 		$manual      = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH );
 		$manual_repo = $this->createStub( PluginRepository::class );
@@ -5435,7 +5455,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			static fn (): bool => true,
 			static fn ( string $nonce ): bool => 'valid' === $nonce,
 			metadata_eligible: static fn (): bool => true,
-			invalidate_native: static function (): void {
+			invalidate_native: static function ( string $type ) use ( &$invalidated ): void {
+				$invalidated[] = $type;
 			},
 			switch_install: static function () use ( &$installs ): string {
 				++$installs;
@@ -5447,6 +5468,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertFalse( $held_result->successful() );
 		self::assertSame( 'native_hold', $held_result->code() );
 		self::assertSame( 0, $installs );
+		$held_rechecks = $this->shutdown_rechecks();
+		self::assertCount( 1, $held_rechecks );
+		( $held_rechecks[0]['callback'] )();
+		self::assertSame( array( 'plugin' ), $invalidated );
+		$GLOBALS['ran_booster_runtime_actions'] = array();
 	}
 
 	#[RunInSeparateProcess]
@@ -5454,17 +5480,25 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	public function test_enable_refuses_when_file_mods_are_disabled_by_site_configuration(): void {
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 		define( 'DISALLOW_FILE_MODS', true );
-		$installs   = 0;
-		[ $facade ] = $this->switch_facade(
+		$installs    = 0;
+		$invalidated = array();
+		[ $facade ]  = $this->switch_facade(
 			static function () use ( &$installs ): string {
 				++$installs;
 				return 'installed';
+			},
+			invalidate_native: static function ( string $type ) use ( &$invalidated ): void {
+				$invalidated[] = $type;
 			}
 		);
-		$result     = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		$result      = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'policy_forced_off', $result->code() );
 		self::assertSame( 0, $installs );
+		$rechecks = $this->shutdown_rechecks();
+		self::assertCount( 1, $rechecks );
+		( $rechecks[0]['callback'] )();
+		self::assertSame( array( 'plugin' ), $invalidated );
 	}
 }
 

@@ -935,6 +935,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			form.dataset.ranBoosterSwitchNativeFallback = '1';
 			removeHiddenInput(form, 'confirm_switch');
 			removeHiddenInput(form, 'confirm_older_release');
+			removeHiddenInput(form, 'confirmed_older_release_identity');
+			removeHiddenInput(form, 'confirmed_older_release_tag');
+			removeHiddenInput(form, 'confirmed_older_release_nonce');
 		}
 		if (typeof form.requestSubmit === 'function') {
 			if (
@@ -1058,7 +1061,45 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		notice.focus?.();
 	}
 
-	function openSwitchConfirmationDialog(form, submitter, payload) {
+	function getReleaseChannelRadios(form) {
+		const seen = new Set();
+		const radios = [];
+		const add = (radio) => {
+			if (radio && !seen.has(radio)) {
+				seen.add(radio);
+				radios.push(radio);
+			}
+		};
+		form.querySelectorAll?.('input[name="release_channel"]').forEach(add);
+		if (form.id) {
+			document
+				.querySelectorAll?.(
+					'input[name="release_channel"][form="' + form.id + '"]'
+				)
+				.forEach(add);
+		}
+		return radios;
+	}
+
+	function getSelectedReleaseChannel(form) {
+		const checked =
+			form.querySelector?.('input[name="release_channel"]:checked') ||
+			(form.id
+				? document.querySelector?.(
+						'input[name="release_channel"][form="' +
+							form.id +
+							'"]:checked'
+					)
+				: null);
+		return checked ? checked.value : 'stable';
+	}
+
+	function openSwitchConfirmationDialog(
+		form,
+		submitter,
+		payload,
+		expectedChannel
+	) {
 		const { __, sprintf } = wp.i18n;
 		const installedVersion =
 			typeof payload?.installed_version === 'string'
@@ -1073,6 +1114,20 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				? payload.version_relationship
 				: 'newer';
 		const isOlder = relationship === 'older';
+		const olderIdentity =
+			typeof payload?.release_identity === 'string'
+				? payload.release_identity
+				: '';
+		const olderTag =
+			typeof payload?.release_tag === 'string' ? payload.release_tag : '';
+		const olderNonce =
+			typeof payload?.older_release_nonce === 'string'
+				? payload.older_release_nonce
+				: '';
+		if (isOlder && (!olderIdentity || !olderTag || !olderNonce)) {
+			showSwitchPreflightError(form, null);
+			return;
+		}
 
 		const body = document.createElement('div');
 		body.className = 'ran-booster-switch-dialog';
@@ -1212,6 +1267,15 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (isOlder && !olderCheckbox?.checked) {
 				return;
 			}
+			if (getSelectedReleaseChannel(form) !== expectedChannel) {
+				if (typeof handle.close === 'function') {
+					handle.close();
+				} else {
+					handle.teardown?.();
+				}
+				host.remove();
+				return;
+			}
 			confirmButton.disabled = true;
 			cancelButton.disabled = true;
 			handle.teardown?.();
@@ -1219,14 +1283,31 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			setHiddenInput(form, 'confirm_switch', '1');
 			if (isOlder) {
 				setHiddenInput(form, 'confirm_older_release', '1');
+				setHiddenInput(
+					form,
+					'confirmed_older_release_identity',
+					olderIdentity
+				);
+				setHiddenInput(form, 'confirmed_older_release_tag', olderTag);
+				setHiddenInput(
+					form,
+					'confirmed_older_release_nonce',
+					olderNonce
+				);
 			} else {
 				removeHiddenInput(form, 'confirm_older_release');
+				removeHiddenInput(form, 'confirmed_older_release_identity');
+				removeHiddenInput(form, 'confirmed_older_release_tag');
+				removeHiddenInput(form, 'confirmed_older_release_nonce');
 			}
 			submitSwitchForm(form, submitter, true);
 		});
 	}
 
 	async function handleReleaseSwitchSubmit(event) {
+		if (event.defaultPrevented) {
+			return;
+		}
 		const form = event.target;
 		if (
 			!form?.matches?.(
@@ -1255,7 +1336,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			event.stopPropagation();
 			return;
 		}
-		if (submitter?.getAttribute('aria-disabled') === 'true') {
+		if (
+			submitter?.disabled ||
+			submitter?.getAttribute('aria-disabled') === 'true'
+		) {
 			event.preventDefault();
 			return;
 		}
@@ -1282,12 +1366,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		} catch {
 			nonces = {};
 		}
-		const checkedChannel =
-			form.querySelector('input[name="release_channel"]:checked') ||
-			document.querySelector(
-				'input[name="release_channel"][form="' + form.id + '"]:checked'
-			);
-		const channel = checkedChannel ? checkedChannel.value : 'stable';
+		const channel = getSelectedReleaseChannel(form);
 		const preflightNonce =
 			typeof nonces[channel] === 'string' ? nonces[channel] : '';
 		if (!preflightUrl || !preflightNonce) {
@@ -1315,8 +1394,17 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			_wpnonce: preflightNonce,
 		});
 
+		const lockedRadios = getReleaseChannelRadios(form).filter(
+			(radio) => !radio.disabled
+		);
+		lockedRadios.forEach((radio) => {
+			radio.disabled = true;
+		});
 		form.dataset.ranBoosterSwitchChecking = '1';
 		submitter?.setAttribute('aria-busy', 'true');
+
+		let failed = false;
+		let payload = null;
 		try {
 			const response = await window.fetch(preflightUrl, {
 				method: 'POST',
@@ -1327,18 +1415,37 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				},
 				body: body.toString(),
 			});
-			const payload = response.ok ? await response.json() : null;
-			if (!payload || payload.successful !== true) {
-				showSwitchPreflightError(form, payload?.data || null);
-				return;
-			}
-			openSwitchConfirmationDialog(form, submitter, payload.data || {});
+			payload = response.ok ? await response.json() : null;
 		} catch {
-			showSwitchPreflightError(form, null);
+			failed = true;
 		} finally {
+			lockedRadios.forEach((radio) => {
+				radio.disabled = false;
+			});
 			delete form.dataset.ranBoosterSwitchChecking;
 			submitter?.removeAttribute('aria-busy');
 		}
+
+		if (failed || !payload || payload.successful !== true) {
+			showSwitchPreflightError(form, payload?.data || null);
+			return;
+		}
+		const payloadChannel =
+			typeof payload.data?.channel === 'string'
+				? payload.data.channel
+				: '';
+		if (
+			getSelectedReleaseChannel(form) !== channel ||
+			(payloadChannel && payloadChannel !== channel)
+		) {
+			return;
+		}
+		openSwitchConfirmationDialog(
+			form,
+			submitter,
+			payload.data || {},
+			channel
+		);
 	}
 
 	function registerSwitchDialogHandler() {

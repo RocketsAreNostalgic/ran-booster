@@ -608,7 +608,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		int $expected_source_revision,
 		string $channel,
 		string $nonce,
-		bool $allow_older = false
+		string $confirmed_older_release_identity = '',
+		string $confirmed_older_release_tag = ''
 	): ReleaseTrackingResult {
 		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return ReleaseTrackingResult::failed(
@@ -627,12 +628,18 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return self::source_paused();
 		}
 		if ( PackageMutationGuard::file_mods_disabled() ) {
+			$this->schedule_native_recheck( $type );
+
 			return ReleaseTrackingResult::failed( 'policy_forced_off', 'Updates are turned off by this site configuration.' );
 		}
 		if ( DeploymentPolicy::DISABLED === $package->get_deployment_policy() ) {
+			$this->schedule_native_recheck( $type );
+
 			return ReleaseTrackingResult::failed( 'policy_disabled', 'Updates are disabled for this package.' );
 		}
 		if ( $this->github_hold_blocks_package( $package ) ) {
+			$this->schedule_native_recheck( $type );
+
 			return ReleaseTrackingResult::failed( 'native_hold', 'GitHub installs are currently on hold.' );
 		}
 		try {
@@ -673,6 +680,18 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					$preflight->detail_text()
 				);
 			}
+			$allow_older = false;
+			if ( '' !== $confirmed_older_release_identity || '' !== $confirmed_older_release_tag ) {
+				if ( '' === $confirmed_older_release_identity
+					|| '' === $confirmed_older_release_tag
+					|| ! hash_equals( $confirmed_older_release_identity, $preflight->release_identity() )
+					|| ! hash_equals( $confirmed_older_release_tag, $preflight->release_tag() ) ) {
+					$this->schedule_native_recheck( $type );
+
+					return ReleaseTrackingResult::failed( 'release_older', 'The eligible release changed after older-release confirmation.' );
+				}
+				$allow_older = true;
+			}
 			$package_root  = $eligibility->package_root();
 			$header_file   = $this->header_file( $type, $identifier );
 			$configuration = $this->configuration_for(
@@ -699,7 +718,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 						$this->registrar->withdraw_switch( $type, $identifier );
 					}
 					// The one-off offer may have displaced an ordinary one; WordPress rechecks on the next admin load.
-					add_action( 'shutdown', fn () => ( $this->invalidate_native )( $type ), PHP_INT_MAX, 0 );
+					$this->schedule_native_recheck( $type );
 				}
 			}
 			$code = match ( $installed ) {
@@ -727,6 +746,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		} catch ( Throwable ) {
 			return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
 		}
+	}
+
+	private function schedule_native_recheck( string $type ): void {
+		add_action( 'shutdown', fn () => ( $this->invalidate_native )( $type ), PHP_INT_MAX, 0 );
 	}
 
 

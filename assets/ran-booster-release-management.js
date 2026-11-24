@@ -878,6 +878,586 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		initializeManagedReleaseBrowserAfterSwap
 	);
 
+	const boundSwitchDocuments = new WeakSet();
+
+	function safeSameOriginUrl(rawUrl) {
+		if (typeof rawUrl !== 'string' || !rawUrl.trim()) {
+			return '';
+		}
+		try {
+			const base =
+				window.location?.href || 'https://example.invalid/wp-admin/';
+			const resolved = new URL(rawUrl, base);
+			if (
+				resolved.protocol !== 'http:' &&
+				resolved.protocol !== 'https:'
+			) {
+				return '';
+			}
+			if (
+				window.location?.origin &&
+				resolved.origin !== window.location.origin
+			) {
+				return '';
+			}
+			return rawUrl.startsWith('#') ? rawUrl : resolved.href;
+		} catch {
+			return '';
+		}
+	}
+
+	function setHiddenInput(form, name, value) {
+		let input = form.querySelector(
+			'input[type="hidden"][name="' + name + '"]'
+		);
+		if (!input) {
+			input = document.createElement('input');
+			input.type = 'hidden';
+			input.name = name;
+			form.appendChild(input);
+		}
+		input.value = value;
+	}
+
+	function removeHiddenInput(form, name) {
+		const input = form.querySelector(
+			'input[type="hidden"][name="' + name + '"]'
+		);
+		if (input) {
+			input.remove();
+		}
+	}
+
+	function submitSwitchForm(form, submitter, confirmed) {
+		if (confirmed) {
+			form.dataset.ranBoosterSwitchConfirmed = '1';
+		} else {
+			form.dataset.ranBoosterSwitchNativeFallback = '1';
+			removeHiddenInput(form, 'confirm_switch');
+			removeHiddenInput(form, 'confirm_older_release');
+			removeHiddenInput(form, 'confirmed_older_release_identity');
+			removeHiddenInput(form, 'confirmed_older_release_tag');
+			removeHiddenInput(form, 'confirmed_older_release_nonce');
+		}
+		if (typeof form.requestSubmit === 'function') {
+			if (
+				submitter &&
+				(submitter.form === form || form.contains?.(submitter))
+			) {
+				form.requestSubmit(submitter);
+			} else {
+				form.requestSubmit();
+			}
+			return;
+		}
+		form.submit();
+	}
+
+	function appendPreflightErrorContent(target, data, fallbackMessage) {
+		const template =
+			typeof data?.message_template === 'string'
+				? data.message_template
+				: '';
+		const linkLabel =
+			typeof data?.link_label === 'string' ? data.link_label : '';
+		const safeLinkUrl = safeSameOriginUrl(data?.link_url);
+		if (template && linkLabel && template.includes('%s')) {
+			const parts = template.split('%s');
+			target.appendChild(document.createTextNode(parts[0] || ''));
+			if (safeLinkUrl) {
+				const link = document.createElement('a');
+				link.href = safeLinkUrl;
+				link.textContent = linkLabel;
+				target.appendChild(link);
+			} else {
+				target.appendChild(document.createTextNode(linkLabel));
+			}
+			target.appendChild(
+				document.createTextNode(parts.slice(1).join('%s'))
+			);
+			return;
+		}
+		const message =
+			typeof data?.message === 'string' && data.message
+				? data.message
+				: fallbackMessage;
+		target.appendChild(document.createTextNode(message));
+	}
+
+	function hideSwitchPreflightError() {
+		const sharedNotice = document.getElementById(
+			'ran-booster-package-mutation-error'
+		);
+		if (sharedNotice) {
+			const primary = sharedNotice.querySelector(
+				'[data-ran-booster-ui-notice-primary]'
+			);
+			if (primary) {
+				primary.replaceChildren();
+			}
+			sharedNotice.hidden = true;
+		}
+		document
+			.querySelectorAll('[data-ran-booster-switch-preflight-error]')
+			.forEach(function (node) {
+				node.remove();
+			});
+	}
+
+	function showSwitchPreflightError(form, data) {
+		const { __ } = wp.i18n;
+		const fallback = __(
+			'Published releases could not be checked. No package was installed and no package settings were changed.',
+			'ran-booster'
+		);
+		const sharedNotice = document.getElementById(
+			'ran-booster-package-mutation-error'
+		);
+		if (sharedNotice) {
+			const primary = sharedNotice.querySelector(
+				'[data-ran-booster-ui-notice-primary]'
+			);
+			if (primary) {
+				primary.replaceChildren();
+				appendPreflightErrorContent(primary, data, fallback);
+				sharedNotice.hidden = false;
+				sharedNotice.scrollIntoView?.({ block: 'nearest' });
+				sharedNotice.focus?.();
+				return;
+			}
+		}
+
+		const switchBar = document.querySelector(
+			'[data-ran-booster-source-switch-bar="branch"]'
+		);
+		const host = switchBar?.parentNode || form.parentNode;
+		if (!host) {
+			return;
+		}
+		let notice;
+		let target;
+		if (typeof window.ranBoosterNotice?.create === 'function') {
+			const created = window.ranBoosterNotice.create('error', {
+				className: 'ran-booster-switch-preflight-error',
+				scope: 'global',
+			});
+			notice = created.host;
+			target = created.content;
+		} else {
+			notice = document.createElement('div');
+			target = notice;
+		}
+		notice.setAttribute('role', 'alert');
+		notice.setAttribute('tabindex', '-1');
+		notice.setAttribute('data-ran-booster-switch-preflight-error', '');
+		const paragraph = document.createElement('p');
+		appendPreflightErrorContent(paragraph, data, fallback);
+		target.appendChild(paragraph);
+		if (switchBar && switchBar.parentNode === host) {
+			switchBar.after(notice);
+		} else {
+			host.prepend(notice);
+		}
+		notice.focus?.();
+	}
+
+	function getReleaseChannelRadios(form) {
+		const seen = new Set();
+		const radios = [];
+		const add = (radio) => {
+			if (radio && !seen.has(radio)) {
+				seen.add(radio);
+				radios.push(radio);
+			}
+		};
+		form.querySelectorAll?.('input[name="release_channel"]').forEach(add);
+		if (form.id) {
+			document
+				.querySelectorAll?.(
+					'input[name="release_channel"][form="' + form.id + '"]'
+				)
+				.forEach(add);
+		}
+		return radios;
+	}
+
+	function getSelectedReleaseChannel(form) {
+		const checked =
+			form.querySelector?.('input[name="release_channel"]:checked') ||
+			(form.id
+				? document.querySelector?.(
+						'input[name="release_channel"][form="' +
+							form.id +
+							'"]:checked'
+					)
+				: null);
+		return checked ? checked.value : 'stable';
+	}
+
+	function openSwitchConfirmationDialog(
+		form,
+		submitter,
+		payload,
+		expectedChannel
+	) {
+		const { __, sprintf } = wp.i18n;
+		const installedVersion =
+			typeof payload?.installed_version === 'string'
+				? payload.installed_version
+				: '';
+		const releaseVersion =
+			typeof payload?.release_version === 'string'
+				? payload.release_version
+				: '';
+		const relationship =
+			typeof payload?.version_relationship === 'string'
+				? payload.version_relationship
+				: 'newer';
+		const isOlder = relationship === 'older';
+		const olderIdentity =
+			typeof payload?.release_identity === 'string'
+				? payload.release_identity
+				: '';
+		const olderTag =
+			typeof payload?.release_tag === 'string' ? payload.release_tag : '';
+		const olderNonce =
+			typeof payload?.older_release_nonce === 'string'
+				? payload.older_release_nonce
+				: '';
+		if (isOlder && (!olderIdentity || !olderTag || !olderNonce)) {
+			showSwitchPreflightError(form, null);
+			return;
+		}
+
+		const body = document.createElement('div');
+		body.className = 'ran-booster-switch-dialog';
+
+		const versions = document.createElement('p');
+		versions.className = 'ran-booster-switch-dialog__versions';
+		if (installedVersion && releaseVersion) {
+			versions.textContent = sprintf(
+				/* translators: 1: currently installed branch version, 2: published release version to install. */
+				__(
+					'Installed: %1$s from branch. Installing: release %2$s.',
+					'ran-booster'
+				),
+				installedVersion,
+				releaseVersion
+			);
+		} else if (releaseVersion) {
+			versions.textContent = sprintf(
+				/* translators: %s: published release version to install. */
+				__(
+					'Branch currently active. Installing: release %s.',
+					'ran-booster'
+				),
+				releaseVersion
+			);
+		} else {
+			versions.textContent = __(
+				'Branch currently active.',
+				'ran-booster'
+			);
+		}
+		body.appendChild(versions);
+
+		const databaseWarning = document.createElement('p');
+		databaseWarning.className = 'ran-booster-switch-dialog__database';
+		databaseWarning.textContent = __(
+			'Installs immediately. Switching to releases replaces the code, but it cannot roll back database changes. If this matters, have a recent database backup ready.',
+			'ran-booster'
+		);
+		body.appendChild(databaseWarning);
+
+		if (relationship === 'same') {
+			const sameNotice = document.createElement('p');
+			sameNotice.className = 'ran-booster-switch-dialog__note';
+			sameNotice.textContent = __(
+				'Same version: this replaces the branch build with the release.',
+				'ran-booster'
+			);
+			body.appendChild(sameNotice);
+		} else if (isOlder) {
+			const olderNotice = document.createElement('p');
+			olderNotice.className = 'ran-booster-switch-dialog__note';
+			olderNotice.textContent = __(
+				"This release is older than what's installed.",
+				'ran-booster'
+			);
+			body.appendChild(olderNotice);
+		}
+
+		let olderCheckbox = null;
+		if (isOlder) {
+			const consentLabel = document.createElement('label');
+			consentLabel.className = 'ran-booster-switch-dialog__consent';
+			olderCheckbox = document.createElement('input');
+			olderCheckbox.type = 'checkbox';
+			olderCheckbox.setAttribute(
+				'data-ran-booster-switch-older-consent',
+				''
+			);
+			const consentText = document.createElement('span');
+			consentText.textContent = __(
+				"I understand the database won't be rolled back.",
+				'ran-booster'
+			);
+			consentLabel.appendChild(olderCheckbox);
+			consentLabel.appendChild(consentText);
+			body.appendChild(consentLabel);
+		}
+
+		const footer = document.createElement('div');
+		footer.className = 'ran-booster-switch-dialog__actions';
+
+		const cancelButton = document.createElement('button');
+		cancelButton.type = 'button';
+		cancelButton.className =
+			'ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline';
+		cancelButton.setAttribute('data-ran-booster-switch-cancel', '');
+		cancelButton.textContent = __('Cancel', 'ran-booster');
+
+		const confirmButton = document.createElement('button');
+		confirmButton.type = 'button';
+		confirmButton.className =
+			'ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid';
+		confirmButton.setAttribute('data-ran-booster-switch-confirm', '');
+		confirmButton.textContent = __('Switch and install', 'ran-booster');
+		if (isOlder) {
+			confirmButton.disabled = true;
+		}
+		footer.appendChild(cancelButton);
+		footer.appendChild(confirmButton);
+
+		let host = form.querySelector('[data-ran-booster-switch-dialog-host]');
+		if (!host) {
+			host = document.createElement('div');
+			host.hidden = true;
+			host.setAttribute('data-ran-booster-switch-dialog-host', '');
+			form.appendChild(host);
+		}
+		host.replaceChildren(body, footer);
+
+		const handle = window.ranBoosterOpenDialog(submitter || form, body, {
+			title: __('Switch to releases?', 'ran-booster'),
+			size: 'medium',
+			footer,
+		});
+		if (!handle) {
+			host.remove();
+			submitSwitchForm(form, submitter, false);
+			return;
+		}
+
+		if (olderCheckbox) {
+			olderCheckbox.addEventListener('change', function () {
+				confirmButton.disabled = !olderCheckbox.checked;
+			});
+		}
+
+		cancelButton.addEventListener('click', function () {
+			if (typeof handle.close === 'function') {
+				handle.close();
+			} else {
+				handle.teardown?.();
+			}
+		});
+
+		confirmButton.addEventListener('click', function () {
+			if (isOlder && !olderCheckbox?.checked) {
+				return;
+			}
+			if (getSelectedReleaseChannel(form) !== expectedChannel) {
+				if (typeof handle.close === 'function') {
+					handle.close();
+				} else {
+					handle.teardown?.();
+				}
+				host.remove();
+				return;
+			}
+			confirmButton.disabled = true;
+			cancelButton.disabled = true;
+			handle.teardown?.();
+			host.remove();
+			setHiddenInput(form, 'confirm_switch', '1');
+			if (isOlder) {
+				setHiddenInput(form, 'confirm_older_release', '1');
+				setHiddenInput(
+					form,
+					'confirmed_older_release_identity',
+					olderIdentity
+				);
+				setHiddenInput(form, 'confirmed_older_release_tag', olderTag);
+				setHiddenInput(
+					form,
+					'confirmed_older_release_nonce',
+					olderNonce
+				);
+			} else {
+				removeHiddenInput(form, 'confirm_older_release');
+				removeHiddenInput(form, 'confirmed_older_release_identity');
+				removeHiddenInput(form, 'confirmed_older_release_tag');
+				removeHiddenInput(form, 'confirmed_older_release_nonce');
+			}
+			submitSwitchForm(form, submitter, true);
+		});
+	}
+
+	async function handleReleaseSwitchSubmit(event) {
+		if (event.defaultPrevented) {
+			return;
+		}
+		const form = event.target;
+		if (
+			!form?.matches?.(
+				'.ran-booster-release-switch-form[data-ran-booster-switch-preflight-url]'
+			)
+		) {
+			return;
+		}
+
+		if (form.dataset.ranBoosterSwitchConfirmed === '1') {
+			delete form.dataset.ranBoosterSwitchConfirmed;
+			return;
+		}
+		if (form.dataset.ranBoosterSwitchNativeFallback === '1') {
+			delete form.dataset.ranBoosterSwitchNativeFallback;
+			return;
+		}
+
+		const submitter =
+			event.submitter ||
+			document.querySelector(
+				'[data-ran-booster-use-releases][form="' + form.id + '"]'
+			);
+		if (form.dataset.ranBoosterSwitchChecking === '1') {
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+		if (
+			submitter?.disabled ||
+			submitter?.getAttribute('aria-disabled') === 'true'
+		) {
+			event.preventDefault();
+			return;
+		}
+		if (
+			typeof window.ranBoosterOpenDialog !== 'function' ||
+			typeof window.fetch !== 'function'
+		) {
+			return;
+		}
+
+		const preflightUrl =
+			form.getAttribute('data-ran-booster-switch-preflight-url') || '';
+		const preflightAction =
+			form.getAttribute('data-ran-booster-switch-preflight-action') ||
+			'ran_booster_release_switch_preflight';
+		let nonces = {};
+		try {
+			nonces =
+				JSON.parse(
+					form.getAttribute(
+						'data-ran-booster-switch-preflight-nonces'
+					) || '{}'
+				) || {};
+		} catch {
+			nonces = {};
+		}
+		const channel = getSelectedReleaseChannel(form);
+		const preflightNonce =
+			typeof nonces[channel] === 'string' ? nonces[channel] : '';
+		if (!preflightUrl || !preflightNonce) {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopPropagation();
+		hideSwitchPreflightError();
+
+		const type =
+			form.querySelector('input[name="expected_type"]')?.value || '';
+		const identifier =
+			form.querySelector('input[name="expected_identifier"]')?.value ||
+			'';
+		const revision =
+			form.querySelector('input[name="expected_source_revision"]')
+				?.value || '';
+		const body = new URLSearchParams({
+			action: preflightAction,
+			expected_type: type,
+			expected_identifier: identifier,
+			expected_source_revision: revision,
+			release_channel: channel,
+			_wpnonce: preflightNonce,
+		});
+
+		const lockedRadios = getReleaseChannelRadios(form).filter(
+			(radio) => !radio.disabled
+		);
+		lockedRadios.forEach((radio) => {
+			radio.disabled = true;
+		});
+		form.dataset.ranBoosterSwitchChecking = '1';
+		submitter?.setAttribute('aria-busy', 'true');
+
+		let failed = false;
+		let payload = null;
+		try {
+			const response = await window.fetch(preflightUrl, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: {
+					'Content-Type':
+						'application/x-www-form-urlencoded; charset=UTF-8',
+				},
+				body: body.toString(),
+			});
+			payload = response.ok ? await response.json() : null;
+		} catch {
+			failed = true;
+		} finally {
+			lockedRadios.forEach((radio) => {
+				radio.disabled = false;
+			});
+			delete form.dataset.ranBoosterSwitchChecking;
+			submitter?.removeAttribute('aria-busy');
+		}
+
+		if (failed || !payload || payload.successful !== true) {
+			showSwitchPreflightError(form, payload?.data || null);
+			return;
+		}
+		const payloadChannel =
+			typeof payload.data?.channel === 'string'
+				? payload.data.channel
+				: '';
+		if (
+			getSelectedReleaseChannel(form) !== channel ||
+			(payloadChannel && payloadChannel !== channel)
+		) {
+			return;
+		}
+		openSwitchConfirmationDialog(
+			form,
+			submitter,
+			payload.data || {},
+			channel
+		);
+	}
+
+	function registerSwitchDialogHandler() {
+		if (!document || boundSwitchDocuments.has(document)) {
+			return;
+		}
+		boundSwitchDocuments.add(document);
+		document.addEventListener('submit', handleReleaseSwitchSubmit, true);
+	}
+
+	registerSwitchDialogHandler();
+
 	const managedBrowser = document.querySelector(
 		'[data-ran-booster-managed-release-browser]'
 	);

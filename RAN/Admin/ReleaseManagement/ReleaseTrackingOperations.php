@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 
 /** @internal Owns ordinary release status reads and exact typed release mutations. */
@@ -57,10 +58,14 @@ final class ReleaseTrackingOperations {
 		return $out;
 	}
 
+	public function preflight( string $type, string $identifier, int $revision, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
+		return $this->releases->preflight( $type, $identifier, $revision, $channel, $nonce );
+	}
+
 	/** @return array{type:string,identifier:string,code:string,successful:bool,reason?:string,check_reason?:string,detail?:string} */
-	public function execute( string $operation, string $type, string $identifier, int $revision, string $channel, string $nonce ): array {
+	public function execute( string $operation, string $type, string $identifier, int $revision, string $channel, string $nonce, string $confirmed_older_release_identity = '', string $confirmed_older_release_tag = '' ): array {
 		$result = match ( $operation ) {
-			'enable' => $this->releases->enable( $type, $identifier, $revision, $channel, $nonce ),
+			'enable' => $this->releases->enable( $type, $identifier, $revision, $channel, $nonce, $confirmed_older_release_identity, $confirmed_older_release_tag ),
 			'change_channel' => $this->releases->change_channel( $type, $identifier, $revision, $channel, $nonce ),
 			'refresh' => $this->releases->refresh( $type, $identifier, $revision, $nonce ),
 			'return_to_branch' => $this->releases->return_to_branch( $type, $identifier, $revision, $nonce ),
@@ -93,14 +98,54 @@ final class ReleaseTrackingOperations {
 
 	/**
 	 * The switch to Releases commits at the end of its own request, after the reply, so its success is decided where it is shown:
-	 * only a package read back on Releases is reported enabled; otherwise the outcome is not yet confirmed.
+	 * only a package read back on Releases is reported enabled; otherwise any active native hold or unconfirmed outcome is reported.
 	 *
+	 * @param array<string, mixed>|null $native_hold Active GitHub native hold metadata, when present.
 	 * @return array{0: string, 1: bool} Code and success for display.
 	 */
-	public static function settled( string $code, bool $successful, ?ReleaseTrackingStatus $status ): array {
-		return 'release_enabled' === $code && \RAN\PackageSource::RELEASE_ASSET->value !== $status?->source()
-			? array( 'management_state_uncertain', false )
-			: array( $code, $successful );
+	public static function settled(
+		string $code,
+		bool $successful,
+		?ReleaseTrackingStatus $status,
+		?array $native_hold = null,
+		string $type = '',
+		string $identifier = ''
+	): array {
+		if ( in_array( $code, array( 'release_enabled', 'switch_uncertain' ), true ) ) {
+			if ( null !== $status && \RAN\PackageSource::RELEASE_ASSET->value === $status->source() ) {
+				return array( 'release_enabled', true );
+			}
+			if ( null !== $native_hold ) {
+				return self::hold_belongs_to_package( $native_hold, $status, $type, $identifier )
+					? array( 'switch_held', false )
+					: array( 'switch_other_held', false );
+			}
+
+			return array( 'switch_not_confirmed', false );
+		}
+
+		if ( in_array( $code, array( 'switch_failed', 'native_hold' ), true ) ) {
+			if ( null !== $native_hold ) {
+				return self::hold_belongs_to_package( $native_hold, $status, $type, $identifier )
+					? array( 'switch_held', false )
+					: array( 'switch_other_held', false );
+			}
+
+			return array( 'switch_failed_unchanged', false );
+		}
+
+		return array( $code, $successful );
+	}
+
+	/** @param array<string, mixed> $native_hold */
+	private static function hold_belongs_to_package( array $native_hold, ?ReleaseTrackingStatus $status, string $type, string $identifier ): bool {
+		$package_type       = $status?->type() ?? $type;
+		$package_identifier = $status?->identifier() ?? $identifier;
+
+		return '' !== $package_type
+			&& '' !== $package_identifier
+			&& ( $native_hold['type'] ?? null ) === $package_type
+			&& ( $native_hold['identifier'] ?? null ) === $package_identifier;
 	}
 
 	private function matches( ReleaseTrackingStatus $status, string $type, string $identifier, int $revision ): bool {

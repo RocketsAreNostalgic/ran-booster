@@ -104,7 +104,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			'same' => array( 'release_enabled', '1.0.0', true, false ),
 			'newer', 'active', 'compete' => array( 'release_enabled', '2.0.0', true, false ),
 			'older' => array( 'release_older', '1.0.0', false, false ),
-			'disabled' => array( 'policy_blocked', '1.0.0', false, false ),
+			'disabled' => array( 'policy_disabled', '1.0.0', false, false ),
 			'failed-download', 'offer-removed' => array( 'wordpress_failed', '1.0.0', false, false ),
 			'failed-install' => array( 'wordpress_failed', '1.0.0', false, true ),
 			// The reply precedes the shutdown commit, which the repository conflict refuses.
@@ -419,8 +419,14 @@ final class RAN_Booster_ReleaseSwitchProof {
 			// The page the administrator lands on settles the reply against the stored source: enabled only when committed.
 			add_filter( 'pre_http_request', $this->http( ... ), PHP_INT_MIN, 3 );
 			$status = $container->make( NativeReleaseTrackingFacade::class )->status( $this->kind, $this->identity );
-			if ( RAN\Admin\ReleaseManagement\ReleaseTrackingOperations::settled( $reply, true, $status ) !== ( $switched ? array( 'release_enabled', true ) : array( 'management_state_uncertain', false ) ) ) {
+			if ( RAN\Admin\ReleaseManagement\ReleaseTrackingOperations::settled( $reply, true, $status ) !== ( $switched ? array( 'release_enabled', true ) : array( 'switch_not_confirmed', false ) ) ) {
 				throw new RuntimeException( 'The landing page would misreport the switch.' );
+			}
+			if ( ! $switched ) {
+				$hold = $container->make( RAN\Admin\ProviderSettingsPresenter::class )->native_hold();
+				if ( RAN\Admin\ReleaseManagement\ReleaseTrackingOperations::settled( $reply, true, $status, $hold, $this->kind, $this->identity ) !== array( 'switch_held', false ) ) {
+					throw new RuntimeException( 'The landing page would misreport a held switch.' );
+				}
 			}
 		}
 		$this->assert_files( $version, $this->published_after_switch(), $this->directory );

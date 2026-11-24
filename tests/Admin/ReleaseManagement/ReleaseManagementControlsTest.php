@@ -68,6 +68,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 				'admin_post_ran_booster_release_install',
 				'wp_ajax_ran_booster_release_list_candidates',
 				'wp_ajax_ran_booster_release_inspect',
+				'wp_ajax_ran_booster_release_switch_preflight',
 				'wp_ajax_ran_booster_managed_release_list_candidates',
 				'wp_ajax_ran_booster_managed_release_inspect',
 			),
@@ -148,6 +149,21 @@ final class ReleaseManagementControlsTest extends TestCase {
 		);
 	}
 
+	public function test_package_pages_enqueue_dialog_dependency_only_outside_creation_pages(): void {
+		$controls = ReleaseManagementFixture::controls();
+		foreach ( array( 'ran-booster-plugins', 'ran-booster-themes' ) as $page ) {
+			ReleaseManagementFixture::reset_word_press();
+			$_GET['page'] = $page; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen fixture.
+
+			$controls->enqueue_prospective_assets();
+
+			self::assertSame(
+				array( 'ran-booster-packages', 'wp-i18n', 'ran-booster-dialog' ),
+				$GLOBALS['ran_booster_release_management_test_scripts']['ran-booster-release-management']['dependencies']
+			);
+		}
+	}
+
 	public function test_documentation_is_core_owned_and_contains_no_retired_product_names(): void {
 		$controls = ReleaseManagementFixture::controls();
 		$sections = $controls->filter_documentation_sections( array(), 'https://example.test/docs', 'site' );
@@ -162,6 +178,9 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertSame( 'ran-booster-documentation-published-releases', $sections[0]['id'] );
 		self::assertSame( 'Releases', $sections[0]['summary'] );
 		self::assertStringContainsString( 'choose Releases, review Release readiness, then choose Use releases', $html );
+		self::assertStringContainsString( 'Booster checks and installs the release in one step; viewing settings changes nothing.', $html );
+		self::assertStringContainsString( 'Updates set to Disabled can&#039;t switch to releases', $html );
+		self::assertStringContainsString( 'release the hold', $html );
 		self::assertStringContainsString( 'Use Check releases on the managed Plugins or Themes screen', $html );
 		self::assertStringNotContainsString( 'Release Deployments', $html );
 		self::assertStringNotContainsString( 'ran-booster-release-deployments', $html );

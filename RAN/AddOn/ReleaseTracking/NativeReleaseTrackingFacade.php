@@ -8,6 +8,7 @@ use RAN\UpdaterSupport\V1\PackageDirectory;
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\PackageMutationGuard;
 use RAN\Deployment\PackageSourceGate;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
@@ -78,7 +79,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** The default read-only check is throttled; an injected one is not. */
 	private bool $check_cooldown;
 
-	/** @var \Closure(string, string, string, string): string */
+	/** @var \Closure(string, string, string, string, bool): string */
 	private \Closure $switch_install;
 
 	/**
@@ -89,7 +90,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(string): void|null         $invalidate_native
 	 * @param callable(string): ?string|null      $public_lookup_profile
 	 * @param callable(string, string): mixed|null $check_without_offer
-	 * @param callable(string, string, string, string): string|null $switch_install Offers one exact release and runs WordPress's upgrader for it.
+	 * @param callable(string, string, string, string, bool): string|null $switch_install Offers one exact release and runs WordPress's upgrader for it.
 	 */
 	public function __construct(
 		private PluginRepository $plugins,
@@ -606,7 +607,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $identifier,
 		int $expected_source_revision,
 		string $channel,
-		string $nonce
+		string $nonce,
+		string $confirmed_older_release_identity = '',
+		string $confirmed_older_release_tag = ''
 	): ReleaseTrackingResult {
 		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return ReleaseTrackingResult::failed(
@@ -623,6 +626,21 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) ) {
 			return self::source_paused();
+		}
+		if ( PackageMutationGuard::file_mods_disabled() ) {
+			$this->schedule_native_recheck( $type );
+
+			return ReleaseTrackingResult::failed( 'policy_forced_off', 'Updates are turned off by this site configuration.' );
+		}
+		if ( DeploymentPolicy::DISABLED === $package->get_deployment_policy() ) {
+			$this->schedule_native_recheck( $type );
+
+			return ReleaseTrackingResult::failed( 'policy_disabled', 'Updates are disabled for this package.' );
+		}
+		if ( $this->github_hold_blocks_package( $package ) ) {
+			$this->schedule_native_recheck( $type );
+
+			return ReleaseTrackingResult::failed( 'native_hold', 'GitHub installs are currently on hold.' );
 		}
 		try {
 			$availability = $this->release_source_available( $type, $package );
@@ -662,6 +680,18 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					$preflight->detail_text()
 				);
 			}
+			$allow_older = false;
+			if ( '' !== $confirmed_older_release_identity || '' !== $confirmed_older_release_tag ) {
+				if ( '' === $confirmed_older_release_identity
+					|| '' === $confirmed_older_release_tag
+					|| ! hash_equals( $confirmed_older_release_identity, $preflight->release_identity() )
+					|| ! hash_equals( $confirmed_older_release_tag, $preflight->release_tag() ) ) {
+					$this->schedule_native_recheck( $type );
+
+					return ReleaseTrackingResult::failed( 'release_older', 'The eligible release changed after older-release confirmation.' );
+				}
+				$allow_older = true;
+			}
 			$package_root  = $eligibility->package_root();
 			$header_file   = $this->header_file( $type, $identifier );
 			$configuration = $this->configuration_for(
@@ -678,7 +708,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			$installed = 'failed';
 			try {
-				$installed = ( $this->switch_install )( $type, $identifier, $preflight->release_identity(), $preflight->release_tag() );
+				$installed = ( $this->switch_install )( $type, $identifier, $preflight->release_identity(), $preflight->release_tag(), $allow_older );
 			} catch ( Throwable ) {
 				// WordPress may already have installed: the permit stays, so the updater's verification at shutdown decides the source.
 				$installed = 'uncertain';
@@ -688,7 +718,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 						$this->registrar->withdraw_switch( $type, $identifier );
 					}
 					// The one-off offer may have displaced an ordinary one; WordPress rechecks on the next admin load.
-					add_action( 'shutdown', fn () => ( $this->invalidate_native )( $type ), PHP_INT_MAX, 0 );
+					$this->schedule_native_recheck( $type );
 				}
 			}
 			$code = match ( $installed ) {
@@ -697,7 +727,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				'uncertain' => 'management_state_uncertain',
 				'unsupported', 'runtime_busy', 'filesystem_unavailable', 'discovery_not_admitted', 'offer_token_unavailable', 'runtime_liveness_lost' => 'service_unavailable',
 				'release_older' => 'release_older',
-				'policy_disabled', 'policy_forced_off' => 'policy_blocked',
+				'policy_disabled' => 'policy_disabled',
+				'policy_forced_off' => 'policy_forced_off',
 				default => 'release_unavailable',
 			};
 			BoosterLogger::log(
@@ -715,6 +746,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		} catch ( Throwable ) {
 			return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
 		}
+	}
+
+	private function schedule_native_recheck( string $type ): void {
+		add_action( 'shutdown', fn () => ( $this->invalidate_native )( $type ), PHP_INT_MAX, 0 );
 	}
 
 
@@ -1053,9 +1088,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 *
 	 * @return string 'installed', 'failed', 'unsupported', or the updater's refusal code.
 	 */
-	private static function install_release( string $type, string $identifier, string $release_identity, string $tag ): string {
+	private static function install_release( string $type, string $identifier, string $release_identity, string $tag, bool $allow_older = false ): string {
+		$extra = true === $allow_older ? array( true ) : array();
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented exact-release filter.
-		$offer = apply_filters( 'ran_wp_release_updater_offer_release_v1', null, $type, $identifier, $release_identity, $tag );
+		$offer = apply_filters( 'ran_wp_release_updater_offer_release_v1', null, $type, $identifier, $release_identity, $tag, ...$extra );
 		if ( ! is_array( $offer ) || ! is_string( $offer['code'] ?? null ) || '' === $offer['code'] ) {
 			return 'unsupported';
 		}
@@ -1237,6 +1273,23 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			: '';
 
 		return $update_uri;
+	}
+
+	private function github_hold_blocks_package( Package $package ): bool {
+		if ( null === $this->github_selection ) {
+			return false;
+		}
+		$status = $this->github_selection->status();
+		if ( 'recovery_required' !== ( $status['state'] ?? null ) ) {
+			return false;
+		}
+		$expectation = $this->github_selection->expectation();
+		$provider    = is_array( $expectation ) ? ( $expectation['provider_code'] ?? null ) : null;
+		if ( ! is_string( $provider ) || '' === $provider ) {
+			return true;
+		}
+
+		return $package->get_provider_code() === $provider;
 	}
 
 	private function header_file( string $type, string $identifier ): string {

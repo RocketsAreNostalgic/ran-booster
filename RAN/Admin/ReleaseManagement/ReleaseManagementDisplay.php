@@ -23,6 +23,7 @@ final class ReleaseManagementDisplay {
 	/**
 	 * @param array<string,string> $nonce_actions
 	 * @param list<array{name:string,url:string,type:string,view_all?:bool}> $repository_conflict
+	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string}|null $switch_confirmation
 	 */
 	public function render_settings(
 		object $package,
@@ -32,7 +33,9 @@ final class ReleaseManagementDisplay {
 		array $nonce_actions = array(),
 		bool $eligibility_recheck = false,
 		string $operation_notice_html = '',
-		array $repository_conflict = array()
+		array $repository_conflict = array(),
+		bool $updates_forced_off = false,
+		?array $switch_confirmation = null
 	): void {
 		if ( ! $this->is_projection( $package ) ) {
 			return;
@@ -86,6 +89,15 @@ final class ReleaseManagementDisplay {
 				|| ( 'branch' === $source && 'release_unavailable' === $failure_code ) );
 		$repository_blocked        = $repository_conflict_code || $repository_source_blocked;
 		$track_disabled            = null === $track_nonce_action || $repository_blocked;
+		$policy_disabled           = $status_available && 'branch' === $source && 'disabled' === $status->deployment_policy();
+		$switch_blocked            = $track_disabled || $updates_forced_off || $policy_disabled;
+		$preflight_nonces          = array(
+			'stable'     => (string) ( $nonce_actions['preflight_stable'] ?? '' ),
+			'prerelease' => (string) ( $nonce_actions['preflight_prerelease'] ?? '' ),
+		);
+		$preflight_action          = ! $switch_blocked && 'branch' === $source && '' !== $preflight_nonces['stable'] && '' !== $preflight_nonces['prerelease']
+			? 'ran_booster_release_switch_preflight'
+			: null;
 		$repository_status_heading = $repository_source_blocked ? __( 'Storage unavailable', 'ran-booster' ) : __( 'Repository shared', 'ran-booster' );
 		$automatic_policy          = $status_available && 'automatic' === $status->deployment_policy();
 		$recheck_enabled           = $status_available && 'branch' === $source && null === $track_nonce_action;
@@ -158,7 +170,10 @@ final class ReleaseManagementDisplay {
 					</div>
 				<?php } ?>
 				<?php if ( 'branch' === $source ) { ?>
-					<?php $this->render_use_releases_bar( $track_disabled, $release_track_summary, $track_form_id ); ?>
+					<?php $this->render_use_releases_bar( $track_disabled, $release_track_summary, $track_form_id, $updates_forced_off, $policy_disabled ); ?>
+					<?php if ( null !== $switch_confirmation && null !== $track_nonce_action && ! $switch_blocked ) { ?>
+						<?php $this->render_switch_confirmation( $package, $switch_confirmation, $track_nonce_action, $release_view_url ); ?>
+					<?php } ?>
 					<?php if ( $automatic_policy ) { ?>
 						<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 							<p><?php esc_html_e( 'Switching resets Automatic to Manual. Existing repository webhook configuration is unchanged.', 'ran-booster' ); ?></p>
@@ -280,7 +295,7 @@ final class ReleaseManagementDisplay {
 				</small>
 			</summary>
 			<div data-ran-booster-ui-disclosure-content class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">
-				<?php $this->render_release_track_settings( $track_mode, $track_disabled, $selected_channel, $package, $track_nonce_action, $track_form_id ); ?>
+				<?php $this->render_release_track_settings( $track_mode, $track_disabled, $selected_channel, $package, $track_nonce_action, $track_form_id, $preflight_action, $preflight_nonces ); ?>
 				<?php $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled ); ?>
 			</div>
 		</details></div>
@@ -292,18 +307,92 @@ final class ReleaseManagementDisplay {
 	 * on the left, one action at the end. The action keeps its association with
 	 * the release track form, which lives further down the pane.
 	 */
-	private function render_use_releases_bar( bool $unavailable, string $track_label, string $track_form_id ): void {
+	private function render_use_releases_bar(
+		bool $unavailable,
+		string $track_label,
+		string $track_form_id,
+		bool $updates_forced_off = false,
+		bool $policy_disabled = false
+	): void {
 		/* translators: %s is the selected release track, Stable or Preview. */
 		$eligible_template   = __( 'Branch currently active. Switch to releases using the %s track.', 'ran-booster' );
 		$unavailable_message = __( 'Releases aren’t ready. Fix the readiness checks below.', 'ran-booster' );
-		$reason_id           = 'ran-booster-release-use-releases-reason';
+		$summary_text        = sprintf( $eligible_template, $track_label );
+		$tooltip_text        = __( 'Available once the readiness checks pass.', 'ran-booster' );
+		$blocked             = $unavailable || $updates_forced_off || $policy_disabled;
+		if ( $unavailable ) {
+			$summary_text = $unavailable_message;
+		} elseif ( $updates_forced_off ) {
+			$summary_text        = __( 'Updates are turned off by this site\'s configuration, so this package can\'t switch to releases.', 'ran-booster' );
+			$unavailable_message = $summary_text;
+			$tooltip_text        = $summary_text;
+		} elseif ( $policy_disabled ) {
+			$summary_text        = __( 'Updates are disabled for this package. Set Updates to Manual to switch.', 'ran-booster' );
+			$unavailable_message = $summary_text;
+			$tooltip_text        = $summary_text;
+		}
+		$reason_id = 'ran-booster-release-use-releases-reason';
 		?>
 		<div class="ran-booster-source-switch-bar ran-booster-release-switch-actions" data-ran-booster-source-switch-bar="branch">
-			<p class="ran-booster-release-switch-actions__summary" data-ran-booster-use-releases-summary="<?php echo esc_attr( $eligible_template ); ?>" data-ran-booster-use-releases-summary-unavailable="<?php echo esc_attr( $unavailable_message ); ?>"><?php echo esc_html( $unavailable ? $unavailable_message : sprintf( $eligible_template, $track_label ) ); ?></p>
-			<span class="ran-booster-reason-tooltip"<?php echo $unavailable ? ' data-ran-booster-reason-tooltip' : ''; ?>>
-				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Switching…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Switching to published releases. This can take a few seconds.', 'ran-booster' ) ); ?>" form="<?php echo esc_attr( $track_form_id ); ?>" data-ran-booster-use-releases data-ran-booster-use-releases-ready="<?php echo $unavailable ? 'false' : 'true'; ?>" aria-disabled="<?php echo $unavailable ? 'true' : 'false'; ?>"<?php echo $unavailable ? ' aria-describedby="' . esc_attr( $reason_id ) . '"' : ''; ?>><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
-				<span id="<?php echo esc_attr( $reason_id ); ?>" class="ran-booster-reason-tooltip__bubble" role="tooltip" data-ran-booster-use-releases-reason hidden><?php esc_html_e( 'Available once the readiness checks pass.', 'ran-booster' ); ?></span>
+			<p class="ran-booster-release-switch-actions__summary" data-ran-booster-use-releases-summary="<?php echo esc_attr( $eligible_template ); ?>" data-ran-booster-use-releases-summary-unavailable="<?php echo esc_attr( $unavailable_message ); ?>"><?php echo esc_html( $summary_text ); ?></p>
+			<span class="ran-booster-reason-tooltip"<?php echo $blocked ? ' data-ran-booster-reason-tooltip' : ''; ?>>
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Switching…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Switching to published releases. This can take a few seconds.', 'ran-booster' ) ); ?>" form="<?php echo esc_attr( $track_form_id ); ?>" data-ran-booster-use-releases data-ran-booster-use-releases-ready="<?php echo $blocked ? 'false' : 'true'; ?>" aria-disabled="<?php echo $blocked ? 'true' : 'false'; ?>"<?php echo $blocked ? ' aria-describedby="' . esc_attr( $reason_id ) . '"' : ''; ?>><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
+				<span id="<?php echo esc_attr( $reason_id ); ?>" class="ran-booster-reason-tooltip__bubble" role="tooltip" data-ran-booster-use-releases-reason hidden><?php echo esc_html( $tooltip_text ); ?></span>
 			</span>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Inline fallback confirmation step when the switch runs without JavaScript.
+	 *
+	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity?:string,release_tag?:string,older_release_nonce?:string} $confirmation
+	 */
+	private function render_switch_confirmation(
+		PackageDisplayProjection $package,
+		array $confirmation,
+		string $nonce_action,
+		string $cancel_url
+	): void {
+		$installed    = $this->bounded_string( $confirmation['installed_version'], 64 );
+		$release      = $this->bounded_string( $confirmation['release_version'], 64 );
+		$relationship = $confirmation['relationship'];
+		$version_line = '' !== $installed && '' !== $release
+			/* translators: 1: currently installed branch version, 2: published release version to install. */
+			? sprintf( __( 'Installed: %1$s from branch. Installing: release %2$s.', 'ran-booster' ), $installed, $release )
+			: ( '' !== $release
+				/* translators: %s: published release version to install. */
+				? sprintf( __( 'Branch currently active. Installing: release %s.', 'ran-booster' ), $release )
+				: __( 'Branch currently active.', 'ran-booster' ) );
+		?>
+		<div class="ran-booster-switch-confirmation" data-ran-booster-switch-confirmation role="region" aria-labelledby="ran-booster-switch-confirmation-heading">
+			<h4 id="ran-booster-switch-confirmation-heading" class="ran-booster-switch-confirmation__title"><?php esc_html_e( 'Switch to releases?', 'ran-booster' ); ?></h4>
+			<p class="ran-booster-switch-confirmation__versions"><?php echo esc_html( $version_line ); ?></p>
+			<p class="ran-booster-switch-confirmation__database"><?php esc_html_e( 'Installs immediately. Switching to releases replaces the code, but it cannot roll back database changes. If this matters, have a recent database backup ready.', 'ran-booster' ); ?></p>
+			<?php if ( 'same' === $relationship ) { ?>
+				<p class="ran-booster-switch-confirmation__note"><?php esc_html_e( 'Same version: this replaces the branch build with the release.', 'ran-booster' ); ?></p>
+			<?php } elseif ( 'older' === $relationship ) { ?>
+				<p class="ran-booster-switch-confirmation__note"><?php esc_html_e( 'This release is older than what\'s installed.', 'ran-booster' ); ?></p>
+			<?php } ?>
+			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="ran-booster-switch-confirmation__form" data-ran-booster-source-transition data-ran-booster-package-mutation>
+				<?php $this->admin_post_fields( 'enable', $package, $nonce_action ); ?>
+				<input type="hidden" name="release_channel" value="<?php echo esc_attr( $confirmation['channel'] ); ?>">
+				<input type="hidden" name="confirm_switch" value="1">
+				<?php if ( 'older' === $relationship ) { ?>
+					<input type="hidden" name="confirmed_older_release_identity" value="<?php echo esc_attr( (string) ( $confirmation['release_identity'] ?? '' ) ); ?>">
+					<input type="hidden" name="confirmed_older_release_tag" value="<?php echo esc_attr( (string) ( $confirmation['release_tag'] ?? '' ) ); ?>">
+					<input type="hidden" name="confirmed_older_release_nonce" value="<?php echo esc_attr( (string) ( $confirmation['older_release_nonce'] ?? '' ) ); ?>">
+					<label class="ran-booster-switch-confirmation__consent">
+						<input type="checkbox" name="confirm_older_release" value="1" required>
+						<span><?php esc_html_e( 'I understand the database won\'t be rolled back.', 'ran-booster' ); ?></span>
+					</label>
+				<?php } ?>
+				<div class="ran-booster-switch-confirmation__actions">
+					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Switching…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Switching to published releases. This can take a few seconds.', 'ran-booster' ) ); ?>"><?php esc_html_e( 'Switch and install', 'ran-booster' ); ?></button>
+					<a href="<?php echo esc_url( $cancel_url . '#ran-booster-advanced-source-settings' ); ?>" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'neutral', 'outline', false, true ) ); ?>"><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></a>
+				</div>
+				<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
+			</form>
 		</div>
 		<?php
 	}
@@ -424,6 +513,7 @@ final class ReleaseManagementDisplay {
 	 * @param array<string,string> $nonce_actions
 	 * @param array{providers?:list<string>,list_candidates?:string,inspect?:string,install?:string} $prospective
 	 * @param list<array{name:string,url:string,type:string,view_all?:bool}> $repository_conflict
+	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity?:string,release_tag?:string,older_release_nonce?:string}|null $switch_confirmation
 	 */
 	public function render_advanced_source_section(
 		string $mode,
@@ -437,7 +527,9 @@ final class ReleaseManagementDisplay {
 		array $prospective = array(),
 		bool $eligibility_recheck = false,
 		string $operation_notice_html = '',
-		array $repository_conflict = array()
+		array $repository_conflict = array(),
+		bool $updates_forced_off = false,
+		?array $switch_confirmation = null
 	): void {
 		if ( ! in_array( $mode, array( 'create', 'edit' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
@@ -453,7 +545,7 @@ final class ReleaseManagementDisplay {
 
 		if ( 'release_asset' === $selected_source ) {
 
-			$this->render_settings( $package, $status, $page_url, $selected_channel, $nonce_actions, $eligibility_recheck, $operation_notice_html, $repository_conflict );
+			$this->render_settings( $package, $status, $page_url, $selected_channel, $nonce_actions, $eligibility_recheck, $operation_notice_html, $repository_conflict, $updates_forced_off, $switch_confirmation );
 
 		} elseif ( 'branch' === $selected_source && $this->is_projection( $package ) ) {
 			if ( 'release_asset' === $package->source() ) {
@@ -581,10 +673,28 @@ final class ReleaseManagementDisplay {
 		return 'unsupported_provider' !== $status->eligibility()->code();
 	}
 
-	private function render_release_track_settings( string $mode, bool $disabled, ?string $selected_channel, PackageDisplayProjection $package, ?string $nonce_action, string $form_id ): void {
-		$has_mutation = ! $disabled && null !== $nonce_action;
+	/** @param array{stable:string,prerelease:string} $preflight_nonces */
+	private function render_release_track_settings(
+		string $mode,
+		bool $disabled,
+		?string $selected_channel,
+		PackageDisplayProjection $package,
+		?string $nonce_action,
+		string $form_id,
+		?string $preflight_action = null,
+		array $preflight_nonces = array(
+			'stable'     => '',
+			'prerelease' => '',
+		)
+	): void {
+		$has_mutation  = ! $disabled && null !== $nonce_action;
+		$has_preflight = 'branch' === $mode
+			&& $has_mutation
+			&& null !== $preflight_action
+			&& '' !== $preflight_nonces['stable']
+			&& '' !== $preflight_nonces['prerelease'];
 		?>
-		<form id="<?php echo esc_attr( $form_id ); ?>" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="<?php echo esc_attr( 'branch' === $mode ? 'ran-booster-release-switch-form' : 'ran-booster-release-channel-form' ); ?>"<?php echo 'branch' === $mode ? ' data-ran-booster-source-transition' : ''; ?><?php echo $has_mutation ? ' data-ran-booster-package-mutation' : ''; ?><?php echo 'managed' === $mode ? ' data-ran-booster-submit-busy' : ''; ?>>
+		<form id="<?php echo esc_attr( $form_id ); ?>" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="<?php echo esc_attr( 'branch' === $mode ? 'ran-booster-release-switch-form' : 'ran-booster-release-channel-form' ); ?>"<?php echo 'branch' === $mode ? ' data-ran-booster-source-transition' : ''; ?><?php echo $has_preflight ? ' data-ran-booster-switch-preflight-url="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" data-ran-booster-switch-preflight-action="' . esc_attr( $preflight_action ) . '" data-ran-booster-switch-preflight-nonces="' . esc_attr( (string) wp_json_encode( $preflight_nonces ) ) . '"' : ''; ?><?php echo $has_mutation ? ' data-ran-booster-package-mutation' : ''; ?><?php echo 'managed' === $mode ? ' data-ran-booster-submit-busy' : ''; ?>>
 			<?php if ( $has_mutation ) { ?>
 				<?php $this->admin_post_fields( 'branch' === $mode ? 'enable' : 'change_channel', $package, $nonce_action ); ?>
 			<?php } ?>
@@ -912,7 +1022,7 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
-	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Retain the existing positional package identifier slot; naming does not alter notice arguments.
+	/** @param array<string, mixed>|null $native_hold */
 	public function render_operation_notice(
 		string $code,
 		bool $successful,
@@ -921,18 +1031,21 @@ final class ReleaseManagementDisplay {
 		string $channel = '',
 		?ReleaseTrackingStatus $status = null,
 		string $reason = '',
-		string $detail = ''
+		string $detail = '',
+		string $reload_url = '',
+		?array $native_hold = null
 	): void {
 		if ( '' === $code ) {
 			return;
 		}
 
-		$message = $this->result_message( $code, $successful, $type, $channel, $status, $reason, $detail );
-		$review  = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
-		$check   = $successful ? null : FeedbackFlash::check_result( $code, $detail );
-		$tone    = $successful
+		$message      = $this->result_message( $code, $successful, $type, $channel, $status, $reason, $detail );
+		$message_html = $this->linked_switch_result_html( $code, $type, $identifier, $reload_url, $native_hold );
+		$review       = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
+		$check        = $successful ? null : FeedbackFlash::check_result( $code, $detail );
+		$tone         = $successful
 			? 'notice-success'
-			: ( null !== $check ? 'notice-' . $check[0] : ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists', 'refresh_unchecked', 'refresh_rejected' ), true )
+			: ( null !== $check ? 'notice-' . $check[0] : ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists', 'refresh_unchecked', 'refresh_rejected', 'switch_not_confirmed' ), true )
 				? 'notice-warning'
 				: 'notice-error' ) );
 		?>
@@ -940,12 +1053,16 @@ final class ReleaseManagementDisplay {
 			<?php if ( $review ) { ?>
 				<p><strong><?php echo esc_html( 'installed_but_unmanaged' === $code ? __( 'Package present, Booster management not established', 'ran-booster' ) : __( 'Installation outcome needs review', 'ran-booster' ) ); ?></strong></p>
 			<?php } ?>
-			<p><?php echo esc_html( $message ); ?></p>
+			<?php if ( null !== $message_html ) { ?>
+				<p><?php echo $message_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every interpolated URL and text fragment inside is escaped with esc_url() and esc_html*(). ?></p>
+			<?php } else { ?>
+				<p><?php echo esc_html( $message ); ?></p>
+			<?php } ?>
 			<?php if ( null !== $check && '' !== $check[2] ) { ?>
 				<p><?php echo esc_html( $check[2] ); ?></p>
 			<?php } ?>
 			<?php if ( $review ) { ?>
-				<p><?php esc_html_e( 'Inspect the installed version, activation state and Booster management before using Link an already installed plugin (or theme) or retrying.', 'ran-booster' ); ?></p>
+				<p><?php echo esc_html( 'installed_but_unmanaged' === $code || null === $status ? __( 'Inspect the installed version, activation state and Booster management before using Link an already installed plugin (or theme) or retrying.', 'ran-booster' ) : __( 'Inspect the installed version, activation state and Booster management before retrying.', 'ran-booster' ) ); ?></p>
 			<?php } ?>
 		</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( substr( $tone, 7 ) ); ?>
 			<?php if ( ! $successful && $this->is_diagnostic_code( $code ) ) { ?>
@@ -953,6 +1070,133 @@ final class ReleaseManagementDisplay {
 			<?php } ?>
 		</div>
 		<?php
+	}
+
+	public function preflight_failure_message( string $code, string $reason = '', string $detail = '' ): string {
+		return $this->result_message( $code, false, '', '', null, $reason, $detail );
+	}
+
+	/**
+	 * Build an interactive switch-preflight refusal response for an active GitHub hold.
+	 *
+	 * @param array<string, mixed> $native_hold
+	 * @return array{successful:bool,code:string,data:array<string, mixed>}
+	 */
+	public function switch_hold_preflight_response( string $type, string $identifier, array $native_hold ): array {
+		$same_package = ( $native_hold['type'] ?? null ) === $type && ( $native_hold['identifier'] ?? null ) === $identifier;
+		if ( $same_package ) {
+			$template   = $this->switch_held_template( $type );
+			$link_label = __( 'release the hold', 'ran-booster' );
+			$link_url   = ! empty( $native_hold['readable'] )
+				? '#ran-booster-native-hold'
+				: ( is_string( $native_hold['url'] ?? null ) ? (string) $native_hold['url'] : '' );
+
+			return array(
+				'successful' => false,
+				'code'       => 'switch_held',
+				'data'       => array(
+					'message'          => sprintf( $template, $link_label ),
+					'message_template' => $template,
+					'link_label'       => $link_label,
+					'link_url'         => $link_url,
+				),
+			);
+		}
+
+		$held_name = is_string( $native_hold['name'] ?? null ) && '' !== $native_hold['name']
+			? $native_hold['name']
+			: __( 'another package', 'ran-booster' );
+		$link_url  = is_string( $native_hold['url'] ?? null ) ? $native_hold['url'] : '';
+		$template  = $this->switch_other_held_template();
+
+		return array(
+			'successful' => false,
+			'code'       => 'switch_other_held',
+			'data'       => array(
+				'message'          => sprintf( $template, $held_name ),
+				'message_template' => $template,
+				'link_label'       => $held_name,
+				'link_url'         => $link_url,
+			),
+		);
+	}
+
+	private function switch_held_template( string $type ): string {
+		if ( 'theme' === $type ) {
+			/* translators: %s: link to release the hold. */
+			return __( 'Install couldn\'t complete. Check this theme, then %s.', 'ran-booster' );
+		}
+
+		/* translators: %s: link to release the hold. */
+		return __( 'Install couldn\'t complete. Check this plugin, then %s.', 'ran-booster' );
+	}
+
+	private function switch_other_held_template(): string {
+		/* translators: %s: the held package's name, linked to the page that releases the hold. */
+		return __( 'GitHub installs are on hold: the last install of %s couldn\'t complete.', 'ran-booster' );
+	}
+
+	/** @param array<string, mixed>|null $native_hold */
+	private function linked_switch_result_html(
+		string $code,
+		string $type,
+		string $identifier,
+		string $reload_url,
+		?array $native_hold
+	): ?string {
+		if ( 'switch_held' === $code ) {
+			$hold_url = null !== $native_hold && ! empty( $native_hold['readable'] )
+				? '#ran-booster-native-hold'
+				: ( is_string( $native_hold['url'] ?? null ) ? (string) $native_hold['url'] : '' );
+			$label    = esc_html__( 'release the hold', 'ran-booster' );
+			$link     = '' !== $hold_url
+				? '<a href="' . esc_url( $hold_url ) . '">' . $label . '</a>'
+				: $label;
+
+			return sprintf(
+				esc_html( $this->switch_held_template( $type ) ),
+				$link
+			);
+		}
+
+		if ( 'switch_other_held' === $code ) {
+			$held_name = is_string( $native_hold['name'] ?? null ) && '' !== $native_hold['name']
+				? $native_hold['name']
+				: __( 'another package', 'ran-booster' );
+			$held_url  = is_string( $native_hold['url'] ?? null ) ? $native_hold['url'] : '';
+			$link      = '' !== $held_url
+				? '<a href="' . esc_url( $held_url ) . '">' . esc_html( $held_name ) . '</a>'
+				: esc_html( $held_name );
+
+			return sprintf(
+				esc_html( $this->switch_other_held_template() ),
+				$link
+			);
+		}
+
+		if ( 'switch_not_confirmed' === $code ) {
+			if ( '' === $reload_url && '' !== $identifier && in_array( $type, array( 'plugin', 'theme' ), true ) ) {
+				$reload_url = add_query_arg(
+					array(
+						'page'    => 'plugin' === $type ? 'ran-booster-plugins' : 'ran-booster-themes',
+						'package' => $identifier,
+					),
+					is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
+				);
+			}
+			$label = esc_html__( 'Reload this page', 'ran-booster' );
+			$link  = '' !== $reload_url
+				? '<a href="' . esc_url( $reload_url ) . '">' . $label . '</a>'
+				: $label;
+
+			return sprintf(
+				/* translators: %s: link to reload the package settings page. */
+				esc_html__( 'Booster hasn\'t confirmed the switch yet. %s to check.', 'ran-booster' ),
+				$link
+			);
+		}
+
+		return null;
 	}
 
 	private function result_message( string $code, bool $successful, string $type, string $channel, ?ReleaseTrackingStatus $status, string $reason = '', string $detail = '' ): string {
@@ -964,7 +1208,20 @@ final class ReleaseManagementDisplay {
 			'release_repository_conflict',
 			'repository_release_owner_exists' => __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' ),
 			'installed' => __( 'The published release was installed and is now managed by Booster. WordPress activation was not changed.', 'ran-booster' ),
-			'release_enabled',
+			'release_enabled' => $this->switch_enabled_message( $status ),
+			'switch_failed_unchanged' => $this->switch_failed_unchanged_message( $type, $status ),
+			'switch_held' => sprintf(
+				$this->switch_held_template( $type ),
+				__( 'release the hold', 'ran-booster' )
+			),
+			'switch_other_held' => sprintf(
+				$this->switch_other_held_template(),
+				__( 'another package', 'ran-booster' )
+			),
+			'switch_not_confirmed' => __( 'Booster hasn\'t confirmed the switch yet. Reload this page to check.', 'ran-booster' ),
+			'policy_disabled' => __( 'Updates are disabled for this package. Set Updates to Manual to switch.', 'ran-booster' ),
+			'policy_forced_off' => __( 'Updates are turned off by this site\'s configuration, so this package can\'t switch to releases.', 'ran-booster' ),
+			'release_older' => __( 'This release is older than what\'s installed.', 'ran-booster' ),
 			'release_channel_changed',
 			'branch_restored' => FeedbackFlash::release_operation_success( $code ) ?? '',
 			'release_channel_current' => sprintf(
@@ -1009,6 +1266,30 @@ final class ReleaseManagementDisplay {
 				? __( 'The published release operation completed.', 'ran-booster' )
 				: __( 'The published release operation could not be completed.', 'ran-booster' ),
 		};
+	}
+
+	private function switch_enabled_message( ?ReleaseTrackingStatus $status ): string {
+		$version = null !== $status ? $this->bounded_string( $status->installed_version(), 64 ) : '';
+
+		return '' !== $version
+			/* translators: %s: installed release version. */
+			? sprintf( __( 'Switched to releases. Version %s is installed.', 'ran-booster' ), $version )
+			: __( 'Switched to releases.', 'ran-booster' );
+	}
+
+	private function switch_failed_unchanged_message( string $type, ?ReleaseTrackingStatus $status ): string {
+		$version = null !== $status ? $this->bounded_string( $status->installed_version(), 64 ) : '';
+		if ( 'theme' === $type ) {
+			return '' !== $version
+				/* translators: %s: currently installed branch version. */
+				? sprintf( __( 'Install couldn\'t complete before any files changed. This theme is still on Branch, version %s.', 'ran-booster' ), $version )
+				: __( 'Install couldn\'t complete before any files changed. This theme is still on Branch.', 'ran-booster' );
+		}
+
+		return '' !== $version
+			/* translators: %s: currently installed branch version. */
+			? sprintf( __( 'Install couldn\'t complete before any files changed. This plugin is still on Branch, version %s.', 'ran-booster' ), $version )
+			: __( 'Install couldn\'t complete before any files changed. This plugin is still on Branch.', 'ran-booster' );
 	}
 
 	private function diagnostic_message( string $code, string $reason = '', string $detail = '' ): string {
@@ -1065,7 +1346,7 @@ final class ReleaseManagementDisplay {
 	}
 
 	private function is_diagnostic_code( string $code ): bool {
-		if ( in_array( $code, array( 'release_repository_conflict', 'repository_release_owner_exists', 'release_changed', 'release_invalid', 'package_already_exists' ), true ) ) {
+		if ( in_array( $code, array( 'release_repository_conflict', 'repository_release_owner_exists', 'release_changed', 'release_invalid', 'release_older', 'package_already_exists' ), true ) ) {
 			return false;
 		}
 		return str_starts_with( $code, 'package_' )

@@ -63,8 +63,8 @@ final class PackageBusyLabelContractTest extends TestCase {
 	public function test_release_view_has_a_status_in_each_busy_form(): void {
 		$source = $this->source( 'RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php' );
 
-		// Recheck, Check releases, branch track form (literal) and managed track (shared template).
-		self::assertSame( 4, substr_count( $source, 'role="status" aria-live="polite" data-ran-booster-submit-busy-status' ) );
+		// Recheck, Check releases, branch track form (literal), switch confirmation, and managed track (shared template).
+		self::assertSame( 5, substr_count( $source, 'role="status" aria-live="polite" data-ran-booster-submit-busy-status' ) );
 		self::assertStringContainsString( "'branch' === \$mode", $source );
 	}
 

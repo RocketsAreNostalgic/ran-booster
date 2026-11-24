@@ -182,3 +182,43 @@
 	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-available {
 	opacity: 1;
 }
+
+.ran-booster-switch-dialog,
+.ran-booster-switch-confirmation {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+}
+
+.ran-booster-switch-confirmation {
+	margin-block-start: var(--ran-booster-space-12);
+	padding: var(--ran-booster-space-16);
+	border: 1px solid var(--ran-booster-divider);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-switch-dialog p,
+.ran-booster-switch-confirmation p,
+.ran-booster-switch-confirmation__title {
+	margin: 0;
+}
+
+.ran-booster-switch-confirmation__form {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+}
+
+.ran-booster-switch-dialog__consent,
+.ran-booster-switch-confirmation__consent {
+	display: flex;
+	align-items: flex-start;
+	gap: var(--ran-booster-space-8);
+	font-weight: 600;
+}
+
+.ran-booster-switch-dialog__actions,
+.ran-booster-switch-confirmation__actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: var(--ran-booster-space-8);
+}

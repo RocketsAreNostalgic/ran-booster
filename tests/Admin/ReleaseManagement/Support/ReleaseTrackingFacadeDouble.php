@@ -34,6 +34,8 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 
 	public ?ReleaseTrackingPreflight $candidate_inspection = null;
 
+	public ?ReleaseTrackingPreflight $preflight = null;
+
 	public ?ReleaseTrackingResult $enable_result = null;
 
 	public ?ReleaseTrackingResult $refresh_result = null;
@@ -90,7 +92,7 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 	public function preflight( string $type, string $identifier, int $expected_source_revision, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
 		$this->calls[] = array( 'preflight', $type, $identifier, $expected_source_revision, $channel, $nonce );
 
-		return $this->release_status->preflight();
+		return $this->preflight ?? $this->release_status->preflight();
 	}
 
 	public function assessment_preflight( string $type, string $identifier, int $expected_source_revision, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
@@ -125,8 +127,8 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 		return $this->candidate_inspection;
 	}
 
-	public function enable( string $type, string $identifier, int $expected_source_revision, string $channel, string $nonce ): ReleaseTrackingResult {
-		$this->calls[] = array( 'enable', $type, $identifier, $expected_source_revision, $channel, $nonce );
+	public function enable( string $type, string $identifier, int $expected_source_revision, string $channel, string $nonce, bool $allow_older = false ): ReleaseTrackingResult {
+		$this->calls[] = array( 'enable', $type, $identifier, $expected_source_revision, $channel, $nonce, $allow_older );
 
 		return $this->enable_result ?? ReleaseTrackingResult::succeeded( 'release_enabled', 'Release tracking enabled.' );
 	}

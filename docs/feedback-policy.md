@@ -117,11 +117,14 @@ example `policy_disabled`) so a caller other than the page can read it.
 Change release track and Use branch confirm through the same flash
 (`release_channel_changed`, `branch_restored`), with the sentence taken from
 `FeedbackFlash::release_operation_success()`, which the inline notice also
-uses. Their failures keep the signed inline result. Use releases replies before
-its source change commits at the end of that request, so its result always
-travels as the signed inline result. The page it lands on shows "Release
-tracking enabled." only when it reads the package back on Releases, and
-otherwise the existing `management_state_uncertain` notice.
+uses. Their failures keep the signed inline result. Use releases confirms via a
+pre-switch dialog (or inline no-JS confirmation step) and replies before its
+source change commits at the end of that request, so its result always travels
+as the signed result. The top of the package settings page it lands on reads
+both the stored source and any GitHub native hold back and settles it into
+`release_enabled` (`"Switched to releases. Version ... is installed."`),
+`switch_failed_unchanged`, `switch_held`, `switch_other_held`, or
+`switch_not_confirmed` (`"Booster hasn't confirmed the switch yet..."`).
 
 Reinstall, update and remove follow the same pattern as saves. Release,
 webhook and extension successes follow it too.

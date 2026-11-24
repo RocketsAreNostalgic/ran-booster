@@ -89,9 +89,12 @@ deploy to retained sites or close #560 from this pilot.
 Booster screen without putting display text in a URL. It is Core-internal, not an
 add-on seam. Check releases was the first producer; the Change release track and
 Use branch successes (`release_channel_changed`, `branch_restored`) are the
-second. Their failures keep the signed inline result. Use releases always uses
-the signed inline result, because its landing page must read the source back
-before it may say the switch is enabled.
+second. Their failures keep the signed inline result. Use releases confirms before
+switching and always carries its post-switch outcome as the signed result rendered
+at the top of the package settings page (`outerHTML show:window:top` under HTMX),
+because the landing page must read both source and native hold state back before
+settling into `release_enabled`, `switch_failed_unchanged`, `switch_held`,
+`switch_other_held`, or `switch_not_confirmed`.
 
 - **Storage.** One user-meta row, `_ran_booster_feedback_flash`, per user:
   `{site, at, codes}`. `codes` are closed Core codes (at most three); no message,

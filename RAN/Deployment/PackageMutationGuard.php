@@ -64,11 +64,21 @@ final class PackageMutationGuard {
 	/**
 	 * Re-check the WordPress mutation policy immediately before an upgrader.
 	 */
+	public static function file_mods_disabled(): bool {
+		if ( defined( 'DISALLOW_FILE_MODS' ) && (bool) constant( 'DISALLOW_FILE_MODS' ) ) {
+			return true;
+		}
+		if ( function_exists( __NAMESPACE__ . '\\wp_is_file_mod_allowed' ) || function_exists( 'wp_is_file_mod_allowed' ) ) {
+			return ! wp_is_file_mod_allowed( 'ran-booster' );
+		}
+
+		return false;
+	}
+
 	public static function assert_filesystem_mutation_allowed(): void {
 		self::assert_package_mutation_allowed();
 
-		if ( ( defined( 'DISALLOW_FILE_MODS' ) && constant( 'DISALLOW_FILE_MODS' ) )
-			|| ! wp_is_file_mod_allowed( 'ran-booster' ) ) {
+		if ( self::file_mods_disabled() ) {
 			BoosterLogger::log(
 				'mutation guard blocked deployment',
 				array(

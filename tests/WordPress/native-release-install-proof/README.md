@@ -229,10 +229,10 @@ load.
 | `active` | 2.0.0 installed; activation preserved | Releases, revision 2 | Cleared |
 | `compete` | A second switch, run while the first holds the installer, is refused; the first completes | Releases, revision 2 | Cleared |
 | `older` | `release_older`; files unchanged | Branch | None |
-| `disabled` | `policy_blocked`; files unchanged | Branch | None |
+| `disabled` | `policy_disabled`; files unchanged | Branch | None |
 | `failed-download` | `wordpress_failed` before replacement; files unchanged | Branch | None |
 | `offer-removed` | The offer is gone when the upgrader reads it, so WordPress reports the package up to date: `wordpress_failed`, never success; files unchanged | Branch | None |
-| `conflict` | Another package from the same repository is added after the install; the shutdown commit refuses it, so the updater records an uncertain outcome. The reply said `release_enabled`; the next load settles it as `management_state_uncertain` | Branch, with the release files installed | Retained, `started`, still owning its lock |
+| `conflict` | Another package from the same repository is added after the install; the shutdown commit refuses it, so the updater records an uncertain outcome. The reply said `release_enabled`; the next load settles it as `switch_not_confirmed` without hold context or `switch_held` with the active hold | Branch, with the release files installed | Retained, `started`, still owning its lock |
 | `failed-install` | `wordpress_failed` after replacement; WordPress restores 1.0.0 at shutdown | Branch | Retained, `finished`, lock released |
 | `kill` | SIGKILL after the install result: 2.0.0 files, 1.0.0 backup left | Branch | Retained, `started`, still owning its lock |
 | `foreign-lock` | As `kill`; the release then meets another operation's live lock and is refused without touching it | Branch | Retained until the lock is an hour old |
@@ -247,8 +247,9 @@ install, in the same transaction that clears native custody. That commit runs
 at shutdown, after the reply, so the page the administrator lands on reads the
 source back: every readback settles the reply as the landing page does, and
 only a package on Releases is reported enabled. In `conflict` the reply is
-`release_enabled`, the commit is refused, and the landing shows
-`management_state_uncertain`. Retained custody is the existing recovery path
+`release_enabled`, the commit is refused, and the landing settles to
+`switch_not_confirmed` (or `switch_held` when the native hold is present).
+Retained custody is the existing recovery path
 for an interrupted Update.
 
 Refs #987. The held cases (`conflict`, `failed-install`, `kill`,

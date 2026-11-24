@@ -219,9 +219,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'expected_source_revision' => '3',
 			'_wpnonce'                 => $nonce,
 			'release_channel'          => $channel,
+			'confirm_switch'           => '1',
 		);
 		ReleaseManagementFixture::controls( $tracking )->process_admin_post_request( 'enable', $request );
-		self::assertSame( array( array( 'enable', $type, $package->identifier(), 3, $channel, $nonce ) ), $tracking->calls );
+		self::assertSame( array( array( 'enable', $type, $package->identifier(), 3, $channel, $nonce, false ) ), $tracking->calls );
 	}
 
 	/** @return array<string,array{string,string}> */
@@ -1587,15 +1588,21 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	public function test_success_result_shows_the_notice_and_no_switch_bar_on_the_now_active_source(): void {
-		// Use releases succeeded: Releases is active, so its tab has the notice and no bar.
+		// Use releases succeeded: Releases is active, so its result renders at top of page with no switch bar inside Advanced.
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', channel: 'stable' ) );
 		$controls = ReleaseManagementFixture::controls( $tracking );
 		$package  = new PackageProjection( 'release_asset' );
 		$this->set_conflict_result( 'release_enabled', true );
+		$_GET['page']    = 'ran-booster-plugins';
+		$_GET['package'] = $package->identifier();
+		ob_start();
+		$controls->render_operation_notice();
+		$top_html = (string) ob_get_clean();
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$releases_html = (string) ob_get_clean();
-		self::assertStringContainsString( 'Release tracking enabled.', $releases_html );
+		self::assertStringContainsString( 'Switched to releases. Version 1.0.0 is installed.', $top_html );
+		self::assertStringNotContainsString( 'Switched to releases.', $releases_html );
 		self::assertStringNotContainsString( 'ran-booster-source-switch-bar', $releases_html );
 		self::assertStringNotContainsString( 'Use releases', $releases_html );
 
@@ -1961,6 +1968,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			}
 			if ( 'enable' === $operation ) {
 				$request['release_channel'] = 'stable';
+				$request['confirm_switch']  = '1';
 			}
 			if ( 'change_channel' === $operation ) {
 				$request['release_channel'] = 'prerelease';
@@ -1975,7 +1983,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		self::assertSame(
 			array(
-				array( 'enable', 'plugin', 'example/example.php', 3, 'stable', $this->nonce( 'enable' ) ),
+				array( 'enable', 'plugin', 'example/example.php', 3, 'stable', $this->nonce( 'enable' ), false ),
 				array( 'change_channel', 'plugin', 'example/example.php', 3, 'prerelease', $this->nonce( 'change_channel' ) ),
 				array( 'refresh', 'plugin', 'example/example.php', 3, $this->nonce( 'refresh' ) ),
 				array( 'return_to_branch', 'plugin', 'example/example.php', 3, $this->nonce( 'return_to_branch' ) ),
@@ -2251,8 +2259,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	/** @return array<string, array{string, string, string}> Source read back, shown text, absent text. */
 	public static function switch_landings(): array {
 		return array(
-			'committed: read back on Releases'     => array( 'release_asset', 'Release tracking enabled.', 'Booster could not confirm' ),
-			'refused or not yet committed: Branch' => array( 'branch', 'Booster could not confirm the final installation or management state.', 'Release tracking enabled.' ),
+			'committed: read back on Releases'     => array( 'release_asset', 'Switched to releases. Version 1.0.0 is installed.', 'Booster hasn&#039;t confirmed' ),
+			'refused or not yet committed: Branch' => array( 'branch', 'Booster hasn&#039;t confirmed the switch yet.', 'Switched to releases.' ),
 		);
 	}
 
@@ -2263,21 +2271,30 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls                   = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( $source, channel: 'stable' ) ) );
 		$request                    = $this->request( 'enable' );
 		$request['release_channel'] = 'stable';
+		$request['confirm_switch']  = '1';
 
 		$url = $controls->process_admin_post_request( 'enable', $request );
 
 		self::assertSame( array(), $GLOBALS['ran_booster_feedback_test']['meta'] );
 		self::assertStringContainsString( 'ran_booster_release_result=release_enabled', $url );
+		self::assertStringNotContainsString( '#ran-booster-advanced-source-settings', $url );
 		$query = (string) parse_url( $url, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Parsing the already signed local PRG fixture.
 		parse_str( $query, $_GET );
-		// The switch lands on the package's settings page, which reads the package's status for this result.
+		$_GET['page']    = 'ran-booster-plugins';
+		$_GET['package'] = 'example/example.php';
+		// The switch lands on top of the package's settings page, which reads the package's status for this result.
 		$package = new PackageProjection( $source );
+		ob_start();
+		$controls->render_operation_notice();
+		$top_notice = (string) ob_get_clean();
+		self::assertStringContainsString( $shown, $top_notice );
+		self::assertStringNotContainsString( $absent, $top_notice );
+
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', 'plugin', $source, $package, $package->settings_url() );
 		$page = (string) ob_get_clean();
-		self::assertStringContainsString( $shown, $page );
-		self::assertStringNotContainsString( $absent, $page );
+		self::assertStringNotContainsString( $shown, $page );
 	}
 
 	public function test_a_failed_settings_operation_keeps_its_inline_result_and_sets_no_flash(): void {
@@ -2431,6 +2448,423 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.', 'not_a_reason' );
 	}
 
+	public function test_disabled_and_forced_off_switch_bar_disables_use_releases_without_preflight(): void {
+		$package          = new PackageProjection();
+		$disabled_status  = ReleaseManagementFixture::status( 'branch', 'plugin', deployment_policy: 'disabled' );
+		$disabled_control = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( $disabled_status ) );
+
+		ob_start();
+		$disabled_control->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$disabled_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Updates are disabled for this package. Set Updates to Manual to switch.', $disabled_html );
+		self::assertStringContainsString( 'data-ran-booster-use-releases-ready="false" aria-disabled="true"', $disabled_html );
+		self::assertStringNotContainsString( 'data-ran-booster-switch-preflight-url', $disabled_html );
+		self::assertStringNotContainsString( 'source transition controls are temporarily unavailable', $disabled_html );
+
+		$manual_status      = ReleaseManagementFixture::status( 'branch', 'plugin', deployment_policy: 'manual' );
+		$forced_off_control = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( $manual_status ), updates_forced_off: static fn (): bool => true );
+
+		ob_start();
+		$forced_off_control->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$forced_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Updates are turned off by this site&#039;s configuration, so this package can&#039;t switch to releases.', $forced_html );
+		self::assertStringContainsString( 'data-ran-booster-use-releases-ready="false" aria-disabled="true"', $forced_html );
+		self::assertStringNotContainsString( 'data-ran-booster-switch-preflight-url', $forced_html );
+		self::assertStringNotContainsString( 'source transition controls are temporarily unavailable', $forced_html );
+	}
+
+	public function test_ready_switch_bar_exposes_preflight_ajax_attributes_and_channel_nonces(): void {
+		$package  = new PackageProjection();
+		$status   = ReleaseManagementFixture::status( 'branch', 'plugin', deployment_policy: 'manual' );
+		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( $status ) );
+
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'data-ran-booster-use-releases-ready="true" aria-disabled="false"', $html );
+		self::assertStringContainsString( 'data-ran-booster-switch-preflight-url="https://example.test/wp-admin/admin-ajax.php"', $html );
+		self::assertStringContainsString( 'data-ran-booster-switch-preflight-action="ran_booster_release_switch_preflight"', $html );
+		if ( 1 !== preg_match( '/data-ran-booster-switch-preflight-nonces="([^"]+)"/', $html, $matches ) ) {
+			self::fail( 'Expected preflight nonces attribute.' );
+		}
+		self::assertSame(
+			array(
+				'stable'     => 'nonce-for-release-tracking-preflight-plugin-example/example.php-3-stable',
+				'prerelease' => 'nonce-for-release-tracking-preflight-plugin-example/example.php-3-prerelease',
+			),
+			json_decode( html_entity_decode( $matches[1], ENT_QUOTES ), true )
+		);
+	}
+
+	public function test_switch_preflight_ajax_returns_versions_and_enforces_policy_hold_and_authority(): void {
+		$preflight_request = function ( string $channel = 'stable', string $nonce_override = '' ): array {
+			$action = 'release-tracking-preflight-plugin-example/example.php-3-' . $channel;
+			return array(
+				'expected_type'            => 'plugin',
+				'expected_identifier'      => 'example/example.php',
+				'expected_source_revision' => '3',
+				'release_channel'          => $channel,
+				'_wpnonce'                 => '' !== $nonce_override ? $nonce_override : 'nonce-for-' . $action,
+			);
+		};
+
+		foreach ( array(
+			'newer' => '2.0.0',
+			'same'  => '1.0.0',
+			'older' => '0.9.0',
+		) as $relationship => $version ) {
+			$tracking            = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) );
+			$tracking->preflight = new ReleaseTrackingPreflight(
+				ReleaseTrackingPreflight::READY,
+				'example-plugin',
+				$version,
+				'https://github.com/example/example/releases/tag/v' . $version,
+				'v' . $version,
+				$version,
+				$relationship
+			);
+			$controls            = ReleaseManagementFixture::controls( $tracking );
+			$response            = $controls->process_switch_preflight_request( $preflight_request( 'prerelease' ) );
+
+			self::assertTrue( $response['successful'], $relationship );
+			self::assertSame( 'ready', $response['code'] );
+			self::assertSame( '1.0.0', $response['data']['installed_version'] );
+			self::assertSame( $version, $response['data']['release_version'] );
+			self::assertSame( $relationship, $response['data']['version_relationship'] );
+			self::assertSame( 'prerelease', $response['data']['channel'] );
+		}
+
+		// Invalid nonce & missing capability.
+		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
+		self::assertSame( 'invalid_request', $controls->process_switch_preflight_request( $preflight_request( 'stable', 'wrong' ) )['code'] );
+		$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array( 'update_plugins' );
+		self::assertSame( 'forbidden', $controls->process_switch_preflight_request( $preflight_request() )['code'] );
+		$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array();
+
+		// Disabled & Forced-off & Hold (same readable, same unreadable, other held) & Diagnostic.
+		$disabled_controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin', deployment_policy: 'disabled' ) ) );
+		$disabled_res      = $disabled_controls->process_switch_preflight_request( $preflight_request() );
+		self::assertFalse( $disabled_res['successful'] );
+		self::assertSame( 'policy_disabled', $disabled_res['code'] );
+		self::assertSame( 'Updates are disabled for this package. Set Updates to Manual to switch.', $disabled_res['data']['message'] );
+
+		$forced_res = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), updates_forced_off: static fn (): bool => true )
+			->process_switch_preflight_request( $preflight_request() );
+		self::assertSame( 'policy_forced_off', $forced_res['code'] );
+		self::assertStringContainsString( 'turned off by this site\'s configuration', $forced_res['data']['message'] );
+
+		$readable_hold = ReleaseManagementFixture::controls(
+			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ),
+			native_hold: static fn (): array => array(
+				'type'       => 'plugin',
+				'identifier' => 'example/example.php',
+				'readable'   => true,
+				'name'       => 'Example Plugin',
+				'url'        => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php#ran-booster-native-hold',
+			)
+		)->process_switch_preflight_request( $preflight_request() );
+		self::assertSame( 'switch_held', $readable_hold['code'] );
+		self::assertSame( '#ran-booster-native-hold', $readable_hold['data']['link_url'] );
+		self::assertSame( 'release the hold', $readable_hold['data']['link_label'] );
+
+		$unreadable_hold = ReleaseManagementFixture::controls(
+			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ),
+			native_hold: static fn (): array => array(
+				'type'       => 'plugin',
+				'identifier' => 'example/example.php',
+				'readable'   => false,
+				'name'       => 'Example Plugin',
+				'url'        => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold',
+			)
+		)->process_switch_preflight_request( $preflight_request() );
+		self::assertSame( 'switch_held', $unreadable_hold['code'] );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold', $unreadable_hold['data']['link_url'] );
+
+		$other_hold = ReleaseManagementFixture::controls(
+			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ),
+			native_hold: static fn (): array => array(
+				'type'       => 'plugin',
+				'identifier' => 'other/other.php',
+				'readable'   => true,
+				'name'       => 'Other Plugin',
+				'url'        => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=other%2Fother.php#ran-booster-native-hold',
+			)
+		)->process_switch_preflight_request( $preflight_request() );
+		self::assertSame( 'switch_other_held', $other_hold['code'] );
+		self::assertSame( 'Other Plugin', $other_hold['data']['link_label'] );
+		self::assertStringContainsString( 'package=other%2Fother.php#ran-booster-native-hold', $other_hold['data']['link_url'] );
+
+		$no_releases_tracking            = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$no_releases_tracking->preflight = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, 'example-plugin', reason_code: 'no_releases' );
+		$no_releases_res                 = ReleaseManagementFixture::controls( $no_releases_tracking )->process_switch_preflight_request( $preflight_request() );
+		self::assertFalse( $no_releases_res['successful'] );
+		self::assertSame( 'release_unavailable', $no_releases_res['code'] );
+		self::assertSame( 'No eligible releases were found in this search.', $no_releases_res['data']['message'] );
+	}
+
+	public function test_no_js_unconfirmed_enable_renders_inline_confirmation_and_forwards_allow_older_only_when_ticked(): void {
+		foreach (
+			array(
+				'newer' => array( '1.5.0', 'switch_confirm_newer', false, false ),
+				'same'  => array( '1.0.0', 'switch_confirm_same', true, false ),
+				'older' => array( '0.9.0', 'switch_confirm_older', false, true ),
+			) as $relationship => list( $version, $expected_code, $expects_same_copy, $expects_checkbox )
+		) {
+			$tracking                   = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) );
+			$tracking->preflight        = new ReleaseTrackingPreflight(
+				ReleaseTrackingPreflight::READY,
+				'example-plugin',
+				$version,
+				'https://github.com/example/example/releases/tag/v' . $version,
+				'v' . $version,
+				$version,
+				$relationship
+			);
+			$controls                   = ReleaseManagementFixture::controls( $tracking );
+			$request                    = $this->request( 'enable' );
+			$request['release_channel'] = 'stable';
+
+			$url = $controls->process_admin_post_request( 'enable', $request );
+
+			self::assertStringContainsString( 'ran_booster_release_result=' . $expected_code, $url, $relationship );
+			self::assertStringContainsString( '#ran-booster-advanced-source-settings', $url, $relationship );
+			self::assertSame( 'preflight', $tracking->calls[0][0], $relationship );
+			self::assertCount( 1, $tracking->calls, 'Unconfirmed submit must not call enable().' );
+
+			$_GET            = $this->query_of( $url );
+			$_GET['page']    = 'ran-booster-plugins';
+			$_GET['package'] = 'example/example.php';
+			ob_start();
+			$controls->render_operation_notice();
+			$top_html = (string) ob_get_clean();
+			self::assertSame( '', $top_html, 'Confirmation step renders inline below switch bar, never at top.' );
+
+			$package = new PackageProjection( 'branch' );
+			ob_start();
+			$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+			$html = (string) ob_get_clean();
+
+			self::assertStringContainsString( 'data-ran-booster-switch-confirmation', $html );
+			self::assertStringContainsString( 'Switch to releases?', $html );
+			self::assertStringContainsString( 'Installed: 1.0.0 from branch. Installing: release ' . $version . '.', $html );
+			self::assertStringContainsString( 'cannot roll back database changes', $html );
+			self::assertSame( $expects_same_copy, str_contains( $html, 'Same version: this replaces the branch build with the release.' ), $relationship );
+			self::assertSame( $expects_checkbox, str_contains( $html, 'name="confirm_older_release" value="1" required' ), $relationship );
+			self::assertSame( $expects_checkbox, str_contains( $html, 'This release is older than what&#039;s installed.' ), $relationship );
+			self::assertStringContainsString( 'Switch and install</button>', $html );
+			self::assertStringContainsString( '>Cancel</a>', $html );
+		}
+
+		// Confirmed older switch without checkbox passes allow_older=false; with checkbox passes allow_older=true.
+		$tracking                     = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) );
+		$controls                     = ReleaseManagementFixture::controls( $tracking );
+		$confirmed_without            = $this->request( 'enable' ) + array(
+			'release_channel' => 'stable',
+			'confirm_switch'  => '1',
+		);
+		$confirmed_with_older_consent = $confirmed_without + array( 'confirm_older_release' => '1' );
+		$controls->process_admin_post_request( 'enable', $confirmed_without );
+		$controls->process_admin_post_request( 'enable', $confirmed_with_older_consent );
+
+		self::assertFalse( $tracking->calls[0][6] );
+		self::assertTrue( $tracking->calls[1][6] );
+	}
+
+	public function test_post_switch_top_of_page_outcomes_and_settled_states(): void {
+		// Failed install before any file changes (plugin & theme).
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			$identifier              = 'theme' === $type ? 'example-theme' : 'example/example.php';
+			$tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', $type ) );
+			$tracking->enable_result = ReleaseTrackingResult::failed( 'wordpress_failed', 'Install failed.' );
+			$controls                = ReleaseManagementFixture::controls( $tracking );
+			$nonce                   = 'nonce-for-release-tracking-enable-' . $type . '-' . $identifier . '-3';
+			$url                     = $controls->process_admin_post_request(
+				'enable',
+				array(
+					'expected_type'            => $type,
+					'expected_identifier'      => $identifier,
+					'expected_source_revision' => '3',
+					'_wpnonce'                 => $nonce,
+					'release_channel'          => 'stable',
+					'confirm_switch'           => '1',
+				)
+			);
+			self::assertStringContainsString( 'ran_booster_release_result=switch_failed', $url );
+			self::assertStringNotContainsString( '#ran-booster-advanced-source-settings', $url );
+
+			$_GET            = $this->query_of( $url );
+			$_GET['page']    = 'theme' === $type ? 'ran-booster-themes' : 'ran-booster-plugins';
+			$_GET['package'] = $identifier;
+			ob_start();
+			$controls->render_operation_notice();
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'Install couldn&#039;t complete before any files changed. This ' . $type . ' is still on Branch, version 1.0.0.', $html );
+		}
+
+		// switch_uncertain settles to release_enabled, switch_held, switch_other_held, or switch_not_confirmed.
+		$uncertain_tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', 'plugin' ) );
+		$uncertain_tracking->enable_result = ReleaseTrackingResult::failed( 'management_state_uncertain', 'Uncertain.' );
+		$uncertain_controls                = ReleaseManagementFixture::controls( $uncertain_tracking );
+		$uncertain_url                     = $uncertain_controls->process_admin_post_request(
+			'enable',
+			$this->request( 'enable' ) + array(
+				'release_channel' => 'stable',
+				'confirm_switch'  => '1',
+			)
+		);
+		self::assertStringContainsString( 'ran_booster_release_result=switch_uncertain', $uncertain_url );
+		self::assertStringNotContainsString( '#ran-booster-advanced-source-settings', $uncertain_url );
+
+		$_GET            = $this->query_of( $uncertain_url );
+		$_GET['page']    = 'ran-booster-plugins';
+		$_GET['package'] = 'example/example.php';
+		ob_start();
+		$uncertain_controls->render_operation_notice();
+		$settled_released = (string) ob_get_clean();
+		self::assertStringContainsString( 'Switched to releases. Version 1.0.0 is installed.', $settled_released );
+
+		// switch_not_confirmed links to clean reload URL (no result args or hash fragment).
+		$unconfirmed_controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) ) );
+		ob_start();
+		$unconfirmed_controls->render_operation_notice();
+		$unconfirmed_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Booster hasn&#039;t confirmed the switch yet.', $unconfirmed_html );
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&amp;package=example%2Fexample.php">Reload this page</a>', $unconfirmed_html );
+		self::assertStringContainsString( 'is-warning', $unconfirmed_html );
+
+		// switch_held (readable & unreadable) and switch_other_held.
+		$held_readable = ReleaseManagementFixture::controls(
+			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) ),
+			native_hold: static fn (): array => array(
+				'type'       => 'plugin',
+				'identifier' => 'example/example.php',
+				'readable'   => true,
+				'name'       => 'Example Plugin',
+				'url'        => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php#ran-booster-native-hold',
+			)
+		);
+		ob_start();
+		$held_readable->render_operation_notice();
+		$held_readable_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Install couldn&#039;t complete. Check this plugin, then <a href="#ran-booster-native-hold">release the hold</a>.', $held_readable_html );
+
+		$theme_tracking                = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'theme' ) );
+		$theme_tracking->enable_result = ReleaseTrackingResult::failed( 'native_hold', 'Held.' );
+		$held_unreadable               = ReleaseManagementFixture::controls(
+			$theme_tracking,
+			native_hold: static fn (): array => array(
+				'type'       => 'theme',
+				'identifier' => 'example-theme',
+				'readable'   => false,
+				'name'       => 'example-theme',
+				'url'        => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold',
+			)
+		);
+		$held_theme_url                = $held_unreadable->process_admin_post_request(
+			'enable',
+			array(
+				'expected_type'            => 'theme',
+				'expected_identifier'      => 'example-theme',
+				'expected_source_revision' => '3',
+				'_wpnonce'                 => 'nonce-for-release-tracking-enable-theme-example-theme-3',
+				'release_channel'          => 'stable',
+				'confirm_switch'           => '1',
+			)
+		);
+		$_GET                          = $this->query_of( $held_theme_url );
+		$_GET['page']                  = 'ran-booster-themes';
+		$_GET['package']               = 'example-theme';
+		ob_start();
+		$held_unreadable->render_operation_notice();
+		$held_unreadable_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Install couldn&#039;t complete. Check this theme, then <a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh#ran-booster-native-hold">release the hold</a>.', $held_unreadable_html );
+
+		$other_held_controls = ReleaseManagementFixture::controls(
+			new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) ),
+			native_hold: static fn (): array => array(
+				'type'       => 'plugin',
+				'identifier' => 'other/other.php',
+				'readable'   => true,
+				'name'       => 'Other Plugin',
+				'url'        => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=other%2Fother.php#ran-booster-native-hold',
+			)
+		);
+		$_GET                = $this->query_of( $uncertain_url );
+		$_GET['page']        = 'ran-booster-plugins';
+		$_GET['package']     = 'example/example.php';
+		ob_start();
+		$other_held_controls->render_operation_notice();
+		$other_held_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'GitHub installs are on hold: the last install of <a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&amp;package=other%2Fother.php#ran-booster-native-hold">Other Plugin</a> couldn&#039;t complete.', $other_held_html );
+
+		// Policy & older refusals.
+		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		ob_start();
+		$display->render_operation_notice( 'release_older', false, 'plugin', 'example/example.php', 'stable' );
+		$older_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'This release is older than what&#039;s installed.', $older_html );
+		self::assertStringNotContainsString( 'Why this happened and how to fix it', $older_html );
+
+		ob_start();
+		$display->render_operation_notice( 'policy_disabled', false );
+		self::assertStringContainsString( 'Updates are disabled for this package. Set Updates to Manual to switch.', (string) ob_get_clean() );
+
+		ob_start();
+		$display->render_operation_notice( 'policy_forced_off', false );
+		self::assertStringContainsString( 'Updates are turned off by this site&#039;s configuration, so this package can&#039;t switch to releases.', (string) ob_get_clean() );
+	}
+
+	public function test_confirmed_switch_hx_location_scrolls_to_top_while_channel_change_preserves_scroll(): void {
+		$controls                   = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
+		$_POST                      = $this->request( 'enable' ) + array(
+			'release_channel' => 'stable',
+			'confirm_switch'  => '1',
+		);
+		$_SERVER['HTTP_HX_REQUEST'] = 'true';
+		try {
+			$controls->handle_enable();
+			self::fail( 'Expected the HX response to stop execution.' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'hx-redirect', $exception->getMessage() );
+		} finally {
+			unset( $_SERVER['HTTP_HX_REQUEST'] );
+		}
+		$switch_location = json_decode( substr( (string) $GLOBALS['ran_booster_release_management_test_header'], strlen( 'HX-Location: ' ) ), true );
+		self::assertIsArray( $switch_location );
+		self::assertSame( 'outerHTML show:window:top', $switch_location['swap'] ?? null );
+
+		$_POST                      = $this->request( 'change_channel' ) + array( 'release_channel' => 'prerelease' );
+		$_SERVER['HTTP_HX_REQUEST'] = 'true';
+		try {
+			$controls->handle_change_channel();
+			self::fail( 'Expected the HX response to stop execution.' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'hx-redirect', $exception->getMessage() );
+		} finally {
+			unset( $_SERVER['HTTP_HX_REQUEST'] );
+		}
+		$channel_location = json_decode( substr( (string) $GLOBALS['ran_booster_release_management_test_header'], strlen( 'HX-Location: ' ) ), true );
+		self::assertIsArray( $channel_location );
+		self::assertSame( 'outerHTML show:none', $channel_location['swap'] ?? null );
+	}
+
+	public function test_managed_uncertain_outcome_does_not_suggest_relinking(): void {
+		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		$status  = ReleaseManagementFixture::status( 'branch', 'plugin' );
+
+		ob_start();
+		$display->render_operation_notice( 'management_state_uncertain', false, 'plugin', 'example/example.php', 'stable', $status );
+		$managed_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Inspect the installed version, activation state and Booster management before retrying.', $managed_html );
+		self::assertStringNotContainsString( 'Link an already installed plugin', $managed_html );
+
+		ob_start();
+		$display->render_operation_notice( 'installed_but_unmanaged', false, 'plugin', 'example/example.php', 'stable', $status );
+		$unmanaged_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'before using Link an already installed plugin (or theme) or retrying.', $unmanaged_html );
+	}
+
 	/** @param-out string $url */
 	private function render_enable_failure( string $reason, ?string &$url = null, string $detail = '', string $code = 'release_unavailable' ): string {
 		$tracking                   = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
@@ -2438,6 +2872,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls                   = ReleaseManagementFixture::controls( $tracking );
 		$request                    = $this->request( 'enable' );
 		$request['release_channel'] = 'stable';
+		$request['confirm_switch']  = '1';
 		$url                        = $controls->process_admin_post_request( 'enable', $request );
 		$_GET                       = $this->query_of( $url );
 		$package                    = new PackageProjection();

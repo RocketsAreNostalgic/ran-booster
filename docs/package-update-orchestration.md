@@ -170,9 +170,24 @@ For advanced support, the exact-target routes are
 and `admin.php?page=ran-booster-themes&recovery=1&recovery_target=THEME_STYLESHEET`.
 URL-encode the identifier. These routes retain access before complete managed
 settings hydration. A healthy target offers **Open package settings**, and an
-absent or unverifiable target has no removal form. The route without a target
-does not enumerate all installed packages. Opening any of these routes does not
-change package management.
+absent or unverifiable target has no removal form when no management record exists.
+The route without a target does not enumerate all installed packages. Opening any
+of these routes does not change package management.
+
+When a managed plugin or theme's files are deleted from disk or too damaged for
+WordPress to load (missing main plugin file or theme `style.css`), it no longer
+appears in the healthy managed table. **Managed Plugins** and **Managed Themes**
+show a compact **Unavailable managed plugins** or **Unavailable managed themes**
+callout whenever such unregistered managed rows exist (covering both Branch and
+Releases across all providers), and direct `?package=<id>` visits route to the
+same recovery screen. Stopping management requires explicit checkbox confirmation
+bound to the record's adoption token and digest, holds `auto_updater.lock`, and
+refuses while an active deployment attempt or GitHub native install hold exists
+(directing to the GitHub provider page hold recovery when a hold is active).
+Booster never silently prunes management records on page load and never deletes
+unregistered directories; after stopping management, distinct feedback reports
+whether the folder is already absent or must be removed from disk before
+reinstalling.
 
 Confirmation
 binds the exact management row and installed plugin main file or theme

@@ -114,6 +114,8 @@ $policy_labels = array(
 );
 
 $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 && empty( $package_list_unavailable );
+$unavailable_packages     = isset( $unavailable_packages ) && is_array( $unavailable_packages ) ? $unavailable_packages : array();
+$can_manage_unavailable   = current_user_can( 'update_' . $package_view->get_type() . 's' );
 
 ?><header class="ran-booster-action-row ran-booster-provider-management__header ran-booster-package-heading-row">
 	<h2 class="wp-heading-inline ran-booster-package-heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></h2>
@@ -146,6 +148,76 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 		</p>
 	<?php } ?>
 </div>
+
+<?php if ( array() !== $unavailable_packages ) { ?>
+	<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning ran-booster-unavailable-packages" data-ran-booster-unavailable-packages data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" role="region" aria-labelledby="ran-booster-unavailable-packages-heading">
+		<h3 id="ran-booster-unavailable-packages-heading" class="ran-wp-ui-text is-heading-md ran-wp-ui-notice__title">
+			<?php echo esc_html( $is_plugin_list ? __( 'Unavailable managed plugins', 'ran-booster' ) : __( 'Unavailable managed themes', 'ran-booster' ) ); ?>
+		</h3>
+		<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+			<p>
+				<?php
+				echo esc_html(
+					$is_plugin_list
+						? __( 'These managed plugins are missing or too damaged for WordPress to load. Review each plugin to stop managing it.', 'ran-booster' )
+						: __( 'These managed themes are missing or too damaged for WordPress to load. Review each theme to stop managing it.', 'ran-booster' )
+				);
+				?>
+			</p>
+			<ul class="ran-booster-unavailable-packages__list">
+				<?php foreach ( $unavailable_packages as $unavailable_record ) { ?>
+					<?php
+					if ( ! is_array( $unavailable_record ) || ! is_string( $unavailable_record['identifier'] ?? null ) || '' === $unavailable_record['identifier'] ) {
+						continue;
+					}
+					$unavailable_identifier = $unavailable_record['identifier'];
+					$unavailable_slug       = \RAN\UpdaterSupport\V1\PackageDirectory::installed_slug( $package_view->get_type(), $unavailable_identifier );
+					$unavailable_slug       = '' !== $unavailable_slug ? $unavailable_slug : $unavailable_identifier;
+					$unavailable_provider   = is_string( $unavailable_record['provider'] ?? null ) ? $unavailable_record['provider'] : '';
+					$unavailable_repository = is_string( $unavailable_record['repository'] ?? null ) ? $unavailable_record['repository'] : '';
+					$unavailable_source     = is_string( $unavailable_record['source'] ?? null ) ? $unavailable_record['source'] : '';
+					$unavailable_parts      = array();
+					if ( '' !== $unavailable_provider ) {
+						$unavailable_provider_row = $package_providers_by_code[ $unavailable_provider ] ?? null;
+						$unavailable_parts[]      = is_array( $unavailable_provider_row ) && is_string( $unavailable_provider_row['label'] ?? null )
+							? $unavailable_provider_row['label']
+							: $unavailable_provider;
+					}
+					if ( '' !== $unavailable_repository ) {
+						$unavailable_parts[] = $unavailable_repository;
+					}
+					if ( \RAN\PackageSource::RELEASE_ASSET->value === $unavailable_source ) {
+						$unavailable_parts[] = __( 'Releases', 'ran-booster' );
+					} elseif ( \RAN\PackageSource::BRANCH->value === $unavailable_source ) {
+						$unavailable_parts[] = __( 'Branch', 'ran-booster' );
+					}
+					$unavailable_review_url = add_query_arg(
+						array(
+							'page'    => $package_view->get_page_slug(),
+							'package' => $unavailable_identifier,
+						) + array_map( 'rawurlencode', $package_return_args ?? array() ),
+						$package_admin_url
+					);
+					?>
+					<li class="ran-booster-unavailable-packages__item">
+						<div class="ran-booster-unavailable-packages__meta">
+							<strong class="ran-booster-unavailable-packages__slug"><code><?php echo esc_html( $unavailable_slug ); ?></code></strong>
+							<?php if ( $unavailable_identifier !== $unavailable_slug ) { ?>
+								<span class="ran-booster-unavailable-packages__identifier"><code><?php echo esc_html( $unavailable_identifier ); ?></code></span>
+							<?php } ?>
+							<?php if ( array() !== $unavailable_parts ) { ?>
+								<span class="ran-booster-unavailable-packages__details"><?php echo esc_html( implode( ' · ', $unavailable_parts ) ); ?></span>
+							<?php } ?>
+						</div>
+						<?php if ( $can_manage_unavailable ) { ?>
+							<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $unavailable_review_url ); ?>"><?php esc_html_e( 'Review & stop managing', 'ran-booster' ); ?><span class="screen-reader-text">: <?php echo esc_html( $unavailable_slug ); ?></span></a>
+						<?php } ?>
+					</li>
+				<?php } ?>
+			</ul>
+		</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?>
+	</div>
+<?php } ?>
 
 <div id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-collection" class="ran-booster-card ran-booster-package-collection" data-ran-booster-card="<?php echo esc_attr( $package_view->get_type() . 's' ); ?>"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 

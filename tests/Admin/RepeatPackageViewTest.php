@@ -21,13 +21,13 @@ final class RepeatPackageViewTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_POST = array();
-		unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_dashboard_test_multisite'] );
+		unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_dashboard_test_multisite'], $GLOBALS['ran_booster_test_capabilities'] );
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_POST = array();
-		unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_dashboard_test_multisite'] );
+		unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_dashboard_test_multisite'], $GLOBALS['ran_booster_test_capabilities'] );
 	}
 
 	#[RunInSeparateProcess]
@@ -1763,6 +1763,111 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertStringContainsString( 'A safely bounded &lt;explanation&gt;.', $html, $recovery_state );
 			}
 		}
+	}
+
+	#[DataProvider( 'managed_package_context_matrix' )]
+	public function test_unregistered_recovery_view_renders_distinct_disk_state_and_hold_link(
+		PackagePagePresenter $package_view,
+		string $managed_package_identifier,
+		bool $multisite
+	): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
+		$recovery_identifier                           = $managed_package_identifier;
+		$recovery_name                                 = 'plugin' === $package_view->get_type() ? 'example-plugin' : 'example-theme';
+		$recovery_reason                               = 'WordPress can’t load this managed package.';
+		$recovery_blocker                              = null;
+		foreach ( array( true, false ) as $folder_absent ) {
+			$recovery_state        = 'unregistered';
+			$recovery_confirmation = array(
+				'id'             => '42',
+				'package'        => $managed_package_identifier,
+				'type'           => 'plugin' === $package_view->get_type() ? 1 : 2,
+				'source'         => 'release_asset',
+				'adoption_token' => 'lifetime-token',
+				'digest'         => 'record-digest',
+				'folder_absent'  => $folder_absent,
+			);
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/recovery.php';
+			$html = (string) ob_get_clean();
+
+			self::assertStringContainsString( 'data-ran-booster-package-failure-state="unregistered"', $html );
+			self::assertStringContainsString( 'name="ran_booster[recovery_mode]" value="unregistered"', $html );
+			self::assertStringContainsString(
+				'name="_wpnonce" value="' . \RAN\Admin\PackageAdminController::unregistered_recovery_action( $package_view->get_type(), $recovery_identifier, 'lifetime-token', 'record-digest' ) . '"',
+				$html
+			);
+			self::assertStringNotContainsString( 'installed_digest', $html );
+			if ( $folder_absent ) {
+				self::assertStringContainsString( 'Its folder is not on disk.', $html );
+				self::assertStringContainsString( 'remove its Booster management record.', $html );
+			} else {
+				self::assertStringContainsString( 'Its folder is still on disk.', $html );
+				self::assertStringContainsString( 'without deleting its files on disk.', $html );
+			}
+		}
+
+		$recovery_state        = 'blocked';
+		$recovery_confirmation = null;
+		$recovery_blocker      = 'A GitHub install hold is active for this package.';
+		$recovery_action_url   = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold';
+		$recovery_action_label = 'Open GitHub hold recovery';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/recovery.php';
+		$blocked_html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( '<form', $blocked_html );
+		self::assertStringContainsString( 'Open GitHub hold recovery', $blocked_html );
+		self::assertStringContainsString( 'tab=gh#ran-booster-native-hold', $blocked_html );
+	}
+
+	#[DataProvider( 'managed_package_context_matrix' )]
+	public function test_package_index_renders_compact_unavailable_callout_without_mixing_main_table(
+		PackagePagePresenter $package_view,
+		string $managed_package_identifier,
+		bool $multisite
+	): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
+		$GLOBALS['ran_booster_test_capabilities'][ 'update_' . $package_view->get_type() . 's' ] = true;
+		$packages             = array();
+		$package_providers    = array(
+			array(
+				'code'  => 'gh',
+				'label' => 'GitHub',
+			),
+			array(
+				'code'  => 'bb',
+				'label' => 'Bitbucket',
+			),
+		);
+		$package_return_args  = array( 'return_type' => $package_view->get_type() );
+		$messages             = array();
+		$unavailable_packages = array(
+			array(
+				'identifier' => $managed_package_identifier,
+				'repository' => 'org/broken-release',
+				'provider'   => 'gh',
+				'source'     => 'release_asset',
+			),
+			array(
+				'identifier' => 'plugin' === $package_view->get_type() ? 'deleted-bb/deleted-bb.php' : 'deleted-bb-theme',
+				'repository' => 'team/deleted-branch',
+				'provider'   => 'bb',
+				'source'     => 'branch',
+			),
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html = (string) ob_get_clean();
+
+		$expected_heading = 'plugin' === $package_view->get_type() ? 'Unavailable managed plugins' : 'Unavailable managed themes';
+		self::assertStringContainsString( 'data-ran-booster-unavailable-packages', $html );
+		self::assertStringContainsString( $expected_heading, $html );
+		self::assertStringContainsString( 'GitHub · org/broken-release · Releases', $html );
+		self::assertStringContainsString( 'Bitbucket · team/deleted-branch · Branch', $html );
+		self::assertStringContainsString( 'Review &amp; stop managing', $html );
+		self::assertStringContainsString( 'package=' . $managed_package_identifier, $html );
+		self::assertStringNotContainsString( '<tbody id="the-list">', $html );
 	}
 
 	public function test_last_recorded_check_reports_earlier_settings_revision_or_none(): void {

@@ -576,6 +576,83 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertSame( 'capability' === $boundary ? array() : array( PackageAdminController::recovery_action( $type, $identifier, $token, 'row', 'files' ) ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
+	#[DataProvider( 'recovery_authorization_provider' )]
+	public function test_unregistered_recovery_enforces_authorization_and_distinct_disk_state_redirects( string $type, string $boundary ): void {
+		$identifier = 'plugin' === $type ? 'broken-plugin/broken-plugin.php' : 'broken-theme';
+		$token      = 'gh:repo-42:11111111-1111-4111-8111-111111111111';
+		$allowed    = 'allowed' === $boundary;
+		foreach ( $allowed ? array( true, false ) : array( true ) as $folder_absent ) {
+			$GLOBALS['ran_booster_test_capability_checks'] = array();
+			$GLOBALS['ran_booster_test_nonce_checks']      = array();
+			$plugins                                       = $this->createMock( PluginRepository::class );
+			$themes                                        = $this->createMock( ThemeRepository::class );
+			$repository                                    = 'plugin' === $type ? $plugins : $themes;
+			$other = 'plugin' === $type ? $themes : $plugins;
+			$other->expects( self::never() )->method( 'recover_unlink' );
+			$repository->expects( $allowed ? self::once() : self::never() )->method( 'recover_unlink' )
+				->with( $identifier, $token, 'row', self::isCallable() )
+				->willReturnCallback(
+					static function ( string $target, string $lifetime, string $digest, callable $guard ): \RAN\Storage\PackageMutationResult {
+						unset( $target, $lifetime, $digest );
+						$guard();
+						return \RAN\Storage\PackageMutationResult::changed( \RAN\Storage\PackageStorageOperation::DELETE );
+					}
+				);
+			$gateway = $this->createMock( \RAN\PackageRemoval\PackageRemovalGateway::class );
+			$gateway->method( 'installed_targets' )->willReturn( array() );
+			$gateway->expects( $allowed ? self::once() : self::never() )->method( 'deletion_postcondition' )
+				->with( $type, $identifier, true )
+				->willReturn( static fn (): bool => $folder_absent );
+			$gateway->expects( $allowed ? self::once() : self::never() )->method( 'invalidate_native_target' )->with( $type, $identifier );
+			$gateway->expects( self::never() )->method( 'delete_plugin' );
+			$gateway->expects( self::never() )->method( 'delete_theme' );
+			$lock = $this->createMock( WordPressUpdaterLock::class );
+			$lock->expects( $allowed ? self::once() : self::never() )->method( 'try_acquire_without_reclaim' )->willReturn( 'fixture-lock' );
+			$lock->expects( $allowed ? self::exactly( 3 ) : self::never() )->method( 'current_token' )->willReturn( 'fixture-lock' );
+			$lock->expects( $allowed ? self::once() : self::never() )->method( 'release' )->with( 'fixture-lock' )->willReturn( true );
+			$attempts   = new \RAN\Deployment\DeploymentAttemptRepository( new \RAN\Tests\Deployment\AttemptRepositoryDatabase(), 'wp_ran_booster_attempts', database_lifecycle: $this->createStub( \RAN\Storage\Database::class ) );
+			$service    = new \RAN\PackageRemoval\PackageRemovalService( $plugins, $themes, $gateway, $attempts, $lock, github_selection: $this->selection() );
+			$controller = new PackageAdminController( removals: $service );
+			$dashboard  = $this->createMock( Dashboard::class );
+			$dashboard->expects( in_array( $boundary, array( 'nonce', 'confirmation' ), true ) ? self::once() : self::never() )->method( 'add_failure_message' );
+			$GLOBALS['ran_booster_test_capabilities'][ 'update_' . $type . 's' ] = 'capability' !== $boundary;
+			$GLOBALS['ran_booster_test_nonce_valid']                             = 'nonce' !== $boundary;
+			$request = array(
+				'recovery_mode'           => 'unregistered',
+				'identifier'              => $identifier,
+				'adoption_token'          => $token,
+				'digest'                  => 'row',
+				'confirm_package_removal' => '1',
+			);
+			if ( 'confirmation' === $boundary ) {
+				unset( $request['confirm_package_removal'] );
+			}
+			try {
+				$result = $controller->manage( $dashboard, 'recover-' . $type, $request, true );
+				if ( $allowed ) {
+					self::assertIsString( $result );
+					self::assertStringContainsString( 'page=ran-booster-' . $type . 's', $result );
+					self::assertStringContainsString( 'ran_booster_result=' . ( $folder_absent ? 'unlink-absent' : 'unlink-on-disk' ), $result );
+					self::assertStringNotContainsString( 'relink=', $result );
+				} else {
+					self::assertNotSame( 'capability', $boundary );
+					self::assertFalse( $result );
+				}
+			} catch ( \RuntimeException ) {
+				self::assertSame( 'capability', $boundary );
+			}
+			self::assertSame( array( 'update_' . $type . 's' ), $GLOBALS['ran_booster_test_capability_checks'] );
+			self::assertSame(
+				'capability' === $boundary ? array() : array( PackageAdminController::unregistered_recovery_action( $type, $identifier, $token, 'row' ) ),
+				$GLOBALS['ran_booster_test_nonce_checks']
+			);
+			self::assertNotSame(
+				PackageAdminController::recovery_action( $type, $identifier, $token, 'row', '' ),
+				PackageAdminController::unregistered_recovery_action( $type, $identifier, $token, 'row' )
+			);
+		}
+	}
+
 	private function selection(): GitHubProviderSelection {
 		$store   = new GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' );
 		$bundled = new GitHubReplacementDeclaration(

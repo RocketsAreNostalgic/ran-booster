@@ -330,9 +330,12 @@ build-generated `ran-booster-release.json` marker may consume the configured
 Core release feed. Source checkouts and unverified directories remain
 runtime-only: the updater runtime and prospective API are retained, but no Core
 self-update feed request, native offer, upgrader hook, or updater notice is
-created. The current Core repository is private and Core's shipped updater
-registration carries no credential, so anonymous discovery fails closed with
-`404`; the temporary token shim used for release proof is not product UX.
+created. Core's GitHub repository is public and Core's shipped updater
+registration carries no credential, so a verified release installation uses
+anonymous public-release discovery through GitHub Releases without requiring a
+stored Booster credential; against a private or unavailable repository,
+anonymous discovery fails closed, and the temporary token shim used for earlier
+pre-public release proof is not product UX.
 
 An operator may force `enabled` only for a disposable update test or force
 `disabled` as a narrow site-level freeze. Enabled Core discovery remains

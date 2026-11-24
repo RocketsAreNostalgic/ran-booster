@@ -213,10 +213,12 @@ stable channel, auto-update remains forced off, and WordPress Core retains
 update scheduling, UI and replacement. No web hook or managed deployment
 attempt may replace Booster itself.
 
-The current Core repository is private and the shipped Core registration has
-no credential. Anonymous discovery therefore fails closed; the temporary
-process-only token shim used for the hosted release proof is not a supported
-private Core credential path.
+Core's GitHub repository is public and the shipped Core registration carries
+no credential, so verified release installations discover published releases
+anonymously without a stored Booster credential. Against a private or
+unavailable repository, anonymous discovery fails closed; the temporary
+process-only token shim used for earlier pre-public release proof is not a
+supported private Core credential path.
 
 ## Attempt records
 

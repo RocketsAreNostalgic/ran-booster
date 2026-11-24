@@ -100,12 +100,31 @@ final readonly class GitHubReplacementDeclaration {
 	}
 
 	/**
+	 * Validate one WordPress plugin basename relative to WP_PLUGIN_DIR without
+	 * rejecting valid third-party characters or nested paths that WordPress loads.
+	 */
+	public static function is_valid_plugin_basename( string $basename ): bool {
+		if ( '' === $basename || ! str_ends_with( $basename, '.php' ) || str_contains( $basename, '\\' ) || 1 === preg_match( '/[\x00-\x1f\x7f]/', $basename ) ) {
+			return false;
+		}
+		if ( ':' === substr( $basename, 1, 1 ) ) {
+			return false;
+		}
+		foreach ( explode( '/', $basename ) as $segment ) {
+			if ( '' === $segment || '.' === $segment || '..' === $segment ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
 	 * Read one active main file without executing it. Missing/invalid files throw;
 	 * null means a readable plugin does not declare a replacement header.
 	 * Directory symlinks are supported; manifest symlinks outside that directory are not.
 	 */
 	public static function from_plugin_file( string $plugin_root, string $basename ): ?self {
-		if ( ! preg_match( '/\A(?:[a-zA-Z0-9][a-zA-Z0-9_.-]*\/)?[a-zA-Z0-9][a-zA-Z0-9_.-]*\.php\z/D', $basename ) ) {
+		if ( ! self::is_valid_plugin_basename( $basename ) ) {
 			throw new \InvalidArgumentException( 'Invalid plugin basename.' );
 		}
 		// A plugin-directory symlink may have changed in another process since Preview.

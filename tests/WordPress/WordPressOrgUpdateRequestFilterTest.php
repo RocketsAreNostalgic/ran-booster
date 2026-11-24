@@ -143,40 +143,84 @@ final class WordPressOrgUpdateRequestFilterTest extends TestCase {
 		}
 	}
 
-	public function test_storage_failure_and_unsupported_database_fail_closed_for_plugins_and_themes(): void {
-		$plugin_args = array(
+	public function test_storage_failure_and_unsupported_database_preserve_unmanaged_updates(): void {
+		$plugin_args_with_booster = array(
 			'body' => array(
-				'plugins' => '{"plugins":{"managed/plugin.php":{},"ran-booster/ran-booster.php":{},"other/plugin.php":{}},"active":["managed/plugin.php","ran-booster/ran-booster.php","other/plugin.php"]}',
+				'plugins' => '{"plugins":{"managed\/plugin.php":{},"ran-booster\/ran-booster.php":{},"other\/plugin.php":{}},"active":["managed\/plugin.php","ran-booster\/ran-booster.php","other\/plugin.php"]}',
 			),
 		);
-		$theme_args  = array(
+		$plugin_args_only_booster = array(
+			'body' => array(
+				'plugins' => '{"plugins":{"ran-booster\/ran-booster.php":{}},"active":["ran-booster\/ran-booster.php"]}',
+			),
+		);
+		$plugin_args_unmanaged    = array(
+			'body' => array(
+				'plugins' => '{"plugins":{"managed\/plugin.php":{},"other\/plugin.php":{}},"active":["managed\/plugin.php","other\/plugin.php"]}',
+			),
+		);
+		$theme_args               = array(
 			'body' => array(
 				'themes' => '{"themes":{"managed-theme":{},"other-theme":{}},"active":"managed-theme"}',
 			),
 		);
 
-		$throwing_db = $this->createStub( Database::class );
-		$throwing_db->method( 'is_supported' )->willReturn( true );
+		$throwing_repo_db = $this->createStub( Database::class );
+		$throwing_repo_db->method( 'is_supported' )->willReturn( true );
 		$throwing_plugins = $this->createStub( PluginRepository::class );
 		$throwing_plugins->method( 'all_booster_plugins' )->willThrowException( new RuntimeException( 'database details' ) );
 		$throwing_themes = $this->createStub( ThemeRepository::class );
 		$throwing_themes->method( 'all_booster_themes' )->willThrowException( new RuntimeException( 'database details' ) );
 
+		$throwing_support_db = $this->createStub( Database::class );
+		$throwing_support_db->method( 'is_supported' )->willThrowException( new RuntimeException( 'database details' ) );
+
 		$unsupported_db = $this->createStub( Database::class );
 		$unsupported_db->method( 'is_supported' )->willReturn( false );
+		$unused_plugins = $this->createMock( PluginRepository::class );
+		$unused_plugins->expects( self::never() )->method( 'all_booster_plugins' );
+		$unused_themes = $this->createMock( ThemeRepository::class );
+		$unused_themes->expects( self::never() )->method( 'all_booster_themes' );
 
 		foreach (
 			array(
-				new WordPressOrgUpdateRequestFilter( $throwing_db, $throwing_plugins, $throwing_themes, 'ran-booster/ran-booster.php' ),
-				new WordPressOrgUpdateRequestFilter( $unsupported_db, $this->createStub( PluginRepository::class ), $this->createStub( ThemeRepository::class ), 'ran-booster/ran-booster.php' ),
+				new WordPressOrgUpdateRequestFilter( $throwing_repo_db, $throwing_plugins, $throwing_themes, 'ran-booster/ran-booster.php' ),
+				new WordPressOrgUpdateRequestFilter( $throwing_support_db, $this->createStub( PluginRepository::class ), $this->createStub( ThemeRepository::class ), 'ran-booster/ran-booster.php' ),
+				new WordPressOrgUpdateRequestFilter( $unsupported_db, $unused_plugins, $unused_themes, 'ran-booster/ran-booster.php' ),
 			) as $filter
 		) {
-			$filtered_plugins = $filter->plugins( $plugin_args, 'https://api.wordpress.org/plugins/update-check/1.1/' );
-			self::assertSame( '{"plugins":{},"active":[]}', $filtered_plugins['body']['plugins'] );
+			$filtered_plugins = $filter->plugins( $plugin_args_with_booster, 'https://api.wordpress.org/plugins/update-check/1.1/' );
+			self::assertSame(
+				'{"plugins":{"managed\/plugin.php":[],"other\/plugin.php":[]},"active":["managed\/plugin.php","other\/plugin.php"]}',
+				$filtered_plugins['body']['plugins']
+			);
 
-			$filtered_themes = $filter->themes( $theme_args, 'https://api.wordpress.org/themes/update-check/1.1/' );
-			self::assertSame( '{"themes":{}}', $filtered_themes['body']['themes'] );
+			$filtered_only_booster = $filter->plugins( $plugin_args_only_booster, 'https://api.wordpress.org/plugins/update-check/1.1/' );
+			self::assertSame( '{"plugins":{},"active":[]}', $filtered_only_booster['body']['plugins'] );
+
+			self::assertSame( $plugin_args_unmanaged, $filter->plugins( $plugin_args_unmanaged, 'https://api.wordpress.org/plugins/update-check/1.1/' ) );
+			self::assertSame( $theme_args, $filter->themes( $theme_args, 'https://api.wordpress.org/themes/update-check/1.1/' ) );
 		}
+	}
+
+	public function test_removing_all_managed_entries_preserves_empty_json_object_and_strips_duplicate_active_entries(): void {
+		$filter      = $this->filter_with_managed_records();
+		$plugin_args = array(
+			'body' => array(
+				'plugins' => '{"plugins":{"managed\/plugin.php":{},"ran-booster\/ran-booster.php":{}},"active":["managed\/plugin.php","ran-booster\/ran-booster.php","managed\/plugin.php"]}',
+			),
+		);
+		$theme_args  = array(
+			'body' => array(
+				'themes' => '{"themes":{"managed-theme":{}},"active":"managed-theme"}',
+			),
+		);
+
+		$filtered_plugins = $filter->plugins( $plugin_args, 'https://api.wordpress.org/plugins/update-check/1.1/' );
+		self::assertSame( '{"plugins":{},"active":[]}', $filtered_plugins['body']['plugins'] );
+
+		$filtered_themes = $filter->themes( $theme_args, 'https://api.wordpress.org/themes/update-check/1.1/' );
+		self::assertSame( '{"themes":{}}', $filtered_themes['body']['themes'] );
 	}
 
 	private function filter(): WordPressOrgUpdateRequestFilter {

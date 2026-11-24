@@ -45,12 +45,9 @@ final class WordPressOrgUpdateRequestFilter {
 			return $args;
 		}
 
-		$storage_failed = false;
-		$managed        = array();
+		$managed = array();
 		try {
-			if ( ! $this->database->is_supported() ) {
-				$storage_failed = true;
-			} else {
+			if ( $this->database->is_supported() ) {
 				$managed = array_keys(
 					'plugin' === $type
 						? $this->plugins->all_booster_plugins()
@@ -58,39 +55,46 @@ final class WordPressOrgUpdateRequestFilter {
 				);
 			}
 		} catch ( Throwable ) {
-			$storage_failed = true;
+			$managed = array();
 		}
 
-		if ( $storage_failed ) {
-			if ( 'plugin' === $type ) {
-				$payload['plugins'] = new \stdClass();
-				$payload['active']  = array();
-			} else {
-				$payload['themes'] = new \stdClass();
-				unset( $payload['active'] );
-			}
-		} elseif ( 'plugin' === $type ) {
-			$managed[] = $this->booster_plugin;
-			$removed   = false;
+		$removed = false;
+		if ( 'plugin' === $type ) {
+			$managed[]      = $this->booster_plugin;
+			$active_removed = false;
 			foreach ( $managed as $package ) {
-				$removed = $removed || isset( $payload['plugins'][ $package ] );
-				unset( $payload['plugins'][ $package ] );
-				$active = array_search( $package, $payload['active'], true );
-				if ( false !== $active ) {
-					unset( $payload['active'][ $active ] );
+				if ( array_key_exists( $package, $payload['plugins'] ) ) {
+					unset( $payload['plugins'][ $package ] );
 					$removed = true;
 				}
+				foreach ( array_keys( $payload['active'], $package, true ) as $active ) {
+					unset( $payload['active'][ $active ] );
+					$active_removed = true;
+					$removed        = true;
+				}
 			}
-			if ( $removed ) {
+			if ( $active_removed ) {
 				$payload['active'] = array_values( $payload['active'] );
 			}
 		} else {
 			foreach ( $managed as $package ) {
-				unset( $payload['themes'][ $package ] );
+				if ( array_key_exists( $package, $payload['themes'] ) ) {
+					unset( $payload['themes'][ $package ] );
+					$removed = true;
+				}
 			}
 			if ( isset( $payload['active'] ) && in_array( $payload['active'], $managed, true ) ) {
 				unset( $payload['active'] );
+				$removed = true;
 			}
+		}
+
+		if ( ! $removed ) {
+			return $args;
+		}
+
+		if ( array() === $payload[ $key ] ) {
+			$payload[ $key ] = new \stdClass();
 		}
 
 		$encoded = wp_json_encode( $payload );

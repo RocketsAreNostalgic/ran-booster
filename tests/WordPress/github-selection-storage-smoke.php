@@ -83,7 +83,7 @@ return static function ( wpdb $database ): void {
 		$store->invalidate_cache();
 		$expect( 0 === $original['selection_generation'] && 'bundled' === $original['selected'], 'fresh bundled selection' );
 		$expect( $original === $second->read(), 'independent connection sees initialization' );
-		$expect( 'no' === $database->get_var( $database->prepare( 'SELECT autoload FROM %i WHERE option_name = %s', $table, GitHubSelectionStore::OPTION ) ), 'selection never autoloads' );
+		$expect( 'off' === $database->get_var( $database->prepare( 'SELECT autoload FROM %i WHERE option_name = %s', $table, GitHubSelectionStore::OPTION ) ), 'selection never autoloads' );
 		foreach ( array( GitHubSelectionStore::OPTION, 'alloptions', 'notoptions' ) as $key ) {
 			$found = false;
 			wp_cache_get( $key, 'options', false, $found );
@@ -359,6 +359,53 @@ return static function ( wpdb $database ): void {
 		$set_active( array( $declaration->plugin_basename, 'unrelated.php' ) );
 		$expect( ! $context->operation_allowed(), 'same request refuses actual active-list change' );
 		$expect( $compose()->operation_allowed(), 'fresh request can use unchanged bundled contract after unrelated activation' );
+
+		// Prove WordPress 7.0 'off' and legacy 'no' autoload values both work across read/CAS/hold,
+		// and unrelated valid active plugin basenames (spaces, symbols, nested paths) do not lock out admission.
+		$custom_dirs = array( $plugin_root . '/_custom dir', $plugin_root . '/_custom dir/sub' );
+		$custom_file = '_custom dir/sub/my+plugin (2).php';
+		try {
+			foreach ( $custom_dirs as $custom_dir ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Temporary passive smoke plugin directory cleaned below.
+				$expect( mkdir( $custom_dir, 0700 ), 'custom passive plugin subdirectory created' );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Passive fixture file cleaned in finally.
+			$expect( false !== file_put_contents( $plugin_root . '/' . $custom_file, '<?php /* Plugin Name: Unrelated Nested */' ), 'custom passive plugin written' );
+			$set_active( array( $declaration->plugin_basename, $custom_file ) );
+			$expect( array( $custom_file, $declaration->plugin_basename ) === $store->active_plugins(), 'active_plugins accepts spaces, symbols, and nested paths' );
+			$current_sel = $store->read();
+			foreach ( array( 'no', 'off' ) as $allowed_autoload ) {
+				$query( $database->prepare( 'UPDATE %i SET autoload = %s WHERE option_name = %s', $table, $allowed_autoload, GitHubSelectionStore::OPTION ) );
+				$store->invalidate_cache();
+				$expect( $current_sel === $store->read(), "read() accepts autoload={$allowed_autoload}" );
+				$expect( $compose()->operation_allowed(), "admission succeeds with autoload={$allowed_autoload} and unrelated nested/spaced plugin" );
+				$next_sel = $current_sel;
+				++$next_sel['selection_generation'];
+				$query( 'START TRANSACTION' );
+				$expect( $store->compare_and_swap( $current_sel, $next_sel ), "CAS accepts autoload={$allowed_autoload}" );
+				$query( 'COMMIT' );
+				$pinned_next = $next_sel;
+				++$pinned_next['selection_generation'];
+				$expect(
+					$store->selection_transaction( static fn (): bool => $store->compare_and_swap( $next_sel, $pinned_next ) ),
+					"pinned selection_transaction CAS accepts autoload={$allowed_autoload}"
+				);
+				$expect( 'hold-ok' === $store->without_native_mutation_hold( static fn (): string => 'hold-ok' ), "without_native_mutation_hold accepts autoload={$allowed_autoload}" );
+				$current_sel = $pinned_next;
+			}
+			$restored = $current_sel;
+		} finally {
+			if ( is_file( $plugin_root . '/' . $custom_file ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Exact custom smoke fixture file created above.
+				unlink( $plugin_root . '/' . $custom_file );
+			}
+			foreach ( array_reverse( $custom_dirs ) as $custom_dir ) {
+				if ( is_dir( $custom_dir ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Empty custom smoke subdirectory created above.
+					rmdir( $custom_dir );
+				}
+			}
+		}
 		$set_active( array( $declaration->plugin_basename ) );
 
 		$manifest = get_object_vars( $declaration );
@@ -1359,9 +1406,14 @@ return static function ( wpdb $database ): void {
 		$store->initialize_bundled( $declaration );
 		$query( 'COMMIT' );
 		$store->invalidate_cache();
-		$query( $database->prepare( "UPDATE %i SET autoload = 'yes'", $table ) );
-		$reject( static fn () => $store->read(), 'autoloaded state refuses' );
-		$query( $database->prepare( "UPDATE %i SET autoload = 'no'", $table ) );
+		foreach ( array( 'yes', 'on', 'auto', 'auto-on', 'auto-off' ) as $autoloaded_value ) {
+			$query( $database->prepare( 'UPDATE %i SET autoload = %s', $table, $autoloaded_value ) );
+			$reject( static fn () => $store->read(), "autoload={$autoloaded_value} state refuses" );
+		}
+		foreach ( array( 'no', 'off' ) as $non_autoload_value ) {
+			$query( $database->prepare( 'UPDATE %i SET autoload = %s', $table, $non_autoload_value ) );
+			$expect( array() !== $store->read(), "autoload={$non_autoload_value} state reads cleanly" );
+		}
 		$query( $database->prepare( 'ALTER TABLE %i ENGINE=MyISAM', $table ) );
 		$store->invalidate_cache();
 		$reject( static fn () => $store->read(), 'nontransactional options storage refuses' );

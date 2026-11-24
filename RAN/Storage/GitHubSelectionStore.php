@@ -20,6 +20,7 @@ use RAN\RepositoryProvider\GitHubReplacementDeclaration;
  */
 final class GitHubSelectionStore {
 	public const OPTION                      = 'ran_booster_github_selection';
+	private const NON_AUTOLOAD_VALUES        = array( 'no', 'off' );
 	private bool $commit_uncertain           = false;
 	private bool $transaction_open_uncertain = false;
 	private bool $storage_verified           = false;
@@ -45,7 +46,7 @@ final class GitHubSelectionStore {
 
 	/**
 	 * Authoritative current read: option filters and object caches are not authority.
-	 * Only WordPress's bounded serialized integer-keyed array of plugin basenames is accepted.
+	 * Only WordPress's canonical serialized integer-keyed array of valid plugin basenames is accepted.
 	 *
 	 * @return list<string>
 	 */
@@ -68,35 +69,38 @@ final class GitHubSelectionStore {
 			throw new DatabaseLifecycleFailure( 'active_plugins_read_failed' );
 		}
 		$bytes = $rows[0]->option_value;
-		if ( strlen( $bytes ) > 262144 || ! preg_match( '/\Aa:(0|[1-9][0-9]{0,3}):\{/', $bytes, $match ) || (int) $match[1] > 1024 ) {
+		if ( ! str_starts_with( $bytes, 'a:' ) ) {
 			throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
 		}
-		$count   = (int) $match[1];
-		$offset  = strlen( $match[0] );
-		$plugins = array();
-		// Native deactivation unsets entries without renumbering the surviving keys.
-		$keys        = array();
-		$maximum_key = (string) PHP_INT_MAX;
-		for ( $index = 0; $index < $count; ++$index ) {
-			if ( ! preg_match( '/\Gi:(0|[1-9][0-9]{0,18});s:([1-9][0-9]{0,2}):"/', $bytes, $item, 0, $offset ) || (int) $item[2] > 255 ) {
-				throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
-			}
-			if ( strlen( $item[1] ) > strlen( $maximum_key ) || ( strlen( $item[1] ) === strlen( $maximum_key ) && strcmp( $item[1], $maximum_key ) > 0 ) || isset( $keys[ $item[1] ] ) ) {
-				throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
-			}
-			$keys[ $item[1] ] = true;
-
-			$offset  += strlen( $item[0] );
-			$length   = (int) $item[2];
-			$basename = substr( $bytes, $offset, $length );
-			$offset  += $length;
-			if ( ! preg_match( '/\A(?:[a-zA-Z0-9][a-zA-Z0-9_.-]*\/)?[a-zA-Z0-9][a-zA-Z0-9_.-]*\.php\z/D', $basename ) || '";' !== substr( $bytes, $offset, 2 ) || in_array( $basename, $plugins, true ) ) {
-				throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
-			}
-			$offset   += 2;
-			$plugins[] = $basename;
+		// Ensure the failure class is loaded before blocking autoloaders during unserialize().
+		class_exists( DatabaseLifecycleFailure::class );
+		$deny_autoload = static function (): never {
+			throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
+		};
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Suppress native unserialize notices, warnings, and deprecations on malformed stored bytes just as maybe_unserialize() does.
+		set_error_handler( static fn (): bool => true, E_NOTICE | E_WARNING | E_DEPRECATED );
+		spl_autoload_register( $deny_autoload, true, true );
+		try {
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- Decode authoritative active_plugins option bytes with class instantiation and autoloading disabled plus canonical round-trip verification.
+			$decoded = unserialize( $bytes, array( 'allowed_classes' => false ) );
+		} finally {
+			spl_autoload_unregister( $deny_autoload );
+			restore_error_handler();
 		}
-		if ( '}' !== substr( $bytes, $offset ) ) {
+		if ( ! is_array( $decoded ) ) {
+			throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
+		}
+		$plugins = array();
+		$seen    = array();
+		foreach ( $decoded as $key => $basename ) {
+			if ( ! is_int( $key ) || $key < 0 || ! is_string( $basename ) || ! GitHubReplacementDeclaration::is_valid_plugin_basename( $basename ) || isset( $seen[ $basename ] ) ) {
+				throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
+			}
+			$seen[ $basename ] = true;
+			$plugins[]         = $basename;
+		}
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Verify canonical serialized array bytes with no trailing data, duplicate keys, or coerced key forms.
+		if ( serialize( $decoded ) !== $bytes ) {
 			throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
 		}
 		sort( $plugins, SORT_STRING );
@@ -137,7 +141,7 @@ final class GitHubSelectionStore {
 			throw new DatabaseLifecycleFailure( 'selection_read_failed' );
 		}
 		$row = $rows[0];
-		if ( ! is_object( $row ) || ( $row->option_name ?? null ) !== self::OPTION || 'no' !== ( $row->autoload ?? null ) || ! is_string( $row->option_value ?? null ) || strlen( $row->option_value ) > 16384 ) {
+		if ( ! is_object( $row ) || ( $row->option_name ?? null ) !== self::OPTION || ! in_array( $row->autoload ?? null, self::NON_AUTOLOAD_VALUES, true ) || ! is_string( $row->option_value ?? null ) || strlen( $row->option_value ) > 16384 ) {
 			throw new DatabaseLifecycleFailure( 'selection_invalid' );
 		}
 		try {
@@ -170,7 +174,7 @@ final class GitHubSelectionStore {
 			'approved_api_formats' => $declaration->api_credential_formats,
 		);
 		$this->require_storage();
-		$query = $this->connection->prepare( 'INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $this->table, self::OPTION, $this->encode( $initial ), 'no' );
+		$query = $this->connection->prepare( 'INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $this->table, self::OPTION, $this->encode( $initial ), 'off' );
 		try {
 			$this->connection->last_error = '';
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Every identifier and value is bound by prepare().
@@ -208,12 +212,20 @@ final class GitHubSelectionStore {
 				$this->assert_pinned_session();
 				$sql    = $this->format_pinned_sql(
 					$pinned,
-					'UPDATE %i SET option_value = %s WHERE BINARY option_name = BINARY %s AND BINARY option_value = BINARY %s AND BINARY autoload = BINARY %s',
-					array( $this->table, $new, self::OPTION, $old, 'no' )
+					'UPDATE %i SET option_value = %s WHERE BINARY option_name = BINARY %s AND BINARY option_value = BINARY %s AND ( BINARY autoload = BINARY %s OR BINARY autoload = BINARY %s )',
+					array( $this->table, $new, self::OPTION, $old, self::NON_AUTOLOAD_VALUES[0], self::NON_AUTOLOAD_VALUES[1] )
 				);
 				$result = $this->pinned_mysqli_affected( $pinned, $sql, 'selection_write_failed' );
 			} else {
-				$query                        = $this->connection->prepare( 'UPDATE %i SET option_value = %s WHERE BINARY option_name = BINARY %s AND BINARY option_value = BINARY %s AND BINARY autoload = BINARY %s', $this->table, $new, self::OPTION, $old, 'no' );
+				$query                        = $this->connection->prepare(
+					'UPDATE %i SET option_value = %s WHERE BINARY option_name = BINARY %s AND BINARY option_value = BINARY %s AND ( BINARY autoload = BINARY %s OR BINARY autoload = BINARY %s )',
+					$this->table,
+					$new,
+					self::OPTION,
+					$old,
+					self::NON_AUTOLOAD_VALUES[0],
+					self::NON_AUTOLOAD_VALUES[1]
+				);
 				$this->connection->last_error = '';
 				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Exact byte CAS with prepared table and values.
 				$result = $this->connection->query( $query );

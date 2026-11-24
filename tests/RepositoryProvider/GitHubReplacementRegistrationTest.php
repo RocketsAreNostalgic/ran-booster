@@ -392,4 +392,73 @@ final class GitHubReplacementRegistrationTest extends TestCase {
 			rmdir( $root );
 		}
 	}
+
+	public function test_from_plugin_file_ignores_unrelated_valid_paths_and_refuses_unsafe_or_declared_ones(): void {
+		$root  = sys_get_temp_dir() . '/ran-gh-decl-' . bin2hex( random_bytes( 8 ) );
+		$dirs  = array(
+			$root,
+			$root . '/my plugin',
+			$root . '/my+plugin (v2)',
+			$root . '/_private',
+			$root . '/plügîn',
+			$root . '/vendor',
+			$root . '/vendor/sub',
+			$root . '/vendor/sub/nested',
+		);
+		$files = array(
+			'my plugin/my plugin.php',
+			'my+plugin (v2)/@main.php',
+			'_private/.hidden.php',
+			'plügîn/màin.php',
+			'vendor/sub/nested/plugin.php',
+		);
+		try {
+			foreach ( $dirs as $dir ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated passive plugin-path fixture directory.
+				self::assertTrue( mkdir( $dir, 0700 ) );
+			}
+			foreach ( $files as $basename ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Ordinary passive plugin fixture without replacement marker.
+				file_put_contents( $root . '/' . $basename, '<?php /* Plugin Name: Ordinary */' );
+				self::assertNull( GitHubReplacementDeclaration::from_plugin_file( $root, $basename ), $basename );
+			}
+
+			// A third-party/nested basename that declares the replacement header still fails closed.
+			$manifest                    = $this->manifest();
+			$manifest['plugin_basename'] = 'my plugin/my plugin.php';
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Passive header fixture only.
+			file_put_contents( $root . '/my plugin/my plugin.php', "<?php\n/* RAN Booster GitHub Replacement: 1 */" );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Adjacent passive manifest fixture.
+			file_put_contents( $root . '/my plugin/my plugin.gh-replacement.json', $this->encode_manifest( $manifest ) );
+			try {
+				GitHubReplacementDeclaration::from_plugin_file( $root, 'my plugin/my plugin.php' );
+				self::fail( 'Replacement header on disallowed replacement basename must throw.' );
+			} catch ( \InvalidArgumentException $failure ) {
+				self::assertNotSame( '', $failure->getMessage() );
+			}
+
+			foreach ( array( '../a.php', 'a/../b.php', './a.php', 'a/./b.php', '/a.php', 'a//b.php', 'a\\b.php', 'C:/a.php', "bad\0.php", "bad\n.php", 'plain.txt', 'missing/plugin.php' ) as $unsafe ) {
+				try {
+					GitHubReplacementDeclaration::from_plugin_file( $root, $unsafe );
+					self::fail( "Unsafe basename accepted: {$unsafe}" );
+				} catch ( \InvalidArgumentException $failure ) {
+					self::assertNotSame( '', $failure->getMessage() );
+				}
+			}
+		} finally {
+			foreach ( array_merge( $files, array( 'my plugin/my plugin.gh-replacement.json' ) ) as $file ) {
+				$path = $root . '/' . $file;
+				if ( is_file( $path ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this isolated fixture's files.
+					unlink( $path );
+				}
+			}
+			foreach ( array_reverse( $dirs ) as $dir ) {
+				if ( is_dir( $dir ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only this isolated fixture's directories.
+					rmdir( $dir );
+				}
+			}
+		}
+	}
 }

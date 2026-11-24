@@ -357,26 +357,38 @@ final class GitHubSelectionStoreTest extends TestCase {
 		$invalid_bytes['duplicate serialized k'] = 'a:2:{i:0;s:5:"a.php";i:0;s:5:"b.php";}';
 		$invalid_bytes['trailing bytes']         = 'a:1:{i:0;s:5:"a.php";}trailing';
 		$invalid_bytes['corrupt serialized']     = 'a:1:{i:0;s:99:"a.php";}';
+		$invalid_bytes['hex escaped string']     = 'a:1:{i:0;S:5:"\61.php";}';
 		$invalid_bytes['raw string']             = 'not-serialized';
 
-		foreach ( $invalid_bytes as $label => $bytes ) {
-			$db       = new SelectionDatabase();
-			$db->rows = array(
-				(object) array(
-					'option_name'  => 'active_plugins',
-					'option_value' => $bytes,
-					'autoload'     => 'yes',
-				),
-			);
-			try {
-				( new GitHubSelectionStore( $db, 'wp_options' ) )->active_plugins();
-				self::fail( "Invalid active_plugins fixture accepted: {$label}" );
-			} catch ( DatabaseLifecycleFailure $failure ) {
-				self::assertSame( 'active_plugins_invalid', $failure->reason(), $label );
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Prove no unserialize notice, warning, or deprecation escapes active_plugins().
+		set_error_handler(
+			static function ( int $severity, string $message ): never {
+				throw new \RuntimeException( "Unexpected PHP error ({$severity}): {$message}" );
+			},
+			E_NOTICE | E_WARNING | E_DEPRECATED
+		);
+		try {
+			foreach ( $invalid_bytes as $label => $bytes ) {
+				$db       = new SelectionDatabase();
+				$db->rows = array(
+					(object) array(
+						'option_name'  => 'active_plugins',
+						'option_value' => $bytes,
+						'autoload'     => 'yes',
+					),
+				);
+				try {
+					( new GitHubSelectionStore( $db, 'wp_options' ) )->active_plugins();
+					self::fail( "Invalid active_plugins fixture accepted: {$label}" );
+				} catch ( DatabaseLifecycleFailure $failure ) {
+					self::assertSame( 'active_plugins_invalid', $failure->reason(), $label );
+				}
 			}
+		} finally {
+			restore_error_handler();
 		}
 
-		// Verify object-bearing active_plugins payloads never invoke PHP class autoloaders.
+		// Verify object-bearing and enum-bearing active_plugins payloads never invoke PHP class autoloaders.
 		$autoload_triggered = false;
 		$spy                = static function ( string $class_name ) use ( &$autoload_triggered ): void {
 			if ( 'RanTestForbiddenActivePluginsGadget' === $class_name ) {
@@ -385,21 +397,26 @@ final class GitHubSelectionStoreTest extends TestCase {
 		};
 		spl_autoload_register( $spy );
 		try {
-			$db       = new SelectionDatabase();
-			$db->rows = array(
-				(object) array(
-					'option_name'  => 'active_plugins',
-					'option_value' => 'a:1:{i:0;O:35:"RanTestForbiddenActivePluginsGadget":0:{}}',
-					'autoload'     => 'yes',
-				),
-			);
-			try {
-				( new GitHubSelectionStore( $db, 'wp_options' ) )->active_plugins();
-				self::fail( 'Object payload must fail.' );
-			} catch ( DatabaseLifecycleFailure $failure ) {
-				self::assertSame( 'active_plugins_invalid', $failure->reason() );
+			foreach ( array(
+				'object' => 'a:1:{i:0;O:35:"RanTestForbiddenActivePluginsGadget":0:{}}',
+				'enum'   => 'a:1:{i:0;E:40:"RanTestForbiddenActivePluginsGadget:Case";}',
+			) as $kind => $payload ) {
+				$db       = new SelectionDatabase();
+				$db->rows = array(
+					(object) array(
+						'option_name'  => 'active_plugins',
+						'option_value' => $payload,
+						'autoload'     => 'yes',
+					),
+				);
+				try {
+					( new GitHubSelectionStore( $db, 'wp_options' ) )->active_plugins();
+					self::fail( "{$kind} payload must fail." );
+				} catch ( DatabaseLifecycleFailure $failure ) {
+					self::assertSame( 'active_plugins_invalid', $failure->reason(), $kind );
+				}
+				self::assertFalse( $autoload_triggered, $kind );
 			}
-			self::assertFalse( $autoload_triggered );
 		} finally {
 			spl_autoload_unregister( $spy );
 		}

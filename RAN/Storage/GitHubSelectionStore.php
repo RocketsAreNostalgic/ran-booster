@@ -72,12 +72,19 @@ final class GitHubSelectionStore {
 		if ( ! str_starts_with( $bytes, 'a:' ) ) {
 			throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
 		}
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Suppress native unserialize notices on malformed stored bytes just as maybe_unserialize() does.
-		set_error_handler( static fn (): bool => true, E_NOTICE | E_WARNING );
+		// Ensure the failure class is loaded before blocking autoloaders during unserialize().
+		class_exists( DatabaseLifecycleFailure::class );
+		$deny_autoload = static function (): never {
+			throw new DatabaseLifecycleFailure( 'active_plugins_invalid' );
+		};
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Suppress native unserialize notices, warnings, and deprecations on malformed stored bytes just as maybe_unserialize() does.
+		set_error_handler( static fn (): bool => true, E_NOTICE | E_WARNING | E_DEPRECATED );
+		spl_autoload_register( $deny_autoload, true, true );
 		try {
-			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- Decode authoritative active_plugins option bytes with class instantiation disabled and canonical round-trip verification.
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- Decode authoritative active_plugins option bytes with class instantiation and autoloading disabled plus canonical round-trip verification.
 			$decoded = unserialize( $bytes, array( 'allowed_classes' => false ) );
 		} finally {
+			spl_autoload_unregister( $deny_autoload );
 			restore_error_handler();
 		}
 		if ( ! is_array( $decoded ) ) {

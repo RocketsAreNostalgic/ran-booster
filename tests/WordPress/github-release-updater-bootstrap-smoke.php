@@ -158,7 +158,7 @@ try {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Copy only the installed, locked runtime source.
 			$ran_booster_bytes          = (string) file_get_contents( $ran_booster_source . '/' . $ran_booster_relative );
 			$ran_booster_protocol_files = array(
-				'bootstrap.php'                        => 4,
+				'bootstrap.php'                        => 6,
 				'runtime.php'                          => 2,
 				'src/Runtime/RequestBroker.php'        => 2,
 				'src/Runtime/RuntimeCopySelector.php'  => 2,

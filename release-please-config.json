@@ -86,6 +86,7 @@
       ]
     }
   },
+  "always-update": true,
   "draft": true,
   "force-tag-creation": true
 }

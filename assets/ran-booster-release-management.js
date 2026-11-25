@@ -934,6 +934,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		} else {
 			form.dataset.ranBoosterSwitchNativeFallback = '1';
 			removeHiddenInput(form, 'confirm_switch');
+			removeHiddenInput(form, 'confirmed_release_identity');
+			removeHiddenInput(form, 'confirmed_release_tag');
+			removeHiddenInput(form, 'confirmed_release_version');
+			removeHiddenInput(form, 'confirmed_release_nonce');
+			removeHiddenInput(form, 'confirmed_release_older');
 			removeHiddenInput(form, 'confirm_older_release');
 			removeHiddenInput(form, 'confirmed_older_release_identity');
 			removeHiddenInput(form, 'confirmed_older_release_tag');
@@ -1114,17 +1119,22 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				? payload.version_relationship
 				: 'newer';
 		const isOlder = relationship === 'older';
-		const olderIdentity =
+		const releaseIdentity =
 			typeof payload?.release_identity === 'string'
 				? payload.release_identity
 				: '';
-		const olderTag =
+		const releaseTag =
 			typeof payload?.release_tag === 'string' ? payload.release_tag : '';
-		const olderNonce =
-			typeof payload?.older_release_nonce === 'string'
-				? payload.older_release_nonce
+		const releaseNonce =
+			typeof payload?.confirmed_release_nonce === 'string'
+				? payload.confirmed_release_nonce
 				: '';
-		if (isOlder && (!olderIdentity || !olderTag || !olderNonce)) {
+		if (
+			!releaseIdentity ||
+			!releaseTag ||
+			!releaseVersion ||
+			!releaseNonce
+		) {
 			showSwitchPreflightError(form, null);
 			return;
 		}
@@ -1160,6 +1170,15 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			);
 		}
 		body.appendChild(versions);
+		if (
+			typeof payload?.fallback_message === 'string' &&
+			payload.fallback_message
+		) {
+			const fallbackNotice = document.createElement('p');
+			fallbackNotice.className = 'ran-booster-switch-dialog__note';
+			fallbackNotice.textContent = payload.fallback_message;
+			body.appendChild(fallbackNotice);
+		}
 
 		const databaseWarning = document.createElement('p');
 		databaseWarning.className = 'ran-booster-switch-dialog__database';
@@ -1222,7 +1241,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		confirmButton.className =
 			'ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid';
 		confirmButton.setAttribute('data-ran-booster-switch-confirm', '');
-		confirmButton.textContent = __('Switch and install', 'ran-booster');
+		confirmButton.textContent = sprintf(
+			/* translators: %s: release version to install. */
+			__('Switch and install %s', 'ran-booster'),
+			releaseVersion
+		);
 		if (isOlder) {
 			confirmButton.disabled = true;
 		}
@@ -1281,19 +1304,17 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			handle.teardown?.();
 			host.remove();
 			setHiddenInput(form, 'confirm_switch', '1');
+			setHiddenInput(form, 'confirmed_release_identity', releaseIdentity);
+			setHiddenInput(form, 'confirmed_release_tag', releaseTag);
+			setHiddenInput(form, 'confirmed_release_version', releaseVersion);
+			setHiddenInput(form, 'confirmed_release_nonce', releaseNonce);
+			setHiddenInput(
+				form,
+				'confirmed_release_older',
+				isOlder ? '1' : '0'
+			);
 			if (isOlder) {
 				setHiddenInput(form, 'confirm_older_release', '1');
-				setHiddenInput(
-					form,
-					'confirmed_older_release_identity',
-					olderIdentity
-				);
-				setHiddenInput(form, 'confirmed_older_release_tag', olderTag);
-				setHiddenInput(
-					form,
-					'confirmed_older_release_nonce',
-					olderNonce
-				);
 			} else {
 				removeHiddenInput(form, 'confirm_older_release');
 				removeHiddenInput(form, 'confirmed_older_release_identity');

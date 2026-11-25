@@ -214,11 +214,11 @@ These runners are local. CI analyses the PHP but does not execute them.
 ## Branch-to-release switch
 
 Refs #903. `ReleaseSwitchProof.php` drives the real installed Core: the
-`enable()` facade an administrator's switch calls, the release updater's
-exact-release offer and WordPress's own upgrader (count-one `bulk_upgrade` for a
+public switch preflight and admin POST processor, the release updater's
+exact-release path and WordPress's own upgrader (count-one `bulk_upgrade` for a
 plugin, `upgrade` for a theme). Remote HTTP is synthetic; every other component
 is the installed code, attested against the Core ZIP under test before and after
-each switch. Each case seeds a Branch package at 1.0.0, switches in a second
+each switch. Preflight and POST ZIP streams are counted separately. Each case seeds a Branch package at 1.0.0, switches in a second
 process and reads back in a third, which stands in for the next admin page
 load.
 
@@ -230,10 +230,14 @@ load.
 | `compete` | A second switch, run while the first holds the installer, is refused; the first completes | Releases, revision 2 | Cleared |
 | `older` | `release_older`; files unchanged | Branch | None |
 | `disabled` | `policy_disabled`; files unchanged | Branch | None |
-| `failed-download` | `wordpress_failed` before replacement; files unchanged | Branch | None |
-| `offer-removed` | The offer is gone when the upgrader reads it, so WordPress reports the package up to date: `wordpress_failed`, never success; files unchanged | Branch | None |
-| `conflict` | Another package from the same repository is added after the install; the shutdown commit refuses it, so the updater records an uncertain outcome. The reply said `release_enabled`; the next load settles it as `switch_not_confirmed` without hold context or `switch_held` with the active hold | Branch, with the release files installed | Retained, `started`, still owning its lock |
-| `failed-install` | `wordpress_failed` after replacement; WordPress restores 1.0.0 at shutdown | Branch | Retained, `finished`, lock released |
+| `failed-download` | `release_unavailable` before the upgrader starts; files unchanged | Branch | None |
+| `pre-install` | `switch_uncertain` while native cleanup is pending; files unchanged | Branch | None after shutdown |
+| `pre-install-throw` | Interrupted after taking the updater lock, before custody and with no WordPress completion event; files unchanged | Branch | Lock cleared by shutdown |
+| `stale` | Preflight confirms A (1.0.0), then B (2.0.0) appears; exactly one mutation ZIP for A is installed | Releases, revision 2 | Cleared before reply |
+| `fallback-repaired` | B (2.0.0) lacks a digest at preflight, so A (1.0.0) is confirmed; B is repaired before POST, which installs only A in one mutation ZIP | Releases, revision 2 | Cleared before reply |
+| `missing` | A loses its digest after preflight while B appears; no mutation ZIP body is delivered and no switch occurs | Branch | None |
+| `conflict` | Another package from the same repository is added after the install; the synchronous commit refuses it, so the updater records an uncertain outcome. The reply is uncertain; the next load reflects the retained hold | Branch, with the release files installed | Retained, `started`, still owning its lock |
+| `failed-install` | `switch_uncertain` while WordPress rolls back to 1.0.0 at shutdown | Branch | Retained, `finished`, lock released |
 | `kill` | SIGKILL after the install result: 2.0.0 files, 1.0.0 backup left | Branch | Retained, `started`, still owning its lock |
 | `foreign-lock` | As `kill`; the release then meets another operation's live lock and is refused without touching it | Branch | Retained until the lock is an hour old |
 | `expired-lock` | As `kill`; the lock row is another, hour-old value, which the release reclaims itself | Branch | Retained |
@@ -243,12 +247,9 @@ load.
 | `fresh-deleted` | As `kill`; the folder is deleted while the hold exists, and it goes through the removal recovery | New package on Releases | Cleared |
 
 The source changes only when the updater's finalisation reports a verified
-install, in the same transaction that clears native custody. That commit runs
-at shutdown, after the reply, so the page the administrator lands on reads the
+install, in the same transaction that clears native custody. A successful exact install commits before the reply; the page the administrator lands on reads the
 source back: every readback settles the reply as the landing page does, and
-only a package on Releases is reported enabled. In `conflict` the reply is
-`release_enabled`, the commit is refused, and the landing settles to
-`switch_not_confirmed` (or `switch_held` when the native hold is present).
+only a package on Releases is reported enabled. In `conflict` the commit is refused and the hold remains for recovery.
 Retained custody is the existing recovery path
 for an interrupted Update.
 
@@ -259,12 +260,9 @@ recorded its end still owns the updater lock by the exact value carried in its
 owner tag. The release phase requires the operator's check, and for a `started`
 hold also the confirmation that the install stopped. It proves that the managed
 row is byte-identical afterwards, that no hold or lock is left, and that the
-files are untouched. The switch then runs again:
-
-- `conflict` and `failed-install` switch to the release.
-- After a kill, the release updater's own ten-minute discovery lease, which the
-  killed request never returned, refuses the retry (`service_unavailable`) with
-  no Booster hold or lock left.
+files are untouched. A fresh confirmation can then switch to the release.
+The retry must report success with the source already committed and the
+updater lock and hold cleared.
 
 The fresh-start cases prove that an operator can always start clean.
 `fresh-finished` and `fresh-killed` release the hold in place, then Stop

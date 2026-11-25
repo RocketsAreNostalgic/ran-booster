@@ -66,6 +66,33 @@ default branch itself. The
 [package update guide](docs/package-update-orchestration.md) explains how branch
 and release deployments differ.
 
+### Develop on a branch and test the published release
+
+1. **Develop locally.** Use hot reload for front-end changes if your project
+   supports it. Before pushing to a branch that Booster installs directly, run
+   your project's production build, if it has one. Commit the source and the
+   files WordPress needs to run it together. Include generated CSS and
+   JavaScript, asset manifests, and production dependencies the package loads.
+   A PHP-only package with no build step can ship its source files as-is.
+2. **Check the committed build in CI.** Rebuild from a clean checkout using the
+   project's lockfiles and compare the output with the committed runtime files.
+   If they differ, fail the check and fix the commit. An uncommitted rebuild in
+   CI would still leave Booster installing the stale files from the branch.
+3. **Validate both installs on staging.** Deploy the checked branch commit and
+   test the change on staging. Then explicitly install the published beta ZIP
+   on staging and test the package again. This catches packaging problems such
+   as missing assets or dependencies. Allow Branch and Preview sources on staging
+   as needed. See [Branch and pre-release sources](#branch-and-pre-release-sources).
+4. **Follow Stable on production.** Publish the stable release and verify its
+   ZIP before rolling it out to production.
+
+If your source branch is built only in CI, publish the built ZIP as a prerelease
+and install that ZIP on staging. If you want direct branch deployment as well,
+let CI alone maintain a deploy branch. Have it commit the complete runnable
+package and record the source commit for each build. Point Booster at that
+deploy branch. Run builds locally or in CI so WordPress receives a runnable
+package.
+
 ## Requirements and support
 
 - WordPress 7.0 or newer

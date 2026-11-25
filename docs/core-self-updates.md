@@ -127,17 +127,17 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core loads lock-pinned `ran/wp-release-updater` beta.22 after single-site
+Core loads lock-pinned `ran/wp-release-updater` beta.23 after single-site
 admission. The root Composer manifest declares runtime protocol 11, up from 8.
 The packaged runtime manifest and the active broker must agree with that
 declaration. Physical copies with conflicting protocols refuse target
 registration in either load order.
 
 The published beta.22 commit is
-`75a76877dcd254e3ae88b0b1d0a2c0ea9c691a87`. Its runtime revision is
-`eebda6cfffd0daa0f859458dd5accd1b47f15714e09768d51e6156173cf1ddf7`.
-Beta.22 adds the exact-release offer, `ran_wp_release_updater_offer_release_v1`,
-and keeps runtime protocol 11.
+`6677ca9df38ea4b3b4dcd06015b2aed4f0f080c8`. Its runtime revision is
+`f9ceeee0a65b8d323770ededecef98216ab35608e8cfd2ca49a8d8303ebfd213`.
+Beta.23 adds `ran_wp_release_updater_install_exact_release_v1` alongside the
+existing exact-release offer and keeps runtime protocol 11.
 Core's bundled GitHub provider shares this copy. GitHub Example v0.2.2 carries
 beta.15/Protocol 7, and standalone updater Example v0.2.0 carries
 beta.13/Protocol 6. Example installations with a separate runtime need a
@@ -155,13 +155,10 @@ screens these identifiers when accepting the failure and writing log context.
 The previously inspected Bitbucket, Migrator and retired add-on archives carry
 no updater copy.
 
-The broker validates the latest native outcome and supplies it as the eleventh
-status field, `last_native_outcome`, with `null` when absent. Core continues to
-project its existing status fields. The updater writes schema 2 in its existing
-target binding row. It reads a schema 1 binding with an absent latest outcome.
-On downgrade, the beta.20 binding reader rejects a schema 2 row and the old
-runtime cannot claim that binding. The published codecs were exercised in both
-directions. A WordPress site downgrade has not been exercised.
+The active updater target reports the latest native outcome from this request
+as `last_native_outcome`, with `null` when absent. Core continues to project
+its existing status fields. The updater no longer uses target binding option
+rows for native outcomes or locking.
 
 Branch working-copy refusal remains `policy_blocked`, with generic
 Updates/file-modification advice. Native release refusal uses

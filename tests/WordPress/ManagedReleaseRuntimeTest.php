@@ -26,7 +26,9 @@ use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget;
+use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Deployment\DeploymentRequest;
 use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\PackageSource;
@@ -1055,6 +1057,96 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertNotSame( '', $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN ) );
 	}
 
+	public function test_switch_refuses_a_deferred_target_and_leaves_its_refusal_fence(): void {
+		$package                   = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH );
+		[ $registrar, , $updater ] = $this->native_plugin_registrar( $package );
+		$updater->replace_diagnostics( array( 'state' => 'inactive' ) );
+		self::assertFalse( $registrar->admit_switch( 'plugin', $package, new ManagedReleaseConfiguration( 'example', 'example.php' ), 7 ) );
+		self::assertNotNull( $registrar->target( 'plugin', self::NATIVE_PLUGIN ) );
+		$this->assert_native_authority_error( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+	}
+
+	public function test_branch_attempt_blocks_switch_registration_and_native_custody(): void {
+		$this->github_selection();
+		self::assertNotNull( $this->native_selection_db );
+		$database               = $this->native_selection_db;
+		$attempts               = new DeploymentAttemptRepository( $database, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->createStub( Database::class ) );
+		$package                = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH );
+		$request                = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 7, installed_identifier: 'example/other.php', adoption_token: (string) \RAN\AdoptionIdentity::of( $package ) );
+		$row                    = (object) array(
+			'id'                      => 1,
+			'correlation_id'          => str_repeat( 'a', 32 ),
+			'source'                  => 'manual',
+			'operation'               => 'update',
+			'package_type'            => 'plugin',
+			'package_slug'            => 'example',
+			'package_source'          => 'branch',
+			'package_source_revision' => 1,
+			'provider'                => 'gh',
+			'provider_repository_id'  => '123456789',
+			'requested_ref'           => 'main',
+			'state'                   => 'queued',
+			'request_json'            => $request->to_json(),
+			'created_at'              => '2026-11-25 00:00:00',
+		);
+		$configuration          = new ManagedReleaseConfiguration( 'example', 'example.php' );
+		[ $registrar, $lock ]   = $this->native_plugin_registrar( $package, attempts: $attempts );
+		$database->attempt_rows = array( $row );
+		self::assertFalse( $registrar->admit_switch( 'plugin', $package, $configuration, 7 ) );
+		self::assertNull( $registrar->target( 'plugin', self::NATIVE_PLUGIN ) );
+
+		$database->attempt_rows = array();
+		self::assertTrue( $registrar->admit_switch( 'plugin', $package, $configuration, 7 ) );
+		$upgrader = new \stdClass();
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $upgrader, self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		$database->attempt_rows = array( $row );
+		try {
+			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+			self::fail( 'A Branch attempt queued before custody must prevent the filesystem mutation.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'GitHub native mutation is unavailable.', $failure->getMessage() );
+		}
+		self::assertNotNull( $this->native_selection_store );
+		self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
+		$registrar->complete_native_mutation( $upgrader, self::NATIVE_EXTRA );
+		self::assertSame( array( '1700000002' ), $lock->releases );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_switch_owns_one_lock_before_unpack_and_releases_only_its_invocation(): void {
+		$package              = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH );
+		[ $registrar, $lock ] = $this->native_plugin_registrar( $package );
+		self::assertTrue( $registrar->admit_switch( 'plugin', $package, new ManagedReleaseConfiguration( 'example', 'example.php' ), 7 ) );
+
+		$upgrader = (object) array(
+			'bulk'           => true,
+			'update_count'   => 1,
+			'update_current' => 1,
+		);
+		$other    = clone $upgrader;
+		// Plugin_Upgrader's per-item bulk hook omits the operation action and type.
+		$download = array(
+			'plugin'      => self::NATIVE_PLUGIN,
+			'temp_backup' => array( 'slug' => 'example' ),
+		);
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $upgrader, $download ) );
+		self::assertSame( 1, $lock->acquires );
+		self::assertInstanceOf( \WP_Error::class, $registrar->authorize_native_download( false, 'package.zip', $other, $download ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, $download ) );
+		self::assertSame( 1, $lock->acquires );
+
+		$registrar->complete_native_mutation( $other, self::NATIVE_EXTRA );
+		self::assertSame( array(), $lock->releases );
+		$fallback = $this->shutdown_rechecks();
+		self::assertCount( 1, $fallback );
+		( $fallback[0]['callback'] )();
+		self::assertSame( array( '1700000002' ), $lock->releases, 'The admitted invocation releases its lock even without a completion event.' );
+		$registrar->complete_native_mutation( $upgrader, self::NATIVE_EXTRA );
+		self::assertSame( array( '1700000002' ), $lock->releases );
+	}
+
 	public function test_switch_permit_refuses_release_subdirectory_and_reserved_packages(): void {
 		$configuration = new ManagedReleaseConfiguration( 'example', 'example.php' );
 		foreach ( array(
@@ -2015,12 +2107,12 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_enable_installs_the_chosen_release_and_leaves_the_source_to_native_completion(): void {
+	public function test_enable_installs_the_confirmed_release_without_selecting_the_newest_again(): void {
 		$expected_action                       = 'ran-booster-release-tracking-enable-plugin-example/example.php-1-gh:123456789:11111111-1111-4111-8111-111111111111';
 		$installs                              = array();
 		[ $facade, $store, $registrar, $lock ] = $this->switch_facade(
-			static function ( string $type, string $identifier, string $identity, string $tag, bool $allow_older ) use ( &$installs ): string {
-				$installs[] = array( $type, $identifier, $identity, $tag, $allow_older );
+			static function ( string $type, string $identifier, string $identity, string $tag, bool $allow_older, string $version ) use ( &$installs ): string {
+				$installs[] = array( $type, $identifier, $identity, $tag, $allow_older, $version );
 
 				return 'installed';
 			},
@@ -2032,11 +2124,22 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'forbidden', $denied->code() );
 		self::assertCount( 0, $installs );
 
-		$result = $facade->enable( 'plugin', 'example/example.php', 1, 'prerelease', 'valid' );
+		$result = $facade->enable(
+			'plugin',
+			'example/example.php',
+			1,
+			'prerelease',
+			'valid',
+			confirmed_release: array(
+				'identity' => '99',
+				'tag'      => 'v1.0.0',
+				'version'  => '1.0.0',
+			)
+		);
 		self::assertTrue( $result->successful() );
 		self::assertSame( 'release_enabled', $result->code() );
-		self::assertSame( array( array( 'plugin', 'example/example.php', '101', 'v2.0.0', false ) ), $installs );
-		// The source changes only in native completion, never in this request's reply.
+		self::assertSame( array( array( 'plugin', 'example/example.php', '99', 'v1.0.0', false, '1.0.0' ) ), $installs );
+		// The injected updater stands in for the native completion that owns the source write.
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( 0, $lock->acquires );
 		self::assertNotNull( $registrar->target( 'plugin', 'example/example.php' ) );
@@ -2098,7 +2201,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	}
 
 	/** @return iterable<string, array{mixed, string}> */
-	public static function updater_offer_answers(): iterable {
+	public static function exact_install_answers(): iterable {
 		yield 'older updater copy' => array( null, 'service_unavailable' );
 		yield 'refusal' => array(
 			array(
@@ -2114,12 +2217,41 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			),
 			'service_unavailable',
 		);
+		foreach ( array( 'not_applicable', 'failed', null ) as $host ) {
+			yield 'unconfirmed host ' . ( $host ?? 'missing' ) => array(
+				array(
+					'status'               => 'installed',
+					'code'                 => 'update_completed',
+					'finalization_pending' => false,
+					'finalization'         => array(
+						'commit'          => 'completed',
+						'host_completion' => $host,
+					),
+				),
+				'management_state_uncertain',
+			);
+		}
+		yield 'shutdown pending' => array(
+			array(
+				'status'               => 'pending',
+				'code'                 => 'backup_restore_pending',
+				'finalization_pending' => true,
+			),
+			'management_state_uncertain',
+		);
+		yield 'host callback threw' => array(
+			array(
+				'status' => 'failed',
+				'code'   => 'host_completion_failed',
+			),
+			'management_state_uncertain',
+		);
 	}
 
-	#[DataProvider( 'updater_offer_answers' )]
+	#[DataProvider( 'exact_install_answers' )]
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_the_default_install_trusts_only_an_authorised_offer( mixed $answer, string $code ): void {
+	public function test_the_default_install_requires_finalized_host_completion( mixed $answer, string $code ): void {
 		require_once __DIR__ . '/ReadOnlyCheckWordPressFunctions.php';
 		$GLOBALS['ran_booster_read_only_check'] = array(
 			'calls'      => array(),
@@ -2132,8 +2264,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( $code, $result->code() );
 		self::assertSame( array(), $store->transitions );
-		// One exact-release offer for the newest eligible release, then nothing more.
-		self::assertSame( array( array( 'ran_wp_release_updater_offer_release_v1', null, 'plugin', 'example/example.php', '101', 'v2.0.0' ) ), $GLOBALS['ran_booster_read_only_check']['calls'] );
+		// One exact-install call, with its listed version and downgrade consent.
+		self::assertSame( array( array( 'ran_wp_release_updater_install_exact_release_v1', null, 'plugin', 'example/example.php', '101', 'v2.0.0', '2.0.0', false ) ), $GLOBALS['ran_booster_read_only_check']['calls'] );
 	}
 
 	/** @return iterable<string, array{string}> */
@@ -2176,7 +2308,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	}
 
 	/**
-	 * @param (callable(string, string, string, string, bool): string)|null $switch_install Null runs the facade's own offer and upgrader.
+	 * @param (callable(string, string, string, string, bool, string): string)|null $switch_install Null uses the published exact-install filter.
 	 * @param (callable(string, string): bool)|null            $verify_nonce
 	 * @param (callable(string): void)|null                    $invalidate_native
 	 * @param RuntimeReleaseStore|null                         $store             Shared with an earlier request's facade.
@@ -2971,6 +3103,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertNotNull( $result );
 		self::assertSame( ReleaseTrackingPreflight::READY, $result->code() );
 		self::assertSame( 'v2.0.0', $result->release_tag() );
+		self::assertSame( '3.0.0', $result->detail_text() );
+		self::assertSame( 'package_asset_missing', $result->reason_code() );
 		self::assertSame( 2, $inspection_calls - $calls_before_fallback );
 
 		$mode->value = 'channel';
@@ -3077,7 +3211,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				);
 			}
 		);
-		$facade      = $this->facade(
+		$facade      = fn (): NativeReleaseTrackingFacade => $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -3119,7 +3253,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$mode->value                                = $case;
 			[ $reason, $expected_inspections, $detail ] = $expected;
 			$inspections                                = 0;
-			$result                                     = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+			$result                                     = $facade()->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
 
 			self::assertFalse( $result->successful(), $case );
 			self::assertSame( 'release_unavailable', $result->code(), $case );
@@ -3130,7 +3264,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array(), $store->transitions );
 
 		$this->repository_rows["plugin\0example/example.php"]->source = 'unknown';
-		$guard = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		$guard = $facade()->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
 		self::assertSame( 'release_unavailable', $guard->code() );
 		self::assertSame( '', $guard->reason() );
 	}
@@ -3536,8 +3670,20 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$GLOBALS['ran_booster_test_environment_type'] = 'production';
 		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
 		$GLOBALS['ran_booster_storage_test_options']  = array();
-		$package                                      = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL );
-		$plugins                                      = $this->createStub( PluginRepository::class );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Fresh policy reads inspect this controlled options table.
+		$GLOBALS['wpdb'] = new class() {
+			public string $options = 'wp_options';
+
+			public function prepare( string $query ): string {
+				return $query;
+			}
+
+			public function get_var(): null {
+				return null;
+			}
+		};
+		$package         = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL );
+		$plugins         = $this->createStub( PluginRepository::class );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
 		$themes    = $this->createStub( ThemeRepository::class );
 		$store     = new RuntimeReleaseStore(
@@ -5215,7 +5361,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	private function native_plugin_registrar(
 		Package $registered,
 		Package|callable|null $live = null,
-		?\RAN\Activity\ActivityStore $activity = null
+		?\RAN\Activity\ActivityStore $activity = null,
+		?DeploymentAttemptRepository $attempts = null
 	): array {
 		$plugins = $this->createStub( PluginRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $registered ) );
@@ -5246,7 +5393,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 					return $facade;
 				}
 			),
-			activity: $activity
+			activity: $activity,
+			attempts: $attempts
 		);
 		$registrar->register();
 		$store->native_connection = $this->native_selection_db;
@@ -5341,7 +5489,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_enable_forwards_allow_older_flag_to_offer_filter_only_when_explicitly_confirmed(): void {
+	public function test_enable_forwards_allow_older_to_exact_install_only_when_explicitly_confirmed(): void {
 		require_once __DIR__ . '/ReadOnlyCheckWordPressFunctions.php';
 		$GLOBALS['ran_booster_read_only_check'] = array(
 			'calls'      => array(),
@@ -5378,8 +5526,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		self::assertSame(
 			array(
-				array( 'ran_wp_release_updater_offer_release_v1', null, 'plugin', 'example/example.php', '101', 'v2.0.0' ),
-				array( 'ran_wp_release_updater_offer_release_v1', null, 'plugin', 'example/example.php', '101', 'v2.0.0', true ),
+				array( 'ran_wp_release_updater_install_exact_release_v1', null, 'plugin', 'example/example.php', '101', 'v2.0.0', '2.0.0', false ),
+				array( 'ran_wp_release_updater_install_exact_release_v1', null, 'plugin', 'example/example.php', '101', 'v2.0.0', '2.0.0', true ),
 			),
 			$GLOBALS['ran_booster_read_only_check']['calls']
 		);

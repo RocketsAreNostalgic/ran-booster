@@ -10,6 +10,7 @@ require_once dirname( __DIR__ ) . '/Portability/WpPusherCoexistenceWordPressFunc
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Deployment\DeploymentPolicy;
 use RAN\PackageSource;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseCompatibilityFailure;
@@ -785,5 +786,24 @@ final class ManagedReleaseStoreTest extends TestCase {
 		} finally {
 			$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array();
 		}
+
+		$state->source            = PackageSource::BRANCH->value;
+		$state->deployment_policy = DeploymentPolicy::DISABLED->value;
+		$executed                 = array();
+		self::assertFalse(
+			$store->transition_in_transaction(
+				'plugin',
+				'installed/example.php',
+				PackageSource::BRANCH,
+				6,
+				PackageSource::RELEASE_ASSET,
+				$configuration,
+				7,
+				$token,
+				$execute
+			)
+		);
+		self::assertSame( 'branch', $state->source );
+		self::assertCount( 1, $executed, 'The pinned package read observes Disabled before the source update.' );
 	}
 }

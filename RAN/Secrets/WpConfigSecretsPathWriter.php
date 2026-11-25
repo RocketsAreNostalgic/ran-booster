@@ -26,8 +26,14 @@ class WpConfigSecretsPathWriter {
 	private const LOCK_SUFFIX                    = '.ran-booster.lock';
 	private const TEMP_PREFIX                    = '.ran-booster-wp-config-';
 
-	public function write( string $config_path, string $sidecar_path ): void {
-		$this->edit( $config_path, $sidecar_path, false, null );
+	/**
+	 * Reports whether replacement was attempted, including an unverified outcome.
+	 *
+	 * @param-out bool $replacement_attempted
+	 */
+	public function write( string $config_path, string $sidecar_path, ?bool &$replacement_attempted = null ): void {
+		$replacement_attempted = false;
+		$this->edit( $config_path, $sidecar_path, false, null, $replacement_attempted );
 	}
 
 	/**
@@ -52,10 +58,11 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * Removes only the exact definition block previously inserted by this writer.
 	 *
+	 * @param (callable():void)|null $before_removal Runs under the verified config lock while the owned definition still exists.
 	 * @return bool Whether the owned definition block was removed.
 	 */
-	public function remove_owned_definition( string $config_path, string $sidecar_path ): bool {
-		return $this->edit( $config_path, $sidecar_path, true, null );
+	public function remove_owned_definition( string $config_path, string $sidecar_path, ?callable $before_removal = null ): bool {
+		return $this->edit( $config_path, $sidecar_path, true, null, before_removal: $before_removal );
 	}
 
 	/**
@@ -99,11 +106,14 @@ class WpConfigSecretsPathWriter {
 		return true;
 	}
 
+	/** @param (callable():void)|null $before_removal */
 	private function edit(
 		string $config_path,
 		string $sidecar_path,
 		bool $remove,
-		?string $replacement_sidecar_path
+		?string $replacement_sidecar_path,
+		bool &$replacement_attempted = false,
+		?callable $before_removal = null
 	): bool {
 		$this->assert_absolute_safe_path( $config_path, 'config_path_invalid' );
 		$this->assert_absolute_safe_path( $sidecar_path, 'sidecar_path_invalid' );
@@ -165,13 +175,16 @@ class WpConfigSecretsPathWriter {
 			}
 			if ( $remove ) {
 				$this->validate_removal_candidate( $candidate, $sidecar_path );
+				if ( null !== $before_removal ) {
+					$before_removal();
+				}
 			} elseif ( null !== $replacement_sidecar_path ) {
 				$this->validate_retarget_candidate( $candidate, $sidecar_path, $replacement_sidecar_path );
 			} else {
 				$this->validate_candidate( $candidate );
 			}
 
-			$this->replace_config( $config_path, $candidate, $locked );
+			$this->replace_config( $config_path, $candidate, $locked, $replacement_attempted );
 		} finally {
 			if ( is_resource( $lock ) ) {
 				try {
@@ -398,7 +411,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param array{contents: string, dev: int, ino: int, mode: int, uid: int, gid: int, nlink: int, size: int, mtime: int, ctime: int} $original
 	 */
-	private function replace_config( string $path, string $candidate, array $original ): void {
+	private function replace_config( string $path, string $candidate, array $original, bool &$replacement_attempted ): void {
 		$temporary = '';
 		$handle    = null;
 		$replaced  = null;
@@ -449,7 +462,9 @@ class WpConfigSecretsPathWriter {
 				$this->fail( 'config_changed', 'The WordPress configuration changed while it was being edited.' );
 			}
 
+			$replacement_attempted = true;
 			if ( ! $this->replace_path( $temporary, $path ) ) {
+				$replacement_attempted = false;
 				$this->fail( 'replace_failed', 'Could not atomically replace the WordPress configuration.' );
 			}
 			$temporary = '';

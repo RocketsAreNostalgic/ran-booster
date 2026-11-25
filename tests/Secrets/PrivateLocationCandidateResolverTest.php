@@ -80,24 +80,26 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		self::assertDirectoryDoesNotExist( $this->root . '/account/.ran-booster' );
 	}
 
-	public function test_rejects_common_public_web_root_basenames_case_insensitively(): void {
+	public function test_resolves_outside_nested_public_roots_with_or_without_document_root(): void {
 		$resolver = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 
 		foreach ( array( 'public_html', 'Public_HTML', 'htdocs', 'HTDOCS', 'www', 'WWW', 'httpdocs', 'HttpDocs' ) as $index => $web_root ) {
-			$wordpress = $this->root . '/webroot-case-' . $index . '/' . $web_root . '/blog';
+			$account   = $this->root . '/webroot-case-' . $index;
+			$public    = $account . '/' . $web_root;
+			$wordpress = $public . '/nested/blog';
 			$content   = $wordpress . '/wp-content';
 			$plugin    = $content . '/plugins/ran-booster';
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create disposable subdirectory WordPress topology under a public web root basename.
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable nested WordPress topology.
 			self::assertTrue( mkdir( $plugin, 0700, true ) );
 
-			self::assertNull(
-				$resolver->resolve( $wordpress, $content, $plugin ),
-				'Automatic resolution must reject public web-root parent ' . $web_root . ' when DOCUMENT_ROOT is unset.'
-			);
-			self::assertNull(
-				$resolver->resolve( $wordpress, $content, $plugin, $wordpress ),
-				'Automatic resolution must reject public web-root parent ' . $web_root . ' when DOCUMENT_ROOT points to the subdirectory.'
-			);
+			foreach ( array( null, $wordpress, $public ) as $document_root ) {
+				$candidate = $resolver->resolve( $wordpress, $content, $plugin, $document_root );
+				self::assertIsString( $candidate );
+				self::assertStringStartsWith( $account . '/.ran-booster/', $candidate );
+				self::assertTrue( $resolver->validate_configured( $candidate, $wordpress, $content, $plugin, $document_root ) );
+				self::assertFalse( $resolver->validate_configured( $public . '/nested/legacy/ran-booster-store.json', $wordpress, $content, $plugin, $document_root ) );
+				self::assertTrue( $resolver->validate_configured( $account . '/.ran-booster/0123456789abcdef/ran-booster-store.json', $wordpress, $content, $plugin, $document_root ) );
+			}
 		}
 	}
 

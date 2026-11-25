@@ -11,7 +11,12 @@ namespace RAN\Secrets;
  */
 final class PosixFilesystemProbe {
 
-	public function probe( string $candidate_file ): bool {
+	/**
+	 * @param array{dev:int,ino:int}|null $owned_leaf
+	 * @param-out array{dev:int,ino:int}|null $owned_leaf
+	 */
+	public function probe( string $candidate_file, ?array &$owned_leaf = null ): bool {
+		$owned_leaf = null;
 		$probe_path = '';
 		$handles    = array();
 		$passed     = false;
@@ -21,11 +26,11 @@ final class PosixFilesystemProbe {
 			}
 			$site_directory = dirname( $candidate_file );
 			$root_directory = dirname( $site_directory );
-			if ( ! $this->safe_directory( dirname( $root_directory ), false )
+			if ( null === $this->safe_directory( dirname( $root_directory ), false )
 				|| ! $this->ensure_private_directory( $root_directory )
 				|| ! $this->ensure_deny_stub( $root_directory . '/.htaccess', "Require all denied\n" )
 				|| ! $this->ensure_deny_stub( $root_directory . '/index.php', "<?php\n// Silence is golden.\n" )
-				|| ! $this->ensure_private_directory( $site_directory )
+				|| ! $this->ensure_private_directory( $site_directory, $owned_leaf )
 			) {
 				return false;
 			}
@@ -74,27 +79,54 @@ final class PosixFilesystemProbe {
 			&& 0 === preg_match( '#(?:^|/)\.{1,2}(?:/|$)#', $path );
 	}
 
-	private function safe_directory( string $path, bool $require_private_mode ): bool {
+	/** @return array{dev:int,ino:int}|null */
+	private function safe_directory( string $path, bool $require_private_mode ): ?array {
 		clearstatcache( true, $path );
 		$stat = lstat( $path );
 
 		return false !== $stat
 			&& 0040000 === ( $stat['mode'] & 0170000 )
+			&& 0 !== $stat['ino']
 			&& ! is_link( $path )
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The private local storage boundary checks actual PHP-process writability alongside canonical path and inode checks.
 			&& is_writable( $path )
 			&& ( ! function_exists( 'posix_geteuid' ) || posix_geteuid() === $stat['uid'] )
-			&& ( ! $require_private_mode || 0700 === ( $stat['mode'] & 0777 ) )
-			&& ( $require_private_mode || 0 === ( $stat['mode'] & 0022 ) );
+			&& ( $require_private_mode ? 0700 === ( $stat['mode'] & 0777 ) : 0 === ( $stat['mode'] & 0022 ) )
+			? array(
+				'dev' => $stat['dev'],
+				'ino' => $stat['ino'],
+			)
+			: null;
 	}
 
-	private function ensure_private_directory( string $path ): bool {
+	/** @param array{dev:int,ino:int}|null $created */
+	private function ensure_private_directory( string $path, ?array &$created = null ): bool {
+		clearstatcache( true, $path );
 		if ( file_exists( $path ) || is_link( $path ) ) {
-			return $this->safe_directory( $path, true );
+			return null !== $this->safe_directory( $path, true );
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the private directory with mode 0700, then verify its native ownership and mode.
-		return mkdir( $path, 0700 ) && $this->safe_directory( $path, true );
+		// Another request may create the shared directory first. Inspect it before continuing.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir, WordPress.PHP.NoSilencedErrors.Discouraged -- A failed exclusive creation is resolved by verifying the current directory.
+		$made     = @mkdir( $path, 0700 );
+		$identity = is_dir( $path ) ? $this->safe_directory( $path, true ) : null;
+		if ( $made ) {
+			$created = $identity;
+		}
+
+		return null !== $identity;
+	}
+
+	/** @param array{dev:int,ino:int} $identity */
+	public function remove_owned_empty_leaf( string $candidate_file, array $identity ): void {
+		$leaf = dirname( $candidate_file );
+		if ( ! $this->valid_candidate( $candidate_file ) || realpath( $leaf ) !== $leaf
+			|| $identity !== $this->safe_directory( $leaf, true ) || array( '.', '..' ) !== scandir( $leaf )
+			|| $identity !== $this->safe_directory( $leaf, true ) ) {
+			return;
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir, WordPress.PHP.NoSilencedErrors.Discouraged -- Remove only the verified new leaf if still empty. A raced or failed cleanup preserves it.
+		@rmdir( $leaf );
 	}
 
 	private function ensure_deny_stub( string $path, string $contents ): bool {
@@ -121,13 +153,13 @@ final class PosixFilesystemProbe {
 			$bytes   = fwrite( $handle, $contents );
 			$written = false !== $bytes && strlen( $contents ) === $bytes && fflush( $handle );
 		} finally {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native stub handle after flushing.
-			fclose( $handle );
 			clearstatcache( true, $path );
-			if ( ! $written && is_file( $path ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove a partially written deny stub created by this probe.
+			if ( ! $written && is_file( $path ) && $this->safe_file( $path, $handle ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the partially written inode still owned by this open handle.
 				unlink( $path );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Keep the native handle available for exact ownership verification until cleanup ends.
+			fclose( $handle );
 		}
 
 		return $written;

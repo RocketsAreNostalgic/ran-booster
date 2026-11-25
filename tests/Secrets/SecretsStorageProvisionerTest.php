@@ -316,6 +316,40 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $configured->path_source() );
 	}
 
+	public function test_definitive_config_failure_removes_its_empty_leaf_and_allows_retry(): void {
+		$provisioner = $this->provisioner();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Capture the exact disposable configuration to restore it before retrying.
+		$original = file_get_contents( $this->config_path );
+		self::assertIsString( $original );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Make only the disposable configuration unsuitable for the constrained writer.
+		self::assertNotFalse( file_put_contents( $this->config_path, "<?php\n" ) );
+		self::assertSame( 'marker_invalid', $provisioner->provision()->code() );
+		self::assertDirectoryDoesNotExist( dirname( $this->candidate ) );
+		self::assertFileExists( dirname( $this->candidate, 2 ) . '/.htaccess' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Restore the original disposable config so the next request can provision.
+		self::assertNotFalse( file_put_contents( $this->config_path, $original ) );
+		self::assertTrue( $this->provisioner()->provision()->requires_next_request_verification() );
+		self::assertDirectoryExists( dirname( $this->candidate ) );
+	}
+
+	public function test_losing_provisioning_request_keeps_the_configured_winner_and_retires_its_own_leaf(): void {
+		$winner = $this->provisioner();
+		self::assertTrue( $winner->provision()->requires_next_request_verification() );
+		$loser            = $this->provisioner();
+		$loser->candidate = dirname( $this->candidate, 2 ) . '/fedcba9876543210/ran-booster-store.json';
+		self::assertSame( 'constant_exists', $loser->provision()->code() );
+		self::assertDirectoryDoesNotExist( dirname( $loser->candidate ) );
+		self::assertDirectoryExists( dirname( $this->candidate ) );
+		self::assertTrue( ( new WpConfigSecretsPathWriter() )->has_owned_definition( $this->config_path, $this->candidate ) );
+	}
+
+	public function test_uncertain_replacement_leaves_its_directory_for_inspection(): void {
+		$provisioner                      = $this->provisioner();
+		$provisioner->writer_failure_code = 'replacement_readback_failed';
+		self::assertSame( 'replacement_readback_failed', $provisioner->provision()->code() );
+		self::assertDirectoryExists( dirname( $this->candidate ) );
+	}
+
 	public function test_configuration_facts_reuse_source_classification_without_authentication(): void {
 		$provisioner                 = $this->provisioner();
 		$provisioner->configured     = $this->root . '/custom/secrets.json';
@@ -354,7 +388,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
 		self::assertSame( $manual . '/ran-booster-store.json', $result->candidate_path() );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $result->path_source() );
-		self::assertTrue( $provisioner->resolver_called );
+		self::assertFalse( $provisioner->resolver_called );
 		self::assertFalse( $provisioner->probe_called );
 		self::assertFalse( $provisioner->writer_called );
 	}
@@ -577,7 +611,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		);
 	}
 
-	public function test_uninspectable_path_selection_is_unknown_without_changing_status(): void {
+	public function test_manual_path_source_does_not_depend_on_candidate_discovery(): void {
 		$manual = $this->root . '/manual';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $manual, 0700 ) );
@@ -588,8 +622,8 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$result = $provisioner->status();
 
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
-		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN, $result->path_source() );
-		self::assertTrue( $provisioner->resolver_called );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $result->path_source() );
+		self::assertFalse( $provisioner->resolver_called );
 	}
 
 	public function test_manual_override_inside_word_press_is_rejected_with_privileged_correction_path(): void {
@@ -1237,10 +1271,11 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		return $this->resolver_fails ? null : $this->candidate;
 	}
 
-	protected function probe_candidate( string $candidate ): bool {
+	/** @param array{dev:int,ino:int}|null $owned_leaf */
+	protected function probe_candidate( string $candidate, ?array &$owned_leaf ): bool {
 		$this->probe_called = true;
 
-		return ! $this->probe_fails && parent::probe_candidate( $candidate );
+		return ! $this->probe_fails && parent::probe_candidate( $candidate, $owned_leaf );
 	}
 
 	protected function validate_configured_candidate( string $candidate ): bool {
@@ -1282,7 +1317,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		$this->orphaned_ciphertext_reset_available = false;
 	}
 
-	protected function write_configuration( string $config, string $candidate ): void {
+	protected function write_configuration( string $config, string $candidate, ?bool &$replacement_attempted ): void {
 		$this->writer_called = true;
 		if ( null !== $this->writer_failure_code ) {
 			throw new \RAN\Secrets\WpConfigPathWriteException(
@@ -1293,7 +1328,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 			);
 		}
 
-		parent::write_configuration( $config, $candidate );
+		parent::write_configuration( $config, $candidate, $replacement_attempted );
 	}
 
 	public bool $retarget_refused = false;

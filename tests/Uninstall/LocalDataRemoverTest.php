@@ -697,10 +697,8 @@ final class LocalDataRemoverTest extends TestCase {
 		$secrets = $this->secrets( $sidecar );
 		$secrets->method( 'delete_managed_storage' );
 		$writer = $this->createMock( WpConfigSecretsPathWriter::class );
-		$writer->expects( self::once() )
-			->method( 'remove_owned_definition' )
-			->with( $config, $sidecar )
-			->willReturn( false );
+		$writer->expects( self::once() )->method( 'assert_owned_definition_removable' )->with( $config, $sidecar )->willReturn( false );
+		$writer->expects( self::never() )->method( 'remove_owned_definition' );
 
 		$remover = new TestableLocalDataRemover(
 			$secrets,
@@ -761,91 +759,70 @@ final class LocalDataRemoverTest extends TestCase {
 		}
 	}
 
+	/** @return array<string, array{bool}> */
+	public static function directory_ownership_cases(): array {
+		return array(
+			'writer owned'     => array( true ),
+			'operator defined' => array( false ),
+		);
+	}
+
+	#[DataProvider( 'directory_ownership_cases' )]
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_remove_deletes_the_exact_config_lock_and_empty_automatic_directories(): void {
+	public function test_remove_retires_only_the_writer_owned_leaf_and_keeps_the_shared_base( bool $owned ): void {
 		$this->setUp();
-		$root        = (string) realpath( sys_get_temp_dir() )
-			. '/ran-booster-uninstall-directories-'
-			. bin2hex( random_bytes( 6 ) );
-		$base        = $root . '/.ran-booster';
-		$site        = $base . '/site-fingerprint';
-		$sidecar     = $site . '/secrets.json';
-		$config      = $root . '/wp-config.php';
-		$config_lock = $config . '.ran-booster.lock';
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
+		$root    = (string) realpath( sys_get_temp_dir() ) . '/ran-booster-uninstall-directories-' . bin2hex( random_bytes( 6 ) );
+		$base    = $root . '/.ran-booster';
+		$site    = $base . '/0123456789abcdef0123456789abcdef';
+		$sidecar = $site . '/ran-booster-store.json';
+		$config  = $root . '/wp-config.php';
+		$stub    = $base . '/.htaccess';
+		$writer  = new WpConfigSecretsPathWriter();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only this test's disposable topology.
 		self::assertTrue( mkdir( $site, 0700, true ) );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
-		self::assertNotFalse( file_put_contents( $config, "<?php\n" ) );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
-		self::assertNotFalse( file_put_contents( $config_lock, '' ) );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
-		self::assertTrue( chmod( $base, 0700 ) );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
-		self::assertTrue( chmod( $config_lock, 0600 ) );
-
-		$secrets = $this->secrets( $sidecar );
-		$remover = new class(
-			$secrets,
-			new TemporaryDebugCapture( $sidecar ),
-			$this->createStub( WpConfigSecretsPathWriter::class ),
-			$this->database,
-			$config,
-			$sidecar
-		) extends LocalDataRemover {
-			public function __construct(
-				SecretsFile $secrets,
-				TemporaryDebugCapture $capture,
-				WpConfigSecretsPathWriter $writer,
-				object $database,
-				private readonly string $config_path,
-				private readonly string $automatic_path
-			) {
-				parent::__construct( $secrets, $capture, $writer, database: $database );
-			}
-
-			protected function loaded_wp_config_path(): string {
-				return $this->config_path;
-			}
-
-			protected function automatic_sidecar_path(): string {
-				return $this->automatic_path;
-			}
-		};
-
+		$definition = $owned ? '' : sprintf( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '%s' );\n", addcslashes( $site, "\\'" ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Create this fixture's local configuration and shared stub.
+		self::assertNotFalse( file_put_contents( $config, "<?php\n$definition/* That's all, stop editing! Happy publishing. */\n" ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Create the disposable shared deny stub.
+		self::assertNotFalse( file_put_contents( $stub, "Require all denied\n" ) );
 		try {
-			$remover->remove();
-			$remover->remove();
-			self::assertFileDoesNotExist( $config_lock );
-			self::assertDirectoryDoesNotExist( $site );
-			self::assertDirectoryDoesNotExist( $base );
+			if ( $owned ) {
+				$writer->write( $config, $sidecar );
+			}
+			$this->remover( $this->secrets( $sidecar ), $writer, $config )->remove();
+			self::assertSame( ! $owned, is_dir( $site ) );
+			self::assertFileExists( $stub );
+			self::assertFileDoesNotExist( $config . '.ran-booster.lock' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Verify the operator's definition remains and the owned definition was removed.
+			self::assertSame( ! $owned, str_contains( (string) file_get_contents( $config ), 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) );
+			if ( $owned ) {
+				$this->remover( $this->secrets( null ), $writer, $config )->remove();
+				self::assertDirectoryDoesNotExist( $site );
+				self::assertFileExists( $stub );
+			}
 		} finally {
-			if ( is_file( $config_lock ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
-				unlink( $config_lock );
+			foreach ( array( $config, $config . '.ran-booster.lock', $stub ) as $file ) {
+				if ( is_file( $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the disposable files created by this test.
+					unlink( $file );
+				}
 			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable native filesystem entries owned by this fixture.
-			unlink( $config );
-			if ( is_dir( $site ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
-				rmdir( $site );
+			foreach ( array( $site, $base, $root ) as $directory ) {
+				if ( is_dir( $directory ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the disposable directories created by this test.
+					rmdir( $directory );
+				}
 			}
-			if ( is_dir( $base ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
-				rmdir( $base );
-			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable native filesystem entries owned by this fixture.
-			rmdir( $root );
 		}
 	}
 
 	/** @return array<string, array{string}> */
 	public static function unsafe_directory_cases(): array {
 		return array(
-			'empty site fails before mutations'       => array( 'preflight' ),
-			'site becomes empty during cleanup'       => array( 'site' ),
-			'parent becomes empty after site removal' => array( 'base' ),
-			'safe site loses private permissions'     => array( 'changed' ),
+			'empty site fails before mutations'   => array( 'preflight' ),
+			'site becomes empty during cleanup'   => array( 'site' ),
+			'safe site loses private permissions' => array( 'changed' ),
 		);
 	}
 
@@ -856,16 +833,15 @@ final class LocalDataRemoverTest extends TestCase {
 		$this->setUp();
 		$root    = (string) realpath( sys_get_temp_dir() ) . '/ran-booster-uninstall-safety-' . bin2hex( random_bytes( 6 ) );
 		$base    = $root . '/.ran-booster';
-		$site    = $base . '/site-fingerprint';
+		$site    = $base . '/0123456789abcdef';
 		$marker  = $site . '/retained-until-cleanup';
-		$sidecar = $site . '/secrets.json';
-		$unsafe  = 'base' === $phase ? $base : $site;
+		$sidecar = $site . '/ran-booster-store.json';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only this randomized disposable native filesystem fixture.
 		self::assertTrue( mkdir( $site, 0700, true ) );
 
 		try {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Exercise rejection of an empty directory that is not private.
-			self::assertTrue( chmod( $unsafe, 'changed' === $phase ? 0700 : 0755 ) );
+			self::assertTrue( chmod( $site, 'changed' === $phase ? 0700 : 0755 ) );
 			if ( 'site' === $phase ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Make the disposable directory ineligible until the existing secrets-deletion phase.
 				self::assertNotFalse( file_put_contents( $marker, '' ) );
@@ -888,14 +864,16 @@ final class LocalDataRemoverTest extends TestCase {
 						clearstatcache();
 					}
 				);
-			$remover = new TestableLocalDataRemover(
-				$secrets,
-				new TemporaryDebugCapture( null ),
-				$this->createStub( WpConfigSecretsPathWriter::class ),
-				$this->database,
-				$root . '/wp-config.php',
-				$sidecar
+			$writer = $this->createStub( WpConfigSecretsPathWriter::class );
+			$writer->method( 'assert_owned_definition_removable' )->willReturn( true );
+			$writer->method( 'remove_owned_definition' )->willReturnCallback(
+				static function ( string $config, string $path, callable $cleanup ): bool {
+					unset( $config, $path );
+					$cleanup();
+					return true;
+				}
 			);
+			$remover = $this->remover( $secrets, $writer, $root . '/wp-config.php' );
 
 			try {
 				$remover->remove();
@@ -905,7 +883,7 @@ final class LocalDataRemoverTest extends TestCase {
 			}
 
 			self::assertDirectoryExists( $base );
-			self::assertSame( 'base' !== $phase, is_dir( $site ) );
+			self::assertDirectoryExists( $site );
 			self::assertSame( 'preflight' === $phase, in_array( 'wp_ran_booster_packages', $this->database->tables, true ) );
 			self::assertSame( 'preflight' === $phase, isset( $GLOBALS['ran_booster_uninstall_cron'][ WordPressWorkerWakeup::HOOK ] ) );
 		} finally {

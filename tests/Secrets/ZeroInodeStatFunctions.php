@@ -9,7 +9,7 @@ namespace RAN\Secrets;
 /** @return array<int|string, int>|false */
 function lstat( string $path ): array|false {
 	$stat = \lstat( $path );
-	if ( false !== $stat ) {
+	if ( false !== $stat && empty( $GLOBALS['ran_booster_fixture_zero_handle_inode_only'] ) ) {
 		$stat['ino'] = 0;
 	}
 

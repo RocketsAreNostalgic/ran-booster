@@ -57,8 +57,11 @@ then export before returning to Plugins to deactivate and choose **Delete**;
 deactivation alone preserves its data. Delete removes verified
 Booster-owned credentials and webhook secrets, key, package/deployment/Activity
 records, options, schedules and temporary debug capture, but retains managed
-package files. The Blueprint omits webhook secrets/history, constants and the
-original storage key, and imported or adopted packages remain deployment
+package files. Delete removes an empty site storage directory when Booster can
+verify that it wrote the matching configuration. It keeps operator-managed
+storage directories and the shared `.ran-booster` directory with its deny stubs.
+The Blueprint omits webhook secrets/history, constants and the original storage
+key, and imported or adopted packages remain deployment
 **Disabled**. It is not a full backup: retain matching database, package-file
 and private-storage backups. Clean up remote tokens/PATs and hooks separately;
 extension data and manually authored configuration are not part of the cleanup.

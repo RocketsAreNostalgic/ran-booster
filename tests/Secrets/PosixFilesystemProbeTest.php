@@ -6,6 +6,8 @@ namespace RAN\Tests\Secrets;
 
 // Test fixtures deliberately exercise native filesystem semantics.
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Secrets\PosixFilesystemProbe;
 
@@ -74,6 +76,18 @@ final class PosixFilesystemProbeTest extends TestCase {
 		self::assertFalse( ( new PosixFilesystemProbe() )->probe( $candidate ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Confirm symlink target was not modified.
 		self::assertSame( 'untouched', file_get_contents( $target ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_failed_deny_stub_keeps_the_entry_if_its_handle_identity_cannot_be_proved(): void {
+		require __DIR__ . '/ZeroInodeStatFunctions.php';
+		$GLOBALS['ran_booster_fixture_zero_handle_inode_only'] = true;
+		$base = $this->root . '/.ran-booster';
+		self::assertFalse( ( new PosixFilesystemProbe() )->probe( $base . '/0123456789abcdef/ran-booster-store.json' ) );
+		self::assertFileExists( $base . '/.htaccess' );
+		self::assertFileDoesNotExist( $base . '/index.php' );
+		self::assertDirectoryDoesNotExist( $base . '/0123456789abcdef' );
 	}
 
 	public function test_rejects_paths_outside_the_fixed_candidate_shape(): void {

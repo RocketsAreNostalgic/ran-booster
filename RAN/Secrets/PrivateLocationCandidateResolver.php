@@ -268,6 +268,9 @@ final class PrivateLocationCandidateResolver {
 			$boundaries[] = $canonical;
 
 			for ( $ancestor = $canonical; '/' !== $ancestor; $ancestor = dirname( $ancestor ) ) {
+				if ( $this->is_public_web_root_basename( $ancestor ) ) {
+					$boundaries[] = $ancestor;
+				}
 				foreach ( array( '.git', '.hg', '.svn' ) as $marker ) {
 					if ( file_exists( $ancestor . '/' . $marker ) || is_link( $ancestor . '/' . $marker ) ) {
 						$boundaries[] = $ancestor;

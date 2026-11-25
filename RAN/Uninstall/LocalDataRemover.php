@@ -20,7 +20,6 @@ use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\WorkflowA
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Settings\GeneralPreferenceStore;
-use RAN\Secrets\PrivateLocationCandidateResolver;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 use RAN\Storage\Database;
@@ -63,7 +62,6 @@ class LocalDataRemover {
 		private readonly SecretsFile $secrets,
 		private readonly TemporaryDebugCapture $debug_capture,
 		private readonly WpConfigSecretsPathWriter $config_writer,
-		private readonly PrivateLocationCandidateResolver $location_resolver = new PrivateLocationCandidateResolver(),
 		?object $database = null
 	) {
 		global $wpdb;
@@ -79,6 +77,7 @@ class LocalDataRemover {
 			? $this->loaded_wp_config_path_for_retry()
 			: $this->loaded_wp_config_path();
 
+		$owned_definition = false;
 		$this->assert_cleanup_capabilities();
 		if ( null !== $config_path ) {
 			if ( null !== $sidecar_path ) {
@@ -93,7 +92,10 @@ class LocalDataRemover {
 		$this->secrets->assert_managed_storage_deletable();
 
 		$this->debug_capture->assert_managed_storage_deletable();
-		$this->assert_automatic_directories_removable( $sidecar_path );
+		$owned_directory = $owned_definition && null !== $sidecar_path ? $this->automatic_leaf_directory( $sidecar_path ) : null;
+		if ( null !== $owned_directory ) {
+			$this->assert_directory_removal_safe( $owned_directory );
+		}
 		$this->assert_no_recorded_custody();
 
 		$this->debug_capture->delete_managed_storage();
@@ -108,14 +110,16 @@ class LocalDataRemover {
 		$this->drop_tables();
 
 		if ( null !== $config_path ) {
-			if ( null !== $sidecar_path ) {
-
-				$this->config_writer->remove_owned_definition( $config_path, $sidecar_path );
+			if ( $owned_definition && null !== $sidecar_path ) {
+				// Retire only the verified leaf while its owned definition still permits a retry.
+				$this->config_writer->remove_owned_definition(
+					$config_path,
+					$sidecar_path,
+					null === $owned_directory ? null : fn () => $this->remove_directory_if_empty( $owned_directory )
+				);
 			}
 			$this->remove_wp_config_lock( $config_path );
 		}
-
-		$this->remove_empty_automatic_directories( $sidecar_path );
 	}
 
 	/** A read-only snapshot; it does not exclude work that begins after this check. */
@@ -411,21 +415,6 @@ class LocalDataRemover {
 		}
 	}
 
-	private function remove_empty_automatic_directories( ?string $sidecar_path ): void {
-		$automatic_path = $this->automatic_sidecar_path();
-		if ( null === $automatic_path
-			|| ( null !== $sidecar_path && ! $this->matches_automatic_sidecar_path( $sidecar_path, $automatic_path ) )
-		) {
-			return;
-		}
-
-		$target_path    = $sidecar_path ?? $automatic_path;
-		$site_directory = dirname( $target_path );
-		$base_directory = dirname( $site_directory );
-		$this->remove_directory_if_empty( $site_directory );
-		$this->remove_directory_if_empty( $base_directory );
-	}
-
 	private function remove_wp_config_lock( string $config_path ): void {
 		$lock_path = $config_path . '.ran-booster.lock';
 		if ( ! file_exists( $lock_path ) && ! is_link( $lock_path ) ) {
@@ -459,22 +448,6 @@ class LocalDataRemover {
 		}
 	}
 
-	protected function automatic_sidecar_path(): ?string {
-		try {
-
-			return $this->location_resolver->resolve(
-				defined( 'ABSPATH' ) && is_string( constant( 'ABSPATH' ) ) ? ABSPATH : '',
-				defined( 'WP_CONTENT_DIR' ) && is_string( constant( 'WP_CONTENT_DIR' ) ) ? WP_CONTENT_DIR : '',
-				dirname( __DIR__, 2 ),
-				isset( $_SERVER['DOCUMENT_ROOT'] ) && is_string( $_SERVER['DOCUMENT_ROOT'] )
-					? $_SERVER['DOCUMENT_ROOT']
-					: null
-			);
-		} catch ( \Throwable ) {
-			return null;
-		}
-	}
-
 	private function remove_directory_if_empty( string $directory ): void {
 		if ( ! $this->assert_directory_removal_safe( $directory ) ) {
 			return;
@@ -486,31 +459,14 @@ class LocalDataRemover {
 		}
 	}
 
-	private function assert_automatic_directories_removable( ?string $sidecar_path ): void {
-		$automatic_path = $this->automatic_sidecar_path();
-		if ( null === $automatic_path
-			|| ( null !== $sidecar_path && ! $this->matches_automatic_sidecar_path( $sidecar_path, $automatic_path ) )
-		) {
-			return;
-		}
-
-		$target_path = $sidecar_path ?? $automatic_path;
-		$this->assert_directory_removal_safe( dirname( $target_path ) );
-		$this->assert_directory_removal_safe( dirname( dirname( $target_path ) ) );
-	}
-
-	private function matches_automatic_sidecar_path( string $sidecar_path, string $automatic_path ): bool {
-		if ( $sidecar_path === $automatic_path ) {
-			return true;
-		}
-
-		$sidecar_site = dirname( $sidecar_path );
-		$sidecar_base = dirname( $sidecar_site );
+	private function automatic_leaf_directory( string $sidecar_path ): ?string {
+		$directory = dirname( $sidecar_path );
 
 		return 'ran-booster-store.json' === basename( $sidecar_path )
-			&& '.ran-booster' === basename( $sidecar_base )
-			&& dirname( dirname( $automatic_path ) ) === $sidecar_base
-			&& 1 === preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', basename( $sidecar_site ) );
+			&& '.ran-booster' === basename( dirname( $directory ) )
+			&& 1 === preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', basename( $directory ) )
+			? $directory
+			: null;
 	}
 
 	private function assert_directory_removal_safe( string $directory ): bool {
@@ -524,6 +480,8 @@ class LocalDataRemover {
 
 		$stat = lstat( $directory );
 		if ( false === $stat
+			|| realpath( $directory ) !== $directory
+			|| 0 === $stat['ino']
 			|| 0040000 !== ( $stat['mode'] & 0170000 )
 			|| 0700 !== ( $stat['mode'] & 0777 )
 			|| ! function_exists( 'posix_geteuid' )

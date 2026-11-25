@@ -533,13 +533,13 @@ Provider API 15 owns two shared helpers for ordinary vendor implementations:
   cleanup lifecycle. Its optional authorizer is consumed only for the exact
   archive URL, and reusable authorization must not survive a redirect.
 
-Providers may enforce stricter vendor syntax and archive-origin policy. They
-must not weaken the shared authentication cleanup lifecycle or reproduce Core's
-storage or deployment machinery. Any custom `PreparedArchive::download_to()`
-implementation or custom provider archive downloader must enforce
-`'redirection' => 0` on authenticated requests and strip `Authorization`
-headers before following cross-origin archive redirects so credentials are never
-sent to redirect targets.
+Providers may enforce stricter vendor syntax and archive-origin policy. Core's
+`AdmittedBranchHostAdapter` downloads the prepared URL into its private local
+file and disables automatic redirects. `PreparedArchive` supplies the URL,
+resolved ref, final head check and cleanup. `AuthenticatedPreparedArchive`
+scopes authorization to the exact first request and removes authorization
+before any redirect is followed, including redirects on the same origin. Use
+that lifecycle for private archive access.
 
 Historical acquisition is an explicit archive contract, separate from future Branch
 tracking. `ProviderMetadata::$archive_api_version` defaults to `1`; Core recognizes
@@ -573,11 +573,8 @@ automatic request with an expected branch, the provider checks the branch while
 preparing and supplies `verify_current_head()` to repeat that fixed provider-owned
 check immediately before WordPress mutates the package. Manual preparations use
 a no-op verification. Provider resolution and head verification are limited to
-three 15-second requests in total. Private authentication applies only to the
-exact first archive request and must be removed before any redirect; custom
-`PreparedArchive::download_to()` implementations must enforce
-`'redirection' => 0` and strip `Authorization` headers before following
-cross-origin archive redirects.
+three 15-second requests in total. For private archives, use the one-request
+authorizer and redirect scrubbing described above.
 
 If a provider add-on is deactivated, Booster retains those stored identities
 and presents the package as unavailable. It must not substitute another

@@ -1088,11 +1088,11 @@ final class ReleaseManagementDisplay {
 		}
 		$explanation = match ( $reason ) {
 			'digest_missing', 'package_asset_missing', 'package_asset_ambiguous', 'release_incompatible' => $this->preflight_failure_message( 'release_unavailable', $reason, $skipped_version ),
+			'release_identity_mismatch' => __( 'The ZIP’s folder or main file does not match this package.', 'ran-booster' ),
 			'package_header_missing' => $this->preflight_failure_message( 'release_header_missing' ),
 			'package_header_invalid' => $this->preflight_failure_message( 'release_header_invalid' ),
 			'package_archive_unreadable' => $this->preflight_failure_message( 'release_archive_unreadable' ),
-			'release_version_mismatch', 'package_update_uri_missing', 'package_update_uri_invalid', 'package_compatibility_missing', 'package_compatibility_invalid', 'package_header_ambiguous', 'release_version_invalid' => $this->preflight_failure_message( $reason ),
-			default => __( 'Booster could not validate that release.', 'ran-booster' ),
+			default => $this->diagnostic_message( $reason, default_message: __( 'Booster could not validate that release.', 'ran-booster' ) ),
 		};
 		if ( '' === $skipped_version ) {
 			return sprintf(
@@ -1330,7 +1330,7 @@ final class ReleaseManagementDisplay {
 			: __( 'Install couldn\'t complete before any files changed. This plugin is still on Branch.', 'ran-booster' );
 	}
 
-	private function diagnostic_message( string $code, string $reason = '', string $detail = '' ): string {
+	private function diagnostic_message( string $code, string $reason = '', string $detail = '', ?string $default_message = null ): string {
 		// The release or file name is only a fact the reason may carry. Without it the generic copy stays true.
 		if ( '' === $detail && in_array( $reason, array( 'package_asset_missing', 'package_asset_ambiguous' ), true ) ) {
 			$reason = 'release_incompatible';
@@ -1379,7 +1379,7 @@ final class ReleaseManagementDisplay {
 			'package_archive_entry_limit' => __( 'The published ZIP has an unsafe or unsupported archive structure.', 'ran-booster' ),
 			'package_header_ambiguous' => __( 'The published ZIP contains more than one possible WordPress package header.', 'ran-booster' ),
 			'release_version_invalid' => __( 'The published release tag does not contain a valid package version.', 'ran-booster' ),
-			default => __( 'Published release status needs attention.', 'ran-booster' ),
+			default => $default_message ?? __( 'Published release status needs attention.', 'ran-booster' ),
 		};
 	}
 

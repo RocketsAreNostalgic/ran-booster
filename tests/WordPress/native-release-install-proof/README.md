@@ -232,6 +232,7 @@ load.
 | `disabled` | `policy_disabled`; files unchanged | Branch | None |
 | `failed-download` | `release_unavailable` before the upgrader starts; files unchanged | Branch | None |
 | `pre-install` | `switch_uncertain` while native cleanup is pending; files unchanged | Branch | None after shutdown |
+| `pre-install-throw` | Interrupted after taking the updater lock, before custody and with no WordPress completion event; files unchanged | Branch | Lock cleared by shutdown |
 | `stale` | Preflight confirms A (1.0.0), then B (2.0.0) appears; exactly one mutation ZIP for A is installed | Releases, revision 2 | Cleared before reply |
 | `fallback-repaired` | B (2.0.0) lacks a digest at preflight, so A (1.0.0) is confirmed; B is repaired before POST, which installs only A in one mutation ZIP | Releases, revision 2 | Cleared before reply |
 | `missing` | A loses its digest after preflight while B appears; no mutation ZIP body is delivered and no switch occurs | Branch | None |

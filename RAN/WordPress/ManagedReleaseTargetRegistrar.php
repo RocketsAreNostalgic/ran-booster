@@ -288,9 +288,9 @@ final class ManagedReleaseTargetRegistrar {
 			$this->native_updates[ $key ]['switch_upgrader'] = $upgrader;
 			add_action(
 				'shutdown',
-				function () use ( $key, $upgrader, $hook_extra ): void {
+				function () use ( $key, $upgrader ): void {
 					if ( ( $this->native_updates[ $key ]['switch_upgrader'] ?? null ) === $upgrader ) {
-						$this->complete_native_mutation( $upgrader, $hook_extra );
+						$this->complete_pending_native_mutation( $upgrader, $key );
 					}
 				},
 				PHP_INT_MAX,
@@ -556,7 +556,10 @@ final class ManagedReleaseTargetRegistrar {
 		if ( null === $target ) {
 			return;
 		}
-		$key     = self::key( $target['type'], $target['identifier'] );
+		$this->complete_pending_native_mutation( $upgrader, self::key( $target['type'], $target['identifier'] ) );
+	}
+
+	private function complete_pending_native_mutation( object $upgrader, string $key ): void {
 		$pending = $this->native_updates[ $key ] ?? null;
 		if ( isset( $pending['switch_upgrader'] ) && $pending['switch_upgrader'] !== $upgrader ) {
 			return;

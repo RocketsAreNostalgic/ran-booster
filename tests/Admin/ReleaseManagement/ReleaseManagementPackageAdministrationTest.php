@@ -2811,7 +2811,16 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Check releases and confirm again.', (string) ob_get_clean() );
 	}
 
-	public function test_fallback_confirmation_explains_skipped_release_and_binds_selected_version(): void {
+	/** @return array<string, array{string, string}> */
+	public static function fallback_reasons(): array {
+		return array(
+			'missing header' => array( 'package_header_missing', 'The published package is missing its WordPress version header.' ),
+			'oversized ZIP'  => array( 'package_archive_too_large', 'The published ZIP has an invalid or excessive uncompressed size.' ),
+		);
+	}
+
+	#[DataProvider( 'fallback_reasons' )]
+	public function test_fallback_confirmation_explains_skipped_release_and_binds_selected_version( string $reason, string $explanation ): void {
 		$tracking            = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) );
 		$tracking->preflight = new ReleaseTrackingPreflight(
 			ReleaseTrackingPreflight::READY,
@@ -2821,7 +2830,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'v1.1.0',
 			'1.1.0',
 			'newer',
-			reason_code: 'package_header_missing',
+			reason_code: $reason,
 			detail: '1.2.0',
 			release_identity: 'rel-1.1.0'
 		);
@@ -2835,7 +2844,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 				'_wpnonce'                 => 'nonce-for-release-tracking-preflight-plugin-example/example.php-3-stable',
 			)
 		);
-		self::assertSame( 'Release 1.2.0 was skipped. The published package is missing its WordPress version header.', $preflight['data']['fallback_message'] );
+		$message             = 'Release 1.2.0 was skipped. ' . $explanation;
+		self::assertSame( $message, $preflight['data']['fallback_message'] );
 		$request = $this->request( 'enable' ) + array( 'release_channel' => 'stable' );
 		$url     = $controls->process_admin_post_request( 'enable', $request );
 		self::assertCount( 2, $tracking->calls, 'Preflights do not install.' );
@@ -2846,9 +2856,17 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'Release 1.2.0 was skipped. The published package is missing its WordPress version header.', $html );
+		self::assertStringContainsString( $message, $html );
 		self::assertStringContainsString( 'Switch and install 1.1.0', $html );
 		self::assertStringContainsString( 'name="confirmed_release_version" value="1.1.0"', $html );
+
+		// Switching to Releases and back must not renew this old redirect's confirmation.
+		$live_controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( revision: 5 ) ) );
+		$live_package  = new PackageProjection( revision_value: 5 );
+		ob_start();
+		$live_controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $live_package, $live_package->settings_url() );
+		self::assertStringNotContainsString( 'data-ran-booster-switch-confirmation', (string) ob_get_clean() );
+
 		$_GET['ran_booster_skipped_version'] = '1.3.0';
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );

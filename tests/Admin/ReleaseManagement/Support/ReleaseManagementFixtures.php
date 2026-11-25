@@ -48,7 +48,8 @@ final class ReleaseManagementFixture {
 		string $failure_code = '',
 		string $deployment_policy = 'manual',
 		string $last_checked_at = '2026-07-24T20:00:00+00:00',
-		string $preflight_reason = ''
+		string $preflight_reason = '',
+		int $revision = 3
 	): ReleaseTrackingStatus {
 		$identifier = 'theme' === $type ? 'example-theme' : 'example/example.php';
 
@@ -56,7 +57,7 @@ final class ReleaseManagementFixture {
 			$type,
 			$identifier,
 			$source,
-			3,
+			$revision,
 			'101',
 			$deployment_policy,
 			new ReleaseTrackingEligibility(

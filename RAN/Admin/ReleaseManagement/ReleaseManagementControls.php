@@ -227,10 +227,11 @@ final class ReleaseManagementControls {
 		if ( 'edit' === $mode && null !== $result && '' !== $code && ! $duplicate_conflict ) {
 			if ( $this->is_switch_confirmation_code( $code ) ) {
 				if ( $release_pane && null !== $status && $this->can_confirm_switch( $status, $nonces, $updates_forced_off, $native_hold ) ) {
-					$confirm_channel = 'prerelease' === $result['channel'] ? 'prerelease' : 'stable';
-					$decoded_version = base64_decode( strtr( $result['detail'], '-_', '+/' ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decode the signed, URL-safe confirmation version.
-					$confirm_version = $this->bounded_release_token( $decoded_version, 64 );
-					if ( '' !== $result['release_identity'] && '' !== $result['release_tag'] && '' !== $confirm_version ) {
+					$confirm_channel                        = 'prerelease' === $result['channel'] ? 'prerelease' : 'stable';
+					[ $confirm_revision, $encoded_version ] = array_pad( explode( ':', $result['detail'], 2 ), 2, '' );
+					$decoded_version                        = base64_decode( strtr( $encoded_version, '-_', '+/' ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decode the signed, URL-safe confirmation version.
+					$confirm_version                        = $this->bounded_release_token( $decoded_version, 64 );
+					if ( (string) $status->source_revision() === $confirm_revision && '' !== $result['release_identity'] && '' !== $result['release_tag'] && '' !== $confirm_version ) {
 						$switch_confirmation = array(
 							'relationship'            => 'switch_confirm_older' === $code ? 'older' : ( 'switch_confirm_same' === $code ? 'same' : 'newer' ),
 							'channel'                 => $confirm_channel,
@@ -788,7 +789,7 @@ final class ReleaseManagementControls {
 		$outcome = $this->package_outcome( $type, $identifier, $code, false );
 		$detail  = rtrim( strtr( base64_encode( $preflight->latest_version() ), '+/', '-_' ), '=' ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Carry the exact version through the signed redirect.
 		if ( '' !== $detail ) {
-			$outcome['detail'] = $detail;
+			$outcome['detail'] = $revision . ':' . $detail;
 		}
 		$outcome['reason']           = $preflight->reason_code();
 		$outcome['skipped_version']  = $preflight->detail_text();

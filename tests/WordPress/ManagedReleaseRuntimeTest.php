@@ -1120,12 +1120,21 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		[ $registrar, $lock ] = $this->native_plugin_registrar( $package );
 		self::assertTrue( $registrar->admit_switch( 'plugin', $package, new ManagedReleaseConfiguration( 'example', 'example.php' ), 7 ) );
 
-		$upgrader = new \stdClass();
-		$other    = new \stdClass();
-		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $upgrader, self::NATIVE_EXTRA ) );
+		$upgrader = (object) array(
+			'bulk'           => true,
+			'update_count'   => 1,
+			'update_current' => 1,
+		);
+		$other    = clone $upgrader;
+		// Plugin_Upgrader's per-item bulk hook omits the operation action and type.
+		$download = array(
+			'plugin'      => self::NATIVE_PLUGIN,
+			'temp_backup' => array( 'slug' => 'example' ),
+		);
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $upgrader, $download ) );
 		self::assertSame( 1, $lock->acquires );
-		self::assertInstanceOf( \WP_Error::class, $registrar->authorize_native_download( false, 'package.zip', $other, self::NATIVE_EXTRA ) );
-		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		self::assertInstanceOf( \WP_Error::class, $registrar->authorize_native_download( false, 'package.zip', $other, $download ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, $download ) );
 		self::assertSame( 1, $lock->acquires );
 
 		$registrar->complete_native_mutation( $other, self::NATIVE_EXTRA );
@@ -1133,6 +1142,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$fallback = $this->shutdown_rechecks();
 		self::assertCount( 1, $fallback );
 		( $fallback[0]['callback'] )();
+		self::assertSame( array( '1700000002' ), $lock->releases, 'The admitted invocation releases its lock even without a completion event.' );
 		$registrar->complete_native_mutation( $upgrader, self::NATIVE_EXTRA );
 		self::assertSame( array( '1700000002' ), $lock->releases );
 	}

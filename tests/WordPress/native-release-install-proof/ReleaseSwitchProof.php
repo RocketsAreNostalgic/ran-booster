@@ -41,11 +41,12 @@ final class RAN_Booster_ReleaseSwitchProof {
 	private string $repository_id;
 	private string $archive_root;
 	private string $scenario;
-	private bool $changed           = false;
-	private ?string $competing      = null;
-	private int $streams            = 0;
-	private bool $selection_changed = false;
-	private bool $mutating          = false;
+	private bool $changed                    = false;
+	private ?string $competing               = null;
+	private int $streams                     = 0;
+	private bool $selection_changed          = false;
+	private bool $mutating                   = false;
+	private bool $interrupted_before_custody = false;
 
 	public function __construct( private string $kind, private string $case_name ) {
 		$site = getenv( 'RAN_RELEASE_SWITCH_PROOF_SITE' );
@@ -62,7 +63,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			throw new RuntimeException( 'Disposable WordPress 7.0.3 / PHP 8.2 administrator identity not established.' );
 		}
 		if ( ! in_array( $kind, array( 'plugin', 'theme' ), true )
-			|| ! in_array( $case_name, array( 'same', 'newer', 'active', 'older', 'disabled', 'failed-download', 'pre-install', 'stale', 'missing', 'fallback-repaired', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock', 'fresh-finished', 'fresh-killed', 'fresh-damaged', 'fresh-deleted' ), true ) ) {
+			|| ! in_array( $case_name, array( 'same', 'newer', 'active', 'older', 'disabled', 'failed-download', 'pre-install', 'pre-install-throw', 'stale', 'missing', 'fallback-repaired', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock', 'fresh-finished', 'fresh-killed', 'fresh-damaged', 'fresh-deleted' ), true ) ) {
 			throw new RuntimeException( 'Unknown proof case.' );
 		}
 		$this->scenario = self::FRESH[ $case_name ] ?? $case_name;
@@ -111,7 +112,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			'older' => array( 'release_older', '1.0.0', false, false ),
 			'disabled' => array( 'policy_disabled', '1.0.0', false, false ),
 			'failed-download' => array( 'release_unavailable', '1.0.0', false, false ),
-			'pre-install' => array( 'switch_uncertain', '1.0.0', false, false ),
+			'pre-install', 'pre-install-throw' => array( 'switch_uncertain', '1.0.0', false, false ),
 			'stale', 'fallback-repaired' => array( 'release_enabled', '1.0.0', true, false ),
 			'missing' => array( 'release_unavailable', '1.0.0', false, false ),
 			'failed-install' => array( 'switch_uncertain', '1.0.0', false, true ),
@@ -345,6 +346,19 @@ final class RAN_Booster_ReleaseSwitchProof {
 			// Refuse at WordPress's actual pre-install boundary, before destination replacement.
 			add_filter( 'upgrader_pre_install', static fn () => new WP_Error( 'release_switch_proof_pre_install', 'Synthetic refusal before replacement.' ), PHP_INT_MAX );
 		}
+		if ( 'pre-install-throw' === $this->scenario ) {
+			add_filter(
+				'upgrader_pre_install',
+				function ( mixed $reply ): mixed {
+					if ( null === $this->lock_row() ) {
+						return $reply;
+					}
+					$this->interrupted_before_custody = true;
+					throw new RuntimeException( 'Synthetic interruption before custody.' );
+				},
+				PHP_INT_MAX
+			);
+		}
 		if ( 'failed-install' === $this->scenario ) {
 			add_filter( 'upgrader_post_install', static fn () => new WP_Error( 'release_switch_proof_after_replace', 'Synthetic failure after replacement.' ), PHP_INT_MAX );
 		}
@@ -382,6 +396,9 @@ final class RAN_Booster_ReleaseSwitchProof {
 		}
 		$code = $this->enable();
 		$this->attest();
+		if ( 'pre-install-throw' === $this->scenario && ( ! $this->interrupted_before_custody || did_action( 'upgrader_process_complete' ) > 0 ) ) {
+			throw new RuntimeException( 'The interruption must occur while holding the lock and without WordPress completion.' );
+		}
 		if ( ( 'compete' === $this->scenario ) !== ( null !== $this->competing ) ) {
 			throw new RuntimeException( 'The competing switch did not run inside the installer.' );
 		}
@@ -458,6 +475,9 @@ final class RAN_Booster_ReleaseSwitchProof {
 		$hold      = $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ?? null;
 		if ( isset( $hold ) !== $custody ) {
 			throw new RuntimeException( 'Unexpected native custody after the switch.' );
+		}
+		if ( 'pre-install-throw' === $this->scenario && null !== $this->lock_row() ) {
+			throw new RuntimeException( 'The interrupted request left its updater lock behind.' );
 		}
 		if ( is_array( $hold ) ) {
 			// A request that ended records it; only a killed or refused one leaves the hold started, still owning its lock.

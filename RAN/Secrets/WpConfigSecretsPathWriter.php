@@ -58,11 +58,10 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * Removes only the exact definition block previously inserted by this writer.
 	 *
-	 * @param (callable():void)|null $before_removal Runs under the verified config lock while the owned definition still exists.
 	 * @return bool Whether the owned definition block was removed.
 	 */
-	public function remove_owned_definition( string $config_path, string $sidecar_path, ?callable $before_removal = null ): bool {
-		return $this->edit( $config_path, $sidecar_path, true, null, before_removal: $before_removal );
+	public function remove_owned_definition( string $config_path, string $sidecar_path ): bool {
+		return $this->edit( $config_path, $sidecar_path, true, null );
 	}
 
 	/**
@@ -106,14 +105,12 @@ class WpConfigSecretsPathWriter {
 		return true;
 	}
 
-	/** @param (callable():void)|null $before_removal */
 	private function edit(
 		string $config_path,
 		string $sidecar_path,
 		bool $remove,
 		?string $replacement_sidecar_path,
-		bool &$replacement_attempted = false,
-		?callable $before_removal = null
+		bool &$replacement_attempted = false
 	): bool {
 		$this->assert_absolute_safe_path( $config_path, 'config_path_invalid' );
 		$this->assert_absolute_safe_path( $sidecar_path, 'sidecar_path_invalid' );
@@ -175,9 +172,6 @@ class WpConfigSecretsPathWriter {
 			}
 			if ( $remove ) {
 				$this->validate_removal_candidate( $candidate, $sidecar_path );
-				if ( null !== $before_removal ) {
-					$before_removal();
-				}
 			} elseif ( null !== $replacement_sidecar_path ) {
 				$this->validate_retarget_candidate( $candidate, $sidecar_path, $replacement_sidecar_path );
 			} else {

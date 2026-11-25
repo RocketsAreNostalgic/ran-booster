@@ -84,7 +84,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		$resolver = new PrivateLocationCandidateResolver( $this->temporary_boundary );
 
 		foreach ( array( 'public_html', 'Public_HTML', 'htdocs', 'HTDOCS', 'www', 'WWW', 'httpdocs', 'HttpDocs' ) as $index => $web_root ) {
-			$account   = $this->root . '/webroot-case-' . $index;
+			$account   = $this->root . '/var/www/vhosts/webroot-case-' . $index;
 			$public    = $account . '/' . $web_root;
 			$wordpress = $public . '/nested/blog';
 			$content   = $wordpress . '/wp-content';

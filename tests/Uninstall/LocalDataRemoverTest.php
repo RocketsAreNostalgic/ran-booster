@@ -22,6 +22,7 @@ use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\WorkflowA
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Secrets\SecretsFile;
+use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\Secrets\SiteKeyStore;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 use RAN\Storage\Database;
@@ -759,18 +760,19 @@ final class LocalDataRemoverTest extends TestCase {
 		}
 	}
 
-	/** @return array<string, array{bool}> */
+	/** @return array<string, array{string}> */
 	public static function directory_ownership_cases(): array {
 		return array(
-			'writer owned'     => array( true ),
-			'operator defined' => array( false ),
+			'writer owned'      => array( 'automatic' ),
+			'operator defined'  => array( 'manual' ),
+			'recovery retarget' => array( 'recovered' ),
 		);
 	}
 
 	#[DataProvider( 'directory_ownership_cases' )]
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_remove_retires_only_the_writer_owned_leaf_and_keeps_the_shared_base( bool $owned ): void {
+	public function test_remove_preserves_private_directories_and_only_retires_owned_configuration( string $source ): void {
 		$this->setUp();
 		$root    = (string) realpath( sys_get_temp_dir() ) . '/ran-booster-uninstall-directories-' . bin2hex( random_bytes( 6 ) );
 		$base    = $root . '/.ran-booster';
@@ -779,6 +781,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$config  = $root . '/wp-config.php';
 		$stub    = $base . '/.htaccess';
 		$writer  = new WpConfigSecretsPathWriter();
+		$owned   = 'manual' !== $source;
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only this test's disposable topology.
 		self::assertTrue( mkdir( $site, 0700, true ) );
 		$definition = $owned ? '' : sprintf( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '%s' );\n", addcslashes( $site, "\\'" ) );
@@ -787,18 +790,23 @@ final class LocalDataRemoverTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Create the disposable shared deny stub.
 		self::assertNotFalse( file_put_contents( $stub, "Require all denied\n" ) );
 		try {
-			if ( $owned ) {
+			if ( 'recovered' === $source ) {
+				$original = $base . '/fedcba9876543210/ran-booster-store.json';
+				$writer->write( $config, $original );
+				self::assertTrue( $writer->retarget_owned_definition( $config, $original, $sidecar ) );
+				self::assertTrue( $writer->has_owned_definition( $config, $sidecar ) );
+			} elseif ( $owned ) {
 				$writer->write( $config, $sidecar );
 			}
 			$this->remover( $this->secrets( $sidecar ), $writer, $config )->remove();
-			self::assertSame( ! $owned, is_dir( $site ) );
+			self::assertDirectoryExists( $site );
 			self::assertFileExists( $stub );
 			self::assertFileDoesNotExist( $config . '.ran-booster.lock' );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Verify the operator's definition remains and the owned definition was removed.
 			self::assertSame( ! $owned, str_contains( (string) file_get_contents( $config ), 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) );
 			if ( $owned ) {
 				$this->remover( $this->secrets( null ), $writer, $config )->remove();
-				self::assertDirectoryDoesNotExist( $site );
+				self::assertDirectoryExists( $site );
 				self::assertFileExists( $stub );
 			}
 		} finally {
@@ -817,85 +825,50 @@ final class LocalDataRemoverTest extends TestCase {
 		}
 	}
 
-	/** @return array<string, array{string}> */
-	public static function unsafe_directory_cases(): array {
-		return array(
-			'empty site fails before mutations'   => array( 'preflight' ),
-			'site becomes empty during cleanup'   => array( 'site' ),
-			'safe site loses private permissions' => array( 'changed' ),
-		);
-	}
-
-	#[DataProvider( 'unsafe_directory_cases' )]
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_unsafe_empty_directories_stop_at_their_current_cleanup_boundary( string $phase ): void {
+	public function test_inconclusive_managed_storage_inspection_keeps_owned_configuration_for_retry(): void {
 		$this->setUp();
+		unset( $GLOBALS['ran_booster_uninstall_options'][ SiteKeyStore::OPTION_NAME ] );
 		$root    = (string) realpath( sys_get_temp_dir() ) . '/ran-booster-uninstall-safety-' . bin2hex( random_bytes( 6 ) );
-		$base    = $root . '/.ran-booster';
-		$site    = $base . '/0123456789abcdef';
-		$marker  = $site . '/retained-until-cleanup';
+		$site    = $root . '/private-storage';
 		$sidecar = $site . '/ran-booster-store.json';
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only this randomized disposable native filesystem fixture.
+		$config  = $root . '/wp-config.php';
+		$writer  = new WpConfigSecretsPathWriter();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only this randomized disposable storage topology.
 		self::assertTrue( mkdir( $site, 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Seed disposable config with the actual writer marker.
+		self::assertNotFalse( file_put_contents( $config, "<?php\n/* That's all, stop editing! Happy publishing. */\n" ) );
+		$writer->write( $config, $sidecar );
+		$remover = $this->remover( new SecretsFile( $sidecar ), $writer, $config );
 
 		try {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Exercise rejection of an empty directory that is not private.
-			self::assertTrue( chmod( $site, 'changed' === $phase ? 0700 : 0755 ) );
-			if ( 'site' === $phase ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Make the disposable directory ineligible until the existing secrets-deletion phase.
-				self::assertNotFalse( file_put_contents( $marker, '' ) );
-			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Model a temporarily uninspectable private storage directory.
+			self::assertTrue( chmod( $site, 0300 ) );
 			clearstatcache();
-			$secrets = $this->createMock( SecretsFile::class );
-			$secrets->method( 'path' )->willReturn( $sidecar );
-			$secrets->expects( 'preflight' === $phase ? self::never() : self::once() )
-				->method( 'delete_managed_storage' )
-				->willReturnCallback(
-					static function () use ( $marker, $site, $phase ): void {
-						if ( is_file( $marker ) ) {
-							// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Model managed-file deletion using only this fixture-owned marker.
-							self::assertTrue( unlink( $marker ) );
-						}
-						if ( 'changed' === $phase ) {
-							// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Change fixture permissions after preflight to prove removal rechecks current metadata.
-							self::assertTrue( chmod( $site, 0755 ) );
-						}
-						clearstatcache();
-					}
-				);
-			$writer = $this->createStub( WpConfigSecretsPathWriter::class );
-			$writer->method( 'assert_owned_definition_removable' )->willReturn( true );
-			$writer->method( 'remove_owned_definition' )->willReturnCallback(
-				static function ( string $config, string $path, callable $cleanup ): bool {
-					unset( $config, $path );
-					$cleanup();
-					return true;
-				}
-			);
-			$remover = $this->remover( $secrets, $writer, $root . '/wp-config.php' );
-
 			try {
 				$remover->remove();
-				self::fail( 'Unsafe empty automatic storage must stop cleanup.' );
-			} catch ( RuntimeException $failure ) {
-				self::assertSame( 'An empty Booster storage directory could not be removed safely.', $failure->getMessage() );
+				self::fail( 'Unverified managed storage should keep its configuration for retry.' );
+			} catch ( SecretsStorageUnavailable $failure ) {
+				self::assertSame( 'The encrypted Booster secrets directory is not secure and writable.', $failure->getMessage() );
 			}
 
-			self::assertDirectoryExists( $base );
+			self::assertTrue( $writer->has_owned_definition( $config, $sidecar ) );
+			self::assertContains( 'wp_ran_booster_packages', $this->database->tables );
+
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Restore fixture permissions before retrying normal uninstall.
+			self::assertTrue( chmod( $site, 0700 ) );
+			clearstatcache();
+			$remover->remove();
+			self::assertFalse( $writer->has_owned_definition( $config, $sidecar ) );
 			self::assertDirectoryExists( $site );
-			self::assertSame( 'preflight' === $phase, in_array( 'wp_ran_booster_packages', $this->database->tables, true ) );
-			self::assertSame( 'preflight' === $phase, isset( $GLOBALS['ran_booster_uninstall_cron'][ WordPressWorkerWakeup::HOOK ] ) );
+			self::assertNotContains( 'wp_ran_booster_packages', $this->database->tables );
 		} finally {
-			if ( is_file( $marker ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the fixture-owned marker after failure.
-				unlink( $marker );
-			}
-			foreach ( array( $site, $base, $root ) as $directory ) {
-				if ( is_dir( $directory ) ) {
-					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the disposable directories created by this test.
-					rmdir( $directory );
-				}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the disposable configuration.
+			unlink( $config );
+			foreach ( array( $site, $root ) as $directory ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the disposable directories created by this test.
+				rmdir( $directory );
 			}
 		}
 	}

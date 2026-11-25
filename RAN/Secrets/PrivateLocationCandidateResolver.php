@@ -267,9 +267,12 @@ final class PrivateLocationCandidateResolver {
 			}
 			$boundaries[] = $canonical;
 
+			// Infer the nearest site web root. A higher matching name can be a shared hosting directory.
+			$public_root_found = false;
 			for ( $ancestor = $canonical; '/' !== $ancestor; $ancestor = dirname( $ancestor ) ) {
-				if ( $this->is_public_web_root_basename( $ancestor ) ) {
-					$boundaries[] = $ancestor;
+				if ( ! $public_root_found && $this->is_public_web_root_basename( $ancestor ) ) {
+					$boundaries[]      = $ancestor;
+					$public_root_found = true;
 				}
 				foreach ( array( '.git', '.hg', '.svn' ) as $marker ) {
 					if ( file_exists( $ancestor . '/' . $marker ) || is_link( $ancestor . '/' . $marker ) ) {

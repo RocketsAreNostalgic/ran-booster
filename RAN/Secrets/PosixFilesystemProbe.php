@@ -19,6 +19,7 @@ final class PosixFilesystemProbe {
 		$owned_leaf = null;
 		$probe_path = '';
 		$handles    = array();
+		$first      = false;
 		$passed     = false;
 		try {
 			if ( 'Windows' === PHP_OS_FAMILY || ! $this->valid_candidate( $candidate_file ) ) {
@@ -56,13 +57,19 @@ final class PosixFilesystemProbe {
 		} catch ( \Throwable ) {
 			$passed = false;
 		} finally {
-			foreach ( array_reverse( $handles ) as $handle ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close both native lock-probe handles before removing the uniquely named probe entry.
-				fclose( $handle );
-			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove the uniquely named native lock-probe entry after closing its handles; failure invalidates the probe.
-			if ( '' !== $probe_path && ( is_file( $probe_path ) || is_link( $probe_path ) ) && ! unlink( $probe_path ) ) {
+			try {
+				clearstatcache( true, $probe_path );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the probe inode still verified against its creating handle.
+				if ( is_resource( $first ) && ( ! is_file( $probe_path ) || ! $this->safe_file( $probe_path, $first ) || ! unlink( $probe_path ) ) ) {
+					$passed = false;
+				}
+			} catch ( \Throwable ) {
 				$passed = false;
+			} finally {
+				foreach ( array_reverse( $handles ) as $handle ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Keep the creating handle open until the final ownership check.
+					fclose( $handle );
+				}
 			}
 		}
 

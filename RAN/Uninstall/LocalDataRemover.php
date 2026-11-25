@@ -92,10 +92,6 @@ class LocalDataRemover {
 		$this->secrets->assert_managed_storage_deletable();
 
 		$this->debug_capture->assert_managed_storage_deletable();
-		$owned_directory = $owned_definition && null !== $sidecar_path ? $this->automatic_leaf_directory( $sidecar_path ) : null;
-		if ( null !== $owned_directory ) {
-			$this->assert_directory_removal_safe( $owned_directory );
-		}
 		$this->assert_no_recorded_custody();
 
 		$this->debug_capture->delete_managed_storage();
@@ -111,12 +107,8 @@ class LocalDataRemover {
 
 		if ( null !== $config_path ) {
 			if ( $owned_definition && null !== $sidecar_path ) {
-				// Retire only the verified leaf while its owned definition still permits a retry.
-				$this->config_writer->remove_owned_definition(
-					$config_path,
-					$sidecar_path,
-					null === $owned_directory ? null : fn () => $this->remove_directory_if_empty( $owned_directory )
-				);
+				// Recovery can retarget the definition to an operator-restored directory.
+				$this->config_writer->remove_owned_definition( $config_path, $sidecar_path );
 			}
 			$this->remove_wp_config_lock( $config_path );
 		}
@@ -446,51 +438,6 @@ class LocalDataRemover {
 		) {
 			throw new RuntimeException( 'The Booster WordPress configuration lock could not be removed safely.' );
 		}
-	}
-
-	private function remove_directory_if_empty( string $directory ): void {
-		if ( ! $this->assert_directory_removal_safe( $directory ) ) {
-			return;
-		}
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the native directory freshly proven empty, process-owned and mode 0700.
-		if ( ! rmdir( $directory ) ) {
-			throw new RuntimeException( 'An empty Booster storage directory could not be removed safely.' );
-		}
-	}
-
-	private function automatic_leaf_directory( string $sidecar_path ): ?string {
-		$directory = dirname( $sidecar_path );
-
-		return 'ran-booster-store.json' === basename( $sidecar_path )
-			&& '.ran-booster' === basename( dirname( $directory ) )
-			&& 1 === preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', basename( $directory ) )
-			? $directory
-			: null;
-	}
-
-	private function assert_directory_removal_safe( string $directory ): bool {
-		if ( ! is_dir( $directory ) || is_link( $directory ) ) {
-			return false;
-		}
-
-		if ( array( '.', '..' ) !== scandir( $directory ) ) {
-			return false;
-		}
-
-		$stat = lstat( $directory );
-		if ( false === $stat
-			|| realpath( $directory ) !== $directory
-			|| 0 === $stat['ino']
-			|| 0040000 !== ( $stat['mode'] & 0170000 )
-			|| 0700 !== ( $stat['mode'] & 0777 )
-			|| ! function_exists( 'posix_geteuid' )
-			|| posix_geteuid() !== $stat['uid']
-		) {
-			throw new RuntimeException( 'An empty Booster storage directory could not be removed safely.' );
-		}
-
-		return true;
 	}
 
 	private function canonical_directory( string $path ): ?string {

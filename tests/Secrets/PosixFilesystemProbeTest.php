@@ -90,6 +90,22 @@ final class PosixFilesystemProbeTest extends TestCase {
 		self::assertDirectoryDoesNotExist( $base . '/0123456789abcdef' );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_probe_finalizer_preserves_an_entry_when_its_creating_handle_cannot_be_verified(): void {
+		require __DIR__ . '/ZeroInodeStatFunctions.php';
+		$GLOBALS['ran_booster_fixture_zero_handle_inode_only']          = true;
+		$GLOBALS['ran_booster_fixture_handle_checks_before_zero_inode'] = 3;
+		$site = $this->root . '/.ran-booster/0123456789abcdef';
+
+		self::assertFalse( ( new PosixFilesystemProbe() )->probe( $site . '/ran-booster-store.json' ) );
+		$entries = glob( $site . '/.probe-*' );
+		self::assertIsArray( $entries );
+		self::assertCount( 1, $entries );
+		self::assertFileExists( $entries[0] );
+		self::assertFileDoesNotExist( $site . '/ran-booster-store.json' );
+	}
+
 	public function test_rejects_paths_outside_the_fixed_candidate_shape(): void {
 		self::assertFalse( ( new PosixFilesystemProbe() )->probe( $this->root . '/ran-booster-store.json' ) );
 	}

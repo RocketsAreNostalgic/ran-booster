@@ -21,7 +21,12 @@ function lstat( string $path ): array|false {
  * @return array<int|string, int>|false
  */
 function fstat( $stream ): array|false {
-	$stat = \fstat( $stream );
+	$stat      = \fstat( $stream );
+	$remaining = $GLOBALS['ran_booster_fixture_handle_checks_before_zero_inode'] ?? 0;
+	if ( is_int( $remaining ) && 0 < $remaining ) {
+		$GLOBALS['ran_booster_fixture_handle_checks_before_zero_inode'] = $remaining - 1;
+		return $stat;
+	}
 	if ( false !== $stat ) {
 		$stat['ino'] = 0;
 	}

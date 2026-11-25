@@ -79,7 +79,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** The default read-only check is throttled; an injected one is not. */
 	private bool $check_cooldown;
 
-	/** @var \Closure(string, string, string, string, bool): string */
+	/** @var \Closure(string, string, string, string, bool, string): string */
 	private \Closure $switch_install;
 
 	/**
@@ -90,7 +90,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(string): void|null         $invalidate_native
 	 * @param callable(string): ?string|null      $public_lookup_profile
 	 * @param callable(string, string): mixed|null $check_without_offer
-	 * @param callable(string, string, string, string, bool): string|null $switch_install Offers one exact release and runs WordPress's upgrader for it.
+	 * @param callable(string, string, string, string, bool, string): string|null $switch_install Installs one exact release.
 	 */
 	public function __construct(
 		private PluginRepository $plugins,
@@ -602,6 +602,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		return $repository->with_credential( $credential_id );
 	}
 
+	/** @param array{identity:string,tag:string,version:string}|null $confirmed_release Core confirmation, bound by the admin nonce. */
 	public function enable(
 		string $type,
 		string $identifier,
@@ -609,7 +610,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $channel,
 		string $nonce,
 		string $confirmed_older_release_identity = '',
-		string $confirmed_older_release_tag = ''
+		string $confirmed_older_release_tag = '',
+		?array $confirmed_release = null
 	): ReleaseTrackingResult {
 		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return ReleaseTrackingResult::failed(
@@ -624,7 +626,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			|| null === $package ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'Release tracking could not be enabled.' );
 		}
-		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) ) {
+		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel, fresh: true ) ) {
 			return self::source_paused();
 		}
 		if ( PackageMutationGuard::file_mods_disabled() ) {
@@ -660,37 +662,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					'This package already uses the RAN GitHub release updater. Use either its own updater or Booster release tracking, not both.'
 				);
 			}
-			$preflight = $this->branch_preflight(
-				$type,
-				$identifier,
-				$expected_source_revision,
-				$channel,
-				$package,
-				$eligibility,
-				false
-			);
-			if ( null === $preflight ) {
+			if ( PackageSource::BRANCH !== $package->get_source() || ! $eligibility->eligible() ) {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
-			}
-			if ( ! $preflight->ready() ) {
-				return ReleaseTrackingResult::failed(
-					$preflight->code(),
-					'Published release assets could not be validated.',
-					$preflight->reason_code(),
-					$preflight->detail_text()
-				);
-			}
-			$allow_older = false;
-			if ( '' !== $confirmed_older_release_identity || '' !== $confirmed_older_release_tag ) {
-				if ( '' === $confirmed_older_release_identity
-					|| '' === $confirmed_older_release_tag
-					|| ! hash_equals( $confirmed_older_release_identity, $preflight->release_identity() )
-					|| ! hash_equals( $confirmed_older_release_tag, $preflight->release_tag() ) ) {
-					$this->schedule_native_recheck( $type );
-
-					return ReleaseTrackingResult::failed( 'release_older', 'The eligible release changed after older-release confirmation.' );
-				}
-				$allow_older = true;
 			}
 			$package_root  = $eligibility->package_root();
 			$header_file   = $this->header_file( $type, $identifier );
@@ -706,18 +679,54 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			if ( ! $this->registrar->admit_switch( $type, $live, $configuration, function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0 ) ) {
 				return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
 			}
-			$installed = 'failed';
+
+			$installed = 'unsupported';
 			try {
-				$installed = ( $this->switch_install )( $type, $identifier, $preflight->release_identity(), $preflight->release_tag(), $allow_older );
-			} catch ( Throwable ) {
-				// WordPress may already have installed: the permit stays, so the updater's verification at shutdown decides the source.
-				$installed = 'uncertain';
+				// Existing facade callers can still ask Core to select a release. A Core
+				// form already supplies the release the operator chose.
+				if ( null === $confirmed_release ) {
+					$preflight = $this->branch_preflight(
+						$type,
+						$identifier,
+						$expected_source_revision,
+						$channel,
+						$package,
+						$eligibility,
+						false
+					);
+					if ( null === $preflight ) {
+						return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
+					}
+					if ( ! $preflight->ready() ) {
+						return ReleaseTrackingResult::failed(
+							$preflight->code(),
+							'Published release assets could not be validated.',
+							$preflight->reason_code(),
+							$preflight->detail_text()
+						);
+					}
+					$confirmed_release = array(
+						'identity' => $preflight->release_identity(),
+						'tag'      => $preflight->release_tag(),
+						'version'  => $preflight->latest_version(),
+					);
+				}
+				$allow_older = '' !== $confirmed_older_release_identity || '' !== $confirmed_older_release_tag;
+				if ( $allow_older && ( ! hash_equals( $confirmed_older_release_identity, $confirmed_release['identity'] )
+					|| ! hash_equals( $confirmed_older_release_tag, $confirmed_release['tag'] ) ) ) {
+					return ReleaseTrackingResult::failed( 'release_older', 'The eligible release changed after older-release confirmation.' );
+				}
+				try {
+					$installed = ( $this->switch_install )( $type, $identifier, $confirmed_release['identity'], $confirmed_release['tag'], $allow_older, $confirmed_release['version'] );
+				} catch ( Throwable ) {
+					// Pending native completion owns any recovery after an interrupted upgrade.
+					$installed = 'uncertain';
+				}
 			} finally {
 				if ( 'installed' !== $installed ) {
 					if ( 'uncertain' !== $installed ) {
 						$this->registrar->withdraw_switch( $type, $identifier );
 					}
-					// The one-off offer may have displaced an ordinary one; WordPress rechecks on the next admin load.
 					$this->schedule_native_recheck( $type );
 				}
 			}
@@ -727,6 +736,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				'uncertain' => 'management_state_uncertain',
 				'unsupported', 'runtime_busy', 'filesystem_unavailable', 'discovery_not_admitted', 'offer_token_unavailable', 'runtime_liveness_lost' => 'service_unavailable',
 				'release_older' => 'release_older',
+				'candidate_descriptor_mismatch' => 'release_selection_changed',
 				'policy_disabled' => 'policy_disabled',
 				'policy_forced_off' => 'policy_forced_off',
 				default => 'release_unavailable',
@@ -773,7 +783,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			|| null === $package ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'The release track could not be changed.' );
 		}
-		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) ) {
+		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel, fresh: true ) ) {
 			return self::source_paused();
 		}
 		try {
@@ -979,7 +989,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		if ( null === $package ) {
 			return ReleaseTrackingResult::failed( 'forbidden', 'The package source could not be changed.' );
 		}
-		if ( PackageSourceGate::pauses( PackageSource::BRANCH ) ) {
+		if ( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ) ) {
 			return self::source_paused();
 		}
 		try {
@@ -1082,30 +1092,31 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 	}
 
-	/**
-	 * Offer the one release this request chose, then run WordPress's own upgrader for that package alone.
-	 * Nothing refreshes the updater between the two, so the offer reaches the upgrader.
-	 *
-	 * @return string 'installed', 'failed', 'unsupported', or the updater's refusal code.
-	 */
-	private static function install_release( string $type, string $identifier, string $release_identity, string $tag, bool $allow_older = false ): string {
-		$extra = true === $allow_older ? array( true ) : array();
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented exact-release filter.
-		$offer = apply_filters( 'ran_wp_release_updater_offer_release_v1', null, $type, $identifier, $release_identity, $tag, ...$extra );
-		if ( ! is_array( $offer ) || ! is_string( $offer['code'] ?? null ) || '' === $offer['code'] ) {
+	/** Run the published exact-install operation with the selected listing entry. */
+	private static function install_release( string $type, string $identifier, string $release_identity, string $tag, bool $allow_older, string $version ): string {
+		require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented exact-install filter.
+		$report = apply_filters( 'ran_wp_release_updater_install_exact_release_v1', null, $type, $identifier, $release_identity, $tag, $version, $allow_older );
+		if ( ! is_array( $report ) || ! is_string( $report['code'] ?? null ) ) {
 			return 'unsupported';
 		}
-		if ( 'authorized' !== ( $offer['status'] ?? null ) ) {
-			return in_array( $offer['code'], array( 'installed', 'failed', 'uncertain', 'unsupported' ), true ) ? 'unsupported' : $offer['code'];
-		}
-		require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
-		$skin   = new \WP_Ajax_Upgrader_Skin();
-		$result = 'plugin' === $type
-			? ( ( new \Plugin_Upgrader( $skin ) )->bulk_upgrade( array( $identifier ) )[ $identifier ] ?? null )
-			: ( new \Theme_Upgrader( $skin ) )->upgrade( $identifier );
+		if ( 'installed' === ( $report['status'] ?? null ) && 'update_completed' === $report['code'] ) {
+			$finalization = $report['finalization'] ?? null;
 
-		// The plugin upgrader reports `true` for a package it found up to date, so only its result array means installed.
-		return ( 'plugin' === $type ? is_array( $result ) : true === $result ) ? 'installed' : 'failed';
+			return false === ( $report['finalization_pending'] ?? null )
+				&& is_array( $finalization )
+				&& 'completed' === ( $finalization['commit'] ?? null )
+				&& 'completed' === ( $finalization['host_completion'] ?? null ) ? 'installed' : 'uncertain';
+		}
+		if ( true === ( $report['finalization_pending'] ?? null )
+			|| in_array( $report['code'], array( 'host_completion_failed', 'install_commit_failed', 'lease_release_failed', 'archive_cleanup_failed', 'unexpected_failure', 'unverified_install_result' ), true ) ) {
+			return 'uncertain';
+		}
+		if ( 'failed' === ( $report['status'] ?? null ) ) {
+			return 'failed';
+		}
+
+		return 'refused' === ( $report['status'] ?? null ) && ! in_array( $report['code'], array( 'installed', 'failed', 'uncertain' ), true ) ? $report['code'] : 'unsupported';
 	}
 
 	private function package( string $type, string $identifier ): Package {
@@ -1404,7 +1415,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					if ( null === $newest ) {
 						$newest = $candidate;
 						// The provider's failure reason wins over its legacy detail.
-						$detail = null !== $failure->failure && in_array( $failure->failure->reason, self::EXPLAINED_PROVIDER_REASONS, true )
+						$detail = null !== $failure->failure && in_array( $failure->failure->reason, ReleaseTrackingPreflight::reason_codes(), true )
 							? $failure->failure->reason
 							: $failure->detail;
 					}
@@ -1462,6 +1473,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$inspection->tag,
 				$inspection->version,
 				$relationship,
+				reason_code: null === $newest ? '' : (
+					in_array( $detail, ReleaseTrackingPreflight::reason_codes(), true )
+						? $detail : $this->rejected_release_preflight( $package_root, $newest, $detail )->reason_code()
+				),
+				detail: $newest->version ?? '',
 				release_identity: $inspection->provider_release_id
 			);
 		}

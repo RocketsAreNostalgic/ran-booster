@@ -87,6 +87,9 @@ class ManagedReleaseStore {
 		}
 		$before = $this->row( $type, $identifier, true, $expected_adoption_token, $execute );
 		if ( PackageSource::RELEASE_ASSET === $new_source ) {
+			if ( DeploymentPolicy::DISABLED->value === ( $before->deployment_policy ?? null ) ) {
+				return false;
+			}
 			$this->assert_release_subdirectory( $before );
 		}
 		$context = $this->transition_before_context( $before, $expected_adoption_token, $expected_source, $expected_revision );

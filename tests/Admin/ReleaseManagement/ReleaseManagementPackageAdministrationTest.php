@@ -221,8 +221,28 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'release_channel'          => $channel,
 			'confirm_switch'           => '1',
 		);
+		$request += $this->confirmed_release_fields( $type, $package->identifier(), $channel );
 		ReleaseManagementFixture::controls( $tracking )->process_admin_post_request( 'enable', $request );
-		self::assertSame( array( array( 'enable', $type, $package->identifier(), 3, $channel, $nonce, '', '' ) ), $tracking->calls );
+		self::assertSame(
+			array(
+				array(
+					'enable',
+					$type,
+					$package->identifier(),
+					3,
+					$channel,
+					$nonce,
+					'',
+					'',
+					array(
+						'identity' => 'rel-2.0.0',
+						'tag'      => 'v2.0.0',
+						'version'  => '2.0.0',
+					),
+				),
+			),
+			$tracking->calls
+		);
 	}
 
 	/** @return array<string,array{string,string}> */
@@ -917,7 +937,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 		// WordPress's one-item bulk route updates an active plugin without deactivating it first.
 		self::assertStringContainsString( 'https://example.test/wp-admin/plugins.php?action=update-selected', $html );
-		self::assertStringContainsString( 'plugins=example%2Fexample.php', $html );
+		self::assertStringContainsString( 'plugins=example/example.php', rawurldecode( $html ) );
 		self::assertStringContainsString( '_wpnonce=nonce-for-bulk-plugins', $html );
 		self::assertStringNotContainsString( 'upgrade-plugin', $html );
 	}
@@ -1983,7 +2003,21 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		self::assertSame(
 			array(
-				array( 'enable', 'plugin', 'example/example.php', 3, 'stable', $this->nonce( 'enable' ), '', '' ),
+				array(
+					'enable',
+					'plugin',
+					'example/example.php',
+					3,
+					'stable',
+					$this->nonce( 'enable' ),
+					'',
+					'',
+					array(
+						'identity' => 'rel-2.0.0',
+						'tag'      => 'v2.0.0',
+						'version'  => '2.0.0',
+					),
+				),
 				array( 'change_channel', 'plugin', 'example/example.php', 3, 'prerelease', $this->nonce( 'change_channel' ) ),
 				array( 'refresh', 'plugin', 'example/example.php', 3, $this->nonce( 'refresh' ) ),
 				array( 'return_to_branch', 'plugin', 'example/example.php', 3, $this->nonce( 'return_to_branch' ) ),
@@ -2002,7 +2036,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $url );
 		self::assertStringContainsString( 'page=ran-booster-plugins', $url );
-		self::assertStringContainsString( 'package=example%2Fexample.php', $url );
+		self::assertSame( 'example/example.php', $this->query_of( $url )['package'] ?? null );
 	}
 
 	public function test_change_channel_uses_an_origin_relative_hx_location_and_keeps_native_redirect_absolute(): void {
@@ -2536,12 +2570,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			self::assertSame( 'v' . $version, $response['data']['release_tag'] );
 			self::assertSame( $relationship, $response['data']['version_relationship'] );
 			self::assertSame( 'prerelease', $response['data']['channel'] );
-			if ( 'older' === $relationship ) {
-				self::assertIsString( $response['data']['older_release_nonce'] ?? null );
-				self::assertNotSame( '', $response['data']['older_release_nonce'] );
-			} else {
-				self::assertArrayNotHasKey( 'older_release_nonce', $response['data'] );
-			}
+			self::assertNotEmpty( $response['data']['confirmed_release_nonce'] );
+
 		}
 
 		// Older preflight without release identity/tag fails closed.
@@ -2630,7 +2660,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	public function test_no_js_unconfirmed_enable_renders_inline_confirmation_and_forwards_allow_older_only_when_ticked(): void {
 		foreach (
 			array(
-				'newer' => array( '1.5.0', 'switch_confirm_newer', false, false ),
+				'newer' => array( '1.5.0+build', 'switch_confirm_newer', false, false ),
 				'same'  => array( '1.0.0', 'switch_confirm_same', true, false ),
 				'older' => array( '0.9.0', 'switch_confirm_older', false, true ),
 			) as $relationship => list( $version, $expected_code, $expects_same_copy, $expects_checkbox )
@@ -2673,15 +2703,17 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			self::assertStringContainsString( 'data-ran-booster-switch-confirmation', $html );
 			self::assertStringContainsString( 'class="ran-booster-switch-confirmation__form" data-ran-booster-source-transition data-ran-booster-package-mutation', $html );
 			self::assertStringContainsString( 'Switch to releases?', $html );
+			self::assertStringContainsString( 'name="confirmed_release_identity" value="rel-' . $version . '"', $html );
+			self::assertStringContainsString( 'name="confirmed_release_tag" value="v' . $version . '"', $html );
+			self::assertStringContainsString( 'name="confirmed_release_version" value="' . $version . '"', $html );
+			self::assertMatchesRegularExpression( '/name="confirmed_release_nonce" value="[^"]+"/', $html );
 			self::assertStringContainsString( 'Installed: 1.0.0 from branch. Installing: release ' . $version . '.', $html );
 			self::assertStringContainsString( 'cannot roll back database changes', $html );
 			self::assertSame( $expects_same_copy, str_contains( $html, 'Same version: this replaces the branch build with the release.' ), $relationship );
 			self::assertSame( $expects_checkbox, str_contains( $html, 'name="confirm_older_release" value="1" required' ), $relationship );
 			self::assertSame( $expects_checkbox, str_contains( $html, 'This release is older than what&#039;s installed.' ), $relationship );
 			if ( $expects_checkbox ) {
-				self::assertStringContainsString( 'name="confirmed_older_release_identity" value="rel-' . $version . '"', $html );
-				self::assertStringContainsString( 'name="confirmed_older_release_tag" value="v' . $version . '"', $html );
-				self::assertMatchesRegularExpression( '/name="confirmed_older_release_nonce" value="[^"]+"/', $html );
+				self::assertStringContainsString( 'name="confirmed_release_older" value="1"', $html );
 
 				// Tampered release identity query argument invalidates the signed PRG result.
 				$_GET['ran_booster_release_id'] = 'rel-other';
@@ -2691,7 +2723,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			} else {
 				self::assertStringNotContainsString( 'name="confirmed_older_release_identity"', $html );
 			}
-			self::assertStringContainsString( 'Switch and install</button>', $html );
+			self::assertStringContainsString( 'Switch and install ' . $version, $html );
 			self::assertStringContainsString( '>Cancel</a>', $html );
 		}
 
@@ -2717,32 +2749,38 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 				'_wpnonce'                 => 'nonce-for-release-tracking-preflight-plugin-example/example.php-3-stable',
 			)
 		);
-		$valid_older_nonce   = (string) ( $preflight_res['data']['older_release_nonce'] ?? '' );
+		$valid_older_nonce   = (string) ( $preflight_res['data']['confirmed_release_nonce'] ?? '' );
 		self::assertNotSame( '', $valid_older_nonce );
 
-		$confirmed_without = $this->request( 'enable' ) + array(
-			'release_channel' => 'stable',
-			'confirm_switch'  => '1',
+		$confirmed_without = array_replace(
+			$this->request( 'enable' ),
+			array(
+				'release_channel'            => 'stable',
+				'confirm_switch'             => '1',
+				'confirmed_release_identity' => 'rel-0.9.0',
+				'confirmed_release_tag'      => 'v0.9.0',
+				'confirmed_release_version'  => '0.9.0',
+				'confirmed_release_nonce'    => $preflight_res['data']['confirmed_release_nonce'],
+				'confirmed_release_older'    => '1',
+			)
 		);
 		// Missing or mismatched older consent nonce refuses before enable() without forwarding older consent.
-		$tampered_tag = $confirmed_without + array(
-			'confirm_older_release'            => '1',
-			'confirmed_older_release_identity' => 'rel-0.9.0',
-			'confirmed_older_release_tag'      => 'v0.8.0',
-			'confirmed_older_release_nonce'    => $valid_older_nonce,
+		$tampered_tag = array_replace(
+			$confirmed_without,
+			array(
+				'confirm_older_release' => '1',
+				'confirmed_release_tag' => 'v0.8.0',
+			)
 		);
 		$tampered_url = $controls->process_admin_post_request( 'enable', $tampered_tag );
-		self::assertStringContainsString( 'ran_booster_release_result=release_older', $tampered_url );
+		self::assertStringContainsString( 'ran_booster_release_result=release_selection_changed', $tampered_url );
 		self::assertCount( 1, $tracking->calls, 'Only preflight ran; tampered older nonce must not reach enable().' );
 
 		$controls->process_admin_post_request( 'enable', $confirmed_without );
 		$controls->process_admin_post_request(
 			'enable',
 			$confirmed_without + array(
-				'confirm_older_release'            => '1',
-				'confirmed_older_release_identity' => 'rel-0.9.0',
-				'confirmed_older_release_tag'      => 'v0.9.0',
-				'confirmed_older_release_nonce'    => $valid_older_nonce,
+				'confirm_older_release' => '1',
 			)
 		);
 
@@ -2750,6 +2788,89 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( '', $tracking->calls[1][7] );
 		self::assertSame( 'rel-0.9.0', $tracking->calls[2][6] );
 		self::assertSame( 'v0.9.0', $tracking->calls[2][7] );
+		self::assertSame(
+			array(
+				'identity' => 'rel-0.9.0',
+				'tag'      => 'v0.9.0',
+				'version'  => '0.9.0',
+			),
+			$tracking->calls[2][8]
+		);
+		foreach ( array( 'confirmed_release_identity', 'confirmed_release_tag', 'confirmed_release_version', 'confirmed_release_nonce', 'confirmed_release_older', 'release_channel', 'expected_source_revision' ) as $field ) {
+			$tampered           = $confirmed_without;
+			$tampered[ $field ] = 'tampered';
+			$controls->process_admin_post_request( 'enable', $tampered );
+		}
+		self::assertCount( 3, $tracking->calls, 'Tampered candidate binding must never reach enable().' );
+		$GLOBALS['ran_booster_release_management_test_nonce_age'] = 2;
+		$controls->process_admin_post_request( 'enable', $confirmed_without );
+		unset( $GLOBALS['ran_booster_release_management_test_nonce_age'] );
+		self::assertCount( 3, $tracking->calls, 'Expired confirmation must never reach enable().' );
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_operation_notice( 'release_selection_changed', false );
+		self::assertStringContainsString( 'Check releases and confirm again.', (string) ob_get_clean() );
+	}
+
+	/** @return array<string, array{string, string}> */
+	public static function fallback_reasons(): array {
+		return array(
+			'missing header' => array( 'package_header_missing', 'The published package is missing its WordPress version header.' ),
+			'oversized ZIP'  => array( 'package_archive_too_large', 'The published ZIP has an invalid or excessive uncompressed size.' ),
+		);
+	}
+
+	#[DataProvider( 'fallback_reasons' )]
+	public function test_fallback_confirmation_explains_skipped_release_and_binds_selected_version( string $reason, string $explanation ): void {
+		$tracking            = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'branch', 'plugin' ) );
+		$tracking->preflight = new ReleaseTrackingPreflight(
+			ReleaseTrackingPreflight::READY,
+			'example-plugin',
+			'1.1.0',
+			'https://github.com/example/example/releases/tag/v1.1.0',
+			'v1.1.0',
+			'1.1.0',
+			'newer',
+			reason_code: $reason,
+			detail: '1.2.0',
+			release_identity: 'rel-1.1.0'
+		);
+		$controls            = ReleaseManagementFixture::controls( $tracking );
+		$preflight           = $controls->process_switch_preflight_request(
+			array(
+				'expected_type'            => 'plugin',
+				'expected_identifier'      => 'example/example.php',
+				'expected_source_revision' => '3',
+				'release_channel'          => 'stable',
+				'_wpnonce'                 => 'nonce-for-release-tracking-preflight-plugin-example/example.php-3-stable',
+			)
+		);
+		$message             = 'Release 1.2.0 was skipped. ' . $explanation;
+		self::assertSame( $message, $preflight['data']['fallback_message'] );
+		$request = $this->request( 'enable' ) + array( 'release_channel' => 'stable' );
+		$url     = $controls->process_admin_post_request( 'enable', $request );
+		self::assertCount( 2, $tracking->calls, 'Preflights do not install.' );
+		$_GET            = $this->query_of( $url );
+		$_GET['page']    = 'ran-booster-plugins';
+		$_GET['package'] = 'example/example.php';
+		$package         = new PackageProjection( 'branch' );
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( $message, $html );
+		self::assertStringContainsString( 'Switch and install 1.1.0', $html );
+		self::assertStringContainsString( 'name="confirmed_release_version" value="1.1.0"', $html );
+
+		// Switching to Releases and back must not renew this old redirect's confirmation.
+		$live_controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( revision: 5 ) ) );
+		$live_package  = new PackageProjection( revision_value: 5 );
+		ob_start();
+		$live_controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $live_package, $live_package->settings_url() );
+		self::assertStringNotContainsString( 'data-ran-booster-switch-confirmation', (string) ob_get_clean() );
+
+		$_GET['ran_booster_skipped_version'] = '1.3.0';
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		self::assertStringNotContainsString( 'data-ran-booster-switch-confirmation', (string) ob_get_clean() );
 	}
 
 	public function test_post_switch_top_of_page_outcomes_and_settled_states(): void {
@@ -2769,7 +2890,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 					'_wpnonce'                 => $nonce,
 					'release_channel'          => 'stable',
 					'confirm_switch'           => '1',
-				)
+				) + $this->confirmed_release_fields( $type, $identifier, 'stable' )
 			);
 			self::assertStringContainsString( 'ran_booster_release_result=switch_failed', $url );
 			self::assertStringNotContainsString( '#ran-booster-advanced-source-settings', $url );
@@ -2811,7 +2932,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$unconfirmed_controls->render_operation_notice();
 		$unconfirmed_html = (string) ob_get_clean();
 		self::assertStringContainsString( 'Booster hasn&#039;t confirmed the switch yet.', $unconfirmed_html );
-		self::assertStringContainsString( '<a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&amp;package=example%2Fexample.php">Reload this page</a>', $unconfirmed_html );
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins&amp;package=example/example.php">Reload this page</a>', rawurldecode( $unconfirmed_html ) );
 		self::assertStringContainsString( 'is-warning', $unconfirmed_html );
 
 		// switch_held (readable & unreadable) and switch_other_held.
@@ -2851,7 +2972,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 				'_wpnonce'                 => 'nonce-for-release-tracking-enable-theme-example-theme-3',
 				'release_channel'          => 'stable',
 				'confirm_switch'           => '1',
-			)
+			) + $this->confirmed_release_fields( 'theme', 'example-theme', 'stable' )
 		);
 		$_GET                          = $this->query_of( $held_theme_url );
 		$_GET['page']                  = 'ran-booster-themes';
@@ -2982,6 +3103,18 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'expected_identifier'      => 'example/example.php',
 			'expected_source_revision' => '3',
 			'_wpnonce'                 => $this->nonce( $operation ),
+		) + ( 'enable' === $operation ? $this->confirmed_release_fields( 'plugin', 'example/example.php', 'stable' ) : array() );
+	}
+
+	/** @return array<string,string> */
+	private function confirmed_release_fields( string $type, string $identifier, string $channel ): array {
+		$payload = \RAN\Admin\ReleaseManagement\wp_json_encode( array( $type, $identifier, 3, $channel, 'rel-2.0.0', 'v2.0.0', '2.0.0', false ) );
+		return array(
+			'confirmed_release_identity' => 'rel-2.0.0',
+			'confirmed_release_tag'      => 'v2.0.0',
+			'confirmed_release_version'  => '2.0.0',
+			'confirmed_release_older'    => '0',
+			'confirmed_release_nonce'    => \RAN\Admin\ReleaseManagement\wp_create_nonce( 'ran-booster-older-switch-' . hash( 'sha256', is_string( $payload ) ? $payload : '' ) ),
 		);
 	}
 

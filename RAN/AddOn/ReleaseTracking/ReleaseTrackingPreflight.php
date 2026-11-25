@@ -63,7 +63,9 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 
 			|| ( '' !== $reason_code && ! in_array( $reason_code, self::reason_codes(), true ) )
 
-			|| self::detail( $this->detail ) !== $this->detail
+			|| ( self::READY === $code && '' !== $this->detail
+				? 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._+-]{0,63}\z/D', $this->detail )
+				: self::detail( $this->detail ) !== $this->detail )
 
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $this->release_tag . $this->package_header_version . $this->release_identity )
 
@@ -119,6 +121,7 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 		return $this->version_relationship;
 	}
 
+	/** On a ready fallback this is the version skipped by inspection. */
 	public function detail_text(): string {
 
 		return $this->detail;

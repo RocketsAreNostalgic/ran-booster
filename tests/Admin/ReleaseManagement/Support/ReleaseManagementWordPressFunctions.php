@@ -165,7 +165,8 @@ function add_query_arg( array|string $key, mixed $value = null, ?string $url = n
 		$url  = $url ?? '';
 	}
 
-	return $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
+	// WordPress's add_query_arg() requires callers to encode new values before adding them.
+	return $url . ( str_contains( $url, '?' ) ? '&' : '?' ) . rawurldecode( http_build_query( $args, '', '&', PHP_QUERY_RFC3986 ) );
 }
 
 /**

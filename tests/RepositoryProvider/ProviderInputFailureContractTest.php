@@ -23,7 +23,6 @@ final class ProviderInputFailureContractTest extends TestCase {
 		yield 'unicode format control' => array( InvalidCredentialInput::INVALID_CONFIGURATION, "Invalid\u{202E}value" );
 		yield 'unicode next line' => array( InvalidCredentialInput::INVALID_CONFIGURATION, "Invalid\u{0085}value" );
 		yield 'unicode line separator' => array( InvalidCredentialInput::INVALID_CONFIGURATION, "Invalid\u{2028}value" );
-		yield 'curly apostrophe' => array( InvalidCredentialInput::INVALID_CONFIGURATION, "Enter the owner of the token\u{2019}s resource." );
 		yield 'invalid utf-8' => array( InvalidCredentialInput::INVALID_CONFIGURATION, "Invalid\xC3\x28value" );
 		yield 'structured text' => array( InvalidCredentialInput::INVALID_CONFIGURATION, '{"reason":"invalid"}' );
 		yield 'oversized' => array( InvalidCredentialInput::INVALID_CONFIGURATION, str_repeat( 'a ', 257 ) );
@@ -50,10 +49,10 @@ final class ProviderInputFailureContractTest extends TestCase {
 	public function test_known_reason_and_safe_provider_copy_remain_actionable(): void {
 		$failure = new InvalidCredentialInput(
 			InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH,
-			'Choose the credential kind that matches the submitted secret.'
+			"Choose the credential kind that matches the account\u{2019}s secret."
 		);
 
 		self::assertSame( InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH, $failure->reason );
-		self::assertSame( 'Choose the credential kind that matches the submitted secret.', $failure->getMessage() );
+		self::assertSame( "Choose the credential kind that matches the account\u{2019}s secret.", $failure->getMessage() );
 	}
 }

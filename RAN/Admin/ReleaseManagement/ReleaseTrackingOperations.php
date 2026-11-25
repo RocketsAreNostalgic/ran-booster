@@ -6,6 +6,7 @@ namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingResult;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 
 /** @internal Owns ordinary release status reads and exact typed release mutations. */
@@ -13,7 +14,12 @@ final class ReleaseTrackingOperations {
 	/** @var array<string, ReleaseTrackingStatus|null> */
 	private array $statuses = array();
 
-	public function __construct( private readonly ReleaseTrackingFacade $releases ) {
+	/** @var (\Closure(string,string,int,string,string,string,string,?array{identity:string,tag:string,version:string}):ReleaseTrackingResult)|null */
+	private readonly ?\Closure $confirmed_enable;
+
+	/** @param (callable(string,string,int,string,string,string,string,?array{identity:string,tag:string,version:string}):ReleaseTrackingResult)|null $confirmed_enable */
+	public function __construct( private readonly ReleaseTrackingFacade $releases, ?callable $confirmed_enable = null ) {
+		$this->confirmed_enable = null === $confirmed_enable ? null : \Closure::fromCallable( $confirmed_enable );
 	}
 
 
@@ -62,10 +68,13 @@ final class ReleaseTrackingOperations {
 		return $this->releases->preflight( $type, $identifier, $revision, $channel, $nonce );
 	}
 
-	/** @return array{type:string,identifier:string,code:string,successful:bool,reason?:string,check_reason?:string,detail?:string} */
-	public function execute( string $operation, string $type, string $identifier, int $revision, string $channel, string $nonce, string $confirmed_older_release_identity = '', string $confirmed_older_release_tag = '' ): array {
+	/**
+	 * @param array{identity:string,tag:string,version:string}|null $confirmed_release
+	 * @return array{type:string,identifier:string,code:string,successful:bool,reason?:string,check_reason?:string,detail?:string}
+	 */
+	public function execute( string $operation, string $type, string $identifier, int $revision, string $channel, string $nonce, string $confirmed_older_release_identity = '', string $confirmed_older_release_tag = '', ?array $confirmed_release = null ): array {
 		$result = match ( $operation ) {
-			'enable' => $this->releases->enable( $type, $identifier, $revision, $channel, $nonce, $confirmed_older_release_identity, $confirmed_older_release_tag ),
+			'enable' => null === $this->confirmed_enable ? ReleaseTrackingResult::failed( 'service_unavailable', '' ) : ( $this->confirmed_enable )( $type, $identifier, $revision, $channel, $nonce, $confirmed_older_release_identity, $confirmed_older_release_tag, $confirmed_release ),
 			'change_channel' => $this->releases->change_channel( $type, $identifier, $revision, $channel, $nonce ),
 			'refresh' => $this->releases->refresh( $type, $identifier, $revision, $nonce ),
 			'return_to_branch' => $this->releases->return_to_branch( $type, $identifier, $revision, $nonce ),
@@ -97,8 +106,8 @@ final class ReleaseTrackingOperations {
 	}
 
 	/**
-	 * The switch to Releases commits at the end of its own request, after the reply, so its success is decided where it is shown:
-	 * only a package read back on Releases is reported enabled; otherwise any active native hold or unconfirmed outcome is reported.
+	 * Read back the source on landing. A verified switch normally commits before the reply; any
+	 * remaining native hold or unresolved outcome is shown from the current package state.
 	 *
 	 * @param array<string, mixed>|null $native_hold Active GitHub native hold metadata, when present.
 	 * @return array{0: string, 1: bool} Code and success for display.

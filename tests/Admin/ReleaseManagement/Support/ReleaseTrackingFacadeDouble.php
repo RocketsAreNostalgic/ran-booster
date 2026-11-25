@@ -127,8 +127,9 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 		return $this->candidate_inspection;
 	}
 
-	public function enable( string $type, string $identifier, int $expected_source_revision, string $channel, string $nonce, string $confirmed_older_release_identity = '', string $confirmed_older_release_tag = '' ): ReleaseTrackingResult {
-		$this->calls[] = array( 'enable', $type, $identifier, $expected_source_revision, $channel, $nonce, $confirmed_older_release_identity, $confirmed_older_release_tag );
+	/** @param array{identity:string,tag:string,version:string}|null $confirmed_release Confirmed release tuple, when present. */
+	public function enable( string $type, string $identifier, int $expected_source_revision, string $channel, string $nonce, string $confirmed_older_release_identity = '', string $confirmed_older_release_tag = '', ?array $confirmed_release = null ): ReleaseTrackingResult {
+		$this->calls[] = array( 'enable', $type, $identifier, $expected_source_revision, $channel, $nonce, $confirmed_older_release_identity, $confirmed_older_release_tag, $confirmed_release );
 
 		return $this->enable_result ?? ReleaseTrackingResult::succeeded( 'release_enabled', 'Release tracking enabled.' );
 	}

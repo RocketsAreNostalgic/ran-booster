@@ -397,7 +397,8 @@ final class BoosterServiceProvider {
 			$container->make( ProviderRegistry::class ),
 			$github_selection,
 			bulk_forbidden_plugin_identifier: $self_plugin_identifier,
-			activity: $activity
+			activity: $activity,
+			attempts: $container->make( DeploymentAttemptRepository::class )
 		);
 		$container->bind( ManagedReleaseTargetRegistrar::class, $release_registrar );
 		$release_facade = new NativeReleaseTrackingFacade(
@@ -439,7 +440,8 @@ final class BoosterServiceProvider {
 				),
 				new \RAN\Admin\ReleaseManagement\NativeManagedReleaseBrowser( $container->make( NativeReleaseTrackingFacade::class ) ),
 				links: $container->make( \RAN\Admin\ProviderTabLinks::class ),
-				native_hold: static fn (): ?array => $container->make( \RAN\Admin\ProviderSettingsPresenter::class )->native_hold()
+				native_hold: static fn (): ?array => $container->make( \RAN\Admin\ProviderSettingsPresenter::class )->native_hold(),
+				confirmed_enable: $container->make( NativeReleaseTrackingFacade::class )->enable( ... )
 			)
 		);
 	}

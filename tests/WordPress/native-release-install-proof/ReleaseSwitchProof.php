@@ -6,6 +6,7 @@
 
 use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
+use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\PackageOperation;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\RepositoryProvider\GitHubProviderSelection;
@@ -40,8 +41,12 @@ final class RAN_Booster_ReleaseSwitchProof {
 	private string $repository_id;
 	private string $archive_root;
 	private string $scenario;
-	private bool $changed      = false;
-	private ?string $competing = null;
+	private bool $changed                    = false;
+	private ?string $competing               = null;
+	private int $streams                     = 0;
+	private bool $selection_changed          = false;
+	private bool $mutating                   = false;
+	private bool $interrupted_before_custody = false;
 
 	public function __construct( private string $kind, private string $case_name ) {
 		$site = getenv( 'RAN_RELEASE_SWITCH_PROOF_SITE' );
@@ -58,7 +63,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			throw new RuntimeException( 'Disposable WordPress 7.0.3 / PHP 8.2 administrator identity not established.' );
 		}
 		if ( ! in_array( $kind, array( 'plugin', 'theme' ), true )
-			|| ! in_array( $case_name, array( 'same', 'newer', 'active', 'older', 'disabled', 'failed-download', 'offer-removed', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock', 'fresh-finished', 'fresh-killed', 'fresh-damaged', 'fresh-deleted' ), true ) ) {
+			|| ! in_array( $case_name, array( 'same', 'newer', 'active', 'older', 'disabled', 'failed-download', 'pre-install', 'pre-install-throw', 'stale', 'missing', 'fallback-repaired', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock', 'fresh-finished', 'fresh-killed', 'fresh-damaged', 'fresh-deleted' ), true ) ) {
 			throw new RuntimeException( 'Unknown proof case.' );
 		}
 		$this->scenario = self::FRESH[ $case_name ] ?? $case_name;
@@ -94,6 +99,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 		return match ( $this->scenario ) {
 			'same' => array( 1, 0 ),
 			'older' => array( 0 ),
+			'stale', 'missing' => $this->selection_changed ? array( 2, 1, 0 ) : array( 1, 0 ),
 			default => array( 2, 1, 0 ),
 		};
 	}
@@ -105,10 +111,13 @@ final class RAN_Booster_ReleaseSwitchProof {
 			'newer', 'active', 'compete' => array( 'release_enabled', '2.0.0', true, false ),
 			'older' => array( 'release_older', '1.0.0', false, false ),
 			'disabled' => array( 'policy_disabled', '1.0.0', false, false ),
-			'failed-download', 'offer-removed' => array( 'wordpress_failed', '1.0.0', false, false ),
-			'failed-install' => array( 'wordpress_failed', '1.0.0', false, true ),
-			// The reply precedes the shutdown commit, which the repository conflict refuses.
-			'conflict' => array( 'release_enabled', '2.0.0', false, true ),
+			'failed-download' => array( 'release_unavailable', '1.0.0', false, false ),
+			'pre-install', 'pre-install-throw' => array( 'switch_uncertain', '1.0.0', false, false ),
+			'stale', 'fallback-repaired' => array( 'release_enabled', '1.0.0', true, false ),
+			'missing' => array( 'release_unavailable', '1.0.0', false, false ),
+			'failed-install' => array( 'switch_uncertain', '1.0.0', false, true ),
+			// The synchronous commit refuses the newly conflicting repository owner.
+			'conflict' => array( 'switch_uncertain', '2.0.0', false, true ),
 			'kill', 'foreign-lock', 'expired-lock' => array( null, '2.0.0', false, true ),
 			default => throw new RuntimeException( 'Unknown proof case.' ),
 		};
@@ -203,7 +212,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 					'size'                 => filesize( $this->archive( $number ) ),
 					'state'                => 'uploaded',
 					// The digest disappears after authorisation, so the upgrader's fresh inspection refuses it.
-					'digest'               => $this->changed ? null : 'sha256:' . hash_file( 'sha256', $this->archive( $number ) ),
+					'digest'               => ( $this->changed || ( 'fallback-repaired' === $this->scenario && ! $this->selection_changed && 2 === $number ) ) ? null : 'sha256:' . hash_file( 'sha256', $this->archive( $number ) ),
 					'browser_download_url' => 'https://api.github.com/repos/' . $this->repository . '/releases/assets/' . ( 200 + $number ),
 				),
 			),
@@ -219,6 +228,13 @@ final class RAN_Booster_ReleaseSwitchProof {
 		}
 		$number = (int) basename( $path );
 		if ( str_contains( $path, '/releases/assets/' ) && true === ( $args['stream'] ?? false ) && is_string( $args['filename'] ?? null ) ) {
+			if ( $this->mutating && 'failed-download' === $this->scenario ) {
+				return new WP_Error( 'release_switch_proof_download_failed' );
+			}
+			if ( $this->mutating && in_array( $this->scenario, array( 'stale', 'fallback-repaired' ), true ) && 201 !== $number ) {
+				throw new RuntimeException( 'The confirmed release A was substituted.' );
+			}
+			++$this->streams;
 			if ( ! copy( $this->archive( $number - 200 ), $args['filename'] ) ) {
 				throw new RuntimeException( 'Synthetic HTTP asset stream failed.' );
 			}
@@ -255,13 +271,69 @@ final class RAN_Booster_ReleaseSwitchProof {
 		);
 	}
 
-	/** One switch request, as the admin-post handler makes it. */
+	/** Preflight supplies the signed selection submitted to the real admin boundary. */
 	private function enable(): string {
 		add_filter( 'pre_http_request', $this->http( ... ), PHP_INT_MIN, 3 );
-		$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
-		$facade    = $container->make( NativeReleaseTrackingFacade::class );
-		$nonce     = wp_create_nonce( $facade->nonce_action( 'enable', $this->kind, $this->identity, 1 ) );
-		return $facade->enable( $this->kind, $this->identity, 1, 'stable', $nonce )->code();
+		$container         = require dirname( __DIR__ ) . '/core-container-fixture.php';
+		$facade            = $container->make( NativeReleaseTrackingFacade::class );
+		$controls          = $container->make( ReleaseManagementControls::class );
+		$request           = array(
+			'expected_type'            => $this->kind,
+			'expected_identifier'      => $this->identity,
+			'expected_source_revision' => '1',
+			'release_channel'          => 'stable',
+			'_wpnonce'                 => wp_create_nonce( $facade->nonce_action( 'preflight', $this->kind, $this->identity, 1, 'stable' ) ),
+		);
+		$before            = $this->streams;
+		$preflight         = $controls->process_switch_preflight_request( $request );
+		$preflight_streams = $this->streams - $before;
+		if ( ! $preflight['successful'] ) {
+			echo wp_json_encode(
+				array(
+					'preflight_streams' => $preflight_streams,
+					'mutation_streams'  => 0,
+				)
+			) . "\n";
+			return $preflight['code'];
+		}
+		$data = $preflight['data'];
+		if ( 'fallback-repaired' === $this->scenario
+			&& ( ! str_contains( (string) ( $data['fallback_message'] ?? '' ), '2.0.0' )
+				|| ! str_contains( (string) ( $data['fallback_message'] ?? '' ), 'digest' ) ) ) {
+			throw new RuntimeException( 'Preflight did not explain the skipped release B.' );
+		}
+		$request['_wpnonce']                = wp_create_nonce( $facade->nonce_action( 'enable', $this->kind, $this->identity, 1 ) );
+		$request['confirm_switch']          = '1';
+		$request['confirmed_release_older'] = 'older' === $data['version_relationship'] ? '1' : '0';
+		foreach ( array( 'identity', 'tag', 'version', 'nonce' ) as $field ) {
+			$request[ 'confirmed_release_' . $field ] = $data[ 'nonce' === $field ? 'confirmed_release_nonce' : 'release_' . $field ];
+		}
+		if ( in_array( $this->scenario, array( 'stale', 'missing', 'fallback-repaired' ), true ) ) {
+			if ( '1.0.0' !== $data['release_version'] || 'v1.0.0' !== $data['release_tag'] ) {
+				throw new RuntimeException( 'Preflight did not confirm release A.' );
+			}
+			$this->selection_changed = true;
+			$this->changed           = 'missing' === $this->scenario;
+		}
+		$before           = $this->streams;
+		$this->mutating   = true;
+		$url              = $controls->process_admin_post_request( 'enable', $request );
+		$this->mutating   = false;
+		$mutation_streams = $this->streams - $before;
+		if ( in_array( $this->scenario, array( 'same', 'newer', 'active', 'compete', 'stale', 'fallback-repaired' ), true ) && 1 !== $mutation_streams ) {
+			throw new RuntimeException( 'Expected exactly one mutation ZIP stream.' );
+		}
+		if ( 'missing' === $this->scenario && 0 !== $mutation_streams ) {
+			throw new RuntimeException( 'Unverified release downloaded a mutation ZIP.' );
+		}
+		echo wp_json_encode(
+			array(
+				'preflight_streams' => $preflight_streams,
+				'mutation_streams'  => $mutation_streams,
+			)
+		) . "\n";
+		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
+		return is_string( $query['ran_booster_release_result'] ?? null ) ? $query['ran_booster_release_result'] : '';
 	}
 
 	public function run(): void {
@@ -269,24 +341,20 @@ final class RAN_Booster_ReleaseSwitchProof {
 		$this->assert_files( '1.0.0', false, $this->directory );
 		$this->assert_activation();
 		WP_Filesystem();
-		if ( 'failed-download' === $this->scenario ) {
-			// After Core and the updater have authorised the release, before the upgrader's own fresh inspection.
-			add_filter(
-				'upgrader_pre_download',
-				function ( mixed $reply ): mixed {
-					$this->changed = true;
-					return $reply;
-				},
-				PHP_INT_MIN
-			);
+
+		if ( 'pre-install' === $this->scenario ) {
+			// Refuse at WordPress's actual pre-install boundary, before destination replacement.
+			add_filter( 'upgrader_pre_install', static fn () => new WP_Error( 'release_switch_proof_pre_install', 'Synthetic refusal before replacement.' ), PHP_INT_MAX );
 		}
-		if ( 'offer-removed' === $this->scenario ) {
-			// After the updater authorised the release, the upgrader finds no offer and reports the package up to date.
+		if ( 'pre-install-throw' === $this->scenario ) {
 			add_filter(
-				'ran_wp_release_updater_offer_release_v1',
-				function ( mixed $report ): mixed {
-					add_filter( 'site_transient_update_' . $this->kind . 's', fn ( mixed $check ): mixed => $this->without_offer( $check ), PHP_INT_MAX );
-					return $report;
+				'upgrader_pre_install',
+				function ( mixed $reply ): mixed {
+					if ( null === $this->lock_row() ) {
+						return $reply;
+					}
+					$this->interrupted_before_custody = true;
+					throw new RuntimeException( 'Synthetic interruption before custody.' );
 				},
 				PHP_INT_MAX
 			);
@@ -328,6 +396,9 @@ final class RAN_Booster_ReleaseSwitchProof {
 		}
 		$code = $this->enable();
 		$this->attest();
+		if ( 'pre-install-throw' === $this->scenario && ( ! $this->interrupted_before_custody || did_action( 'upgrader_process_complete' ) > 0 ) ) {
+			throw new RuntimeException( 'The interruption must occur while holding the lock and without WordPress completion.' );
+		}
 		if ( ( 'compete' === $this->scenario ) !== ( null !== $this->competing ) ) {
 			throw new RuntimeException( 'The competing switch did not run inside the installer.' );
 		}
@@ -338,20 +409,18 @@ final class RAN_Booster_ReleaseSwitchProof {
 		if ( $expected_code !== $code ) {
 			throw new RuntimeException( 'Unexpected switch result: ' . $code );
 		}
-		// The source is unchanged at reply time: it changes in native completion, at shutdown.
-		$this->assert_row( false );
+		// Successful completion commits the source before the handler returns.
+		$this->assert_row( $switched );
+		if ( $switched ) {
+			$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
+			if ( isset( $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ) ) {
+				throw new RuntimeException( 'Successful switch returned with a native hold.' );
+			}
+		}
 		// WordPress restores a failed install at shutdown, after this reply.
 		$this->assert_files( 'failed-install' === $this->scenario ? '2.0.0' : $version, $switched || in_array( $this->scenario, array( 'failed-install', 'conflict' ), true ), $this->directory );
 		$this->assert_activation();
 		$this->report( $code, $version );
-	}
-
-	private function without_offer( mixed $check ): mixed {
-		if ( is_object( $check ) && isset( $check->response ) && is_array( $check->response ) ) {
-			$check = clone $check;
-			unset( $check->response[ $this->identity ] );
-		}
-		return $check;
 	}
 
 	private function compete( mixed $reply ): mixed {
@@ -379,14 +448,15 @@ final class RAN_Booster_ReleaseSwitchProof {
 		if ( 0 !== proc_close( $process ) ) {
 			throw new RuntimeException( 'Competing switch failed: ' . $errors );
 		}
-		$lines = array_values( array_filter( explode( "\n", trim( $output ) ) ) );
-		$last  = json_decode( (string) end( $lines ), true );
-		if ( ! is_array( $last ) || ! in_array( $last['outcome'] ?? null, array( 'release_unavailable', 'wordpress_failed', 'service_unavailable' ), true ) ) {
-			throw new RuntimeException( 'The competing switch was not refused.' );
+		$lines   = array_values( array_filter( explode( "\n", trim( $output ) ) ) );
+		$last    = json_decode( (string) end( $lines ), true );
+		$outcome = is_array( $last ) && is_string( $last['outcome'] ?? null ) ? $last['outcome'] : '';
+		if ( ! in_array( $outcome, array( 'release_unavailable', 'switch_failed', 'switch_uncertain', 'service_unavailable' ), true ) ) {
+			throw new RuntimeException( 'The competing switch was not refused: ' . $outcome );
 		}
 		$this->assert_files( '1.0.0', false, $this->directory );
 		// The upgrader skin buffers output, so the outcome is reported after the reply.
-		$this->competing = $last['outcome'];
+		$this->competing = $outcome;
 		return $reply;
 	}
 
@@ -406,6 +476,9 @@ final class RAN_Booster_ReleaseSwitchProof {
 		if ( isset( $hold ) !== $custody ) {
 			throw new RuntimeException( 'Unexpected native custody after the switch.' );
 		}
+		if ( 'pre-install-throw' === $this->scenario && null !== $this->lock_row() ) {
+			throw new RuntimeException( 'The interrupted request left its updater lock behind.' );
+		}
 		if ( is_array( $hold ) ) {
 			// A request that ended records it; only a killed or refused one leaves the hold started, still owning its lock.
 			$finished = 'failed-install' === $this->scenario;
@@ -415,18 +488,14 @@ final class RAN_Booster_ReleaseSwitchProof {
 				throw new RuntimeException( 'Unexpected hold or updater lock after the switch.' );
 			}
 		}
-		if ( 'release_enabled' === $reply ) {
-			// The page the administrator lands on settles the reply against the stored source: enabled only when committed.
+		if ( 'release_enabled' === $reply || ( 'switch_uncertain' === $reply && $custody ) ) {
 			add_filter( 'pre_http_request', $this->http( ... ), PHP_INT_MIN, 3 );
-			$status = $container->make( NativeReleaseTrackingFacade::class )->status( $this->kind, $this->identity );
-			if ( RAN\Admin\ReleaseManagement\ReleaseTrackingOperations::settled( $reply, true, $status ) !== ( $switched ? array( 'release_enabled', true ) : array( 'switch_not_confirmed', false ) ) ) {
+			$status     = $container->make( NativeReleaseTrackingFacade::class )->status( $this->kind, $this->identity );
+			$shown_hold = $container->make( RAN\Admin\ProviderSettingsPresenter::class )->native_hold();
+			$shown      = RAN\Admin\ReleaseManagement\ReleaseTrackingOperations::settled( $reply, $switched, $status, $shown_hold, $this->kind, $this->identity );
+			$expected   = $switched ? array( 'release_enabled', true ) : array( 'switch_held', false );
+			if ( $expected !== $shown ) {
 				throw new RuntimeException( 'The landing page would misreport the switch.' );
-			}
-			if ( ! $switched ) {
-				$hold = $container->make( RAN\Admin\ProviderSettingsPresenter::class )->native_hold();
-				if ( RAN\Admin\ReleaseManagement\ReleaseTrackingOperations::settled( $reply, true, $status, $hold, $this->kind, $this->identity ) !== array( 'switch_held', false ) ) {
-					throw new RuntimeException( 'The landing page would misreport a held switch.' );
-				}
 			}
 		}
 		$this->assert_files( $version, $this->published_after_switch(), $this->directory );
@@ -435,7 +504,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			$this->assert_files( '1.0.0', false, WP_CONTENT_DIR . '/upgrade-temp-backup/' . ( 'plugin' === $this->kind ? 'plugins/' : 'themes/' ) . $this->slug );
 		}
 		$this->assert_stored_check( null );
-		if ( ! $switched && ! in_array( $this->scenario, array_merge( self::KILLED, array( 'conflict' ) ), true ) ) {
+		if ( ! $switched && ! in_array( $this->scenario, array_merge( self::KILLED, array( 'conflict', 'disabled' ) ), true ) ) {
 			// The next admin load: WordPress must check again, and the ordinary offer returns.
 			$start = time();
 			add_filter( 'pre_http_request', static fn ( mixed ...$request ): mixed => self::wordpress_org( (string) $request[2] ), PHP_INT_MIN, 3 );
@@ -507,32 +576,29 @@ final class RAN_Booster_ReleaseSwitchProof {
 		$this->report( $finished ? 'finished_hold_released' : 'unfinished_hold_released', $this->expected()[1] );
 	}
 
-	/**
-	 * After the release, the same switch runs again. Nothing of Booster's blocks it. After a kill, the release
-	 * updater's own ten-minute discovery lease, which the killed request never returned, refuses it until it expires.
-	 */
+	/** After the operator releases the hold, the same confirmed switch can run again. */
 	public function retry_switch(): void {
 		$this->attest();
 		// This site cannot reach WordPress.org, so a recheck after a completed install saves a check with no
 		// response list, to which the release updater does not add its offer. Give it an ordinary check again.
 		$this->seed_stored_check();
 		$code = $this->enable();
-		if ( $this->retry_result()[0] !== $code ) {
+		if ( 'release_enabled' !== $code ) {
 			throw new RuntimeException( 'Unexpected switch result after the release: ' . $code );
 		}
-		$this->report( $code, $this->retry_result()[1] );
+		$this->assert_row( true );
+		$this->report( $code, '2.0.0' );
 	}
 
 	public function retried(): void {
-		[ , $version, $switched ] = $this->retry_result();
-		$this->assert_row( $switched );
+		$this->assert_row( true );
 		$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
 		if ( isset( $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ) || null !== $this->lock_row() ) {
 			throw new RuntimeException( 'The switch after the release left a hold or a lock.' );
 		}
-		$this->assert_files( $version, true, $this->directory );
+		$this->assert_files( '2.0.0', true, $this->directory );
 		$this->assert_activation();
-		$this->report( $switched ? 'switched_after_release' : 'updater_lease_held', $version );
+		$this->report( 'switched_after_release', '2.0.0' );
 		$this->cleanup();
 	}
 
@@ -665,11 +731,6 @@ final class RAN_Booster_ReleaseSwitchProof {
 		wp_clean_plugins_cache( false );
 		wp_clean_themes_cache( false );
 		return 'plugin' === $this->kind ? isset( get_plugins()[ $this->identity ] ) : ( wp_get_theme( $this->slug )->exists() && false === wp_get_theme( $this->slug )->errors() );
-	}
-
-	/** @return array{0: string, 1: string, 2: bool} Result code, installed version, switched. */
-	private function retry_result(): array {
-		return in_array( $this->scenario, self::KILLED, true ) ? array( 'service_unavailable', '2.0.0', false ) : array( 'release_enabled', '2.0.0', true );
 	}
 
 	/** @param callable():void $operation */

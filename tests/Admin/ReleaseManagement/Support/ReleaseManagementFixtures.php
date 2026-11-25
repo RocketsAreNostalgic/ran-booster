@@ -34,7 +34,8 @@ final class ReleaseManagementFixture {
 			$source_guard,
 			$links,
 			$native_hold,
-			$updates_forced_off
+			$updates_forced_off,
+			array( $tracking, 'enable' )
 		);
 	}
 

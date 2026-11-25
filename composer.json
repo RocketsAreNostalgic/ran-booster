@@ -50,9 +50,9 @@
         "ext-sodium": "*",
         "ext-zip": "*",
         "ran/booster-github-provider": "1.0.0-beta.27",
-        "ran/updater-support": "1.0.0-beta.10",
+        "ran/updater-support": "1.0.0-beta.11",
         "ran/wp-branch-updater": "1.0.0-beta.18",
-        "ran/wp-release-updater": "1.0.0-beta.22"
+        "ran/wp-release-updater": "1.0.0-beta.23"
     },
     "extra": {
         "ran-updater-runtime-protocol": 11

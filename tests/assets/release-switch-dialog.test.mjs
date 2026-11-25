@@ -456,6 +456,11 @@ test('newer release preflight opens DOM-hosted Dialog and tears down before conf
 						data: {
 							installed_version: '1.5.0-dev',
 							release_version: '1.6.0',
+							fallback_message:
+								'Release 1.7.0 was skipped. The published package is missing its WordPress version header.',
+							release_identity: '101',
+							release_tag: 'v1.6.0',
+							confirmed_release_nonce: 'candidate-nonce',
 							version_relationship: 'newer',
 						},
 					};
@@ -516,12 +521,32 @@ test('newer release preflight opens DOM-hosted Dialog and tears down before conf
 		dialogCall.body.textContent,
 		/cannot roll back database changes/
 	);
-	assert.equal(dialogCall.body.children.length, 2);
+	assert.match(dialogCall.body.textContent, /Release 1\.7\.0 was skipped/);
+	assert.equal(dialogCall.body.children.length, 3);
 
 	const confirmBtn = dialogCall.options.footer.children[1];
 	assert.equal(confirmBtn.disabled, false);
+	assert.equal(confirmBtn.textContent, 'Switch and install 1.6.0');
 	confirmBtn.dispatchClick();
 	assert.deepEqual(events, ['teardown', 'requestSubmit:true']);
+	assert.equal(
+		env.form.querySelector(
+			'input[type="hidden"][name="confirmed_release_identity"]'
+		).value,
+		'101'
+	);
+	assert.equal(
+		env.form.querySelector(
+			'input[type="hidden"][name="confirmed_release_version"]'
+		).value,
+		'1.6.0'
+	);
+	assert.equal(
+		env.form.querySelector(
+			'input[type="hidden"][name="confirmed_release_nonce"]'
+		).value,
+		'candidate-nonce'
+	);
 
 	// Subsequent confirmed submit bypasses dialog capture handler.
 	const secondEvent = await env.triggerSubmit();
@@ -542,6 +567,9 @@ test('same version shows notice copy without consent checkbox', async () => {
 						data: {
 							installed_version: '1.5.0-dev',
 							release_version: '1.5.0',
+							release_identity: '101',
+							release_tag: 'v1.5.0',
+							confirmed_release_nonce: 'candidate-nonce',
 							version_relationship: 'same',
 						},
 					};
@@ -580,7 +608,7 @@ test('older release disables confirm until consent checkbox is checked and sends
 							release_version: '1.9.0',
 							release_identity: '101',
 							release_tag: 'v1.9.0',
-							older_release_nonce: 'older-nonce-101',
+							confirmed_release_nonce: 'candidate-nonce',
 							version_relationship: 'older',
 							channel: 'prerelease',
 						},
@@ -602,9 +630,11 @@ test('older release disables confirm until consent checkbox is checked and sends
 				?.value ?? null;
 		submittedFields = {
 			confirm_older_release: val('confirm_older_release'),
-			identity: val('confirmed_older_release_identity'),
-			tag: val('confirmed_older_release_tag'),
-			nonce: val('confirmed_older_release_nonce'),
+			identity: val('confirmed_release_identity'),
+			tag: val('confirmed_release_tag'),
+			nonce: val('confirmed_release_nonce'),
+			version: val('confirmed_release_version'),
+			older: val('confirmed_release_older'),
 		};
 	};
 
@@ -632,7 +662,9 @@ test('older release disables confirm until consent checkbox is checked and sends
 		confirm_older_release: '1',
 		identity: '101',
 		tag: 'v1.9.0',
-		nonce: 'older-nonce-101',
+		nonce: 'candidate-nonce',
+		version: '1.9.0',
+		older: '1',
 	});
 });
 
@@ -728,6 +760,9 @@ test('cancel closes dialog without mutating hidden inputs or submitting', async 
 						data: {
 							installed_version: '1.0.0',
 							release_version: '2.0.0',
+							release_identity: '101',
+							release_tag: 'v2.0.0',
+							confirmed_release_nonce: 'candidate-nonce',
 							version_relationship: 'newer',
 						},
 					};
@@ -783,7 +818,13 @@ test('absent or null openDialog falls back to unconfirmed submit without confirm
 					return {
 						successful: true,
 						code: 'ready',
-						data: { version_relationship: 'newer' },
+						data: {
+							version_relationship: 'newer',
+							release_version: '2.0.0',
+							release_identity: '101',
+							release_tag: 'v2.0.0',
+							confirmed_release_nonce: 'candidate-nonce',
+						},
 					};
 				},
 			};

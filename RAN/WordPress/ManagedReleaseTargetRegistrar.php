@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\WordPress;
 
+use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\Deployment\PackageSourceGate;
@@ -43,7 +44,7 @@ final class ManagedReleaseTargetRegistrar {
 	private ?string $core_self_update_plugin_identifier = null;
 	private RepositorySourceGuard $source_guard;
 
-	/** @var array<string, array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool, native_owner?:string}> */
+	/** @var array<string, array{authority: array<string, int|string>, automatic: bool, lock: ?string, restore: bool, native_owner?:string, switch_upgrader?:object}> */
 	private array $native_updates = array();
 
 	/** @var array<string, int> */
@@ -70,7 +71,8 @@ final class ManagedReleaseTargetRegistrar {
 		private \RAN\RepositoryProvider\GitHubProviderSelection $github_selection,
 		?RepositorySourceGuard $source_guard = null,
 		private readonly ?string $bulk_forbidden_plugin_identifier = null,
-		private ?\RAN\Activity\ActivityStore $activity = null
+		private ?\RAN\Activity\ActivityStore $activity = null,
+		private ?DeploymentAttemptRepository $attempts = null
 	) {
 		$this->source_guard = $source_guard ?? new RepositorySourceGuard();
 	}
@@ -154,21 +156,26 @@ final class ManagedReleaseTargetRegistrar {
 			|| $this->has_reserved_core_self_update_target( $type, $identifier ) ) {
 			return false;
 		}
-		$this->switches[ $key ] = array(
-			'configuration' => $configuration,
-			'revision'      => $package->get_source_revision(),
-			'token'         => $token,
-			'user'          => $user_id,
-		);
 		try {
-			$this->targets[ $key ] = $this->register_package( $type, $package, $configuration );
-
-			return true;
+			if ( $this->attempts?->has_unresolved_target_attempt( $type, $identifier, directory_scope: true ) ) {
+				return false;
+			}
+			$this->switches[ $key ] = array(
+				'configuration' => $configuration,
+				'revision'      => $package->get_source_revision(),
+				'token'         => $token,
+				'user'          => $user_id,
+			);
+			$this->targets[ $key ]  = $this->register_package( $type, $package, $configuration );
+			if ( $this->native_target_is_active( $type, $identifier ) ) {
+				return true;
+			}
+			$this->withdraw_switch( $type, $identifier );
 		} catch ( Throwable ) {
 			unset( $this->switches[ $key ], $this->targets[ $key ], $this->registered_authorities[ $key ] );
-
-			return false;
 		}
+
+		return false;
 	}
 
 	/** The target stays registered, so a later download in this request is refused. */
@@ -209,7 +216,9 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		$key = self::key( $target['type'], $target['identifier'] );
 		if ( $reply instanceof \WP_Error ) {
-			unset( $this->native_updates[ $key ] );
+			if ( ! isset( $this->native_updates[ $key ]['switch_upgrader'] ) ) {
+				unset( $this->native_updates[ $key ] );
+			}
 
 			return $reply;
 		}
@@ -234,7 +243,7 @@ final class ManagedReleaseTargetRegistrar {
 			return $this->native_update_error( 'authority_changed' );
 		}
 		try {
-			PackageMutationGuard::assert_package_mutation_allowed();
+			PackageMutationGuard::assert_filesystem_mutation_allowed();
 		} catch ( Throwable ) {
 			return $this->native_update_error( 'authority_changed' );
 		}
@@ -248,6 +257,7 @@ final class ManagedReleaseTargetRegistrar {
 			return $this->native_update_error( 'unsupported_context' );
 		}
 		$outer_lock = null;
+		$switch     = ! $automatic && isset( $this->switches[ $key ] );
 		if ( $automatic ) {
 			try {
 				$outer_lock = $this->updater_lock->current_token();
@@ -257,6 +267,16 @@ final class ManagedReleaseTargetRegistrar {
 			if ( null === $outer_lock ) {
 				return $this->native_update_error( 'unsupported_context' );
 			}
+		} elseif ( $switch ) {
+			if ( isset( $this->native_updates[ $key ] ) ) {
+				return $this->native_update_error( 'unsupported_context' );
+			}
+			// WordPress clears the shared upgrades directory before pre-install runs.
+			try {
+				$outer_lock = $this->updater_lock->acquire();
+			} catch ( Throwable ) {
+				return $this->native_update_error( 'authority_changed' );
+			}
 		}
 		$this->native_updates[ $key ] = array(
 			'authority' => $authority,
@@ -264,6 +284,19 @@ final class ManagedReleaseTargetRegistrar {
 			'lock'      => $outer_lock,
 			'restore'   => ! empty( $hook_extra['temp_backup'] ),
 		);
+		if ( $switch ) {
+			$this->native_updates[ $key ]['switch_upgrader'] = $upgrader;
+			add_action(
+				'shutdown',
+				function () use ( $key, $upgrader, $hook_extra ): void {
+					if ( ( $this->native_updates[ $key ]['switch_upgrader'] ?? null ) === $upgrader ) {
+						$this->complete_native_mutation( $upgrader, $hook_extra );
+					}
+				},
+				PHP_INT_MAX,
+				0
+			);
+		}
 
 		return $reply;
 	}
@@ -283,7 +316,9 @@ final class ManagedReleaseTargetRegistrar {
 		$lock       = $this->updater_lock;
 		$lock_token = null;
 		if ( $reply instanceof \WP_Error ) {
-			unset( $this->native_updates[ $key ] );
+			if ( ! isset( $pending['switch_upgrader'] ) ) {
+				unset( $this->native_updates[ $key ] );
+			}
 
 			return $reply;
 		}
@@ -304,13 +339,17 @@ final class ManagedReleaseTargetRegistrar {
 			return $this->native_update_error( 'authority_changed' );
 		}
 		try {
-			PackageMutationGuard::assert_package_mutation_allowed();
+			PackageMutationGuard::assert_filesystem_mutation_allowed();
 			if ( $pending['automatic'] ) {
 				if ( ! function_exists( 'doing_action' )
 					|| ! doing_action( 'wp_maybe_auto_update' )
 					|| null === $pending['lock']
 					|| ! hash_equals( $pending['lock'], (string) $lock->current_token() ) ) {
 					throw new \RuntimeException( 'The WordPress automatic updater lock is unavailable.' );
+				}
+			} elseif ( isset( $pending['switch_upgrader'] ) ) {
+				if ( null === $pending['lock'] || $pending['lock'] !== $lock->current_token() ) {
+					throw new \RuntimeException( 'The release switch no longer owns the updater lock.' );
 				}
 			} else {
 				$lock_token = $lock->acquire();
@@ -337,7 +376,9 @@ final class ManagedReleaseTargetRegistrar {
 					// The exact lock token remains available for stale-lock recovery.
 				}
 			}
-			unset( $this->native_updates[ $key ] );
+			if ( ! isset( $pending['switch_upgrader'] ) ) {
+				unset( $this->native_updates[ $key ] );
+			}
 
 			return $this->native_update_error( 'authority_changed' );
 		}
@@ -358,13 +399,17 @@ final class ManagedReleaseTargetRegistrar {
 		if ( ! $snapshot['release'] || $pending['authority'] !== $snapshot['authority'] || ! $this->native_target_is_active( $type, $identity ) ) {
 			throw new \RuntimeException( 'The managed release authority changed after staging.' );
 		}
-		PackageMutationGuard::assert_package_mutation_allowed();
+		PackageMutationGuard::assert_filesystem_mutation_allowed();
 		$committed_owner = null;
+		$attempts_idle   = isset( $this->switches[ $key ] ) ? null : true;
 		try {
 			return $this->github_selection->begin_native_mutation(
 				$type,
 				$identity,
-				fn ( callable $execute ): bool => $pending['lock'] === $this->updater_lock->current_token_sql( $this->github_selection->uses_connection( ... ), $execute ),
+				function ( callable $execute ) use ( $pending, $type, $identity, &$attempts_idle ): bool {
+					return $pending['lock'] === $this->updater_lock->current_token_sql( $this->github_selection->uses_connection( ... ), $execute )
+						&& ( $attempts_idle ??= ! $this->attempts?->has_unresolved_target_attempt( $type, $identity, true, $execute ) );
+				},
 				$pending['automatic'] ? null : $pending['lock'],
 				function ( string $owner_tag ) use ( $key, &$committed_owner ): void {
 					$committed_owner = $owner_tag;
@@ -513,8 +558,11 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		$key     = self::key( $target['type'], $target['identifier'] );
 		$pending = $this->native_updates[ $key ] ?? null;
+		if ( isset( $pending['switch_upgrader'] ) && $pending['switch_upgrader'] !== $upgrader ) {
+			return;
+		}
 		if ( isset( $pending['native_owner'] ) && 'gh' === ( $pending['authority']['provider'] ?? null ) ) {
-			// Release's private shutdown finalization owns completion and exact lock release.
+			// The updater's private finalization owns completion and exact lock release.
 			return;
 		}
 		unset( $this->native_updates[ $key ] );
@@ -543,7 +591,7 @@ final class ManagedReleaseTargetRegistrar {
 		};
 		$failed  = ( $upgrader->skin->result ?? null ) instanceof \WP_Error
 			|| ( $upgrader->result ?? null ) instanceof \WP_Error;
-		if ( $failed && $pending['restore'] ) {
+		if ( $failed && $pending['restore'] && ( ! function_exists( 'doing_action' ) || ! doing_action( 'shutdown' ) ) ) {
 			add_action( 'shutdown', $release, PHP_INT_MAX, 0 );
 
 			return;

@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace RAN\Tests\RepositoryProvider;
 
 use RAN\Storage\SchemaConnection;
+use RAN\Storage\SqlReadConnection;
 use RAN\Tests\Storage\SelectionDatabase;
 
 /** Adds the independently mutable authoritative WordPress active list to the SQL double. */
-final class SelectionContextDatabase extends SchemaConnection {
+final class SelectionContextDatabase extends SchemaConnection implements SqlReadConnection {
 	public SelectionDatabase $selection;
 	public string $active_bytes = 'a:0:{}';
 	public bool $fail_active    = false;
 	public int $active_reads    = 0;
+	/** @var list<object> */
+	public array $attempt_rows = array();
 	/** @var \Closure():void|null */
 	public ?\Closure $on_active_read = null;
 	public function __construct() {
@@ -39,6 +42,9 @@ final class SelectionContextDatabase extends SchemaConnection {
 	/** @return list<object> */
 	public function get_results( string $query ): array {
 		$data = json_decode( $query, true, 8, JSON_THROW_ON_ERROR );
+		if ( is_array( $data ) && 'wp_ran_booster_deployment_attempts' === ( $data[1][0] ?? null ) ) {
+			return $this->attempt_rows;
+		}
 		if ( is_array( $data ) && is_array( $data[1] ?? null ) && 'active_plugins' === ( $data[1][1] ?? null ) ) {
 			++$this->active_reads;
 			if ( null !== $this->on_active_read ) {

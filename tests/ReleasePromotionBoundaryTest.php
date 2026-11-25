@@ -16,6 +16,7 @@ final class ReleasePromotionBoundaryTest extends TestCase {
 		);
 
 		self::assertIsArray( $config );
+		self::assertTrue( $config['always-update'] ?? false );
 		self::assertTrue( $config['draft'] ?? false );
 		self::assertTrue( $config['force-tag-creation'] ?? false );
 		self::assertNotSame( true, $config['skip-github-release'] ?? false );

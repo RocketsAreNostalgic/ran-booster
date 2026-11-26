@@ -115,7 +115,7 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 		self::assertSame( 'php_accessible_group_writable_ancestor', $discarded[0]['code'] ?? null );
 	}
 
-	public function test_validate_configured_is_deterministic_between_http_and_cli_when_document_root_is_unset(): void {
+	public function test_operator_configured_path_is_deterministic_between_http_and_cli(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Model a shared-host /home ancestor with mode 0775 owned by the host control plane.
 		self::assertTrue( chmod( $this->root, 0775 ) );
 		$groups = posix_getgroups();
@@ -137,15 +137,16 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 		$sidecar  = $this->root . '/account/.ran-booster/' . str_repeat( 'a', 32 ) . '/ran-booster-store.json';
 
 		// HTTP (DOCUMENT_ROOT present) and WP-CLI/cron (DOCUMENT_ROOT unset) must agree.
-		self::assertTrue( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, $doc_root ) );
-		self::assertTrue( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, null ) );
+		self::assertTrue( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, $doc_root, true ) );
+		self::assertTrue( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, null, true ) );
 		self::assertTrue(
 			$resolver->validate_configured(
 				$this->root . '/account/private/ran-booster/ran-booster-store.json',
 				$wordpress,
 				$content,
 				$plugin,
-				null
+				null,
+				true
 			)
 		);
 
@@ -162,8 +163,8 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 			'groups' => array(),
 		);
 
-		self::assertFalse( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, $doc_root ) );
-		self::assertFalse( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, null ) );
+		self::assertFalse( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, $doc_root, true ) );
+		self::assertFalse( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, null, true ) );
 	}
 
 		/** @param list<array{directory:string,code:string,reason:string,component:string|null}> $discarded */

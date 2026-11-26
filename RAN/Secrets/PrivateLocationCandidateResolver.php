@@ -50,7 +50,11 @@ final class PrivateLocationCandidateResolver {
 
 		$token     = bin2hex( random_bytes( 16 ) );
 		$candidate = $private_base . '/.ran-booster/' . $token . '/ran-booster-store.json';
-		$failure   = $this->configured_path_failure( $candidate, $boundaries, $private_base );
+		if ( ! $this->automatic_context_allows( $candidate, $wordpress_root, $document_root ) ) {
+			return null;
+		}
+
+		$failure = $this->configured_path_failure( $candidate, $boundaries, $private_base );
 		if ( null !== $failure ) {
 			$discarded[] = array(
 				'directory' => dirname( $candidate ),
@@ -73,10 +77,11 @@ final class PrivateLocationCandidateResolver {
 		string $wordpress_root,
 		string $content_dir,
 		string $plugin_dir,
-		?string $document_root = null
+		?string $document_root = null,
+		bool $operator_configured = false
 	): bool {
 		$boundaries = $this->unsafe_boundaries( $wordpress_root, $content_dir, $plugin_dir, $document_root );
-		if ( null === $boundaries ) {
+		if ( null === $boundaries || ( ! $operator_configured && ! $this->automatic_context_allows( $candidate, $wordpress_root, $document_root ) ) ) {
 			return false;
 		}
 
@@ -206,7 +211,6 @@ final class PrivateLocationCandidateResolver {
 
 		return '/' === $private_base
 			|| $this->is_temporary_directory( $private_base )
-			|| $this->is_public_web_root_basename( $private_base )
 			? null
 			: $private_base;
 	}
@@ -246,8 +250,25 @@ final class PrivateLocationCandidateResolver {
 		return $anchor;
 	}
 
-	private function is_public_web_root_basename( string $path ): bool {
-		return in_array( strtolower( basename( $path ) ), self::PUBLIC_WEB_ROOT_BASENAMES, true );
+	/**
+	 * Server context describes this mapping. A possible wider named root is a
+	 * reason to decline automatic placement, never evidence against an operator path.
+	 */
+	private function automatic_context_allows( string $candidate, string $wordpress_root, ?string $document_root ): bool {
+		$root = null === $document_root ? null : $this->canonical_directory( $document_root );
+		if ( null === $root || ! $this->contains( $root, rtrim( $wordpress_root, '/' ) ) ) {
+			return false;
+		}
+
+		for ( $ancestor = dirname( $root ); '/' !== $ancestor; $ancestor = dirname( $ancestor ) ) {
+			if ( in_array( strtolower( basename( $ancestor ) ), self::PUBLIC_WEB_ROOT_BASENAMES, true )
+				&& $this->contains( $ancestor, $candidate )
+			) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -260,20 +281,17 @@ final class PrivateLocationCandidateResolver {
 		?string $document_root
 	): ?array {
 		$boundaries = array();
-		foreach ( array_filter( array( $wordpress_root, $content_dir, $plugin_dir, $document_root ) ) as $path ) {
+		foreach ( array( $wordpress_root, $content_dir, $plugin_dir, $document_root ) as $path ) {
+			if ( null === $path ) {
+				continue;
+			}
 			$canonical = $this->canonical_directory( $path );
 			if ( null === $canonical ) {
 				return null;
 			}
 			$boundaries[] = $canonical;
 
-			// Infer the nearest site web root. A higher matching name can be a shared hosting directory.
-			$public_root_found = false;
 			for ( $ancestor = $canonical; '/' !== $ancestor; $ancestor = dirname( $ancestor ) ) {
-				if ( ! $public_root_found && $this->is_public_web_root_basename( $ancestor ) ) {
-					$boundaries[]      = $ancestor;
-					$public_root_found = true;
-				}
 				foreach ( array( '.git', '.hg', '.svn' ) as $marker ) {
 					if ( file_exists( $ancestor . '/' . $marker ) || is_link( $ancestor . '/' . $marker ) ) {
 						$boundaries[] = $ancestor;
@@ -283,9 +301,7 @@ final class PrivateLocationCandidateResolver {
 			}
 		}
 
-		return count( $boundaries ) < 3
-			? null
-			: array_values( array_unique( $boundaries ) );
+		return array_values( array_unique( $boundaries ) );
 	}
 
 	private function canonical_directory( string $path ): ?string {

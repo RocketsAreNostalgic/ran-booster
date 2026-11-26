@@ -873,6 +873,56 @@ final class LocalDataRemoverTest extends TestCase {
 		}
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_a_missing_key_and_untraversable_ancestor_keep_the_owned_setting_until_absence_is_verified(): void {
+		$this->setUp();
+		unset( $GLOBALS['ran_booster_uninstall_options'][ SiteKeyStore::OPTION_NAME ] );
+		$root     = (string) realpath( sys_get_temp_dir() ) . '/ran-booster-uninstall-absence-' . bin2hex( random_bytes( 6 ) );
+		$ancestor = $root . '/private-account';
+		$leaf     = $ancestor . '/absent-leaf';
+		$sidecar  = $leaf . '/ran-booster-store.json';
+		$config   = $root . '/wp-config.php';
+		$writer   = new WpConfigSecretsPathWriter();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable ancestor only so the leaf is genuinely absent on retry.
+		self::assertTrue( mkdir( $ancestor, 0700, true ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Seed the exact fixture configuration.
+		self::assertNotFalse( file_put_contents( $config, "<?php\n/* That's all, stop editing! Happy publishing. */\n" ) );
+		$writer->write( $config, $sidecar );
+
+		try {
+			$remover = $this->remover( new SecretsFile( $sidecar ), $writer, $config );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Model an ancestor temporarily unavailable for traversal.
+			self::assertTrue( chmod( $ancestor, 0600 ) );
+			clearstatcache( true );
+			try {
+				$remover->remove();
+				self::fail( 'Indeterminate absence must stop uninstall.' );
+			} catch ( SecretsStorageUnavailable $failure ) {
+				self::assertSame( 'The encrypted Booster secrets files could not be verified.', $failure->getMessage() );
+			}
+
+			self::assertTrue( $writer->has_owned_definition( $config, $sidecar ) );
+			self::assertContains( 'wp_ran_booster_packages', $this->database->tables );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Restore fixture traversal before testing verified absence on a fresh removal.
+			self::assertTrue( chmod( $ancestor, 0700 ) );
+			clearstatcache( true );
+			$remover->remove();
+			self::assertFalse( $writer->has_owned_definition( $config, $sidecar ) );
+			self::assertDirectoryDoesNotExist( $leaf );
+			self::assertNotContains( 'wp_ran_booster_packages', $this->database->tables );
+			$this->remover( $this->secrets( null ), $writer, $config )->remove();
+			self::assertDirectoryExists( $ancestor );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the disposable configuration.
+			unlink( $config );
+			foreach ( array( $ancestor, $root ) as $directory ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the disposable directories created by this test.
+				rmdir( $directory );
+			}
+		}
+	}
+
 	/** @return SecretsFile&\PHPUnit\Framework\MockObject\Stub */
 	private function secrets( ?string $path ): SecretsFile {
 		$secrets = $this->createStub( SecretsFile::class );

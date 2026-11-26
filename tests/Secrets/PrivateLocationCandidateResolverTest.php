@@ -80,27 +80,51 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		self::assertDirectoryDoesNotExist( $this->root . '/account/.ran-booster' );
 	}
 
-	public function test_resolves_outside_nested_public_roots_with_or_without_document_root(): void {
+	public function test_hosting_names_do_not_disqualify_operator_paths_and_do_not_authorize_automatic_paths(): void {
 		$resolver = new PrivateLocationCandidateResolver( $this->temporary_boundary );
+		$account  = $this->root . '/var/www/vhosts/example';
+		$legacy   = $account . '/.ran-booster/0123456789abcdef';
 
-		foreach ( array( 'public_html', 'Public_HTML', 'htdocs', 'HTDOCS', 'www', 'WWW', 'httpdocs', 'HttpDocs' ) as $index => $web_root ) {
-			$account   = $this->root . '/var/www/vhosts/webroot-case-' . $index;
-			$public    = $account . '/' . $web_root;
-			$wordpress = $public . '/nested/blog';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- A pre-existing operator-owned 16-character storage directory.
+		self::assertTrue( mkdir( $legacy, 0700, true ) );
+		foreach ( array( 'httpdocs', 'Public_HTML', 'web', 'www/team/httpdocs' ) as $name ) {
+			$site_root = $account . '/' . $name;
+			$actual    = 'www/team/httpdocs' === $name ? $account . '/www' : $site_root;
+			$wordpress = $site_root . '/nested/blog';
 			$content   = $wordpress . '/wp-content';
 			$plugin    = $content . '/plugins/ran-booster';
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable nested WordPress topology.
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create disposable nested WordPress layouts.
 			self::assertTrue( mkdir( $plugin, 0700, true ) );
 
-			foreach ( array( null, $wordpress, $public ) as $document_root ) {
-				$candidate = $resolver->resolve( $wordpress, $content, $plugin, $document_root );
-				self::assertIsString( $candidate );
-				self::assertStringStartsWith( $account . '/.ran-booster/', $candidate );
-				self::assertTrue( $resolver->validate_configured( $candidate, $wordpress, $content, $plugin, $document_root ) );
-				self::assertFalse( $resolver->validate_configured( $public . '/nested/legacy/ran-booster-store.json', $wordpress, $content, $plugin, $document_root ) );
-				self::assertTrue( $resolver->validate_configured( $account . '/.ran-booster/0123456789abcdef/ran-booster-store.json', $wordpress, $content, $plugin, $document_root ) );
+			foreach ( array( $actual, null, $wordpress ) as $document_root ) {
+				self::assertTrue( $resolver->validate_configured( $legacy . '/ran-booster-store.json', $wordpress, $content, $plugin, $document_root, true ) );
+				self::assertFalse( $resolver->validate_configured( $legacy . '/ran-booster-store.json', $wordpress, $content, $plugin, $document_root ) );
+				self::assertFalse( $resolver->validate_configured( $wordpress . '/ran-booster-store.json', $wordpress, $content, $plugin, $document_root, true ) );
+				self::assertNull( $resolver->resolve( $wordpress, $content, $plugin, $document_root ) );
 			}
+
+			$outer_sidecar = dirname( $wordpress ) . '/ran-booster-store.json';
+			self::assertFalse( $resolver->validate_configured( $outer_sidecar, $wordpress, $content, $plugin, $actual, true ) );
 		}
+	}
+
+	public function test_automatic_storage_requires_an_observed_root_without_a_wider_conflict(): void {
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
+		$public    = $this->root . '/account/httpdocs';
+		$wordpress = $public . '/nested/blog';
+		$content   = $wordpress . '/wp-content';
+		$plugin    = $content . '/plugins/ran-booster';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create a disposable site with a reported canonical root.
+		self::assertTrue( mkdir( $plugin, 0700, true ) );
+
+		$candidate = $resolver->resolve( $wordpress, $content, $plugin, $public );
+		self::assertIsString( $candidate );
+		self::assertStringStartsWith( dirname( $public ) . '/.ran-booster/', $candidate );
+		self::assertTrue( $resolver->validate_configured( $candidate, $wordpress, $content, $plugin, $public ) );
+		self::assertFalse( $resolver->validate_configured( $candidate, $wordpress, $content, $plugin ) );
+		self::assertNull( $resolver->resolve( $wordpress, $content, $plugin ) );
+		self::assertNull( $resolver->resolve( $wordpress, $content, $plugin, $wordpress ) );
+		self::assertNull( $resolver->resolve( $wordpress, $content, $plugin, $content ) );
 	}
 
 	public function test_rejects_the_old_basename_as_a_configured_path_before_creating_directories(): void {

@@ -58,14 +58,14 @@ class SecretsStorageProvisioner {
 			);
 		}
 		if ( is_string( $configured ) ) {
-			$path_is_safe = $this->validate_configured_candidate( $configured );
 			$source       = $this->configured_path_source( $configured );
+			$path_is_safe = $this->validate_configured_candidate( $configured, SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL === $source );
 			if ( ! $path_is_safe ) {
 				return SecretsStorageProvisioningResult::storage_needs_attention(
 					$configured,
 					$source,
 					'configured_path_unsafe',
-					__( 'The resolved configured storage directory is not a verified private location. It may be inside the public web root, use a symbolic link or cross another unsafe path boundary. Choose a real local directory outside the public web root.', 'ran-booster' )
+					__( 'Booster could not verify this configured storage location. Review the manual storage instructions and the path against your server configuration before continuing.', 'ran-booster' )
 				);
 			}
 
@@ -110,7 +110,7 @@ class SecretsStorageProvisioner {
 		} catch ( Throwable ) {
 			return SecretsStorageProvisioningResult::manual_required(
 				'location_unavailable',
-				__( 'Booster could not determine a safe private storage location.', 'ran-booster' ),
+				__( 'Booster could not determine a safe private storage location. Follow the manual storage instructions.', 'ran-booster' ),
 				null,
 				$discarded
 			);
@@ -118,7 +118,7 @@ class SecretsStorageProvisioner {
 		if ( null === $candidate ) {
 			return SecretsStorageProvisioningResult::manual_required(
 				'location_unavailable',
-				__( 'Booster could not determine a safe private storage location.', 'ran-booster' ),
+				__( 'Booster could not determine a safe private storage location. Follow the manual storage instructions.', 'ran-booster' ),
 				null,
 				$discarded
 			);
@@ -219,13 +219,17 @@ class SecretsStorageProvisioner {
 	 * }|null
 	 */
 	public function recovery_state( SecretsStorageProvisioningResult $status ): ?array {
-		$current            = $status->candidate_path();
-		$missing_ciphertext = null !== $current && $this->current_ciphertext_is_absent( $current );
-		$missing_key        = 'storage_key_missing' === $status->code();
+		$current = $status->candidate_path();
 		if ( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION !== $status->status()
 			|| null === $current
-			|| ( ! $missing_ciphertext && ! $missing_key )
+			|| 'configured_path_unsafe' === $status->code()
 		) {
+			return null;
+		}
+
+		$missing_ciphertext = $this->current_ciphertext_is_absent( $current );
+		$missing_key        = 'storage_key_missing' === $status->code();
+		if ( ! $missing_ciphertext && ! $missing_key ) {
 			return null;
 		}
 
@@ -419,13 +423,14 @@ class SecretsStorageProvisioner {
 		);
 	}
 
-	protected function validate_configured_candidate( string $candidate ): bool {
+	protected function validate_configured_candidate( string $candidate, bool $operator_configured = false ): bool {
 		return $this->resolver->validate_configured(
 			$candidate,
 			$this->wordpress_root(),
 			$this->content_directory(),
 			$this->plugin_directory(),
-			$this->document_root()
+			$this->document_root(),
+			$operator_configured
 		);
 	}
 
@@ -596,7 +601,10 @@ class SecretsStorageProvisioner {
 	private function configured_path_source( string $configured ): string {
 		try {
 			$config = $this->loaded_wp_config_path( true );
-			if ( null !== $config && $this->writer->has_owned_definition( $config, $configured ) ) {
+			if ( null === $config ) {
+				return SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN;
+			}
+			if ( $this->writer->has_owned_definition( $config, $configured ) ) {
 				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
 			}
 		} catch ( Throwable ) {
@@ -616,13 +624,14 @@ class SecretsStorageProvisioner {
 		if ( null === $base ) {
 			return array();
 		}
-		if ( ! is_dir( $base ) || is_link( $base ) || ! stream_is_local( $base ) ) {
+		if ( ! is_dir( $base ) || is_link( $base ) || ! stream_is_local( $base ) || ! is_executable( $base ) ) {
 			$complete = false;
 
 			return array();
 		}
 
-		$entries = scandir( $base );
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Report an incomplete scan without disclosing runtime paths.
+		$entries = @scandir( $base );
 		if ( false === $entries || count( $entries ) > self::RECOVERY_MAX_ENTRIES + 2 ) {
 			$complete = false;
 
@@ -631,7 +640,7 @@ class SecretsStorageProvisioner {
 
 		$candidates = array();
 		foreach ( $entries as $entry ) {
-			if ( 1 !== preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', $entry )
+			if ( ! PosixFilesystemProbe::is_managed_leaf_name( $entry )
 				|| dirname( $current ) === $base . '/' . $entry
 			) {
 				continue;
@@ -650,6 +659,9 @@ class SecretsStorageProvisioner {
 				&& ! file_exists( $lock )
 				&& ! is_link( $lock )
 			) {
+				if ( ! SecretsFile::managed_files_are_absent( $candidate ) ) {
+					$complete = false;
+				}
 				continue;
 			}
 			try {
@@ -686,7 +698,7 @@ class SecretsStorageProvisioner {
 		$base      = dirname( $directory );
 
 		return 'ran-booster-store.json' === basename( $current )
-			&& 1 === preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', basename( $directory ) )
+			&& PosixFilesystemProbe::is_managed_leaf_name( basename( $directory ) )
 			&& '.ran-booster' === basename( $base )
 			? $base
 			: null;

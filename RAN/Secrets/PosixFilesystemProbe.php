@@ -76,11 +76,16 @@ final class PosixFilesystemProbe {
 		return $passed;
 	}
 
+	/** @internal Recognize historical and current automatic storage leaf names. */
+	public static function is_managed_leaf_name( string $name ): bool {
+		return 1 === preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', $name );
+	}
+
 	private function valid_candidate( string $path ): bool {
 		return str_starts_with( $path, '/' )
 			&& 'ran-booster-store.json' === basename( $path )
 			&& '.ran-booster' === basename( dirname( dirname( $path ) ) )
-			&& 1 === preg_match( '/\A(?:[a-f0-9]{16}|[a-f0-9]{32})\z/D', basename( dirname( $path ) ) )
+			&& self::is_managed_leaf_name( basename( dirname( $path ) ) )
 			&& ! str_contains( $path, "\0" )
 			&& ! str_contains( $path, '//' )
 			&& 0 === preg_match( '#(?:^|/)\.{1,2}(?:/|$)#', $path );

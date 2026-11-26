@@ -1029,10 +1029,7 @@ class SecretsFile {
 		$lock_path = $this->lock_path();
 		$has_lock  = file_exists( $lock_path ) || is_link( $lock_path );
 		if ( ! $has_file && null === $key && ! $has_lock ) {
-			$directory = dirname( $path );
-			if ( file_exists( $directory ) || is_link( $directory ) ) {
-				$this->assert_configured_location();
-			}
+			$this->assert_managed_files_absent( $path );
 
 			return;
 		}
@@ -1094,10 +1091,7 @@ class SecretsFile {
 		$lock_path = $this->lock_path();
 		$has_lock  = file_exists( $lock_path ) || is_link( $lock_path );
 		if ( ! $has_file && null === $key && ! $has_lock ) {
-			$directory = dirname( $path );
-			if ( file_exists( $directory ) || is_link( $directory ) ) {
-				$this->assert_configured_location();
-			}
+			$this->assert_managed_files_absent( $path );
 
 			return;
 		}
@@ -1143,6 +1137,43 @@ class SecretsFile {
 				clearstatcache( true, $lock_path );
 			}
 		);
+	}
+
+	/** @internal Prove that neither managed entry is present before reporting absence. */
+	public static function managed_files_are_absent( string $path ): bool {
+		clearstatcache( true );
+		$directory = dirname( $path );
+		$names     = array( basename( $path ), basename( $path ) . '.lock' );
+		while ( ! file_exists( $directory ) && ! is_link( $directory ) ) {
+			$parent = dirname( $directory );
+			if ( $parent === $directory ) {
+				return false;
+			}
+			$names     = array( basename( $directory ) );
+			$directory = $parent;
+		}
+		if ( is_link( $directory ) || ! is_dir( $directory ) || realpath( $directory ) !== $directory || ! is_executable( $directory ) ) {
+			return false;
+		}
+
+		// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- A failed enumeration is an indeterminate read, handled below without leaking a path.
+		$entries = @scandir( $directory );
+		if ( false === $entries ) {
+			return false;
+		}
+
+		// A differently cased name is also inconclusive on a case-insensitive filesystem.
+		return array() === array_intersect( array_map( 'strtolower', $names ), array_map( 'strtolower', $entries ) );
+	}
+
+	private function assert_managed_files_absent( string $path ): void {
+		$directory = dirname( $path );
+		if ( file_exists( $directory ) || is_link( $directory ) ) {
+			$this->assert_configured_location();
+		}
+		if ( ! self::managed_files_are_absent( $path ) ) {
+			throw $this->unavailable( 'The encrypted Booster secrets files could not be verified.' );
+		}
 	}
 
 	/**
@@ -2255,13 +2286,16 @@ class SecretsFile {
 		$plugin_dir     = realpath( dirname( __DIR__, 2 ) );
 		$document_root  = $_SERVER['DOCUMENT_ROOT'] ?? null;
 
+		$facts = ( new SecretsStorageProvisioner() )->configuration_facts();
+
 		return false !== $plugin_dir
 			&& $this->location_resolver->validate_configured(
 				(string) $this->path,
 				$wordpress_root,
 				$content_dir,
 				$plugin_dir,
-				is_string( $document_root ) && '' !== trim( $document_root ) ? $document_root : null
+				is_string( $document_root ) && '' !== trim( $document_root ) ? $document_root : null,
+				null !== $facts && $facts['path'] === $this->path && SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL === $facts['source']
 			);
 	}
 

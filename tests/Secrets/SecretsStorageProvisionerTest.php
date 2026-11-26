@@ -615,9 +615,10 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$manual = $this->root . '/manual';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $manual, 0700 ) );
-		$provisioner                  = $this->provisioner();
-		$provisioner->configured      = $manual . '/ran-booster-store.json';
-		$provisioner->resolver_throws = true;
+		$provisioner                        = $this->provisioner();
+		$provisioner->configured            = $manual . '/ran-booster-store.json';
+		$provisioner->resolver_throws       = true;
+		$provisioner->document_root_missing = true;
 
 		$result = $provisioner->status();
 
@@ -636,7 +637,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( 'configured_path_unsafe', $result->code() );
 		self::assertSame( $this->wordpress_root . '/ran-booster-store.json', $result->candidate_path() );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $result->path_source() );
-		self::assertStringContainsString( 'outside the public web root', $result->message() );
+		self::assertStringContainsString( 'manual storage instructions', $result->message() );
 		self::assertFalse( $provisioner->resolver_called );
 	}
 
@@ -651,6 +652,25 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( 'configured_path_unsafe', $result->code() );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $result->path_source() );
 		self::assertFalse( $provisioner->resolver_called );
+	}
+
+	public function test_a_booster_written_setting_cannot_authorize_unknown_mapping_or_reset(): void {
+		$provisioner                           = $this->provisioner();
+		$provisioner->configured               = $this->candidate;
+		$provisioner->document_root_missing    = true;
+		$provisioner->orphaned_reset_available = true;
+		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
+
+		$status = $provisioner->status();
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $status->path_source() );
+		self::assertSame( 'configured_path_unsafe', $status->code() );
+		self::assertStringContainsString( 'manual storage instructions', $status->message() );
+		self::assertNull( $provisioner->recovery_state( $status ) );
+		self::assertSame(
+			'storage_reset_state_changed',
+			$provisioner->reset_orphaned_storage( SecretsStorageProvisioner::RESET_CONFIRMATION )->code()
+		);
+		self::assertTrue( ( new WpConfigSecretsPathWriter() )->has_owned_definition( $this->config_path, $this->candidate ) );
 	}
 
 	public function test_manual_override_rejects_symlinked_components_and_unsafe_existing_target(): void {
@@ -1109,6 +1129,42 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertNull( $overflow['confirmation'] );
 	}
 
+	public function test_a_visible_but_uninspectable_sibling_blocks_reset_until_absence_is_proved(): void {
+		$sibling = dirname( dirname( $this->candidate ) ) . '/abcdef0123456789';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create only this test's empty disposable sibling.
+		self::assertTrue( mkdir( $sibling, 0700, true ) );
+		$provisioner                           = $this->provisioner();
+		$provisioner->configured               = $this->candidate;
+		$provisioner->health_failure           = true;
+		$provisioner->health_failure_reason    = 'storage_file_missing';
+		$provisioner->orphaned_reset_available = true;
+
+		try {
+			foreach ( array( 0600, 0300 ) as $mode ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Model a visible sibling that PHP cannot traverse or enumerate.
+				self::assertTrue( chmod( $sibling, $mode ) );
+				self::assertDirectoryExists( $sibling );
+				$offer = $provisioner->recovery_state( $provisioner->status() );
+				self::assertIsArray( $offer );
+				self::assertSame( 'blocked', $offer['state'] );
+				self::assertNull( $offer['confirmation'] );
+				self::assertSame(
+					'storage_reset_state_changed',
+					$provisioner->reset_orphaned_storage( SecretsStorageProvisioner::RESET_CONFIRMATION )->code()
+				);
+			}
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Restore enumeration for the fresh request and fixture cleanup.
+			self::assertTrue( chmod( $sibling, 0700 ) );
+		}
+
+		self::assertSame( array(), $provisioner->reset_candidates );
+		$offer = $provisioner->recovery_state( $provisioner->status() );
+		self::assertIsArray( $offer );
+		self::assertSame( 'reset_available', $offer['state'] );
+		self::assertSame( SecretsStorageProvisioner::RESET_CONFIRMATION, $offer['confirmation'] );
+	}
+
 	public function test_authenticated_provider_unfit_sibling_is_visible_but_not_adoptable(): void {
 		$this->recovery_store( 'abcdef0123456789' );
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
@@ -1238,6 +1294,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public string $health_failure_message            = 'Fixture storage failure.';
 	public string $health_failure_reason             = \RAN\Secrets\SecretsStorageUnavailable::REASON_GENERIC;
 	public bool $read_runtime_configuration          = false;
+	public bool $document_root_missing               = false;
 	public bool $force_unsafe                        = false;
 	public bool $unsafe_after_probe                  = false;
 	public bool $recovery_authentication_fails       = false;
@@ -1278,10 +1335,10 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		return ! $this->probe_fails && parent::probe_candidate( $candidate, $owned_leaf );
 	}
 
-	protected function validate_configured_candidate( string $candidate ): bool {
-		return ! $this->force_unsafe
+	protected function validate_configured_candidate( string $candidate, bool $operator_configured = false ): bool {
+		return ! ( $this->force_unsafe && $candidate !== $this->configured )
 			&& ! ( $this->unsafe_after_probe && $this->probe_called )
-			&& parent::validate_configured_candidate( $candidate );
+			&& parent::validate_configured_candidate( $candidate, $operator_configured );
 	}
 
 	protected function recovery_credentials_fit( string $candidate ): bool {
@@ -1366,8 +1423,8 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		return $this->root . '/wp-content/plugins/ran-booster';
 	}
 
-	protected function document_root(): string {
-		return $this->root;
+	protected function document_root(): ?string {
+		return $this->document_root_missing ? null : $this->root;
 	}
 
 	protected function included_files(): array {

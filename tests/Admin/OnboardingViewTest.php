@@ -163,7 +163,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]]//ol/li)' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]//div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]]/ancestor::details[not(parent::div[@data-ran-booster-ui-disclosure="settings-card"])])' ) );
 		self::assertStringContainsString( 'Custom setup instructions', $html );
-		self::assertStringContainsString( 'absolute private directory outside the public web root on durable local storage', $html );
+		self::assertStringContainsString( 'absolute private directory on durable local storage', $html );
 		self::assertStringContainsString( 'owned by PHP, readable and writable by PHP, and mode 0700', $html );
 		self::assertStringNotContainsString( '<canary>', $html );
 		self::assertStringContainsString( 'readonly aria-label="Directory command 1">mkdir -p -- &#039;/private/&lt;canary&gt;&#039;</textarea>', $html );
@@ -367,7 +367,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'the key is stored separately.', $broken );
 		self::assertStringContainsString( 'Use a different storage location', $broken );
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $broken );
-		self::assertStringContainsString( 'dirname( __DIR__ ) . &#039;/private/ran-booster&#039;', $broken );
+		self::assertStringContainsString( '&#039;/absolute/private/path&#039;', $broken );
 		self::assertStringContainsString( 'aria-label="Copy example wp-config.php line"', $broken );
 		self::assertStringContainsString( 'aria-label="Copy example WP-CLI command"', $broken );
 		self::assertStringContainsString( 'aria-label="Copy environment-managed wp-config.php bridge"', $broken );
@@ -533,6 +533,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Booster could not determine a safe private storage location.', $html );
 		self::assertStringContainsString( 'location_unavailable', $html );
 		self::assertStringContainsString( 'Set a storage location manually', $html );
+		self::assertStringContainsString( 'you are responsible for keeping it private', $html );
+		self::assertStringContainsString( 'including aliases, and verify it stays private', $html );
 		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/div[@class="ran-booster-onboarding__storage-discarded" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and div[@data-ran-booster-ui-disclosure-content] and summary[normalize-space(.)="Why automatic setup is unavailable"] and not(@open)])' ) );
 		self::assertStringNotContainsString( 'ran-booster-onboarding__storage-details', $html );
 		self::assertStringContainsString( '/var/www/&lt;account&gt;/.ran-booster/0123456789abcdef', $html );

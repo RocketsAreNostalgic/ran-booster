@@ -750,7 +750,11 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'Use published releases', $html );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_managed_browser_uses_saved_identity_and_keeps_word_press_as_installer(): void {
+		require_once __DIR__ . '/PersistedOfferVersionWordPressFunctions.php';
+		require_once __DIR__ . '/../../Support/PackageViewWordPressFunctions.php';
 		$tracking                       = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->candidate_list       = new RepositoryReleaseCandidateList(
 			array(
@@ -805,6 +809,61 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array( 'inspect_candidate', 'plugin', 'example/example.php', 3, '42', 'v1.2.0', 'stable', 'nonce-for-release-tracking-inspect_candidate-plugin-example/example.php-3-stable' ), $tracking->calls[1] );
 	}
 
+	#[DataProvider( 'managed_picker_relationships' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_managed_listing_and_inspection_share_the_updater_release_order( string $installed, string $candidate, string $expected, bool $runtime_available ): void {
+		if ( $runtime_available ) {
+			require_once __DIR__ . '/PersistedOfferVersionWordPressFunctions.php';
+		} else {
+			self::assertFalse( class_exists( \RAN\WPReleaseUpdater\V1\Contract\ReleaseVersion::class, false ) );
+		}
+
+		$tag                            = 'v' . $candidate;
+		$status                         = new ReleaseTrackingStatus(
+			'plugin',
+			'example/example.php',
+			'release_asset',
+			3,
+			'101',
+			'manual',
+			new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE ),
+			installed_version: $installed,
+			channel: 'prerelease'
+		);
+		$tracking                       = new ReleaseTrackingFacadeDouble( $status );
+		$tracking->candidate_list       = new RepositoryReleaseCandidateList(
+			array( new RepositoryReleaseCandidate( '42', $tag, $candidate, str_contains( $candidate, '-' ), '2026-08-20T09:00:00Z', array( 'example.zip' ) ) )
+		);
+		$tracking->candidate_inspection = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', $candidate, release_tag: $tag );
+		$controls                       = ReleaseManagementFixture::controls( $tracking );
+		$list                           = $controls->process_managed_browser_request( 'list_candidates', $this->managed_request( 'list_candidates', 'prerelease' ) );
+		$inspection                     = $controls->process_managed_browser_request(
+			'inspect_candidate',
+			$this->managed_request( 'inspect_candidate', 'prerelease' ) + array(
+				'release_id'  => '42',
+				'release_tag' => $tag,
+			)
+		);
+
+		self::assertTrue( $list['successful'] );
+		self::assertTrue( $inspection['successful'] );
+		self::assertSame( $expected, $list['data']['candidates'][0]['version_relationship'] );
+		self::assertSame( $expected, $inspection['data']['version_relationship'] );
+	}
+
+	/** @return array<string,array{string,string,string,bool}> */
+	public static function managed_picker_relationships(): array {
+		return array(
+			'updater newer'       => array( '1.2.0-alpha.1', '1.2.0-dev.1', 'newer', true ),
+			'updater older'       => array( '1.2.0-dev.1', '1.2.0-alpha.1', 'older', true ),
+			'normalized same'     => array( '1.2', '1.2.0', 'same', true ),
+			'invalid installed'   => array( '1.2.0+unsupported', '2.0.0', 'invalid', true ),
+			'invalid candidate'   => array( '1.2.0', '2.0.0+unsupported', 'invalid', true ),
+			'unavailable runtime' => array( '1.2.0', '2.0.0', 'invalid', false ),
+		);
+	}
+
 	public function test_managed_candidate_listing_rejects_a_source_change_during_provider_read(): void {
 		$tracking                       = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->candidate_list       = new RepositoryReleaseCandidateList(
@@ -823,7 +882,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 2, $tracking->status_reads );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_managed_candidate_inspection_recomputes_relationship_from_the_fresh_installed_version(): void {
+		require_once __DIR__ . '/PersistedOfferVersionWordPressFunctions.php';
 		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->candidate_inspection       = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0', 'v1.2.0', '1.2.0', 'newer' );
 		$tracking->after_candidate_inspection = static function () use ( $tracking ): void {

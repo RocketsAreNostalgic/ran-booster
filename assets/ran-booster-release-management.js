@@ -326,14 +326,22 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				throw new Error('inspection_failed');
 			}
 			const relationship = response.data.version_relationship;
-			/* translators: %s: release version. */
-			let outcomeMessage = sprintf(
-				/* translators: %s: release version. */
-				__('Version %s matches the installed version.', 'ran-booster'),
-				response.data.version
+			let outcomeMessage = __(
+				'Version comparison unavailable',
+				'ran-booster'
 			);
 			let statusMessage = outcomeMessage;
-			if (relationship === 'newer') {
+			if (relationship === 'same') {
+				outcomeMessage = sprintf(
+					/* translators: %s: release version. */
+					__(
+						'Version %s matches the installed version.',
+						'ran-booster'
+					),
+					response.data.version
+				);
+				statusMessage = outcomeMessage;
+			} else if (relationship === 'newer') {
 				outcomeMessage = sprintf(
 					/* translators: %s: release version. */
 					__(
@@ -373,7 +381,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			);
 			if (selectedOutcome) {
 				selectedOutcome.textContent = outcomeMessage;
-				selectedOutcome.hidden = relationship !== 'newer';
+				selectedOutcome.hidden =
+					relationship === 'same' || relationship === 'older';
 				const screenUrl =
 					managedBrowser.dataset.ranBoosterManagedReleaseWordpressUrl;
 				if (relationship === 'newer' && screenUrl) {
@@ -488,9 +497,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				throw new Error('invalid_candidates');
 			}
 			renderListingObservations(observations, response.data);
-			const inspectable = releases.filter(
-				(candidate) => candidate.version_relationship !== 'older'
-			);
+			const canInspect = (candidate) =>
+				candidate.version_relationship === 'newer' ||
+				candidate.version_relationship === 'same';
+			const inspectable = releases.filter(canInspect);
 			const preferredCandidate = inspectable[0] || releases[0];
 			const installedCandidate = releases.find(
 				(candidate) => candidate.version_relationship === 'same'
@@ -510,8 +520,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				input.name = 'ran_booster_managed_release_candidate';
 				input.dataset.releaseId = String(candidate.release_id);
 				const older = candidate.version_relationship === 'older';
-				input.disabled = older;
+				input.disabled = !canInspect(candidate);
 				input.addEventListener('change', () => {
+					if (input.disabled) {
+						return;
+					}
 					if (selectedOutcome) {
 						selectedOutcome.hidden = true;
 					}
@@ -520,7 +533,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					inspect();
 				});
 				let marker =
-					candidate === preferredCandidate
+					candidate === preferredCandidate &&
+					(older || !input.disabled)
 						? wp.i18n.__('· Latest eligible', 'ran-booster')
 						: '';
 				if (older) {
@@ -530,6 +544,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					);
 				} else if (candidate.version_relationship === 'same') {
 					marker += wp.i18n.__('· Installed/current', 'ran-booster');
+				} else if (input.disabled) {
+					marker += wp.i18n.__(
+						'· Version comparison unavailable',
+						'ran-booster'
+					);
 				} else {
 					marker += wp.i18n.__(
 						'· Newer than installed',
@@ -630,6 +649,18 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					input.checked = true;
 				}
 				await inspect();
+			} else if (
+				releases.some(
+					(candidate) => candidate.version_relationship !== 'older'
+				)
+			) {
+				setStatus(
+					__('Version comparison unavailable', 'ran-booster'),
+					__(
+						'Booster could not compare these release versions with the installed version.',
+						'ran-booster'
+					)
+				);
 			} else {
 				if (
 					managedBrowser.dataset.ranBoosterManagedReleaseChannel ===

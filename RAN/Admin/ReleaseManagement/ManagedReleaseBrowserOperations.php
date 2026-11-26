@@ -9,6 +9,7 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
+use RAN\WPReleaseUpdater\V1\Contract\ReleaseVersion;
 
 /** @internal Projects only revision-bound managed release discovery and inspection. */
 final class ManagedReleaseBrowserOperations {
@@ -133,9 +134,8 @@ final class ManagedReleaseBrowserOperations {
 	}
 
 	private static function version_relationship( string $version, string $installed_version ): string {
-		return version_compare( $version, $installed_version ) > 0
-			? 'newer'
-			: ( version_compare( $version, $installed_version ) < 0 ? 'older' : 'same' );
+		// The elected runtime supplies the comparator without loading a second copy here.
+		return class_exists( ReleaseVersion::class, false ) ? ReleaseVersion::relationship( $version, $installed_version ) : 'invalid';
 	}
 
 	private function valid_request( string $type, string $identifier, int $revision, string $channel ): bool {

@@ -1215,6 +1215,78 @@ test('managed browser keeps native Core update disabled when the offer changes a
 	assert.equal(harness.nodes.get('native-update').getAttribute('href'), null);
 });
 
+test('managed browser leaves incomparable releases disabled without claiming they are older', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate(
+						'unknown',
+						'3.0.0',
+						'invalid',
+						'2026-08-03T00:00:00Z'
+					),
+					candidate('old', '1.0.0', 'older', '2026-08-02T00:00:00Z'),
+				],
+			},
+		},
+	]);
+	harness.browser.dataset.ranBoosterManagedReleaseChannel = 'prerelease';
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	const radio = radioFor(harness, 'unknown');
+	assert.equal(radio.disabled, true);
+	assert.equal(Boolean(radio.checked), false);
+	await radio.dispatch('change');
+	assert.equal(harness.requests.length, 1);
+	assert.match(listText(harness), /Version comparison unavailable/);
+	assert.doesNotMatch(
+		listText(harness),
+		/Newer than installed|only versions older/
+	);
+	assert.match(
+		harness.nodes.get('message').textContent,
+		/could not compare these release versions/
+	);
+});
+
+test('managed inspection reports an unavailable comparison after selection', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate('new', '3.0.0', 'newer', '2026-08-03T00:00:00Z'),
+				],
+			},
+		},
+		readyResponse('3.0.0', 'invalid'),
+	]);
+	harness.browser.dataset.ranBoosterManagedReleaseWordpressUrl =
+		'/wp-admin/plugins.php';
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	assert.equal(harness.requests.length, 2);
+	assert.match(
+		harness.nodes.get('message').textContent,
+		/Version comparison unavailable/
+	);
+	const outcome = descendants(harness.nodes.get('candidate-list')).find(
+		(node) => node.className === 'ran-booster-release-candidate__outcome'
+	);
+	assert.equal(outcome.hidden, false);
+	assert.equal(outcome.children.length, 0);
+});
+
 test('managed browser shows an explicit no-downgrade warning when Preview offers only older releases', async () => {
 	const harness = createHarness([
 		{

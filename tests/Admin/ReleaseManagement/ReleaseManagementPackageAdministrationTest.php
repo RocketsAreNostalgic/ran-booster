@@ -2544,6 +2544,14 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$top_notice = (string) ob_get_clean();
 		self::assertStringContainsString( $shown, $top_notice );
 		self::assertStringNotContainsString( $absent, $top_notice );
+		if ( 'release_asset' === $source ) {
+			self::assertSame( 1, substr_count( $top_notice, $shown ) );
+			self::assertStringContainsString( 'data-ran-booster-feedback', $top_notice );
+			self::assertStringContainsString( 'data-feedback-key="release_enabled" data-intent="success" role="status">' . $shown, $top_notice );
+		} else {
+			self::assertStringNotContainsString( 'data-feedback-key="release_enabled"', $top_notice );
+			self::assertStringContainsString( 'notice-warning', $top_notice );
+		}
 
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', 'plugin', $source, $package, $package->settings_url() );

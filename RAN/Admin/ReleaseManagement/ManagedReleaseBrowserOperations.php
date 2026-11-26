@@ -11,19 +11,23 @@ use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WPReleaseUpdater\V1\Contract\ReleaseVersion;
 
-/** @internal Projects only revision-bound managed release discovery and inspection. */
+/**
+ * @internal Projects only revision-bound managed release discovery and inspection.
+ * @phpstan-type Candidate array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,version_relationship:string,zip_count?:int}
+ */
 final class ManagedReleaseBrowserOperations {
 	public function __construct( private readonly ManagedReleaseBrowser $browser, private readonly ReleaseTrackingFacade $releases ) {
 	}
 
-	/** @return array{code:string,successful:bool,data:array<mixed>} */
+	/** @return array{code:string,successful:bool,data:array{candidates?:list<Candidate>,installed_version?:string,channel?:string,search_exhausted?:bool|null,diagnostics?:array<mixed>|null,rate_limited_provider?:string}} */
 
-	public function list_candidates( string $type, string $identifier, int $revision, string $channel, string $nonce ): array {
+	public function list_candidates( string $type, string $identifier, int $revision, string $channel, string $nonce, bool $on_branch = false ): array {
 		if ( ! $this->valid_request( $type, $identifier, $revision, $channel ) ) {
 			return $this->outcome( 'invalid_request' );
 		}
+		$source = $on_branch ? 'branch' : 'release_asset';
 		$status = $this->releases->status( $type, $identifier );
-		if ( $revision !== $status->source_revision() || 'release_asset' !== $status->source() ) {
+		if ( $revision !== $status->source_revision() || $source !== $status->source() ) {
 			return $this->outcome( 'source_changed' );
 		}
 		$candidates = $this->browser->list_candidates( $type, $identifier, $revision, $channel, $nonce );
@@ -33,7 +37,7 @@ final class ManagedReleaseBrowserOperations {
 			return $this->outcome( 'unable_to_check', false, null === $provider ? array() : array( 'rate_limited_provider' => $provider ) );
 		}
 		$status = $this->releases->status( $type, $identifier );
-		if ( $revision !== $status->source_revision() || 'release_asset' !== $status->source() ) {
+		if ( $revision !== $status->source_revision() || $source !== $status->source() ) {
 			return $this->outcome( 'source_changed' );
 		}
 		$eligible_candidates = $candidates->candidates;
@@ -57,7 +61,7 @@ final class ManagedReleaseBrowserOperations {
 			array(
 				'channel'           => $channel,
 				'installed_version' => $status->installed_version(),
-				'candidates'        => array_map( $this->candidate_projection( $status->installed_version() ), array_slice( $eligible_candidates, 0, 8 ) ),
+				'candidates'        => array_map( $this->candidate_projection( $status->installed_version(), $on_branch ), array_slice( $eligible_candidates, 0, 8 ) ),
 				'search_exhausted'  => $candidates->search_exhausted,
 				'diagnostics'       => $candidates->diagnostics,
 			)
@@ -122,8 +126,8 @@ final class ManagedReleaseBrowserOperations {
 			: '';
 	}
 
-	/** @return \Closure(RepositoryReleaseCandidate):array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,version_relationship:string} */
-	private function candidate_projection( string $installed_version ): \Closure {
+	/** @return \Closure(RepositoryReleaseCandidate):Candidate */
+	private function candidate_projection( string $installed_version, bool $on_branch ): \Closure {
 		return static fn ( RepositoryReleaseCandidate $candidate ): array => array(
 
 			'release_id'           => $candidate->provider_release_id,
@@ -133,7 +137,7 @@ final class ManagedReleaseBrowserOperations {
 
 			'published_at'         => $candidate->published_at,
 			'version_relationship' => self::version_relationship( $candidate->version, $installed_version ),
-		);
+		) + ( $on_branch ? array( 'zip_count' => count( $candidate->expected_asset_names ) ) : array() );
 	}
 
 	private static function version_relationship( string $version, string $installed_version ): string {
@@ -153,8 +157,9 @@ final class ManagedReleaseBrowserOperations {
 	}
 
 	/**
-	 * @return array{code:string,successful:bool,data:array<mixed>}
-	 * @param array<string, mixed> $data
+	 * @template TData of array<string,mixed>
+	 * @param TData $data
+	 * @return array{code:string,successful:bool,data:TData}
 	 */
 	private function outcome( string $code, bool $successful = false, array $data = array() ): array {
 		return array(

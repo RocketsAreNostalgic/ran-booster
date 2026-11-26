@@ -13,14 +13,15 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowPreflight;
  */
 final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowPreflight {
 
-	public const READY                      = 'ready';
-	public const RELEASE_UNAVAILABLE        = 'release_unavailable';
-	public const INVALID_RELEASE_ASSETS     = 'invalid_release_assets';
-	public const PREFLIGHT_UNAVAILABLE      = 'preflight_unavailable';
-	public const RELEASE_VERSION_MISMATCH   = 'release_version_mismatch';
-	public const RELEASE_HEADER_MISSING     = 'release_header_missing';
-	public const RELEASE_HEADER_INVALID     = 'release_header_invalid';
-	public const RELEASE_ARCHIVE_UNREADABLE = 'release_archive_unreadable';
+	public const MATCHING_RELEASE_UNAVAILABLE = 'matching_release_unavailable';
+	public const READY                        = 'ready';
+	public const RELEASE_UNAVAILABLE          = 'release_unavailable';
+	public const INVALID_RELEASE_ASSETS       = 'invalid_release_assets';
+	public const PREFLIGHT_UNAVAILABLE        = 'preflight_unavailable';
+	public const RELEASE_VERSION_MISMATCH     = 'release_version_mismatch';
+	public const RELEASE_HEADER_MISSING       = 'release_header_missing';
+	public const RELEASE_HEADER_INVALID       = 'release_header_invalid';
+	public const RELEASE_ARCHIVE_UNREADABLE   = 'release_archive_unreadable';
 
 	public function __construct(
 		string $code,
@@ -32,12 +33,14 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 		private string $version_relationship = '',
 		string $reason_code = '',
 		private string $detail = '',
-		private string $release_identity = ''
+		private string $release_identity = '',
+		public bool $matching_release_available = false
 	) {
 		if ( ! in_array(
 			$code,
 			array(
 				self::READY,
+				self::MATCHING_RELEASE_UNAVAILABLE,
 				self::RELEASE_UNAVAILABLE,
 				self::INVALID_RELEASE_ASSETS,
 				self::PREFLIGHT_UNAVAILABLE,

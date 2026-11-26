@@ -79,7 +79,7 @@ is not a replacement public API.
 
 | Historical operator task | Current Core path |
 | --- | --- |
-| Switch an eligible managed plugin or theme to releases | Open package settings → Releases → **Use releases**. Core validates before changing source; viewing settings does not change configuration. |
+| Switch an eligible managed plugin or theme to releases | Open package settings → Releases. While on Branch, check eligibility or list published versions for Stable or Preview. **Use releases** lets you confirm the latest eligible release or a published release matching your installed version, when available. The switch installs that ZIP and leaves Updates on Manual. |
 | Follow stable or preview releases | Choose the release track in package settings. Preview includes eligible prereleases and stable releases, never drafts. Changing track does not install or downgrade. |
 | Refresh an existing release-managed package | **Check releases** on managed Plugins or Themes; **Open WordPress updates** hands installation to WordPress. Disabled, Manual and Automatic retain their distinct authority. |
 | Install a not-yet-managed plugin or theme from a release | Use Core's Install Plugin or Install Theme release controls. Listing is metadata-only; inspection validates and discards the ZIP; Install freshly acquires it and verifies the inspected selection. Partial or uncertain outcomes do not claim adoption. |
@@ -387,31 +387,25 @@ push. **Disabled** permits neither.
 3. Core repeats authorization and confirms that the package has the required
    release metadata, listing and inspection facets, a stable provider
    repository identity and no native-target registration conflict.
-4. Core asks the selected provider for at most eight candidates in provider
-   preference order and inspects no more than the first two. The provider
-   performs its remote identity, release and archive checks. Core falls through
-   only for package incompatibility; vanished, corrupt or contradictory
-   releases fail closed. Core accepts only exact
-   listing-to-inspection identity, tag, version, channel, package-root and main
-   file continuity, then derives the public release URL from the metadata facet.
-5. Only after that check succeeds does Core admit the Branch package as a
-   native target for this request only. It asks the shared updater to offer
-   that exact release through `ran_wp_release_updater_offer_release_v1`, then
-   runs WordPress's own upgrader for that one package. The updater refuses an
-   older release (`release_older`), Updates set to Disabled or forced off, and
-   an updater copy without the offer.
-6. The stored source changes from `branch` to `release_asset` only when the
-   updater's finalisation reports a verified install. The change happens in
-   the transaction that clears native custody and repeats the repository
-   exclusivity check, and it records the release configuration, increments the
-   source revision and resets Automatic to Manual. A refused switch, or one
-   that fails before WordPress's installer completes, stays on Branch and asks
-   WordPress to recheck for updates at the end of the request. An uncertain or
-   interrupted install keeps native custody for the existing recovery path.
-   The request's reply comes before that commit at shutdown, so the page the
-   administrator lands on decides the result. It shows "Release tracking
-   enabled." only when it reads the package back on Releases, and otherwise
-   the existing uncertain-state message.
+4. In package settings, **Use releases** lists up to eight published
+   candidates on the selected track. The chooser compares their versions
+   with the installed header using the elected updater's ordering. It offers
+   the latest eligible version and, when distinct and available, a release
+   matching the installed version. Opening the chooser downloads no ZIP.
+5. The operator chooses the release to install. Core checks the signed
+   choice and installed version, then passes the release ID, tag, version
+   and any explicit downgrade consent to
+   `ran_wp_release_updater_install_exact_release_v1`. The updater reacquires
+   the chosen release, checks its ZIP and runs the WordPress upgrader.
+   If the release disappears or its ZIP fails validation, choosing another
+   release requires a fresh confirmation.
+6. A successful switch commits the source change, records the release
+   configuration, increments the source revision, clears native custody and
+   leaves subsequent updates on Manual. The landing page checks the
+   attempt's result against the current revision and hold. A confirmed
+   refusal on Branch offers **Use releases** again. An interrupted install
+   with a matching hold points to recovery. When an outcome has been
+   superseded or cannot be verified, the page reports that explicitly.
 
 Changing Stable/Preview channel later updates eligibility and invalidates the
 native transient; it does not install or downgrade. Returning to Branch changes

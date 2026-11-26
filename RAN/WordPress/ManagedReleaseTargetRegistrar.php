@@ -60,7 +60,7 @@ final class ManagedReleaseTargetRegistrar {
 	/** @var array<string, array{status: string, reason: string}> Last observed check result by target key. */
 	private array $check_outcomes = array();
 
-	/** @var array<string, array{configuration: ManagedReleaseConfiguration, revision: int, token: string, user: int}> This request's Branch-to-release switch, never stored. */
+	/** @var array<string, array{configuration: ManagedReleaseConfiguration, revision: int, token: string, user: int, installed_version?:string}> This request's Branch-to-release switch, never stored. */
 	private array $switches = array();
 
 	public function __construct(
@@ -146,7 +146,7 @@ final class ManagedReleaseTargetRegistrar {
 	 * Admit one Branch package's switch to releases for this request only. Its source changes when
 	 * the native install completes, in the transaction that ends the install's custody.
 	 */
-	public function admit_switch( string $type, Package $package, ManagedReleaseConfiguration $configuration, int $user_id ): bool {
+	public function admit_switch( string $type, Package $package, ManagedReleaseConfiguration $configuration, int $user_id, string $installed_version = '' ): bool {
 		$identifier = (string) $package->get_identifier();
 		$key        = self::key( $type, $identifier );
 		$token      = \RAN\AdoptionIdentity::of( $package );
@@ -162,10 +162,11 @@ final class ManagedReleaseTargetRegistrar {
 				return false;
 			}
 			$this->switches[ $key ] = array(
-				'configuration' => $configuration,
-				'revision'      => $package->get_source_revision(),
-				'token'         => $token,
-				'user'          => $user_id,
+				'configuration'     => $configuration,
+				'revision'          => $package->get_source_revision(),
+				'token'             => $token,
+				'user'              => $user_id,
+				'installed_version' => $installed_version,
 			);
 			$this->targets[ $key ]  = $this->register_package( $type, $package, $configuration );
 			if ( $this->native_target_is_active( $type, $identifier ) ) {
@@ -351,6 +352,14 @@ final class ManagedReleaseTargetRegistrar {
 			} elseif ( isset( $pending['switch_upgrader'] ) ) {
 				if ( null === $pending['lock'] || $pending['lock'] !== $lock->current_token() ) {
 					throw new \RuntimeException( 'The release switch no longer owns the updater lock.' );
+				}
+				// Re-read the header from disk under the updater lock before WordPress can replace files.
+				$switch = $this->switches[ $key ] ?? null;
+				if ( '' !== ( $switch['installed_version'] ?? '' ) ) {
+					$path = $this->metadata_path( $target['type'], $switch['configuration'], $target['identifier'] );
+					if ( ! is_readable( $path ) || get_file_data( $path, array( 'Version' => 'Version' ) )['Version'] !== $switch['installed_version'] ) {
+						throw new \RuntimeException( 'The installed version changed after confirmation.' );
+					}
 				}
 			} else {
 				$lock_token = $lock->acquire();

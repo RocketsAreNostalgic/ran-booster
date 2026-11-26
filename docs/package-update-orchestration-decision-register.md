@@ -398,6 +398,7 @@ state.
 - The registrar admits the package for this request only.
 - The updater's exact-release filter offers the chosen release, with no refresh
   before the upgrade.
+- The operator can choose the latest eligible release on the selected track or a distinct published release matching the installed version when one is found in the bounded listing. The chooser uses release metadata. Each install button confirms one exact release, which the updater verifies before replacing files. An unavailable selected release requires a new choice.
 - One native upgrade runs.
 - The source changes only on a verified install, inside the transaction that
   ends the install's custody.

@@ -440,7 +440,14 @@ final class BoosterServiceProvider {
 				),
 				new \RAN\Admin\ReleaseManagement\NativeManagedReleaseBrowser( $container->make( NativeReleaseTrackingFacade::class ) ),
 				links: $container->make( \RAN\Admin\ProviderTabLinks::class ),
-				native_hold: static fn (): ?array => $container->make( \RAN\Admin\ProviderSettingsPresenter::class )->native_hold(),
+				native_hold: static function () use ( $container, $selection_store ): ?array {
+					if ( ! isset( $selection_store->read()['native_mutation'] ) ) {
+						return null;
+					}
+
+					return $container->make( \RAN\Admin\ProviderSettingsPresenter::class )->native_hold()
+						?? throw new \RuntimeException( 'Native hold details are unavailable.' );
+				},
 				confirmed_enable: $container->make( NativeReleaseTrackingFacade::class )->enable( ... )
 			)
 		);

@@ -271,7 +271,10 @@ const createHarness = (
 			fetch: async (url, options) => {
 				requestedUrls.push(url);
 				requests.push(options.body.values);
-				return { ok: true, json: async () => responses.shift() };
+				const entry = responses.shift();
+				return typeof entry === 'function'
+					? entry()
+					: { ok: true, json: async () => entry };
 			},
 		},
 	};
@@ -287,6 +290,7 @@ const createHarness = (
 		requests,
 		requestedUrls,
 		initialize: context.initialize,
+		window: context.window,
 		afterPackageSwap: () => {
 			swappedBrowser = browser;
 			documentListeners.get('htmx:afterSwap')?.({
@@ -307,6 +311,91 @@ test('disabled managed browser does not initialize or fetch', async () => {
 
 	assert.equal(harness.requests.length, 0);
 	assert.equal(harness.nodes.get('retry').listeners.click?.length || 0, 0);
+});
+
+test('branch track changes and refresh list metadata without selecting or inspecting releases', async () => {
+	const slow = deferred();
+	const reply = (version) => ({
+		successful: true,
+		code: 'release_candidates_available',
+		data: {
+			installed_version: version,
+			candidates: [
+				candidate('current', version, 'same', ''),
+				candidate('old', '0.5.0', 'older', ''),
+			],
+		},
+	});
+	const harness = createHarness([
+		() => slow.promise,
+		reply('2.0.0-beta.1'),
+		reply('2.0.0-beta.2'),
+	]);
+	const host = new Node('div');
+	const trigger = new Node('div');
+	host.querySelector = (selector) =>
+		selector === ':scope > details' ? null : trigger;
+	let notify;
+	harness.window.MutationObserver = class {
+		constructor(callback) {
+			notify = callback;
+		}
+		observe() {}
+		disconnect() {}
+	};
+	harness.browser.closest = () => host;
+	Object.assign(harness.browser.dataset, {
+		ranBoosterBranchStable: 'list',
+		ranBoosterBranchPreview: 'preview-list',
+	});
+	delete harness.browser.dataset.ranBoosterManagedReleaseInspectNonce;
+	harness.initialize(harness.browser);
+	assert.equal(harness.requests.length, 0);
+	trigger.setAttribute('aria-expanded', 'true');
+	notify();
+	assert.equal(harness.requests.length, 1);
+	host.dispatchEvent({
+		type: 'change',
+		target: { matches: () => true, value: 'prerelease' },
+	});
+	await flush();
+	slow.resolve({ ok: true, json: async () => reply('1.0.0') });
+	await flush();
+	const rows = () => descendants(harness.nodes.get('candidate-list'));
+	assert.ok(
+		rows().some((node) => node.textContent?.includes('2.0.0-beta.1'))
+	);
+	assert.ok(
+		rows().some((node) => node.textContent?.includes('Installed/current'))
+	);
+	assert.ok(
+		rows().some((node) => node.textContent?.includes('earlier release'))
+	);
+	assert.ok(
+		rows().some((node) => node.textContent?.includes('Latest eligible'))
+	);
+	await harness.nodes.get('retry').dispatch('click');
+	assert.ok(
+		rows().some((node) => node.textContent?.includes('2.0.0-beta.2'))
+	);
+	assert.deepEqual(
+		harness.requests.map((request) => [
+			request.get('view_source'),
+			request.get('release_channel'),
+			request.get('_wpnonce'),
+		]),
+		[
+			['branch', 'stable', 'list'],
+			['branch', 'prerelease', 'preview-list'],
+			['branch', 'prerelease', 'preview-list'],
+		]
+	);
+	assert.ok(
+		rows()
+			.filter((node) => node.tagName === 'input')
+			.every((node) => node.disabled && !node.checked)
+	);
+	assert.ok(harness.nodes.get('review').hidden);
 });
 
 test('managed browser uses an origin-relative AJAX URL', async () => {
@@ -1571,7 +1660,7 @@ test('managed browser keeps provider failures visible beside Refresh releases', 
 	assert.equal(harness.nodes.get('error').hidden, false);
 	assert.match(
 		harness.nodes.get('error-message').textContent,
-		/rate-limited/
+		/could not list releases for this package/i
 	);
 	assert.equal(harness.nodes.get('retry').disabled, false);
 	assert.equal(harness.nodes.get('retry').textContent, 'Refresh releases');
@@ -1581,6 +1670,29 @@ test('managed browser keeps provider failures visible beside Refresh releases', 
 			.classList.contains('ran-booster-update-is-active'),
 		false
 	);
+});
+
+test('managed release listing distinguishes an HTTP failure from a missing or unusable response', async () => {
+	for (const [reply, expected] of [
+		[() => ({ ok: false, status: 502 }), /site returned HTTP 502/i],
+		[() => ({ ok: false, status: 429 }), /site returned HTTP 429/i],
+		[
+			() => Promise.reject(new Error('offline')),
+			/usable response from this site/i,
+		],
+		[
+			() => ({ ok: true, json: async () => JSON.parse('<html>') }),
+			/usable response from this site/i,
+		],
+	]) {
+		const harness = createHarness([reply]);
+		harness.initialize(harness.browser);
+		await flush();
+		const message = harness.nodes.get('error-message').textContent;
+		assert.match(message, expected);
+		assert.doesNotMatch(message, /rate.limit|credential/i);
+		assert.equal(harness.nodes.get('retry').disabled, false);
+	}
 });
 
 test('managed browser adds the lookup-credential hint only when the server supplies one', async () => {
@@ -1601,6 +1713,7 @@ test('managed browser adds the lookup-credential hint only when the server suppl
 	await flush();
 	const message = hinted.nodes.get('error-message');
 	assert.equal(hinted.nodes.get('error').hidden, false);
+	assert.match(message.textContent, /provider rate-limited this lookup/i);
 	assert.equal(message.children[0], ` ${hint.text} `);
 	assert.equal(message.children[1].tagName, 'a');
 	assert.equal(message.children[1].href, hint.url);

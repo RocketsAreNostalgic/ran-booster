@@ -15,23 +15,26 @@ use RAN\Deployment\PackageMutationGuard;
 use RAN\Deployment\PackageSourceGate;
 use RAN\PackageSource;
 use RAN\Storage\RepositorySourceGuard;
+use RAN\WPReleaseUpdater\V1\Contract\ReleaseVersion;
 use Throwable;
 
-/** @internal Fixed Core placement for repository release capabilities. */
+/**
+ * @internal Fixed Core placement for repository release capabilities.
+ * @phpstan-type SwitchOption array{relationship:'newer'|'same'|'older',version_relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity:string,release_tag:string,confirmed_release_nonce:string,fallback_message:string,confirmed_installed_version:string}
+ * @phpstan-type SwitchError array{successful:false,code:string,data:array{message:string,reason?:string,detail?:string}}
+ */
 final class ReleaseManagementControls {
 	private const RESULT_QUERY_KEY = 'ran_booster_release_result';
 
-	private const RESULT_SUCCESS_QUERY_KEY  = 'ran_booster_release_success';
-	private const RESULT_TYPE_QUERY_KEY     = 'ran_booster_release_type';
-	private const RESULT_PACKAGE_QUERY_KEY  = 'ran_booster_release_package';
-	private const RESULT_NONCE_QUERY_KEY    = 'ran_booster_release_result_nonce';
-	private const RESULT_NONCE_ACTION       = 'ran-booster-result-';
-	private const CHANNEL_QUERY_KEY         = 'ran_booster_release_channel';
-	private const REASON_QUERY_KEY          = 'ran_booster_release_reason';
-	private const DETAIL_QUERY_KEY          = 'ran_booster_release_detail';
-	private const RELEASE_ID_QUERY_KEY      = 'ran_booster_release_id';
-	private const RELEASE_TAG_QUERY_KEY     = 'ran_booster_release_tag';
-	private const SKIPPED_VERSION_QUERY_KEY = 'ran_booster_skipped_version';
+
+	private const RESULT_SUCCESS_QUERY_KEY = 'ran_booster_release_success';
+	private const RESULT_TYPE_QUERY_KEY    = 'ran_booster_release_type';
+	private const RESULT_PACKAGE_QUERY_KEY = 'ran_booster_release_package';
+	private const RESULT_NONCE_QUERY_KEY   = 'ran_booster_release_result_nonce';
+	private const RESULT_NONCE_ACTION      = 'ran-booster-result-';
+	private const CHANNEL_QUERY_KEY        = 'ran_booster_release_channel';
+	private const REASON_QUERY_KEY         = 'ran_booster_release_reason';
+	private const DETAIL_QUERY_KEY         = 'ran_booster_release_detail';
 
 	private readonly ProspectiveReleaseOperations $prospective_operations;
 	private readonly ReleaseTrackingOperations $tracking;
@@ -48,7 +51,7 @@ final class ReleaseManagementControls {
 	/**
 	 * @param (callable(): (?array<string, mixed>))|null $native_hold
 	 * @param (callable(): bool)|null                     $updates_forced_off
-	 * @param (callable(string,string,int,string,string,string,string,?array{identity:string,tag:string,version:string}):\RAN\AddOn\ReleaseTracking\ReleaseTrackingResult)|null $confirmed_enable
+	 * @param (callable(string,string,int,string,string,string,string,?array{identity:string,tag:string,version:string,installed_version?:string}):\RAN\AddOn\ReleaseTracking\ReleaseTrackingResult)|null $confirmed_enable
 	 */
 	public function __construct(
 		ReleaseTrackingFacade $releases,
@@ -222,8 +225,8 @@ final class ReleaseManagementControls {
 		$status                = null === $package ? null : $this->package_status( $package );
 		$repository_conflict   = null === $package ? array() : $this->repository_conflict_packages( $package, $status );
 		$nonces                = null === $package ? array() : $this->package_nonce_actions( $package, $status );
-		$native_hold           = $this->request_boundary( $this->native_hold, null );
-		$native_hold           = is_array( $native_hold ) ? $native_hold : null;
+		$native_hold_read      = $this->request_boundary( $this->native_hold, false );
+		$native_hold           = is_array( $native_hold_read ) ? $native_hold_read : null;
 		$updates_forced_off    = $this->updates_forced_off_for_display();
 		$switch_confirmation   = null;
 		$operation_notice_html = '';
@@ -232,38 +235,90 @@ final class ReleaseManagementControls {
 			&& $release_pane;
 		if ( 'edit' === $mode && null !== $result && '' !== $code && ! $duplicate_conflict ) {
 			if ( $this->is_switch_confirmation_code( $code ) ) {
-				if ( $release_pane && null !== $status && $this->can_confirm_switch( $status, $nonces, $updates_forced_off, $native_hold ) ) {
-					$confirm_channel                        = 'prerelease' === $result['channel'] ? 'prerelease' : 'stable';
-					[ $confirm_revision, $encoded_version ] = array_pad( explode( ':', $result['detail'], 2 ), 2, '' );
-					$decoded_version                        = base64_decode( strtr( $encoded_version, '-_', '+/' ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Decode the signed, URL-safe confirmation version.
-					$confirm_version                        = $this->bounded_release_token( $decoded_version, 64 );
-					if ( (string) $status->source_revision() === $confirm_revision && '' !== $result['release_identity'] && '' !== $result['release_tag'] && '' !== $confirm_version ) {
-						$switch_confirmation = array(
-							'relationship'            => 'switch_confirm_older' === $code ? 'older' : ( 'switch_confirm_same' === $code ? 'same' : 'newer' ),
-							'channel'                 => $confirm_channel,
-							'installed_version'       => $status->installed_version(),
-							'release_version'         => $confirm_version,
-							'release_identity'        => $result['release_identity'],
-							'release_tag'             => $result['release_tag'],
-							'confirmed_release_nonce' => wp_create_nonce( $this->confirmed_release_nonce_action( $type, $status->identifier(), $status->source_revision(), $confirm_channel, $result['release_identity'], $result['release_tag'], $confirm_version, 'switch_confirm_older' === $code ) ),
-							'fallback_message'        => $this->display->switch_fallback_message( $result['reason'], $result['skipped_version'] ),
-						);
+				if ( $release_pane && null !== $status && $this->can_confirm_switch( $status, $nonces, $updates_forced_off, $native_hold_read ) ) {
+					if ( (string) $status->source_revision() === $result['detail'] ) {
+						$chooser = $this->switch_choices( $type, $status->identifier(), $status->source_revision(), $result['channel'], $status );
+						if ( $chooser['successful'] ) {
+							$switch_confirmation = $chooser['data'];
+						} else {
+							$operation_notice_html = esc_html( $chooser['data']['message'] );
+						}
+					} else {
+						$operation_notice_html = $this->display->preflight_failure_message( 'release_selection_changed' );
 					}
 				}
 			} elseif ( ! $this->is_top_level_switch_outcome( $code ) ) {
-				[ $code, $successful ] = ReleaseTrackingOperations::settled( $code, $result['successful'], $status, $native_hold, $result['type'], $result['identifier'] );
+				[ $code, $successful ] = ReleaseTrackingOperations::settled( $code, $result['successful'], $status, $native_hold_read, $result['type'], $result['identifier'], $result['detail'] );
 				$reload_url            = '' !== $result['identifier'] ? $this->return_url( $result['type'], $result['identifier'], true ) : '';
 				ob_start();
 				$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $successful, $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'], $reload_url, $native_hold ), null );
 				$operation_notice_html = (string) ob_get_clean();
 			}
 		}
-		$prospective = $this->prospective_projection( $type );
-		$recheck     = isset( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI marker.
-			&& is_scalar( $_GET['ran_booster_release_recheck'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This scalar flag only selects read-only source-section presentation; it does not perform a release recheck.
-			&& '1' === (string) $_GET['ran_booster_release_recheck']; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This literal comparison only selects read-only source-section presentation; mutation controls keep their separate nonces.
+		$browse_candidates = array();
+		$browse_message    = '';
+		$readiness_message = '';
+		$recheck_request   = isset( $_GET['ran_booster_release_recheck'] ) && '1' === $_GET['ran_booster_release_recheck'];
+		$list_request      = $_GET['ran_booster_release_list'] ?? '';
+		$list_requests     = $recheck_request ? array( 'stable', 'prerelease' ) : ( is_string( $list_request ) && '' !== $list_request ? array( $list_request ) : array() );
+		foreach ( $list_requests as $requested_track ) {
+			if ( ! $release_pane || null === $status ) {
+				continue;
+			}
+			$channel     = sanitize_key( wp_unslash( $requested_track ) );
+			$list_nonces = $_GET['_ran_booster_release_list_nonce'] ?? array();
+			$nonce       = is_array( $list_nonces ) ? ( $list_nonces[ $channel ] ?? null ) : null;
+			$action      = in_array( $channel, array( 'stable', 'prerelease' ), true ) ? $this->package_nonce_action( 'list_candidates', $package, $channel ) : null;
+			$label       = 'stable' === $channel ? __( 'Stable', 'ran-booster' ) : __( 'Preview', 'ran-booster' );
+			/* translators: Track name and, where applicable, a version or release tags. */
+			$message = sprintf( __( '%s track: release lookup unavailable. Refresh the page and try again.', 'ran-booster' ), $label );
+			if ( null !== $action && is_string( $nonce ) && current_user_can( 'manage_options' ) && current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' )
+				&& false !== wp_verify_nonce( sanitize_text_field( wp_unslash( $nonce ) ), $action ) && '' === ReleaseTrackingOperations::repository_blocker( $status ) ) {
+				$listing = $this->request_boundary( fn () => $this->managed_browser->list_candidates( $type, $status->identifier(), $status->source_revision(), $channel, sanitize_text_field( wp_unslash( $nonce ) ), 'branch' === $status->source() ), null );
+				/* translators: Track name and, where applicable, a version or release tags. */
+				$message = sprintf( __( '%s track: Booster could not list releases. Try again.', 'ran-booster' ), $label );
+				if ( null !== $listing && $listing['successful'] && is_array( $listing['data']['candidates'] ?? null ) ) {
+					$candidates = $listing['data']['candidates'];
+					if ( $recheck_request ) {
+						$version    = '';
+						$comparable = class_exists( ReleaseVersion::class );
+						foreach ( $candidates as $candidate ) {
+							$found = $candidate['version'] ?? '';
+							if ( ! is_string( $found ) || ! $comparable || null === ReleaseVersion::normalize_header( $found ) ) {
+								$comparable = false;
+								break;
+							}
+							if ( '' === $version || 1 === ReleaseVersion::compare( $found, $version ) ) {
+								$version = $found;
+							}
+						}
+						if ( ! $comparable && array() !== $candidates ) {
+							$version = '';
+						}
 
-		$this->request_boundary( fn () => $this->display->render_advanced_source_section( $mode, $type, $selected_source, $package, $status, $page_url, $result['channel'] ?? '', $nonces, $prospective, $recheck, $operation_notice_html, $repository_conflict, $updates_forced_off, $switch_confirmation ), null );
+						/* translators: Track name and, where applicable, a version or release tags. */
+						$message = '' !== $version ? sprintf( __( 'Latest %1$s release found: %2$s.', 'ran-booster' ), $label, $version ) : ( array() === $candidates ? sprintf( __( '%s track: no published version found in this lookup.', 'ran-booster' ), $label ) : sprintf( __( '%s track: the latest version could not be determined.', 'ran-booster' ), $label ) );
+					} else {
+						$browse_candidates = $candidates;
+						/* translators: Track name. */
+						$message = array() === $candidates ? sprintf( __( '%s track: no published releases found in this lookup.', 'ran-booster' ), $label ) : '';
+					}
+				} elseif ( isset( $listing['data']['rate_limited_provider'] ) ) {
+					/* translators: Track name and, where applicable, a version or release tags. */
+					$message = sprintf( __( '%s track: the Git provider rate-limited this lookup. Try again later.', 'ran-booster' ), $label );
+				}
+			}
+			if ( $recheck_request ) {
+				$readiness_message .= ( '' === $readiness_message ? '' : ' ' ) . $message;
+			} else {
+				$browse_message = $message;
+			}
+		}
+
+		$prospective    = $this->prospective_projection( $type );
+		$browse_channel = 'prerelease' === $list_request ? 'prerelease' : 'stable';
+
+		$this->request_boundary( fn () => $this->display->render_advanced_source_section( $mode, $type, $selected_source, $package, $status, $page_url, $result['channel'] ?? '', $nonces, $prospective, $recheck_request, $operation_notice_html, $repository_conflict, $updates_forced_off, $switch_confirmation, $browse_message, $readiness_message, $browse_channel, $browse_candidates ), null );
 		if ( $release_pane ) {
 			?>
 			</div>
@@ -320,9 +375,9 @@ final class ReleaseManagementControls {
 		}
 
 		$status                = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->fresh_status( $result['type'], $result['identifier'] ), null );
-		$native_hold           = $this->request_boundary( $this->native_hold, null );
-		$native_hold           = is_array( $native_hold ) ? $native_hold : null;
-		[ $code, $successful ] = ReleaseTrackingOperations::settled( $code, $result['successful'], $status, $native_hold, $result['type'], $result['identifier'] );
+		$native_hold_read      = $this->request_boundary( $this->native_hold, false );
+		$native_hold           = is_array( $native_hold_read ) ? $native_hold_read : null;
+		[ $code, $successful ] = ReleaseTrackingOperations::settled( $code, $result['successful'], $status, $native_hold_read, $result['type'], $result['identifier'], $result['detail'] );
 		$reload_url            = '' !== $result['identifier'] ? $this->return_url( $result['type'], $result['identifier'], true ) : '';
 		\RAN\Admin\BoosterNoticeScope::render( fn () => $this->request_boundary( fn () => $this->display->render_operation_notice( $code, $successful, $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'], $reload_url, $native_hold ), null ) );
 	}
@@ -555,33 +610,38 @@ final class ReleaseManagementControls {
 					}
 					if ( 'enable' === $operation && '' !== $channel ) {
 						$confirmed = is_string( $request['confirm_switch'] ?? null ) && '1' === wp_unslash( $request['confirm_switch'] );
-						if ( ! $confirmed ) {
-							$outcome = $this->unconfirmed_switch_outcome( $type, $identifier, $revision, $channel );
+						$choice    = $request['switch_release_choice'] ?? 'latest';
+						if ( ! in_array( $choice, array( 'latest', 'installed' ), true ) ) {
+							$outcome = $this->package_outcome( $type, $identifier, 'invalid_request', false );
+						} elseif ( ! $confirmed ) {
+							$outcome = $this->package_outcome( $type, $identifier, 'switch_choose', false ) + array( 'detail' => (string) $revision );
 						} else {
 							$release_id      = $this->bounded_release_token( is_string( $request['confirmed_release_identity'] ?? null ) ? wp_unslash( $request['confirmed_release_identity'] ) : '', 191 );
 							$release_tag     = $this->bounded_release_token( is_string( $request['confirmed_release_tag'] ?? null ) ? wp_unslash( $request['confirmed_release_tag'] ) : '', 128 );
 							$release_version = $this->bounded_release_token( is_string( $request['confirmed_release_version'] ?? null ) ? wp_unslash( $request['confirmed_release_version'] ) : '', 64 );
 							$release_nonce   = is_string( $request['confirmed_release_nonce'] ?? null ) ? sanitize_text_field( wp_unslash( $request['confirmed_release_nonce'] ) ) : '';
 							$older_value     = is_string( $request['confirmed_release_older'] ?? null ) ? wp_unslash( $request['confirmed_release_older'] ) : '';
-							$release_action  = $this->confirmed_release_nonce_action( $type, $identifier, $revision, $channel, $release_id, $release_tag, $release_version, '1' === $older_value );
+							$installed_proof = $this->bounded_release_token( is_string( $request['confirmed_installed_version'] ?? null ) ? wp_unslash( $request['confirmed_installed_version'] ) : '', 64 );
+							$release_action  = $this->confirmed_release_nonce_action( $type, $identifier, $revision, $channel, $release_id, $release_tag, $release_version, '1' === $older_value, $installed_proof );
 							$older_confirmed = is_string( $request['confirm_older_release'] ?? null ) && '1' === wp_unslash( $request['confirm_older_release'] );
 
-							if ( '' === $release_id || '' === $release_tag || '' === $release_version || '' === $release_nonce || ! in_array( $older_value, array( '0', '1' ), true ) || 1 !== wp_verify_nonce( $release_nonce, $release_action ) ) {
+							if ( '' === $installed_proof || '' === $release_id || '' === $release_tag || '' === $release_version || '' === $release_nonce || ! in_array( $older_value, array( '0', '1' ), true ) || 1 !== wp_verify_nonce( $release_nonce, $release_action ) ) {
 								$outcome = $this->package_outcome( $type, $identifier, 'release_selection_changed', false );
-							} elseif ( $older_confirmed && '1' !== $older_value ) {
+							} elseif ( ( '1' === $older_value ) !== $older_confirmed ) {
 								$outcome = $this->package_outcome( $type, $identifier, 'release_older', false );
 							} else {
-								$confirmed_release = array(
+								$confirmed_release                      = array(
 									'identity' => $release_id,
 									'tag'      => $release_tag,
 									'version'  => $release_version,
 								);
-								$outcome           = $this->request_boundary(
+								$confirmed_release['installed_version'] = $installed_proof;
+								$outcome                                = $this->request_boundary(
 									fn (): array => $this->tracking->execute( $operation, $type, $identifier, $revision, $channel, $nonce, $older_confirmed ? $release_id : '', $older_confirmed ? $release_tag : '', $confirmed_release ),
 									$this->package_outcome( $type, $identifier, 'service_unavailable', false )
 								);
 							}
-							if ( in_array( $outcome['code'], array( 'wordpress_failed', 'native_hold' ), true ) ) {
+							if ( 'wordpress_failed' === $outcome['code'] ) {
 								$outcome['code'] = 'switch_failed';
 							} elseif ( 'management_state_uncertain' === $outcome['code'] ) {
 								$outcome['code'] = 'switch_uncertain';
@@ -595,6 +655,11 @@ final class ReleaseManagementControls {
 					}
 				}
 			}
+		}
+
+		if ( 'enable' === $operation && $this->is_top_level_switch_outcome( $outcome['code'] ) ) {
+			// Carry the attempt's source revision in the already signed result detail.
+			$outcome['detail'] = (string) $revision;
 		}
 
 		// These bounded fields affect only the signed result's local redirect projection; they are not forwarded to an operation owner.
@@ -649,7 +714,8 @@ final class ReleaseManagementControls {
 		$revision   = $this->requested_revision( $request );
 		$channel    = $this->release_channel_from( $request );
 		$nonce      = is_string( $request['_wpnonce'] ?? null ) ? sanitize_text_field( wp_unslash( $request['_wpnonce'] ) ) : '';
-		if ( '' === $type || '' === $identifier || $revision < 1 || '' === $channel ) {
+		$choice     = $request['switch_release_choice'] ?? 'latest';
+		if ( ! in_array( $choice, array( 'latest', 'installed' ), true ) || '' === $type || '' === $identifier || $revision < 1 || '' === $channel ) {
 			return $this->preflight_error_payload( 'invalid_request' );
 		}
 		if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' ) ) {
@@ -674,50 +740,104 @@ final class ReleaseManagementControls {
 			return $this->preflight_error_payload( 'source_paused' );
 		}
 
-		$native_hold = $this->request_boundary( $this->native_hold, null );
+		$native_hold = $this->request_boundary( $this->native_hold, false );
+		if ( false === $native_hold ) {
+			return $this->preflight_error_payload( 'unable_to_check' );
+		}
 		if ( is_array( $native_hold ) ) {
 			return $this->display->switch_hold_preflight_response( $type, $identifier, $native_hold );
 		}
 
-		$preflight = $this->request_boundary(
-			fn (): ?ReleaseTrackingPreflight => $this->tracking->preflight( $type, $identifier, $revision, $channel, $nonce ),
-			'threw'
-		);
-		if ( 'threw' === $preflight ) {
-			return $this->preflight_error_payload( 'unable_to_check' );
+		return $this->switch_choices( $type, $identifier, $revision, $channel, $status );
+	}
+
+	/** @return array{successful:true,code:string,data:SwitchOption&array{matching_release?:(SwitchOption&array{relationship:'same'})}}|SwitchError */
+	private function switch_choices( string $type, string $identifier, int $revision, string $channel, ReleaseTrackingStatus $status ): array {
+		if ( ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
+			return $this->preflight_error_payload( 'invalid_request' );
 		}
-		if ( ! $preflight instanceof ReleaseTrackingPreflight ) {
+		if ( ! class_exists( ReleaseVersion::class ) ) {
+			return $this->preflight_error_payload( 'version_comparison_unavailable' );
+		}
+		if ( ! $status->eligible() || '' !== ReleaseTrackingOperations::repository_blocker( $status ) ) {
 			return $this->preflight_error_payload( 'source_changed' );
 		}
-		if ( ! $preflight->ready() ) {
-			return $this->preflight_error_payload( $preflight->code(), $preflight->reason_code(), $preflight->detail_text() );
-		}
-		if ( '' === $this->bounded_release_token( $preflight->release_identity(), 191 )
-			|| '' === $this->bounded_release_token( $preflight->release_tag(), 128 )
-			|| '' === $this->bounded_release_token( $preflight->latest_version(), 64 ) ) {
-			return $this->preflight_error_payload( 'unable_to_check' );
-		}
-
-		$data                            = array(
-			'installed_version'    => $status->installed_version(),
-			'release_version'      => $preflight->latest_version(),
-			'release_identity'     => $preflight->release_identity(),
-			'release_tag'          => $preflight->release_tag(),
-			'release_url'          => $preflight->release_url(),
-			'version_relationship' => $preflight->version_relationship(),
-			'channel'              => $channel,
+		$listing = $this->request_boundary(
+			fn () => $this->managed_browser->list_candidates( $type, $identifier, $revision, $channel, wp_create_nonce( $this->tracking->nonce_action( 'list_candidates', $type, $identifier, $revision, $channel ) ), true ),
+			null
 		);
-		$data['fallback_message']        = $this->display->switch_fallback_message( $preflight->reason_code(), $preflight->detail_text() );
-		$data['confirmed_release_nonce'] = wp_create_nonce( $this->confirmed_release_nonce_action( $type, $identifier, $revision, $channel, $preflight->release_identity(), $preflight->release_tag(), $preflight->latest_version(), 'older' === $preflight->version_relationship() ) );
-
+		if ( null === $listing || ! $listing['successful'] || ! is_array( $listing['data']['candidates'] ?? null ) ) {
+			if ( 'unable_to_check' === ( $listing['code'] ?? '' ) && is_string( $listing['data']['rate_limited_provider'] ?? null ) ) {
+				return $this->preflight_error_payload( 'lookup_rate_limited' );
+			}
+			return $this->preflight_error_payload( $listing['code'] ?? 'unable_to_check' );
+		}
+		$installed = $status->installed_version();
+		if ( '' === $this->bounded_release_token( $installed, 64 ) || ( $listing['data']['installed_version'] ?? '' ) !== $installed ) {
+			return $this->preflight_error_payload( 'release_selection_changed' );
+		}
+		$latest          = null;
+		$match           = null;
+		$skipped_version = '';
+		$skipped_reason  = '';
+		foreach ( $listing['data']['candidates'] as $candidate ) {
+			if ( ! is_array( $candidate ) || ( 'stable' === $channel && true === ( $candidate['prerelease'] ?? null ) ) ) {
+				continue;
+			}
+			$id       = $this->bounded_release_token( $candidate['release_id'] ?? null, 191 );
+			$tag      = $this->bounded_release_token( $candidate['tag'] ?? null, 128 );
+			$version  = $this->bounded_release_token( $candidate['version'] ?? null, 64 );
+			$relation = ReleaseVersion::relationship( $version, $installed );
+			if ( '' === $id || '' === $tag ) {
+				return $this->preflight_error_payload( 'invalid_release_assets' );
+			}
+			if ( ! in_array( $relation, array( 'same', 'newer', 'older' ), true ) ) {
+				return $this->preflight_error_payload( 'version_comparison_unavailable' );
+			}
+			if ( 1 !== ( $candidate['zip_count'] ?? null ) ) {
+				if ( '' === $skipped_version || 1 === ReleaseVersion::compare( $version, $skipped_version ) ) {
+					$skipped_version = $version;
+					$skipped_reason  = 0 === ( $candidate['zip_count'] ?? null ) ? 'package_asset_missing' : 'package_asset_ambiguous';
+				}
+				continue;
+			}
+			$option = array(
+				'release_identity'            => $id,
+				'release_tag'                 => $tag,
+				'release_version'             => $version,
+				'relationship'                => $relation,
+				'version_relationship'        => $relation,
+				'channel'                     => $channel,
+				'installed_version'           => $installed,
+				'confirmed_installed_version' => $installed,
+				'fallback_message'            => '',
+				'confirmed_release_nonce'     => wp_create_nonce( $this->confirmed_release_nonce_action( $type, $identifier, $revision, $channel, $id, $tag, $version, 'older' === $relation, $installed ) ),
+			);
+			if ( null === $latest || 1 === ReleaseVersion::compare( $version, $latest['release_version'] ) ) {
+				$latest = $option;
+			}
+			if ( null === $match && 'same' === $relation ) {
+				$match                 = $option;
+				$match['relationship'] = 'same';
+			}
+		}
+		if ( null === $latest ) {
+			return $this->preflight_error_payload( 'release_unavailable', '' === $skipped_reason ? 'no_releases' : $skipped_reason, $skipped_version );
+		}
+		if ( '' !== $skipped_version && 1 === ReleaseVersion::compare( $skipped_version, $latest['release_version'] ) ) {
+			$latest['fallback_message'] = $this->display->switch_fallback_message( $skipped_reason, $skipped_version );
+		}
+		if ( null !== $match && 'newer' === $latest['relationship'] ) {
+			$latest['matching_release'] = $match;
+		}
 		return array(
 			'successful' => true,
 			'code'       => 'ready',
-			'data'       => $data,
+			'data'       => $latest,
 		);
 	}
 
-	/** @return array{successful:bool,code:string,data:array<string, mixed>} */
+	/** @return SwitchError */
 	private function preflight_error_payload( string $code, string $reason = '', string $detail = '' ): array {
 		$data = array(
 			'message' => $this->display->preflight_failure_message( $code, $reason, $detail ),
@@ -736,81 +856,13 @@ final class ReleaseManagementControls {
 		);
 	}
 
-	/** @return array{type:string,identifier:string,code:string,successful:bool,reason?:string,check_reason?:string,detail?:string,release_identity?:string,release_tag?:string,skipped_version?:string} */
-	private function unconfirmed_switch_outcome( string $type, string $identifier, int $revision, string $channel ): array {
-		$status = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->status( $type, $identifier, $revision ), null );
-		if ( null === $status || PackageSource::BRANCH->value !== $status->source() ) {
-			return $this->package_outcome( $type, $identifier, 'source_changed', false );
-		}
-		if ( (bool) $this->request_boundary( $this->updates_forced_off, false ) ) {
-			return $this->package_outcome( $type, $identifier, 'policy_forced_off', false );
-		}
-		if ( 'disabled' === $status->deployment_policy() ) {
-			return $this->package_outcome( $type, $identifier, 'policy_disabled', false );
-		}
-		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) ) {
-			return $this->package_outcome( $type, $identifier, 'source_paused', false );
-		}
-		if ( is_array( $this->request_boundary( $this->native_hold, null ) ) ) {
-			return $this->package_outcome( $type, $identifier, 'switch_failed', false );
-		}
-
-		$preflight_nonce = $this->request_boundary( fn (): string => wp_create_nonce( $this->tracking->nonce_action( 'preflight', $type, $identifier, $revision, $channel ) ), '' );
-		if ( '' === $preflight_nonce ) {
-			return $this->package_outcome( $type, $identifier, 'service_unavailable', false );
-		}
-
-		$preflight = $this->request_boundary(
-			fn (): ?ReleaseTrackingPreflight => $this->tracking->preflight( $type, $identifier, $revision, $channel, $preflight_nonce ),
-			'threw'
-		);
-		if ( 'threw' === $preflight ) {
-			return $this->package_outcome( $type, $identifier, 'service_unavailable', false );
-		}
-		if ( ! $preflight instanceof ReleaseTrackingPreflight ) {
-			return $this->package_outcome( $type, $identifier, 'source_changed', false );
-		}
-		if ( ! $preflight->ready() ) {
-			$outcome = $this->package_outcome( $type, $identifier, $preflight->code(), false );
-			if ( '' !== $preflight->reason_code() ) {
-				$outcome['reason'] = $preflight->reason_code();
-			}
-			if ( '' !== $preflight->detail_text() ) {
-				$outcome['detail'] = $preflight->detail_text();
-			}
-
-			return $outcome;
-		}
-		if ( '' === $this->bounded_release_token( $preflight->release_identity(), 191 )
-			|| '' === $this->bounded_release_token( $preflight->release_tag(), 128 )
-			|| '' === $this->bounded_release_token( $preflight->latest_version(), 64 ) ) {
-			return $this->package_outcome( $type, $identifier, 'service_unavailable', false );
-		}
-
-		$code = match ( $preflight->version_relationship() ) {
-			'same'  => 'switch_confirm_same',
-			'older' => 'switch_confirm_older',
-			default => 'switch_confirm_newer',
-		};
-		$outcome = $this->package_outcome( $type, $identifier, $code, false );
-		$detail  = rtrim( strtr( base64_encode( $preflight->latest_version() ), '+/', '-_' ), '=' ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Carry the exact version through the signed redirect.
-		if ( '' !== $detail ) {
-			$outcome['detail'] = $revision . ':' . $detail;
-		}
-		$outcome['reason']           = $preflight->reason_code();
-		$outcome['skipped_version']  = $preflight->detail_text();
-		$outcome['release_identity'] = $preflight->release_identity();
-		$outcome['release_tag']      = $preflight->release_tag();
-
-		return $outcome;
-	}
-
 	private function is_top_level_switch_outcome( string $code ): bool {
 		return in_array(
 			$code,
 			array(
 				'release_enabled',
 				'switch_failed',
+				'switch_refused',
 				'switch_uncertain',
 				'native_hold',
 				'policy_disabled',
@@ -825,14 +877,14 @@ final class ReleaseManagementControls {
 	}
 
 	private function is_switch_confirmation_code( string $code ): bool {
-		return in_array( $code, array( 'switch_confirm_newer', 'switch_confirm_same', 'switch_confirm_older' ), true );
+		return 'switch_choose' === $code;
 	}
 
 	/**
 	 * @param array<string, string> $nonces
-	 * @param array<string, mixed>|null $native_hold
+	 * @param array<string, mixed>|false|null $native_hold
 	 */
-	private function can_confirm_switch( ?ReleaseTrackingStatus $status, array $nonces, bool $updates_forced_off, ?array $native_hold ): bool {
+	private function can_confirm_switch( ?ReleaseTrackingStatus $status, array $nonces, bool $updates_forced_off, array|false|null $native_hold ): bool {
 		return null !== $status
 			&& PackageSource::BRANCH->value === $status->source()
 			&& $status->eligible()
@@ -908,9 +960,10 @@ final class ReleaseManagementControls {
 		$release_id = is_string( $request['release_id'] ?? null ) ? wp_unslash( $request['release_id'] ) : '';
 		$tag        = is_string( $request['release_tag'] ?? null ) ? wp_unslash( $request['release_tag'] ) : '';
 
-		$outcome = $this->request_boundary(
+		$view_source = $request['view_source'] ?? '';
+		$outcome     = $this->request_boundary(
 			fn (): array => 'list_candidates' === $operation
-				? $this->managed_browser->list_candidates( $type, $identifier, $revision, $channel, $nonce )
+				? $this->managed_browser->list_candidates( $type, $identifier, $revision, $channel, $nonce, 'branch' === $view_source )
 				: $this->managed_browser->inspect( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce ),
 			array(
 				'code'       => 'unable_to_check',
@@ -1186,6 +1239,14 @@ final class ReleaseManagementControls {
 				$actions[ $operation ] = wp_create_nonce( $nonce );
 			}
 		}
+		if ( null !== $status && in_array( $status->source(), array( 'branch', 'release_asset' ), true ) ) {
+			foreach ( array( 'stable', 'prerelease' ) as $channel ) {
+				$nonce = $this->package_nonce_action( 'list_candidates', $package, $channel );
+				if ( null !== $nonce ) {
+					$actions[ 'branch_list_' . $channel ] = wp_create_nonce( $nonce );
+				}
+			}
+		}
 		if ( null !== $status && 'release_asset' === $status->source() ) {
 			foreach ( array( 'list_candidates', 'inspect_candidate' ) as $operation ) {
 				$nonce = $this->package_nonce_action( $operation, $package, $status->channel() );
@@ -1266,7 +1327,7 @@ final class ReleaseManagementControls {
 	}
 
 	/**
-	 * @param array{type:string,identifier:string,code:string,successful:bool,reason?:string,check_reason?:string,detail?:string,release_identity?:string,release_tag?:string,skipped_version?:string} $outcome
+	 * @param array{type:string,identifier:string,code:string,successful:bool,reason?:string,check_reason?:string,detail?:string} $outcome
 	 * @return array<string, string>
 	 */
 	private function result_query_arguments( array $outcome, string $channel = '' ): array {
@@ -1279,9 +1340,6 @@ final class ReleaseManagementControls {
 		$reason                          = $outcome['reason'] ?? '';
 		$reason                          = in_array( $reason, ReleaseTrackingPreflight::reason_codes(), true ) ? $reason : '';
 		$detail                          = ReleaseTrackingPreflight::detail( $outcome['detail'] ?? '' );
-		$release_identity                = $this->bounded_release_token( $outcome['release_identity'] ?? '', 191 );
-		$release_tag                     = $this->bounded_release_token( $outcome['release_tag'] ?? '', 128 );
-		$skipped_version                 = $this->bounded_release_token( $outcome['skipped_version'] ?? '', 64 );
 		$args                            = array(
 			self::RESULT_QUERY_KEY         => $code,
 			self::RESULT_SUCCESS_QUERY_KEY => $successful ? '1' : '0',
@@ -1295,85 +1353,60 @@ final class ReleaseManagementControls {
 		if ( '' !== $detail ) {
 			$args[ self::DETAIL_QUERY_KEY ] = $detail;
 		}
-		if ( '' !== $release_identity ) {
-			$args[ self::RELEASE_ID_QUERY_KEY ] = rawurlencode( $release_identity );
-		}
-		if ( '' !== $release_tag ) {
-			$args[ self::RELEASE_TAG_QUERY_KEY ] = rawurlencode( $release_tag );
-		}
-		if ( '' !== $skipped_version ) {
-			$args[ self::SKIPPED_VERSION_QUERY_KEY ] = rawurlencode( $skipped_version );
-		}
 		$args[ self::RESULT_NONCE_QUERY_KEY ] = wp_create_nonce(
-			$this->result_nonce_action( $code, $successful, $type, $identifier, $channel, $reason, $detail, $release_identity, $release_tag, $skipped_version )
+			$this->result_nonce_action( $code, $successful, $type, $identifier, $channel, $reason, $detail )
 		);
 
 		return $args;
 	}
 
-	/** @return array{code:string,successful:bool,type:string,identifier:string,channel:string,reason:string,detail:string,release_identity:string,release_tag:string,skipped_version:string}|null */
+	/** @return array{code:string,successful:bool,type:string,identifier:string,channel:string,reason:string,detail:string}|null */
 	private function requested_result(): ?array {
-		$raw_code             = $_GET[ self::RESULT_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
-		$raw_success          = $_GET[ self::RESULT_SUCCESS_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
-		$raw_type             = $_GET[ self::RESULT_TYPE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
-		$raw_identifier       = $_GET[ self::RESULT_PACKAGE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
-		$raw_channel          = $_GET[ self::CHANNEL_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
-		$raw_reason           = $_GET[ self::REASON_QUERY_KEY ] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
-		$raw_detail           = $_GET[ self::DETAIL_QUERY_KEY ] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
-		$raw_release_identity = $_GET[ self::RELEASE_ID_QUERY_KEY ] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
-		$raw_release_tag      = $_GET[ self::RELEASE_TAG_QUERY_KEY ] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
-		$raw_skipped_version  = $_GET[ self::SKIPPED_VERSION_QUERY_KEY ] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
-		$raw_nonce            = $_GET[ self::RESULT_NONCE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verification value for this PRG result.
+		$raw_code       = $_GET[ self::RESULT_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
+		$raw_success    = $_GET[ self::RESULT_SUCCESS_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
+		$raw_type       = $_GET[ self::RESULT_TYPE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
+		$raw_identifier = $_GET[ self::RESULT_PACKAGE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
+		$raw_channel    = $_GET[ self::CHANNEL_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
+		$raw_reason     = $_GET[ self::REASON_QUERY_KEY ] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
+		$raw_detail     = $_GET[ self::DETAIL_QUERY_KEY ] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
+		$raw_nonce      = $_GET[ self::RESULT_NONCE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verification value for this PRG result.
 		if ( ! is_string( $raw_code ) || ! is_string( $raw_success ) || ! is_string( $raw_type )
 			|| ! is_string( $raw_identifier ) || ! is_string( $raw_channel ) || ! is_string( $raw_reason ) || ! is_string( $raw_detail )
-			|| ! is_string( $raw_release_identity ) || ! is_string( $raw_release_tag ) || ! is_string( $raw_skipped_version ) || ! is_string( $raw_nonce ) ) {
+			|| ! is_string( $raw_nonce ) ) {
 			return null;
 		}
 
-		$code             = wp_unslash( $raw_code );
-		$success          = wp_unslash( $raw_success );
-		$type             = wp_unslash( $raw_type );
-		$identifier       = wp_unslash( $raw_identifier );
-		$channel          = wp_unslash( $raw_channel );
-		$reason           = wp_unslash( $raw_reason );
-		$detail           = wp_unslash( $raw_detail );
-		$release_identity = wp_unslash( $raw_release_identity );
-		$release_tag      = wp_unslash( $raw_release_tag );
-		$skipped_version  = wp_unslash( $raw_skipped_version );
-		$nonce            = wp_unslash( $raw_nonce );
-		if ( '' !== $release_identity && '' === $this->bounded_release_token( $release_identity, 191 ) ) {
-			return null;
-		}
-		if ( '' !== $release_tag && '' === $this->bounded_release_token( $release_tag, 128 ) ) {
-			return null;
-		}
+		$code       = wp_unslash( $raw_code );
+		$success    = wp_unslash( $raw_success );
+		$type       = wp_unslash( $raw_type );
+		$identifier = wp_unslash( $raw_identifier );
+		$channel    = wp_unslash( $raw_channel );
+		$reason     = wp_unslash( $raw_reason );
+		$detail     = wp_unslash( $raw_detail );
+		$nonce      = wp_unslash( $raw_nonce );
 		if ( sanitize_key( $code ) !== $code || '' === $code || strlen( $code ) > 64
 			|| ! in_array( $success, array( '0', '1' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| sanitize_text_field( $identifier ) !== $identifier || strlen( $identifier ) > 255
 			|| ! in_array( $channel, array( '', 'stable', 'prerelease' ), true )
 			|| ( '' !== $reason && ! in_array( $reason, ReleaseTrackingPreflight::reason_codes(), true ) )
-			|| ReleaseTrackingPreflight::detail( $detail ) !== $detail
-			|| $this->bounded_release_token( $skipped_version, 64 ) !== $skipped_version ) {
+			|| ReleaseTrackingPreflight::detail( $detail ) !== $detail ) {
 			return null;
 		}
 
 		$successful = '1' === $success;
-		if ( 1 !== wp_verify_nonce( $nonce, $this->result_nonce_action( $code, $successful, $type, $identifier, $channel, $reason, $detail, $release_identity, $release_tag, $skipped_version ) ) ) {
+		if ( 1 !== wp_verify_nonce( $nonce, $this->result_nonce_action( $code, $successful, $type, $identifier, $channel, $reason, $detail ) ) ) {
 			return null;
 		}
 
 		return array(
-			'code'             => $code,
-			'successful'       => $successful,
-			'type'             => $type,
-			'identifier'       => $identifier,
-			'channel'          => $channel,
-			'reason'           => $reason,
-			'detail'           => $detail,
-			'release_identity' => $release_identity,
-			'release_tag'      => $release_tag,
-			'skipped_version'  => $skipped_version,
+			'code'       => $code,
+			'successful' => $successful,
+			'type'       => $type,
+			'identifier' => $identifier,
+			'channel'    => $channel,
+			'reason'     => $reason,
+			'detail'     => $detail,
 		);
 	}
 
@@ -1385,8 +1418,9 @@ final class ReleaseManagementControls {
 		return sanitize_text_field( $value ) === $value ? $value : '';
 	}
 
-	private function confirmed_release_nonce_action( string $type, string $identifier, int $revision, string $channel, string $release_identity, string $release_tag, string $release_version, bool $older ): string {
-		$payload = wp_json_encode( array( $type, $identifier, $revision, $channel, $release_identity, $release_tag, $release_version, $older ) );
+	private function confirmed_release_nonce_action( string $type, string $identifier, int $revision, string $channel, string $release_identity, string $release_tag, string $release_version, bool $older, string $installed_proof ): string {
+		$facts   = array( $type, $identifier, $revision, $channel, $release_identity, $release_tag, $release_version, $older, $installed_proof );
+		$payload = wp_json_encode( $facts );
 
 		return 'ran-booster-older-switch-' . hash( 'sha256', is_string( $payload ) ? $payload : '' );
 	}
@@ -1398,16 +1432,12 @@ final class ReleaseManagementControls {
 		string $identifier,
 		string $channel,
 		string $reason = '',
-		string $detail = '',
-		string $release_identity = '',
-		string $release_tag = '',
-		string $skipped_version = ''
+		string $detail = ''
 	): string {
 		// Absent optional values keep the original signed payload, so adding, removing or swapping one invalidates the nonce.
 		// A detail without a reason is signed with an empty reason slot, so it cannot match a reason-only payload.
 		$payload = wp_json_encode(
 			match ( true ) {
-				'' !== $release_identity || '' !== $release_tag => array( $code, $successful, $type, $identifier, $channel, $reason, $detail, $release_identity, $release_tag, $skipped_version ),
 				'' !== $detail => array( $code, $successful, $type, $identifier, $channel, $reason, $detail ),
 				'' !== $reason => array( $code, $successful, $type, $identifier, $channel, $reason ),
 				default => array( $code, $successful, $type, $identifier, $channel ),

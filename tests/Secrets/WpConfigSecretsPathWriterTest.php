@@ -258,9 +258,12 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 	/** @return iterable<string, array{string,string}> */
 	public static function operator_provenance_cases(): iterable {
 		$definition = "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', @directory );";
+		yield 'leading strict types' => array( 'declare( strict_types = 1 ); ' . $definition, 'manual' );
+		yield 'strict types then import' => array( "declare(strict_types=1); require 'extra.php'; " . $definition, 'unknown' );
 		yield 'normal configuration' => array( "define( 'WP_DEBUG', false ); \$table_prefix = 'wp_'; " . $definition, 'manual' );
 		$debug_guard = "if ( ! defined( 'WP_DEBUG' ) ) { define( 'WP_DEBUG', false ); }";
 		yield 'stock wp-config debug guard' => array( $debug_guard . $definition, 'manual' );
+		yield 'double-quoted debug guard' => array( str_replace( "'WP_DEBUG'", '"WP_DEBUG"', $debug_guard ) . $definition, 'manual' );
 		yield 'custom debug guard' => array( str_replace( 'false );', 'false ); require "extra.php";', $debug_guard ) . $definition, 'unknown' );
 		yield 'direct const' => array( 'const RAN_BOOSTER_ENCRYPTED_SECRETS_DIR = @directory;', 'manual' );
 		yield 'unrelated later import' => array( $definition . " require 'extra.php';", 'manual' );

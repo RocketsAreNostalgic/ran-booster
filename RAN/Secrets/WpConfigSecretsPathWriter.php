@@ -155,7 +155,19 @@ class WpConfigSecretsPathWriter {
 			return false;
 		}
 
-		for ( $index = 1; isset( $tokens[ $index ] ); ) {
+		$index = 1;
+		if ( T_DECLARE === ( $tokens[1][0] ?? null ) ) {
+			// A standalone strict_types directive must precede the operator's definition.
+			if ( '(' !== ( $tokens[2] ?? null ) || T_STRING !== ( $tokens[3][0] ?? null )
+				|| 0 !== strcasecmp( $tokens[3][1], 'strict_types' ) || '=' !== ( $tokens[4] ?? null )
+				|| T_LNUMBER !== ( $tokens[5][0] ?? null ) || ! in_array( $tokens[5][1], array( '0', '1' ), true )
+				|| ')' !== ( $tokens[6] ?? null ) || ';' !== ( $tokens[7] ?? null ) ) {
+				return false;
+			}
+			$index = 8;
+		}
+
+		while ( isset( $tokens[ $index ] ) ) {
 			$token = $tokens[ $index ];
 			if ( ! is_array( $token ) ) {
 				return false;
@@ -164,9 +176,11 @@ class WpConfigSecretsPathWriter {
 			if ( T_IF === $token[0] ) {
 				// WordPress's stock wp-config.php places this guard before operator constants.
 				$guard       = array_map( static fn ( array|string $part ): string => is_array( $part ) ? $part[1] : $part, array_slice( $tokens, $index, 17 ) );
+				$guard[5]    = $this->provenance_string( $tokens[ $index + 5 ] ?? null );
+				$guard[11]   = $this->provenance_string( $tokens[ $index + 11 ] ?? null );
 				$debug_value = $guard[13] ?? '';
 				if ( ! in_array( $debug_value, array( 'false', 'true' ), true )
-					|| array( 'if', '(', '!', 'defined', '(', "'WP_DEBUG'", ')', ')', '{', 'define', '(', "'WP_DEBUG'", ',', $debug_value, ')', ';', '}' ) !== $guard ) {
+					|| array( 'if', '(', '!', 'defined', '(', 'WP_DEBUG', ')', ')', '{', 'define', '(', 'WP_DEBUG', ',', $debug_value, ')', ';', '}' ) !== $guard ) {
 					return false;
 				}
 				$index += count( $guard );

@@ -106,15 +106,27 @@ class WpConfigSecretsPathWriter {
 	}
 
 	/**
-	 * Admission provenance comes from a safely read config and an identifiable
-	 * Booster marker. Only the exact writer block grants mutation authority.
+	 * Inspect the selected config without granting edit or removal authority.
+	 *
+	 * @internal
+	 * @return 'automatic'|'manual'|'unknown'
 	 */
-	public function has_storage_marker( string $config_path ): bool {
+	public function storage_path_provenance( string $config_path, string $directory ): string {
 		$this->assert_absolute_safe_path( $config_path, 'config_path_invalid' );
 		$config = $this->inspect_config_path( $config_path, require_writable: false, require_owner: false );
+		$tokens = $this->tokens( $config['contents'] );
+		if ( $this->has_storage_marker( $tokens ) ) {
+			return 'automatic';
+		}
+
+		return $this->has_direct_storage_definition( $tokens, $directory ) ? 'manual' : 'unknown';
+	}
+
+	/** @param list<array{0: int, 1: string, 2: int}|string> $tokens */
+	private function has_storage_marker( array $tokens ): bool {
 		$marker = trim( self::OWNED_MARKER, ' /*.' );
 		$found  = false;
-		foreach ( $this->tokens( $config['contents'] ) as $token ) {
+		foreach ( $tokens as $token ) {
 			if ( ! is_array( $token ) || ! in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true ) ) {
 				continue;
 			}
@@ -129,6 +141,80 @@ class WpConfigSecretsPathWriter {
 		}
 
 		return $found;
+	}
+
+	/**
+	 * Only an unconditional literal before imports or opaque code establishes provenance.
+	 * Simple scalar definitions and the usual table prefix can precede it.
+	 *
+	 * @param list<array{0: int, 1: string, 2: int}|string> $tokens
+	 */
+	private function has_direct_storage_definition( array $tokens, string $directory ): bool {
+		$tokens = array_values( array_filter( $tokens, static fn ( array|string $token ): bool => ! is_array( $token ) || ! in_array( $token[0], array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ), true ) ) );
+		if ( T_OPEN_TAG !== ( $tokens[0][0] ?? null ) ) {
+			return false;
+		}
+
+		for ( $index = 1; isset( $tokens[ $index ] ); ) {
+			$token = $tokens[ $index ];
+			if ( ! is_array( $token ) ) {
+				return false;
+			}
+
+			if ( T_IF === $token[0] ) {
+				// WordPress's stock wp-config.php places this guard before operator constants.
+				$guard       = array_map( static fn ( array|string $part ): string => is_array( $part ) ? $part[1] : $part, array_slice( $tokens, $index, 17 ) );
+				$debug_value = $guard[13] ?? '';
+				if ( ! in_array( $debug_value, array( 'false', 'true' ), true )
+					|| array( 'if', '(', '!', 'defined', '(', "'WP_DEBUG'", ')', ')', '{', 'define', '(', "'WP_DEBUG'", ',', $debug_value, ')', ';', '}' ) !== $guard ) {
+					return false;
+				}
+				$index += count( $guard );
+				continue;
+			}
+
+			if ( in_array( $token[0], array( T_STRING, T_NAME_FULLY_QUALIFIED ), true )
+				&& in_array( strtolower( $token[1] ), array( 'define', '\define' ), true )
+				&& '(' === ( $tokens[ $index + 1 ] ?? null ) && ',' === ( $tokens[ $index + 3 ] ?? null )
+				&& ')' === ( $tokens[ $index + 5 ] ?? null ) && ';' === ( $tokens[ $index + 6 ] ?? null ) ) {
+				$name   = $this->provenance_string( $tokens[ $index + 2 ] ?? null );
+				$value  = $tokens[ $index + 4 ] ?? null;
+				$index += 7;
+			} elseif ( T_CONST === $token[0] && T_STRING === ( $tokens[ $index + 1 ][0] ?? null )
+				&& '=' === ( $tokens[ $index + 2 ] ?? null ) && ';' === ( $tokens[ $index + 4 ] ?? null ) ) {
+				$name   = $tokens[ $index + 1 ][1];
+				$value  = $tokens[ $index + 3 ] ?? null;
+				$index += 5;
+			} elseif ( T_VARIABLE === $token[0] && '$table_prefix' === $token[1]
+				&& '=' === ( $tokens[ $index + 1 ] ?? null ) && ';' === ( $tokens[ $index + 3 ] ?? null ) ) {
+				$name   = '$table_prefix';
+				$value  = $tokens[ $index + 2 ] ?? null;
+				$index += 4;
+			} else {
+				return false;
+			}
+
+			if ( self::DIRECTORY_CONSTANT_NAME === $name ) {
+				$literal = $this->provenance_string( $value );
+
+				return null !== $literal && rtrim( $literal, '/' ) === $directory;
+			}
+			if ( null === $name || ! is_array( $value ) || ( ! in_array( $value[0], array( T_CONSTANT_ENCAPSED_STRING, T_LNUMBER, T_DNUMBER ), true )
+				&& ( T_STRING !== $value[0] || ! in_array( strtolower( $value[1] ), array( 'true', 'false', 'null' ), true ) ) ) ) {
+				return false;
+			}
+		}
+
+		return false;
+	}
+
+	/** @param array{0: int, 1: string, 2: int}|string|null $token */
+	private function provenance_string( array|string|null $token ): ?string {
+		// Escaped double-quoted strings need PHP's full escape semantics.
+		return is_array( $token ) && T_CONSTANT_ENCAPSED_STRING === $token[0]
+			&& ( ! str_starts_with( $token[1], '"' ) || ! str_contains( $token[1], '\\' ) )
+			? $this->decode_php_string_literal( $token[1] )
+			: null;
 	}
 
 	private function edit(

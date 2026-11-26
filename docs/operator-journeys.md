@@ -63,8 +63,13 @@ including aliases, and verify it stays private when hosting settings change.
 Use an absolute path and a real, owner-only directory (mode 0700) that the
 WordPress PHP process can read and write. Set
 `RAN_BOOSTER_ENCRYPTED_SECRETS_DIR` in `wp-config.php` or with WP-CLI
-using the same verified path. WordPress web, cron and CLI requests must
-be able to traverse the parent directories. If an existing Booster default
+using the same verified path. Put the literal definition near the top of the
+config WordPress actually loads, before file imports or custom PHP. When
+server mapping is unavailable, including in many WP-CLI requests, Booster
+needs this direct definition to recognize an operator choice. Imported or
+computed definitions still require enough server context to verify the
+location. WordPress web, cron and CLI requests must be able to traverse the
+parent directories. If an existing Booster default
 cannot be verified, review the location in Settings and update the definition
 manually only after confirming privacy. Remove the existing Booster-written
 definition and its “RAN Booster encrypted secrets storage.” comment before

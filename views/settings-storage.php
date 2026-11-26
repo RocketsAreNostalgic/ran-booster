@@ -146,6 +146,7 @@ $storage_card_open = 'storage_healthy' !== $storage_status || null !== $storage_
 							$snippet_copy_label = __( 'Copy example WP-CLI command', 'ran-booster' );
 							include __DIR__ . '/copy-setup-snippet.php';
 							?>
+							<p><?php esc_html_e( 'When the server mapping is unavailable, use the literal definition near the top of the loaded configuration, before imports or custom PHP. Imported or computed settings need enough server context for Booster to verify the location.', 'ran-booster' ); ?></p>
 							<p><?php esc_html_e( 'For environment-managed hosting, replace the existing definition with this wp-config.php bridge. An environment variable by itself is not read by Booster:', 'ran-booster' ); ?></p>
 							<?php
 							$snippet_value      = '$ran_booster_secrets_dir = getenv( \'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR\' );

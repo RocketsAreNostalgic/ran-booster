@@ -40,7 +40,7 @@ class SecretsStorageProvisioner {
 		}
 		return array(
 			'path'   => $configured,
-			'source' => $this->configured_path_source(),
+			'source' => $this->configured_path_source( $configured ),
 		);
 	}
 
@@ -58,7 +58,7 @@ class SecretsStorageProvisioner {
 			);
 		}
 		if ( is_string( $configured ) ) {
-			$source       = $this->configured_path_source();
+			$source       = $this->configured_path_source( $configured );
 			$path_is_safe = $this->validate_configured_candidate( $configured, SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL === $source );
 			if ( ! $path_is_safe ) {
 				return SecretsStorageProvisioningResult::storage_needs_attention(
@@ -598,20 +598,16 @@ class SecretsStorageProvisioner {
 		return null;
 	}
 
-	private function configured_path_source(): string {
+	private function configured_path_source( string $configured ): string {
 		try {
 			$config = $this->loaded_wp_config_path( true );
-			if ( null === $config ) {
-				return SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN;
-			}
-			if ( $this->writer->has_storage_marker( $config ) ) {
-				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
-			}
+
+			return null === $config
+				? SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN
+				: $this->writer->storage_path_provenance( $config, dirname( $configured ) );
 		} catch ( Throwable ) {
 			return SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN;
 		}
-
-		return SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL;
 	}
 
 	/**

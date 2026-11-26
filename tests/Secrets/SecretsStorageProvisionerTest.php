@@ -351,8 +351,9 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	}
 
 	public function test_configuration_facts_reuse_source_classification_without_authentication(): void {
-		$provisioner                 = $this->provisioner();
-		$provisioner->configured     = $this->root . '/custom/secrets.json';
+		$provisioner             = $this->provisioner();
+		$provisioner->configured = $this->root . '/custom/secrets.json';
+		$this->write_manual_config( dirname( $provisioner->configured ) );
 		$provisioner->health_failure = true;
 		self::assertSame(
 			array(
@@ -363,6 +364,8 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		);
 		self::assertFalse( $provisioner->probe_called );
 		self::assertFalse( $provisioner->writer_called );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Restore the empty synthetic config before testing the exact writer.
+		self::assertNotFalse( file_put_contents( $this->config_path, "<?php\n/* That's all, stop editing! Happy publishing. */\n" ) );
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
 		$provisioner->configured = $this->candidate;
 		self::assertSame(
@@ -382,6 +385,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertTrue( mkdir( $manual, 0700 ) );
 		$provisioner             = $this->provisioner();
 		$provisioner->configured = $manual . '/ran-booster-store.json';
+		$this->write_manual_config( dirname( $provisioner->configured ) );
 
 		$result = $provisioner->status();
 
@@ -615,8 +619,9 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$manual = $this->root . '/manual';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $manual, 0700 ) );
-		$provisioner                        = $this->provisioner();
-		$provisioner->configured            = $manual . '/ran-booster-store.json';
+		$provisioner             = $this->provisioner();
+		$provisioner->configured = $manual . '/ran-booster-store.json';
+		$this->write_manual_config( dirname( $provisioner->configured ) );
 		$provisioner->resolver_throws       = true;
 		$provisioner->document_root_missing = true;
 
@@ -630,6 +635,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	public function test_manual_override_inside_word_press_is_rejected_with_privileged_correction_path(): void {
 		$provisioner             = $this->provisioner();
 		$provisioner->configured = $this->wordpress_root . '/ran-booster-store.json';
+		$this->write_manual_config( dirname( $provisioner->configured ) );
 
 		$result = $provisioner->status();
 
@@ -757,7 +763,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertTrue( mkdir( $private, 0700 ) );
 		$provisioner->document_root_missing = true;
 
-		$manual    = "<?php\n// Operator configuration.\n";
+		$manual    = "<?php\ndefine( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', " . sprintf( "'%s'", addcslashes( $private, "\\'" ) ) . " );\n";
 		$marker    = '/* RAN Booster encrypted secrets storage. */';
 		$automatic = "<?php\n$marker\n";
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Seed the exact selected synthetic file.
@@ -778,6 +784,14 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$status = $provisioner->status();
 		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $status->path_source() );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $status->status() );
+
+		// The selected config imports the active declaration instead of defining it directly.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Seed the imported synthetic marker and definition.
+		self::assertNotFalse( file_put_contents( $this->config_path, $automatic . substr( $manual, 6 ) ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Seed the selected synthetic importer.
+		self::assertNotFalse( file_put_contents( $selected, "<?php\nrequire __DIR__ . '/wordpress/wp-config.php';\n" ) );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN, $provisioner->status()->path_source() );
+		self::assertSame( 'configured_path_unsafe', $provisioner->status()->code() );
 		$GLOBALS['ran_booster_cli_selected_config'] = $this->config_path;
 		$provisioner->included                      = array();
 		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $provisioner->status()->path_source() );
@@ -1360,6 +1374,11 @@ final class SecretsStorageProvisionerTest extends TestCase {
 			'storage_lock_unusable'         => 'The secrets lock file could not be used safely. Verify its ownership and mode 0600.',
 			'storage_unavailable'           => 'Booster could not classify the storage failure. Verify PHP owns the directories, ran-booster-store.json and ran-booster-store.json.lock; directories require mode 0700 and both files require mode 0600.',
 		)[ $code ];
+	}
+
+	private function write_manual_config( string $directory ): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write an explicit definition into the selected synthetic config.
+		self::assertNotFalse( file_put_contents( $this->config_path, "<?php\ndefine( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', " . sprintf( "'%s'", addcslashes( $directory, "\\'" ) ) . " );\n" ) );
 	}
 
 	private function provisioner(): TestSecretsStorageProvisioner {

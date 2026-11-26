@@ -248,16 +248,40 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertSame( $written, file_get_contents( $this->config_path ) );
 	}
 
+	#[DataProvider( 'operator_provenance_cases' )]
+	public function test_operator_provenance_requires_a_direct_matching_definition( string $source, string $expected ): void {
+		$directory = dirname( $this->sidecar_path );
+		$this->write_config( "<?php\n" . str_replace( '@directory', sprintf( "'%s'", addcslashes( $directory, "\\'" ) ), $source ) );
+		self::assertSame( $expected, ( new WpConfigSecretsPathWriter() )->storage_path_provenance( $this->config_path, $directory ) );
+	}
+
+	/** @return iterable<string, array{string,string}> */
+	public static function operator_provenance_cases(): iterable {
+		$definition = "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', @directory );";
+		yield 'normal configuration' => array( "define( 'WP_DEBUG', false ); \$table_prefix = 'wp_'; " . $definition, 'manual' );
+		$debug_guard = "if ( ! defined( 'WP_DEBUG' ) ) { define( 'WP_DEBUG', false ); }";
+		yield 'stock wp-config debug guard' => array( $debug_guard . $definition, 'manual' );
+		yield 'custom debug guard' => array( str_replace( 'false );', 'false ); require "extra.php";', $debug_guard ) . $definition, 'unknown' );
+		yield 'direct const' => array( 'const RAN_BOOSTER_ENCRYPTED_SECRETS_DIR = @directory;', 'manual' );
+		yield 'unrelated later import' => array( $definition . " require 'extra.php';", 'manual' );
+		yield 'imported only' => array( "require 'extra.php';", 'unknown' );
+		yield 'import before matching literal' => array( "require 'extra.php'; " . $definition, 'unknown' );
+		yield 'computed configuration' => array( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', getenv( 'STORAGE_DIR' ) );", 'unknown' );
+		yield 'conditional literal' => array( 'if ( false ) { ' . $definition . ' }', 'unknown' );
+		yield 'reachable literal differs' => array( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/different' );", 'unknown' );
+	}
+
+
 	public function test_operator_comment_mentioning_storage_is_not_a_booster_marker(): void {
 		$this->write_config( "<?php\n// The deployment team maintains the RAN Booster encrypted secrets storage directory.\n" );
-		self::assertFalse( ( new WpConfigSecretsPathWriter() )->has_storage_marker( $this->config_path ) );
+		self::assertSame( 'unknown', ( new WpConfigSecretsPathWriter() )->storage_path_provenance( $this->config_path, dirname( $this->sidecar_path ) ) );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_storage_marker_read_requires_a_verifiable_inode(): void {
 		require __DIR__ . '/ZeroInodeStatFunctions.php';
-		$this->assert_refused( 'config_file_invalid', fn () => ( new WpConfigSecretsPathWriter() )->has_storage_marker( $this->config_path ) );
+		$this->assert_refused( 'config_file_invalid', fn () => ( new WpConfigSecretsPathWriter() )->storage_path_provenance( $this->config_path, dirname( $this->sidecar_path ) ) );
 	}
 
 	#[RunInSeparateProcess]
@@ -274,7 +298,7 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 			'writable' => true,
 		);
 
-		self::assertTrue( $writer->has_storage_marker( $this->config_path ) );
+		self::assertSame( 'automatic', $writer->storage_path_provenance( $this->config_path, dirname( $this->sidecar_path ) ) );
 		$this->assert_refused( 'config_owner_invalid', fn () => $writer->write( $this->config_path, $this->sidecar_path ) );
 		$this->assert_refused( 'config_owner_invalid', fn () => $writer->assert_owned_definition_removable( $this->config_path, $this->sidecar_path ) );
 		$this->assert_refused( 'config_owner_invalid', fn () => $writer->remove_owned_definition( $this->config_path, $this->sidecar_path ) );

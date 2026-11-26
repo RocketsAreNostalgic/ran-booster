@@ -8,6 +8,8 @@ namespace RAN\Tests\Secrets;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Secrets\WpConfigPathWriteException;
 use RAN\Secrets\WpConfigSecretsPathWriter;
@@ -244,6 +246,68 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertTrue( $writer->has_owned_definition( $this->config_path, $this->sidecar_path ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $written, file_get_contents( $this->config_path ) );
+	}
+
+	#[DataProvider( 'operator_provenance_cases' )]
+	public function test_operator_provenance_requires_a_direct_matching_definition( string $source, string $expected ): void {
+		$directory = dirname( $this->sidecar_path );
+		$this->write_config( "<?php\n" . str_replace( '@directory', sprintf( "'%s'", addcslashes( $directory, "\\'" ) ), $source ) );
+		self::assertSame( $expected, ( new WpConfigSecretsPathWriter() )->storage_path_provenance( $this->config_path, $directory ) );
+	}
+
+	/** @return iterable<string, array{string,string}> */
+	public static function operator_provenance_cases(): iterable {
+		$definition = "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', @directory );";
+		yield 'leading strict types' => array( 'declare( strict_types = 1 ); ' . $definition, 'manual' );
+		yield 'strict types then import' => array( "declare(strict_types=1); require 'extra.php'; " . $definition, 'unknown' );
+		yield 'normal configuration' => array( "define( 'WP_DEBUG', false ); \$table_prefix = 'wp_'; " . $definition, 'manual' );
+		$debug_guard = "if ( ! defined( 'WP_DEBUG' ) ) { define( 'WP_DEBUG', false ); }";
+		yield 'stock wp-config debug guard' => array( $debug_guard . $definition, 'manual' );
+		yield 'double-quoted debug guard' => array( str_replace( "'WP_DEBUG'", '"WP_DEBUG"', $debug_guard ) . $definition, 'manual' );
+		yield 'custom debug guard' => array( str_replace( 'false );', 'false ); require "extra.php";', $debug_guard ) . $definition, 'unknown' );
+		yield 'direct const' => array( 'const RAN_BOOSTER_ENCRYPTED_SECRETS_DIR = @directory;', 'manual' );
+		yield 'unrelated later import' => array( $definition . " require 'extra.php';", 'manual' );
+		yield 'imported only' => array( "require 'extra.php';", 'unknown' );
+		yield 'import before matching literal' => array( "require 'extra.php'; " . $definition, 'unknown' );
+		yield 'computed configuration' => array( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', getenv( 'STORAGE_DIR' ) );", 'unknown' );
+		yield 'conditional literal' => array( 'if ( false ) { ' . $definition . ' }', 'unknown' );
+		yield 'reachable literal differs' => array( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/different' );", 'unknown' );
+	}
+
+
+	public function test_operator_comment_mentioning_storage_is_not_a_booster_marker(): void {
+		$this->write_config( "<?php\n// The deployment team maintains the RAN Booster encrypted secrets storage directory.\n" );
+		self::assertSame( 'unknown', ( new WpConfigSecretsPathWriter() )->storage_path_provenance( $this->config_path, dirname( $this->sidecar_path ) ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_storage_marker_read_requires_a_verifiable_inode(): void {
+		require __DIR__ . '/ZeroInodeStatFunctions.php';
+		$this->assert_refused( 'config_file_invalid', fn () => ( new WpConfigSecretsPathWriter() )->storage_path_provenance( $this->config_path, dirname( $this->sidecar_path ) ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_deploy_owned_read_access_does_not_grant_write_or_removal_authority(): void {
+		require __DIR__ . '/fixtures/shared-host-functions.php';
+		$writer = new WpConfigSecretsPathWriter();
+		$writer->write( $this->config_path, $this->sidecar_path );
+		self::assertTrue( $writer->has_owned_definition( $this->config_path, $this->sidecar_path ) );
+		$GLOBALS['ran_booster_shared_host_stat'] = array(
+			'path'     => $this->config_path,
+			'uid'      => posix_geteuid() + 10000,
+			'gid'      => posix_getegid(),
+			'writable' => true,
+		);
+
+		self::assertSame( 'automatic', $writer->storage_path_provenance( $this->config_path, dirname( $this->sidecar_path ) ) );
+		$this->assert_refused( 'config_owner_invalid', fn () => $writer->write( $this->config_path, $this->sidecar_path ) );
+		$this->assert_refused( 'config_owner_invalid', fn () => $writer->assert_owned_definition_removable( $this->config_path, $this->sidecar_path ) );
+		$this->assert_refused( 'config_owner_invalid', fn () => $writer->remove_owned_definition( $this->config_path, $this->sidecar_path ) );
+		$this->assert_refused( 'config_owner_invalid', fn () => $writer->retarget_owned_definition( $this->config_path, $this->sidecar_path, $this->directory . '/other/secrets.json' ) );
+		self::assertFileDoesNotExist( $this->config_path . '.ran-booster.lock' );
+		self::assertSame( array(), $this->temporary_files() );
 	}
 
 	public function test_removal_leaves_amanual_matching_definition_untouched(): void {

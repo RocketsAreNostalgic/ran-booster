@@ -239,29 +239,31 @@ that a provider supplied reaches these sinks.
 
 ### Optional release workflow management
 
-`RepositoryReleaseWorkflowManagementV3` is the release-workflow management
-contract in the v1 baseline, with `RELEASE_WORKFLOW_API_VERSION = 3`. The earlier
+`RepositoryReleaseWorkflowManagementV4` is the release-workflow management
+contract in the v1 baseline, with `RELEASE_WORKFLOW_API_VERSION = 4`. The earlier
 Core-bound API 1 facet was retired before 1.0 after the maintained-repository
 audit found no current consumer.
 
-The current helper resolves `RepositoryReleaseWorkflowManagementV3` directly.
+The current helper resolves `RepositoryReleaseWorkflowManagementV4` directly.
 Its provider-neutral contract does not load Core `ReleaseTrackingStatus` or
 `ReleaseTrackingPreflight` parameter types into an external provider runtime.
 
-API 3 keeps the same fixed workflow operation shape and accepts only neutral
-inputs. `RepositoryReleaseWorkflowTarget` carries the bounded package identity,
+API 4 keeps the same fixed workflow operation shape and accepts only neutral
+inputs, plus an optional trailing `?RAN\Activity\ActivityProgress $progress = null`
+parameter on `workflow_inspect()`, `workflow_setup()` and `workflow_outcome()`.
+`RepositoryReleaseWorkflowTarget` carries the bounded package identity,
 source revision, stable provider repository ID, package root, installed version
 and expected Update URI required by provider workflow logic. The expected Update
 URI may be empty; when present it must be an HTTPS URL with a host and no
 userinfo. Ordinary release tracking may retain a non-HTTPS canonical Update URI,
-but Core cannot project that value into an API 3 target, so that
+but Core cannot project that value into an API 4 target, so that
 provider/package is not eligible for current workflow-helper calls until the URI
 satisfies this stricter workflow boundary.
 `RepositoryReleaseWorkflowPreflight` carries only the bounded preflight machine
 code and reason code needed by inspection and setup. Core constructs fresh
 neutral values at the provider call boundary.
 
-A provider implementing API 3 must also implement all five release-consumption
+A provider implementing API 4 must also implement all five release-consumption
 contracts on the same registered aggregate: `RepositoryReleaseMetadata`,
 `RepositoryReleaseCandidateListing`, `RepositoryReleaseInspector`,
 `RepositoryReleaseAcquirer` and `RepositoryReleaseNativeTargets`. Current Core
@@ -275,7 +277,7 @@ assessed for release workflow setup before it switches to Releases. Package
 eligibility and repository exclusivity still apply; package source is not a
 substitute for provider capability.
 
-The API 3 interface exposes local `workflow_status()` and validated
+The API 4 interface exposes local `workflow_status()` and validated
 `workflow_preview()` reads plus three operations: `workflow_inspect()`,
 `workflow_setup()` and `workflow_outcome()`. There are no later template updates. Providers return bounded immutable status, preview and
 result values, not HTML, callbacks, clients or storage handles. Available
@@ -283,7 +285,7 @@ releases, detected automation, verified configuration, recorded setup pull
 requests and latest outcomes remain separate evidence.
 
 See [Provider release-workflow capability](provider-release-workflow-api.md) for
-the v1 API 3 baseline and feature-detection boundary.
+the v1 API 4 baseline and feature-detection boundary.
 
 `RepositoryReleaseWorkflowResult::failure_stage()` is a closed, Core-owned
 display category, never a provider-defined value. Successful results must use
@@ -296,7 +298,7 @@ Core admits one fixed workflow endpoint. It checks administrator permissions,
 provider dependencies, exact repository/package/source revision, repository
 admission, operation nonce, preview identity and credential-profile eligibility
 before calling the operation. Assessment and setup each receive fresh Core
-release preflight evidence projected into the neutral API 3 preflight value for
+release preflight evidence projected into the neutral API 4 preflight value for
 that exact target. Setup takes its channel from the provider's validated,
 current-user preview, never a submitted channel.
 
@@ -319,9 +321,10 @@ registration context and introduce no repository settings object or shared
 workflow storage.
 
 Provider API 15 completes the breaking snake_case method, parameter, property
-and DTO contract migration while retaining initial-only V3 behavior. Providers
-must check this exact marker before loading their implementation. API11, API12
-and API13 providers remain unregistered; there is no V2 compatibility shim.
+and DTO contract migration with initial-only V4 behavior. Providers
+must check this exact marker before loading their implementation. API11, API12,
+API13 and API14 providers remain unregistered; there is no V2 or V3 compatibility
+shim.
 The registration factory still receives three arguments. Add-on API17 and Admin
 Interaction API3 are separate connected boundaries. See the
 [coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-15-compatibility-boundary).
@@ -530,9 +533,13 @@ Provider API 15 owns two shared helpers for ordinary vendor implementations:
   cleanup lifecycle. Its optional authorizer is consumed only for the exact
   archive URL, and reusable authorization must not survive a redirect.
 
-Providers may enforce stricter vendor syntax and archive-origin policy. They
-must not weaken the shared authentication cleanup lifecycle or reproduce Core's
-storage or deployment machinery.
+Providers may enforce stricter vendor syntax and archive-origin policy. Core's
+`AdmittedBranchHostAdapter` downloads the prepared URL into its private local
+file and disables automatic redirects. `PreparedArchive` supplies the URL,
+resolved ref, final head check and cleanup. `AuthenticatedPreparedArchive`
+scopes authorization to the exact first request and removes authorization
+before any redirect is followed, including redirects on the same origin. Use
+that lifecycle for private archive access.
 
 Historical acquisition is an explicit archive contract, separate from future Branch
 tracking. `ProviderMetadata::$archive_api_version` defaults to `1`; Core recognizes
@@ -566,8 +573,8 @@ automatic request with an expected branch, the provider checks the branch while
 preparing and supplies `verify_current_head()` to repeat that fixed provider-owned
 check immediately before WordPress mutates the package. Manual preparations use
 a no-op verification. Provider resolution and head verification are limited to
-three 15-second requests in total. Private authentication applies only to the
-exact first archive request and must be removed before any redirect.
+three 15-second requests in total. For private archives, use the one-request
+authorizer and redirect scrubbing described above.
 
 If a provider add-on is deactivated, Booster retains those stored identities
 and presents the package as unavailable. It must not substitute another

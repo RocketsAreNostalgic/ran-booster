@@ -516,6 +516,73 @@ final class LocalTroubleshootingServiceTest extends TestCase {
 		self::assertStringNotContainsString( 'Authorization:', $encoded );
 	}
 
+	public function test_zero_inode_file_identity_comparisons_are_rejected(): void {
+		$service    = $this->service();
+		$reflection = new \ReflectionClass( LocalTroubleshootingService::class );
+		$same_file  = $reflection->getMethod( 'same_file' );
+
+		self::assertFalse(
+			$same_file->invoke(
+				$service,
+				array(
+					'dev' => 42,
+					'ino' => 0,
+				),
+				array(
+					'dev' => 42,
+					'ino' => 0,
+				)
+			)
+		);
+		self::assertTrue(
+			$same_file->invoke(
+				$service,
+				array(
+					'dev' => 42,
+					'ino' => 12345,
+				),
+				array(
+					'dev' => 42,
+					'ino' => 12345,
+				)
+			)
+		);
+
+		$zero_inode_service = new class(
+			new SecretsFile( $this->secrets_directory . '/secrets.json', array() )
+		) extends LocalTroubleshootingService {
+			/** @var list<string> */
+			public array $inspected_paths = array();
+
+			/** @return array<int|string, int> */
+			protected function path_stat( string $path ): array {
+				$this->inspected_paths[] = $path;
+
+				return array(
+					'dev'   => 42,
+					'ino'   => 0,
+					'mode'  => 0100600,
+					'nlink' => 1,
+				);
+			}
+		};
+		$handle_matches     = $reflection->getMethod( 'handle_matches_path' );
+
+		self::assertFalse(
+			$handle_matches->invoke(
+				$zero_inode_service,
+				array(
+					'dev'   => 42,
+					'ino'   => 0,
+					'mode'  => 0100600,
+					'nlink' => 1,
+				),
+				$this->temporary_directory . '/zero-inode-marker'
+			)
+		);
+		self::assertSame( array( $this->temporary_directory . '/zero-inode-marker' ), $zero_inode_service->inspected_paths );
+	}
+
 	/** @return list<string> */
 	private function directories(): array {
 		return array(

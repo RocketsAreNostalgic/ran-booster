@@ -28,6 +28,29 @@ spl_autoload_register(
 );
 
 /**
+ * Load the bundled updater support package without shipping Composer's
+ * runtime autoloader in the WordPress release archive.
+ */
+spl_autoload_register(
+	function ( $class_name ) {
+		$prefix   = 'RAN\\UpdaterSupport\\V1\\';
+		$base_dir = __DIR__ . '/vendor/ran/updater-support/src/';
+		$len      = strlen( $prefix );
+
+		if ( 0 !== strncmp( $prefix, $class_name, $len ) ) {
+			return;
+		}
+
+		$relative_class = substr( $class_name, $len );
+		$file           = $base_dir . str_replace( '\\', '/', $relative_class ) . '.php';
+
+		if ( is_file( $file ) && is_readable( $file ) ) {
+			require $file;
+		}
+	}
+);
+
+/**
  * PSR-4 autoloader function, as suggested by the PHP-FIG.
  * See: https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-4-autoloader-examples.md
  */

@@ -49,6 +49,34 @@ destination; manage the target copy's lifecycle separately. If requirement
 observations were omitted because headers were unreadable or invalid, do not
 treat their absence as compatibility evidence.
 
+## Configure a private credential storage directory
+
+Use **Settings → Credential storage** when Booster offers automatic setup.
+Booster uses the root reported by the web server and may decline when the
+mapping is missing or the filesystem layout suggests a broader public root.
+A reported document root describes that request's mapping. Check your hosting
+configuration for other public mappings and aliases.
+
+If you set the location yourself, you are responsible for keeping it private.
+Choose a durable directory outside every location the web server serves,
+including aliases, and verify it stays private when hosting settings change.
+Use an absolute path and a real, owner-only directory (mode 0700) that the
+WordPress PHP process can read and write. Set
+`RAN_BOOSTER_ENCRYPTED_SECRETS_DIR` in `wp-config.php` or with WP-CLI
+using the same verified path. Put the literal definition near the top of the
+config WordPress actually loads, after any leading `declare(strict_types=1);`
+and before file imports or custom PHP. When
+server mapping is unavailable, including in many WP-CLI requests, Booster
+needs this direct definition to recognize an operator choice. Imported or
+computed definitions still require enough server context to verify the
+location. WordPress web, cron and CLI requests must be able to traverse the
+parent directories. If an existing Booster default
+cannot be verified, review the location in Settings and update the definition
+manually only after confirming privacy. Remove the existing Booster-written
+definition and its “RAN Booster encrypted secrets storage.” comment before
+adding your own. For existing credentials, preserve the encrypted file, lock
+and matching database key together.
+
 ## Before deleting Booster on the source
 
 With Booster active on **Plugins**, choose **Export settings before deleting**
@@ -57,8 +85,12 @@ then export before returning to Plugins to deactivate and choose **Delete**;
 deactivation alone preserves its data. Delete removes verified
 Booster-owned credentials and webhook secrets, key, package/deployment/Activity
 records, options, schedules and temporary debug capture, but retains managed
-package files. The Blueprint omits webhook secrets/history, constants and the
-original storage key, and imported or adopted packages remain deployment
+package files. Delete retains private storage directories, including empty
+site directories and the shared `.ran-booster` directory with its deny stubs.
+It removes the Booster-written configuration entry after managed storage
+cleanup succeeds.
+The Blueprint omits webhook secrets/history, constants and the original storage
+key, and imported or adopted packages remain deployment
 **Disabled**. It is not a full backup: retain matching database, package-file
 and private-storage backups. Clean up remote tokens/PATs and hooks separately;
 extension data and manually authored configuration are not part of the cleanup.

@@ -26,8 +26,14 @@ class WpConfigSecretsPathWriter {
 	private const LOCK_SUFFIX                    = '.ran-booster.lock';
 	private const TEMP_PREFIX                    = '.ran-booster-wp-config-';
 
-	public function write( string $config_path, string $sidecar_path ): void {
-		$this->edit( $config_path, $sidecar_path, false, null );
+	/**
+	 * Reports whether replacement was attempted, including an unverified outcome.
+	 *
+	 * @param-out bool $replacement_attempted
+	 */
+	public function write( string $config_path, string $sidecar_path, ?bool &$replacement_attempted = null ): void {
+		$replacement_attempted = false;
+		$this->edit( $config_path, $sidecar_path, false, null, $replacement_attempted );
 	}
 
 	/**
@@ -99,11 +105,138 @@ class WpConfigSecretsPathWriter {
 		return true;
 	}
 
+	/**
+	 * Inspect the selected config without granting edit or removal authority.
+	 *
+	 * @internal
+	 * @return 'automatic'|'manual'|'unknown'
+	 */
+	public function storage_path_provenance( string $config_path, string $directory ): string {
+		$this->assert_absolute_safe_path( $config_path, 'config_path_invalid' );
+		$config = $this->inspect_config_path( $config_path, require_writable: false, require_owner: false );
+		$tokens = $this->tokens( $config['contents'] );
+		if ( $this->has_storage_marker( $tokens ) ) {
+			return 'automatic';
+		}
+
+		return $this->has_direct_storage_definition( $tokens, $directory ) ? 'manual' : 'unknown';
+	}
+
+	/** @param list<array{0: int, 1: string, 2: int}|string> $tokens */
+	private function has_storage_marker( array $tokens ): bool {
+		$marker = trim( self::OWNED_MARKER, ' /*.' );
+		$found  = false;
+		foreach ( $tokens as $token ) {
+			if ( ! is_array( $token ) || ! in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true ) ) {
+				continue;
+			}
+			$comment = preg_replace( '/[\s*]+/', ' ', $token[1] );
+			if ( null === $comment || 0 !== strcasecmp( trim( $comment, " /#.\t\n\r" ), $marker ) ) {
+				continue;
+			}
+			if ( $found ) {
+				$this->fail( 'owned_definition_ambiguous', 'The automatic encrypted secrets definition is ambiguous.' );
+			}
+			$found = true;
+		}
+
+		return $found;
+	}
+
+	/**
+	 * Only an unconditional literal before imports or opaque code establishes provenance.
+	 * Simple scalar definitions and the usual table prefix can precede it.
+	 *
+	 * @param list<array{0: int, 1: string, 2: int}|string> $tokens
+	 */
+	private function has_direct_storage_definition( array $tokens, string $directory ): bool {
+		$tokens = array_values( array_filter( $tokens, static fn ( array|string $token ): bool => ! is_array( $token ) || ! in_array( $token[0], array( T_WHITESPACE, T_COMMENT, T_DOC_COMMENT ), true ) ) );
+		if ( T_OPEN_TAG !== ( $tokens[0][0] ?? null ) ) {
+			return false;
+		}
+
+		$index = 1;
+		if ( T_DECLARE === ( $tokens[1][0] ?? null ) ) {
+			// A standalone strict_types directive must precede the operator's definition.
+			if ( '(' !== ( $tokens[2] ?? null ) || T_STRING !== ( $tokens[3][0] ?? null )
+				|| 0 !== strcasecmp( $tokens[3][1], 'strict_types' ) || '=' !== ( $tokens[4] ?? null )
+				|| T_LNUMBER !== ( $tokens[5][0] ?? null ) || ! in_array( $tokens[5][1], array( '0', '1' ), true )
+				|| ')' !== ( $tokens[6] ?? null ) || ';' !== ( $tokens[7] ?? null ) ) {
+				return false;
+			}
+			$index = 8;
+		}
+
+		while ( isset( $tokens[ $index ] ) ) {
+			$token = $tokens[ $index ];
+			if ( ! is_array( $token ) ) {
+				return false;
+			}
+
+			if ( T_IF === $token[0] ) {
+				// WordPress's stock wp-config.php places this guard before operator constants.
+				$guard       = array_map( static fn ( array|string $part ): string => is_array( $part ) ? $part[1] : $part, array_slice( $tokens, $index, 17 ) );
+				$guard[5]    = $this->provenance_string( $tokens[ $index + 5 ] ?? null );
+				$guard[11]   = $this->provenance_string( $tokens[ $index + 11 ] ?? null );
+				$debug_value = $guard[13] ?? '';
+				if ( ! in_array( $debug_value, array( 'false', 'true' ), true )
+					|| array( 'if', '(', '!', 'defined', '(', 'WP_DEBUG', ')', ')', '{', 'define', '(', 'WP_DEBUG', ',', $debug_value, ')', ';', '}' ) !== $guard ) {
+					return false;
+				}
+				$index += count( $guard );
+				continue;
+			}
+
+			if ( in_array( $token[0], array( T_STRING, T_NAME_FULLY_QUALIFIED ), true )
+				&& in_array( strtolower( $token[1] ), array( 'define', '\define' ), true )
+				&& '(' === ( $tokens[ $index + 1 ] ?? null ) && ',' === ( $tokens[ $index + 3 ] ?? null )
+				&& ')' === ( $tokens[ $index + 5 ] ?? null ) && ';' === ( $tokens[ $index + 6 ] ?? null ) ) {
+				$name   = $this->provenance_string( $tokens[ $index + 2 ] ?? null );
+				$value  = $tokens[ $index + 4 ] ?? null;
+				$index += 7;
+			} elseif ( T_CONST === $token[0] && T_STRING === ( $tokens[ $index + 1 ][0] ?? null )
+				&& '=' === ( $tokens[ $index + 2 ] ?? null ) && ';' === ( $tokens[ $index + 4 ] ?? null ) ) {
+				$name   = $tokens[ $index + 1 ][1];
+				$value  = $tokens[ $index + 3 ] ?? null;
+				$index += 5;
+			} elseif ( T_VARIABLE === $token[0] && '$table_prefix' === $token[1]
+				&& '=' === ( $tokens[ $index + 1 ] ?? null ) && ';' === ( $tokens[ $index + 3 ] ?? null ) ) {
+				$name   = '$table_prefix';
+				$value  = $tokens[ $index + 2 ] ?? null;
+				$index += 4;
+			} else {
+				return false;
+			}
+
+			if ( self::DIRECTORY_CONSTANT_NAME === $name ) {
+				$literal = $this->provenance_string( $value );
+
+				return null !== $literal && rtrim( $literal, '/' ) === $directory;
+			}
+			if ( null === $name || ! is_array( $value ) || ( ! in_array( $value[0], array( T_CONSTANT_ENCAPSED_STRING, T_LNUMBER, T_DNUMBER ), true )
+				&& ( T_STRING !== $value[0] || ! in_array( strtolower( $value[1] ), array( 'true', 'false', 'null' ), true ) ) ) ) {
+				return false;
+			}
+		}
+
+		return false;
+	}
+
+	/** @param array{0: int, 1: string, 2: int}|string|null $token */
+	private function provenance_string( array|string|null $token ): ?string {
+		// Escaped double-quoted strings need PHP's full escape semantics.
+		return is_array( $token ) && T_CONSTANT_ENCAPSED_STRING === $token[0]
+			&& ( ! str_starts_with( $token[1], '"' ) || ! str_contains( $token[1], '\\' ) )
+			? $this->decode_php_string_literal( $token[1] )
+			: null;
+	}
+
 	private function edit(
 		string $config_path,
 		string $sidecar_path,
 		bool $remove,
-		?string $replacement_sidecar_path
+		?string $replacement_sidecar_path,
+		bool &$replacement_attempted = false
 	): bool {
 		$this->assert_absolute_safe_path( $config_path, 'config_path_invalid' );
 		$this->assert_absolute_safe_path( $sidecar_path, 'sidecar_path_invalid' );
@@ -171,7 +304,7 @@ class WpConfigSecretsPathWriter {
 				$this->validate_candidate( $candidate );
 			}
 
-			$this->replace_config( $config_path, $candidate, $locked );
+			$this->replace_config( $config_path, $candidate, $locked, $replacement_attempted );
 		} finally {
 			if ( is_resource( $lock ) ) {
 				try {
@@ -192,7 +325,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @return array{contents: string, dev: int, ino: int, mode: int, uid: int, gid: int, nlink: int, size: int, mtime: int, ctime: int}
 	 */
-	private function inspect_config_path( string $path, bool $require_writable = true ): array {
+	private function inspect_config_path( string $path, bool $require_writable = true, bool $require_owner = true ): array {
 		clearstatcache( true, $path );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The configuration replacement boundary checks actual PHP-process writability alongside canonical path and inode checks.
 		if ( is_link( $path ) || ! is_file( $path ) || ( $require_writable && ! is_writable( $path ) ) ) {
@@ -212,8 +345,12 @@ class WpConfigSecretsPathWriter {
 		if ( $path_stat['size'] < 1 || $path_stat['size'] > self::MAX_BYTES ) {
 			$this->fail( 'config_size_unsupported', 'The WordPress configuration has an unsupported size.' );
 		}
-		if ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $path_stat['uid'] ) {
+		if ( $require_owner && function_exists( 'posix_geteuid' ) && posix_geteuid() !== $path_stat['uid'] ) {
 			$this->fail( 'config_owner_invalid', 'The WordPress configuration is not owned by the current process owner.' );
+		}
+
+		if ( ! is_readable( $path ) ) {
+			$this->fail( 'config_read_failed', 'Could not open the WordPress configuration.' );
 		}
 
 		$handle = $this->open_config_for_read( $path );
@@ -398,7 +535,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @param array{contents: string, dev: int, ino: int, mode: int, uid: int, gid: int, nlink: int, size: int, mtime: int, ctime: int} $original
 	 */
-	private function replace_config( string $path, string $candidate, array $original ): void {
+	private function replace_config( string $path, string $candidate, array $original, bool &$replacement_attempted ): void {
 		$temporary = '';
 		$handle    = null;
 		$replaced  = null;
@@ -449,7 +586,9 @@ class WpConfigSecretsPathWriter {
 				$this->fail( 'config_changed', 'The WordPress configuration changed while it was being edited.' );
 			}
 
+			$replacement_attempted = true;
 			if ( ! $this->replace_path( $temporary, $path ) ) {
+				$replacement_attempted = false;
 				$this->fail( 'replace_failed', 'Could not atomically replace the WordPress configuration.' );
 			}
 			$temporary = '';
@@ -691,7 +830,8 @@ class WpConfigSecretsPathWriter {
 	 * @param array{dev:int,ino:int,mode:int,nlink:int} $second
 	 */
 	private function same_identity( array $first, array $second ): bool {
-		return $first['dev'] === $second['dev']
+		return 0 !== $first['ino']
+			&& $first['dev'] === $second['dev']
 			&& $first['ino'] === $second['ino']
 			&& 0100000 === ( $second['mode'] & 0170000 )
 			&& 1 === $second['nlink'];

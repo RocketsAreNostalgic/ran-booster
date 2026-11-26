@@ -11,6 +11,14 @@ namespace RAN\Secrets;
  */
 final class PrivateLocationCandidateResolver {
 
+	/** @var list<string> */
+	private const PUBLIC_WEB_ROOT_BASENAMES = array(
+		'public_html',
+		'htdocs',
+		'www',
+		'httpdocs',
+	);
+
 	private string $temporary_root;
 
 	public function __construct( ?string $temporary_root = null ) {
@@ -40,14 +48,13 @@ final class PrivateLocationCandidateResolver {
 			return null;
 		}
 
-		$fingerprint = substr(
-			hash( 'sha256', implode( "\0", array_map( array( $this, 'canonical_directory' ), array( $wordpress_root, $content_dir, $plugin_dir ) ) ) ),
-			0,
-			16
-		);
+		$token     = bin2hex( random_bytes( 16 ) );
+		$candidate = $private_base . '/.ran-booster/' . $token . '/ran-booster-store.json';
+		if ( ! $this->automatic_context_allows( $candidate, $wordpress_root, $document_root ) ) {
+			return null;
+		}
 
-		$candidate = $private_base . '/.ran-booster/' . $fingerprint . '/ran-booster-store.json';
-		$failure   = $this->configured_path_failure( $candidate, $boundaries, $private_base );
+		$failure = $this->configured_path_failure( $candidate, $boundaries, $private_base );
 		if ( null !== $failure ) {
 			$discarded[] = array(
 				'directory' => dirname( $candidate ),
@@ -70,17 +77,15 @@ final class PrivateLocationCandidateResolver {
 		string $wordpress_root,
 		string $content_dir,
 		string $plugin_dir,
-		?string $document_root = null
+		?string $document_root = null,
+		bool $operator_configured = false
 	): bool {
 		$boundaries = $this->unsafe_boundaries( $wordpress_root, $content_dir, $plugin_dir, $document_root );
-		if ( null === $boundaries ) {
+		if ( null === $boundaries || ( ! $operator_configured && ! $this->automatic_context_allows( $candidate, $wordpress_root, $document_root ) ) ) {
 			return false;
 		}
 
-		$private_base = $this->automatic_private_base( $boundaries );
-		$anchor       = null !== $private_base && $this->contains( $private_base, $candidate )
-			? $private_base
-			: null;
+		$anchor = $this->configured_private_anchor( $candidate );
 
 		return null === $this->configured_path_failure( $candidate, $boundaries, $anchor );
 	}
@@ -204,9 +209,66 @@ final class PrivateLocationCandidateResolver {
 
 		$private_base = dirname( $outermost );
 
-		return '/' === $private_base || $this->is_temporary_directory( $private_base )
+		return '/' === $private_base
+			|| $this->is_temporary_directory( $private_base )
 			? null
 			: $private_base;
+	}
+
+	private function configured_private_anchor( string $candidate ): ?string {
+		if ( ! $this->valid_absolute_file_path( $candidate ) || ! function_exists( 'posix_geteuid' ) ) {
+			return null;
+		}
+
+		$effective_user = posix_geteuid();
+		$anchor         = null;
+		$current        = dirname( $candidate );
+		while ( '/' !== $current && '' !== $current ) {
+			if ( ! file_exists( $current ) && ! is_link( $current ) ) {
+				if ( null !== $anchor ) {
+					break;
+				}
+				$current = dirname( $current );
+				continue;
+			}
+
+			$stat = lstat( $current );
+			if ( false === $stat || is_link( $current ) || 0040000 !== ( $stat['mode'] & 0170000 ) ) {
+				return null;
+			}
+			if ( $effective_user !== $stat['uid']
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The trust boundary depends on writability by the actual PHP process, including host-group ancestor checks.
+				|| ! is_writable( $current )
+			) {
+				break;
+			}
+
+			$anchor  = $current;
+			$current = dirname( $current );
+		}
+
+		return $anchor;
+	}
+
+	/**
+	 * Server context describes this mapping. A possible wider named root is a
+	 * reason to decline automatic placement, never evidence against an operator path.
+	 */
+	private function automatic_context_allows( string $candidate, string $wordpress_root, ?string $document_root ): bool {
+		$root = null === $document_root ? null : $this->canonical_directory( $document_root );
+		if ( null === $root || ! $this->contains( $root, rtrim( $wordpress_root, '/' ) ) ) {
+			return false;
+		}
+
+		for ( $ancestor = dirname( $root ); '/' !== $ancestor; $ancestor = dirname( $ancestor ) ) {
+			if ( in_array( strtolower( basename( $ancestor ) ), self::PUBLIC_WEB_ROOT_BASENAMES, true )
+				&& $this->contains( $ancestor, $candidate )
+			) {
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/**
@@ -219,7 +281,10 @@ final class PrivateLocationCandidateResolver {
 		?string $document_root
 	): ?array {
 		$boundaries = array();
-		foreach ( array_filter( array( $wordpress_root, $content_dir, $plugin_dir, $document_root ) ) as $path ) {
+		foreach ( array( $wordpress_root, $content_dir, $plugin_dir, $document_root ) as $path ) {
+			if ( null === $path ) {
+				continue;
+			}
 			$canonical = $this->canonical_directory( $path );
 			if ( null === $canonical ) {
 				return null;
@@ -236,9 +301,7 @@ final class PrivateLocationCandidateResolver {
 			}
 		}
 
-		return count( $boundaries ) < 3
-			? null
-			: array_values( array_unique( $boundaries ) );
+		return array_values( array_unique( $boundaries ) );
 	}
 
 	private function canonical_directory( string $path ): ?string {

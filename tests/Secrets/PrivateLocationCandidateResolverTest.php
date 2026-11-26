@@ -34,9 +34,15 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		$this->remove( $this->temporary_boundary );
 	}
 
-	public function test_suggests_stable_site_specific_path_outside_repository_and_web_roots(): void {
-		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
-		$candidate = $resolver->resolve(
+	public function test_suggests_randomized_128_bit_site_specific_path_outside_repository_and_web_roots(): void {
+		$resolver   = new PrivateLocationCandidateResolver( $this->temporary_boundary );
+		$candidate  = $resolver->resolve(
+			$this->root . '/account/site/public',
+			$this->root . '/account/site/public/wp-content',
+			$this->root . '/account/site/public/wp-content/plugins/ran-booster',
+			$this->root . '/account/site/public'
+		);
+		$second_run = $resolver->resolve(
 			$this->root . '/account/site/public',
 			$this->root . '/account/site/public/wp-content',
 			$this->root . '/account/site/public/wp-content/plugins/ran-booster',
@@ -44,18 +50,14 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		);
 
 		self::assertMatchesRegularExpression(
-			'#^' . preg_quote( $this->root . '/account', '#' ) . '/\.ran-booster/[a-f0-9]{16}/ran-booster-store\.json$#D',
+			'#^' . preg_quote( $this->root . '/account', '#' ) . '/\.ran-booster/[a-f0-9]{32}/ran-booster-store\.json$#D',
 			(string) $candidate
 		);
-		self::assertSame(
-			$candidate,
-			$resolver->resolve(
-				$this->root . '/account/site/public',
-				$this->root . '/account/site/public/wp-content',
-				$this->root . '/account/site/public/wp-content/plugins/ran-booster',
-				$this->root . '/account/site/public'
-			)
+		self::assertMatchesRegularExpression(
+			'#^' . preg_quote( $this->root . '/account', '#' ) . '/\.ran-booster/[a-f0-9]{32}/ran-booster-store\.json$#D',
+			(string) $second_run
 		);
+		self::assertNotSame( $candidate, $second_run );
 		self::assertTrue(
 			$resolver->validate_configured(
 				(string) $candidate,
@@ -65,7 +67,64 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 				$this->root . '/account/site/public'
 			)
 		);
+		// Existing configured legacy 16-hex-char paths remain valid.
+		self::assertTrue(
+			$resolver->validate_configured(
+				$this->root . '/account/.ran-booster/' . $this->fingerprint() . '/ran-booster-store.json',
+				$this->root . '/account/site/public',
+				$this->root . '/account/site/public/wp-content',
+				$this->root . '/account/site/public/wp-content/plugins/ran-booster',
+				$this->root . '/account/site/public'
+			)
+		);
 		self::assertDirectoryDoesNotExist( $this->root . '/account/.ran-booster' );
+	}
+
+	public function test_hosting_names_do_not_disqualify_operator_paths_and_do_not_authorize_automatic_paths(): void {
+		$resolver = new PrivateLocationCandidateResolver( $this->temporary_boundary );
+		$account  = $this->root . '/var/www/vhosts/example';
+		$legacy   = $account . '/.ran-booster/0123456789abcdef';
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- A pre-existing operator-owned 16-character storage directory.
+		self::assertTrue( mkdir( $legacy, 0700, true ) );
+		foreach ( array( 'httpdocs', 'Public_HTML', 'web', 'www/team/httpdocs' ) as $name ) {
+			$site_root = $account . '/' . $name;
+			$actual    = 'www/team/httpdocs' === $name ? $account . '/www' : $site_root;
+			$wordpress = $site_root . '/nested/blog';
+			$content   = $wordpress . '/wp-content';
+			$plugin    = $content . '/plugins/ran-booster';
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create disposable nested WordPress layouts.
+			self::assertTrue( mkdir( $plugin, 0700, true ) );
+
+			foreach ( array( $actual, null, $wordpress ) as $document_root ) {
+				self::assertTrue( $resolver->validate_configured( $legacy . '/ran-booster-store.json', $wordpress, $content, $plugin, $document_root, true ) );
+				self::assertFalse( $resolver->validate_configured( $legacy . '/ran-booster-store.json', $wordpress, $content, $plugin, $document_root ) );
+				self::assertFalse( $resolver->validate_configured( $wordpress . '/ran-booster-store.json', $wordpress, $content, $plugin, $document_root, true ) );
+				self::assertNull( $resolver->resolve( $wordpress, $content, $plugin, $document_root ) );
+			}
+
+			$outer_sidecar = dirname( $wordpress ) . '/ran-booster-store.json';
+			self::assertFalse( $resolver->validate_configured( $outer_sidecar, $wordpress, $content, $plugin, $actual, true ) );
+		}
+	}
+
+	public function test_automatic_storage_requires_an_observed_root_without_a_wider_conflict(): void {
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
+		$public    = $this->root . '/account/httpdocs';
+		$wordpress = $public . '/nested/blog';
+		$content   = $wordpress . '/wp-content';
+		$plugin    = $content . '/plugins/ran-booster';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create a disposable site with a reported canonical root.
+		self::assertTrue( mkdir( $plugin, 0700, true ) );
+
+		$candidate = $resolver->resolve( $wordpress, $content, $plugin, $public );
+		self::assertIsString( $candidate );
+		self::assertStringStartsWith( dirname( $public ) . '/.ran-booster/', $candidate );
+		self::assertTrue( $resolver->validate_configured( $candidate, $wordpress, $content, $plugin, $public ) );
+		self::assertFalse( $resolver->validate_configured( $candidate, $wordpress, $content, $plugin ) );
+		self::assertNull( $resolver->resolve( $wordpress, $content, $plugin ) );
+		self::assertNull( $resolver->resolve( $wordpress, $content, $plugin, $wordpress ) );
+		self::assertNull( $resolver->resolve( $wordpress, $content, $plugin, $content ) );
 	}
 
 	public function test_rejects_the_old_basename_as_a_configured_path_before_creating_directories(): void {
@@ -99,17 +158,14 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 				$discarded
 			)
 		);
-		self::assertSame(
-			array(
-				array(
-					'directory' => $this->root . '/account/.ran-booster/' . $this->fingerprint(),
-					'code'      => 'broad_private_path_permissions',
-					'reason'    => 'A private path component is writable by its group or by other users.',
-					'component' => $this->root . '/account',
-				),
-			),
-			$discarded
+		self::assertCount( 1, $discarded );
+		self::assertMatchesRegularExpression(
+			'#^' . preg_quote( $this->root . '/account', '#' ) . '/\.ran-booster/[a-f0-9]{32}$#D',
+			$discarded[0]['directory']
 		);
+		self::assertSame( 'broad_private_path_permissions', $discarded[0]['code'] );
+		self::assertSame( 'A private path component is writable by its group or by other users.', $discarded[0]['reason'] );
+		self::assertSame( $this->root . '/account', $discarded[0]['component'] );
 	}
 
 	public function test_rejects_agroup_writable_ancestor_owned_by_php_even_when_owner_write_is_disabled(): void {

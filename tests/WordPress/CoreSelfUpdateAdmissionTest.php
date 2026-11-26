@@ -83,6 +83,187 @@ final class CoreSelfUpdateAdmissionTest extends TestCase {
 		$this->assert_fenced( $this->core_identifier() );
 	}
 
+	#[RunInSeparateProcess]
+	public function test_core_descriptor_admission_requires_policy_repository_id_and_sha256_digest(): void {
+		$admitted = $this->extract_descriptor_admission_callback( true );
+		$denied   = $this->extract_descriptor_admission_callback( false );
+		$sha256   = str_repeat( 'a', 64 );
+
+		global $wp_version;
+		$wp_version = '7.0.0'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Real selected runtime activation fixture meets the copied Core header requirement.
+		ReleaseUpdaterBootstrap::register();
+		$this->invoke_lifecycle();
+		$valid_descriptor = \RAN\WPReleaseUpdater\V1\Contract\IdentityDescriptor::create(
+			array(
+				'artifact_filename'          => 'ran-booster-1.0.0-beta.51.zip',
+				'artifact_identity'          => '101',
+				'artifact_sha256'            => $sha256,
+				'artifact_size'              => 1024,
+				'assurance_facts'            => array(
+					'exact_artifact_identity'       => true,
+					'exact_commit_identity'         => true,
+					'exact_reacquisition_supported' => true,
+					'exact_release_identity'        => true,
+					'provenance_verified'           => false,
+					'publication_immutable'         => false,
+					'repository_identity_stable'    => true,
+					'trusted_digest_source'         => true,
+				),
+				'canonical_update_uri'       => 'https://github.com/RocketsAreNostalgic/ran-booster',
+				'channel'                    => 'prerelease',
+				'commit_identity'            => str_repeat( 'b', 40 ),
+				'installed_package_identity' => 'ran-booster/ran-booster.php',
+				'prerelease'                 => true,
+				'provider_code'              => 'github',
+				'release_identity'           => '202',
+				'repository_identity'        => '1319710173',
+				'repository_locator'         => 'RocketsAreNostalgic/ran-booster',
+				'tag'                        => 'v1.0.0-beta.51',
+				'target_type'                => 'plugin',
+				'version'                    => '1.0.0-beta.51',
+			)
+		);
+
+		self::assertTrue( $admitted( $valid_descriptor ) );
+		self::assertFalse( $denied( $valid_descriptor ) );
+
+		$wrong_repo_descriptor = \RAN\WPReleaseUpdater\V1\Contract\IdentityDescriptor::create(
+			array_merge(
+				array_diff_key( $valid_descriptor->to_array(), array( 'fingerprint' => true ) ),
+				array( 'repository_identity' => '9999999999' )
+			)
+		);
+		self::assertFalse( $admitted( $wrong_repo_descriptor ) );
+
+		$descriptor_from_array = static function ( array $facts ): object {
+			return new class( $facts ) {
+				/** @param array<string, mixed> $facts */
+				public function __construct( private readonly array $facts ) {
+				}
+
+				/** @return array<string, mixed> */
+				public function to_array(): array {
+					return $this->facts;
+				}
+			};
+		};
+
+		self::assertTrue(
+			$admitted(
+				$descriptor_from_array(
+					array(
+						'repository_identity' => '1319710173',
+						'artifact_sha256'     => $sha256,
+					)
+				)
+			)
+		);
+		self::assertFalse( $admitted( null ) );
+		self::assertFalse( $admitted( 'not-an-object' ) );
+		self::assertFalse( $admitted( new \stdClass() ) );
+		self::assertFalse(
+			$admitted(
+				new class() {
+					public function to_array(): never {
+						throw new \RuntimeException( 'broken descriptor' );
+					}
+				}
+			)
+		);
+		self::assertFalse(
+			$admitted(
+				new class() {
+					public function to_array(): string {
+						return 'not-an-array';
+					}
+				}
+			)
+		);
+		self::assertFalse(
+			$admitted(
+				$descriptor_from_array(
+					array(
+						'artifact_sha256' => $sha256,
+					)
+				)
+			)
+		);
+		self::assertFalse(
+			$admitted(
+				$descriptor_from_array(
+					array(
+						'repository_identity' => '1319710173 ',
+						'artifact_sha256'     => $sha256,
+					)
+				)
+			)
+		);
+		self::assertFalse(
+			$admitted(
+				$descriptor_from_array(
+					array(
+						'repository_identity' => '1319710173',
+						'artifact_sha256'     => '',
+					)
+				)
+			)
+		);
+		self::assertFalse(
+			$admitted(
+				$descriptor_from_array(
+					array(
+						'repository_identity' => '1319710173',
+						'artifact_sha256'     => str_repeat( 'A', 64 ),
+					)
+				)
+			)
+		);
+		self::assertFalse(
+			$admitted(
+				$descriptor_from_array(
+					array(
+						'repository_identity' => '1319710173',
+						'artifact_sha256'     => 'sha256:' . $sha256,
+					)
+				)
+			)
+		);
+		self::assertFalse(
+			$admitted(
+				$descriptor_from_array(
+					array(
+						'repository_identity' => '1319710173',
+						'artifact_sha256'     => str_repeat( 'a', 63 ),
+					)
+				)
+			)
+		);
+	}
+
+	private function extract_descriptor_admission_callback( bool $allows_discovery ): \Closure {
+		$source = file_get_contents( $this->source_file() ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Extract the exact production Core descriptor admission callback from ran-booster.php.
+		self::assertIsString( $source );
+		$offset = strpos( $source, '->with_descriptor_admission(' );
+		self::assertIsInt( $offset, 'ran-booster.php must configure with_descriptor_admission().' );
+		$callback_start = strpos( $source, 'static function', $offset );
+		self::assertIsInt( $callback_start, 'with_descriptor_admission() must supply a static callback.' );
+		$callback_source = $this->balanced_block( $source, $callback_start );
+		$policy_stub     = new class( $allows_discovery ) {
+			public function __construct( private readonly bool $allows ) {
+			}
+
+			public function allows_native_discovery(): bool {
+				return $this->allows;
+			}
+		};
+		$core_policy     = static fn (): object => $policy_stub;
+
+		$callback = eval( 'return ' . $callback_source . ';' ); // phpcs:ignore Squiz.PHP.Eval.Discouraged -- Test executes the exact bounded production admission callback rather than duplicating it.
+		self::assertInstanceOf( \Closure::class, $callback );
+
+		return $callback;
+	}
+
 	private function queued_target(): CoreSelfUpdateNativeTarget {
 		global $wp_version;
 		$wp_version = '7.0.0'; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The public registrar samples WordPress at its later lifecycle callback.

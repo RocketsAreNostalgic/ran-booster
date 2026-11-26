@@ -115,6 +115,58 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 		self::assertSame( 'php_accessible_group_writable_ancestor', $discarded[0]['code'] ?? null );
 	}
 
+	public function test_operator_configured_path_is_deterministic_between_http_and_cli(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Model a shared-host /home ancestor with mode 0775 owned by the host control plane.
+		self::assertTrue( chmod( $this->root, 0775 ) );
+		$groups = posix_getgroups();
+		self::assertIsArray( $groups );
+		$GLOBALS['ran_booster_shared_host_stat'] = array(
+			'path' => $this->root,
+			'uid'  => posix_geteuid() + 10000,
+			'gid'  => max( array_merge( $groups, array( posix_getegid() ) ) ) + 10000,
+		);
+
+		$doc_root  = $this->root . '/account/public_html';
+		$wordpress = $doc_root . '/blog';
+		$content   = $wordpress . '/wp-content';
+		$plugin    = $content . '/plugins/ran-booster';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create subdirectory WordPress install under public_html.
+		self::assertTrue( mkdir( $plugin, 0700, true ) );
+
+		$resolver = new PrivateLocationCandidateResolver( $this->temporary_boundary );
+		$sidecar  = $this->root . '/account/.ran-booster/' . str_repeat( 'a', 32 ) . '/ran-booster-store.json';
+
+		// HTTP (DOCUMENT_ROOT present) and WP-CLI/cron (DOCUMENT_ROOT unset) must agree.
+		self::assertTrue( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, $doc_root, true ) );
+		self::assertTrue( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, null, true ) );
+		self::assertTrue(
+			$resolver->validate_configured(
+				$this->root . '/account/private/ran-booster/ran-booster-store.json',
+				$wordpress,
+				$content,
+				$plugin,
+				null,
+				true
+			)
+		);
+
+		// When the 0775 ancestor belongs to PHP's effective group, both HTTP and CLI reject it.
+		$effective_group                             = posix_getegid();
+		$GLOBALS['ran_booster_shared_host_stat']     = array(
+			'path' => $this->root,
+			'uid'  => posix_geteuid() + 10000,
+			'gid'  => $effective_group,
+		);
+		$GLOBALS['ran_booster_shared_host_identity'] = array(
+			'uid'    => posix_geteuid(),
+			'gid'    => $effective_group,
+			'groups' => array(),
+		);
+
+		self::assertFalse( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, $doc_root, true ) );
+		self::assertFalse( $resolver->validate_configured( $sidecar, $wordpress, $content, $plugin, null, true ) );
+	}
+
 		/** @param list<array{directory:string,code:string,reason:string,component:string|null}> $discarded */
 	private function resolve( array &$discarded ): ?string {
 		$wordpress = $this->root . '/account/site/public';

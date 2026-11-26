@@ -67,4 +67,54 @@ final class SecretsFileStatFailureTest extends TestCase {
 		$after = is_array( $after ) ? $after : array();
 		self::assertSame( $before, $after );
 	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_zero_inode_is_rejected_in_handle_and_delete_identity_checks(): void {
+		require __DIR__ . '/ZeroInodeStatFunctions.php';
+
+		$path = tempnam( sys_get_temp_dir(), 'ran-booster-zero-ino-' );
+		self::assertIsString( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set private mode required by SecretsFile identity checks.
+		self::assertTrue( chmod( $path, 0600 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Acquire native handle to test assert_handle_matches_path against zero-inode stats.
+		$handle = fopen( $path, 'r+b' );
+		self::assertIsResource( $handle );
+
+		$reflection = new ReflectionClass( SecretsFile::class );
+		$secrets    = $reflection->newInstanceWithoutConstructor();
+		$stat       = \lstat( $path );
+		self::assertIsArray( $stat );
+
+		try {
+			try {
+				$reflection->getMethod( 'assert_handle_matches_path' )->invoke( $secrets, $handle, $path, 'secrets lock' );
+				self::fail( 'assert_handle_matches_path() must reject zero-inode file stats.' );
+			} catch ( SecretsStorageUnavailable $failure ) {
+				self::assertSame( 'Refusing to use an invalid encrypted Booster secrets lock.', $failure->getMessage() );
+			}
+
+			try {
+				$expected = array(
+					'dev'   => (int) $stat['dev'],
+					'ino'   => 0,
+					'mode'  => (int) $stat['mode'],
+					'uid'   => (int) $stat['uid'],
+					'nlink' => (int) $stat['nlink'],
+				);
+				$reflection->getMethod( 'delete_exact_file' )->invoke( $secrets, $path, $expected, 'Could not remove secrets file.' );
+				self::fail( 'delete_exact_file() must reject zero-inode file stats.' );
+			} catch ( SecretsStorageUnavailable $failure ) {
+				self::assertSame( 'Could not remove secrets file.', $failure->getMessage() );
+			}
+			self::assertFileExists( $path );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close disposable handle opened by test.
+			fclose( $handle );
+			if ( is_file( $path ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove disposable file owned by this test.
+				unlink( $path );
+			}
+		}
+	}
 }

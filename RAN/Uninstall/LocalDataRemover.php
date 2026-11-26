@@ -20,7 +20,6 @@ use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\WorkflowA
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\Settings\GeneralPreferenceStore;
-use RAN\Secrets\PrivateLocationCandidateResolver;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 use RAN\Storage\Database;
@@ -63,7 +62,6 @@ class LocalDataRemover {
 		private readonly SecretsFile $secrets,
 		private readonly TemporaryDebugCapture $debug_capture,
 		private readonly WpConfigSecretsPathWriter $config_writer,
-		private readonly PrivateLocationCandidateResolver $location_resolver = new PrivateLocationCandidateResolver(),
 		?object $database = null
 	) {
 		global $wpdb;
@@ -79,6 +77,7 @@ class LocalDataRemover {
 			? $this->loaded_wp_config_path_for_retry()
 			: $this->loaded_wp_config_path();
 
+		$owned_definition = false;
 		$this->assert_cleanup_capabilities();
 		if ( null !== $config_path ) {
 			if ( null !== $sidecar_path ) {
@@ -93,7 +92,6 @@ class LocalDataRemover {
 		$this->secrets->assert_managed_storage_deletable();
 
 		$this->debug_capture->assert_managed_storage_deletable();
-		$this->assert_automatic_directories_removable( $sidecar_path );
 		$this->assert_no_recorded_custody();
 
 		$this->debug_capture->delete_managed_storage();
@@ -108,14 +106,12 @@ class LocalDataRemover {
 		$this->drop_tables();
 
 		if ( null !== $config_path ) {
-			if ( null !== $sidecar_path ) {
-
+			if ( $owned_definition && null !== $sidecar_path ) {
+				// Recovery can retarget the definition to an operator-restored directory.
 				$this->config_writer->remove_owned_definition( $config_path, $sidecar_path );
 			}
 			$this->remove_wp_config_lock( $config_path );
 		}
-
-		$this->remove_empty_automatic_directories( $sidecar_path );
 	}
 
 	/** A read-only snapshot; it does not exclude work that begins after this check. */
@@ -411,20 +407,6 @@ class LocalDataRemover {
 		}
 	}
 
-	private function remove_empty_automatic_directories( ?string $sidecar_path ): void {
-		$automatic_path = $this->automatic_sidecar_path();
-		if ( null === $automatic_path
-			|| ( null !== $sidecar_path && $sidecar_path !== $automatic_path )
-		) {
-			return;
-		}
-
-		$site_directory = dirname( $automatic_path );
-		$base_directory = dirname( $site_directory );
-		$this->remove_directory_if_empty( $site_directory );
-		$this->remove_directory_if_empty( $base_directory );
-	}
-
 	private function remove_wp_config_lock( string $config_path ): void {
 		$lock_path = $config_path . '.ran-booster.lock';
 		if ( ! file_exists( $lock_path ) && ! is_link( $lock_path ) ) {
@@ -456,67 +438,6 @@ class LocalDataRemover {
 		) {
 			throw new RuntimeException( 'The Booster WordPress configuration lock could not be removed safely.' );
 		}
-	}
-
-	protected function automatic_sidecar_path(): ?string {
-		try {
-
-			return $this->location_resolver->resolve(
-				defined( 'ABSPATH' ) && is_string( constant( 'ABSPATH' ) ) ? ABSPATH : '',
-				defined( 'WP_CONTENT_DIR' ) && is_string( constant( 'WP_CONTENT_DIR' ) ) ? WP_CONTENT_DIR : '',
-				dirname( __DIR__, 2 ),
-				isset( $_SERVER['DOCUMENT_ROOT'] ) && is_string( $_SERVER['DOCUMENT_ROOT'] )
-					? $_SERVER['DOCUMENT_ROOT']
-					: null
-			);
-		} catch ( \Throwable ) {
-			return null;
-		}
-	}
-
-	private function remove_directory_if_empty( string $directory ): void {
-		if ( ! $this->assert_directory_removal_safe( $directory ) ) {
-			return;
-		}
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the native directory freshly proven empty, process-owned and mode 0700.
-		if ( ! rmdir( $directory ) ) {
-			throw new RuntimeException( 'An empty Booster storage directory could not be removed safely.' );
-		}
-	}
-
-	private function assert_automatic_directories_removable( ?string $sidecar_path ): void {
-		$automatic_path = $this->automatic_sidecar_path();
-		if ( null === $automatic_path
-			|| ( null !== $sidecar_path && $sidecar_path !== $automatic_path )
-		) {
-			return;
-		}
-
-		$this->assert_directory_removal_safe( dirname( $automatic_path ) );
-		$this->assert_directory_removal_safe( dirname( dirname( $automatic_path ) ) );
-	}
-
-	private function assert_directory_removal_safe( string $directory ): bool {
-		if ( ! is_dir( $directory ) || is_link( $directory ) ) {
-			return false;
-		}
-
-		if ( array( '.', '..' ) !== scandir( $directory ) ) {
-			return false;
-		}
-
-		$stat = lstat( $directory );
-		if ( false === $stat
-			|| 0040000 !== ( $stat['mode'] & 0170000 )
-			|| 0700 !== ( $stat['mode'] & 0777 )
-			|| ! function_exists( 'posix_geteuid' )
-			|| posix_geteuid() !== $stat['uid']
-		) {
-			throw new RuntimeException( 'An empty Booster storage directory could not be removed safely.' );
-		}
-
-		return true;
 	}
 
 	private function canonical_directory( string $path ): ?string {

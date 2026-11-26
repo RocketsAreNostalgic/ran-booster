@@ -147,7 +147,30 @@ $ran_booster_core_development_notice->register();
 				$registrar      = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->with_operation_guard(
 					static fn (): bool => $core_policy()->allows_native_discovery()
 				)->with_descriptor_admission(
-					static fn (): bool => $core_policy()->allows_native_discovery()
+					static function ( mixed $descriptor = null ) use ( $core_policy ): bool {
+						if ( ! $core_policy()->allows_native_discovery() || ! is_object( $descriptor ) ) {
+							return false;
+						}
+						$to_array = array( $descriptor, 'to_array' );
+						if ( ! is_callable( $to_array ) ) {
+							return false;
+						}
+						try {
+							$facts = \Closure::fromCallable( $to_array )();
+						} catch ( Throwable ) {
+							return false;
+						}
+						if ( ! is_array( $facts ) ) {
+							return false;
+						}
+						$repository_identity = $facts['repository_identity'] ?? null;
+						$artifact_sha256     = $facts['artifact_sha256'] ?? null;
+
+						return is_string( $repository_identity )
+							&& hash_equals( '1319710173', $repository_identity )
+							&& is_string( $artifact_sha256 )
+							&& 1 === preg_match( '/\A[a-f0-9]{64}\z/D', $artifact_sha256 );
+					}
 				);
 				if ( null === $registrar ) {
 					throw new LogicException( 'The selected release updater cannot enforce Core self-update admission.' );

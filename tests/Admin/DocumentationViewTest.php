@@ -99,10 +99,11 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Credential storage, retention and removal</summary>', $html );
 		self::assertStringContainsString( 'id="ran-booster-credential-storage"', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-manual-storage-override">Use a different storage location</h4>', $html );
-		self::assertStringContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );", $html );
+		self::assertStringContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/absolute/private/path' );", $html );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $html );
 		self::assertStringContainsString( 'Do not add group access as a workaround', $html );
 		self::assertStringContainsString( 'dirname( __DIR__ ) is its parent', $html );
+		self::assertStringContainsString( 'including aliases, and verify it stays private', $html );
 		self::assertStringContainsString( 'do not append public_html again', $html );
 		self::assertStringContainsString( 'host-managed execute permission or ACL on an ancestor', $html );
 		self::assertStringContainsString( 'move or restore ran-booster-store.json, ran-booster-store.json.lock and the matching database key together', $html );
@@ -845,7 +846,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( "dirname( __DIR__ ) . '/private/ran-booster'", $html );
 		self::assertStringContainsString( 'Raw unanchored relative strings are rejected', $html );
 		self::assertStringContainsString( 'authenticated ciphertext in a private JSON file', $html );
-		self::assertStringContainsString( 'private directory outside the public web root on durable local storage', $html );
+		self::assertStringContainsString( 'private directory on durable local storage', $html );
 		self::assertStringContainsString( 'directory must be owned by PHP, readable and writable by PHP, and mode 0700', $html );
 		self::assertStringContainsString( '<code>ran_booster_secrets_key_v1</code>', $html );
 		self::assertStringContainsString( 'neither the filesystem nor database alone contains usable credentials', $html );

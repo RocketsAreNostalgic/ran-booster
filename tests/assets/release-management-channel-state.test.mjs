@@ -149,13 +149,13 @@ for (const picker of ['managed', 'prospective']) {
 			`
 			${earlierDisclosureHelpers}
 			let sequence=0, requestSequence=0, selected=null; const window={};
-			const candidateList=document.createElement('div'), candidates={hidden:true};
+			const candidateList=document.createElement('div'), candidates={hidden:true}; const review=null;
 			const form={querySelector:()=>({value:'example'})};
 			const hasSubdirectory=()=>false, providerSupported=()=>true;
 			const forceBranchForSubdirectory=()=>{}, forceBranchForUnsupportedProvider=()=>{};
-			const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{};
+			const clearError=()=>{}, setListBusy=()=>{};
 			const showPlaceholder=()=>{}, setStatus=()=>{}, setChecking=()=>{}, showUnavailable=()=>{}, showError=()=>{};
-			const showCandidates=()=>{}, isNativeUpdateOffer=()=>false, inspect=()=>{};
+			const showCandidates=()=>{}, inspect=()=>{};
 			const candidateElements=new Map(); let selectedOutcome=null;
 			${declaration(picker === 'managed' ? 'list' : 'listCandidates')}
 			return ${picker === 'managed' ? 'list' : 'listCandidates'};
@@ -1171,19 +1171,23 @@ for (const enhanced of [true, false]) {
 				},
 			};
 		}
+		const review = { hidden: false };
 		const list = Function(
 			'candidateList',
+			'review',
 			'window',
 			'wp',
 			'request',
-			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{}, setStatus=()=>{}, showError=()=>{}, showPlaceholder=()=>{}; const candidates=null, observations=null; const renderListingObservations=()=>{}; ${declaration('list')} return list;`
+			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, setStatus=()=>{}, showError=()=>{}, showPlaceholder=()=>{}; const candidates=null, observations=null; const renderListingObservations=()=>{}; ${declaration('list')} return list;`
 		)(
 			candidateList,
+			review,
 			window,
 			{ i18n: { __: (text) => text } },
 			async () => ({ successful: false })
 		);
 		await list();
+		assert.equal(review.hidden, true);
 		assert.deepEqual(order, [enhanced ? 'htmx-swap' : 'native-clear']);
 	});
 }

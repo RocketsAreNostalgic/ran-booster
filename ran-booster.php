@@ -246,7 +246,12 @@ $ran_booster_core_development_notice->register();
 			}
 			$ran_booster_container->bind(
 				CoreSelfUpdateStatus::class,
-				new CoreSelfUpdateStatus( $core_policy, $core_release_target, $core_check )
+				new CoreSelfUpdateStatus(
+					$core_policy,
+					$core_release_target,
+					$core_check,
+					static fn (): string => ManagedReleaseTargetRegistrar::cached_offer_version( 'plugin', plugin_basename( __FILE__ ), $core_version() )
+				)
 			);
 
 			// Release targets join the package broker after every provider is

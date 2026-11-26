@@ -12,7 +12,7 @@ use RAN\WordPress\CoreSelfUpdateNativeTarget;
 #[CoversClass( CoreSelfUpdateNativeTarget::class )]
 final class CoreSelfUpdateNativeTargetTest extends TestCase {
 
-	public function test_delegates_registration_refresh_and_bounded_passive_status(): void {
+	public function test_delegates_registration_refresh_and_projects_a_metadata_only_offer(): void {
 		$updater = new class() {
 			public int $registrations = 0;
 			public int $refreshes     = 0;
@@ -32,9 +32,9 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 					'code'                 => 'target_active',
 					'native'               => array(
 						'candidate_header_version'  => null,
-						'candidate_tag'             => null,
+						'candidate_tag'             => 'v1.1.0',
 						'candidate_validation_code' => null,
-						'candidate_version'         => null,
+						'candidate_version'         => '1.1.0',
 						'failure_code'              => null,
 						'installed_version'         => '1.0.0',
 						'last_check'                => 1_700_000_000,
@@ -65,6 +65,9 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 		self::assertSame( 'newer', $status->version_relationship );
 		self::assertSame( 1_700_000_000, $status->last_check );
 		self::assertSame( '', $status->failure_code );
+		self::assertSame( '', $status->candidate_code );
+		self::assertSame( '', $status->candidate_package_header_version );
+		self::assertSame( '', $status->candidate_provider_release_id );
 
 		self::assertTrue( $target->refresh() );
 		self::assertSame( 1, $updater->refreshes );
@@ -172,6 +175,45 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 		$status                                       = $target->status();
 		self::assertFalse( $status->active );
 		self::assertSame( 'github_updater_status_unavailable', $status->failure_code );
+
+		$updater->native['candidate_header_version'] = '1.1.0';
+		$updater->native['offered_release_identity'] = 'release:42';
+		$updater->native['offered_version']          = '1.1.0';
+		self::assertSame( '1.1.0', $target->status()->offered_version );
+
+		$updater->native['candidate_validation_code'] = 'archive_version_mismatch';
+		self::assertFalse( $target->status()->active );
+		$updater->native['offered_release_identity'] = null;
+		$updater->native['offered_version']          = null;
+		self::assertTrue( $target->status()->active );
+		self::assertSame( '', $target->status()->offered_version );
+
+		$updater->native['candidate_validation_code'] = null;
+		self::assertFalse( $target->status()->active );
+		$updater->native['candidate_header_version'] = null;
+		$updater->native['offered_release_identity'] = 'release:42';
+		$updater->native['offered_version']          = '1.1.0';
+		self::assertSame( '1.1.0', $target->status()->offered_version );
+
+		$updater->native['offered_release_identity'] = null;
+		$updater->native['offered_version']          = null;
+		$consumed                                    = $target->status();
+		self::assertTrue( $consumed->active );
+		self::assertSame( '', $consumed->offered_version );
+		self::assertSame( '', $consumed->candidate_code );
+		self::assertSame( '', $consumed->candidate_package_header_version );
+		$updater->native['failure_code'] = 'download_digest_mismatch';
+		self::assertSame( 'download_digest_mismatch', $target->status()->failure_code );
+		$updater->native['failure_code']      = null;
+		$updater->native['installed_version'] = null;
+		self::assertFalse( $target->status()->active );
+		$updater->native['installed_version']        = '1.0.0';
+		$updater->native['offered_release_identity'] = 'release:42';
+		$updater->native['offered_version']          = '1.2.0';
+		self::assertFalse( $target->status()->active );
+		$updater->native['offered_version'] = '1.1.0';
+		$updater->native['relationship']    = 'older';
+		self::assertFalse( $target->status()->active );
 	}
 
 	public function test_malformed_or_throwing_updater_state_fails_closed(): void {

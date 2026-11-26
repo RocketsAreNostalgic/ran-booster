@@ -52,7 +52,7 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		self::assertSame( 'active', $status['updater_state'] );
 		self::assertSame( 'neutral_target_unavailable', $status['updater_code'] );
 		self::assertSame( 1_700_000_900, $status['next_check'] );
-		self::assertSame( '1.2.4', $status['offered_version'] );
+		self::assertNull( $status['offered_version'] );
 		self::assertSame( 1_700_000_000, $status['last_check'] );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable focused fixture cleanup.
@@ -149,17 +149,19 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 				++$calls;
 				return $policy;
 			},
-			null,
-			$check
+			$target,
+			$check,
+			static fn (): string => '1.2.5'
 		);
 		self::assertFalse( $status->can_check() );
-		self::assertSame( 'native_discovery_disabled', $status->diagnostics()['updater_code'] );
+		self::assertNull( $status->diagnostics()['offered_version'] );
 		self::assertSame( 2, $calls );
 		$policy = $enabled;
 		self::assertTrue( $status->can_check() );
 		$diagnostics = $status->diagnostics();
 		self::assertSame( 'enabled', $diagnostics['effective_mode'] );
 		self::assertNull( $diagnostics['updater_code'] );
+		self::assertSame( '1.2.5', $diagnostics['offered_version'] );
 		self::assertSame( 4, $calls );
 		$policy = $disabled;
 		self::assertFalse( $status->can_check() );
@@ -198,7 +200,7 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 
 		self::assertSame( 'active', $status['updater_state'] );
 		self::assertNull( $status['updater_code'] );
-		self::assertSame( '1.2.4', $status['offered_version'] );
+		self::assertNull( $status['offered_version'] );
 		self::assertNull( $status['last_check'] );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable focused fixture cleanup.

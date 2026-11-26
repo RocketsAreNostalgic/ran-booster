@@ -79,7 +79,7 @@ is not a replacement public API.
 
 | Historical operator task | Current Core path |
 | --- | --- |
-| Switch an eligible managed plugin or theme to releases | Open package settings → Releases → **Use releases**. Core validates before changing source; viewing settings does not change configuration. |
+| Switch an eligible managed plugin or theme to releases | Open package settings → Releases. While on Branch, check eligibility or list published versions for Stable or Preview. **Use releases** lets you confirm the latest eligible release or a published release matching your installed version, when available. The switch installs that ZIP and leaves Updates on Manual. |
 | Follow stable or preview releases | Choose the release track in package settings. Preview includes eligible prereleases and stable releases, never drafts. Changing track does not install or downgrade. |
 | Refresh an existing release-managed package | **Check releases** on managed Plugins or Themes; **Open WordPress updates** hands installation to WordPress. Disabled, Manual and Automatic retain their distinct authority. |
 | Install a not-yet-managed plugin or theme from a release | Use Core's Install Plugin or Install Theme release controls. Listing is metadata-only; inspection validates and discards the ZIP; Install freshly acquires it and verifies the inspected selection. Partial or uncertain outcomes do not claim adoption. |
@@ -350,11 +350,11 @@ These controls do not change managed plugin or theme release policies.
 
 | Trigger                    | Initiator                                                                                 | Immediate handoff                                                                                                          | Can download a ZIP?                           | Can change files? |
 | ----------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ----------------- |
-| **Use releases**           | Administrator in Booster                                                                  | Core handler → internal coordinator → provider listing and exact inspection → atomic source transition                     | Yes, for eligibility and identity validation  | No                |
+| **Use releases**           | Administrator in Booster                                                                  | Core chooser → confirmed exact release → WordPress install and source transition | One ZIP on confirmed install | Yes, on confirmed install                |
 | Request bootstrap       | Booster                                                                                   | Registers each eligible managed target with the shared updater before public selection/activation at `after_setup_theme` priority `PHP_INT_MAX` | No                                            | No                |
-| Normal update check        | WordPress scheduled or administrator-driven update check                                  | WordPress calls the updater's host-specific update filter                                                                  | Yes, for candidate validation on a cache miss | No                |
-| **Check releases**         | Administrator in Booster                                                                  | Core handler → internal coordinator → updater cache clear → WordPress native update check                                  | Yes, for fresh candidate validation           | No                |
-| **Enable updates**         | Administrator changing a release package's policy from `disabled` to `manual` or `automatic` | Core policy write → update-cache clear → next administration request runs one WordPress native check | Yes, for fresh candidate validation           | No                |
+| Normal update check        | WordPress scheduled or administrator-driven update check                                  | WordPress calls the updater's host-specific update filter                                                                  | No, metadata only | No                |
+| **Check releases**         | Administrator in Booster                                                                  | Core handler → internal coordinator → updater cache clear → WordPress native update check                                  | No, metadata only           | No                |
+| **Enable updates**         | Administrator changing a release package's policy from `disabled` to `manual` or `automatic` | Core policy write → update-cache clear → next administration request runs one WordPress native check | No, metadata only           | No                |
 | Prospective **Install**    | Administrator selecting an exact release                                                  | Core prospective facade → selected provider → Core installer and adoption                                                  | Yes, one exact installation archive           | Yes               |
 | Native **Update**          | Administrator on a WordPress update surface                                               | WordPress upgrader → shared updater pre-download hook                                                                      | Yes, one fresh installation archive           | Yes               |
 | Native automatic update    | WordPress's own automatic-updater run, when its final policy decision permits the package | WordPress upgrader → shared updater pre-download hook                                                                      | Yes, one fresh installation archive           | Yes               |
@@ -390,31 +390,25 @@ push. **Disabled** permits neither.
 3. Core repeats authorization and confirms that the package has the required
    release metadata, listing and inspection facets, a stable provider
    repository identity and no native-target registration conflict.
-4. Core asks the selected provider for at most eight candidates in provider
-   preference order and inspects no more than the first two. The provider
-   performs its remote identity, release and archive checks. Core falls through
-   only for package incompatibility; vanished, corrupt or contradictory
-   releases fail closed. Core accepts only exact
-   listing-to-inspection identity, tag, version, channel, package-root and main
-   file continuity, then derives the public release URL from the metadata facet.
-5. Only after that check succeeds does Core admit the Branch package as a
-   native target for this request only. It asks the shared updater to offer
-   that exact release through `ran_wp_release_updater_offer_release_v1`, then
-   runs WordPress's own upgrader for that one package. The updater refuses an
-   older release (`release_older`), Updates set to Disabled or forced off, and
-   an updater copy without the offer.
-6. The stored source changes from `branch` to `release_asset` only when the
-   updater's finalisation reports a verified install. The change happens in
-   the transaction that clears native custody and repeats the repository
-   exclusivity check, and it records the release configuration, increments the
-   source revision and resets Automatic to Manual. A refused switch, or one
-   that fails before WordPress's installer completes, stays on Branch and asks
-   WordPress to recheck for updates at the end of the request. An uncertain or
-   interrupted install keeps native custody for the existing recovery path.
-   The request's reply comes before that commit at shutdown, so the page the
-   administrator lands on decides the result. It shows "Release tracking
-   enabled." only when it reads the package back on Releases, and otherwise
-   the existing uncertain-state message.
+4. In package settings, **Use releases** lists up to eight published
+   candidates on the selected track. The chooser compares their versions
+   with the installed header using the elected updater's ordering. It offers
+   the latest eligible version and, when distinct and available, a release
+   matching the installed version. Opening the chooser downloads no ZIP.
+5. The operator chooses the release to install. Core checks the signed
+   choice and installed version, then passes the release ID, tag, version
+   and any explicit downgrade consent to
+   `ran_wp_release_updater_install_exact_release_v1`. The updater reacquires
+   the chosen release, checks its ZIP and runs the WordPress upgrader.
+   If the release disappears or its ZIP fails validation, choosing another
+   release requires a fresh confirmation.
+6. A successful switch commits the source change, records the release
+   configuration, increments the source revision, clears native custody and
+   leaves subsequent updates on Manual. The landing page checks the
+   attempt's result against the current revision and hold. A confirmed
+   refusal on Branch offers **Use releases** again. An interrupted install
+   with a matching hold points to recovery. When an outcome has been
+   superseded or cannot be verified, the page reports that explicitly.
 
 Changing Stable/Preview channel later updates eligibility and invalidates the
 native transient; it does not install or downgrade. Returning to Branch changes
@@ -439,8 +433,7 @@ sequenceDiagram
     else cache miss or forced check
         U->>G: List releases and describe exact candidate
         G-->>U: Release, tag/commit, repository, ZIP asset, and digest facts
-        U->>G: Download candidate ZIP for identity validation
-        U->>U: Verify digest, bounds, package root, headers, version, and Update URI
+        U->>U: Check repository, release, asset identity and eligibility
         U-->>W: Return newer eligible offer or no offer
     end
     W->>W: Store native plugin/theme update transient
@@ -450,27 +443,14 @@ sequenceDiagram
     B-->>A: Bounded release status
 ```
 
-The candidate-validation ZIP is temporary. It proves that the release is safe
-to advertise, then its temporary file is discarded. The cached native offer is
-metadata, not an installation archive.
+The bundled updater beta.24 builds the native offer from release and asset
+metadata. A fresh check verifies the stable repository ID and release
+identity. A warm check can reuse the WordPress offer. Archive headers and
+PHP or WordPress requirements remain unknown until a ZIP is inspected.
 
-The bundled `ran/wp-release-updater` beta.9 binds managed release configuration,
-cached offers and release fingerprints to the provider's stable repository ID.
-Discovery and acquisition also compare that ID with live GitHub repository
-metadata. Reusing the same `owner/repository` locator for a deleted and recreated
-repository therefore fails closed instead of inheriting the old package's
-authority.
-
-This means a release ZIP can be fetched during discovery and fetched again
-later during installation. Those are two separate trust decisions at two
-different times:
-
-1. **offer validation** proves that WordPress may show the release; and
-2. **installation acquisition** re-describes and freshly verifies the exact
-   offered release immediately before replacement.
-
-That is deliberate freshness protection, not two installers racing to deploy
-the same update.
+Explicitly reviewing a release acquires and verifies its ZIP and then
+discards it. Installation resolves the exact offered release and asset again
+and verifies the freshly acquired ZIP before WordPress replaces files.
 
 #### Release request budget
 
@@ -485,8 +465,7 @@ The earlier fixtures model a cold cache, one non-full release page,
 a direct successful response, the first candidate succeeding, and a stored
 stable GitHub repository ID.
 
-These are the native-ZIP contract's normal single-page, direct-success
-budgets:
+Before metadata-first discovery, the same single-page fixture recorded:
 
 | Operation                                     | Logical requests |               ZIP downloads |
 | --------------------------------------------- | ---------------: | --------------------------: |
@@ -498,7 +477,7 @@ budgets:
 | Prospective exact acquisition                 |                5 |          1 installation ZIP |
 | Full prospective list, review and acquisition |               12 |                           2 |
 
-Public and private targets have the same network-request count. A private
+In that fixture, public and private targets had the same network-request count. A private
 target resolves its lazy credential once for each outgoing logical request; a
 validated release-asset redirect may add a transport hop without resolving the
 credential again. Redirect locations, credentials, signed URLs, and raw
@@ -514,14 +493,10 @@ acceptable easy wins: remove a call only when its authority is obsolete or the
 current operation already owns the exact fact and no freshness boundary lies
 between producer and consumer.
 
-The two native ZIPs do not meet that rule. Offer discovery and installation
-normally happen in different WordPress requests and can be hours apart. The
-first ZIP is inspected before WordPress advertises the package and is then
-deleted. The second ZIP is freshly bound to the cached offer immediately before
-WordPress changes files. Reusing the first ZIP would require cross-request file
-custody, expiry, quotas, crash cleanup, permissions, and stale-offer handling.
-The product does not carry that machinery merely to save one installation-time
-download.
+The current updater downloads zero archives for routine discovery. An
+operator who explicitly reviews a release and later installs it triggers two
+separate downloads. The later install validates the release at the time of
+replacement.
 
 ### 3. Explicit Check releases
 
@@ -534,9 +509,8 @@ download.
 5. Core asks the selected updater target to clear only its package cache and the
    corresponding WordPress update transient.
 6. Core calls `wp_update_plugins()` or `wp_update_themes()`.
-7. WordPress invokes the updater's native discovery filter. Discovery follows
-   the normal sequence above and may download a temporary candidate-validation
-   ZIP.
+7. WordPress invokes the updater's native discovery filter. The bundled
+   updater checks release and asset metadata without fetching a ZIP.
 8. Control returns to the Core handler, which redirects with a bounded result.
 
 No deployment attempt is written. No upgrader runs. **Check releases**
@@ -783,10 +757,8 @@ optimization candidates; it is not a runtime profile.
 
 ### Intentional repeated work
 
-- Cold release discovery downloads and discards a candidate ZIP before
-  advertising an offer. A later Update freshly downloads the installation ZIP.
-  Those operations can be hours apart. Persisting the discovery file would add
-  stale-file custody, cleanup, and disk-exhaustion risks.
+- Explicit release review verifies a temporary ZIP. A later install checks
+  the exact release and its freshly downloaded ZIP before replacing files.
 - Prospective install revalidates the approved release fingerprint before
   acquisition so changed release metadata cannot cross the administrator
   approval boundary unnoticed.
@@ -812,19 +784,10 @@ freshness, credential, cleanup, or maintenance cost.
 | Status                    | Opportunity                                                                                                                    | Decision                                                                                                                                                                                                                                                                                             |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Delivered**             | Reuse an exact descriptor within the same synchronous operation.                                                               | Updater `v1.5.0-beta.11` uses `acquireDescribed()` after fresh reconstruction and continuity checks. This removed repeated requests from a full native Update and reduced production code.                                                                                                           |
-| **Conditional follow-up** | An expired ordinary release-list request returns `304`, but the updater downloads and scans the unchanged candidate ZIP again. | If separately authorized, design and test an updater-only cached-verdict path. Freshly re-describe the exact release and separately prove the live repository ID, then reuse the strict cached candidate-validation identity. Do not apply it to explicit **Check releases** or actual installation. |
+| **Superseded by beta.24** | Avoid rescanning a ZIP during a routine release check. | Routine checks now use release metadata. Archive validation happens on explicit inspection and installation. |
 | **Measure first**         | Reuse the richer list response rather than fetching the selected exact release once more during cold discovery.                | This saves one small JSON request but would widen `ReleaseSummary` and blur the explicit list-to-exact continuity step. Consider it only if cold discovery is measured as material and the patch removes more code than it adds.                                                                     |
 
-If separately authorized, the expired-`304` candidate-verdict path is the only
-release optimization worth a bounded design-and-test spike now. It is not yet a
-one-line reuse: current repository-ID proof happens during ZIP acquisition, so
-skipping the ZIP first requires a narrow explicit repository-identity check.
-The spike should remain updater-only, add no production telemetry or
-cross-package cache, and be rejected if its new seam and cache logic do not
-carry their production-LoC and maintenance cost. This documentation does not
-authorize Phase 2B.
-
-Discovery and installation ZIPs remain separate. Reconsider deferred
+Reconsider deferred
 optimizations and rejected pooling approaches against PU-006, PU-011, PU-012,
 and PU-024 through PU-026 in the private durable decision register
 rather than reviving retired Reinstall plumbing or adding a generic request

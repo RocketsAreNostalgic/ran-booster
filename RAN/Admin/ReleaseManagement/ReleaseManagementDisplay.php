@@ -455,6 +455,9 @@ final class ReleaseManagementDisplay {
 				<legend class="screen-reader-text"><?php esc_html_e( 'Available published releases', 'ran-booster' ); ?></legend>
 				<div data-ran-booster-managed-release-candidate-list></div>
 			</fieldset>
+			<?php if ( $enabled ) { ?>
+				<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" hidden aria-disabled="true" data-ran-booster-managed-release-review><?php esc_html_e( 'Review selected release', 'ran-booster' ); ?></button>
+			<?php } ?>
 			<div class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-managed-release-status>
 				<h4 data-ran-booster-managed-release-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
 				<p data-ran-booster-managed-release-message></p>

@@ -151,8 +151,6 @@ const createHarness = (
 		ranBoosterManagedReleaseListNonce: 'list',
 		ranBoosterManagedReleaseInspectNonce: 'inspect',
 		ranBoosterManagedReleaseAjaxUrl: '/ajax',
-		ranBoosterManagedReleaseNativeUpdateUrl:
-			'/wp-admin/plugins.php?action=update-selected&plugins=example%2Fplugin.php&_wpnonce=bulk',
 		ranBoosterManagedReleaseNativeUpdateVersion: '3.0.0',
 		ranBoosterManagedReleaseNativeUpdateReleaseId: nativeOfferReleaseId,
 	};
@@ -175,6 +173,7 @@ const createHarness = (
 	nodes.get('candidates').hidden = true;
 	nodes.get('error').hidden = true;
 	nodes.get('native-update').setAttribute('aria-disabled', 'true');
+	nodes.get('native-update').classList.add('disabled');
 	nodes.get('native-update').textContent = 'Update now';
 	nodes.get('retry').textContent = 'Refresh releases';
 	browser.querySelector = (selector) =>
@@ -553,7 +552,7 @@ test('managed browser leaves Update now disabled, with no fallback link, while t
 	);
 });
 
-test('managed browser inspects the newer release and enables Update now when the user selects it with a matching offer', async () => {
+test('managed browser inspects the newer release without changing the toolbar', async () => {
 	const harness = createHarness(
 		[
 			...installedAndNewer,
@@ -585,17 +584,12 @@ test('managed browser inspects the newer release and enables Update now when the
 	assert.equal(harness.requests.length, 3);
 	assert.equal(harness.requests[2].get('release_id'), 'new');
 	const update = harness.nodes.get('native-update');
-	assert.equal(update.getAttribute('aria-disabled'), 'false');
-	assert.equal(update.textContent, 'Update to 3.0.0');
-	assert.match(update.getAttribute('href'), /action=update-selected/);
-
-	const installed = radioFor(harness, 'same');
-	installed.checked = true;
-	await installed.dispatch('change');
-	await flush();
 	assert.equal(update.getAttribute('aria-disabled'), 'true');
 	assert.equal(update.getAttribute('href'), null);
-	assert.equal(update.textContent, 'Update now');
+	assert.match(
+		harness.nodes.get('message').textContent,
+		/matches the current WordPress update offer/
+	);
 });
 
 test('managed browser shows the WordPress screen link only after the newer release without an offer is selected', async () => {
@@ -843,7 +837,7 @@ test('managed browser keeps installed version separate and ignores stale respons
 	);
 });
 
-test('managed browser enables the native Core update only for its exact newer inspected offer', async () => {
+test('managed browser identifies an inspected release with exact offer evidence', async () => {
 	const harness = createHarness(
 		[
 			{
@@ -882,31 +876,14 @@ test('managed browser enables the native Core update only for its exact newer in
 	harness.initialize(harness.browser);
 	await flush();
 	await flush();
-	assert.equal(
-		harness.nodes.get('native-update').getAttribute('aria-disabled'),
-		'false'
-	);
-	assert.equal(
-		harness.nodes.get('native-update').classList.contains('disabled'),
-		false
-	);
-	assert.equal(
-		harness.nodes.get('native-update').textContent,
-		'Update to 3.0.0'
-	);
-	assert.doesNotMatch(
-		harness.nodes.get('native-update').textContent,
-		/Install .* now/
-	);
-	assert.equal(
-		harness.nodes.get('native-update').getAttribute('href'),
-		'/wp-admin/plugins.php?action=update-selected&plugins=example%2Fplugin.php&_wpnonce=bulk'
-	);
 	const outcome = descendants(harness.nodes.get('candidate-list')).find(
 		(node) => node.className === 'ran-booster-release-candidate__outcome'
 	);
 	assert.equal(outcome.hidden, false);
-	assert.equal(outcome.textContent, 'Version 3.0.0 is ready to install.');
+	assert.equal(
+		outcome.textContent,
+		'Version 3.0.0 was inspected and matches the current WordPress update offer.'
+	);
 });
 
 test('managed browser prefers and marks the exact rendered update offer over a later-published candidate when the installed release is not listed', async () => {
@@ -1008,7 +985,7 @@ test('managed browser sends a newer theme release without an offer to the Themes
 	}
 });
 
-test('managed browser matches the page-level offer by version when the page has no release id and the installed release is not listed', async () => {
+test('managed browser requires identity to match a same-version WordPress offer', async () => {
 	const harness = createHarness(
 		[
 			{
@@ -1019,7 +996,7 @@ test('managed browser matches the page-level offer by version when the page has 
 					candidates: [
 						candidate(
 							'other',
-							'3.1.0',
+							'3.0.0',
 							'newer',
 							'2026-08-04T00:00:00Z'
 						),
@@ -1042,7 +1019,7 @@ test('managed browser matches the page-level offer by version when the page has 
 					version_relationship: 'newer',
 					native_offer: {
 						available: true,
-						release_id: 'new',
+						release_id: '',
 						version: '3.0.0',
 					},
 				},
@@ -1059,16 +1036,13 @@ test('managed browser matches the page-level offer by version when the page has 
 	);
 	assert.equal(
 		checked?.dataset.releaseId,
-		'new',
-		'the offered release, not the newest, is preselected'
+		'other',
+		'the provider order is preserved'
 	);
-	assert.equal(
-		harness.nodes.get('native-update').getAttribute('aria-disabled'),
-		'false'
-	);
-	assert.equal(
-		harness.nodes.get('native-update').textContent,
-		'Update to 3.0.0'
+	assert.match(harness.nodes.get('message').textContent, /was inspected/);
+	assert.doesNotMatch(
+		harness.nodes.get('message').textContent,
+		/matches the current WordPress update offer/
 	);
 });
 
@@ -1666,7 +1640,7 @@ test('the source switch bar is one shared state row with the message at the star
 	assert.doesNotMatch(packageStyles, /\.ran-booster-source-transition \{/);
 });
 
-test('the Update now button outside the browser is found, enabled, relabelled and reset', async () => {
+test('the standalone native update link survives inspection and a candidate refresh', async () => {
 	const harness = createHarness(
 		[
 			{
@@ -1708,6 +1682,12 @@ test('the Update now button outside the browser is found, enabled, relabelled an
 		'new'
 	);
 	const button = harness.nodes.get('native-update');
+	const href =
+		'/wp-admin/plugins.php?action=update-selected&plugins=example%2Fplugin.php&_wpnonce=bulk';
+	button.removeAttribute('aria-disabled');
+	button.classList.remove('disabled');
+	button.setAttribute('href', href);
+	button.textContent = 'Update to 3.0.0';
 	// The browser subtree does not contain the button.
 	assert.equal(
 		harness.browser.querySelector(
@@ -1720,7 +1700,7 @@ test('the Update now button outside the browser is found, enabled, relabelled an
 	await flush();
 	await flush();
 
-	assert.equal(button.getAttribute('aria-disabled'), 'false');
+	assert.equal(button.getAttribute('aria-disabled'), null);
 	assert.equal(button.getAttribute('tabindex'), null);
 	assert.equal(button.classList.contains('disabled'), false);
 	assert.match(button.getAttribute('href'), /update-selected/);
@@ -1730,9 +1710,7 @@ test('the Update now button outside the browser is found, enabled, relabelled an
 	await flush();
 	await flush();
 
-	assert.equal(button.getAttribute('aria-disabled'), 'true');
-	assert.equal(button.getAttribute('tabindex'), '-1');
-	assert.equal(button.classList.contains('disabled'), true);
-	assert.equal(button.getAttribute('href'), null);
-	assert.equal(button.textContent, 'Update now');
+	assert.equal(button.getAttribute('aria-disabled'), null);
+	assert.equal(button.getAttribute('href'), href);
+	assert.equal(button.textContent, 'Update to 3.0.0');
 });

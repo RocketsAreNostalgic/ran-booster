@@ -19,11 +19,15 @@ final class CoreSelfUpdateStatus {
 	/** @var Closure():CoreSelfUpdatePolicy */
 	private readonly Closure $policy;
 
-	/** @param callable():CoreSelfUpdatePolicy $policy Fresh effective policy. */
+	/**
+	 * @param callable():CoreSelfUpdatePolicy $policy Fresh effective policy.
+	 * @param (Closure():string)|null $cached_offer_version Passive read of the current WordPress offer.
+	 */
 	public function __construct(
 		callable $policy,
 		private readonly ?RepositoryReleaseNativeTarget $target,
-		private readonly ?CoreSelfUpdateCheck $check = null
+		private readonly ?CoreSelfUpdateCheck $check = null,
+		private readonly ?Closure $cached_offer_version = null
 	) {
 		$this->policy = Closure::fromCallable( $policy );
 	}
@@ -99,7 +103,10 @@ final class CoreSelfUpdateStatus {
 		}
 
 		try {
-			$status = $this->target->status();
+			$status  = $this->target->status();
+			$offered = $status->active && $policy->allows_native_discovery()
+				? $this->cached_offer_version?->__invoke() ?? $status->offered_version
+				: '';
 		} catch ( Throwable ) {
 			return array(
 				'state' => 'inactive',
@@ -112,7 +119,7 @@ final class CoreSelfUpdateStatus {
 
 			'code'            => $status->failure_code,
 
-			'offered_version' => $status->offered_version,
+			'offered_version' => $offered,
 
 			'last_check'      => $status->last_check,
 

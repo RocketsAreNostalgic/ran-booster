@@ -115,8 +115,9 @@ final class ReleaseManagementDisplay {
 
 			&& '' !== ( $nonce_actions['inspect_candidate'] ?? '' )
 			&& ! $repository_blocked;
+		$offered_version       = $status_available && ! $updates_forced_off && ! $repository_blocked ? ManagedReleaseBrowserOperations::persisted_offer_version( $status ) : '';
 		$status_notice_visible = $status_available && 'release_asset' === $source && '' !== $failure_code && ! $repository_blocked && ! $this->eligibility_explains_failure( $status );
-		$release_unchecked     = $status_available && 'release_asset' === $source && '' === $failure_code && '' === $status->last_checked_at() && ! $status->update_available();
+		$release_unchecked     = $status_available && 'release_asset' === $source && '' === $failure_code && '' === $status->last_checked_at() && '' === $offered_version && ! $status->update_available();
 		$gate_notice           = $repository_conflict_code
 			? __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' )
 			: ( $repository_source_blocked
@@ -211,7 +212,7 @@ final class ReleaseManagementDisplay {
 					<li class="ran-booster-readiness-item <?php echo $status_available && 'release_asset' === $source && '' === $status->failure_code() ? ( $release_unchecked ? 'is-neutral' : 'is-ok' ) : ( $status_available && 'branch' === $source && ! $repository_blocked ? 'is-neutral' : 'is-warning' ); ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 						<strong><?php esc_html_e( 'Release status', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? ( $release_unchecked && 'disabled' !== $status->deployment_policy() ? __( 'Use Check releases to look for a newer version.', 'ran-booster' ) : $this->release_status_message( $status ) ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
+						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? ( $release_unchecked && 'disabled' !== $status->deployment_policy() ? __( 'Use Check releases to look for a newer version.', 'ran-booster' ) : $this->release_status_message( $status, $offered_version ) ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
 					</li>
 				</ul>
 				<?php ob_start(); ?>
@@ -296,7 +297,7 @@ final class ReleaseManagementDisplay {
 			</summary>
 			<div data-ran-booster-ui-disclosure-content class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">
 				<?php $this->render_release_track_settings( $track_mode, $track_disabled, $selected_channel, $package, $track_nonce_action, $track_form_id, $preflight_action, $preflight_nonces ); ?>
-				<?php $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled ); ?>
+				<?php $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled, $offered_version ); ?>
 			</div>
 		</details></div>
 		<?php
@@ -408,15 +409,13 @@ final class ReleaseManagementDisplay {
 	}
 
 	/** @param array<string,string> $nonce_actions */
-	private function render_managed_candidate_browser( ?ReleaseTrackingStatus $status, array $nonce_actions, bool $enabled ): void {
-		$list_nonce        = $enabled ? ( $nonce_actions['list_candidates'] ?? '' ) : '';
-		$inspect_nonce     = $enabled ? ( $nonce_actions['inspect_candidate'] ?? '' ) : '';
-		$native_update_url = $enabled && null !== $status ? $this->native_update_url( $status ) : '';
-		$offered_version   = $enabled && null !== $status ? ManagedReleaseBrowserOperations::persisted_offer_version( $status->type(), $status->identifier() ) : '';
-		$screen_is_theme   = null !== $status && 'theme' === $status->type();
-		$screen_file       = $screen_is_theme ? 'themes.php' : 'plugins.php';
-		$screen_cap        = $screen_is_theme ? ( is_multisite() ? 'manage_network_themes' : 'switch_themes' ) : ( is_multisite() ? 'manage_network_plugins' : 'activate_plugins' );
-		$screen_url        = null === $status || ! current_user_can( $screen_cap ) ? '' : ( is_multisite() ? network_admin_url( $screen_file ) : admin_url( $screen_file ) );
+	private function render_managed_candidate_browser( ?ReleaseTrackingStatus $status, array $nonce_actions, bool $enabled, string $offered_version ): void {
+		$list_nonce      = $enabled ? ( $nonce_actions['list_candidates'] ?? '' ) : '';
+		$inspect_nonce   = $enabled ? ( $nonce_actions['inspect_candidate'] ?? '' ) : '';
+		$screen_is_theme = null !== $status && 'theme' === $status->type();
+		$screen_file     = $screen_is_theme ? 'themes.php' : 'plugins.php';
+		$screen_cap      = $screen_is_theme ? ( is_multisite() ? 'manage_network_themes' : 'switch_themes' ) : ( is_multisite() ? 'manage_network_plugins' : 'activate_plugins' );
+		$screen_url      = null === $status || ! current_user_can( $screen_cap ) ? '' : ( is_multisite() ? network_admin_url( $screen_file ) : admin_url( $screen_file ) );
 		?>
 		<div
 			class="ran-booster-managed-release-browser<?php echo $enabled ? '' : ' is-disabled'; ?>"
@@ -430,10 +429,9 @@ final class ReleaseManagementDisplay {
 			data-ran-booster-managed-release-list-nonce="<?php echo esc_attr( $list_nonce ); ?>"
 			data-ran-booster-managed-release-inspect-nonce="<?php echo esc_attr( $inspect_nonce ); ?>"
 			data-ran-booster-managed-release-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
-			data-ran-booster-managed-release-native-update-url="<?php echo esc_url( $native_update_url ); ?>"
-			data-ran-booster-managed-release-native-update-version="<?php echo esc_attr( '' !== $offered_version ? $offered_version : $status->latest_version() ); ?>"
+			data-ran-booster-managed-release-native-update-version="<?php echo esc_attr( $offered_version ); ?>"
 			data-ran-booster-managed-release-wordpress-url="<?php echo esc_url( $screen_url ); ?>"
-			data-ran-booster-managed-release-native-update-release-id="<?php echo esc_attr( $status->native_offer_release_id() ); ?>"
+			data-ran-booster-managed-release-native-update-release-id="<?php echo esc_attr( ManagedReleaseBrowserOperations::offer_release_id( $status, $offered_version ) ); ?>"
 			<?php } ?>
 		>
 			<div class="ran-booster-managed-release-browser__header">
@@ -468,22 +466,25 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
-	/**
-	 * Renders the disabled Update now anchor for the Package operations group.
-	 * The managed release browser script finds it by its data attribute and enables it.
-	 */
-	public function render_native_update_action(): void {
-		?>
-		<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) . ' disabled ran-booster-managed-release-native-update' ); ?>" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update><?php esc_html_e( 'Update now', 'ran-booster' ); ?></a>
-		<?php
+	/** Renders the current native offer in Package operations, including when scripts are unavailable. */
+	public function render_native_update_action( ?ReleaseTrackingStatus $status ): void {
+		$version = null === $status ? '' : ManagedReleaseBrowserOperations::persisted_offer_version( $status );
+		$url     = null !== $status && '' !== $version ? $this->native_update_url( $status ) : '';
+		$class   = \RAN\Admin\Component\ButtonClasses::secondary( false, true );
+		if ( '' !== $url ) {
+			/* translators: %s: release version. */
+			$label = sprintf( __( 'Update to %s', 'ran-booster' ), $version );
+			?>
+			<a class="<?php echo esc_attr( $class . ' ran-booster-managed-release-native-update' ); ?>" href="<?php echo esc_url( $url ); ?>" data-ran-booster-managed-release-native-update><?php echo esc_html( $label ); ?></a>
+			<?php
+		} else {
+			?>
+			<a class="<?php echo esc_attr( $class . ' disabled ran-booster-managed-release-native-update' ); ?>" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update><?php esc_html_e( 'Update now', 'ran-booster' ); ?></a>
+			<?php
+		}
 	}
 
 	private function native_update_url( ReleaseTrackingStatus $status ): string {
-		$offered = ManagedReleaseBrowserOperations::persisted_offer_version( $status->type(), $status->identifier() );
-		if ( '' === $offered && ( ! $status->update_available() || '' === $status->latest_version() ) ) {
-			return '';
-		}
-
 		$type       = $status->type();
 		$identifier = $status->identifier();
 		if ( 'plugin' === $type ) {
@@ -494,7 +495,7 @@ final class ReleaseManagementDisplay {
 				add_query_arg(
 					array(
 						'action'  => 'update-selected',
-						'plugins' => $identifier,
+						'plugins' => rawurlencode( $identifier ),
 					),
 					self_admin_url( 'plugins.php' )
 				),
@@ -510,7 +511,7 @@ final class ReleaseManagementDisplay {
 			add_query_arg(
 				array(
 					'action' => 'upgrade-theme',
-					'theme'  => $identifier,
+					'theme'  => rawurlencode( $identifier ),
 				),
 				self_admin_url( 'update.php' )
 			),
@@ -1369,6 +1370,10 @@ final class ReleaseManagementDisplay {
 			'package_update_uri_invalid' => __( 'The published ZIP’s Update URI does not match its configured repository.', 'ran-booster' ),
 			'package_compatibility_missing',
 			'package_compatibility_invalid' => __( 'The published release is not compatible with this WordPress site.', 'ran-booster' ),
+			'download_digest_mismatch' => __( 'The downloaded ZIP does not match the published digest.', 'ran-booster' ),
+			'download_size_mismatch' => __( 'The downloaded ZIP does not match the published size.', 'ran-booster' ),
+			'archive_php_requirement_incompatible' => __( 'The release ZIP requires a different PHP version.', 'ran-booster' ),
+			'archive_wordpress_requirement_incompatible' => __( 'The release ZIP requires a different WordPress version.', 'ran-booster' ),
 			'package_zip_extension_unavailable' => __( 'This server cannot inspect ZIP packages because its ZIP extension is unavailable.', 'ran-booster' ),
 			'package_archive_size_invalid',
 			'package_archive_too_large' => __( 'The published ZIP has an invalid or excessive uncompressed size.', 'ran-booster' ),
@@ -1419,6 +1424,10 @@ final class ReleaseManagementDisplay {
 			'package_update_uri_missing',
 			'package_update_uri_invalid' => __( 'Correct the Update URI in the packaged plugin or theme header, publish a new ZIP, then recheck.', 'ran-booster' ),
 			'package_compatibility_missing',
+			'download_digest_mismatch',
+			'download_size_mismatch' => __( 'Check the uploaded ZIP on the release, then use Check releases to get a fresh offer.', 'ran-booster' ),
+			'archive_php_requirement_incompatible',
+			'archive_wordpress_requirement_incompatible',
 			'package_compatibility_invalid' => __( 'Publish a package whose WordPress and PHP compatibility headers include this site, or choose a compatible release track.', 'ran-booster' ),
 			'release_version_mismatch',
 			'release_version_invalid' => __( 'Make the release tag and packaged WordPress Version header describe the same valid version, then publish a corrected ZIP.', 'ran-booster' ),
@@ -1442,10 +1451,10 @@ final class ReleaseManagementDisplay {
 	}
 
 	/** @param ReleaseTrackingStatus $status */
-	private function release_status_message( object $status ): string {
+	private function release_status_message( object $status, string $offered_version = '' ): string {
 		$installed = $this->bounded_string( $status->installed_version(), 64 );
-		$latest    = $this->bounded_string( $status->latest_version(), 64 );
-		if ( $status->update_available() && '' !== $latest ) {
+		$latest    = $this->bounded_string( '' !== $offered_version ? $offered_version : $status->latest_version(), 64 );
+		if ( ( '' !== $offered_version || $status->update_available() ) && '' !== $latest ) {
 			return sprintf(
 				/* translators: 1: installed version, 2: available version. */
 				__( 'Version %1$s is installed; version %2$s is available. WordPress controls installation.', 'ran-booster' ),

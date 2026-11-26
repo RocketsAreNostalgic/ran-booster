@@ -135,25 +135,20 @@ final class CoreSelfUpdateNativeTarget implements RepositoryReleaseNativeTarget 
 
 	/** @param array<string, mixed> $status */
 	private function valid_candidate_tuple( array $status ): bool {
-		$present = array(
-			null !== $status['candidate_validation_code'],
-			null !== $status['candidate_tag'],
-			null !== $status['candidate_version'],
-		);
-		$count   = count( array_filter( $present ) );
-		if ( 0 !== $count && 3 !== $count ) {
-			return false;
+		$code    = $status['candidate_validation_code'];
+		$tag     = $status['candidate_tag'];
+		$version = $status['candidate_version'];
+		$header  = $status['candidate_header_version'];
+		$offered = $status['offered_version'];
+		if ( null === $tag || null === $version ) {
+			return null === $tag && null === $version && null === $code && null === $header;
 		}
-		if ( 0 === $count ) {
-			return null === $status['candidate_header_version'];
-		}
-		if ( 'archive_identity_verified' === $status['candidate_validation_code']
-			&& null === $status['candidate_header_version'] ) {
-			return false;
+		if ( null === $code ) {
+			// Routine discovery can offer a release before its ZIP is inspected.
+			return null === $header && $version === $offered && 'newer' === $status['relationship'];
 		}
 
-		return null === $status['offered_release_identity']
-			|| 'archive_identity_verified' === $status['candidate_validation_code'];
+		return 'archive_identity_verified' === $code ? null !== $header : null === $offered;
 	}
 
 	private function unavailable_status(): RepositoryReleaseNativeTargetStatus {

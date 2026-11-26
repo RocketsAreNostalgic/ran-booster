@@ -153,7 +153,7 @@ for (const picker of ['managed', 'prospective']) {
 			const form={querySelector:()=>({value:'example'})};
 			const hasSubdirectory=()=>false, providerSupported=()=>true;
 			const forceBranchForSubdirectory=()=>{}, forceBranchForUnsupportedProvider=()=>{};
-			const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{};
+			const clearError=()=>{}, setListBusy=()=>{};
 			const showPlaceholder=()=>{}, setStatus=()=>{}, setChecking=()=>{}, showUnavailable=()=>{}, showError=()=>{};
 			const showCandidates=()=>{}, isNativeUpdateOffer=()=>false, inspect=()=>{};
 			const candidateElements=new Map(); let selectedOutcome=null;
@@ -1176,7 +1176,7 @@ for (const enhanced of [true, false]) {
 			'window',
 			'wp',
 			'request',
-			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{}, setStatus=()=>{}, showError=()=>{}, showPlaceholder=()=>{}; const candidates=null, observations=null; const renderListingObservations=()=>{}; ${declaration('list')} return list;`
+			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, setStatus=()=>{}, showError=()=>{}, showPlaceholder=()=>{}; const candidates=null, observations=null; const renderListingObservations=()=>{}; ${declaration('list')} return list;`
 		)(
 			candidateList,
 			window,

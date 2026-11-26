@@ -10,6 +10,8 @@ require_once __DIR__ . '/../../Storage/StorageTestEnvironment.php';
 
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
@@ -22,31 +24,6 @@ use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
 use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class ReleaseManagementPackageAdministrationTest extends TestCase {
-	public function test_theme_native_update_url_requires_update_themes_capability(): void {
-		$package = new PackageProjection( 'release_asset', 'theme' );
-		$status  = ReleaseManagementFixture::status( 'release_asset', 'theme', update_available: true );
-		$nonces  = array(
-			'list_candidates'   => 'nonce-list',
-			'inspect_candidate' => 'nonce-inspect',
-		);
-
-		$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array( 'update_themes' );
-		ob_start();
-		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, $status, $package->settings_url(), 'stable', $nonces );
-		$denied_html = (string) ob_get_clean();
-
-		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-url=""', $denied_html );
-		self::assertStringNotContainsString( 'upgrade-theme', $denied_html );
-
-		$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array();
-		ob_start();
-		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, $status, $package->settings_url(), 'stable', $nonces );
-		$allowed_html = (string) ob_get_clean();
-
-		self::assertStringContainsString( 'action=upgrade-theme', $allowed_html );
-		self::assertStringContainsString( 'nonce-for-upgrade-theme_example-theme', $allowed_html );
-	}
-
 	public function test_unavailable_readiness_keeps_native_text_and_explicit_badge_intent(): void {
 		$package = new PackageProjection();
 		ob_start();
@@ -803,7 +780,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			array(
 				'available'  => false,
 				'release_id' => '',
-				'version'    => '1.1.0',
+				'version'    => '',
 			),
 			$inspect['data']['native_offer']
 		);
@@ -878,115 +855,95 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 	}
 
-	public function test_managed_browser_renders_a_disabled_native_core_update_bound_to_the_current_offer(): void {
-		$tracking = new ReleaseTrackingFacadeDouble(
-			new \RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus(
-				'plugin',
-				'example/example.php',
-				'release_asset',
-				3,
-				'101',
-				'manual',
-				new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE, 'https://github.com/example/example', 'example-plugin' ),
-				new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0' ),
-				'example-plugin',
-				'1.0.0',
-				'1.2.0',
-				true,
-				'',
-				'',
-				'',
-				'stable'
-			)
-		);
-		$controls = ReleaseManagementFixture::controls( $tracking );
+	public function test_managed_browser_links_to_the_wordpress_screen_only_when_accessible(): void {
+		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) ) );
 		$package  = new PackageProjection( 'release_asset' );
 
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 
-		self::assertStringNotContainsString( '>Install now</a>', $html );
-		// The browser keeps the offer data; the Update now button moved to the Package operations group.
-		self::assertStringNotContainsString( '>Update now</a>', $html );
-		self::assertStringNotContainsString( 'ran-booster-managed-release-browser__footer', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-managed-release-native-update>', $html );
-		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-version="1.2.0"', $html );
-		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-release-id=""', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-managed-release-native-update-url=', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-wordpress-url="https://example.test/wp-admin/plugins.php"', $html );
 		$GLOBALS['ran_booster_release_management_test_multisite'] = true;
 		try {
 			ob_start();
 			$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 			$network_html = (string) ob_get_clean();
-		} finally {
-			unset( $GLOBALS['ran_booster_release_management_test_multisite'] );
-		}
-		self::assertStringContainsString( 'data-ran-booster-managed-release-wordpress-url="https://example.test/wp-admin/network/plugins.php"', $network_html );
-		// Without the capability the screen would deny the user, so no link target is offered.
-		$GLOBALS['ran_booster_release_management_test_multisite']           = true;
-		$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array( 'manage_network_plugins' );
-		try {
+			$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array( 'manage_network_plugins' );
 			ob_start();
 			$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 			$denied_html = (string) ob_get_clean();
 		} finally {
 			unset( $GLOBALS['ran_booster_release_management_test_multisite'], $GLOBALS['ran_booster_release_management_test_denied_capabilities'] );
 		}
+		self::assertStringContainsString( 'data-ran-booster-managed-release-wordpress-url="https://example.test/wp-admin/network/plugins.php"', $network_html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-wordpress-url=""', $denied_html );
-		self::assertStringContainsString( 'aria-disabled="true"', $html );
-		// WordPress's one-item bulk route updates an active plugin without deactivating it first.
-		self::assertStringContainsString( 'https://example.test/wp-admin/plugins.php?action=update-selected', $html );
-		self::assertStringContainsString( 'plugins=example/example.php', rawurldecode( $html ) );
-		self::assertStringContainsString( '_wpnonce=nonce-for-bulk-plugins', $html );
-		self::assertStringNotContainsString( 'upgrade-plugin', $html );
 	}
 
-	public function test_managed_plugin_update_link_requires_exactly_what_the_wordpress_plugins_screen_requires(): void {
-		$status   = new \RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus(
-			'plugin',
-			'example/example.php',
-			'release_asset',
-			3,
-			'101',
-			'manual',
-			new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE, 'https://github.com/example/example', 'example-plugin' ),
-			new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0' ),
-			'example-plugin',
-			'1.0.0',
-			'1.2.0',
-			true,
-			'',
-			'',
-			'',
-			'stable'
+	/** @return iterable<string,array{string,string,string,string,list<string>}> */
+	public static function native_update_routes(): iterable {
+		yield 'plugin' => array( 'plugin', 'example/example.php', 'plugins.php?action=update-selected', 'bulk-plugins', array( 'activate_plugins', 'update_plugins' ) );
+		yield 'theme' => array( 'theme', 'example-theme', 'update.php?action=upgrade-theme', 'upgrade-theme_example-theme', array( 'update_themes' ) );
+	}
+
+	/** @param list<string> $required_capabilities */
+	#[DataProvider( 'native_update_routes' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_native_update_renders_an_authorized_target_and_nonce_without_picker_activity( string $type, string $identifier, string $route, string $nonce_action, array $required_capabilities ): void {
+		require_once __DIR__ . '/PersistedOfferVersionWordPressFunctions.php';
+		require_once __DIR__ . '/../../Support/PackageViewWordPressFunctions.php';
+		$transient = 'plugin' === $type ? 'update_plugins' : 'update_themes';
+		$entry     = array(
+			$type         => $identifier,
+			'new_version' => '2.0',
+			'package'     => 'identity-bound-offer',
 		);
-		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( $status ) );
-		$package  = new PackageProjection( 'release_asset' );
-		$render   = static function ( array $denied ) use ( $controls, $package ): string {
-			$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = $denied;
-			try {
-				ob_start();
-				$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
-
-				return (string) ob_get_clean();
-			} finally {
-				unset( $GLOBALS['ran_booster_release_management_test_denied_capabilities'] );
-			}
+		$GLOBALS['ran_booster_test_site_transients'][ $transient ] = (object) array(
+			'response' => array( $identifier => 'plugin' === $type ? (object) $entry : $entry ),
+		);
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', $type ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$render   = static function ( int $revision = 3 ) use ( $controls, $type, $identifier ): string {
+			ob_start();
+			$controls->render_package_operation_actions( 'release_asset', 'release_asset', $type, $identifier, $revision );
+			return (string) ob_get_clean();
 		};
-		$no_link  = 'data-ran-booster-managed-release-native-update-url=""';
 
-		// The Plugins screen refuses without activate_plugins and its update frame without update_plugins.
-		self::assertStringContainsString( $no_link, $render( array( 'activate_plugins' ) ) );
-		self::assertStringContainsString( $no_link, $render( array( 'update_plugins' ) ) );
-		self::assertStringContainsString( 'https://example.test/wp-admin/plugins.php?action=update-selected', $render( array( 'manage_network_plugins' ) ) );
+		$html = $render();
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/' . $route, $html );
+		self::assertStringContainsString( ( 'plugin' === $type ? 'plugins' : 'theme' ) . '=' . $identifier, rawurldecode( $html ) );
+		self::assertStringContainsString( '_wpnonce=nonce-for-' . $nonce_action, $html );
+		self::assertStringContainsString( '>Update to 2.0</a>', $html );
+
+		$package = new PackageProjection( 'release_asset', $type );
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, ReleaseManagementFixture::status( 'release_asset', $type ), $package->settings_url() );
+		$status_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'version 2.0 is available.', $status_html );
+		self::assertStringNotContainsString( 'Published release inspected', $status_html );
+		self::assertSame( array(), $tracking->calls );
+
+		foreach ( $required_capabilities as $capability ) {
+			$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array( $capability );
+			self::assertStringNotContainsString( 'href=', $render() );
+		}
+		unset( $GLOBALS['ran_booster_release_management_test_denied_capabilities'] );
+		self::assertStringNotContainsString( 'href=', $render( 4 ) );
+
+		$blocked = ReleaseManagementFixture::controls( $tracking, updates_forced_off: static fn (): bool => true );
+		ob_start();
+		$blocked->render_package_operation_actions( 'release_asset', 'release_asset', $type, $identifier, 3 );
+		self::assertStringNotContainsString( 'href=', (string) ob_get_clean() );
 	}
 
-	public function test_package_operation_actions_render_a_disabled_secondary_update_now_for_release_packages_only(): void {
-		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) ) );
+	public function test_package_operation_actions_render_disabled_when_wordpress_holds_no_offer(): void {
+		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', update_available: true ) ) );
 
 		ob_start();
-		$controls->render_package_operation_actions( 'release_asset', 'release_asset' );
+		$controls->render_package_operation_actions( 'release_asset', 'release_asset', 'plugin', 'example/example.php', 3 );
 		$html = trim( (string) ob_get_clean() );
 
 		self::assertMatchesRegularExpression( '/^<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-outline disabled ran-booster-managed-release-native-update" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update>Update now<\/a>$/', $html );
@@ -994,42 +951,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		foreach ( array( array( 'branch', 'branch' ), array( 'branch', 'release_asset' ), array( 'release_asset', 'branch' ) ) as $sources ) {
 			ob_start();
-			$controls->render_package_operation_actions( $sources[0], $sources[1] );
+			$controls->render_package_operation_actions( $sources[0], $sources[1], 'plugin', 'example/example.php', 3 );
 			self::assertSame( '', trim( (string) ob_get_clean() ), implode( '/', $sources ) );
 		}
-	}
-
-	public function test_managed_theme_browser_uses_the_native_theme_upgrade_route(): void {
-		$tracking = new ReleaseTrackingFacadeDouble(
-			new \RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus(
-				'theme',
-				'example-theme',
-				'release_asset',
-				3,
-				'101',
-				'manual',
-				new ReleaseTrackingEligibility( ReleaseTrackingEligibility::ELIGIBLE, 'https://github.com/example/example', 'example-theme' ),
-				new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-theme', '1.2.0', 'https://example.test/releases/v1.2.0' ),
-				'example-theme',
-				'1.0.0',
-				'1.2.0',
-				true,
-				'',
-				'',
-				'',
-				'stable'
-			)
-		);
-		$controls = ReleaseManagementFixture::controls( $tracking );
-		$package  = new PackageProjection( 'release_asset', 'theme' );
-
-		ob_start();
-		$controls->render_advanced_source_section( 'edit', 'theme', 'release_asset', $package, $package->settings_url() );
-		$html = (string) ob_get_clean();
-
-		self::assertStringContainsString( 'https://example.test/wp-admin/update.php?action=upgrade-theme', $html );
-		self::assertStringContainsString( 'theme=example-theme', $html );
-		self::assertStringContainsString( '_wpnonce=nonce-for-upgrade-theme_example-theme', $html );
 	}
 
 	#[DataProvider( 'package_types' )]

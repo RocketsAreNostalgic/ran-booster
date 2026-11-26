@@ -668,7 +668,7 @@ class Dashboard {
 		$status['installed_version'] = $version;
 		$url                         = null;
 		if ( 'enabled' === ( $status['effective_mode'] ?? null ) && 'active' === ( $status['updater_state'] ?? null )
-			&& is_string( $status['offered_version'] ?? null ) && version_compare( $status['offered_version'], $version, '>' ) && current_user_can( 'update_plugins' ) ) {
+			&& is_string( $status['offered_version'] ?? null ) && current_user_can( 'update_plugins' ) ) {
 			$url = wp_nonce_url( admin_url( 'update.php?action=upgrade-plugin&plugin=' . rawurlencode( plugin_basename( dirname( __DIR__ ) . '/ran-booster.php' ) ) ), 'upgrade-plugin_' . plugin_basename( dirname( __DIR__ ) . '/ran-booster.php' ) );
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Fixed feedback flag conveys no private data and performs no mutation.

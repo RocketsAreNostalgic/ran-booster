@@ -187,10 +187,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const retry = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-retry]'
 	);
-	// Lives in the Package operations group, outside the release browser.
-	const nativeUpdate = document.querySelector(
-		'[data-ran-booster-managed-release-native-update]'
-	);
 	const errorNotice = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-error]'
 	);
@@ -234,56 +230,25 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			retry.classList.toggle('ran-booster-update-is-active', busy);
 		}
 	};
-	const disableNativeUpdate = () => {
-		if (!nativeUpdate) {
-			return;
-		}
-		nativeUpdate.removeAttribute('href');
-		nativeUpdate.setAttribute('aria-disabled', 'true');
-		nativeUpdate.setAttribute('tabindex', '-1');
-		nativeUpdate.classList.add('disabled');
-		nativeUpdate.textContent = __('Update now', 'ran-booster');
-	};
-	const enableNativeUpdate = (version) => {
-		const url =
-			managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl;
-		if (!nativeUpdate || !url) {
-			return false;
-		}
-		nativeUpdate.setAttribute('href', url);
-		nativeUpdate.setAttribute('aria-disabled', 'false');
-		nativeUpdate.removeAttribute('tabindex');
-		nativeUpdate.classList.remove('disabled');
-		/* translators: %s: release version. */
-		nativeUpdate.textContent = sprintf(
-			/* translators: %s: release version. */
-			__('Update to %s', 'ran-booster'),
-			version
-		);
-		return true;
-	};
 	const isNativeUpdateOffer = (candidate) => {
 		const offeredId =
 			managedBrowser.dataset
 				.ranBoosterManagedReleaseNativeUpdateReleaseId;
-		// The release id is only known in the request that ran the updater's check.
 		return (
+			Boolean(offeredId) &&
 			candidate.version_relationship === 'newer' &&
 			candidate.version ===
 				managedBrowser.dataset
 					.ranBoosterManagedReleaseNativeUpdateVersion &&
-			(!offeredId || String(candidate.release_id) === offeredId) &&
-			Boolean(
-				managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl
-			)
+			String(candidate.release_id) === offeredId
 		);
 	};
 	const isCurrentNativeUpdateOffer = (candidate, nativeOffer) =>
 		nativeOffer?.available === true &&
+		Boolean(nativeOffer.release_id) &&
 		candidate.version_relationship === 'newer' &&
 		candidate.version === nativeOffer.version &&
-		String(candidate.release_id) === String(nativeOffer.release_id) &&
-		Boolean(managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl);
+		String(candidate.release_id) === String(nativeOffer.release_id);
 	const request = async (operation, extra = {}) => {
 		const data = new FormData();
 		data.append(
@@ -399,7 +364,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					? sprintf(
 							/* translators: %s: release version. */
 							__(
-								'Version %s is ready to install.',
+								'Version %s was inspected and matches the current WordPress update offer.',
 								'ran-booster'
 							),
 							response.data.version
@@ -407,7 +372,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					: sprintf(
 							/* translators: %s: release version. */
 							__(
-								'Version %s is newer, but it is not the current WordPress update offer.',
+								'Version %s was inspected. See WordPress Updates for the current offer.',
 								'ran-booster'
 							),
 							response.data.version
@@ -461,11 +426,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					selectedOutcome.append(link);
 				}
 			}
-			if (nativeOffer) {
-				enableNativeUpdate(response.data.native_offer.version);
-			} else {
-				disableNativeUpdate();
-			}
 		} catch {
 			if (current === sequence) {
 				showError(
@@ -497,7 +457,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		selected = null;
 		clearError();
 		setListBusy(true);
-		disableNativeUpdate();
 		if (candidateList) {
 			if (window.htmx?.swap) {
 				window.htmx.swap(candidateList, '', {
@@ -592,7 +551,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				const older = candidate.version_relationship === 'older';
 				input.disabled = older;
 				input.addEventListener('change', () => {
-					disableNativeUpdate();
 					if (selectedOutcome) {
 						selectedOutcome.hidden = true;
 					}
@@ -768,11 +726,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			}
 		}
 	};
-	nativeUpdate?.addEventListener('click', (event) => {
-		if ('true' === nativeUpdate.getAttribute('aria-disabled')) {
-			event.preventDefault();
-		}
-	});
 	retry?.addEventListener('click', list);
 	list();
 };

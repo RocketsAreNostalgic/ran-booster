@@ -238,6 +238,7 @@ if ( 2 !== $ran_booster_counts['wordpress_org'] ) {
 $ran_booster_plugin_updates = get_site_transient( 'update_plugins' );
 $ran_booster_theme_updates  = get_site_transient( 'update_themes' );
 $ran_booster_active         = 0;
+$ran_booster_advisory       = 0;
 foreach ( $ran_booster_items as $ran_booster_item_index => $ran_booster_item ) {
 	if ( ! is_array( $ran_booster_item ) || ! is_string( $ran_booster_item['type'] ?? null ) || ! is_string( $ran_booster_item['identifier'] ?? null ) || ! is_string( $ran_booster_item['policy'] ?? null ) ) {
 		throw new RuntimeException( 'The native lifecycle item is malformed.' );
@@ -261,7 +262,11 @@ foreach ( $ran_booster_items as $ran_booster_item_index => $ran_booster_item ) {
 		continue;
 	}
 	$ran_booster_expected_release_id = (string) hexdec( substr( sha1( (string) $ran_booster_item['repository'] ), 0, 6 ) );
-	if ( '2.0.0' !== $status->offered_version || ! hash_equals( $ran_booster_expected_release_id, $status->candidate_provider_release_id ) ) {
+	$ran_booster_is_advisory         = '' === $status->candidate_code && '' === $status->candidate_package_header_version && '' === $status->candidate_provider_release_id;
+	$ran_booster_verified            = 'release_identity_verified' === $status->candidate_code
+		&& '2.0.0' === $status->candidate_package_header_version
+		&& hash_equals( $ran_booster_expected_release_id, $status->candidate_provider_release_id );
+	if ( '2.0.0' !== $status->offered_version || ( ! $ran_booster_is_advisory && ! $ran_booster_verified ) ) {
 		throw new RuntimeException(
 			'The installed target did not retain its exact native offer identity: ' . wp_json_encode(
 				array(
@@ -275,14 +280,15 @@ foreach ( $ran_booster_items as $ran_booster_item_index => $ran_booster_item ) {
 			)
 		);
 	}
-	$ran_booster_history = $ran_booster_activity->activity_history(
+	$ran_booster_advisory += (int) $ran_booster_is_advisory;
+	$ran_booster_history   = $ran_booster_activity->activity_history(
 		array(
 			'subject_type'     => $ran_booster_item['type'],
 			'subject_identity' => $ran_booster_item['identifier'],
 			'operation'        => 'release.check',
 		)
 	);
-	$ran_booster_check   = $ran_booster_history['records'][0] ?? null;
+	$ran_booster_check     = $ran_booster_history['records'][0] ?? null;
 	if ( ! $ran_booster_history['available'] || null === $ran_booster_check
 		|| 'succeeded' !== ( $ran_booster_check['status'] ?? null ) || 'update_available' !== ( $ran_booster_check['reason'] ?? null )
 		|| 'established' !== ( $ran_booster_check['effect'] ?? null ) || '' === ( $ran_booster_check['adoption_token'] ?? '' ) ) {
@@ -290,6 +296,11 @@ foreach ( $ran_booster_items as $ran_booster_item_index => $ran_booster_item ) {
 	}
 }
 
+
+if ( 0 < $ran_booster_advisory && 0 !== $ran_booster_counts['zip_count'] ) {
+	throw new RuntimeException( 'Advisory discovery downloaded a ZIP before installation.' );
+}
+$ran_booster_before_install = $ran_booster_counts['zip_count'];
 
 // Each mutation gets a real request shutdown before another target can start.
 foreach ( array( $ran_booster_items[ (int) $ran_booster_index - 1 ] ) as $ran_booster_item ) {
@@ -335,12 +346,11 @@ foreach ( array( $ran_booster_items[ (int) $ran_booster_index - 1 ] ) as $ran_bo
 		if ( ! is_plugin_active( $ran_booster_identifier ) ) {
 			throw new RuntimeException( 'The installed native manual plugin fixture is not active.' );
 		}
-		$ran_booster_package = new RAN\Admin\AdminPackageProjection( 'plugin', $ran_booster_identifier, 'C4 ' . $ran_booster_item['number'], 'gh', 'release_asset', 1, 'manual', admin_url( 'admin.php?page=ran-booster-plugins' ) );
 		ob_start();
-		do_action( 'ran_booster_admin_package_advanced_source_sections', 'edit', 'plugin', 'release_asset', $ran_booster_package, $ran_booster_package->settings_url() );
-		$ran_booster_pane = (string) ob_get_clean();
-		if ( 1 !== preg_match( '/\sdata-ran-booster-managed-release-native-update-url="([^"]+)"/', $ran_booster_pane, $ran_booster_match ) ) {
-			throw new RuntimeException( 'The installed release pane rendered no Update now link.' );
+		do_action( 'ran_booster_admin_package_operation_actions', 'release_asset', 'release_asset', $type, $ran_booster_identifier, 1 );
+		$ran_booster_actions = (string) ob_get_clean();
+		if ( 1 !== preg_match( '/<a [^>]*href="([^"]+)" data-ran-booster-managed-release-native-update>Update to 2\.0\.0<\/a>/', $ran_booster_actions, $ran_booster_match ) ) {
+			throw new RuntimeException( 'The Package operations group rendered no version-labelled native link.' );
 		}
 		$ran_booster_link  = html_entity_decode( $ran_booster_match[1], ENT_QUOTES | ENT_HTML5 );
 		$ran_booster_query = array();
@@ -382,6 +392,9 @@ foreach ( array( $ran_booster_items[ (int) $ran_booster_index - 1 ] ) as $ran_bo
 		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 		throw new RuntimeException( 'The installed native ' . $type . ' digest was not replaced.' );
 	}
+}
+if ( 0 < $ran_booster_advisory && 1 !== $ran_booster_counts['zip_count'] - $ran_booster_before_install ) {
+	throw new RuntimeException( 'The native update did not acquire exactly one ZIP for installation.' );
 }
 if ( 1 > $ran_booster_counts['http'] || 1 > $ran_booster_counts['zip_bytes'] || 1 > $ran_booster_counts['zip_count'] ) {
 	throw new RuntimeException( 'The controlled GitHub fixture did not serve native metadata and ZIP bytes.' );

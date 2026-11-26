@@ -22,6 +22,7 @@ use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeNotFound;
 use RAN\Storage\ThemeRepository;
 use RAN\UpdaterSupport\V1\PackageDirectory;
+use RAN\WPReleaseUpdater\V1\Contract\ReleaseVersion;
 use Throwable;
 
 /**
@@ -731,6 +732,25 @@ final class ManagedReleaseTargetRegistrar {
 		} catch ( Throwable ) {
 			return null;
 		}
+	}
+
+	/** @phpstan-impure Reads the current filtered WordPress update transient. */
+	public static function cached_offer_version( string $type, string $identifier, string $installed_version ): string {
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || '' === $installed_version || ! function_exists( 'get_site_transient' )
+			|| ! class_exists( ReleaseVersion::class, false ) ) {
+			return '';
+		}
+		$transient = get_site_transient( 'plugin' === $type ? 'update_plugins' : 'update_themes' );
+		$entry     = is_object( $transient ) && is_array( $transient->response ?? null ) ? ( $transient->response[ $identifier ] ?? null ) : null;
+		$offer     = is_object( $entry ) ? get_object_vars( $entry ) : ( is_array( $entry ) ? $entry : array() );
+		$package   = $offer['package'] ?? null;
+		$version   = $offer['new_version'] ?? $offer['version'] ?? null;
+
+		return ( $offer[ $type ] ?? null ) === $identifier && is_string( $package ) && '' !== $package
+			&& is_string( $version ) && 64 >= strlen( $version )
+			&& ReleaseVersion::RELATIONSHIP_NEWER === ReleaseVersion::relationship( $version, $installed_version )
+			? $version
+			: '';
 	}
 
 	public function failure_code( string $type, string $identifier ): string {

@@ -89,6 +89,12 @@ final class SupportReportTest extends TestCase {
 		self::assertSame( 'check_failed', $lines['last_check_code'] );
 		self::assertSame( gmdate( 'c', 1700000300 ), $lines['check_cooldown_until'] );
 		self::assertSame( gmdate( 'c', 1700001000 ), $lines['next_check'] );
+		foreach ( array( 'download_digest_mismatch', 'download_size_mismatch', 'archive_php_requirement_incompatible', 'archive_wordpress_requirement_incompatible' ) as $code ) {
+			$core['updater_code'] = $code;
+			self::assertSame( $code, $method->invoke( null, $core )['updater_code'] );
+		}
+		$core['updater_code'] = 'private_failure_details';
+		self::assertSame( 'Unknown', $method->invoke( null, $core )['updater_code'] );
 		foreach ( array( 'success', 'skipped', 'unknown', 'rejected' ) as $outcome ) {
 			$core['last_check_outcome'] = $outcome;
 			self::assertSame( $outcome, $method->invoke( null, $core )['last_check_outcome'] );

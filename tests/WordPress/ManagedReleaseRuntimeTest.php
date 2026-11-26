@@ -2158,8 +2158,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			)
 		);
 		self::assertSame( 'release_selection_changed', $stale->code() );
-		self::assertSame( array(), $installs );
-		self::assertSame( array(), $store->transitions );
+		self::assertCount( 0, $installs );
+		self::assertCount( 0, $store->transitions );
 
 		$result = $facade->enable(
 			'plugin',
@@ -2177,10 +2177,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'release_enabled', $result->code() );
 		self::assertSame( array( array( 'plugin', 'example/example.php', '99', 'v1.0.0', false, '1.0.0' ) ), $installs );
 		// The injected updater stands in for the native completion that owns the source write.
-		self::assertSame( array(), $store->transitions );
+		self::assertCount( 0, $store->transitions );
 		self::assertSame( 0, $lock->acquires );
 		self::assertNotNull( $registrar->target( 'plugin', 'example/example.php' ) );
-		self::assertSame( array(), $this->shutdown_rechecks() );
+		self::assertCount( 0, $this->shutdown_rechecks() );
 	}
 
 	/** @return iterable<string, array{string, string}> */
@@ -2500,29 +2500,26 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$inspections   = array();
 		$invalidations = array();
 		$allowed       = true;
-		$matching_list = false;
-		$providers     = $this->release_metadata_registry(
+		/** @var \ArrayObject<int, RepositoryReleaseCandidate> $additional_candidates */
+		$additional_candidates = new \ArrayObject();
+		$providers             = $this->release_metadata_registry(
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
-			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$listings, &$matching_list ): RepositoryReleaseCandidateList {
+			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$listings, $additional_candidates ): RepositoryReleaseCandidateList {
 				$listings[] = compact( 'type', 'repository', 'channel' );
 				$ids        = 'plugin' === $type ? array( '101', '102' ) : array( '201' );
 
-				if ( $matching_list ) {
-					$ids[] = '303';
-				}
-				return new RepositoryReleaseCandidateList(
-					array_map(
-						static fn ( string $id ): RepositoryReleaseCandidate => new RepositoryReleaseCandidate(
-							$id,
-							'303' === $id ? 'v1.0' : 'v2.0.0',
-							'303' === $id ? '1.0' : '2.0.0',
-							false,
-							'2026-08-17T12:00:00Z',
-							array( 'example.zip' )
-						),
-						$ids
-					)
+				$candidates = array_map(
+					static fn ( string $id ): RepositoryReleaseCandidate => new RepositoryReleaseCandidate(
+						$id,
+						'v2.0.0',
+						'2.0.0',
+						false,
+						'2026-08-17T12:00:00Z',
+						array( 'example.zip' )
+					),
+					$ids
 				);
+				return new RepositoryReleaseCandidateList( array_merge( $candidates, $additional_candidates->getArrayCopy() ) );
 			},
 			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ) use ( &$inspections ): RepositoryReleaseInspection {
 				$inspections[] = array(
@@ -2576,7 +2573,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertTrue( $facade->preflight( 'plugin', 'example/example.php', 1, 'prerelease', $plugin_nonce )?->ready() );
 		self::assertTrue( $facade->preflight( 'theme', 'example-theme', 1, 'stable', $theme_nonce )?->ready() );
 
-		$matching_list = true;
+		$additional_candidates[] = new RepositoryReleaseCandidate( '303', 'v1.0', '1.0', false, '2026-08-17T12:00:00Z', array( 'example.zip' ) );
 		foreach ( array( array( 'plugin', 'example/example.php', 'prerelease', $plugin_nonce ), array( 'theme', 'example-theme', 'stable', $theme_nonce ) ) as [ $type, $identifier, $channel, $nonce ] ) {
 			$latest = $facade->preflight( $type, $identifier, 1, $channel, $nonce );
 			self::assertTrue( $latest?->matching_release_available );
@@ -2588,8 +2585,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			self::assertFalse( $match->matching_release_available );
 			self::assertSame( array( '303' ), array_column( array_slice( $inspections, $before ), 'releaseId' ) );
 		}
-		$matching_list = false;
-		$before        = count( $inspections );
+		$additional_candidates->exchangeArray( array() );
+		$before = count( $inspections );
 		self::assertSame( ReleaseTrackingPreflight::MATCHING_RELEASE_UNAVAILABLE, $facade->preflight( 'theme', 'example-theme', 1, 'stable', $theme_nonce, true )?->code() );
 		self::assertCount( $before, $inspections );
 

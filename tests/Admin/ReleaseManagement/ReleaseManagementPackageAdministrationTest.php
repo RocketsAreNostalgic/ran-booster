@@ -573,6 +573,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'Open repository', $html );
 	}
 
+	/** @return list<array{'plugin'|'theme'}> */
 	public static function eligible_branch_types(): array {
 		return array( array( 'plugin' ), array( 'theme' ) );
 	}
@@ -598,7 +599,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', $type, 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
-		self::assertSame( array(), $tracking->calls );
+		self::assertCount( 0, $tracking->calls );
 		self::assertStringNotContainsString( 'Browse releases', $html );
 		self::assertStringContainsString( 'data-ran-booster-branch-preview', $html );
 		self::assertStringContainsString( 'Refresh releases', $html );
@@ -609,13 +610,13 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', $type, 'release_asset', $package, $package->settings_url() );
 		ob_end_clean();
-		self::assertSame( array(), $tracking->calls );
+		self::assertCount( 0, $tracking->calls );
 		$_GET['_ran_booster_release_list_nonce']['stable'] = 'nonce-for-' . $tracking->nonce_action( 'list_candidates', $type, $status->identifier(), 3, 'stable' );
 		ob_start();
 		$controls->render_advanced_source_section( 'edit', $type, 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 		self::assertCount( 1, $tracking->calls );
-		self::assertSame( 'list_candidates', $tracking->calls[0][0] );
+		self::assertSame( array( 'list_candidates' ), array_column( $tracking->calls, 0 ) );
 		self::assertStringContainsString( 'Stable track: no published releases found in this lookup.', $html );
 	}
 
@@ -2863,7 +2864,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	private function switch_candidates( string ...$versions ): RepositoryReleaseCandidateList {
 		require_once dirname( __DIR__, 3 ) . '/vendor/ran/wp-release-updater/src/Contract/ReleaseVersion.php';
 		return new RepositoryReleaseCandidateList(
-			array_map( static fn ( string $version ): RepositoryReleaseCandidate => new RepositoryReleaseCandidate( 'rel-' . $version, 'v' . $version, $version, false, '2026-06-01T00:00:00Z', array( 'plugin.zip' ) ), $versions )
+			array_map( static fn ( string $version ): RepositoryReleaseCandidate => new RepositoryReleaseCandidate( 'rel-' . $version, 'v' . $version, $version, false, '2026-06-01T00:00:00Z', array( 'plugin.zip' ) ), array_values( $versions ) )
 		);
 	}
 

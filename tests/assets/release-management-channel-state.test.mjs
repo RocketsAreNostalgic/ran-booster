@@ -155,7 +155,7 @@ for (const picker of ['managed', 'prospective']) {
 			const forceBranchForSubdirectory=()=>{}, forceBranchForUnsupportedProvider=()=>{};
 			const clearError=()=>{}, setListBusy=()=>{};
 			const showPlaceholder=()=>{}, setStatus=()=>{}, setChecking=()=>{}, showUnavailable=()=>{}, showError=()=>{};
-			const showCandidates=()=>{}, isNativeUpdateOffer=()=>false, inspect=()=>{};
+			const showCandidates=()=>{}, inspect=()=>{};
 			const candidateElements=new Map(); let selectedOutcome=null;
 			${declaration(picker === 'managed' ? 'list' : 'listCandidates')}
 			return ${picker === 'managed' ? 'list' : 'listCandidates'};

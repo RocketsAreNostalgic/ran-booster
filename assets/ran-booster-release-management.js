@@ -230,25 +230,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			retry.classList.toggle('ran-booster-update-is-active', busy);
 		}
 	};
-	const isNativeUpdateOffer = (candidate) => {
-		const offeredId =
-			managedBrowser.dataset
-				.ranBoosterManagedReleaseNativeUpdateReleaseId;
-		return (
-			Boolean(offeredId) &&
-			candidate.version_relationship === 'newer' &&
-			candidate.version ===
-				managedBrowser.dataset
-					.ranBoosterManagedReleaseNativeUpdateVersion &&
-			String(candidate.release_id) === offeredId
-		);
-	};
-	const isCurrentNativeUpdateOffer = (candidate, nativeOffer) =>
-		nativeOffer?.available === true &&
-		Boolean(nativeOffer.release_id) &&
-		candidate.version_relationship === 'newer' &&
-		candidate.version === nativeOffer.version &&
-		String(candidate.release_id) === String(nativeOffer.release_id);
 	const request = async (operation, extra = {}) => {
 		const data = new FormData();
 		data.append(
@@ -345,13 +326,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				throw new Error('inspection_failed');
 			}
 			const relationship = response.data.version_relationship;
-			const nativeOffer = isCurrentNativeUpdateOffer(
-				{
-					...response.data,
-					release_id: selected.release_id,
-				},
-				response.data.native_offer
-			);
 			/* translators: %s: release version. */
 			let outcomeMessage = sprintf(
 				/* translators: %s: release version. */
@@ -360,23 +334,14 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			);
 			let statusMessage = outcomeMessage;
 			if (relationship === 'newer') {
-				outcomeMessage = nativeOffer
-					? sprintf(
-							/* translators: %s: release version. */
-							__(
-								'Version %s was inspected and matches the current WordPress update offer.',
-								'ran-booster'
-							),
-							response.data.version
-						)
-					: sprintf(
-							/* translators: %s: release version. */
-							__(
-								'Version %s was inspected. See WordPress Updates for the current offer.',
-								'ran-booster'
-							),
-							response.data.version
-						);
+				outcomeMessage = sprintf(
+					/* translators: %s: release version. */
+					__(
+						'Version %s was inspected. See WordPress Updates for the current offer.',
+						'ran-booster'
+					),
+					response.data.version
+				);
 				const guidance =
 					managedBrowser.dataset.ranBoosterManagedReleaseType ===
 					'theme'
@@ -390,9 +355,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 								'%s Use Check releases, or update from the WordPress Plugins screen.',
 								'ran-booster'
 							);
-				statusMessage = nativeOffer
-					? outcomeMessage
-					: sprintf(guidance, outcomeMessage);
+				statusMessage = sprintf(guidance, outcomeMessage);
 			} else if (relationship === 'older') {
 				outcomeMessage = sprintf(
 					/* translators: %s: release version. */
@@ -413,7 +376,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				selectedOutcome.hidden = relationship !== 'newer';
 				const screenUrl =
 					managedBrowser.dataset.ranBoosterManagedReleaseWordpressUrl;
-				if (relationship === 'newer' && !nativeOffer && screenUrl) {
+				if (relationship === 'newer' && screenUrl) {
 					// The status line is announced only; a visible way forward sits with the outcome.
 					const link = document.createElement('a');
 					link.href = screenUrl;
@@ -525,12 +488,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				throw new Error('invalid_candidates');
 			}
 			renderListingObservations(observations, response.data);
-			const nativeOffer = releases.find(isNativeUpdateOffer);
 			const inspectable = releases.filter(
 				(candidate) => candidate.version_relationship !== 'older'
 			);
-			const preferredCandidate =
-				nativeOffer || inspectable[0] || releases[0];
+			const preferredCandidate = inspectable[0] || releases[0];
 			const installedCandidate = releases.find(
 				(candidate) => candidate.version_relationship === 'same'
 			);
@@ -661,8 +622,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 						releases.length
 					)
 				);
-				// The installed release stays selected; the newer one is chosen to update.
-				selected = installedCandidate || nativeOffer || inspectable[0];
+				selected = installedCandidate || inspectable[0];
 				const selectedCandidate = candidateElements.get(selected);
 				selectedOutcome = selectedCandidate?.outcome || null;
 				const input = selectedCandidate?.input;

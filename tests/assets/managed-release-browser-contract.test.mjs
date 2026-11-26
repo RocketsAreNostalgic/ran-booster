@@ -588,7 +588,7 @@ test('managed browser inspects the newer release without changing the toolbar', 
 	assert.equal(update.getAttribute('href'), null);
 	assert.match(
 		harness.nodes.get('message').textContent,
-		/matches the current WordPress update offer/
+		/See WordPress Updates for the current offer/
 	);
 });
 
@@ -837,7 +837,7 @@ test('managed browser keeps installed version separate and ignores stale respons
 	);
 });
 
-test('managed browser identifies an inspected release with exact offer evidence', async () => {
+test('managed browser keeps inspection separate from the native offer identity', async () => {
 	const harness = createHarness(
 		[
 			{
@@ -882,11 +882,11 @@ test('managed browser identifies an inspected release with exact offer evidence'
 	assert.equal(outcome.hidden, false);
 	assert.equal(
 		outcome.textContent,
-		'Version 3.0.0 was inspected and matches the current WordPress update offer.'
+		'Version 3.0.0 was inspected. See WordPress Updates for the current offer.'
 	);
 });
 
-test('managed browser prefers and marks the exact rendered update offer over a later-published candidate when the installed release is not listed', async () => {
+test('managed browser preserves provider order when previous page data names another offer', async () => {
 	const harness = createHarness([
 		{
 			successful: true,
@@ -913,8 +913,8 @@ test('managed browser prefers and marks the exact rendered update offer over a l
 			successful: true,
 			code: 'release_ready',
 			data: {
-				version: '3.0.0',
-				tag: 'v3.0.0',
+				version: '3.1.0',
+				tag: 'v3.1.0',
 				installed_version: '2.0.0',
 				version_relationship: 'newer',
 			},
@@ -924,18 +924,18 @@ test('managed browser prefers and marks the exact rendered update offer over a l
 	await flush();
 	await flush();
 
-	assert.equal(harness.requests[1].get('release_id'), 'offer');
+	assert.equal(harness.requests[1].get('release_id'), 'later');
 	assert.equal(
 		descendants(harness.nodes.get('candidate-list')).find(
 			(node) => node.tagName === 'input' && node.checked
 		).dataset.releaseId,
-		'offer'
+		'later'
 	);
 	assert.match(
 		descendants(harness.nodes.get('candidate-list'))
 			.map((node) => node.textContent || '')
 			.join(' '),
-		/3\.0\.0 \(v3\.0\.0\).*Latest eligible/
+		/3\.1\.0 \(v3\.1\.0\).*Latest eligible/
 	);
 });
 

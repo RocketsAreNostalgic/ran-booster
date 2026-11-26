@@ -117,7 +117,7 @@ final class ReleaseManagementDisplay {
 			&& ! $repository_blocked;
 		$offered_version       = $status_available && ! $updates_forced_off && ! $repository_blocked ? ManagedReleaseBrowserOperations::persisted_offer_version( $status ) : '';
 		$status_notice_visible = $status_available && 'release_asset' === $source && '' !== $failure_code && ! $repository_blocked && ! $this->eligibility_explains_failure( $status );
-		$release_unchecked     = $status_available && 'release_asset' === $source && '' === $failure_code && '' === $status->last_checked_at() && '' === $offered_version && ! $status->update_available();
+		$release_unchecked     = $status_available && 'release_asset' === $source && '' === $failure_code && '' === $status->last_checked_at() && '' === $offered_version && ! $status->update_available() && ! $updates_forced_off;
 		$gate_notice           = $repository_conflict_code
 			? __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' )
 			: ( $repository_source_blocked
@@ -212,7 +212,7 @@ final class ReleaseManagementDisplay {
 					<li class="ran-booster-readiness-item <?php echo $status_available && 'release_asset' === $source && '' === $status->failure_code() ? ( $release_unchecked ? 'is-neutral' : 'is-ok' ) : ( $status_available && 'branch' === $source && ! $repository_blocked ? 'is-neutral' : 'is-warning' ); ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 						<strong><?php esc_html_e( 'Release status', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? ( $release_unchecked && 'disabled' !== $status->deployment_policy() ? __( 'Use Check releases to look for a newer version.', 'ran-booster' ) : $this->release_status_message( $status, $offered_version ) ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
+						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? ( $release_unchecked && 'disabled' !== $status->deployment_policy() ? __( 'Use Check releases to look for a newer version.', 'ran-booster' ) : $this->release_status_message( $status, $offered_version, $updates_forced_off ) ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
 					</li>
 				</ul>
 				<?php ob_start(); ?>
@@ -297,7 +297,7 @@ final class ReleaseManagementDisplay {
 			</summary>
 			<div data-ran-booster-ui-disclosure-content class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">
 				<?php $this->render_release_track_settings( $track_mode, $track_disabled, $selected_channel, $package, $track_nonce_action, $track_form_id, $preflight_action, $preflight_nonces ); ?>
-				<?php $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled, $offered_version ); ?>
+				<?php $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled ); ?>
 			</div>
 		</details></div>
 		<?php
@@ -409,7 +409,7 @@ final class ReleaseManagementDisplay {
 	}
 
 	/** @param array<string,string> $nonce_actions */
-	private function render_managed_candidate_browser( ?ReleaseTrackingStatus $status, array $nonce_actions, bool $enabled, string $offered_version ): void {
+	private function render_managed_candidate_browser( ?ReleaseTrackingStatus $status, array $nonce_actions, bool $enabled ): void {
 		$list_nonce      = $enabled ? ( $nonce_actions['list_candidates'] ?? '' ) : '';
 		$inspect_nonce   = $enabled ? ( $nonce_actions['inspect_candidate'] ?? '' ) : '';
 		$screen_is_theme = null !== $status && 'theme' === $status->type();
@@ -429,9 +429,7 @@ final class ReleaseManagementDisplay {
 			data-ran-booster-managed-release-list-nonce="<?php echo esc_attr( $list_nonce ); ?>"
 			data-ran-booster-managed-release-inspect-nonce="<?php echo esc_attr( $inspect_nonce ); ?>"
 			data-ran-booster-managed-release-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
-			data-ran-booster-managed-release-native-update-version="<?php echo esc_attr( $offered_version ); ?>"
 			data-ran-booster-managed-release-wordpress-url="<?php echo esc_url( $screen_url ); ?>"
-			data-ran-booster-managed-release-native-update-release-id="<?php echo esc_attr( ManagedReleaseBrowserOperations::offer_release_id( $status, $offered_version ) ); ?>"
 			<?php } ?>
 		>
 			<div class="ran-booster-managed-release-browser__header">
@@ -893,7 +891,7 @@ final class ReleaseManagementDisplay {
 						? $this->eligibility_message( $status->eligibility(), $status->source() )
 						: $this->diagnostic_message( $status->failure_code(), null === $status->preflight() ? '' : $status->preflight()->reason_code() );
 				} else {
-					$rows[ $identifier ]['status'] = $this->release_status_message( $status );
+					$rows[ $identifier ]['status'] = $this->release_status_message( $status, $status->update_available() ? $status->latest_version() : '' );
 				}
 			}
 
@@ -1394,7 +1392,7 @@ final class ReleaseManagementDisplay {
 		}
 		return str_starts_with( $code, 'package_' )
 			|| str_starts_with( $code, 'release_' )
-			|| in_array( $code, array( 'invalid_release_assets', 'preflight_unavailable', 'subdirectory_not_supported', 'target_registration_failed' ), true );
+			|| in_array( $code, array( 'invalid_release_assets', 'preflight_unavailable', 'subdirectory_not_supported', 'target_registration_failed', 'download_digest_mismatch', 'download_size_mismatch', 'archive_php_requirement_incompatible', 'archive_wordpress_requirement_incompatible' ), true );
 	}
 
 	private function diagnostic_action( string $code, string $reason = '', string $detail = '' ): string {
@@ -1423,11 +1421,11 @@ final class ReleaseManagementDisplay {
 			'subdirectory_not_supported' => __( 'Return the package to Branch to keep its configured repository subdirectory.', 'ran-booster' ),
 			'package_update_uri_missing',
 			'package_update_uri_invalid' => __( 'Correct the Update URI in the packaged plugin or theme header, publish a new ZIP, then recheck.', 'ran-booster' ),
-			'package_compatibility_missing',
 			'download_digest_mismatch',
 			'download_size_mismatch' => __( 'Check the uploaded ZIP on the release, then use Check releases to get a fresh offer.', 'ran-booster' ),
 			'archive_php_requirement_incompatible',
 			'archive_wordpress_requirement_incompatible',
+			'package_compatibility_missing',
 			'package_compatibility_invalid' => __( 'Publish a package whose WordPress and PHP compatibility headers include this site, or choose a compatible release track.', 'ran-booster' ),
 			'release_version_mismatch',
 			'release_version_invalid' => __( 'Make the release tag and packaged WordPress Version header describe the same valid version, then publish a corrected ZIP.', 'ran-booster' ),
@@ -1450,11 +1448,10 @@ final class ReleaseManagementDisplay {
 			: FeedbackFlash::release_checked();
 	}
 
-	/** @param ReleaseTrackingStatus $status */
-	private function release_status_message( object $status, string $offered_version = '' ): string {
+	private function release_status_message( ReleaseTrackingStatus $status, string $offered_version, bool $updates_forced_off = false ): string {
 		$installed = $this->bounded_string( $status->installed_version(), 64 );
-		$latest    = $this->bounded_string( '' !== $offered_version ? $offered_version : $status->latest_version(), 64 );
-		if ( ( '' !== $offered_version || $status->update_available() ) && '' !== $latest ) {
+		$latest    = $this->bounded_string( $offered_version, 64 );
+		if ( '' !== $latest ) {
 			return sprintf(
 				/* translators: 1: installed version, 2: available version. */
 				__( 'Version %1$s is installed; version %2$s is available. WordPress controls installation.', 'ran-booster' ),
@@ -1463,15 +1460,15 @@ final class ReleaseManagementDisplay {
 			);
 		}
 
-		// While updates are off the updater offers nothing, so "no newer release" would contradict a check that found one.
-		return sprintf(
-			'disabled' === $status->deployment_policy()
-				/* translators: %s is the installed version. */
-				? __( 'Version %s is installed. Updates are off for this package.', 'ran-booster' )
-				/* translators: %s is the installed version. */
-				: __( 'Version %s is installed. No newer eligible release was found.', 'ran-booster' ),
-			'' !== $installed ? $installed : __( 'unknown', 'ran-booster' )
-		);
+		$message = match ( true ) {
+			/* translators: %s is the installed version. */
+			$updates_forced_off, 'disabled' === $status->deployment_policy() => __( 'Version %s is installed. Updates are off for this package.', 'ran-booster' ),
+			/* translators: %s is the installed version. */
+			$status->update_available() => __( 'Version %s is installed. WordPress has no current update offer.', 'ran-booster' ),
+			/* translators: %s is the installed version. */
+			default => __( 'Version %s is installed. No newer eligible release was found.', 'ran-booster' ),
+		};
+		return sprintf( $message, '' !== $installed ? $installed : __( 'unknown', 'ran-booster' ) );
 	}
 
 	private function render_failure_help( string $code, string $message = '', string $reason = '', string $detail = '' ): void {

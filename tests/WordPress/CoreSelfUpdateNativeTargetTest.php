@@ -191,7 +191,23 @@ final class CoreSelfUpdateNativeTargetTest extends TestCase {
 		$updater->native['candidate_validation_code'] = null;
 		self::assertFalse( $target->status()->active );
 		$updater->native['candidate_header_version'] = null;
+		$updater->native['offered_release_identity'] = 'release:42';
+		$updater->native['offered_version']          = '1.1.0';
+		self::assertSame( '1.1.0', $target->status()->offered_version );
+
+		$updater->native['offered_release_identity'] = null;
+		$updater->native['offered_version']          = null;
+		$consumed                                    = $target->status();
+		self::assertTrue( $consumed->active );
+		self::assertSame( '', $consumed->offered_version );
+		self::assertSame( '', $consumed->candidate_code );
+		self::assertSame( '', $consumed->candidate_package_header_version );
+		$updater->native['failure_code'] = 'download_digest_mismatch';
+		self::assertSame( 'download_digest_mismatch', $target->status()->failure_code );
+		$updater->native['failure_code']      = null;
+		$updater->native['installed_version'] = null;
 		self::assertFalse( $target->status()->active );
+		$updater->native['installed_version']        = '1.0.0';
 		$updater->native['offered_release_identity'] = 'release:42';
 		$updater->native['offered_version']          = '1.2.0';
 		self::assertFalse( $target->status()->active );

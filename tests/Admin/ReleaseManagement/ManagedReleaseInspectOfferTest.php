@@ -88,12 +88,12 @@ final class ManagedReleaseInspectOfferTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_a_release_id_the_status_knows_is_kept_so_a_different_inspected_release_still_blocks(): void {
-		$offer = $this->inspect( '1.2.0', true, 'known-release', '1.2.0' );
+	public function test_a_request_local_release_id_cannot_identify_the_same_version_cached_offer(): void {
+		$offer = $this->inspect( '1.2.0', true, '42', '1.2.0' );
 
 		self::assertTrue( $offer['available'] );
-		self::assertSame( 'known-release', $offer['release_id'], 'The script compares this with the inspected release id.' );
-		self::assertNotSame( '42', $offer['release_id'] );
+		self::assertSame( '', $offer['release_id'] );
+		self::assertSame( '1.2.0', $offer['version'] );
 	}
 
 	#[RunInSeparateProcess]

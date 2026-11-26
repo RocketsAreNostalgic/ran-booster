@@ -144,8 +144,9 @@ final class CoreSelfUpdateNativeTarget implements RepositoryReleaseNativeTarget 
 			return null === $tag && null === $version && null === $code && null === $header;
 		}
 		if ( null === $code ) {
-			// Routine discovery can offer a release before its ZIP is inspected.
-			return null === $header && $version === $offered && 'newer' === $status['relationship'];
+			// Acquisition clears the offer while the completed metadata check remains observable.
+			return null === $header && 'newer' === $status['relationship']
+				&& ( $version === $offered || ( null === $offered && null !== $status['installed_version'] && null !== $status['last_check'] ) );
 		}
 
 		return 'archive_identity_verified' === $code ? null !== $header : null === $offered;

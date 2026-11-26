@@ -364,14 +364,32 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
 	}
 
-	public function test_a_diagnostic_failure_still_shows_its_message_and_help(): void {
+	#[DataProvider( 'diagnostic_failures' )]
+	public function test_a_diagnostic_failure_still_shows_its_message_and_help( string $code, string $message, string $action ): void {
+		require_once __DIR__ . '/../../Support/NoticeIconGlobalWordPressFunctions.php';
 		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
 		ob_start();
-		$display->render_operation_notice( 'release_header_missing', false );
+		$display->render_operation_notice( $code, false );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'The published package is missing its WordPress version header.', $html );
+		self::assertStringContainsString( $message, $html );
+		self::assertStringContainsString( $action, $html );
 		self::assertStringContainsString( 'Why this happened and how to fix it', $html );
+		self::assertStringContainsString( '<code>' . $code . '</code>', $html );
+	}
+
+	/** @return array<string,array{string,string,string}> */
+	public static function diagnostic_failures(): array {
+		$headers = 'Publish a package whose WordPress and PHP compatibility headers include this site, or choose a compatible release track.';
+		$zip     = 'Check the uploaded ZIP on the release, then use Check releases to get a fresh offer.';
+		return array(
+			'version header'       => array( 'release_header_missing', 'The published package is missing its WordPress version header.', 'Correct the plugin or theme header in the distributable ZIP' ),
+			'compatibility header' => array( 'package_compatibility_missing', 'The published release is not compatible with this WordPress site.', $headers ),
+			'digest'               => array( 'download_digest_mismatch', 'The downloaded ZIP does not match the published digest.', $zip ),
+			'size'                 => array( 'download_size_mismatch', 'The downloaded ZIP does not match the published size.', $zip ),
+			'PHP'                  => array( 'archive_php_requirement_incompatible', 'The release ZIP requires a different PHP version.', $headers ),
+			'WordPress'            => array( 'archive_wordpress_requirement_incompatible', 'The release ZIP requires a different WordPress version.', $headers ),
+		);
 	}
 
 	#[DataProvider( 'installation_review_outcomes' )]
@@ -904,7 +922,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$GLOBALS['ran_booster_test_site_transients'][ $transient ] = (object) array(
 			'response' => array( $identifier => 'plugin' === $type ? (object) $entry : $entry ),
 		);
-		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', $type ) );
+		$status   = ReleaseManagementFixture::status( 'release_asset', $type, update_available: true );
+		$tracking = new ReleaseTrackingFacadeDouble( $status );
 		$controls = ReleaseManagementFixture::controls( $tracking );
 		$render   = static function ( int $revision = 3 ) use ( $controls, $type, $identifier ): string {
 			ob_start();
@@ -918,10 +937,14 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( '_wpnonce=nonce-for-' . $nonce_action, $html );
 		self::assertStringContainsString( '>Update to 2.0</a>', $html );
 
-		$package = new PackageProjection( 'release_asset', $type );
-		ob_start();
-		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, ReleaseManagementFixture::status( 'release_asset', $type ), $package->settings_url() );
-		$status_html = (string) ob_get_clean();
+		$package         = new PackageProjection( 'release_asset', $type );
+		$display         = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		$render_settings = static function ( bool $forced_off = false ) use ( $display, $package, $status ): string {
+			ob_start();
+			$display->render_settings( $package, $status, $package->settings_url(), updates_forced_off: $forced_off );
+			return (string) ob_get_clean();
+		};
+		$status_html     = $render_settings();
 		self::assertStringContainsString( 'version 2.0 is available.', $status_html );
 		self::assertStringNotContainsString( 'Published release inspected', $status_html );
 		self::assertSame( array(), $tracking->calls );
@@ -937,6 +960,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		ob_start();
 		$blocked->render_package_operation_actions( 'release_asset', 'release_asset', $type, $identifier, 3 );
 		self::assertStringNotContainsString( 'href=', (string) ob_get_clean() );
+		self::assertStringContainsString( 'Updates are off for this package.', $render_settings( true ) );
+		unset( $GLOBALS['ran_booster_test_site_transients'][ $transient ] );
+		self::assertStringNotContainsString( 'href=', $render() );
+		self::assertStringContainsString( 'WordPress has no current update offer.', $render_settings() );
 	}
 
 	public function test_package_operation_actions_render_disabled_when_wordpress_holds_no_offer(): void {

@@ -90,8 +90,7 @@ final class ManagedReleaseBrowserOperations {
 			return $this->outcome( 'source_changed' );
 		}
 
-		$offered  = self::persisted_offer_version( $status );
-		$known_id = self::offer_release_id( $status, $offered );
+		$offered = self::persisted_offer_version( $status );
 
 		return $this->outcome(
 			'release_ready',
@@ -104,7 +103,8 @@ final class ManagedReleaseBrowserOperations {
 				'version_relationship' => self::version_relationship( $inspection->latest_version(), $status->installed_version() ),
 				'native_offer'         => array(
 					'available'  => '' !== $offered,
-					'release_id' => $known_id,
+					// The filtered WordPress offer supplies a version without an independently proven release identity.
+					'release_id' => '',
 					'version'    => $offered,
 				),
 			)
@@ -115,12 +115,6 @@ final class ManagedReleaseBrowserOperations {
 	public static function persisted_offer_version( ReleaseTrackingStatus $status ): string {
 		return 'release_asset' === $status->source() && $status->eligible() && 'disabled' !== $status->deployment_policy()
 			? ManagedReleaseTargetRegistrar::cached_offer_version( $status->type(), $status->identifier(), $status->installed_version() )
-			: '';
-	}
-
-	public static function offer_release_id( ReleaseTrackingStatus $status, string $version ): string {
-		return '' !== $version && $status->update_available() && $status->latest_version() === $version
-			? $status->native_offer_release_id()
 			: '';
 	}
 

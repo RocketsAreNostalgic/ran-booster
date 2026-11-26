@@ -127,7 +127,7 @@ final class FeedbackFlash {
 		return match ( $code ) {
 			'release_enabled'         => __( 'Release tracking enabled.', 'ran-booster' ),
 			'release_channel_changed' => __( 'Release track changed. The installed package was not changed and Automatic was reset to Manual.', 'ran-booster' ),
-			'branch_restored'         => __( 'Branch-based package management is restored.', 'ran-booster' ),
+			'branch_restored'         => __( 'Switched to Branch. The installed files were kept. Review the Updates setting before enabling automatic branch deployments.', 'ran-booster' ),
 			default                   => null,
 		};
 	}

@@ -149,11 +149,13 @@ const renderListingObservations = (target, data = null) => {
 
 const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const { __, sprintf } = wp.i18n;
+	const branch = Boolean(managedBrowser.dataset.ranBoosterBranchStable);
 	if (
 		managedBrowser.dataset.ranBoosterManagedReleaseBrowserDisabled ===
 			'true' ||
 		!managedBrowser.dataset.ranBoosterManagedReleaseListNonce ||
-		!managedBrowser.dataset.ranBoosterManagedReleaseInspectNonce
+		(!branch &&
+			!managedBrowser.dataset.ranBoosterManagedReleaseInspectNonce)
 	) {
 		return;
 	}
@@ -248,6 +250,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	};
 	const request = async (operation, extra = {}) => {
 		const data = new FormData();
+		if (branch) {
+			data.append('view_source', 'branch');
+		}
 		data.append(
 			'action',
 			operation === 'list'
@@ -293,7 +298,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			body: data,
 		});
 		if (!response.ok) {
-			throw new Error('request_failed');
+			throw new Error('request_failed', { cause: response.status });
 		}
 		return response.json();
 	};
@@ -478,14 +483,34 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			)
 		);
 		let lookupHint = null;
+		let failureMessage;
 		try {
 			const response = await request('list');
 			if (current !== sequence) {
 				return;
 			}
-			lookupHint = response.successful
-				? null
-				: (response.data?.lookup_hint ?? null);
+			if (response.successful === false) {
+				if (response.code === 'unable_to_check') {
+					lookupHint = response.data?.lookup_hint;
+					failureMessage = lookupHint
+						? wp.i18n.__(
+								'The Git provider rate-limited this lookup. Try again later.',
+								'ran-booster'
+							)
+						: wp.i18n.__(
+								'Booster could not list releases for this package. Try again.',
+								'ran-booster'
+							);
+				} else if (
+					response.code === 'source_changed' ||
+					response.code === 'invalid_request'
+				) {
+					failureMessage = wp.i18n.__(
+						'Refresh the package page and try again.',
+						'ran-booster'
+					);
+				}
+			}
 			const releases = Array.isArray(response.data?.candidates)
 				? response.data.candidates.slice(0, 8)
 				: [];
@@ -524,7 +549,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			const inspectable = releases.filter((candidate) =>
 				canInspect(candidate.version_relationship)
 			);
-			const preferredCandidate = inspectable[0] || releases[0];
+			const preferredCandidate = branch
+				? releases.find(
+						(candidate) => candidate.latest_eligible === true
+					) || releases[0]
+				: inspectable[0] || releases[0];
 			const installedCandidate = releases.find(
 				(candidate) => candidate.version_relationship === 'same'
 			);
@@ -548,17 +577,18 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				outcome.className = 'ran-booster-release-candidate__outcome';
 				outcome.hidden = true;
 				const renderRelationship = (relationship, version) => {
-					input.disabled = !canInspect(relationship);
+					input.disabled = branch || !canInspect(relationship);
 					let marker =
 						candidate === preferredCandidate &&
-						(relationship === 'older' || !input.disabled)
+						(!branch || candidate.latest_eligible === true) &&
+						(relationship === 'older' || canInspect(relationship))
 							? __('· Latest eligible', 'ran-booster')
 							: '';
 					if (relationship === 'older') {
 						marker += __('· Older than installed', 'ran-booster');
 					} else if (relationship === 'same') {
 						marker += __('· Installed/current', 'ran-booster');
-					} else if (input.disabled) {
+					} else if (!canInspect(relationship)) {
 						marker += __(
 							'· Version comparison unavailable',
 							'ran-booster'
@@ -599,7 +629,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					clearError();
 					promptReview();
 				});
-				if (candidate === preselected) {
+				if (!branch && candidate === preselected) {
 					input.checked = true;
 					selected = row;
 				}
@@ -656,7 +686,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				candidates.hidden = false;
 				showPlaceholder(false);
 			}
-			if (selected) {
+			if (branch) {
+				setStatus(__('Release candidates loaded', 'ran-booster'), '');
+			} else if (selected) {
 				if (review) {
 					review.hidden = false;
 				}
@@ -702,25 +734,33 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					)
 				);
 			}
-		} catch {
+		} catch (error) {
 			if (current === sequence) {
+				if (
+					error?.message === 'request_failed' &&
+					Number.isInteger(error.cause)
+				) {
+					failureMessage = sprintf(
+						/* translators: %d: HTTP status returned by the site's release list endpoint. */
+						__(
+							'This site returned HTTP %d while loading releases. Try again. If this continues, check the site’s server logs.',
+							'ran-booster'
+						),
+						error.cause
+					);
+				}
 				showPlaceholder(false);
-				showError(
-					wp.i18n.__(
-						'Booster could not load published releases. The Git provider may be temporarily unavailable or rate-limited. Try again later.',
-						'ran-booster'
-					),
-					lookupHint
+				failureMessage ??= wp.i18n.__(
+					'Booster did not receive a usable response from this site. Refresh the page and try again.',
+					'ran-booster'
 				);
+				showError(failureMessage, lookupHint);
 				setStatus(
 					wp.i18n.__(
 						'Published releases could not be checked',
 						'ran-booster'
 					),
-					wp.i18n.__(
-						'Booster could not read eligible releases for the saved package.',
-						'ran-booster'
-					)
+					failureMessage
 				);
 			}
 		} finally {
@@ -731,6 +771,46 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	};
 	review?.addEventListener('click', inspect);
 	retry?.addEventListener('click', list);
+	if (branch) {
+		const host = managedBrowser.closest('[data-ran-booster-ui-disclosure]');
+		host?.addEventListener('change', (event) => {
+			if (!event.target.matches('[data-ran-booster-release-channel]')) {
+				return;
+			}
+			const channel = event.target.value;
+			managedBrowser.dataset.ranBoosterManagedReleaseChannel = channel;
+			managedBrowser.dataset.ranBoosterManagedReleaseListNonce =
+				channel === 'stable'
+					? managedBrowser.dataset.ranBoosterBranchStable
+					: managedBrowser.dataset.ranBoosterBranchPreview;
+			list();
+		});
+		if (host && window.MutationObserver) {
+			const loadWhenOpen = () => {
+				const native = host.querySelector(':scope > details');
+				const open = native
+					? native.open
+					: host
+							.querySelector('[role="button"]')
+							?.getAttribute('aria-expanded') === 'true';
+				if (open) {
+					observer.disconnect();
+					if (!sequence) {
+						list();
+					}
+				}
+			};
+			const observer = new window.MutationObserver(loadWhenOpen);
+			observer.observe(host, {
+				attributes: true,
+				attributeFilter: ['open', 'aria-expanded'],
+				childList: true,
+				subtree: true,
+			});
+			loadWhenOpen();
+			return;
+		}
+	}
 	list();
 };
 (() => {
@@ -885,21 +965,28 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		}
 	}
 
+	function clearSwitchConfirmation(form) {
+		[
+			'confirm_switch',
+			'confirmed_release_identity',
+			'confirmed_release_tag',
+			'confirmed_release_version',
+			'confirmed_release_nonce',
+			'confirmed_release_older',
+			'confirmed_installed_version',
+			'confirm_older_release',
+			'confirmed_older_release_identity',
+			'confirmed_older_release_tag',
+			'confirmed_older_release_nonce',
+		].forEach((name) => removeHiddenInput(form, name));
+	}
+
 	function submitSwitchForm(form, submitter, confirmed) {
 		if (confirmed) {
 			form.dataset.ranBoosterSwitchConfirmed = '1';
 		} else {
 			form.dataset.ranBoosterSwitchNativeFallback = '1';
-			removeHiddenInput(form, 'confirm_switch');
-			removeHiddenInput(form, 'confirmed_release_identity');
-			removeHiddenInput(form, 'confirmed_release_tag');
-			removeHiddenInput(form, 'confirmed_release_version');
-			removeHiddenInput(form, 'confirmed_release_nonce');
-			removeHiddenInput(form, 'confirmed_release_older');
-			removeHiddenInput(form, 'confirm_older_release');
-			removeHiddenInput(form, 'confirmed_older_release_identity');
-			removeHiddenInput(form, 'confirmed_older_release_tag');
-			removeHiddenInput(form, 'confirmed_older_release_nonce');
+			clearSwitchConfirmation(form);
 		}
 		if (typeof form.requestSubmit === 'function') {
 			if (
@@ -972,6 +1059,26 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			'Published releases could not be checked. No package was installed and no package settings were changed.',
 			'ran-booster'
 		);
+		const appendRetry = (target) => {
+			if (typeof form.requestSubmit !== 'function') {
+				return;
+			}
+			const button = document.createElement('button');
+			button.type = 'button';
+			button.className =
+				'ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline';
+			button.setAttribute('data-ran-booster-switch-retry', '');
+			button.textContent = __('Try again', 'ran-booster');
+			button.addEventListener('click', function () {
+				if (button.disabled) {
+					return;
+				}
+				button.disabled = true;
+				clearSwitchConfirmation(form);
+				form.requestSubmit();
+			});
+			target.appendChild(button);
+		};
 		const sharedNotice = document.getElementById(
 			'ran-booster-package-mutation-error'
 		);
@@ -982,6 +1089,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (primary) {
 				primary.replaceChildren();
 				appendPreflightErrorContent(primary, data, fallback);
+				appendRetry(primary);
 				sharedNotice.hidden = false;
 				sharedNotice.scrollIntoView?.({ block: 'nearest' });
 				sharedNotice.focus?.();
@@ -1015,6 +1123,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		const paragraph = document.createElement('p');
 		appendPreflightErrorContent(paragraph, data, fallback);
 		target.appendChild(paragraph);
+		appendRetry(target);
 		if (switchBar && switchBar.parentNode === host) {
 			switchBar.after(notice);
 		} else {
@@ -1060,7 +1169,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		form,
 		submitter,
 		payload,
-		expectedChannel
+		expectedChannel,
+		expectedChoice
 	) {
 		const { __, sprintf } = wp.i18n;
 		const installedVersion =
@@ -1076,6 +1186,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				? payload.version_relationship
 				: 'newer';
 		const isOlder = relationship === 'older';
+		const confirmedInstalledVersion =
+			typeof payload?.confirmed_installed_version === 'string'
+				? payload.confirmed_installed_version
+				: '';
 		const releaseIdentity =
 			typeof payload?.release_identity === 'string'
 				? payload.release_identity
@@ -1090,7 +1204,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			!releaseIdentity ||
 			!releaseTag ||
 			!releaseVersion ||
-			!releaseNonce
+			!releaseNonce ||
+			(expectedChoice === 'installed' &&
+				(!confirmedInstalledVersion ||
+					confirmedInstalledVersion !== installedVersion))
 		) {
 			showSwitchPreflightError(form, null);
 			return;
@@ -1103,9 +1220,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		versions.className = 'ran-booster-switch-dialog__versions';
 		if (installedVersion && releaseVersion) {
 			versions.textContent = sprintf(
-				/* translators: 1: currently installed branch version, 2: published release version to install. */
+				/* translators: 1: currently installed version, 2: published release version to install. */
 				__(
-					'Installed: %1$s from branch. Installing: release %2$s.',
+					'Installed: %1$s. Latest eligible release: %2$s.',
 					'ran-booster'
 				),
 				installedVersion,
@@ -1114,10 +1231,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		} else if (releaseVersion) {
 			versions.textContent = sprintf(
 				/* translators: %s: published release version to install. */
-				__(
-					'Branch currently active. Installing: release %s.',
-					'ran-booster'
-				),
+				__('Latest eligible release: %s.', 'ran-booster'),
 				releaseVersion
 			);
 		} else {
@@ -1127,6 +1241,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			);
 		}
 		body.appendChild(versions);
+
 		if (
 			typeof payload?.fallback_message === 'string' &&
 			payload.fallback_message
@@ -1140,16 +1255,16 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		const databaseWarning = document.createElement('p');
 		databaseWarning.className = 'ran-booster-switch-dialog__database';
 		databaseWarning.textContent = __(
-			'Installs immediately. Switching to releases replaces the code, but it cannot roll back database changes. If this matters, have a recent database backup ready.',
+			'Installs immediately. After switching, Updates will be set to Manual.',
 			'ran-booster'
 		);
 		body.appendChild(databaseWarning);
 
-		if (relationship === 'same') {
+		if (relationship === 'same' || payload?.matching_release) {
 			const sameNotice = document.createElement('p');
 			sameNotice.className = 'ran-booster-switch-dialog__note';
 			sameNotice.textContent = __(
-				'Same version: this replaces the branch build with the release.',
+				'Same version: this replaces the installed files with the release.',
 				'ran-booster'
 			);
 			body.appendChild(sameNotice);
@@ -1157,7 +1272,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			const olderNotice = document.createElement('p');
 			olderNotice.className = 'ran-booster-switch-dialog__note';
 			olderNotice.textContent = __(
-				"This release is older than what's installed.",
+				"This release is older than what's installed. Switching replaces the code but cannot roll back database changes. Have a recent database backup ready.",
 				'ran-booster'
 			);
 			body.appendChild(olderNotice);
@@ -1196,17 +1311,56 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		const confirmButton = document.createElement('button');
 		confirmButton.type = 'button';
 		confirmButton.className =
-			'ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid';
+			'ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline';
 		confirmButton.setAttribute('data-ran-booster-switch-confirm', '');
-		confirmButton.textContent = sprintf(
-			/* translators: %s: release version to install. */
-			__('Switch and install %s', 'ran-booster'),
-			releaseVersion
-		);
+		if (relationship === 'same') {
+			confirmButton.textContent = sprintf(
+				/* translators: %s: release version to install. */
+				__('Reinstall %s (current)', 'ran-booster'),
+				releaseVersion
+			);
+		} else if (relationship === 'newer') {
+			confirmButton.textContent = sprintf(
+				/* translators: %s: release version to install. */
+				__('Upgrade to %s (latest)', 'ran-booster'),
+				releaseVersion
+			);
+		} else {
+			confirmButton.textContent = sprintf(
+				/* translators: %s: release version to install. */
+				__('Install %s (latest)', 'ran-booster'),
+				releaseVersion
+			);
+		}
 		if (isOlder) {
 			confirmButton.disabled = true;
 		}
 		footer.appendChild(cancelButton);
+		const matching = payload?.matching_release;
+		let matchingButton = null;
+		if (
+			matching?.release_identity &&
+			matching?.release_tag &&
+			matching?.release_version &&
+			matching?.confirmed_release_nonce &&
+			matching?.confirmed_installed_version === installedVersion &&
+			matching?.version_relationship === 'same' &&
+			installedVersion
+		) {
+			matchingButton = document.createElement('button');
+			matchingButton.type = 'button';
+			matchingButton.className = confirmButton.className;
+			matchingButton.setAttribute(
+				'data-ran-booster-switch-choice',
+				'installed'
+			);
+			matchingButton.textContent = sprintf(
+				/* translators: %s: release version to install. */
+				__('Reinstall %s (current)', 'ran-booster'),
+				matching.release_version
+			);
+			footer.appendChild(matchingButton);
+		}
 		footer.appendChild(confirmButton);
 
 		let host = form.querySelector('[data-ran-booster-switch-dialog-host]');
@@ -1236,6 +1390,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		}
 
 		cancelButton.addEventListener('click', function () {
+			removeHiddenInput(form, 'switch_release_choice');
 			if (typeof handle.close === 'function') {
 				handle.close();
 			} else {
@@ -1243,8 +1398,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			}
 		});
 
-		confirmButton.addEventListener('click', function () {
-			if (isOlder && !olderCheckbox?.checked) {
+		function installChoice(candidate, choice) {
+			const candidateOlder =
+				(candidate.version_relationship || relationship) === 'older';
+			if (candidateOlder && !olderCheckbox?.checked) {
 				return;
 			}
 			if (getSelectedReleaseChannel(form) !== expectedChannel) {
@@ -1257,20 +1414,49 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				return;
 			}
 			confirmButton.disabled = true;
+			if (matchingButton) {
+				matchingButton.disabled = true;
+			}
 			cancelButton.disabled = true;
 			handle.teardown?.();
 			host.remove();
+			setHiddenInput(form, 'switch_release_choice', choice);
 			setHiddenInput(form, 'confirm_switch', '1');
-			setHiddenInput(form, 'confirmed_release_identity', releaseIdentity);
-			setHiddenInput(form, 'confirmed_release_tag', releaseTag);
-			setHiddenInput(form, 'confirmed_release_version', releaseVersion);
-			setHiddenInput(form, 'confirmed_release_nonce', releaseNonce);
+			setHiddenInput(
+				form,
+				'confirmed_release_identity',
+				candidate.release_identity
+			);
+			setHiddenInput(
+				form,
+				'confirmed_release_tag',
+				candidate.release_tag
+			);
+			setHiddenInput(
+				form,
+				'confirmed_release_version',
+				candidate.release_version
+			);
+			setHiddenInput(
+				form,
+				'confirmed_release_nonce',
+				candidate.confirmed_release_nonce
+			);
+			if (candidate.confirmed_installed_version) {
+				setHiddenInput(
+					form,
+					'confirmed_installed_version',
+					candidate.confirmed_installed_version
+				);
+			} else {
+				removeHiddenInput(form, 'confirmed_installed_version');
+			}
 			setHiddenInput(
 				form,
 				'confirmed_release_older',
-				isOlder ? '1' : '0'
+				candidateOlder ? '1' : '0'
 			);
-			if (isOlder) {
+			if (candidateOlder) {
 				setHiddenInput(form, 'confirm_older_release', '1');
 			} else {
 				removeHiddenInput(form, 'confirm_older_release');
@@ -1279,7 +1465,13 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				removeHiddenInput(form, 'confirmed_older_release_nonce');
 			}
 			submitSwitchForm(form, submitter, true);
-		});
+		}
+		confirmButton.addEventListener('click', () =>
+			installChoice(payload, expectedChoice)
+		);
+		matchingButton?.addEventListener('click', () =>
+			installChoice(matching, 'installed')
+		);
 	}
 
 	async function handleReleaseSwitchSubmit(event) {
@@ -1321,6 +1513,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			event.preventDefault();
 			return;
 		}
+		const choice = 'latest';
+		removeHiddenInput(form, 'switch_release_choice');
 		if (
 			typeof window.ranBoosterOpenDialog !== 'function' ||
 			typeof window.fetch !== 'function'
@@ -1369,6 +1563,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			expected_identifier: identifier,
 			expected_source_revision: revision,
 			release_channel: channel,
+			switch_release_choice: choice,
 			_wpnonce: preflightNonce,
 		});
 
@@ -1405,6 +1600,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		}
 
 		if (failed || !payload || payload.successful !== true) {
+			removeHiddenInput(form, 'switch_release_choice');
 			showSwitchPreflightError(form, payload?.data || null);
 			return;
 		}
@@ -1422,7 +1618,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			form,
 			submitter,
 			payload.data || {},
-			channel
+			channel,
+			choice
 		);
 	}
 

@@ -80,6 +80,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		// Model the elected comparator; this suite stubs the rest of the updater runtime.
+		require_once dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/src/Contract/ReleaseVersion.php';
 		$GLOBALS['ran_booster_runtime_actions'] = array();
 		$this->start_log_capture();
 	}
@@ -725,8 +727,16 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		};
 
 		$lock      = new class() extends WordPressUpdaterLock {
-			public ?string $token = null;
-			public function try_acquire_without_reclaim(): string {
+			public ?string $token            = null;
+			public bool $occupied            = false;
+			public bool $acquire_unavailable = false;
+			public function try_acquire_without_reclaim(): ?string {
+				if ( $this->acquire_unavailable ) {
+					throw \RAN\Deployment\DeploymentStorageFailure::unavailable();
+				}
+				if ( $this->occupied ) {
+					return null;
+				}
 				$this->token = 'hold-test-lock';
 				return $this->token;
 			}
@@ -774,11 +784,21 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$return = $facade->return_to_branch( 'plugin', self::NATIVE_PLUGIN, 1, 'valid' );
 		self::assertFalse( $return->successful() );
-		self::assertSame( 'release_unavailable', $return->code() );
+		self::assertSame( 'branch_switch_held', $return->code() );
+
+		$lock->occupied = true;
+		$lock->token    = 'foreign-holder';
+		self::assertSame( 'branch_switch_held', $facade->return_to_branch( 'plugin', self::NATIVE_PLUGIN, 1, 'valid' )->code() );
+		self::assertSame( 'release_unavailable', $facade->change_channel( 'plugin', self::NATIVE_PLUGIN, 1, 'prerelease', 'valid' )->code() );
 
 		self::assertSame( 0, $store->channel_changes );
+		$lock->acquire_unavailable = true;
+		self::assertSame( 'branch_switch_unavailable', $facade->return_to_branch( 'plugin', self::NATIVE_PLUGIN, 1, 'valid' )->code() );
+		self::assertSame( 'release_unavailable', $facade->change_channel( 'plugin', self::NATIVE_PLUGIN, 1, 'prerelease', 'valid' )->code() );
+
 		self::assertSame( 0, $store->transitions );
-		self::assertNull( $lock->token );
+		self::assertSame( 'foreign-holder', $lock->token );
+		self::assertSame( $next, $this->native_selection_store->read() );
 	}
 
 	#[RunInSeparateProcess]
@@ -2124,6 +2144,23 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'forbidden', $denied->code() );
 		self::assertCount( 0, $installs );
 
+		$stale = $facade->enable(
+			'plugin',
+			'example/example.php',
+			1,
+			'prerelease',
+			'valid',
+			confirmed_release: array(
+				'identity'          => '99',
+				'tag'               => 'v1.0.0',
+				'version'           => '1.0.0',
+				'installed_version' => 'different-header',
+			)
+		);
+		self::assertSame( 'release_selection_changed', $stale->code() );
+		self::assertCount( 0, $installs );
+		self::assertCount( 0, $store->transitions );
+
 		$result = $facade->enable(
 			'plugin',
 			'example/example.php',
@@ -2140,10 +2177,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'release_enabled', $result->code() );
 		self::assertSame( array( array( 'plugin', 'example/example.php', '99', 'v1.0.0', false, '1.0.0' ) ), $installs );
 		// The injected updater stands in for the native completion that owns the source write.
-		self::assertSame( array(), $store->transitions );
+		self::assertCount( 0, $store->transitions );
 		self::assertSame( 0, $lock->acquires );
 		self::assertNotNull( $registrar->target( 'plugin', 'example/example.php' ) );
-		self::assertSame( array(), $this->shutdown_rechecks() );
+		self::assertCount( 0, $this->shutdown_rechecks() );
 	}
 
 	/** @return iterable<string, array{string, string}> */
@@ -2205,10 +2242,19 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		yield 'older updater copy' => array( null, 'service_unavailable' );
 		yield 'refusal' => array(
 			array(
-				'status' => 'refused',
-				'code'   => 'release_older',
+				'status'               => 'refused',
+				'code'                 => 'release_older',
+				'finalization_pending' => false,
 			),
 			'release_older',
+		);
+		yield 'verified pre-install refusal' => array(
+			array(
+				'status'               => 'refused',
+				'code'                 => 'candidate_not_eligible',
+				'finalization_pending' => false,
+			),
+			'switch_refused',
 		);
 		yield 'refusal spelled as an outcome' => array(
 			array(
@@ -2460,19 +2506,18 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				$listings[] = compact( 'type', 'repository', 'channel' );
 				$ids        = 'plugin' === $type ? array( '101', '102' ) : array( '201' );
 
-				return new RepositoryReleaseCandidateList(
-					array_map(
-						static fn ( string $id ): RepositoryReleaseCandidate => new RepositoryReleaseCandidate(
-							$id,
-							'v2.0.0',
-							'2.0.0',
-							false,
-							'2026-08-17T12:00:00Z',
-							array( 'example.zip' )
-						),
-						$ids
-					)
+				$candidates = array_map(
+					static fn ( string $id ): RepositoryReleaseCandidate => new RepositoryReleaseCandidate(
+						$id,
+						'v2.0.0',
+						'2.0.0',
+						false,
+						'2026-08-17T12:00:00Z',
+						array( 'example.zip' )
+					),
+					$ids
 				);
+				return new RepositoryReleaseCandidateList( $candidates );
 			},
 			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ) use ( &$inspections ): RepositoryReleaseInspection {
 				$inspections[] = array(
@@ -2844,6 +2889,15 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $preflight->code() );
 		self::assertSame( array( 'package-profile', 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
 		self::assertSame( 'package-profile', $packages['branch_explicit']->get_repository()->reference->credential_id );
+
+		$references = array();
+		$nonce      = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+		self::assertNull( $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', 'invalid' ) );
+		self::assertNull( $facade->list_candidates( 'plugin', 'example/example.php', 2, 'stable', $nonce ) );
+		self::assertSame( array(), $references );
+		self::assertInstanceOf( RepositoryReleaseCandidateList::class, $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+		self::assertSame( array( 'package-profile', 'public-profile' ), array_map( static fn ( RepositoryReference $reference ): ?string => $reference->credential_id, $references ) );
+		self::assertSame( PackageSource::BRANCH, $packages['branch_explicit']->get_source() );
 	}
 
 	public function test_only_an_anonymous_rate_limited_public_listing_reports_a_lookup_hint_provider(): void {
@@ -3129,8 +3183,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$mode->value = 'hyphenated_stable';
 		$result      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
 		self::assertNotNull( $result );
-		self::assertSame( ReleaseTrackingPreflight::READY, $result->code() );
-		self::assertSame( '2026-08', $result->latest_version() );
+		self::assertSame( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $result->code() );
 
 		$calls_before_budget = $inspection_calls;
 		$mode->value         = 'incompatible_budget';
@@ -4693,7 +4746,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$unavailable               = $facade->return_to_branch( 'plugin', 'example/example.php', 1, 'nonce' );
 
 		self::assertFalse( $unavailable->successful() );
-		self::assertSame( 'release_unavailable', $unavailable->code() );
+		self::assertSame( 'branch_switch_unavailable', $unavailable->code() );
 		self::assertCount( 1, $store->transitions );
 	}
 
@@ -5495,8 +5548,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'calls'      => array(),
 			'transients' => array(),
 			'answer'     => array(
-				'status' => 'refused',
-				'code'   => 'release_older',
+				'status'               => 'refused',
+				'code'                 => 'release_older',
+				'finalization_pending' => false,
 			),
 		);
 		[ $facade ]                             = $this->switch_facade( null );
@@ -5516,8 +5570,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$GLOBALS['ran_booster_runtime_actions'] = array();
 
 		$GLOBALS['ran_booster_read_only_check']['answer'] = array(
-			'status' => 'refused',
-			'code'   => 'candidate_not_eligible',
+			'status'               => 'refused',
+			'code'                 => 'candidate_not_eligible',
+			'finalization_pending' => false,
 		);
 
 		[ $confirmed_facade ] = $this->switch_facade( null );

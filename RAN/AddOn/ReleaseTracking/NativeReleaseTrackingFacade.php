@@ -36,6 +36,7 @@ use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseSubdirectoryNotSupported;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
+use RAN\WPReleaseUpdater\V1\Contract\ReleaseVersion;
 use Throwable;
 
 /**
@@ -441,8 +442,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 		try {
 
-			$package = $this->managed_package_for_browser( $package, $expected_source_revision );
-			if ( null === $package ) {
+			if ( ! in_array( $package->get_source(), array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ), true )
+				|| $expected_source_revision !== $package->get_source_revision()
+				|| ! $this->release_source_supported( $package ) ) {
 				return null;
 			}
 			$listing = $this->providers->require_capability( (string) $package->get_provider_code(), RepositoryReleaseCandidateListing::class );
@@ -599,7 +601,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		return $repository->with_credential( $credential_id );
 	}
 
-	/** @param array{identity:string,tag:string,version:string}|null $confirmed_release Core confirmation, bound by the admin nonce. */
+	/** @param array{identity:string,tag:string,version:string,installed_version?:string}|null $confirmed_release Core confirmation, bound by the admin nonce. */
 	public function enable(
 		string $type,
 		string $identifier,
@@ -673,7 +675,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			if ( null === \RAN\AdoptionIdentity::of( $live ) || \RAN\AdoptionIdentity::of( $live ) !== \RAN\AdoptionIdentity::of( $package ) || $expected_source_revision !== $live->get_source_revision() ) {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
 			}
-			if ( ! $this->registrar->admit_switch( $type, $live, $configuration, function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0 ) ) {
+			if ( isset( $confirmed_release['installed_version'] ) && $confirmed_release['installed_version'] !== $live->get_version() ) {
+				return ReleaseTrackingResult::failed( 'release_selection_changed', 'The installed version changed.' );
+			}
+			if ( ! $this->registrar->admit_switch( $type, $live, $configuration, function_exists( 'get_current_user_id' ) ? (int) get_current_user_id() : 0, $confirmed_release['installed_version'] ?? '' ) ) {
 				return ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.' );
 			}
 
@@ -730,6 +735,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$code = match ( $installed ) {
 				'installed' => 'release_enabled',
 				'failed' => 'wordpress_failed',
+				'refused' => 'switch_refused',
 				'uncertain' => 'management_state_uncertain',
 				'unsupported', 'runtime_busy', 'filesystem_unavailable', 'discovery_not_admitted', 'offer_token_unavailable', 'runtime_liveness_lost' => 'service_unavailable',
 				'release_older' => 'release_older',
@@ -831,7 +837,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			if ( $changed instanceof ManagedReleaseSubdirectoryNotSupported ) {
 				return $this->subdirectory_not_supported();
 			}
-			if ( null === $changed ) {
+			if ( ! is_bool( $changed ) ) {
 				return ReleaseTrackingResult::failed( 'release_unavailable', 'The release track could not be changed.' );
 			}
 			if ( $incompatible ) {
@@ -1015,8 +1021,16 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					);
 				}
 			);
-			if ( null === $changed ) {
-				return ReleaseTrackingResult::failed( 'release_unavailable', 'The package source could not be changed.' );
+			if ( DeploymentOutcome::CODE_LOCK_UNAVAILABLE === $changed
+				&& $this->github_selection?->native_mutation_blocks_target( $type, $identifier ) ) {
+				$changed = 'branch_switch_held';
+			}
+			if ( ! is_bool( $changed ) ) {
+				return match ( $changed ) {
+					DeploymentOutcome::CODE_LOCK_UNAVAILABLE => ReleaseTrackingResult::failed( $changed, 'The WordPress package updater lock is occupied.' ),
+					'branch_switch_held' => ReleaseTrackingResult::failed( $changed, 'A GitHub install hold blocks the switch to Branch.' ),
+					default => ReleaseTrackingResult::failed( 'branch_switch_unavailable', 'Booster could not verify the switch to Branch.' ),
+				};
 			}
 
 			if ( ! $changed ) {
@@ -1038,15 +1052,15 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 			return ReleaseTrackingResult::succeeded( 'branch_restored', 'Branch-based package management is restored.' );
 		} catch ( Throwable ) {
-			return ReleaseTrackingResult::failed( 'release_unavailable', 'The package source could not be changed.' );
+			return ReleaseTrackingResult::failed( 'branch_switch_unavailable', 'Booster could not verify the switch to Branch.' );
 		}
 	}
 
 	/**
 	 * @param callable(): bool $mutation
-	 * @return bool|ManagedReleaseSubdirectoryNotSupported|null
+	 * @return bool|ManagedReleaseSubdirectoryNotSupported|'lock_unavailable'|'branch_switch_held'|null
 	 */
-	private function mutate_with_updater_lock( string $type, string $identifier, callable $mutation ): bool|ManagedReleaseSubdirectoryNotSupported|null {
+	private function mutate_with_updater_lock( string $type, string $identifier, callable $mutation ): bool|ManagedReleaseSubdirectoryNotSupported|string|null {
 		if ( null === $this->github_selection ) {
 			try {
 				return $this->updater_lock->run( $mutation );
@@ -1063,13 +1077,17 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return null;
 		}
 		if ( null === $token ) {
-			return null;
+			return DeploymentOutcome::CODE_LOCK_UNAVAILABLE;
 		}
 
 		try {
-			if ( $this->updater_lock->current_token() !== $token
-				|| $this->github_selection->native_mutation_blocks_target( $type, $identifier )
-				|| $this->updater_lock->current_token() !== $token ) {
+			if ( $this->updater_lock->current_token() !== $token ) {
+				return null;
+			}
+			if ( $this->github_selection->native_mutation_blocks_target( $type, $identifier ) ) {
+				return 'branch_switch_held';
+			}
+			if ( $this->updater_lock->current_token() !== $token ) {
 				return null;
 			}
 
@@ -1113,7 +1131,15 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return 'failed';
 		}
 
-		return 'refused' === ( $report['status'] ?? null ) && ! in_array( $report['code'], array( 'installed', 'failed', 'uncertain' ), true ) ? $report['code'] : 'unsupported';
+		if ( 'refused' !== ( $report['status'] ?? null ) || false !== ( $report['finalization_pending'] ?? null ) ) {
+			return 'unsupported';
+		}
+
+		// The updater reports refusal only when WordPress has not started its upgrader.
+		return match ( $report['code'] ) {
+			'release_older', 'candidate_descriptor_mismatch', 'policy_disabled', 'policy_forced_off' => $report['code'],
+			default => 'refused',
+		};
 	}
 
 	private function package( string $type, string $identifier ): Package {
@@ -1451,12 +1477,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				);
 			}
 
-			$comparison   = version_compare( $inspection->version, $package->get_version() );
-			$relationship = match ( true ) {
-				$comparison > 0 => 'newer',
-				$comparison < 0 => 'older',
-				default => 'same',
-			};
+			$relationship = class_exists( ReleaseVersion::class ) ? ReleaseVersion::relationship( $inspection->version, $package->get_version() ) : '';
+			if ( ! in_array( $relationship, array( 'newer', 'same', 'older' ), true ) ) {
+				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $package_root );
+			}
 			$release_url = $metadata->release_details_url( $repository, $inspection->tag );
 			if ( '' === $release_url ) {
 				throw new InvalidArgumentException( 'The release details URL is unavailable.' );

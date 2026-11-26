@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\PackagePagePresenter;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/FeedbackWordPressFunctions.php';
 
 final class PackageIndexNoticePlacementTest extends TestCase {
 
@@ -444,7 +445,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 
 		$heading_position = strpos( $html, 'Booster can’t open settings for Refused package' );
 		$refusal_position = strpos( $html, 'Booster refused this package operation.' );
-		self::assertStringNotContainsString( 'id="ran-booster-notice-icons"', $html );
+		self::assertSame( 1, substr_count( $html, 'id="ran-booster-notice-icons"' ) );
 
 		foreach ( array( $heading_position, $refusal_position ) as $position ) {
 			self::assertIsInt( $position );

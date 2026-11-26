@@ -170,6 +170,9 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 		<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?>
 		</div>
 	<?php } ?>
+	<?php if ( 'packages/edit' === $view ) { ?>
+	<div id="ran-booster-package-edit-region">
+	<?php } ?>
 	<?php if ( ! in_array( $view, array( 'packages/index', 'packages/recovery' ), true ) ) { ?>
 		<?php
 		$credential_form_error = null;
@@ -190,6 +193,9 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 	<div id="ran-booster-package-mutation-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 
 	<?php require __DIR__ . '/' . $view . '.php'; ?>
+	<?php if ( 'packages/edit' === $view ) { ?>
+	</div>
+	<?php } ?>
 
 	<hr>
 
@@ -212,10 +218,5 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 	</div>
 </div>
 <?php
-// Screens whose scripts change a notice's intent in place clone its icon from here.
-if ( in_array( $view, array( 'packages/index', 'packages/create', 'packages/edit' ), true )
-	|| 'portability.php' === ( $tab_view ?? '' )
-	|| ( 'provider.php' === ( $tab_view ?? '' ) && 'credentials' === ( $provider_view ?? '' ) )
-) {
-	\RAN\Admin\Component\NoticeIcon::print_template();
-}
+// The feedback host and intent-changing notices share this one icon template.
+\RAN\Admin\Component\NoticeIcon::print_template();

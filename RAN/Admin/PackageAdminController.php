@@ -334,6 +334,7 @@ final class PackageAdminController {
 
 			$check_skipped = 'edited' === $status ? match ( $request['repository_check_skipped'] ?? null ) {
 				'1' => 'edit-unverified',
+				'rate_limited' => 'edit-rate-limited',
 				'updates_disabled' => 'edit-unchecked',
 				default => null,
 			} : null;
@@ -387,13 +388,28 @@ final class PackageAdminController {
 		$operation  = sanitize_key( wp_unslash( (string) $_GET['ran_booster_result'] ) );
 		$identifier = sanitize_text_field( wp_unslash( (string) $_GET['ran_booster_package'] ) );
 		$nonce      = wp_unslash( (string) $_GET['_ran_booster_notice_nonce'] );
-		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'edit-unverified', 'edit-unchecked', 'unlink', 'unlink-absent', 'unlink-on-disk', 'unlink-and-delete', 'already-managed' ), true )
+		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'edit-unverified', 'edit-rate-limited', 'edit-unchecked', 'unlink', 'unlink-absent', 'unlink-on-disk', 'unlink-and-delete', 'already-managed' ), true )
 			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) ) {
 			return null;
 		}
-		$repository_check_skipped = 'edit-unverified' === $operation;
-		$repository_not_checked   = 'edit-unchecked' === $operation;
-		if ( $repository_check_skipped || $repository_not_checked ) {
+		$rate_limited = 'edit-rate-limited' === $operation;
+		if ( $rate_limited || 'edit-unverified' === $operation ) {
+			$dashboard->add_message(
+				array(
+					'type'     => 'warning',
+					'feedback' => 'package_edit_unverified',
+					'message'  => $rate_limited
+						? __( 'Your settings were saved. The Git provider was limiting requests, so Booster used the repository details it already had.', 'ran-booster' )
+						: __( "Your settings were saved using the stored repository details. Booster couldn't recheck them with the Git provider.", 'ran-booster' ),
+				)
+			);
+			return array(
+				'operation'  => 'edit',
+				'identifier' => $identifier,
+			);
+		}
+		$repository_not_checked = 'edit-unchecked' === $operation;
+		if ( $repository_not_checked ) {
 			$operation = 'edit';
 		}
 		if ( in_array( $operation, array( 'unlink-absent', 'unlink-on-disk' ), true ) ) {
@@ -464,24 +480,12 @@ final class PackageAdminController {
 			$message['message'] = 'plugin' === $type ? __( 'Plugin was saved. The repository was not checked.', 'ran-booster' ) : __( 'Theme was saved. The repository was not checked.', 'ran-booster' );
 		}
 		if ( 'edit' === $operation ) {
-			// Saves already reach the snackbar through the enhanced save path, except a qualified one (R12).
-			if ( ! $repository_check_skipped ) {
-				$message['saved_package'] = $identifier;
-				$message['saved_type']    = $type;
-			}
+			$message['saved_package'] = $identifier;
+			$message['saved_type']    = $type;
 		} else {
 			$message['feedback'] = 'package_' . str_replace( '-', '_', $operation );
 		}
 		$dashboard->add_message( $message );
-		if ( $repository_check_skipped ) {
-			$dashboard->add_message(
-				array(
-					'type'     => 'warning',
-					'feedback' => 'package_edit_unverified',
-					'message'  => __( 'The Git provider is rate-limited or unavailable, so Booster could not re-check the repository. Your settings were saved with the repository details already stored.', 'ran-booster' ),
-				)
-			);
-		}
 
 		return compact( 'operation', 'identifier' );
 	}
@@ -782,7 +786,10 @@ final class PackageAdminController {
 			return null;
 		}
 
-		return $this->saved_from_stored( $request, $stored_package, 'http_' . $failure->getCode(), '1' );
+		$reason = ProviderFailure::from_throwable( $failure )?->reason;
+		$marker = in_array( $reason, array( 'rate_limited', 'rate_limited_secondary' ), true ) ? 'rate_limited' : '1';
+
+		return $this->saved_from_stored( $request, $stored_package, 'http_' . $failure->getCode(), $marker );
 	}
 
 	/**

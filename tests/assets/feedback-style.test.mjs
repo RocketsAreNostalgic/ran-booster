@@ -268,15 +268,6 @@ test('focus rings are drawn outside the item and the glyph never carries meaning
 		/outline:\s*var\(--wpds-border-width-focus\)\s*solid\s*var\(--wpds-color-stroke-focus\)/
 	);
 	assert.match(focus.body, /outline-offset:\s*2px/);
-	const glyphs = rules.filter(({ body }) => /(^|[\s;])content:/.test(body));
-	assert.ok(glyphs.length >= 2);
-	for (const { body } of glyphs) {
-		assert.match(
-			body,
-			/content:\s*"[^"]*"\s*\/\s*""/,
-			'Empty alt text hides the decoration.'
-		);
-	}
 });
 
 test('action and dismiss controls keep a 24px target and the text colour', () => {
@@ -293,41 +284,21 @@ test('action and dismiss controls keep a 24px target and the text colour', () =>
 	assert.match(tokens, /--wpds-dimension-size-sm:\s*24px/);
 });
 
-test('each intent has its own glyph with a fallback for browsers without alt text', () => {
-	const glyph = (intent) => {
-		const match = hostCss.match(
-			new RegExp(
-				`ran-booster-snackbar--${intent}\\s*\\.components-snackbar__content::before\\s*\\{([^}]*)\\}`
-			)
-		);
-		return match?.[1];
-	};
-	const baseRule = rules.find(
-		({ selector, body }) =>
-			selector.endsWith('.components-snackbar__content::before') &&
-			/content:/.test(body) &&
-			!selector.includes('--')
-	).body;
-	const shapes = {
-		success: glyph('success').match(/content:\s*"([^"]+)"\s*;/)[1],
-		error: glyph('error').match(/content:\s*"([^"]+)"\s*;/)[1],
-		info: glyph('info').match(/content:\s*"([^"]+)"\s*;/)[1],
-		// Warning keeps the base glyph.
-		warning: baseRule.match(/content:\s*"([^"]+)"\s*;/)[1],
-	};
-	assert.equal(new Set(Object.values(shapes)).size, 4, 'Shapes differ');
-	for (const body of [
-		glyph('success'),
-		glyph('info'),
-		glyph('error'),
-		baseRule,
-	]) {
-		assert.match(
-			body,
-			/content:\s*"[^"]+";\s*content:\s*"[^"]+"\s*\/\s*"";/
-		);
-	}
-	assert.equal(glyph('warning'), undefined, 'Warning uses the base glyph.');
+test('the notice icon stays at the top start at its native 24px size', () => {
+	const [content] = rule(/\.components-snackbar__content$/);
+	assert.match(content.body, /align-items:\s*flex-start/);
+	assert.match(content.body, /padding:\s*0/);
+	assert.match(
+		content.body,
+		/line-height:\s*var\(--wpds-dimension-size-sm\)/
+	);
+	const [slot] = rule(/\.components-snackbar__icon$/);
+	assert.match(slot.body, /position:\s*static/);
+	assert.match(slot.body, /color:\s*var\(--ran-booster-snackbar-icon\)/);
+	const [icon] = rule(/\.ran-wp-ui-notice__icon$/);
+	assert.match(icon.body, /inline-size:\s*var\(--wpds-dimension-size-sm\)/);
+	assert.match(icon.body, /block-size:\s*var\(--wpds-dimension-size-sm\)/);
+	assert.match(icon.body, /color:\s*inherit/);
 });
 
 test('forced colours keep a real CanvasText border and no background reliance', () => {

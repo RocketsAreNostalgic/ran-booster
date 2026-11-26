@@ -20,9 +20,12 @@ same pattern, wherever it lives:
    technology.
 2. Success: a snackbar that dismisses itself.
 3. Failure or any result that is not a success: an inline message next to
-   where it is most useful. It persists and never auto-dismisses. A short
-   snackbar pointer to it, with a Show details action, always accompanies it
-   when the person started the action.
+   where it is most useful. It persists and never auto-dismisses. A user-initiated failure also shows a dismissible
+   snackbar with the summary. **Show details** appears only when the inline
+   notice offers more, such as an explanation, a relevant link, or a
+   disclosure. Activating it brings the extra information into view and
+   opens the disclosure when present. A summary-only warning, such as a
+   settings save during a provider rate limit, has only the dismiss control.
 4. A neutral outcome that is not a failure, such as a check that was not run
    because updates are off, is an `info` snackbar that dismisses itself, with
    the longer explanation inline.
@@ -197,12 +200,10 @@ Notice does. Both resolve to the same hue per intent.
   `--wpds-dimension-gap-md`. Stacked items keep WordPress's own 8px list
   spacing. Pixel literals: the 1px border, the 600px width clamp, the 24px
   and 16px bottom offsets (as spacing tokens) and the 2px focus offset.
-- **Icon.** A decorative CSS `::before` glyph on the item content, not the
-  `SnackbarList` `icon` prop, whose layout assumes WordPress's own icon. Each
-  intent has its own shape so intent never relies on colour alone: a check for
-  success, `i` for info, `!` for warning, a cross for error. Alternative text is empty
-  (`content: "x" / ""`), after a plain `content` declaration for browsers
-  without alternative text. Colour comes from the icon token above.
+- **Icon.** The `SnackbarList` icon uses the same decorative 24px SVG and
+  intent colour as the static Notice, copied from the shared per-page icon
+  template. It aligns to the top at the start of the message; its empty
+  accessible role leaves the message and controls available to assistive technology.
 - **Contrast (WCAG AA).** Computed from the token values in the bundled file.
   Text on surface: success 15.2:1, info 15.6:1, error 15.6:1, warning 15.7:1 (needs 4.5:1).
   Icon on surface: 4.9:1, info 4.85:1, 5.3:1, 4.9:1 (needs 3:1). Focus ring on surface:

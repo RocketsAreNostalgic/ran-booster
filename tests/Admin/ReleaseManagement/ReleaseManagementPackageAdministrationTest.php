@@ -1029,6 +1029,58 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'WordPress has no current update offer.', $render_settings() );
 	}
 
+	/** @return iterable<string,array{string,string,string,string}> */
+	public static function native_update_repository_blocks(): iterable {
+		foreach ( self::package_types() as $coordinates ) {
+			list( $type, $identifier ) = $coordinates;
+			foreach (
+				array(
+					'release_repository_conflict'     => 'Repository shared',
+					'repository_release_owner_exists' => 'Repository shared',
+					'repository_source_unavailable'   => 'Storage unavailable',
+				) as $failure_code => $heading
+			) {
+				yield $type . ' ' . $failure_code => array( $type, $identifier, $failure_code, $heading );
+			}
+		}
+	}
+
+	#[DataProvider( 'native_update_repository_blocks' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_repository_block_suppresses_cached_offer_in_package_operations_and_release_track( string $type, string $identifier, string $failure_code, string $heading ): void {
+		require_once __DIR__ . '/PersistedOfferVersionWordPressFunctions.php';
+		require_once __DIR__ . '/../../Support/PackageViewWordPressFunctions.php';
+		$transient = 'plugin' === $type ? 'update_plugins' : 'update_themes';
+		$entry     = array(
+			$type         => $identifier,
+			'new_version' => '2.0',
+			'package'     => 'identity-bound-offer',
+		);
+		$GLOBALS['ran_booster_test_site_transients'][ $transient ] = (object) array(
+			'response' => array( $identifier => 'plugin' === $type ? (object) $entry : $entry ),
+		);
+
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', $type, failure_code: $failure_code, update_available: true ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset', $type );
+
+		self::assertSame( '2.0', \RAN\WordPress\ManagedReleaseTargetRegistrar::cached_offer_version( $type, $identifier, '1.0.0' ) );
+
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', $type, 'release_asset', $package, $package->settings_url() );
+		$pane = (string) ob_get_clean();
+		self::assertStringContainsString( $heading, $pane );
+		self::assertStringNotContainsString( 'version 2.0 is available.', $pane );
+
+		ob_start();
+		$controls->render_package_operation_actions( 'release_asset', 'release_asset', $type, $identifier, $package->source_revision() );
+		$action = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'href=', $action );
+		self::assertStringContainsString( 'aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update>Update now</a>', $action );
+		self::assertSame( array(), $tracking->calls );
+	}
+
 	public function test_package_operation_actions_render_disabled_when_wordpress_holds_no_offer(): void {
 		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', update_available: true ) ) );
 

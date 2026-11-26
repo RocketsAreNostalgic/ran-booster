@@ -359,7 +359,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				outcomeMessage = sprintf(
 					/* translators: %s: release version. */
 					__(
-						'Version %s matches the installed version.',
+						'Version %s was inspected and matches the installed version.',
 						'ran-booster'
 					),
 					response.data.version
@@ -404,7 +404,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				statusMessage
 			);
 			outcome.textContent = outcomeMessage;
-			outcome.hidden = relationship !== 'newer';
+			outcome.hidden = !canInspect(relationship);
 			const screenUrl =
 				managedBrowser.dataset.ranBoosterManagedReleaseWordpressUrl;
 			if (relationship === 'newer' && screenUrl) {

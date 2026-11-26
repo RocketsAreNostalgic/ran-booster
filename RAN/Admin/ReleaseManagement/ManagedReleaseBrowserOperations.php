@@ -114,7 +114,10 @@ final class ManagedReleaseBrowserOperations {
 
 	/** The current native action uses WordPress's filtered offer. */
 	public static function persisted_offer_version( ReleaseTrackingStatus $status ): string {
-		return 'release_asset' === $status->source() && $status->eligible() && 'disabled' !== $status->deployment_policy()
+		return 'release_asset' === $status->source()
+			&& $status->eligible()
+			&& 'disabled' !== $status->deployment_policy()
+			&& '' === ReleaseTrackingOperations::repository_blocker( $status )
 			? ManagedReleaseTargetRegistrar::cached_offer_version( $status->type(), $status->identifier(), $status->installed_version() )
 			: '';
 	}

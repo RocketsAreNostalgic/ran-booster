@@ -379,7 +379,7 @@ test('managed browser selects and explicitly reviews the newest current candidat
 			(node) =>
 				node.className === 'ran-booster-release-candidate__outcome'
 		).hidden,
-		true
+		false
 	);
 	assert.equal(
 		harness.nodes.get('native-update').getAttribute('aria-disabled'),
@@ -621,6 +621,93 @@ for (const type of ['plugin', 'theme']) {
 			null
 		);
 	});
+}
+
+for (const type of ['plugin', 'theme']) {
+	for (const panel of ['initial', 'replacement']) {
+		test(`managed ${type} ${panel} panel shows the successful review of an equivalent version`, async () => {
+			const selected = candidate(
+				'A',
+				'2.1.0',
+				'same',
+				'2026-08-03T00:00:00Z'
+			);
+			const harness = createHarness([
+				{
+					successful: true,
+					code: 'release_candidates_available',
+					data: { installed_version: '2.1', candidates: [selected] },
+				},
+				readyResponse(selected.version, 'same', {
+					installed_version: '2.1',
+					native_offer: {
+						available: true,
+						release_id: '',
+						version: '3.0.0',
+					},
+				}),
+			]);
+			const { dataset } = harness.browser;
+			dataset.ranBoosterManagedReleaseType = type;
+			dataset.ranBoosterManagedReleaseIdentifier =
+				type === 'plugin' ? 'example/plugin.php' : 'example-theme';
+			const nativeUpdate = harness.nodes.get('native-update');
+			const href =
+				type === 'plugin'
+					? '/wp-admin/plugins.php?action=update-selected&plugins=example%2Fplugin.php&_wpnonce=B'
+					: '/wp-admin/update.php?action=upgrade-theme&theme=example-theme&_wpnonce=B';
+			nativeUpdate.setAttribute('href', href);
+			nativeUpdate.removeAttribute('aria-disabled');
+			nativeUpdate.textContent = 'Update to 3.0.0';
+
+			if (panel === 'replacement') {
+				harness.afterPackageSwap();
+			} else {
+				harness.initialize(harness.browser);
+			}
+			await flush();
+			assert.deepEqual(
+				harness.requests.map((request) => request.get('action')),
+				['ran_booster_managed_release_list_candidates']
+			);
+			assert.equal(checkedRadio(harness)?.dataset.releaseId, 'A');
+			const row = harness.nodes
+				.get('candidate-list')
+				.children.find((candidateRow) =>
+					candidateRow.children.includes(checkedRadio(harness))
+				);
+			const outcome = row.children.find(
+				(node) =>
+					node.className === 'ran-booster-release-candidate__outcome'
+			);
+			assert.equal(outcome.hidden, true);
+
+			await harness.nodes.get('review').dispatch('click');
+			assert.equal(harness.requests.length, 2);
+			assert.equal(
+				harness.requests[1].get('action'),
+				'ran_booster_managed_release_inspect'
+			);
+			assert.equal(harness.requests[1].get('release_id'), 'A');
+			assert.equal(outcome.hidden, false);
+			assert.match(
+				outcome.textContent,
+				/2\.1\.0 was inspected and matches the installed version/
+			);
+			assert.equal(
+				harness.nodes.get('heading').textContent,
+				'Release checked'
+			);
+			assert.equal(
+				harness.nodes.get('message').textContent,
+				outcome.textContent
+			);
+			assert.equal(outcome.children.length, 0);
+			assert.equal(nativeUpdate.getAttribute('href'), href);
+			assert.equal(nativeUpdate.getAttribute('aria-disabled'), null);
+			assert.equal(nativeUpdate.textContent, 'Update to 3.0.0');
+		});
+	}
 }
 
 test('managed browser preselects and explicitly reviews the installed release even when a newer release is listed first', async () => {

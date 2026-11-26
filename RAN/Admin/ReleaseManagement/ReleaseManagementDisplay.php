@@ -83,11 +83,10 @@ final class ReleaseManagementDisplay {
 		}
 		$track_mode                = 'branch' === $source ? 'branch' : 'managed';
 		$failure_code              = $status_available ? $status->failure_code() : '';
-		$repository_conflict_code  = $status_available && in_array( $failure_code, array( 'release_repository_conflict', 'repository_release_owner_exists' ), true );
-		$repository_source_blocked = $status_available
-			&& ( 'repository_source_unavailable' === $failure_code
-				|| ( 'branch' === $source && 'release_unavailable' === $failure_code ) );
-		$repository_blocked        = $repository_conflict_code || $repository_source_blocked;
+		$repository_blocker        = ReleaseTrackingOperations::repository_blocker( $status );
+		$repository_conflict_code  = 'release_repository_conflict' === $repository_blocker;
+		$repository_source_blocked = 'repository_source_unavailable' === $repository_blocker;
+		$repository_blocked        = '' !== $repository_blocker;
 		$track_disabled            = null === $track_nonce_action || $repository_blocked;
 		$policy_disabled           = $status_available && 'branch' === $source && 'disabled' === $status->deployment_policy();
 		$switch_blocked            = $track_disabled || $updates_forced_off || $policy_disabled;
@@ -115,7 +114,7 @@ final class ReleaseManagementDisplay {
 
 			&& '' !== ( $nonce_actions['inspect_candidate'] ?? '' )
 			&& ! $repository_blocked;
-		$offered_version       = $status_available && ! $updates_forced_off && ! $repository_blocked ? ManagedReleaseBrowserOperations::persisted_offer_version( $status ) : '';
+		$offered_version       = $status_available && ! $updates_forced_off ? ManagedReleaseBrowserOperations::persisted_offer_version( $status ) : '';
 		$status_notice_visible = $status_available && 'release_asset' === $source && '' !== $failure_code && ! $repository_blocked && ! $this->eligibility_explains_failure( $status );
 		$release_unchecked     = $status_available && 'release_asset' === $source && '' === $failure_code && '' === $status->last_checked_at() && '' === $offered_version && ! $status->update_available() && ! $updates_forced_off;
 		$gate_notice           = $repository_conflict_code

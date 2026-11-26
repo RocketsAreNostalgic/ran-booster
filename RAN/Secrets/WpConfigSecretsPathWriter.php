@@ -105,6 +105,32 @@ class WpConfigSecretsPathWriter {
 		return true;
 	}
 
+	/**
+	 * Admission provenance comes from a safely read config and an identifiable
+	 * Booster marker. Only the exact writer block grants mutation authority.
+	 */
+	public function has_storage_marker( string $config_path ): bool {
+		$this->assert_absolute_safe_path( $config_path, 'config_path_invalid' );
+		$config = $this->inspect_config_path( $config_path, require_writable: false, require_owner: false );
+		$marker = trim( self::OWNED_MARKER, ' /*.' );
+		$found  = false;
+		foreach ( $this->tokens( $config['contents'] ) as $token ) {
+			if ( ! is_array( $token ) || ! in_array( $token[0], array( T_COMMENT, T_DOC_COMMENT ), true ) ) {
+				continue;
+			}
+			$comment = preg_replace( '/[\s*]+/', ' ', $token[1] );
+			if ( null === $comment || false === stripos( $comment, $marker ) ) {
+				continue;
+			}
+			if ( $found ) {
+				$this->fail( 'owned_definition_ambiguous', 'The automatic encrypted secrets definition is ambiguous.' );
+			}
+			$found = true;
+		}
+
+		return $found;
+	}
+
 	private function edit(
 		string $config_path,
 		string $sidecar_path,
@@ -199,7 +225,7 @@ class WpConfigSecretsPathWriter {
 	/**
 	 * @return array{contents: string, dev: int, ino: int, mode: int, uid: int, gid: int, nlink: int, size: int, mtime: int, ctime: int}
 	 */
-	private function inspect_config_path( string $path, bool $require_writable = true ): array {
+	private function inspect_config_path( string $path, bool $require_writable = true, bool $require_owner = true ): array {
 		clearstatcache( true, $path );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- The configuration replacement boundary checks actual PHP-process writability alongside canonical path and inode checks.
 		if ( is_link( $path ) || ! is_file( $path ) || ( $require_writable && ! is_writable( $path ) ) ) {
@@ -219,8 +245,12 @@ class WpConfigSecretsPathWriter {
 		if ( $path_stat['size'] < 1 || $path_stat['size'] > self::MAX_BYTES ) {
 			$this->fail( 'config_size_unsupported', 'The WordPress configuration has an unsupported size.' );
 		}
-		if ( function_exists( 'posix_geteuid' ) && posix_geteuid() !== $path_stat['uid'] ) {
+		if ( $require_owner && function_exists( 'posix_geteuid' ) && posix_geteuid() !== $path_stat['uid'] ) {
 			$this->fail( 'config_owner_invalid', 'The WordPress configuration is not owned by the current process owner.' );
+		}
+
+		if ( ! is_readable( $path ) ) {
+			$this->fail( 'config_read_failed', 'Could not open the WordPress configuration.' );
 		}
 
 		$handle = $this->open_config_for_read( $path );

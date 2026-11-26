@@ -22,7 +22,7 @@ function is_writable( string $path ): bool {
 	$mock = $GLOBALS['ran_booster_shared_host_stat'] ?? null;
 
 	return is_array( $mock ) && ( $mock['path'] ?? null ) === $path
-		? false
+		? true === ( $mock['writable'] ?? false )
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Delegate non-injected paths to PHP so the shared-host permission fixture preserves native behavior.
 		: \is_writable( $path );
 }

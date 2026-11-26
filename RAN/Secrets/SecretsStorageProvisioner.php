@@ -40,7 +40,7 @@ class SecretsStorageProvisioner {
 		}
 		return array(
 			'path'   => $configured,
-			'source' => $this->configured_path_source( $configured ),
+			'source' => $this->configured_path_source(),
 		);
 	}
 
@@ -58,7 +58,7 @@ class SecretsStorageProvisioner {
 			);
 		}
 		if ( is_string( $configured ) ) {
-			$source       = $this->configured_path_source( $configured );
+			$source       = $this->configured_path_source();
 			$path_is_safe = $this->validate_configured_candidate( $configured, SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL === $source );
 			if ( ! $path_is_safe ) {
 				return SecretsStorageProvisioningResult::storage_needs_attention(
@@ -598,13 +598,13 @@ class SecretsStorageProvisioner {
 		return null;
 	}
 
-	private function configured_path_source( string $configured ): string {
+	private function configured_path_source(): string {
 		try {
 			$config = $this->loaded_wp_config_path( true );
 			if ( null === $config ) {
 				return SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN;
 			}
-			if ( $this->writer->has_owned_definition( $config, $configured ) ) {
+			if ( $this->writer->has_storage_marker( $config ) ) {
 				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
 			}
 		} catch ( Throwable ) {

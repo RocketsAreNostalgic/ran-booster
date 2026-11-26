@@ -8,6 +8,8 @@ namespace RAN\Tests\Secrets;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Secrets\WpConfigPathWriteException;
 use RAN\Secrets\WpConfigSecretsPathWriter;
@@ -244,6 +246,29 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertTrue( $writer->has_owned_definition( $this->config_path, $this->sidecar_path ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read exact local fixture/source bytes for the boundary assertion without WordPress filesystem indirection.
 		self::assertSame( $written, file_get_contents( $this->config_path ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_deploy_owned_read_access_does_not_grant_write_or_removal_authority(): void {
+		require __DIR__ . '/fixtures/shared-host-functions.php';
+		$writer = new WpConfigSecretsPathWriter();
+		$writer->write( $this->config_path, $this->sidecar_path );
+		self::assertTrue( $writer->has_owned_definition( $this->config_path, $this->sidecar_path ) );
+		$GLOBALS['ran_booster_shared_host_stat'] = array(
+			'path'     => $this->config_path,
+			'uid'      => posix_geteuid() + 10000,
+			'gid'      => posix_getegid(),
+			'writable' => true,
+		);
+
+		self::assertTrue( $writer->has_storage_marker( $this->config_path ) );
+		$this->assert_refused( 'config_owner_invalid', fn () => $writer->write( $this->config_path, $this->sidecar_path ) );
+		$this->assert_refused( 'config_owner_invalid', fn () => $writer->assert_owned_definition_removable( $this->config_path, $this->sidecar_path ) );
+		$this->assert_refused( 'config_owner_invalid', fn () => $writer->remove_owned_definition( $this->config_path, $this->sidecar_path ) );
+		$this->assert_refused( 'config_owner_invalid', fn () => $writer->retarget_owned_definition( $this->config_path, $this->sidecar_path, $this->directory . '/other/secrets.json' ) );
+		self::assertFileDoesNotExist( $this->config_path . '.ran-booster.lock' );
+		self::assertSame( array(), $this->temporary_files() );
 	}
 
 	public function test_removal_leaves_amanual_matching_definition_untouched(): void {

@@ -770,21 +770,52 @@ jobs:
             shell: bash
             run: |
                 set -euo pipefail
-                # Normal bootstrap includes wp-config.php for the constrained setup writer.
+                wordpress="$GITHUB_WORKSPACE/build/wordpress"
+                test "$(realpath "$wordpress")" = "$wordpress"
+                test "$(cat "$wordpress/.ran-booster-disposable-test-site")" = 'RAN Booster disposable test site'
+                # The HTTP proof below serves this same directory with PHP's -t.
+                # shellcheck disable=SC2016 # The PHP expression is passed literally.
                 php -r '
-                  require getenv( "GITHUB_WORKSPACE" ) . "/build/wordpress/wp-load.php";
+                  $_SERVER["DOCUMENT_ROOT"] = $argv[1];
+                  require $argv[1] . "/wp-load.php";
                   $result = ( new RAN\Secrets\SecretsStorageProvisioner() )->provision();
                   if ( ! $result->requires_next_request_verification() ) {
                     throw new RuntimeException( "Private storage provisioning failed: " . $result->code() );
                   }
-                '
-                # A fresh request reads the persisted wp-config setting, also used by HTTP.
-                # Empty storage is initialized by the first normal credential write.
-                wp eval '
+                ' "$wordpress"
+
+                # Read the automatic declaration in a fresh request with the served root.
+                # The later connected proofs use independent WP-CLI processes without it.
+                # shellcheck disable=SC2016 # The PHP expression is passed literally.
+                private_directory="$(php -r '
+                  $_SERVER["DOCUMENT_ROOT"] = $argv[1];
+                  require $argv[1] . "/wp-load.php";
                   $secrets = new RAN\Secrets\SecretsFile();
                   $result = ( new RAN\Secrets\SecretsStorageProvisioner( secrets: $secrets ) )->status();
-                  if ( RAN\Secrets\SecretsStorageProvisioningResult::PATH_CONFIGURED !== $result->status() ) {
-                    throw new RuntimeException( "Private storage verification failed: " . $result->code() );
+                  if ( RAN\Secrets\SecretsStorageProvisioningResult::PATH_CONFIGURED !== $result->status()
+                      || RAN\Secrets\SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC !== $result->path_source()
+                      || ! is_string( $secrets->path() ) ) {
+                    throw new RuntimeException( "Automatic storage verification failed: " . $result->code() );
+                  }
+                  $secrets->assert_managed_storage_ready();
+                  $writer = new RAN\Secrets\WpConfigSecretsPathWriter();
+                  if ( ! $writer->remove_owned_definition( $argv[1] . "/wp-config.php", $secrets->path() ) ) {
+                    throw new RuntimeException( "Could not retire the exact automatic fixture declaration." );
+                  }
+                  echo dirname( $secrets->path() );
+                ' "$wordpress")"
+                wp config set RAN_BOOSTER_ENCRYPTED_SECRETS_DIR "$private_directory" --type=constant --path="$wordpress"
+
+                # The fixture operator now supplies the verified private path for both WP-CLI and HTTP.
+                # Empty storage is initialized by the first normal credential write.
+                # shellcheck disable=SC2016 # The PHP expression is passed literally.
+                wp eval '
+                  unset( $_SERVER["DOCUMENT_ROOT"] );
+                  $secrets = new RAN\Secrets\SecretsFile();
+                  $result = ( new RAN\Secrets\SecretsStorageProvisioner( secrets: $secrets ) )->status();
+                  if ( RAN\Secrets\SecretsStorageProvisioningResult::PATH_CONFIGURED !== $result->status()
+                      || RAN\Secrets\SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL !== $result->path_source() ) {
+                    throw new RuntimeException( "Explicit storage verification failed: " . $result->code() );
                   }
                   $secrets->assert_managed_storage_ready();
                   $secrets->with_github_adoption_inventory( static function ( array $inventory ): void {
@@ -792,7 +823,7 @@ jobs:
                       throw new RuntimeException( "Expected an empty disposable credential inventory." );
                     }
                   } );
-                ' --path=build/wordpress
+                ' --path="$wordpress"
 
           - name: Prove installed GitHub replacement and historical selection
             if: ${{ matrix.suite == 'critical' }}

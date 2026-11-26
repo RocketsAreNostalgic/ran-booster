@@ -673,6 +673,76 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertTrue( ( new WpConfigSecretsPathWriter() )->has_owned_definition( $this->config_path, $this->candidate ) );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_safe_deploy_owned_operator_config_works_without_a_document_root(): void {
+		require __DIR__ . '/fixtures/shared-host-functions.php';
+		$manual = $this->root . '/deployed-private';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Prepare a private directory for this synthetic deployment config.
+		self::assertTrue( mkdir( $manual, 0700 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Seed the exact synthetic operator configuration bytes.
+		self::assertNotFalse( file_put_contents( $this->config_path, sprintf( "<?php\ndefine( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '%s' );\n", addcslashes( $manual, "\\'" ) ) ) );
+		$GLOBALS['ran_booster_shared_host_stat'] = array(
+			'path' => $this->config_path,
+			'uid'  => posix_geteuid() + 10000,
+			'gid'  => posix_getegid(),
+		);
+		$provisioner                             = $this->provisioner();
+		$provisioner->configured                 = $manual . '/ran-booster-store.json';
+		$provisioner->document_root_missing      = true;
+		$status                                  = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $status->status() );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $status->path_source() );
+		self::assertFalse( $provisioner->writer_called );
+	}
+
+	public function test_a_reformatted_booster_marker_preserves_provenance_without_granting_mutation_custody(): void {
+		$writer      = new WpConfigSecretsPathWriter();
+		$provisioner = $this->provisioner();
+		$config      = "<?php\n/** RAN Booster encrypted\n * secrets storage. */\n"
+			. sprintf( "define( \"RAN_BOOSTER_ENCRYPTED_SECRETS_DIR\", '%s' );\n", addcslashes( dirname( $this->candidate ), "\\'" ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Seed a deliberately reformatted but identifiable fixture marker and setting.
+		self::assertNotFalse( file_put_contents( $this->config_path, $config ) );
+		$provisioner->configured               = $this->candidate;
+		$provisioner->document_root_missing    = true;
+		$provisioner->orphaned_reset_available = true;
+		$status                                = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $status->path_source() );
+		self::assertSame( 'configured_path_unsafe', $status->code() );
+		self::assertNull( $provisioner->recovery_state( $status ) );
+		self::assertFalse( $writer->assert_owned_definition_removable( $this->config_path, $this->candidate ) );
+		self::assertFalse( $writer->remove_owned_definition( $this->config_path, $this->candidate ) );
+		self::assertFalse( $writer->retarget_owned_definition( $this->config_path, $this->candidate, $this->root . '/other/ran-booster-store.json' ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Verify failed mutation left the exact fixture bytes unchanged.
+		self::assertSame( $config, file_get_contents( $this->config_path ) );
+	}
+
+	public function test_unreadable_and_ambiguous_config_provenance_cannot_grant_the_operator_exception(): void {
+		$provisioner                        = $this->provisioner();
+		$provisioner->configured            = $this->candidate;
+		$provisioner->document_root_missing = true;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Model a deployment configuration that the current PHP process cannot read.
+		self::assertTrue( chmod( $this->config_path, 0000 ) );
+		try {
+			$status = $provisioner->status();
+			self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN, $status->path_source() );
+			self::assertSame( 'configured_path_unsafe', $status->code() );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Restore fixture permissions for the next case.
+			self::assertTrue( chmod( $this->config_path, 0600 ) );
+		}
+
+		$config = "<?php\n/* RAN Booster encrypted secrets storage. */\n/** RAN Booster encrypted secrets storage. */\n"
+			. sprintf( "define( \"RAN_BOOSTER_ENCRYPTED_SECRETS_DIR\", '%s' );\n", addcslashes( dirname( $this->candidate ), "\\'" ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write the ambiguous fixture bytes only.
+		self::assertNotFalse( file_put_contents( $this->config_path, $config ) );
+		$status = $provisioner->status();
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN, $status->path_source() );
+		self::assertSame( 'configured_path_unsafe', $status->code() );
+	}
+
 	public function test_manual_override_rejects_symlinked_components_and_unsafe_existing_target(): void {
 		$actual = $this->root . '/manual-actual';
 		$link   = $this->root . '/manual-link';

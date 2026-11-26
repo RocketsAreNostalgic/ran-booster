@@ -2127,13 +2127,17 @@ test('package save feedback requires the matching authoritative edit response', 
 		'partial-reinstall',
 		'recovery',
 		'failed-status',
+		'plugin-conflict',
+		'theme-conflict',
+		'other-target-conflict',
 		'stale',
 		'independent-pending',
 		'host-absent',
 		'host-refused',
 	]) {
 		const state = fixture();
-		const type = scenario === 'theme' ? 'theme' : 'plugin';
+		const conflict = scenario.endsWith('-conflict');
+		const type = scenario.startsWith('theme') ? 'theme' : 'plugin';
 		const identifier =
 			type === 'plugin' ? 'example/example.php' : 'example';
 		const handlers = new Map();
@@ -2142,6 +2146,9 @@ test('package save feedback requires the matching authoritative edit response', 
 			addEventListener() {},
 			getResponseHeader: () => null,
 		};
+		if (conflict) {
+			xhr.status = 409;
+		}
 		const button = state.button;
 		button.dataset = {};
 		button.isConnected = true;
@@ -2190,8 +2197,12 @@ test('package save feedback requires the matching authoritative edit response', 
 			scenario === 'wrong-returned-action'
 				? 'install-plugin'
 				: `edit-${type}`;
-		const returnedIdentifier =
-			scenario === 'wrong-returned-identifier' ? 'other' : identifier;
+		const returnedIdentifier = [
+			'wrong-returned-identifier',
+			'other-target-conflict',
+		].includes(scenario)
+			? 'other'
+			: identifier;
 		const newRegion = {
 			id: 'ran-booster-package-edit-region',
 			querySelector(selector) {
@@ -2199,6 +2210,9 @@ test('package save feedback requires the matching authoritative edit response', 
 					return scenario === 'recovery'
 						? null
 						: {
+								hasAttribute: (name) =>
+									conflict &&
+									name === 'data-ran-booster-attempted',
 								elements: packageEditControls(
 									type,
 									returnedAction,
@@ -2261,6 +2275,24 @@ test('package save feedback requires the matching authoritative edit response', 
 					xhr: { addEventListener() {} },
 				},
 			});
+		}
+		if (conflict) {
+			const response = { getElementById: () => newRegion };
+			state.window.DOMParser = class {
+				parseFromString() {
+					return response;
+				}
+			};
+			newRegion.querySelectorAll = () => [];
+			detail.shouldSwap = false;
+			state.listeners.get('htmx:beforeSwap')({ detail });
+			assert.equal(
+				detail.shouldSwap,
+				scenario !== 'other-target-conflict',
+				scenario
+			);
+			assert.equal(rendered, 0);
+			continue;
 		}
 		current = newRegion;
 		state.listeners.get('htmx:afterSwap')({ detail });
@@ -2635,10 +2667,17 @@ test('stale source and current save failures release their own controls for retr
 		document: state.document,
 		window: state.window,
 	})();
-	const oldDetail = { elt: old, target, xhr: makeXhr() };
+	state.sourceLinkAttributes.set('data-ran-booster-source-choice', 'branch');
+	const oldDetail = {
+		elt: old,
+		target: { ...target, id: 'wpbody-content' },
+		xhr: makeXhr(),
+	};
 	const saveDetail = { elt: save, target, xhr: makeXhr() };
 	state.listeners.get('htmx:beforeRequest')({ detail: oldDetail });
+	assert.equal(state.sourceProgress.hidden, false);
 	state.listeners.get('htmx:beforeRequest')({ detail: saveDetail });
+	assert.equal(state.sourceProgress.hidden, true);
 	state.listeners.get('htmx:sendError')({ detail: oldDetail });
 	assert.equal(state.sourceLinkAttributes.has('aria-busy'), false);
 	assert.equal(state.sourceLinkAttributes.has('aria-disabled'), false);

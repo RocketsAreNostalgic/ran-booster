@@ -299,6 +299,8 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	public function test_successful_package_operations_preserve_bounded_return_context(): void {
+		require_once __DIR__ . '/Admin/AdminViewWordPressFunctions.php';
+
 		$cases = array(
 			array( 'install-plugin', array(), 'ran-booster-plugins-create', false ),
 			array( 'install-plugin', array( 'install_another' => '1' ), 'ran-booster-plugins-create', false ),
@@ -315,6 +317,7 @@ final class PackageOperationServiceTest extends TestCase {
 				'return_policy'   => 'manual',
 				'provider'        => 'gh',
 				'return_url'      => 'https://evil.test/',
+				'source_view'     => 'release_asset',
 			);
 			if ( $settings ) {
 				$_GET['package'] = 'example/example.php';
@@ -329,6 +332,7 @@ final class PackageOperationServiceTest extends TestCase {
 			self::assertSame( 'branch', $query['return_source'], $action );
 			self::assertSame( 'manual', $query['return_policy'], $action );
 			self::assertArrayNotHasKey( 'return_url', $query );
+			self::assertSame( 'edit-plugin' === $action ? 'release_asset' : null, $query['source_view'] ?? null );
 			if ( isset( $overrides['install_another'] ) ) {
 				self::assertSame( 'gh', $query['provider'] );
 				self::assertSame( '1', $query['open_picker'] );

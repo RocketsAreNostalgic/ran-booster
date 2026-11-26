@@ -313,6 +313,15 @@
 		const requests = new WeakMap();
 		let armedSuccess = null;
 
+		function showSourceProgress(visible) {
+			const progress = document.querySelector(
+				'[data-ran-booster-source-progress]'
+			);
+			if (progress) {
+				progress.hidden = !visible;
+			}
+		}
+
 		function captureRequest(event, form) {
 			const detail = event.detail;
 			const general = form.matches?.('[data-ran-booster-general-form]');
@@ -352,6 +361,7 @@
 			if (packageType) {
 				// An earlier source-choice read targets the enclosing WordPress page.
 				sourceRequest = null;
+				showSourceProgress(false);
 			}
 			const record = {
 				target: detail.target,
@@ -1086,12 +1096,7 @@
 						return;
 					}
 					sourceRequest = event.detail.xhr;
-					const progress = document.querySelector(
-						'[data-ran-booster-source-progress]'
-					);
-					if (progress) {
-						progress.hidden = false;
-					}
+					showSourceProgress(true);
 				}
 				captureRequest(event, form);
 				if (!form.dataset?.ranBoosterSettingsScope) {
@@ -1136,15 +1141,26 @@
 					'#ran-booster-package-edit-form'
 				);
 				const failed = isScopedFailureStatus(event.detail.xhr.status);
+				const samePackage =
+					edit?.elements.namedItem('ran_booster[action]')?.value ===
+						save.operation &&
+					edit.elements.namedItem(save.identifierField)?.value ===
+						save.identifier;
+				const attempted = edit?.hasAttribute(
+					'data-ran-booster-attempted'
+				);
 				if (
-					failed ||
-					!edit ||
-					edit.hasAttribute('data-ran-booster-attempted') ||
-					edit.elements.namedItem('ran_booster[action]')?.value !==
-						save.operation ||
-					edit.elements.namedItem(save.identifierField)?.value !==
-						save.identifier
+					samePackage &&
+					attempted &&
+					event.detail.xhr.status === 409 &&
+					save.ready &&
+					requests.get(save.target) === save
 				) {
+					// The conflict form carries the refreshed expected values for a retry.
+					event.detail.shouldSwap = true;
+					return;
+				}
+				if (failed || !samePackage || attempted) {
 					event.detail.shouldSwap = false;
 					restoreInteractionState(true);
 					const notice = renderedFailureNotice(
@@ -1462,12 +1478,7 @@
 		document.addEventListener('htmx:configRequest', boundFollowUp);
 		document.addEventListener('htmx:afterRequest', function (event) {
 			if (event.detail?.xhr === sourceRequest && sourceRequest) {
-				const progress = document.querySelector(
-					'[data-ran-booster-source-progress]'
-				);
-				if (progress) {
-					progress.hidden = true;
-				}
+				showSourceProgress(false);
 			}
 			if (
 				heldSave &&

@@ -743,6 +743,77 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( 'configured_path_unsafe', $status->code() );
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_wp_cli_reads_only_the_selected_config_for_provenance(): void {
+		require __DIR__ . '/fixtures/wp-cli-config-functions.php';
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Model the WordPress CLI bootstrap in this isolated test.
+		define( 'WP_CLI', true );
+		$selected                = $this->root . '/cli-config.php';
+		$provisioner             = $this->provisioner();
+		$private                 = $this->root . '/operator-private';
+		$provisioner->configured = $private . '/ran-booster-store.json';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Prepare an existing private directory for the operator-path fixture.
+		self::assertTrue( mkdir( $private, 0700 ) );
+		$provisioner->document_root_missing = true;
+
+		$manual    = "<?php\n// Operator configuration.\n";
+		$marker    = '/* RAN Booster encrypted secrets storage. */';
+		$automatic = "<?php\n$marker\n";
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Seed the exact selected synthetic file.
+		self::assertNotFalse( file_put_contents( $selected, $automatic ) );
+		$GLOBALS['ran_booster_cli_selected_config'] = $selected;
+		$provisioner->included                      = array();
+		$status                                     = $provisioner->status();
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $status->path_source() );
+		self::assertSame( 'configured_path_unsafe', $status->code() );
+
+		// Each included file has the opposite marker state to the config WP-CLI selected.
+		$provisioner->included = array( $this->config_path );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $provisioner->status()->path_source() );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Swap the exact synthetic files' marker states.
+		self::assertNotFalse( file_put_contents( $this->config_path, $automatic ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Swap the exact synthetic files' marker states.
+		self::assertNotFalse( file_put_contents( $selected, $manual ) );
+		$status = $provisioner->status();
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $status->path_source() );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $status->status() );
+		$GLOBALS['ran_booster_cli_selected_config'] = $this->config_path;
+		$provisioner->included                      = array();
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $provisioner->status()->path_source() );
+
+		$provisioner->included = array( $this->config_path );
+		foreach ( array( false, $this->root . '/absent.php', 'relative.php', $selected . '/..' ) as $unverifiable ) {
+			$GLOBALS['ran_booster_cli_selected_config'] = $unverifiable;
+			$status                                     = $provisioner->status();
+			self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN, $status->path_source() );
+			self::assertSame( 'configured_path_unsafe', $status->code() );
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Seed an ambiguous marker in the exact selected file.
+		self::assertNotFalse( file_put_contents( $selected, "$automatic$marker\n" ) );
+		$GLOBALS['ran_booster_cli_selected_config'] = $selected;
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN, $provisioner->status()->path_source() );
+		$provisioner->configured = null;
+		$provisioner->included   = array();
+		self::assertSame( 'wp_config_unavailable', $provisioner->provision()->code() );
+		self::assertFalse( $provisioner->writer_called );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_wp_cli_without_a_locator_does_not_guess_the_config(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Model a CLI environment with no usable locator.
+		define( 'WP_CLI', true );
+		$provisioner                        = $this->provisioner();
+		$provisioner->configured            = $this->candidate;
+		$provisioner->document_root_missing = true;
+		$status                             = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN, $status->path_source() );
+		self::assertSame( 'configured_path_unsafe', $status->code() );
+	}
+
 	public function test_manual_override_rejects_symlinked_components_and_unsafe_existing_target(): void {
 		$actual = $this->root . '/manual-actual';
 		$link   = $this->root . '/manual-link';

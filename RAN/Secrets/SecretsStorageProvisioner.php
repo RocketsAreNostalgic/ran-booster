@@ -974,6 +974,17 @@ class SecretsStorageProvisioner {
 			return null;
 		}
 
+		if ( $read_only && defined( 'WP_CLI' ) && true === WP_CLI ) {
+			// WP-CLI evaluates the config from its cached locator, so it need not appear in the include list.
+			$path = function_exists( 'WP_CLI\\Utils\\locate_wp_config' )
+				? \WP_CLI\Utils\locate_wp_config()
+				: null;
+
+			return is_string( $path ) && $this->absolute_canonical_path( $path )
+				? $this->canonical_regular_file( $path )
+				: null;
+		}
+
 		$supported = array();
 		$in_root   = $this->canonical_regular_file( $root . '/wp-config.php' );
 		if ( null !== $in_root ) {
@@ -1001,10 +1012,6 @@ class SecretsStorageProvisioner {
 			$loaded[] = $canonical;
 		}
 		$loaded = array_values( array_unique( $loaded ) );
-		if ( $read_only && array() === $loaded && 1 === count( $supported ) && defined( 'WP_CLI' ) && true === WP_CLI ) {
-			return $supported[0];
-		}
-
 		return 1 === count( $loaded ) && in_array( $loaded[0], $supported, true )
 			? $loaded[0]
 			: null;

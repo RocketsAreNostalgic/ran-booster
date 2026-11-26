@@ -64,6 +64,19 @@ final class ReleaseTrackingOperations {
 		return $out;
 	}
 
+	/** The repository gate shared by package controls and the cached offer projection. */
+	public static function repository_blocker( ?ReleaseTrackingStatus $status ): string {
+		$failure_code = $status?->failure_code();
+		if ( in_array( $failure_code, array( 'release_repository_conflict', 'repository_release_owner_exists' ), true ) ) {
+			return 'release_repository_conflict';
+		}
+
+		return 'repository_source_unavailable' === $failure_code
+			|| ( 'release_unavailable' === $failure_code && 'branch' === $status?->source() )
+			? 'repository_source_unavailable'
+			: '';
+	}
+
 	public function preflight( string $type, string $identifier, int $revision, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
 		return $this->releases->preflight( $type, $identifier, $revision, $channel, $nonce );
 	}

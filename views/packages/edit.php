@@ -359,8 +359,11 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 						 *
 						 * @param string $package_current_source Current package update source.
 						 * @param string $package_source_view    Update source selected for this view.
+						 * @param string $type                  Package type.
+						 * @param string $identifier            Installed package identifier.
+						 * @param int    $source_revision       Package source revision.
 						 */
-						do_action( 'ran_booster_admin_package_operation_actions', $package_current_source, $package_source_view );
+						do_action( 'ran_booster_admin_package_operation_actions', $package_current_source, $package_source_view, $package_view->get_type(), $identifier_value, $package->get_source_revision() );
 					}
 					$package_add_on_operation_actions = trim( (string) ob_get_clean() );
 					if ( $show_package_operation_actions || '' !== $package_add_on_operation_actions ) {

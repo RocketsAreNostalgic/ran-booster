@@ -551,16 +551,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			if ( '' === $url ) {
 				return null;
 			}
-			$comparison = version_compare( $inspection->version, $package->get_version() );
-
 			return new ReleaseTrackingPreflight(
 				ReleaseTrackingPreflight::READY,
 				$inspection->package_root,
 				$inspection->version,
 				$url,
 				$inspection->tag,
-				$inspection->version,
-				$comparison > 0 ? 'newer' : ( $comparison < 0 ? 'older' : 'same' )
+				$inspection->version
 			);
 		} catch ( Throwable ) {
 			return null;

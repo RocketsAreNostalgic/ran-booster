@@ -261,7 +261,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 				<div class="ran-booster-settings__update-summary">
 					<dl class="ran-booster-settings__update-facts">
 						<div><dt><?php esc_html_e( 'Installed version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $installed_version ?? __( 'Unknown', 'ran-booster' ) ); ?></code></dd></div>
-						<div><dt><?php esc_html_e( 'Available version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $offered_version ?? __( 'No verified newer offer', 'ran-booster' ) ); ?></code></dd></div>
+						<div><dt><?php esc_html_e( 'Available version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $offered_version ?? __( 'No newer offer', 'ran-booster' ) ); ?></code></dd></div>
 						<div><dt><?php esc_html_e( 'Latest check result', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $core_update_status['last_check_outcome'] ?? __( 'No completed check recorded', 'ran-booster' ) ); ?></code></dd></div>
 					</dl>
 					<button form="ran-booster-check-core-updates" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"<?php echo $check_available ? '' : ( 'enabled' === $status_mode ? ' aria-describedby="ran-booster-check-updates-unavailable"' : ' aria-describedby="ran-booster-self-update-discovery-help"' ); ?><?php disabled( ! $check_available ); ?>><?php esc_html_e( 'Check for updates', 'ran-booster' ); ?></button>

@@ -13,12 +13,6 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Admin\ReleaseManagement\ManagedReleaseBrowserOperations;
 use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
-/**
- * inspect() decides whether the exact inspected release can be updated through WordPress. The
- * updater's status only holds an offer in the request that ran its check, so a persisted WordPress
- * offer with the same version is what matches. Each test runs in its own process because it defines
- * the global WordPress transient function.
- */
 final class ManagedReleaseInspectOfferTest extends TestCase {
 
 	/** @return array<string,mixed> */
@@ -26,7 +20,17 @@ final class ManagedReleaseInspectOfferTest extends TestCase {
 		require_once __DIR__ . '/PersistedOfferVersionWordPressFunctions.php';
 		$GLOBALS['ran_booster_test_site_transients'] = null === $offered_version
 			? array()
-			: array( 'update_plugins' => (object) array( 'response' => array( 'example/example.php' => (object) array( 'new_version' => $offered_version ) ) ) );
+			: array(
+				'update_plugins' => (object) array(
+					'response' => array(
+						'example/example.php' => (object) array(
+							'plugin'      => 'example/example.php',
+							'package'     => 'cached-offer',
+							'new_version' => $offered_version,
+						),
+					),
+				),
+			);
 
 		$status                         = new ReleaseTrackingStatus(
 			'plugin',
@@ -58,11 +62,11 @@ final class ManagedReleaseInspectOfferTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_a_persisted_offer_for_the_inspected_version_is_the_offer_even_when_the_status_holds_none(): void {
+	public function test_a_same_version_cached_offer_does_not_take_the_inspected_release_identity(): void {
 		self::assertSame(
 			array(
 				'available'  => true,
-				'release_id' => '42',
+				'release_id' => '',
 				'version'    => '1.2.0',
 			),
 			$this->inspect( '1.2.0', false, '' )
@@ -71,10 +75,10 @@ final class ManagedReleaseInspectOfferTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_a_persisted_offer_for_another_version_is_not_the_inspected_release(): void {
+	public function test_a_cached_offer_for_another_version_is_reported_without_the_inspected_release_id(): void {
 		self::assertSame(
 			array(
-				'available'  => false,
+				'available'  => true,
 				'release_id' => '',
 				'version'    => '1.1.0',
 			),
@@ -84,32 +88,24 @@ final class ManagedReleaseInspectOfferTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_a_release_id_the_status_knows_is_kept_so_a_different_inspected_release_still_blocks(): void {
-		$offer = $this->inspect( '1.2.0', false, 'known-release' );
+	public function test_a_request_local_release_id_cannot_identify_the_same_version_cached_offer(): void {
+		$offer = $this->inspect( '1.2.0', true, '42', '1.2.0' );
 
 		self::assertTrue( $offer['available'] );
-		self::assertSame( 'known-release', $offer['release_id'], 'The script compares this with the inspected release id.' );
-		self::assertNotSame( '42', $offer['release_id'] );
+		self::assertSame( '', $offer['release_id'] );
+		self::assertSame( '1.2.0', $offer['version'] );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_without_a_persisted_offer_the_status_alone_decides_and_no_release_id_is_invented(): void {
+	public function test_an_observed_version_without_a_current_wordpress_offer_cannot_be_updated(): void {
 		self::assertSame(
 			array(
 				'available'  => false,
 				'release_id' => '',
-				'version'    => '1.1.0',
+				'version'    => '',
 			),
-			$this->inspect( null, false, '' )
-		);
-		self::assertSame(
-			array(
-				'available'  => true,
-				'release_id' => '',
-				'version'    => '1.1.0',
-			),
-			$this->inspect( null, true, '' )
+			$this->inspect( null, true, 'known-release' )
 		);
 	}
 }

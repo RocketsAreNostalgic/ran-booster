@@ -187,9 +187,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const retry = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-retry]'
 	);
-	// Lives in the Package operations group, outside the release browser.
-	const nativeUpdate = document.querySelector(
-		'[data-ran-booster-managed-release-native-update]'
+	const review = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-review]'
 	);
 	const errorNotice = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-error]'
@@ -198,8 +197,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		'[data-ran-booster-managed-release-error-message]'
 	);
 	let selected = null;
-	let selectedOutcome = null;
-	const candidateElements = new Map();
 	let sequence = 0;
 	const setStatus = (title, text) => {
 		if (heading) {
@@ -209,6 +206,14 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			message.textContent = text;
 		}
 	};
+	const promptReview = () => {
+		setStatus(
+			__('Release candidates loaded', 'ran-booster'),
+			__('Review the selected release to inspect its ZIP.', 'ran-booster')
+		);
+	};
+	const canInspect = (relationship) =>
+		relationship === 'newer' || relationship === 'same';
 	const clearError = () => {
 		if (errorNotice) {
 			errorNotice.hidden = true;
@@ -225,6 +230,13 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	};
 	const setListBusy = (busy) => {
 		managedBrowser.setAttribute('aria-busy', busy ? 'true' : 'false');
+		if (candidates) {
+			candidates.disabled = busy;
+		}
+		review?.setAttribute(
+			'aria-disabled',
+			busy || !selected ? 'true' : 'false'
+		);
 		if (retry) {
 			retry.disabled = busy;
 			retry.classList.toggle(
@@ -234,56 +246,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			retry.classList.toggle('ran-booster-update-is-active', busy);
 		}
 	};
-	const disableNativeUpdate = () => {
-		if (!nativeUpdate) {
-			return;
-		}
-		nativeUpdate.removeAttribute('href');
-		nativeUpdate.setAttribute('aria-disabled', 'true');
-		nativeUpdate.setAttribute('tabindex', '-1');
-		nativeUpdate.classList.add('disabled');
-		nativeUpdate.textContent = __('Update now', 'ran-booster');
-	};
-	const enableNativeUpdate = (version) => {
-		const url =
-			managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl;
-		if (!nativeUpdate || !url) {
-			return false;
-		}
-		nativeUpdate.setAttribute('href', url);
-		nativeUpdate.setAttribute('aria-disabled', 'false');
-		nativeUpdate.removeAttribute('tabindex');
-		nativeUpdate.classList.remove('disabled');
-		/* translators: %s: release version. */
-		nativeUpdate.textContent = sprintf(
-			/* translators: %s: release version. */
-			__('Update to %s', 'ran-booster'),
-			version
-		);
-		return true;
-	};
-	const isNativeUpdateOffer = (candidate) => {
-		const offeredId =
-			managedBrowser.dataset
-				.ranBoosterManagedReleaseNativeUpdateReleaseId;
-		// The release id is only known in the request that ran the updater's check.
-		return (
-			candidate.version_relationship === 'newer' &&
-			candidate.version ===
-				managedBrowser.dataset
-					.ranBoosterManagedReleaseNativeUpdateVersion &&
-			(!offeredId || String(candidate.release_id) === offeredId) &&
-			Boolean(
-				managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl
-			)
-		);
-	};
-	const isCurrentNativeUpdateOffer = (candidate, nativeOffer) =>
-		nativeOffer?.available === true &&
-		candidate.version_relationship === 'newer' &&
-		candidate.version === nativeOffer.version &&
-		String(candidate.release_id) === String(nativeOffer.release_id) &&
-		Boolean(managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl);
 	const request = async (operation, extra = {}) => {
 		const data = new FormData();
 		data.append(
@@ -336,9 +298,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		return response.json();
 	};
 	const inspect = async () => {
-		if (!selected) {
+		if (!selected || review?.getAttribute('aria-disabled') === 'true') {
 			return;
 		}
+		const { candidate, input, outcome, renderRelationship } = selected;
+		outcome.hidden = true;
 		const current = ++sequence;
 		clearError();
 		setListBusy(true);
@@ -351,8 +315,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		);
 		try {
 			const response = await request('inspect', {
-				release_id: selected.release_id,
-				release_tag: selected.tag,
+				release_id: candidate.release_id,
+				release_tag: candidate.tag,
 			});
 			if (current !== sequence) {
 				return;
@@ -379,39 +343,37 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				}
 				throw new Error('inspection_failed');
 			}
-			const relationship = response.data.version_relationship;
-			const nativeOffer = isCurrentNativeUpdateOffer(
-				{
-					...response.data,
-					release_id: selected.release_id,
-				},
-				response.data.native_offer
-			);
-			/* translators: %s: release version. */
-			let outcomeMessage = sprintf(
-				/* translators: %s: release version. */
-				__('Version %s matches the installed version.', 'ran-booster'),
-				response.data.version
+			const { version, version_relationship: relationship } =
+				response.data;
+			renderRelationship(relationship, version);
+			if (input.disabled) {
+				input.checked = false;
+				selected = null;
+			}
+			let outcomeMessage = __(
+				'Version comparison unavailable',
+				'ran-booster'
 			);
 			let statusMessage = outcomeMessage;
-			if (relationship === 'newer') {
-				outcomeMessage = nativeOffer
-					? sprintf(
-							/* translators: %s: release version. */
-							__(
-								'Version %s is ready to install.',
-								'ran-booster'
-							),
-							response.data.version
-						)
-					: sprintf(
-							/* translators: %s: release version. */
-							__(
-								'Version %s is newer, but it is not the current WordPress update offer.',
-								'ran-booster'
-							),
-							response.data.version
-						);
+			if (relationship === 'same') {
+				outcomeMessage = sprintf(
+					/* translators: %s: release version. */
+					__(
+						'Version %s was inspected and matches the installed version.',
+						'ran-booster'
+					),
+					response.data.version
+				);
+				statusMessage = outcomeMessage;
+			} else if (relationship === 'newer') {
+				outcomeMessage = sprintf(
+					/* translators: %s: release version. */
+					__(
+						'Version %s was inspected. See WordPress Updates for the current offer.',
+						'ran-booster'
+					),
+					response.data.version
+				);
 				const guidance =
 					managedBrowser.dataset.ranBoosterManagedReleaseType ===
 					'theme'
@@ -425,9 +387,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 								'%s Use Check releases, or update from the WordPress Plugins screen.',
 								'ran-booster'
 							);
-				statusMessage = nativeOffer
-					? outcomeMessage
-					: sprintf(guidance, outcomeMessage);
+				statusMessage = sprintf(guidance, outcomeMessage);
 			} else if (relationship === 'older') {
 				outcomeMessage = sprintf(
 					/* translators: %s: release version. */
@@ -443,28 +403,21 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				wp.i18n.__('Release checked', 'ran-booster'),
 				statusMessage
 			);
-			if (selectedOutcome) {
-				selectedOutcome.textContent = outcomeMessage;
-				selectedOutcome.hidden = relationship !== 'newer';
-				const screenUrl =
-					managedBrowser.dataset.ranBoosterManagedReleaseWordpressUrl;
-				if (relationship === 'newer' && !nativeOffer && screenUrl) {
-					// The status line is announced only; a visible way forward sits with the outcome.
-					const link = document.createElement('a');
-					link.href = screenUrl;
-					link.textContent =
-						managedBrowser.dataset.ranBoosterManagedReleaseType ===
-						'theme'
-							? __('Open WordPress Themes', 'ran-booster')
-							: __('Open WordPress Plugins', 'ran-booster');
-					selectedOutcome.textContent = `${outcomeMessage} `;
-					selectedOutcome.append(link);
-				}
-			}
-			if (nativeOffer) {
-				enableNativeUpdate(response.data.native_offer.version);
-			} else {
-				disableNativeUpdate();
+			outcome.textContent = outcomeMessage;
+			outcome.hidden = !canInspect(relationship);
+			const screenUrl =
+				managedBrowser.dataset.ranBoosterManagedReleaseWordpressUrl;
+			if (relationship === 'newer' && screenUrl) {
+				// The status line is announced only; a visible way forward sits with the outcome.
+				const link = document.createElement('a');
+				link.href = screenUrl;
+				link.textContent =
+					managedBrowser.dataset.ranBoosterManagedReleaseType ===
+					'theme'
+						? __('Open WordPress Themes', 'ran-booster')
+						: __('Open WordPress Plugins', 'ran-booster');
+				outcome.textContent = `${outcomeMessage} `;
+				outcome.append(link);
 			}
 		} catch {
 			if (current === sequence) {
@@ -495,9 +448,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		const current = ++sequence;
 		renderListingObservations(observations);
 		selected = null;
+		if (review) {
+			review.hidden = true;
+		}
 		clearError();
 		setListBusy(true);
-		disableNativeUpdate();
 		if (candidateList) {
 			if (window.htmx?.swap) {
 				window.htmx.swap(candidateList, '', {
@@ -566,15 +521,14 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				throw new Error('invalid_candidates');
 			}
 			renderListingObservations(observations, response.data);
-			const nativeOffer = releases.find(isNativeUpdateOffer);
-			const inspectable = releases.filter(
-				(candidate) => candidate.version_relationship !== 'older'
+			const inspectable = releases.filter((candidate) =>
+				canInspect(candidate.version_relationship)
 			);
-			const preferredCandidate =
-				nativeOffer || inspectable[0] || releases[0];
+			const preferredCandidate = inspectable[0] || releases[0];
 			const installedCandidate = releases.find(
 				(candidate) => candidate.version_relationship === 'same'
 			);
+			const preselected = installedCandidate || inspectable[0];
 			const visible = [preferredCandidate];
 			if (installedCandidate && !visible.includes(installedCandidate)) {
 				visible.push(installedCandidate);
@@ -589,54 +543,67 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				input.type = 'radio';
 				input.name = 'ran_booster_managed_release_candidate';
 				input.dataset.releaseId = String(candidate.release_id);
-				const older = candidate.version_relationship === 'older';
-				input.disabled = older;
-				input.addEventListener('change', () => {
-					disableNativeUpdate();
-					if (selectedOutcome) {
-						selectedOutcome.hidden = true;
-					}
-					selected = candidate;
-					selectedOutcome = outcome;
-					inspect();
-				});
-				let marker =
-					candidate === preferredCandidate
-						? wp.i18n.__('· Latest eligible', 'ran-booster')
-						: '';
-				if (older) {
-					marker += wp.i18n.__(
-						'· Older than installed',
-						'ran-booster'
-					);
-				} else if (candidate.version_relationship === 'same') {
-					marker += wp.i18n.__('· Installed/current', 'ran-booster');
-				} else {
-					marker += wp.i18n.__(
-						'· Newer than installed',
-						'ran-booster'
-					);
-				}
+				const description = document.createElement('span');
 				const outcome = document.createElement('p');
 				outcome.className = 'ran-booster-release-candidate__outcome';
 				outcome.hidden = true;
-				label.append(
-					input,
-					document.createTextNode(
-						wp.i18n.sprintf(
-							/* translators: 1: release version, 2: release tag, 3: release channel label, 4: release relationship marker. */
-							wp.i18n.__('%1$s (%2$s) · %3$s%4$s', 'ran-booster'),
-							candidate.version,
-							candidate.tag,
-							candidate.prerelease
-								? wp.i18n.__('Preview', 'ran-booster')
-								: wp.i18n.__('Stable', 'ran-booster'),
-							marker
-						)
-					),
-					outcome
+				const renderRelationship = (relationship, version) => {
+					input.disabled = !canInspect(relationship);
+					let marker =
+						candidate === preferredCandidate &&
+						(relationship === 'older' || !input.disabled)
+							? __('· Latest eligible', 'ran-booster')
+							: '';
+					if (relationship === 'older') {
+						marker += __('· Older than installed', 'ran-booster');
+					} else if (relationship === 'same') {
+						marker += __('· Installed/current', 'ran-booster');
+					} else if (input.disabled) {
+						marker += __(
+							'· Version comparison unavailable',
+							'ran-booster'
+						);
+					} else {
+						marker += __('· Newer than installed', 'ran-booster');
+					}
+					description.textContent = sprintf(
+						/* translators: 1: release version, 2: release tag, 3: release channel label, 4: release relationship marker. */
+						__('%1$s (%2$s) · %3$s%4$s', 'ran-booster'),
+						version,
+						candidate.tag,
+						candidate.prerelease
+							? __('Preview', 'ran-booster')
+							: __('Stable', 'ran-booster'),
+						marker
+					);
+				};
+				renderRelationship(
+					candidate.version_relationship,
+					candidate.version
 				);
-				candidateElements.set(candidate, { input, outcome });
+				const row = { candidate, input, outcome, renderRelationship };
+				input.addEventListener('change', () => {
+					if (
+						!input.checked ||
+						input.disabled ||
+						candidates?.disabled ||
+						selected === row
+					) {
+						return;
+					}
+					if (selected) {
+						selected.outcome.hidden = true;
+					}
+					selected = row;
+					review?.setAttribute('aria-disabled', 'false');
+					clearError();
+					promptReview();
+				});
+				if (candidate === preselected) {
+					input.checked = true;
+					selected = row;
+				}
+				label.append(input, description, outcome);
 				target.append(label);
 			};
 			visible.forEach((candidate) =>
@@ -689,29 +656,23 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				candidates.hidden = false;
 				showPlaceholder(false);
 			}
-			if (inspectable.length > 0) {
+			if (selected) {
+				if (review) {
+					review.hidden = false;
+				}
+				promptReview();
+			} else if (
+				releases.some(
+					(candidate) => candidate.version_relationship !== 'older'
+				)
+			) {
 				setStatus(
-					wp.i18n.__('Release candidates loaded', 'ran-booster'),
-					wp.i18n.sprintf(
-						/* translators: %d: number of eligible releases. */
-						wp.i18n._n(
-							'%d eligible release found. Inspecting the preferred available release.',
-							'%d eligible releases found. Inspecting the preferred available release.',
-							releases.length,
-							'ran-booster'
-						),
-						releases.length
+					__('Version comparison unavailable', 'ran-booster'),
+					__(
+						'Booster could not compare these release versions with the installed version.',
+						'ran-booster'
 					)
 				);
-				// The installed release stays selected; the newer one is chosen to update.
-				selected = installedCandidate || nativeOffer || inspectable[0];
-				const selectedCandidate = candidateElements.get(selected);
-				selectedOutcome = selectedCandidate?.outcome || null;
-				const input = selectedCandidate?.input;
-				if (input) {
-					input.checked = true;
-				}
-				await inspect();
 			} else {
 				if (
 					managedBrowser.dataset.ranBoosterManagedReleaseChannel ===
@@ -768,11 +729,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			}
 		}
 	};
-	nativeUpdate?.addEventListener('click', (event) => {
-		if ('true' === nativeUpdate.getAttribute('aria-disabled')) {
-			event.preventDefault();
-		}
-	});
+	review?.addEventListener('click', inspect);
 	retry?.addEventListener('click', list);
 	list();
 };

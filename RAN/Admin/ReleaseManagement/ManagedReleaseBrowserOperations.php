@@ -6,7 +6,10 @@ namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
+use RAN\WordPress\ManagedReleaseTargetRegistrar;
+use RAN\WPReleaseUpdater\V1\Contract\ReleaseVersion;
 
 /** @internal Projects only revision-bound managed release discovery and inspection. */
 final class ManagedReleaseBrowserOperations {
@@ -88,14 +91,7 @@ final class ManagedReleaseBrowserOperations {
 			return $this->outcome( 'source_changed' );
 		}
 
-		// The updater's own status only holds the offer in the request that ran its check, so the
-		// persisted WordPress offer decides whether this exact version can be updated. WordPress
-		// installs the offer's identity-bound package, so a matching version needs no release id. The
-		// version string is the only identity available here: a persisted offer for another release with
-		// the same version would install that release.
-		$offered  = self::persisted_offer_version( $type, $identifier );
-		$matches  = '' !== $offered && 0 === version_compare( $offered, $inspection->latest_version() );
-		$known_id = $status->native_offer_release_id();
+		$offered = self::persisted_offer_version( $status );
 
 		return $this->outcome(
 			'release_ready',
@@ -107,24 +103,23 @@ final class ManagedReleaseBrowserOperations {
 				'installed_version'    => $status->installed_version(),
 				'version_relationship' => self::version_relationship( $inspection->latest_version(), $status->installed_version() ),
 				'native_offer'         => array(
-					'available'  => $matches || $status->update_available(),
-					'release_id' => '' === $known_id && $matches ? $release_id : $known_id,
-					'version'    => $matches ? $offered : $status->latest_version(),
+					'available'  => '' !== $offered,
+					// The filtered WordPress offer supplies a version without an independently proven release identity.
+					'release_id' => '',
+					'version'    => $offered,
 				),
 			)
 		);
 	}
 
-	/** The version WordPress currently offers for this package, or an empty string when it holds no offer. */
-	public static function persisted_offer_version( string $type, string $identifier ): string {
-		if ( ! function_exists( 'get_site_transient' ) ) {
-			return '';
-		}
-		$transient = get_site_transient( 'plugin' === $type ? 'update_plugins' : 'update_themes' );
-		$entry     = is_object( $transient ) && is_array( $transient->response ?? null ) ? ( $transient->response[ $identifier ] ?? null ) : null;
-		$version   = is_array( $entry ) ? ( $entry['new_version'] ?? $entry['version'] ?? '' ) : ( is_object( $entry ) ? ( $entry->new_version ?? $entry->version ?? '' ) : '' );
-
-		return is_string( $version ) ? $version : '';
+	/** The current native action uses WordPress's filtered offer. */
+	public static function persisted_offer_version( ReleaseTrackingStatus $status ): string {
+		return 'release_asset' === $status->source()
+			&& $status->eligible()
+			&& 'disabled' !== $status->deployment_policy()
+			&& '' === ReleaseTrackingOperations::repository_blocker( $status )
+			? ManagedReleaseTargetRegistrar::cached_offer_version( $status->type(), $status->identifier(), $status->installed_version() )
+			: '';
 	}
 
 	/** @return \Closure(RepositoryReleaseCandidate):array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,version_relationship:string} */
@@ -142,9 +137,8 @@ final class ManagedReleaseBrowserOperations {
 	}
 
 	private static function version_relationship( string $version, string $installed_version ): string {
-		return version_compare( $version, $installed_version ) > 0
-			? 'newer'
-			: ( version_compare( $version, $installed_version ) < 0 ? 'older' : 'same' );
+		// The elected runtime supplies the comparator without loading a second copy here.
+		return class_exists( ReleaseVersion::class, false ) ? ReleaseVersion::relationship( $version, $installed_version ) : 'invalid';
 	}
 
 	private function valid_request( string $type, string $identifier, int $revision, string $channel ): bool {

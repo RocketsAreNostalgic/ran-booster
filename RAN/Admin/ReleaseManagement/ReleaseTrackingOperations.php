@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin\ReleaseManagement;
 
-use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
-use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingResult;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\PackageSource;
@@ -77,15 +75,6 @@ final class ReleaseTrackingOperations {
 			|| ( 'release_unavailable' === $failure_code && 'branch' === $status?->source() )
 			? 'repository_source_unavailable'
 			: '';
-	}
-
-	public function preflight( string $type, string $identifier, int $revision, string $channel, string $nonce, bool $match_installed = false ): ?ReleaseTrackingPreflight {
-		if ( $match_installed ) {
-			return $this->releases instanceof NativeReleaseTrackingFacade
-				? $this->releases->preflight( $type, $identifier, $revision, $channel, $nonce, true )
-				: null;
-		}
-		return $this->releases->preflight( $type, $identifier, $revision, $channel, $nonce );
 	}
 
 	/**

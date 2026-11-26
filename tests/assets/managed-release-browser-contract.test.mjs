@@ -313,6 +313,71 @@ test('disabled managed browser does not initialize or fetch', async () => {
 	assert.equal(harness.nodes.get('retry').listeners.click?.length || 0, 0);
 });
 
+test('branch latest marker follows the server choice while all rows remain inert', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '1.0.0',
+				candidates: [
+					{
+						...candidate('missing', '4.0.0', 'newer', ''),
+						latest_eligible: false,
+					},
+					{
+						...candidate(
+							'older-list-position',
+							'2.0.0',
+							'newer',
+							''
+						),
+						latest_eligible: false,
+					},
+					{
+						...candidate('selected', '3.0.0', 'newer', ''),
+						latest_eligible: true,
+					},
+					{
+						...candidate('ambiguous', '5.0.0', 'newer', ''),
+						latest_eligible: false,
+					},
+				],
+			},
+		},
+	]);
+	Object.assign(harness.browser.dataset, { ranBoosterBranchStable: 'list' });
+	harness.browser.closest = () => null;
+	harness.initialize(harness.browser);
+	await flush();
+	const rows = descendants(harness.nodes.get('candidate-list'));
+	const labels = rows.filter((node) => node.tagName === 'label');
+	assert.equal(labels.length, 4);
+	assert.equal(
+		labels.filter((node) =>
+			descendants(node).some((child) =>
+				child.textContent?.includes('Latest eligible')
+			)
+		).length,
+		1
+	);
+	assert.match(
+		labels.find((node) =>
+			descendants(node).some((child) =>
+				child.textContent?.includes('Latest eligible')
+			)
+		).children[1].textContent,
+		/3\.0\.0/
+	);
+	assert.ok(
+		labels.every((node) =>
+			descendants(node)
+				.filter((child) => child.tagName === 'input')
+				.every((input) => input.disabled)
+		)
+	);
+});
+
 test('branch track changes and refresh list metadata without selecting or inspecting releases', async () => {
 	const slow = deferred();
 	const reply = (version) => ({
@@ -321,7 +386,10 @@ test('branch track changes and refresh list metadata without selecting or inspec
 		data: {
 			installed_version: version,
 			candidates: [
-				candidate('current', version, 'same', ''),
+				{
+					...candidate('current', version, 'same', ''),
+					latest_eligible: true,
+				},
 				candidate('old', '0.5.0', 'older', ''),
 			],
 		},

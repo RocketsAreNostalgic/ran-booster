@@ -1346,7 +1346,6 @@ final class ReleaseManagementDisplay {
 			'switch_not_confirmed' => __( 'Booster hasn\'t confirmed the switch yet. Reload this page to check.', 'ran-booster' ),
 			'policy_disabled' => __( 'Updates are disabled for this package. Set Updates to Manual to switch.', 'ran-booster' ),
 			'policy_forced_off' => __( 'Updates are turned off by this site\'s configuration, so this package can\'t switch to releases.', 'ran-booster' ),
-			'matching_release_unavailable' => __( 'The returned release list has no release matching the installed version. Review the latest eligible release instead.', 'ran-booster' ),
 			'release_selection_changed' => __( 'The selected release changed or your confirmation expired. Choose Use releases to open a new confirmation.', 'ran-booster' ),
 			'release_older' => __( 'This release is older than what\'s installed. Switching replaces the code but cannot roll back database changes. Have a recent database backup ready.', 'ran-booster' ),
 			'release_channel_changed',

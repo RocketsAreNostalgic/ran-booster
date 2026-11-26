@@ -2897,6 +2897,57 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 'rel-1.0.0', $tracking->calls[1][8]['identity'] );
 	}
 
+	/** @return array<string,array{string,string}> */
+	public static function native_chooser_blockers(): array {
+		return array(
+			'same package hold'  => array( 'same', '<a href="#ran-booster-native-hold">release the hold</a>' ),
+			'other package hold' => array( 'other', '<a href="https://example.test/other#hold">Other Plugin</a>' ),
+			'hold read failed'   => array( 'hold-error', 'Published releases could not be checked.' ),
+			'policy read failed' => array( 'policy-error', 'Published releases could not be checked.' ),
+			'policy forced off'  => array( 'forced-off', 'Updates are turned off by this site' ),
+			'policy disabled'    => array( 'disabled', 'Updates are disabled for this package.' ),
+			'status read failed' => array( 'status-error', 'Published releases could not be checked.' ),
+			'permission revoked' => array( 'forbidden', 'You are not authorized' ),
+		);
+	}
+
+	#[DataProvider( 'native_chooser_blockers' )]
+	public function test_native_switch_explains_blockers_before_listing( string $blocker, string $expected ): void {
+		$tracking                  = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( deployment_policy: 'disabled' === $blocker ? 'disabled' : 'manual' ) );
+		$controls                  = ReleaseManagementFixture::controls(
+			$tracking,
+			native_hold: static fn (): ?array => match ( $blocker ) {
+				'same' => array(
+					'type'       => 'plugin',
+					'identifier' => 'example/example.php',
+					'readable'   => true,
+				),
+				'other' => array(
+					'type'       => 'plugin',
+					'identifier' => 'other/other.php',
+					'name'       => 'Other Plugin',
+					'url'        => 'https://example.test/other#hold',
+				),
+				'hold-error' => throw new \RuntimeException( 'Hold read failed.' ),
+				default => null,
+			},
+			updates_forced_off: static fn (): bool => 'policy-error' === $blocker ? throw new \RuntimeException( 'Policy read failed.' ) : 'forced-off' === $blocker
+		);
+		$url                       = $controls->process_admin_post_request( 'enable', $this->request( 'enable' ) );
+		$_GET                      = $this->query_of( $url );
+		$tracking->throw_on_status = 'status-error' === $blocker;
+		if ( 'forbidden' === $blocker ) {
+			$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array( 'update_plugins' );
+		}
+		$package = new PackageProjection( 'branch' );
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( $expected, $html );
+		self::assertStringNotContainsString( 'data-ran-booster-switch-confirmation', $html );
+		self::assertSame( array(), $tracking->calls );
+	}
+
 	public function test_native_switch_submits_one_exact_signed_choice_and_refuses_tampering(): void {
 		foreach ( array(
 			'installed' => '1.0.0',

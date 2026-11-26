@@ -954,9 +954,9 @@ test('aria-disabled submitter does not issue preflight fetch', async () => {
 });
 
 test('both choices submit their exact preflight tuple in one click', async () => {
-	for (const [index, identity, choice] of [
-		[1, 'same-id', 'installed'],
-		[2, 'latest-id', 'latest'],
+	for (const [index, identity, choice, version, nonce, tag] of [
+		[1, 'same-id', 'installed', '1.0.0', 'same-nonce', 'v1.0.0'],
+		[2, 'latest-id', 'latest', '1.1.0', 'latest-nonce', 'v1.1.0'],
 	]) {
 		let dialog;
 		let fetches = 0;
@@ -969,20 +969,20 @@ test('both choices submit their exact preflight tuple in one click', async () =>
 						return {
 							successful: true,
 							data: {
-								installed_version: '1.5.0',
-								release_version: '1.6.0',
+								installed_version: '1.0',
+								release_version: '1.1.0',
 								release_identity: 'latest-id',
-								release_tag: 'v1.6.0',
+								release_tag: 'v1.1.0',
 								confirmed_release_nonce: 'latest-nonce',
 								version_relationship: 'newer',
-								confirmed_installed_version: '1.5.0',
+								confirmed_installed_version: '1.0',
 								matching_release: {
-									release_version: '1.5.0',
+									release_version: '1.0.0',
 									release_identity: 'same-id',
-									release_tag: 'v1.5.0',
+									release_tag: 'v1.0.0',
 									confirmed_release_nonce: 'same-nonce',
 									version_relationship: 'same',
-									confirmed_installed_version: '1.5.0',
+									confirmed_installed_version: '1.0',
 								},
 							},
 						};
@@ -1000,15 +1000,18 @@ test('both choices submit their exact preflight tuple in one click', async () =>
 		};
 		await env.triggerSubmit();
 		assert.equal(dialog.children.length, 3);
-		assert.match(dialog.children[1].textContent, /Reinstall 1\.5\.0/);
-		assert.match(dialog.children[2].textContent, /Upgrade to 1\.6\.0/);
+		assert.match(dialog.children[1].textContent, /Reinstall 1\.0\.0/);
+		assert.match(dialog.children[2].textContent, /Upgrade to 1\.1\.0/);
 		dialog.children[index].dispatchClick();
 		const field = (name) =>
 			env.form.querySelector('input[type="hidden"][name="' + name + '"]')
 				?.value;
 		assert.equal(field('confirmed_release_identity'), identity);
+		assert.equal(field('confirmed_release_version'), version);
+		assert.equal(field('confirmed_release_nonce'), nonce);
+		assert.equal(field('confirmed_release_tag'), tag);
 		assert.equal(field('switch_release_choice'), choice);
-		assert.equal(field('confirmed_installed_version'), '1.5.0');
+		assert.equal(field('confirmed_installed_version'), '1.0');
 		assert.equal(submitted, 1);
 		assert.equal(fetches, 1);
 	}
@@ -1030,7 +1033,6 @@ test('does not offer a matching release when preflight did not find a distinct c
 							release_tag: 'v1.5.0',
 							confirmed_release_nonce: 'nonce',
 							version_relationship: 'same',
-							matching_release_available: false,
 						},
 					};
 				},

@@ -549,7 +549,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			const inspectable = releases.filter((candidate) =>
 				canInspect(candidate.version_relationship)
 			);
-			const preferredCandidate = inspectable[0] || releases[0];
+			const preferredCandidate = branch
+				? releases.find(
+						(candidate) => candidate.latest_eligible === true
+					) || releases[0]
+				: inspectable[0] || releases[0];
 			const installedCandidate = releases.find(
 				(candidate) => candidate.version_relationship === 'same'
 			);
@@ -576,6 +580,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					input.disabled = branch || !canInspect(relationship);
 					let marker =
 						candidate === preferredCandidate &&
+						(!branch || candidate.latest_eligible === true) &&
 						(relationship === 'older' || canInspect(relationship))
 							? __('· Latest eligible', 'ran-booster')
 							: '';
@@ -1339,7 +1344,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			matching?.release_version &&
 			matching?.confirmed_release_nonce &&
 			matching?.confirmed_installed_version === installedVersion &&
-			matching?.release_version === installedVersion &&
+			matching?.version_relationship === 'same' &&
 			installedVersion
 		) {
 			matchingButton = document.createElement('button');

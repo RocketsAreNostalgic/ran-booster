@@ -2500,11 +2500,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$inspections   = array();
 		$invalidations = array();
 		$allowed       = true;
-		/** @var \ArrayObject<int, RepositoryReleaseCandidate> $additional_candidates */
-		$additional_candidates = new \ArrayObject();
-		$providers             = $this->release_metadata_registry(
+		$providers     = $this->release_metadata_registry(
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
-			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$listings, $additional_candidates ): RepositoryReleaseCandidateList {
+			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$listings ): RepositoryReleaseCandidateList {
 				$listings[] = compact( 'type', 'repository', 'channel' );
 				$ids        = 'plugin' === $type ? array( '101', '102' ) : array( '201' );
 
@@ -2519,7 +2517,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 					),
 					$ids
 				);
-				return new RepositoryReleaseCandidateList( array_merge( $candidates, $additional_candidates->getArrayCopy() ) );
+				return new RepositoryReleaseCandidateList( $candidates );
 			},
 			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ) use ( &$inspections ): RepositoryReleaseInspection {
 				$inspections[] = array(
@@ -2536,7 +2534,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				return new RepositoryReleaseInspection(
 					$release_id,
 					$tag,
-					'303' === $release_id ? '1.0' : '2.0.0',
+					'2.0.0',
 					str_repeat( 'a', 40 ),
 					'plugin' === $type ? 'example' : 'example-theme',
 					'plugin' === $type ? 'example.php' : 'style.css',
@@ -2573,23 +2571,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertTrue( $facade->preflight( 'plugin', 'example/example.php', 1, 'prerelease', $plugin_nonce )?->ready() );
 		self::assertTrue( $facade->preflight( 'theme', 'example-theme', 1, 'stable', $theme_nonce )?->ready() );
 
-		$additional_candidates[] = new RepositoryReleaseCandidate( '303', 'v1.0', '1.0', false, '2026-08-17T12:00:00Z', array( 'example.zip' ) );
-		foreach ( array( array( 'plugin', 'example/example.php', 'prerelease', $plugin_nonce ), array( 'theme', 'example-theme', 'stable', $theme_nonce ) ) as [ $type, $identifier, $channel, $nonce ] ) {
-			$latest = $facade->preflight( $type, $identifier, 1, $channel, $nonce );
-			self::assertTrue( $latest?->matching_release_available );
-			self::assertSame( '2.0.0', $latest->latest_version() );
-			$before = count( $inspections );
-			$match  = $facade->preflight( $type, $identifier, 1, $channel, $nonce, true );
-			self::assertSame( '303', $match?->release_identity() );
-			self::assertSame( 'same', $match->version_relationship() );
-			self::assertFalse( $match->matching_release_available );
-			self::assertSame( array( '303' ), array_column( array_slice( $inspections, $before ), 'releaseId' ) );
-		}
-		$additional_candidates->exchangeArray( array() );
-		$before = count( $inspections );
-		self::assertSame( ReleaseTrackingPreflight::MATCHING_RELEASE_UNAVAILABLE, $facade->preflight( 'theme', 'example-theme', 1, 'stable', $theme_nonce, true )?->code() );
-		self::assertCount( $before, $inspections );
-
 		$stale_nonce = $facade->nonce_action( 'preflight', 'plugin', 'example/example.php', 2, 'stable' );
 		self::assertNull( $facade->preflight( 'plugin', 'example/example.php', 2, 'stable', $stale_nonce ) );
 		self::assertNull( $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $plugin_nonce ) );
@@ -2611,10 +2592,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertNull( $facade->assessment_preflight( 'plugin', 'example/example.php', 2, 'stable', $facade->nonce_action( 'assessment_preflight', 'plugin', 'example/example.php', 2, 'stable' ) ) );
 		self::assertNull( $facade->assessment_preflight( 'plugin', 'example/example.php', 1, 'stable', $plugin_nonce ) );
 
-		self::assertSame( array( 'plugin', 'theme', 'plugin', 'plugin', 'theme', 'theme', 'theme', 'plugin' ), array_column( $listings, 'type' ) );
-		self::assertSame( array( 'prerelease', 'stable', 'prerelease', 'prerelease', 'stable', 'stable', 'stable', 'stable' ), array_column( $listings, 'channel' ) );
-		self::assertSame( array( '101', '102', '201', '101', '102', '303', '201', '303', '101', '102' ), array_column( $inspections, 'releaseId' ) );
-		self::assertSame( array( 'prerelease', 'prerelease', 'stable', 'prerelease', 'prerelease', 'prerelease', 'stable', 'stable', 'stable', 'stable' ), array_column( $inspections, 'channel' ) );
+		self::assertSame( array( 'plugin', 'theme', 'plugin' ), array_column( $listings, 'type' ) );
+		self::assertSame( array( 'prerelease', 'stable', 'stable' ), array_column( $listings, 'channel' ) );
+		self::assertSame( array( '101', '102', '201', '101', '102' ), array_column( $inspections, 'releaseId' ) );
+		self::assertSame( array( 'prerelease', 'prerelease', 'stable', 'stable', 'stable' ), array_column( $inspections, 'channel' ) );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( array(), $invalidations );
 		self::assertSame( 0, $lock->acquires );

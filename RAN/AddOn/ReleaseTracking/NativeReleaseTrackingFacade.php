@@ -358,8 +358,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $identifier,
 		int $expected_source_revision,
 		string $channel,
-		string $nonce,
-		bool $match_installed = false
+		string $nonce
 	): ?ReleaseTrackingPreflight {
 		$package = $this->authorized( 'preflight', $type, $identifier, $expected_source_revision, $nonce, $channel );
 		if ( ! RuntimeSupport::current()->allows_managed_operations()
@@ -377,8 +376,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$expected_source_revision,
 				$channel,
 				$package,
-				$this->eligibility( $type, $identifier, $package ),
-				match_installed: $match_installed
+				$this->eligibility( $type, $identifier, $package )
 			);
 		} catch ( Throwable ) {
 			return null;
@@ -1339,8 +1337,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $channel,
 		Package $package,
 		ReleaseTrackingEligibility $eligibility,
-		bool $allow_public_lookup_profile = true,
-		bool $match_installed = false
+		bool $allow_public_lookup_profile = true
 	): ?ReleaseTrackingPreflight {
 		if ( PackageSource::BRANCH !== $package->get_source()
 			|| $expected_source_revision !== $package->get_source_revision()
@@ -1354,8 +1351,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$eligibility->package_root(),
 			$this->header_file( $type, $identifier ),
 			$channel,
-			$allow_public_lookup_profile,
-			$match_installed
+			$allow_public_lookup_profile
 		);
 	}
 
@@ -1365,8 +1361,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $package_root,
 		string $header_file,
 		string $channel,
-		bool $allow_public_lookup_profile = true,
-		bool $match_installed = false
+		bool $allow_public_lookup_profile = true
 	): ReleaseTrackingPreflight {
 		$provider_code = $package->get_provider_code();
 		if ( null === $provider_code ) {
@@ -1383,7 +1378,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				: array( $package->get_repository()->reference );
 			foreach ( $repositories as $repository ) {
 				try {
-					return $this->repository_preflight( $type, $repository, $package_root, $header_file, $channel, $package, $listing, $inspector, $metadata, $match_installed );
+					return $this->repository_preflight( $type, $repository, $package_root, $header_file, $channel, $package, $listing, $inspector, $metadata );
 				} catch ( RepositoryReleaseReadUnavailable $unavailable ) {
 					BoosterLogger::log_provider_failure(
 						'release read failed',
@@ -1412,30 +1407,13 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		Package $package,
 		RepositoryReleaseCandidateListing $listing,
 		RepositoryReleaseInspector $inspector,
-		RepositoryReleaseMetadata $metadata,
-		bool $match_installed = false
+		RepositoryReleaseMetadata $metadata
 	): ReleaseTrackingPreflight {
 		$candidates = $listing->list_release_candidates( $type, $repository, $channel )->candidates;
 		if ( array() === $candidates ) {
 			return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $package_root, reason_code: 'no_releases' );
 		}
 
-		// The existing listing supplies version metadata. Only the chosen ZIP needs inspection.
-		$matching = null;
-		foreach ( $candidates as $listed ) {
-			if ( ( 'stable' !== $channel || ! $listed->prerelease )
-				&& class_exists( ReleaseVersion::class )
-				&& 'same' === ReleaseVersion::relationship( $listed->version, $package->get_version() ) ) {
-				$matching = $listed;
-				break;
-			}
-		}
-		if ( $match_installed ) {
-			if ( null === $matching ) {
-				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::MATCHING_RELEASE_UNAVAILABLE, $package_root );
-			}
-			$candidates = array( $matching );
-		}
 		$inspected = 0;
 		$newest    = null;
 		$detail    = null;
@@ -1521,8 +1499,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 						? $detail : $this->rejected_release_preflight( $package_root, $newest, $detail )->reason_code()
 				),
 				detail: $newest->version ?? '',
-				release_identity: $inspection->provider_release_id,
-				matching_release_available: null !== $matching && $matching !== $candidate && $matching !== $newest
+				release_identity: $inspection->provider_release_id
 			);
 		}
 

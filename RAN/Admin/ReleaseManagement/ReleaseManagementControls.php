@@ -227,7 +227,8 @@ final class ReleaseManagementControls {
 		$nonces                = null === $package ? array() : $this->package_nonce_actions( $package, $status );
 		$native_hold_read      = $this->request_boundary( $this->native_hold, false );
 		$native_hold           = is_array( $native_hold_read ) ? $native_hold_read : null;
-		$updates_forced_off    = $this->updates_forced_off_for_display();
+		$policy_read           = $this->request_boundary( $this->updates_forced_off, null );
+		$updates_forced_off    = false !== $policy_read;
 		$switch_confirmation   = null;
 		$operation_notice_html = '';
 		$duplicate_conflict    = in_array( $code, array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )
@@ -235,16 +236,25 @@ final class ReleaseManagementControls {
 			&& $release_pane;
 		if ( 'edit' === $mode && null !== $result && '' !== $code && ! $duplicate_conflict ) {
 			if ( $this->is_switch_confirmation_code( $code ) ) {
-				if ( $release_pane && null !== $status && $this->can_confirm_switch( $status, $nonces, $updates_forced_off, $native_hold_read ) ) {
-					if ( (string) $status->source_revision() === $result['detail'] ) {
+				if ( $release_pane ) {
+					$blocker = $this->switch_blocker( $type, $result['identifier'], $status, $result['channel'], $policy_read, $native_hold_read );
+					if ( '' === $blocker && ( null === $status || (string) $status->source_revision() !== $result['detail'] ) ) {
+						$blocker = 'release_selection_changed';
+					}
+					if ( '' === $blocker && '' === ( $nonces['enable'] ?? '' ) ) {
+						$blocker = 'unable_to_check';
+					}
+					if ( '' !== $blocker ) {
+						ob_start();
+						$this->display->render_operation_notice( $blocker, false, $type, $result['identifier'], native_hold: $native_hold );
+						$operation_notice_html = (string) ob_get_clean();
+					} elseif ( null !== $status ) {
 						$chooser = $this->switch_choices( $type, $status->identifier(), $status->source_revision(), $result['channel'], $status );
 						if ( $chooser['successful'] ) {
 							$switch_confirmation = $chooser['data'];
 						} else {
 							$operation_notice_html = esc_html( $chooser['data']['message'] );
 						}
-					} else {
-						$operation_notice_html = $this->display->preflight_failure_message( 'release_selection_changed' );
 					}
 				}
 			} elseif ( ! $this->is_top_level_switch_outcome( $code ) ) {
@@ -726,26 +736,15 @@ final class ReleaseManagementControls {
 			return $this->preflight_error_payload( 'invalid_request' );
 		}
 
-		$status = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->status( $type, $identifier, $revision ), null );
-		if ( null === $status || PackageSource::BRANCH->value !== $status->source() ) {
-			return $this->preflight_error_payload( 'source_changed' );
-		}
-		if ( (bool) $this->request_boundary( $this->updates_forced_off, false ) ) {
-			return $this->preflight_error_payload( 'policy_forced_off' );
-		}
-		if ( 'disabled' === $status->deployment_policy() ) {
-			return $this->preflight_error_payload( 'policy_disabled' );
-		}
-		if ( PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) ) {
-			return $this->preflight_error_payload( 'source_paused' );
-		}
-
+		$status      = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->status( $type, $identifier, $revision ), null );
 		$native_hold = $this->request_boundary( $this->native_hold, false );
-		if ( false === $native_hold ) {
-			return $this->preflight_error_payload( 'unable_to_check' );
-		}
-		if ( is_array( $native_hold ) ) {
+		$policy      = $this->request_boundary( $this->updates_forced_off, null );
+		$blocker     = $this->switch_blocker( $type, $identifier, $status, $channel, $policy, $native_hold );
+		if ( in_array( $blocker, array( 'switch_held', 'switch_other_held' ), true ) && is_array( $native_hold ) ) {
 			return $this->display->switch_hold_preflight_response( $type, $identifier, $native_hold );
+		}
+		if ( '' !== $blocker || null === $status ) {
+			return $this->preflight_error_payload( $blocker );
 		}
 
 		return $this->switch_choices( $type, $identifier, $revision, $channel, $status );
@@ -813,7 +812,7 @@ final class ReleaseManagementControls {
 				'fallback_message'            => '',
 				'confirmed_release_nonce'     => wp_create_nonce( $this->confirmed_release_nonce_action( $type, $identifier, $revision, $channel, $id, $tag, $version, 'older' === $relation, $installed ) ),
 			);
-			if ( null === $latest || 1 === ReleaseVersion::compare( $version, $latest['release_version'] ) ) {
+			if ( true === ( $candidate['latest_eligible'] ?? null ) ) {
 				$latest = $option;
 			}
 			if ( null === $match && 'same' === $relation ) {
@@ -880,18 +879,18 @@ final class ReleaseManagementControls {
 		return 'switch_choose' === $code;
 	}
 
-	/**
-	 * @param array<string, string> $nonces
-	 * @param array<string, mixed>|false|null $native_hold
-	 */
-	private function can_confirm_switch( ?ReleaseTrackingStatus $status, array $nonces, bool $updates_forced_off, array|false|null $native_hold ): bool {
-		return null !== $status
-			&& PackageSource::BRANCH->value === $status->source()
-			&& $status->eligible()
-			&& 'disabled' !== $status->deployment_policy()
-			&& ! $updates_forced_off
-			&& null === $native_hold
-			&& '' !== ( $nonces['enable'] ?? '' );
+	/** @param array<string,mixed>|false|null $native_hold */
+	private function switch_blocker( string $type, string $identifier, ?ReleaseTrackingStatus $status, string $channel, ?bool $policy, array|false|null $native_hold ): string {
+		return match ( true ) {
+			! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' ) => 'forbidden',
+			null === $status || null === $policy || false === $native_hold => 'unable_to_check',
+			PackageSource::BRANCH->value !== $status->source() || ! $status->eligible() => 'source_changed',
+			$policy => 'policy_forced_off',
+			'disabled' === $status->deployment_policy() => 'policy_disabled',
+			PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) => 'source_paused',
+			is_array( $native_hold ) => ( $native_hold['type'] ?? null ) === $type && ( $native_hold['identifier'] ?? null ) === $identifier ? 'switch_held' : 'switch_other_held',
+			default => '',
+		};
 	}
 
 	private function handle_prospective_ajax( string $operation ): never {

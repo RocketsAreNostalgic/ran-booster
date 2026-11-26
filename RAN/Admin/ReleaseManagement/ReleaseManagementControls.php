@@ -181,9 +181,13 @@ final class ReleaseManagementControls {
 	public function render_package_operation_actions( string $current_source, string $selected_source, string $type = '', string $identifier = '', int $revision = 0 ): void {
 		if ( 'release_asset' === $current_source && 'release_asset' === $selected_source ) {
 			$status             = $revision > 0 ? $this->request_boundary( fn () => $this->tracking->status( $type, $identifier, $revision ), null ) : null;
-			$updates_forced_off = $this->request_boundary( $this->updates_forced_off, true );
+			$updates_forced_off = $this->updates_forced_off_for_display();
 			$this->request_boundary( fn () => $this->display->render_native_update_action( $updates_forced_off ? null : $status ), null );
 		}
+	}
+
+	private function updates_forced_off_for_display(): bool {
+		return $this->request_boundary( $this->updates_forced_off, true );
 	}
 
 	public function render_advanced_source_section(
@@ -220,7 +224,7 @@ final class ReleaseManagementControls {
 		$nonces                = null === $package ? array() : $this->package_nonce_actions( $package, $status );
 		$native_hold           = $this->request_boundary( $this->native_hold, null );
 		$native_hold           = is_array( $native_hold ) ? $native_hold : null;
-		$updates_forced_off    = (bool) $this->request_boundary( $this->updates_forced_off, false );
+		$updates_forced_off    = $this->updates_forced_off_for_display();
 		$switch_confirmation   = null;
 		$operation_notice_html = '';
 		$duplicate_conflict    = in_array( $code, array( 'release_repository_conflict', 'repository_release_owner_exists' ), true )

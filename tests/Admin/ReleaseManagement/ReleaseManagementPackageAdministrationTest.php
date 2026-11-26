@@ -1002,9 +1002,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		$package         = new PackageProjection( 'release_asset', $type );
 		$display         = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
-		$render_settings = static function ( bool $forced_off = false ) use ( $display, $package, $status ): string {
+		$render_settings = static function () use ( $display, $package, $status ): string {
 			ob_start();
-			$display->render_settings( $package, $status, $package->settings_url(), updates_forced_off: $forced_off );
+			$display->render_settings( $package, $status, $package->settings_url() );
 			return (string) ob_get_clean();
 		};
 		$status_html     = $render_settings();
@@ -1019,11 +1019,22 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		unset( $GLOBALS['ran_booster_release_management_test_denied_capabilities'] );
 		self::assertStringNotContainsString( 'href=', $render( 4 ) );
 
-		$blocked = ReleaseManagementFixture::controls( $tracking, updates_forced_off: static fn (): bool => true );
-		ob_start();
-		$blocked->render_package_operation_actions( 'release_asset', 'release_asset', $type, $identifier, 3 );
-		self::assertStringNotContainsString( 'href=', (string) ob_get_clean() );
-		self::assertStringContainsString( 'Updates are off for this package.', $render_settings( true ) );
+		foreach (
+			array(
+				static fn (): bool => true,
+				static fn (): bool => throw new \RuntimeException( 'Policy unavailable.' ),
+			) as $policy
+		) {
+			$blocked = ReleaseManagementFixture::controls( $tracking, updates_forced_off: $policy );
+			ob_start();
+			$blocked->render_package_operation_actions( 'release_asset', 'release_asset', $type, $identifier, 3 );
+			self::assertStringNotContainsString( 'href=', (string) ob_get_clean() );
+			ob_start();
+			$blocked->render_advanced_source_section( 'edit', $type, 'release_asset', $package, $package->settings_url() );
+			$pane = (string) ob_get_clean();
+			self::assertStringContainsString( 'Updates are off for this package.', $pane );
+			self::assertStringNotContainsString( 'version 2.0 is available.', $pane );
+		}
 		unset( $GLOBALS['ran_booster_test_site_transients'][ $transient ] );
 		self::assertStringNotContainsString( 'href=', $render() );
 		self::assertStringContainsString( 'WordPress has no current update offer.', $render_settings() );

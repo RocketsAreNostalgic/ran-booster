@@ -1129,7 +1129,12 @@ final class ReleaseManagementDisplay {
 			return;
 		}
 
-		$message      = $this->result_message( $code, $successful, $type, $channel, $status, $reason, $detail );
+		$message = $this->result_message( $code, $successful, $type, $channel, $status, $reason, $detail );
+		if ( $successful && 'release_enabled' === $code ) {
+			echo FeedbackFlash::container( FeedbackFlash::item( $code, 'success', $message ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- FeedbackFlash escapes the settled message for its static fallback.
+			return;
+		}
+
 		$message_html = $this->linked_switch_result_html( $code, $type, $identifier, $reload_url, $native_hold );
 		$review       = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
 		$check        = $successful ? null : FeedbackFlash::check_result( $code, $detail );

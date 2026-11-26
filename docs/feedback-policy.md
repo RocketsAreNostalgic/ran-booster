@@ -124,7 +124,9 @@ as the signed result. The top of the package settings page it lands on reads
 both the stored source and any GitHub native hold back and settles it into
 `release_enabled` (`"Switched to releases. Version ... is installed."`),
 `switch_failed_unchanged`, `switch_held`, `switch_other_held`, or
-`switch_not_confirmed` (`"Booster hasn't confirmed the switch yet..."`).
+`switch_not_confirmed` (`"Booster hasn't confirmed the switch yet..."`). Only
+a confirmed switch shows the installed version and update policy in a success
+snackbar. The same message is visible on the page without JavaScript.
 
 Reinstall, update and remove follow the same pattern as saves. Release,
 webhook and extension successes follow it too.

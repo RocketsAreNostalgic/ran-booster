@@ -119,7 +119,7 @@ class WpConfigSecretsPathWriter {
 				continue;
 			}
 			$comment = preg_replace( '/[\s*]+/', ' ', $token[1] );
-			if ( null === $comment || false === stripos( $comment, $marker ) ) {
+			if ( null === $comment || 0 !== strcasecmp( trim( $comment, " /#.\t\n\r" ), $marker ) ) {
 				continue;
 			}
 			if ( $found ) {
@@ -730,7 +730,8 @@ class WpConfigSecretsPathWriter {
 	 * @param array{dev:int,ino:int,mode:int,nlink:int} $second
 	 */
 	private function same_identity( array $first, array $second ): bool {
-		return $first['dev'] === $second['dev']
+		return 0 !== $first['ino']
+			&& $first['dev'] === $second['dev']
 			&& $first['ino'] === $second['ino']
 			&& 0100000 === ( $second['mode'] & 0170000 )
 			&& 1 === $second['nlink'];

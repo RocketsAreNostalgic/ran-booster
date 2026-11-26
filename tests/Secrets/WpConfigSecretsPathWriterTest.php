@@ -248,6 +248,18 @@ final class WpConfigSecretsPathWriterTest extends TestCase {
 		self::assertSame( $written, file_get_contents( $this->config_path ) );
 	}
 
+	public function test_operator_comment_mentioning_storage_is_not_a_booster_marker(): void {
+		$this->write_config( "<?php\n// The deployment team maintains the RAN Booster encrypted secrets storage directory.\n" );
+		self::assertFalse( ( new WpConfigSecretsPathWriter() )->has_storage_marker( $this->config_path ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_storage_marker_read_requires_a_verifiable_inode(): void {
+		require __DIR__ . '/ZeroInodeStatFunctions.php';
+		$this->assert_refused( 'config_file_invalid', fn () => ( new WpConfigSecretsPathWriter() )->has_storage_marker( $this->config_path ) );
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_deploy_owned_read_access_does_not_grant_write_or_removal_authority(): void {

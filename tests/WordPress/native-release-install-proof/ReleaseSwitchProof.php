@@ -210,7 +210,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 		}
 		$this->seed_stored_check();
 		$this->assert_activation();
-		$this->report( 'seeded', $this->branch_version() );
+		$this->report( 'seeded', $this->branch_version(), 'seed' );
 	}
 
 	/** A still-fresh stored check holding the ordinary offer: only a recheck replaces it on the next load. */
@@ -529,6 +529,8 @@ final class RAN_Booster_ReleaseSwitchProof {
 		$this->attest();
 		$this->assert_files( $this->branch_version(), false, $this->directory );
 		$this->assert_activation();
+		// An earlier process seeded this case's still-fresh update check. Without it, a later recheck proves nothing.
+		$this->assert_stored_check( null, true );
 		WP_Filesystem();
 
 		if ( 'pre-install' === $this->scenario ) {
@@ -1155,7 +1157,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			throw new RuntimeException( 'The one-off offer reached the stored update check.' );
 		}
 		if ( $expect_seeded && ( ! is_array( $entry ) || ( $entry['ran_release_switch_proof'] ?? '' ) !== 'seeded-' . $this->slug ) ) {
-			throw new RuntimeException( 'A refusal before installation disturbed the ordinary stored offer.' );
+			throw new RuntimeException( 'The seeded ordinary offer is not in the stored update check.' );
 		}
 		if ( null !== $rechecked_since
 			&& ( ! is_object( $check ) || (int) ( $check->last_checked ?? 0 ) < $rechecked_since || ! is_array( $entry ) || ( $entry['ran_release_switch_proof'] ?? null ) !== 'fresh-' . $this->slug ) ) {
@@ -1270,12 +1272,12 @@ final class RAN_Booster_ReleaseSwitchProof {
 		return is_string( $archive_bytes ) && is_string( $file_bytes ) && $archive_bytes === $file_bytes;
 	}
 
-	private function report( string $outcome, string $version ): void {
+	private function report( string $outcome, string $version, ?string $phase = null ): void {
 		echo wp_json_encode(
 			array(
 				'type'      => $this->kind,
 				'case'      => $this->case_name,
-				'phase'     => getenv( 'RAN_RELEASE_SWITCH_PROOF_PHASE' ),
+				'phase'     => $phase ?? getenv( 'RAN_RELEASE_SWITCH_PROOF_PHASE' ),
 				'outcome'   => $outcome,
 				'installed' => $version,
 			)
@@ -1297,4 +1299,10 @@ if ( ! defined( 'RAN_BOOSTER_RELEASE_SWITCH_PROOF_LIBRARY_ONLY' ) ) {
 		'fresh' => $ran_booster_release_switch_proof->fresh_start(),
 		default => throw new RuntimeException( 'Unknown proof phase.' ),
 	};
+	// switch.sh names the next case here to spare it a WordPress start of its own for seeding.
+	$ran_booster_release_switch_next = (string) getenv( 'RAN_RELEASE_SWITCH_PROOF_SEED_NEXT' );
+	if ( '' !== $ran_booster_release_switch_next ) {
+		list( $ran_booster_release_switch_type, $ran_booster_release_switch_case ) = explode( ':', $ran_booster_release_switch_next, 2 ) + array( 1 => '' );
+		( new RAN_Booster_ReleaseSwitchProof( $ran_booster_release_switch_type, $ran_booster_release_switch_case ) )->seed();
+	}
 }

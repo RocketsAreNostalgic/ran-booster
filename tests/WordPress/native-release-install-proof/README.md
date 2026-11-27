@@ -218,9 +218,15 @@ public switch preflight and admin POST processor, the release updater's
 exact-release path and WordPress's own upgrader (count-one `bulk_upgrade` for a
 plugin, `upgrade` for a theme). Remote HTTP is synthetic; every other component
 is the installed code, attested against the Core ZIP under test before and after
-each switch. Preflight and POST ZIP streams are counted separately. Each case seeds a Branch package at 1.0.0, switches in a second
-process and reads back in a third, which stands in for the next admin page
+each switch. Preflight and POST ZIP streams are counted separately. Each case seeds a Branch package at 1.0.0, switches in a new
+process and reads back in another, which stands in for the next admin page
 load.
+
+To save WordPress starts, a case whose last process is `readback` or `retried`
+also seeds the next case there. `run` and `retry` leave an update-check deletion
+for request end, and `fresh` and `branch-return` change that cache too, so a
+case that follows `fresh` or `branch-return` seeds in its own process, as the
+first case does. Every `run` asserts that its seeded offer is still stored.
 
 | Case | Result | Source after | Native custody |
 | --- | --- | --- | --- |

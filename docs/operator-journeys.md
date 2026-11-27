@@ -30,11 +30,12 @@ The [Blueprint reference](portability-briefcase.md) retains format and policy de
    profiles unused by managed packages are shown unavailable with a reason.
    Provider permissions have not been assessed. Choosing packages alone never
    silently selects their credentials.
-4. If credentials are selected, use **Generate password** or supply a high-entropy
-   **Transporter Blueprint password** of 20–256 ASCII characters and repeat it in
-   **Confirm password**. The generator fills both fields. Keep the password
-   separately from the ZIP; the supported encrypted briefcase requires AES-256
-   ZIP support.
+4. If credentials are selected, use **Generate password** or supply a
+   **Transporter Blueprint password** of 20–256 characters, with at least 10
+   distinct characters, and repeat it in **Confirm password**. The generator
+   fills both fields. Keep the password separately from the ZIP; Booster seals
+   the credentials with it. A credential Blueprint exported before sealing was
+   introduced must be exported again.
    With no credentials selected, the download is a package-only, **unencrypted**
    Blueprint and a password has no effect. Treat repository configuration as
    potentially sensitive even without credentials.

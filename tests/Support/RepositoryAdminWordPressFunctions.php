@@ -61,7 +61,7 @@ function is_uploaded_file( string $filename ): bool {
 
 if ( ! function_exists( __NAMESPACE__ . '\\get_temp_dir' ) ) {
 	function get_temp_dir(): string {
-		return rtrim( sys_get_temp_dir(), '/' ) . '/';
+		return $GLOBALS['ran_booster_repository_admin_temp_dir'] ?? rtrim( sys_get_temp_dir(), '/' ) . '/';
 	}
 }
 

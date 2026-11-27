@@ -703,7 +703,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		);
 
 		self::assertSame( 'success', $response->kind );
-		self::assertSame( array( 'event_generation' => 1 ), $expiry_observations->get( 'fixture', 'credential_existing' ) );
+		self::assertSame( array( 'event_generation' => 2 ), $expiry_observations->get( 'fixture', 'credential_existing' ) );
 		self::assertSame(
 			'Replacement credential',
 			$this->secrets->credential_profiles( 'fixture' )['credential_existing']['label']
@@ -779,6 +779,29 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$material = $this->secrets->credential_material( 'fixture', 'credential_existing' );
 		self::assertNotNull( $material );
 		self::assertSame( $secret_before, $material['secret'] );
+	}
+
+	public function test_credential_replacement_does_not_persist_when_the_validation_generation_cannot_advance(): void {
+		$interaction          = new CapturingProviderProfileInteraction();
+		$dashboard            = $this->getMockBuilder( Dashboard::class )->disableOriginalConstructor()->onlyMethods( array( 'add_message' ) )->getMock();
+		$expiry               = new InMemoryCredentialExpiryObservationStore();
+		$expiry->fail_writes  = true;
+		$material             = $this->secrets->credential_material( 'fixture', 'credential_existing' );
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'id'            => 'credential_existing',
+			'label'         => 'Replacement credential',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'existing' ),
+			'secret'        => 'replacement-secret-canary',
+		);
+
+		$this->native_failure( $dashboard, $interaction, $this->dispatcher( $dashboard, $this->secrets, $interaction, new InMemoryPublicRepositoryLookupProfileStore(), $expiry ) );
+
+		// An in-flight validation of the old secret must never see an unchanged generation after the secret changes.
+		self::assertSame( $material, $this->secrets->credential_material( 'fixture', 'credential_existing' ) );
 	}
 
 	public function test_credential_configuration_change_invalidates_evidence_before_saving(): void {
@@ -1069,6 +1092,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			$message
 		);
 		self::assertStringNotContainsString( 'secret-value', $message );
+		// A refused replacement keeps the observation; only the generation advances, so a pending validation fails safe.
+		$observation_before['profiles']['fixture']['credential_existing'] = array( 'event_generation' => 1 ) + $observation_before['profiles']['fixture']['credential_existing'];
 		self::assertSame( $observation_before, $expiry_observations->document );
 	}
 

@@ -85,9 +85,14 @@ final readonly class PortabilityController {
 			return $this->export_failure( __( 'Booster could not read the managed package selection. Try again.', 'ran-booster' ), 500, 'export', $failure );
 		}
 
-		$path = tempnam( get_temp_dir(), 'ran-booster-blueprint-' );
-		if ( false === $path ) {
-			return $this->export_failure( __( 'Booster could not create the Blueprint ZIP. Try again.', 'ran-booster' ), 500, 'archive_write' );
+		$root = get_temp_dir();
+		$path = is_dir( $root ) ? tempnam( $root, 'ran-booster-blueprint-' ) : false;
+		// tempnam() silently falls back to the system directory when the configured root is unusable.
+		if ( false === $path || realpath( dirname( $path ) ) !== realpath( $root ) ) {
+			if ( is_string( $path ) && is_file( $path ) ) {
+				unlink( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only this request's misplaced staging file.
+			}
+			return $this->export_failure( __( 'Booster could not create the Blueprint ZIP. Try again.', 'ran-booster' ), 500, 'temp_dir' );
 		}
 		// A fatal error after this point skips the finally below; never leave the archive behind.
 		register_shutdown_function( static fn () => is_file( $path ) && unlink( $path ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only this request's generated ZIP.
@@ -204,10 +209,15 @@ final readonly class PortabilityController {
 			$blueprint = $this->archive->read_from( $upload['tmp_name'], $this->password_from_request( 'password' ) );
 			try {
 				$decisions = $this->credential_decisions( $blueprint );
+				$targets   = $this->target_credential_ids();
 			} catch ( InvalidArgumentException ) {
 				return wp_send_json_error( array( 'message' => __( 'The repository credential decisions are invalid. Review the Blueprint again.', 'ran-booster' ) ), 400 );
 			}
-			return $this->preview_success( $this->review_blueprint( $blueprint, $decisions, $this->target_credential_ids() ) );
+			$refusal = $this->credential_refusal( $decisions, $targets, false );
+			if ( null !== $refusal ) {
+				return $this->credential_refused( $refusal );
+			}
+			return $this->preview_success( $this->review_blueprint( $blueprint, $decisions, $targets ) );
 		} catch ( PackageStorageFailure $failure ) {
 			return wp_send_json_error( array( 'message' => $failure->getMessage() ), $failure->is_database_unsupported() ? 503 : 500 );
 		} catch ( Throwable ) {
@@ -241,17 +251,9 @@ final readonly class PortabilityController {
 			} catch ( InvalidArgumentException ) {
 				return wp_send_json_error( array( 'message' => __( 'The repository credential decisions are invalid. Review the Blueprint again.', 'ran-booster' ) ), 400 );
 			}
-			// Importing secret material changes stored credentials, so it needs that authority and file changes allowed.
-			if ( null !== $ordinal && BlueprintCredentialAction::IMPORT === ( $decisions[ $ordinal ]['action'] ?? null )
-				&& ( ! current_user_can( 'activate_plugins' ) || PackageMutationGuard::file_mods_disabled() ) ) {
-				BoosterLogger::log(
-					'Blueprint credential import refused.',
-					array(
-						'operation'    => 'portability_apply',
-						'outcome_code' => 'credential_authority_missing',
-					)
-				);
-				return wp_send_json_error( array( 'message' => __( 'You cannot import repository credentials on this site. Choose another credential decision.', 'ran-booster' ) ), 403 );
+			$refusal = $this->credential_refusal( $decisions, $target_credentials, null !== $ordinal && BlueprintCredentialAction::IMPORT === ( $decisions[ $ordinal ]['action'] ?? null ) );
+			if ( null !== $refusal ) {
+				return $this->credential_refused( $refusal );
 			}
 			$release_review = null;
 			$expectation    = null;
@@ -451,6 +453,32 @@ final readonly class PortabilityController {
 		$value = $_SERVER['HTTP_HX_REQUEST'] ?? null;
 
 		return is_string( $value ) && 'true' === strtolower( trim( $value ) );
+	}
+
+	/**
+	 * Using a saved profile needs the secret authority; importing also needs file changes allowed.
+	 *
+	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $decisions
+	 * @param array<int, string>                                                    $targets
+	 */
+	private function credential_refusal( array $decisions, array $targets, bool $imports ): ?string {
+		$saved = array() !== $targets || in_array( BlueprintCredentialAction::TARGET, array_column( $decisions, 'action' ), true );
+		if ( ( $saved || $imports ) && ! current_user_can( 'activate_plugins' ) ) {
+			return 'credential_authority_missing';
+		}
+
+		return $imports && PackageMutationGuard::file_mods_disabled() ? 'file_mods_disallowed' : null;
+	}
+
+	private function credential_refused( string $code ): mixed {
+		BoosterLogger::log(
+			'Blueprint credential use refused.',
+			array(
+				'operation'    => 'portability_credentials',
+				'outcome_code' => $code,
+			)
+		);
+		return wp_send_json_error( array( 'message' => __( 'You cannot use or import repository credentials on this site. Choose another credential decision.', 'ran-booster' ) ), 403 );
 	}
 
 	private function is_allowed( string $nonce_action ): bool {

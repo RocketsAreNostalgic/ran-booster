@@ -242,8 +242,19 @@ class ProviderProfileAdminController {
 				);
 			}
 			if ( $result->is_valid() ) {
-				if ( null !== $result->expiry ) {
-					$this->commit_validation_expiry( $provider, $id, $generation, $result->expiry );
+				$current = null === $result->expiry
+					? $generation === $this->expiry_observations->generation( $provider->value, $id )
+					: $this->commit_validation_expiry( $provider, $id, $generation, $result->expiry );
+				if ( ! $current ) {
+					BoosterLogger::log(
+						'Credential validation result discarded.',
+						array(
+							'operation'    => 'credential_validation',
+							'provider'     => $provider->value,
+							'outcome_code' => 'credential_replaced',
+						)
+					);
+					throw new CredentialRequestException( __( 'This credential changed during the check. Validate it again.', 'ran-booster' ) );
 				}
 				$message = __( 'Repository credential validated successfully.', 'ran-booster' );
 
@@ -281,25 +292,18 @@ class ProviderProfileAdminController {
 	}
 
 	/** Record expiry evidence only while the validated credential is still current; rotation holds the same lock. */
-	private function commit_validation_expiry( ProviderCode $provider, string $id, int $generation, CredentialExpiryReport $expiry ): void {
-		$this->updater_lock->run(
-			function () use ( $provider, $id, $generation, $expiry ): void {
+	private function commit_validation_expiry( ProviderCode $provider, string $id, int $generation, CredentialExpiryReport $expiry ): bool {
+		return $this->updater_lock->run(
+			function () use ( $provider, $id, $generation, $expiry ): bool {
 				if ( $generation !== $this->expiry_observations->generation( $provider->value, $id ) ) {
-					BoosterLogger::log(
-						'Credential validation expiry discarded.',
-						array(
-							'operation'    => 'credential_validation',
-							'provider'     => $provider->value,
-							'outcome_code' => 'credential_replaced',
-						)
-					);
-					return;
+					return false;
 				}
 				$this->expiry_observations->record_provider_expiry( $provider->value, $id, $expiry, gmdate( 'Y-m-d\\TH:i:s\\Z' ) );
-				// A deployment-configured constant is read-only; only its advisory observation is kept.
-				if ( SecretsFile::CONSTANT_PROFILE !== $id && $expiry->is_known() && is_string( $expiry->expires_at ) ) {
+				// A configured constant is read-only, and validation never writes the sidecar while file changes are disallowed.
+				if ( SecretsFile::CONSTANT_PROFILE !== $id && $expiry->is_known() && is_string( $expiry->expires_at ) && ! PackageMutationGuard::file_mods_disabled() ) {
 					$this->secrets->record_credential_provider_expiry( $provider, $id, substr( $expiry->expires_at, 0, 10 ) );
 				}
+				return true;
 			}
 		);
 	}
@@ -484,6 +488,9 @@ class ProviderProfileAdminController {
 				if ( $access_changed && null !== $id ) {
 					$this->branch_check_evidence->bump_profile_generation( $provider->value, $id );
 				}
+				if ( $is_replacement && null !== $id ) {
+					$this->expiry_observations->invalidate( $provider->value, $id );
+				}
 				$saved_id      = $this->secrets->save_credential(
 					$provider,
 					$id,
@@ -611,6 +618,7 @@ class ProviderProfileAdminController {
 				}
 
 				$cleared_default = $id === $this->public_lookup_profiles->get( $provider->value );
+				$this->expiry_observations->invalidate( $provider->value, $id );
 				if ( ! $this->secrets->delete_credential( $provider, $id ) || isset( $this->secrets->credential_profiles( $provider )[ $id ] ) ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
 					throw new CredentialRequestException( __( 'Booster could not verify that the repository credential was removed.', 'ran-booster' ) );

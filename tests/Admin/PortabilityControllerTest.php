@@ -1341,19 +1341,58 @@ final class PortabilityControllerTest extends TestCase {
 		$_POST['password']             = 'correct-horse-battery-staple';
 		$_POST['credential_decisions'] = array( array( 'action' => 'import' ) );
 
+		$cases = array(
+			'credential_authority_missing'          => array( false, true, array( 'action' => 'import' ) ),
+			'file_mods_disallowed'                  => array( true, false, array( 'action' => 'import' ) ),
+			'saved target without secret authority' => array(
+				false,
+				true,
+				array(
+					'action'    => 'target',
+					'target_id' => 'saved-profile',
+				),
+			),
+		);
+		$this->start_log_capture();
 		try {
-			foreach ( array( 'capability', 'file_mods' ) as $refusal ) {
-				$GLOBALS['ran_booster_repository_admin_capabilities']    = array( 'activate_plugins' => 'capability' !== $refusal );
-				$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = 'file_mods' !== $refusal;
+			foreach ( $cases as list( $authority, $file_mods, $decision ) ) {
+				$GLOBALS['ran_booster_repository_admin_capabilities']    = array( 'activate_plugins' => $authority );
+				$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = $file_mods;
+				$_POST['credential_decisions']                           = array( $decision );
 				$result = $controller->handle_apply();
 				self::assertSame( 403, $result['status'] );
-				self::assertSame( 'You cannot import repository credentials on this site. Choose another credential decision.', $result['data']['message'] );
+				self::assertSame( 'You cannot use or import repository credentials on this site. Choose another credential decision.', $result['data']['message'] );
 			}
+			$lines = $this->captured_log_lines();
 		} finally {
+			$this->stop_log_capture();
 			unset( $GLOBALS['ran_booster_package_mutation_guard_file_mods'] );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
 			unlink( $file );
 		}
+		foreach ( array( 'credential_authority_missing', 'file_mods_disallowed', 'credential_authority_missing' ) as $index => $code ) {
+			self::assertSame( '[ran-booster] Blueprint credential use refused. {"operation":"portability_credentials","outcome_code":"' . $code . '"}', $lines[ $index ] ?? null );
+		}
+	}
+
+	public function test_export_refuses_an_unavailable_temporary_root_without_staging_elsewhere(): void {
+		$_POST['packages']                                 = array( 'plugin' => array( 'example/example.php' ) );
+		$_POST['response_format']                          = 'json';
+		$GLOBALS['ran_booster_repository_admin_temp_dir']  = sys_get_temp_dir() . '/ran-booster-missing-' . bin2hex( random_bytes( 4 ) ) . '/';
+		$GLOBALS['ran_booster_repository_admin_file_read'] = false;
+
+		$this->start_log_capture();
+		try {
+			$result = $this->export_controller()->handle_export();
+			$lines  = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+			unset( $GLOBALS['ran_booster_repository_admin_temp_dir'] );
+		}
+
+		self::assertSame( array( 500, 'Booster could not create the Blueprint ZIP. Try again.' ), array( $result['status'], $result['data']['message'] ) );
+		self::assertSame( array( '[ran-booster] Blueprint export failed. {"operation":"portability_export","step":"temp_dir","http_status":"500"}' ), $lines );
+		self::assertSame( array(), array_filter( $GLOBALS['ran_booster_repository_admin_temporary_files'] ?? array(), 'is_string' ) );
 	}
 
 	#[DataProvider( 'invalid_credential_selections' )]
@@ -1469,6 +1508,24 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertSame( 0, $secrets->readiness_checks );
 		self::assertTrue( $result['success'] );
 		self::assertStringContainsString( 'Ready to migrate; all checks passed.', $result['data']['html'] );
+	}
+
+	public function test_preview_needs_secret_authority_only_for_a_saved_target_profile(): void {
+		$file = $this->blueprint_archive( new PackageBlueprint( array( $this->blueprint_package() ) ) );
+		$this->set_uploaded_blueprint( $file );
+		$GLOBALS['ran_booster_repository_admin_capabilities'] = array( 'activate_plugins' => false );
+
+		try {
+			$public                      = $this->preview_controller( new PortabilityReadinessSpySecretsFile( false ) )->handle_preview();
+			$_POST['target_credentials'] = array( 0 => 'saved-profile' );
+			$saved                       = $this->preview_controller( new PortabilityReadinessSpySecretsFile( false ) )->handle_preview();
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test temporary file is outside WordPress media handling.
+			unlink( $file );
+		}
+
+		self::assertTrue( $public['success'] );
+		self::assertSame( 403, $saved['status'] );
 	}
 
 	public function test_credential_preview_reports_unavailable_target_storage_without_persistence(): void {

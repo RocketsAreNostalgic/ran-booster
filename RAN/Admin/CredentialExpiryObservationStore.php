@@ -71,11 +71,16 @@ class CredentialExpiryObservationStore {
 		);
 	}
 
+	/** Clear the observation but keep an advanced generation, so a pending validation cannot match a removed credential. */
 	public function clear( string $provider, string $profile_id ): void {
+		$this->reset_for_replacement( $provider, $profile_id );
+	}
+
+	/** Advance the generation before a secret changes, so a failed write still fails safe as a mismatch. */
+	public function invalidate( string $provider, string $profile_id ): void {
 		$this->require_provider_id( $provider );
 		$this->require_profile_id( $profile_id );
-
-		$this->mutate( $provider, $profile_id, null );
+		$this->mutate( $provider, $profile_id, array(), true );
 	}
 
 	/** Clear stale expiry evidence while retaining a non-secret replacement generation. */

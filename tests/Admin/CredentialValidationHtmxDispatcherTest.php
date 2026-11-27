@@ -10,6 +10,7 @@ require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPr
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/ProviderFailureWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
@@ -384,33 +385,48 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		self::assertSame( 'credential.valid', $completions[0]['args'][1] );
 	}
 
-	public function test_a_validation_finishing_after_replacement_leaves_the_replacements_expiry_intact(): void {
+	public function test_a_validation_finishing_after_replacement_or_purge_is_reported_stale_and_writes_nothing(): void {
+		$stale  = 'This credential changed during the check. Validate it again.';
+		$known  = CredentialValidationResult::valid( \RAN\RepositoryProvider\CredentialExpiryReport::known( '2027-04-30T12:34:56Z' ) );
 		$expiry = new InMemoryCredentialExpiryObservationStore();
-		$expiry->set_manual_expiry( 'bb', 'credential_1', '2027-01-01' );
+		// Native request, replaced token, known expiry.
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->expects( self::never() )->method( 'record_credential_provider_expiry' );
-		$result               = CredentialValidationResult::valid( \RAN\RepositoryProvider\CredentialExpiryReport::known( '2027-04-30T12:34:56Z' ) );
-		$dispatcher           = $this->dispatcher(
-			$this->createMock( Dashboard::class ),
-			$result,
-			secrets: $secrets,
-			expiry: $expiry,
-			on_validate: static function () use ( $expiry ): void {
-				// The token is replaced while the provider request for the old one is in flight.
-				$expiry->reset_for_replacement( 'bb', 'credential_1' );
-			}
-		);
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'set_credential_validation_feedback' )->with( 'bb', 'credential_1', null, $stale );
 		$_POST['ran_booster'] = $this->request();
-		$dispatcher->dispatch_post_requests();
-
+		$this->dispatcher( $dashboard, $known, secrets: $secrets, expiry: $expiry, on_validate: static fn () => $expiry->reset_for_replacement( 'bb', 'credential_1' ) )->dispatch_post_requests();
 		self::assertSame( array( 'event_generation' => 1 ), $expiry->get( 'bb', 'credential_1' ) );
 		self::assertStringContainsString( '"outcome_code":"credential_replaced"', implode( "\n", $this->captured_log_lines() ) );
+
+		// Enhanced request, purged first-generation profile, no expiry reported: still stale.
+		$purged                     = new InMemoryCredentialExpiryObservationStore();
+		$_SERVER['HTTP_HX_REQUEST'] = 'true';
+		try {
+			$this->dispatcher( $this->createMock( Dashboard::class ), CredentialValidationResult::valid(), expiry: $purged, on_validate: static fn () => $purged->clear( 'bb', 'credential_1' ) )->dispatch_post_requests();
+			self::fail( 'An HTMX response must end the request.' );
+		} catch ( HtmxCredentialValidationResponse $response ) {
+			self::assertSame( array( $stale, 422 ), array( $response->error, $response->status ) );
+		}
+		unset( $_SERVER['HTTP_HX_REQUEST'] );
 
 		// Validating the unchanged replacement records both observations.
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->expects( self::once() )->method( 'record_credential_provider_expiry' )->with( self::anything(), 'credential_1', '2027-04-30' );
-		$this->dispatcher( $this->createMock( Dashboard::class ), $result, secrets: $secrets, expiry: $expiry )->dispatch_post_requests();
+		$this->dispatcher( $this->createMock( Dashboard::class ), $known, secrets: $secrets, expiry: $expiry )->dispatch_post_requests();
 		self::assertSame( '2027-04-30T12:34:56Z', $expiry->observations()['bb']['credential_1']['provider_expires_at'] ?? null );
+
+		// While file changes are disallowed, validation keeps the advisory observation but never writes the sidecar.
+		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'record_credential_provider_expiry' );
+		$advisory = new InMemoryCredentialExpiryObservationStore();
+		try {
+			$this->dispatcher( $this->createMock( Dashboard::class ), $known, secrets: $secrets, expiry: $advisory )->dispatch_post_requests();
+		} finally {
+			unset( $GLOBALS['ran_booster_package_mutation_guard_file_mods'] );
+		}
+		self::assertSame( '2027-04-30T12:34:56Z', $advisory->observations()['bb']['credential_1']['provider_expires_at'] ?? null );
 	}
 
 	public function test_a_configured_constant_validates_with_advisory_expiry_and_no_storage_mutation(): void {

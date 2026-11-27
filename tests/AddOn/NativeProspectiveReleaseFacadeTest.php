@@ -835,6 +835,37 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		}
 	}
 
+	public function test_an_anonymous_rate_limit_with_a_retry_time_pauses_the_next_anonymous_listing(): void {
+		require_once __DIR__ . '/../Internal/AnonymousLookupCooldownWordPressFunctions.php';
+		$GLOBALS['ran_booster_cooldown_transients'] = array();
+		try {
+			$provider = new ProspectiveRepositoryProvider( candidate_list: new RepositoryReleaseReadUnavailable( 'listing-failure', 0, null, new ProviderFailure( 'rate_limited', 429, 3540 ) ) );
+			$facade   = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor(), provider: $provider );
+			$first    = $facade->list_candidates( 'plugin', $this->repository_request(), 'stable', 'valid-nonce' )->data();
+			$retry_at = $first['rate_limit']['retry_at'] ?? null;
+			self::assertIsInt( $retry_at );
+			self::assertSame( $retry_at, $GLOBALS['ran_booster_cooldown_transients']['ran_booster_anonymous_cooldown_gh']['value'] ?? null );
+			self::assertSame( 1, ProspectiveRepositoryProvider::$listing_calls );
+
+			// The next anonymous listing is not sent and reports the same limit.
+			$second = $facade->list_candidates( 'plugin', $this->repository_request(), 'stable', 'valid-nonce' );
+			self::assertSame( 'unable_to_check', $second->code() );
+			self::assertSame(
+				array(
+					'rate_limit'            => array(
+						'provider' => 'Prospective provider',
+						'retry_at' => $retry_at,
+					),
+					'rate_limited_provider' => 'gh',
+				),
+				$second->data()
+			);
+			self::assertSame( 1, ProspectiveRepositoryProvider::$listing_calls );
+		} finally {
+			unset( $GLOBALS['ran_booster_cooldown_transients'] );
+		}
+	}
+
 	public function test_invalid_channel_fails_before_any_prospective_release_work(): void {
 		$facade = $this->facade(
 			new ProspectivePluginRepository(),

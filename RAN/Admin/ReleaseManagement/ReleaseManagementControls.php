@@ -501,7 +501,7 @@ final class ReleaseManagementControls {
 		}
 
 		$package_page = in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true );
-		$dependencies = $package_page ? array( 'ran-booster-packages', 'wp-i18n', 'ran-booster-dialog' ) : array( 'ran-booster-packages', 'wp-i18n' );
+		$dependencies = $package_page ? array( 'ran-booster-packages', 'ran-booster-rate-limit', 'wp-i18n', 'ran-booster-dialog' ) : array( 'ran-booster-packages', 'ran-booster-rate-limit', 'wp-i18n' );
 		$type         = str_contains( $page, 'themes' ) ? 'theme' : 'plugin';
 		$plugin_root  = dirname( __DIR__, 3 );
 		$asset_root   = $plugin_root . '/assets';

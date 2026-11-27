@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Internal\ReleaseManagement;
 
+use RAN\Internal\AnonymousLookupCooldown;
 use InvalidArgumentException;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
 use RAN\Admin\PackageRepositoryRequestResolver;
@@ -62,8 +63,30 @@ final class ProspectiveReleaseCandidateReader {
 				'1' === ( $repository['private'] ?? null ),
 				is_string( $repository['credential_id'] ?? null ) && '' !== $repository['credential_id'] ? $repository['credential_id'] : null
 			);
-			$result     = $listing->list_release_candidates( $type, $reference, $channel );
-			$metadata   = array(
+			$retry_at   = ! $reference->private && null === $reference->credential_id ? AnonymousLookupCooldown::until( $provider ) : null;
+			if ( null !== $retry_at ) {
+				BoosterLogger::log(
+					'anonymous release lookup skipped during rate limit',
+					array(
+						'event'     => 'anonymous_lookup_cooldown',
+						'operation' => 'list_release_candidates',
+						'provider'  => $provider,
+					)
+				);
+
+				return ProspectiveReleaseResult::failure(
+					'unable_to_check',
+					array(
+						'rate_limit'            => array(
+							'provider' => $this->providers->metadata()[ $provider ]->label ?? '',
+							'retry_at' => $retry_at,
+						),
+						'rate_limited_provider' => $provider,
+					)
+				);
+			}
+			$result   = $listing->list_release_candidates( $type, $reference, $channel );
+			$metadata = array(
 				'channel'          => $channel,
 				'search_exhausted' => $result->search_exhausted,
 				'diagnostics'      => $result->diagnostics,
@@ -115,6 +138,9 @@ final class ProspectiveReleaseCandidateReader {
 			}
 			// Only an anonymous public lookup that was rate-limited can be helped by a lookup credential.
 			$anonymous = isset( $reference ) && ! $reference->private && null === $reference->credential_id;
+			if ( $anonymous ) {
+				AnonymousLookupCooldown::record( $provider, $rate_limit );
+			}
 
 			return ProspectiveReleaseResult::failure( 'unable_to_check', array( 'rate_limit' => $rate_limit ) + ( $anonymous ? array( 'rate_limited_provider' => $provider ) : array() ) );
 		}

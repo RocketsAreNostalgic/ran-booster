@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\Internal\AnonymousLookupCooldown;
 use InvalidArgumentException;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
 use RAN\Logging\BoosterLogger;
@@ -55,6 +56,8 @@ final class RepositoryPickerController {
 
 		$public_lookup_requested = false;
 		$provider_name           = '';
+		$mode                    = '';
+		$credential_id           = null;
 
 		try {
 			$provider_input = isset( $_POST['provider'] ) ? wp_unslash( $_POST['provider'] ) : '';
@@ -69,11 +72,29 @@ final class RepositoryPickerController {
 				$identity_input          = isset( $_POST['public_lookup_identity'] ) ? wp_unslash( $_POST['public_lookup_identity'] ) : 'anonymous';
 				$public_lookup_requested = is_string( $identity_input ) && 'anonymous' !== sanitize_key( $identity_input );
 				$credential_id           = $this->public_lookup_profile_id( $provider_code );
-				$browser                 = $this->providers->require_capability(
+				$retry_at                = null === $credential_id ? AnonymousLookupCooldown::until( $provider_name ) : null;
+				if ( null !== $retry_at ) {
+					BoosterLogger::log(
+						'anonymous repository browse skipped during rate limit',
+						array(
+							'event'     => 'anonymous_lookup_cooldown',
+							'operation' => 'repository_browse',
+							'provider'  => $provider_name,
+						)
+					);
+
+					return $this->rate_limited_response(
+						array(
+							'provider' => $this->providers->metadata()[ $provider_name ]->label ?? '',
+							'retry_at' => $retry_at,
+						)
+					);
+				}
+				$browser = $this->providers->require_capability(
 					$provider_code,
 					null === $credential_id ? RepositoryBrowser::class : CredentialedPublicRepositoryBrowser::class
 				);
-				$result                  = $browser->browse_repositories(
+				$result  = $browser->browse_repositories(
 					RepositoryBrowseRequest::public_owner(
 						$owner,
 						$credential_id
@@ -168,11 +189,18 @@ final class RepositoryPickerController {
 
 			$failure    = ProviderFailure::carried( $exception );
 			$rate_limit = $failure?->rate_limit( $this->providers->metadata()[ $provider_name ]->label ?? '', time() );
+			if ( null !== $rate_limit ) {
+				if ( 'public' === $mode && null === $credential_id ) {
+					AnonymousLookupCooldown::record( $provider_name, $rate_limit );
+				}
+
+				return $this->rate_limited_response( $rate_limit, $status );
+			}
 
 			return wp_send_json_error(
 				array(
 					// A provider's own reason is worded by Core; a plain exception keeps the status copy.
-					'message' => null !== $rate_limit ? ProviderFailure::rate_limit_message( $rate_limit ) : ( $failure?->message() ?? $this->error_message_for_status( $status ) ),
+					'message' => $failure?->message() ?? $this->error_message_for_status( $status ),
 				),
 				$status
 			);
@@ -193,6 +221,22 @@ final class RepositoryPickerController {
 				500
 			);
 		}
+	}
+
+	/**
+	 * The provider-named rate-limit sentence, with its facts so the browser can show the time on the
+	 * visitor's clock.
+	 *
+	 * @param array{provider:string,retry_at:int|null} $rate_limit
+	 */
+	private function rate_limited_response( array $rate_limit, int $status = 429 ): mixed {
+		return wp_send_json_error(
+			array(
+				'message'    => ProviderFailure::rate_limit_message( $rate_limit ),
+				'rate_limit' => $rate_limit,
+			),
+			$status
+		);
 	}
 
 	private function error_message_for_status( int $status ): string {

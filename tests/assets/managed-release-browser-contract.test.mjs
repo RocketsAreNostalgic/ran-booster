@@ -7,6 +7,11 @@ const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-release-management.js', import.meta.url),
 	'utf8'
 );
+// The shared rate-limit sentence loads before this script on every Booster page.
+const rateLimitSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-rate-limit.js', import.meta.url),
+	'utf8'
+);
 const styles = fs.readFileSync(
 	new URL('../../assets/ran-booster-release-management.css', import.meta.url),
 	'utf8'
@@ -360,8 +365,10 @@ const createHarness = (
 		},
 	};
 	context.globalThis = context;
+	context.window.wp = context.wp;
+	context.window.document = context.document;
 	vm.runInNewContext(
-		`${source}\nglobalThis.initialize = initializeManagedReleaseBrowser;`,
+		`${rateLimitSource}\n${source}\nglobalThis.initialize = initializeManagedReleaseBrowser;`,
 		context
 	);
 	return {

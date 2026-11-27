@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\AddOn\ReleaseTracking;
 
+use RAN\Internal\AnonymousLookupCooldown;
 use RAN\UpdaterSupport\V1\PackageDirectory;
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentOutcome;
@@ -453,6 +454,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$listing = $this->providers->require_capability( (string) $package->get_provider_code(), RepositoryReleaseCandidateListing::class );
 
 			foreach ( $this->release_browser_repositories( $package ) as $repository ) {
+				if ( $this->cooling_down( $repository, (string) $package->get_provider_code(), 'list_release_candidates' ) ) {
+					continue;
+				}
 				try {
 					$candidates                          = $listing->list_release_candidates( $type, $repository, $channel );
 					$this->lookup_rate_limit             = null;
@@ -500,6 +504,35 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	private function record_lookup_failure( RepositoryReleaseReadUnavailable $unavailable, RepositoryReference $repository, string $provider ): void {
 		$this->lookup_rate_limit             = $unavailable->failure?->rate_limit( $this->providers->metadata()[ $provider ]->label ?? '', time() );
 		$this->anonymous_rate_limit_provider = null !== $this->lookup_rate_limit && ! $repository->private && null === $repository->credential_id ? $provider : null;
+		if ( null !== $this->anonymous_rate_limit_provider ) {
+			AnonymousLookupCooldown::record( $provider, $this->lookup_rate_limit );
+		}
+	}
+
+	/**
+	 * Skips an anonymous lookup while the provider's recorded rate limit lasts, reporting it as that
+	 * rate limit. A credentialed lookup is never skipped.
+	 */
+	private function cooling_down( RepositoryReference $repository, string $provider, string $operation ): bool {
+		$retry_at = ! $repository->private && null === $repository->credential_id ? AnonymousLookupCooldown::until( $provider ) : null;
+		if ( null === $retry_at ) {
+			return false;
+		}
+		$this->lookup_rate_limit             = array(
+			'provider' => $this->providers->metadata()[ $provider ]->label ?? '',
+			'retry_at' => $retry_at,
+		);
+		$this->anonymous_rate_limit_provider = $provider;
+		BoosterLogger::log(
+			'anonymous release lookup skipped during rate limit',
+			array(
+				'event'     => 'anonymous_lookup_cooldown',
+				'operation' => $operation,
+				'provider'  => $provider,
+			)
+		);
+
+		return true;
 	}
 
 	public function inspect_candidate(
@@ -542,6 +575,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			foreach ( $this->release_browser_repositories( $package ) as $repository ) {
 				$this->lookup_rate_limit             = null;
 				$this->anonymous_rate_limit_provider = null;
+				if ( $this->cooling_down( $repository, $provider, 'inspect_release' ) ) {
+					continue;
+				}
 				try {
 					$inspection = $inspector->inspect_release( $type, $repository, $release_id, $tag, $channel );
 					break;

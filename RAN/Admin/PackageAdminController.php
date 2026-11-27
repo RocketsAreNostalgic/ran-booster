@@ -72,7 +72,7 @@ final class PackageAdminController {
 
 		check_admin_referer( $action );
 		// Only a skipped provider re-check set below may carry this marker; never the browser.
-		unset( $request['repository_check_skipped'] );
+		unset( $request['repository_check_skipped'], $request['repository_check_retry_at'] );
 		$reinstall = in_array( $action, array( 'edit-plugin', 'edit-theme' ), true )
 			&& $this->enabled( $request, 'reinstall_after_save' );
 		if ( $reinstall ) {
@@ -342,7 +342,9 @@ final class PackageAdminController {
 			// A saved branch is checked on the settings page it returns to, unless the save skipped the provider.
 			$check_branch = 'edited' === $status && null === $check_skipped && PackageSource::BRANCH === $result['package']->get_source();
 
-			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status, $check_skipped, $check_branch );
+			$retry_at = 'edit-rate-limited' === $check_skipped && is_int( $request['repository_check_retry_at'] ?? null ) ? $request['repository_check_retry_at'] : null;
+
+			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status, $check_skipped, $check_branch, $retry_at );
 		}
 		if ( in_array( $status, array( 'unlinked', 'deleted' ), true ) ) {
 
@@ -388,8 +390,10 @@ final class PackageAdminController {
 		$operation  = sanitize_key( wp_unslash( (string) $_GET['ran_booster_result'] ) );
 		$identifier = sanitize_text_field( wp_unslash( (string) $_GET['ran_booster_package'] ) );
 		$nonce      = wp_unslash( (string) $_GET['_ran_booster_notice_nonce'] );
+		// The retry time is part of the signed marker, so a changed or added time fails verification.
+		$retry_at = isset( $_GET['ran_booster_retry_at'] ) && is_string( $_GET['ran_booster_retry_at'] ) && 1 === preg_match( '/\A[1-9][0-9]{0,11}\z/D', $_GET['ran_booster_retry_at'] ) ? (int) $_GET['ran_booster_retry_at'] : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified with the marker nonce below.
 		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'edit-unverified', 'edit-rate-limited', 'edit-unchecked', 'unlink', 'unlink-absent', 'unlink-on-disk', 'unlink-and-delete', 'already-managed' ), true )
-			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) ) {
+			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier . ( null === $retry_at ? '' : '|' . $retry_at ) ) ) {
 			return null;
 		}
 		$rate_limited = 'edit-rate-limited' === $operation;
@@ -399,7 +403,12 @@ final class PackageAdminController {
 					'type'     => 'warning',
 					'feedback' => 'package_edit_unverified',
 					'message'  => $rate_limited
-						? __( 'Your settings were saved. The Git provider was limiting requests, so Booster used the repository details it already had.', 'ran-booster' )
+						? esc_html__( 'Your settings were saved using the repository details Booster already had.', 'ran-booster' ) . ' ' . ProviderFailure::rate_limit_html(
+							array(
+								'provider' => $this->package_provider_label( $type, $identifier ),
+								'retry_at' => $retry_at,
+							)
+						)
 						: __( "Your settings were saved using the stored repository details. Booster couldn't recheck them with the Git provider.", 'ran-booster' ),
 				)
 			);
@@ -770,6 +779,18 @@ final class PackageAdminController {
 		return null;
 	}
 
+	/** The managed package's provider label, or an empty string when it is unavailable. */
+	private function package_provider_label( string $type, string $identifier ): string {
+		try {
+			$package = 'plugin' === $type ? $this->plugins?->booster_plugin_from_file( $identifier ) : $this->themes?->booster_theme_from_stylesheet( $identifier );
+			$code    = $package instanceof Package ? (string) $package->get_provider_code() : '';
+
+			return $this->providers?->metadata()[ $code ]->label ?? '';
+		} catch ( Throwable ) {
+			return '';
+		}
+	}
+
 	/**
 	 * A rate-limited or unavailable provider must not block saving settings for a repository
 	 * that has not changed. Definitive answers (rejected credential, missing repository) and
@@ -788,10 +809,16 @@ final class PackageAdminController {
 			return null;
 		}
 
-		$reason = ProviderFailure::from_throwable( $failure )?->reason;
-		$marker = in_array( $reason, array( 'rate_limited', 'rate_limited_secondary' ), true ) ? 'rate_limited' : '1';
+		$reason   = ProviderFailure::from_throwable( $failure )?->reason;
+		$marker   = in_array( $reason, array( 'rate_limited', 'rate_limited_secondary' ), true ) ? 'rate_limited' : '1';
+		$retry_at = ProviderFailure::carried( $failure )?->rate_limit( '', time() )['retry_at'] ?? null;
+		$stored   = $this->saved_from_stored( $request, $stored_package, 'http_' . $failure->getCode(), $marker );
+		if ( null !== $stored && null !== $retry_at ) {
+			// The retry time reaches the result notice through the signed redirect.
+			$stored['repository_check_retry_at'] = $retry_at;
+		}
 
-		return $this->saved_from_stored( $request, $stored_package, 'http_' . $failure->getCode(), $marker );
+		return $stored;
 	}
 
 	/**
@@ -825,7 +852,7 @@ final class PackageAdminController {
 	}
 
 	/** @param array<string, string> $list_arguments */
-	private function success_redirect( PackageOperation $operation, Package|string $package, array $list_arguments, bool $install_another = false, bool $return_to_settings = false, ?string $result_operation = null, bool $check_branch = false ): string {
+	private function success_redirect( PackageOperation $operation, Package|string $package, array $list_arguments, bool $install_another = false, bool $return_to_settings = false, ?string $result_operation = null, bool $check_branch = false, ?int $retry_at = null ): string {
 		$identifier = $package instanceof Package ? $package->get_identifier() : $package;
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The deployed package identity is unavailable.' );
@@ -837,8 +864,11 @@ final class PackageAdminController {
 			'page'                      => $install_another ? 'ran-booster-' . $type . 's-create' : 'ran-booster-' . $type . 's',
 			'ran_booster_result'        => $result_operation,
 			'ran_booster_package'       => $identifier,
-			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $result_operation . '|' . $identifier ),
+			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $result_operation . '|' . $identifier . ( null === $retry_at ? '' : '|' . $retry_at ) ),
 		);
+		if ( null !== $retry_at ) {
+			$args['ran_booster_retry_at'] = (string) $retry_at;
+		}
 		if ( $install_another ) {
 			$args['provider']    = (string) $operation->provider_code;
 			$args['open_picker'] = '1';

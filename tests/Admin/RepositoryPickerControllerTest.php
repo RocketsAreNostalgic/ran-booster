@@ -440,6 +440,68 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'token-canary', $result['data']['message'] );
 	}
 
+	public function test_an_anonymous_public_rate_limit_pauses_anonymous_browsing_and_carries_its_facts(): void {
+		require_once __DIR__ . '/../Internal/AnonymousLookupCooldownWordPressFunctions.php';
+		$GLOBALS['ran_booster_cooldown_transients'] = array();
+		try {
+			$provider = new class() implements RepositoryProvider, RepositoryBrowser {
+
+				use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+				public int $calls = 0;
+
+				public function get_metadata(): ProviderMetadata {
+					return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
+				}
+
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of browse_repositories retains the production method contract.
+				public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
+					++$this->calls;
+					throw new ProviderRequestFailed( new ProviderFailure( 'rate_limited', retry_after: 3540 ) );
+				}
+			};
+			$_POST      = array(
+				'provider' => 'gh',
+				'mode'     => 'public',
+				'owner'    => 'RocketsAreNostalgic',
+			);
+			$controller = $this->controller( $provider );
+
+			$first    = $controller->handle();
+			$retry_at = $first['data']['rate_limit']['retry_at'] ?? null;
+			self::assertFalse( $first['success'] );
+			self::assertSame( 'GitHub is limiting lookups from this site. Try again in about 59 minutes.', $first['data']['message'] );
+			self::assertSame( 'GitHub', $first['data']['rate_limit']['provider'] ?? null );
+			self::assertIsInt( $retry_at );
+			self::assertSame( $retry_at, $GLOBALS['ran_booster_cooldown_transients']['ran_booster_anonymous_cooldown_gh']['value'] ?? null );
+
+			// The next anonymous browse is not sent and reports the same limit.
+			$second = $controller->handle();
+			self::assertSame( 1, $provider->calls );
+			self::assertSame( 429, $second['status'] );
+			self::assertSame(
+				array(
+					'provider' => 'GitHub',
+					'retry_at' => $retry_at,
+				),
+				$second['data']['rate_limit']
+			);
+
+			// A credentialed browse is never paused and never records a cooldown.
+			$GLOBALS['ran_booster_cooldown_transients'] = array();
+			$_POST                                      = array(
+				'provider'      => 'gh',
+				'mode'          => 'accessible',
+				'credential_id' => 'fixture-profile',
+			);
+			$controller->handle();
+			self::assertSame( 2, $provider->calls );
+			self::assertSame( array(), $GLOBALS['ran_booster_cooldown_transients'] );
+		} finally {
+			unset( $GLOBALS['ran_booster_cooldown_transients'] );
+		}
+	}
+
 	/** @return array<string, array{ProviderFailure, int, string}> */
 	public static function carried_failure_provider(): array {
 		return array(

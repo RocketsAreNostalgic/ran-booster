@@ -1634,7 +1634,7 @@ final class PackageOperationServiceTest extends TestCase {
 				array(
 					'type'     => 'warning',
 					'feedback' => 'package_edit_unverified',
-					'message'  => 'Your settings were saved. The Git provider was limiting requests, so Booster used the repository details it already had.',
+					'message'  => 'Your settings were saved using the repository details Booster already had. The Git provider is limiting lookups from this site. Try again later.',
 				),
 			),
 			$dashboard->messages
@@ -1643,6 +1643,26 @@ final class PackageOperationServiceTest extends TestCase {
 		$forged                            = $this->dashboard( new OperationCoordinator() );
 		self::assertNull( $this->invoke_package_success_notice( $forged, $type ) );
 		self::assertSame( array(), $forged->messages );
+
+		// A signed retry time prints the minutes inside <time>, so the shared script can show a local clock time.
+		$retry_at = time() + 3540;
+		$_GET     = array(
+			'ran_booster_result'        => 'edit-rate-limited',
+			'ran_booster_package'       => $identifier,
+			'ran_booster_retry_at'      => (string) $retry_at,
+			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|' . $type . '|edit-rate-limited|' . $identifier . '|' . $retry_at ),
+		);
+		$timed    = $this->dashboard( new OperationCoordinator() );
+		self::assertNotNull( $this->invoke_package_success_notice( $timed, $type ) );
+		self::assertSame(
+			'Your settings were saved using the repository details Booster already had. <time datetime="' . gmdate( 'Y-m-d\\TH:i:s\\Z', $retry_at ) . '" data-ran-booster-rate-limit="">The Git provider is limiting lookups from this site. Try again in about 59 minutes.</time>',
+			$timed->messages[0]['message'] ?? null
+		);
+		// A changed time no longer matches the signed marker.
+		$_GET['ran_booster_retry_at'] = (string) ( $retry_at + 600 );
+		$tampered                     = $this->dashboard( new OperationCoordinator() );
+		self::assertNull( $this->invoke_package_success_notice( $tampered, $type ) );
+		self::assertSame( array(), $tampered->messages );
 	}
 
 	public function test_unsigned_unverified_edit_marker_cannot_create_a_notice(): void {

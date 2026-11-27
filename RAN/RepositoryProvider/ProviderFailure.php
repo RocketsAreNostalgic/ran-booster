@@ -186,6 +186,24 @@ final readonly class ProviderFailure {
 		return sprintf( __( '%s is limiting lookups from this site. Try again later.', 'ran-booster' ), $provider );
 	}
 
+	/**
+	 * The server sentence as notice HTML. A usable retry time is printed inside <time datetime>, so the
+	 * shared script can show it on the visitor's clock; without JavaScript the minutes stay.
+	 *
+	 * @param array{provider?:mixed,retry_at?:mixed}|null $rate_limit Facts from rate_limit().
+	 */
+	public static function rate_limit_html( ?array $rate_limit, ?int $now = null ): string {
+		$now    ??= time();
+		$text     = esc_html( self::rate_limit_message( $rate_limit, $now ) );
+		$retry_at = $rate_limit['retry_at'] ?? null;
+		if ( ! is_int( $retry_at ) || null === self::minutes_until( $retry_at, $now ) ) {
+			return $text;
+		}
+		$provider = is_string( $rate_limit['provider'] ?? null ) ? $rate_limit['provider'] : '';
+
+		return '<time datetime="' . esc_attr( gmdate( 'Y-m-d\TH:i:s\Z', $retry_at ) ) . '" data-ran-booster-rate-limit="' . esc_attr( $provider ) . '">' . $text . '</time>';
+	}
+
 	/** Whole minutes, rounded up, until a retry time within the next day; otherwise null. */
 	private static function minutes_until( mixed $retry_at, int $now ): ?int {
 		return is_int( $retry_at ) && $retry_at > $now && $retry_at <= $now + 86400 ? (int) ceil( ( $retry_at - $now ) / 60 ) : null;

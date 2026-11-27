@@ -456,7 +456,17 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( '<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $html );
-		self::assertStringContainsString( 'The Git provider has temporarily rate-limited the release workflow request.', $html );
+		self::assertStringContainsString( 'The Git provider is limiting requests from this site. Booster made no change. Try again later.', $html );
+		self::assertStringContainsString(
+			'GitHub is limiting requests from this site. Booster made no change. Try again later.',
+			( new ReleaseWorkflowDisplay() )->workflow(
+				array(
+					'result_code'       => 'workflow_rate_limited',
+					'result_successful' => false,
+					'provider_label'    => 'GitHub',
+				)
+			)
+		);
 		self::assertStringNotContainsString( 'selected saved credential', $html );
 	}
 

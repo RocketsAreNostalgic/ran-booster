@@ -16,7 +16,9 @@ final readonly class RepositoryReleaseInspection {
 		public string $provider_commit_id,
 		public string $package_root,
 		public string $main_file,
-		public string $fingerprint
+		public string $fingerprint,
+		public string $artifact_identity = '',
+		public string $artifact_sha256 = ''
 	) {
 		if ( ! $this->bounded_opaque_value( $provider_release_id, 191 )
 			|| ! $this->bounded_opaque_value( $tag, 100 )

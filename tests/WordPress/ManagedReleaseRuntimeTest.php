@@ -2314,6 +2314,98 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array( array( 'ran_wp_release_updater_install_exact_release_v1', null, 'plugin', 'example/example.php', '101', 'v2.0.0', '2.0.0', false ) ), $GLOBALS['ran_booster_read_only_check']['calls'] );
 	}
 
+	/** @return array<string,array{string,string}> */
+	public static function late_confirmation_cleanup(): array {
+		return array(
+			'clean'  => array( 'clean', 'release_selection_changed' ),
+			'failed' => array( 'failed', 'management_state_uncertain' ),
+		);
+	}
+
+	#[DataProvider( 'late_confirmation_cleanup' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_switch_surfaces_late_confirmation_change_after_verified_cleanup( string $cleanup, string $expected ): void {
+		require_once __DIR__ . '/ReadOnlyCheckWordPressFunctions.php';
+		$GLOBALS['ran_booster_read_only_check'] = array(
+			'calls'  => array(),
+			'answer' => array(
+				'status'               => 'failed',
+				'code'                 => 'confirmation_changed',
+				'finalization_pending' => false,
+				'finalization'         => array(
+					'commit'          => 'not_attempted',
+					'host_completion' => 'completed',
+					'lease'           => 'released',
+					'archive_cleanup' => $cleanup,
+				),
+			),
+		);
+		[ $facade, $store ]                     = $this->switch_facade( null );
+		$result                                 = $facade->enable(
+			'plugin',
+			'example/example.php',
+			1,
+			'stable',
+			'valid',
+			confirmed_release: array(
+				'identity'          => '101',
+				'tag'               => 'v2.0.0',
+				'version'           => '2.0.0',
+				'installed_version' => '1.0.0',
+				'confirmation'      => array(
+					'artifact_identity' => '77',
+					'artifact_sha256'   => str_repeat( 'a', 64 ),
+					'installed_version' => '1.0.0',
+				),
+			)
+		);
+		self::assertSame( $expected, $result->code() );
+		self::assertSame( array(), $store->transitions );
+		self::assertSame( array( 'ran_wp_release_updater_install_confirmed_release_v1' ), array_column( $GLOBALS['ran_booster_read_only_check']['calls'], 0 ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_confirmed_install_rechecks_chosen_permission_under_lock_and_reports_replaced_assets(): void {
+		require_once __DIR__ . '/ReadOnlyCheckWordPressFunctions.php';
+		[ $registrar, $lock ]                   = $this->native_plugin_registrar( $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL ) );
+		$allowed                                = true;
+		$confirmation                           = array(
+			'artifact_identity' => '77',
+			'artifact_sha256'   => str_repeat( 'a', 64 ),
+			'installed_version' => '1.0.0',
+		);
+		$GLOBALS['ran_booster_read_only_check'] = array(
+			'calls'  => array(),
+			'answer' => function () use ( $registrar, &$allowed ): array {
+				self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+				$allowed = false;
+				$this->assert_native_authority_error( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+				return array(
+					'status'               => 'refused',
+					'code'                 => 'confirmation_changed',
+					'finalization_pending' => false,
+				);
+			},
+		);
+		$result                                 = ManagedReleaseTargetRegistrar::install_release(
+			'plugin',
+			self::NATIVE_PLUGIN,
+			'101',
+			'v2.0.0',
+			false,
+			'2.0.0',
+			$confirmation,
+			static function () use ( &$allowed ): bool {
+				return $allowed;
+			}
+		);
+		self::assertSame( 'confirmation_changed', $result );
+		self::assertSame( 1, $lock->acquires );
+		self::assertSame( array( array( 'ran_wp_release_updater_install_confirmed_release_v1', null, 'plugin', self::NATIVE_PLUGIN, '101', 'v2.0.0', '2.0.0', false, $confirmation ) ), $GLOBALS['ran_booster_read_only_check']['calls'] );
+	}
+
 	/** @return iterable<string, array{string}> */
 	public static function unfinished_switches(): iterable {
 		yield 'install failed' => array( 'failed' );
@@ -2919,7 +3011,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$lock      = new RuntimeUpdaterLock();
 		$profiles  = new InMemoryPublicRepositoryLookupProfileStore();
 		$reason    = new class() {
-			public string $value = 'rate_limited';
+			public string $value     = 'rate_limited';
+			public int $inspections  = 0;
+			public ?string $fallback = null;
 		};
 		$providers = $this->release_metadata_registry(
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
@@ -2929,6 +3023,14 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				}
 
 				throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.', 0, null, new ProviderFailure( $reason->value, 'http_5xx' === $reason->value ? 502 : 429 ) );
+			},
+			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag ) use ( $reason ): RepositoryReleaseInspection {
+				++$reason->inspections;
+				$failure = 'public-profile' === $repository->credential_id ? $reason->fallback ?? $reason->value : $reason->value;
+				if ( 'none' === $failure && 'plugin' === $type ) {
+					return new RepositoryReleaseInspection( $release_id, $tag, '2.0.0', str_repeat( 'a', 40 ), 'example', 'example.php', 'v1:' . str_repeat( 'b', 64 ) );
+				}
+				throw new RepositoryReleaseReadUnavailable( 'Fixture inspection failure.', 0, null, new ProviderFailure( $failure, 'http_5xx' === $failure ? 502 : 429 ) );
 			}
 		);
 		$facade = $this->facade(
@@ -2969,6 +3071,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertNull( $list() );
 		self::assertNull( $facade->anonymous_rate_limit_provider() );
 
+		self::assertTrue( $facade->lookup_rate_limited() );
+
 		// A successful listing clears the previous report.
 		$current = 'public';
 		self::assertNull( $list() );
@@ -2976,6 +3080,31 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$reason->value = 'none';
 		self::assertInstanceOf( RepositoryReleaseCandidateList::class, $list() );
 		self::assertNull( $facade->anonymous_rate_limit_provider() );
+		$inspect = static fn (): ?ReleaseTrackingPreflight => $facade->inspect_candidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $facade->nonce_action( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' ) );
+		$results = array();
+		foreach ( array( 'rate_limited', 'rate_limited_secondary' ) as $rate_limit ) {
+			$reason->value = $rate_limit;
+			$results[]     = $inspect()?->reason_code();
+			self::assertSame( 'gh', $facade->anonymous_rate_limit_provider() );
+		}
+		$reason->value = 'http_5xx';
+		$results[]     = $inspect();
+		self::assertNull( $facade->anonymous_rate_limit_provider() );
+		$current            = 'explicit';
+		$profiles->profiles = array( 'gh' => 'public-profile' );
+		$reason->value      = 'rate_limited';
+		$results[]          = $inspect()?->reason_code();
+		self::assertNull( $facade->anonymous_rate_limit_provider() );
+		self::assertSame( 5, $reason->inspections );
+
+		$reason->fallback = 'none';
+		$results[]        = $inspect()?->ready();
+		self::assertFalse( $facade->lookup_rate_limited() );
+		$reason->fallback = 'http_5xx';
+		$results[]        = $inspect();
+		self::assertFalse( $facade->lookup_rate_limited() );
+		self::assertSame( 9, $reason->inspections );
+		self::assertSame( array( 'rate_limited', 'rate_limited', null, 'rate_limited', true, null ), $results );
 	}
 
 	public function test_private_enable_preflight_uses_only_the_saved_package_credential(): void {
@@ -3867,19 +3996,21 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array(), $lock->releases );
 	}
 
-	/** @return array<string, array{string, string, string}> */
+	/** @return array<string, array{0:string, 1:string, 2:string, 3?:bool}> */
 	public static function observed_check_outcomes(): array {
 		return array(
-			'disabled'     => array( 'skipped', 'policy_disabled', 'refresh_skipped_disabled' ),
-			'forced off'   => array( 'skipped', 'policy_forced_off', 'refresh_skipped_forced_off' ),
-			'not admitted' => array( 'skipped', 'discovery_not_admitted', 'refresh_unchecked' ),
-			'rejected'     => array( 'rejected', 'candidate_rejected', 'refresh_rejected' ),
-			'failed'       => array( 'failed', 'release_list_failed', 'refresh_check_failed' ),
+			'disabled'      => array( 'skipped', 'policy_disabled', 'refresh_skipped_disabled' ),
+			'forced off'    => array( 'skipped', 'policy_forced_off', 'refresh_skipped_forced_off' ),
+			'not admitted'  => array( 'skipped', 'discovery_not_admitted', 'refresh_unchecked' ),
+			'rejected'      => array( 'rejected', 'candidate_rejected', 'refresh_rejected' ),
+			'failed'        => array( 'failed', 'release_list_failed', 'refresh_check_failed' ),
+			'rate limited'  => array( 'failed', 'release_list_failed', 'refresh_rate_limited', true ),
+			'inspect limit' => array( 'failed', 'candidate_inspection_failed', 'refresh_rate_limited', true ),
 		);
 	}
 
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'observed_check_outcomes' )]
-	public function test_refresh_never_reports_success_for_a_check_that_did_not_succeed( string $status, string $reason, string $code ): void {
+	public function test_refresh_never_reports_success_for_a_check_that_did_not_succeed( string $status, string $reason, string $code, bool $rate_limited = false ): void {
 		$package = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
 		// No Activity store: the outcome must not depend on Activity recording.
 		[$registrar] = $this->native_plugin_registrar( $package );
@@ -3895,7 +4026,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$this->release_metadata_registry(),
 			static fn (): bool => true,
 			static fn (): bool => true,
-			static function () use ( $registrar, $status, $reason ): void {
+			static function () use ( $registrar, $status, $reason, $rate_limited ): void {
 				$check_id = str_repeat( 'c', 32 );
 				$registrar->activity_check_started(
 					array(
@@ -3920,7 +4051,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 						'candidate_version'         => null,
 						'offered_version'           => null,
 						'candidate_validation_code' => null,
-					)
+					),
+					$rate_limited
 				);
 			},
 			null,
@@ -3931,7 +4063,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		self::assertFalse( $result->successful() );
 		self::assertSame( $code, $result->code() );
-		self::assertSame( $reason, $result->check_reason() );
+		self::assertSame( $rate_limited ? 'rate_limited' : $reason, $result->check_reason() );
 	}
 
 	public function test_a_refresh_that_observes_no_check_does_not_reuse_the_previous_outcome(): void {
@@ -3991,7 +4123,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 'release_refreshed', $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code() );
 	}
 
-	/** @return array<string, array{DeploymentPolicy, ?array<string, mixed>, string, string, bool}> */
+	/** @return array<string, array{0:DeploymentPolicy, 1:?array<string, mixed>, 2:string, 3:string, 4:bool, 5?:bool}> */
 	public static function read_only_check_answers(): array {
 		$report = static fn ( string $status, string $reason, ?string $candidate = null ): array => array(
 			'status'                    => $status,
@@ -4010,6 +4142,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'no candidates'          => array( DeploymentPolicy::DISABLED, $report( 'succeeded', 'no_candidates' ), 'refresh_current_while_off', 'no_candidates', true ),
 			'rejected'               => array( DeploymentPolicy::DISABLED, $report( 'rejected', 'candidate_rejected' ), 'refresh_rejected', 'candidate_rejected', true ),
 			'failed'                 => array( DeploymentPolicy::DISABLED, $report( 'failed', 'release_list_failed' ), 'refresh_check_failed', 'release_list_failed', true ),
+			'rate limited'           => array( DeploymentPolicy::DISABLED, $report( 'failed', 'release_list_failed' ), 'refresh_rate_limited', 'rate_limited', true, true ),
+			'inspect limit'          => array( DeploymentPolicy::DISABLED, $report( 'failed', 'candidate_inspection_failed' ), 'refresh_rate_limited', 'rate_limited', true, true ),
 			'busy'                   => array( DeploymentPolicy::DISABLED, $report( 'failed', 'runtime_busy' ), 'refresh_check_failed', 'runtime_busy', true ),
 			'forced off'             => array( DeploymentPolicy::DISABLED, $report( 'skipped', 'policy_forced_off' ), 'refresh_skipped_forced_off', 'policy_forced_off', true ),
 			'older runtime'          => array( DeploymentPolicy::DISABLED, null, 'release_refreshed', '', false ),
@@ -4027,7 +4161,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	 * @param array<string, mixed>|null $report What the updater's read-only check filter answered.
 	 */
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'read_only_check_answers' )]
-	public function test_check_releases_asks_the_read_only_check_only_while_updates_are_off( DeploymentPolicy $policy, ?array $report, string $code, string $check_reason, bool $answered ): void {
+	public function test_check_releases_asks_the_read_only_check_only_while_updates_are_off( DeploymentPolicy $policy, ?array $report, string $code, string $check_reason, bool $answered, bool $rate_limited = false ): void {
 		$package                                     = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', $policy );
 		$connection                                  = new \RAN\Tests\Activity\ActivityConnection();
 		$activity                                    = new \RAN\Activity\ActivityStore( $connection );
@@ -4066,7 +4200,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			static function () use ( &$invalidated ): void {
 				++$invalidated;
 			},
-			check_without_offer: static function () use ( &$asked, $registrar, $report, $identity ): ?array {
+			check_without_offer: static function () use ( &$asked, $registrar, $report, $identity, $rate_limited ): ?array {
 				++$asked;
 				// The updater emits the same observation actions as a native check.
 				if ( null !== $report && ! isset( $report['unobserved'] ) && ! in_array( $report['reason'], array( 'policy_forced_off', 'runtime_busy', 'Bad Reason', 'something_new' ), true ) ) {
@@ -4081,7 +4215,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 							'candidate_version'         => $report['candidate_version'],
 							'offered_version'           => null,
 							'candidate_validation_code' => null,
-						)
+						),
+						$rate_limited
 					);
 				}
 

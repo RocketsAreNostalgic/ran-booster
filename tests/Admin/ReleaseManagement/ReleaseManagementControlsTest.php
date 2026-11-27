@@ -66,6 +66,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 				'admin_post_ran_booster_release_return_to_branch',
 				'admin_post_ran_booster_release_change_channel',
 				'admin_post_ran_booster_release_install',
+				'admin_post_ran_booster_release_install_chosen',
 				'wp_ajax_ran_booster_release_list_candidates',
 				'wp_ajax_ran_booster_release_inspect',
 				'wp_ajax_ran_booster_release_switch_preflight',

@@ -212,6 +212,11 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 					'',
 					'',
 					array(
+						'confirmation'      => array(
+							'artifact_identity' => 'asset-2.0.0',
+							'artifact_sha256'   => hash( 'sha256', '2.0.0' ),
+							'installed_version' => '1.0.0',
+						),
 						'identity'          => 'rel-2.0.0',
 						'tag'               => 'v2.0.0',
 						'version'           => '2.0.0',
@@ -923,6 +928,114 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			$inspect['data']['native_offer']
 		);
 		self::assertSame( array( 'inspect_candidate', 'plugin', 'example/example.php', 3, '42', 'v1.2.0', 'stable', 'nonce-for-release-tracking-inspect_candidate-plugin-example/example.php-3-stable' ), $tracking->calls[1] );
+	}
+
+	public function test_replacement_adoption_during_inspection_cannot_receive_install_consent(): void {
+		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking->candidate_inspection       = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', release_tag: 'v1.2.0', release_identity: '42', artifact_identity: 'asset42', artifact_sha256: str_repeat( 'a', 64 ) );
+		$tracking->after_candidate_inspection = static function () use ( $tracking ): void {
+			$tracking->adoption_scope = '-replacement';
+		};
+		$request                              = $this->managed_request( 'inspect_candidate' ) + array(
+			'release_id'  => '42',
+			'release_tag' => 'v1.2.0',
+		);
+		$result                               = ReleaseManagementFixture::controls( $tracking )->process_managed_browser_request( 'inspect_candidate', $request );
+		self::assertSame( 'source_changed', $result['code'] );
+		self::assertFalse( $result['successful'] );
+		self::assertSame( array(), $result['data'] );
+	}
+
+	#[DataProvider( 'package_types' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_chosen_install_binds_the_inspected_artifact_and_rechecks_manual_policy( string $type, string $identifier ): void {
+		require_once __DIR__ . '/PersistedOfferVersionWordPressFunctions.php';
+		$tracking                       = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', $type ) );
+		$tracking->candidate_inspection = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.0.0', release_tag: 'v1.0.0', release_identity: '42', artifact_identity: 'asset42', artifact_sha256: str_repeat( 'a', 64 ) );
+		$controls                       = ReleaseManagementFixture::controls( $tracking );
+		$request                        = array(
+			'expected_type'            => $type,
+			'expected_identifier'      => $identifier,
+			'expected_source_revision' => '3',
+			'release_channel'          => 'stable',
+			'release_id'               => '42',
+			'release_tag'              => 'v1.0.0',
+			'_wpnonce'                 => \RAN\Admin\ReleaseManagement\wp_create_nonce( $tracking->nonce_action( 'inspect_candidate', $type, $identifier, 3, 'stable' ) ),
+		);
+		$result                         = $controls->process_managed_browser_request( 'inspect_candidate', $request );
+		self::assertTrue( $result['successful'] );
+		$chosen = $result['data']['chosen_install'];
+		self::assertSame( str_repeat( 'a', 64 ), $chosen['artifact_sha256'] );
+		self::assertArrayHasKey( '_wpnonce', $chosen );
+		require_once __DIR__ . '/../../WordPress/ReadOnlyCheckWordPressFunctions.php';
+		$GLOBALS['ran_booster_read_only_check'] = array(
+			'calls'  => array(),
+			'answer' => array(
+				'status'               => 'installed',
+				'code'                 => 'update_completed',
+				'finalization_pending' => false,
+				'finalization'         => array(
+					'commit'          => 'completed',
+					'host_completion' => 'completed',
+				),
+			),
+		);
+		self::assertStringContainsString( 'chosen_installed', $controls->process_admin_post_request( 'install_chosen', array_merge( $request, $chosen ) ) );
+		self::assertSame(
+			array(
+				array(
+					'ran_wp_release_updater_install_confirmed_release_v1',
+					null,
+					$type,
+					$identifier,
+					'42',
+					'v1.0.0',
+					'1.0.0',
+					false,
+					array(
+						'artifact_identity' => 'asset42',
+						'artifact_sha256'   => str_repeat( 'a', 64 ),
+						'installed_version' => '1.0.0',
+					),
+				),
+			),
+			$GLOBALS['ran_booster_read_only_check']['calls']
+		);
+		$answer = $GLOBALS['ran_booster_read_only_check']['answer'];
+		$GLOBALS['ran_booster_read_only_check']['answer'] = array(
+			'status'               => 'failed',
+			'code'                 => 'confirmation_changed',
+			'finalization_pending' => false,
+			'finalization'         => array(
+				'commit'          => 'not_attempted',
+				'host_completion' => 'completed',
+				'lease'           => 'released',
+				'archive_cleanup' => 'clean',
+			),
+		);
+		self::assertStringContainsString( 'confirmation_changed', $controls->process_admin_post_request( 'install_chosen', array_merge( $request, $chosen ) ) );
+		$GLOBALS['ran_booster_read_only_check']['answer'] = $answer;
+		$post                    = array_merge( $request, $chosen );
+		$post['artifact_sha256'] = str_repeat( 'b', 64 );
+		self::assertStringContainsString( 'invalid_request', $controls->process_admin_post_request( 'install_chosen', $post ) );
+		$tracking->set_status( ReleaseManagementFixture::status( 'release_asset', $type, installed_version: '1.0.1' ) );
+		self::assertStringContainsString( 'confirmation_changed', $controls->process_admin_post_request( 'install_chosen', array_merge( $request, $chosen ) ) );
+		$older = $controls->process_managed_browser_request( 'inspect_candidate', $request );
+		self::assertSame( 'older', $older['data']['version_relationship'] );
+		$post = array_merge( $request, $older['data']['chosen_install'] );
+		self::assertStringContainsString( 'invalid_request', $controls->process_admin_post_request( 'install_chosen', $post ) );
+		$post['confirm_older'] = '1';
+		self::assertStringContainsString( 'chosen_installed', $controls->process_admin_post_request( 'install_chosen', $post ) );
+		self::assertSame( array( false, false, true ), array_column( $GLOBALS['ran_booster_read_only_check']['calls'], 7 ) );
+		$GLOBALS['ran_booster_test_environment_type'] = 'production';
+		define( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', false );
+		self::assertStringContainsString( 'invalid_request', $controls->process_admin_post_request( 'install_chosen', $post ) );
+		self::assertCount( 3, $GLOBALS['ran_booster_read_only_check']['calls'] );
+		$tracking->set_status( ReleaseManagementFixture::status( 'release_asset', $type, deployment_policy: 'automatic' ) );
+		self::assertStringContainsString( 'invalid_request', $controls->process_admin_post_request( 'install_chosen', array_merge( $request, $chosen ) ) );
+		$result = $controls->process_managed_browser_request( 'inspect_candidate', $request );
+		self::assertEmpty( $result['data']['chosen_install'] );
 	}
 
 	#[DataProvider( 'managed_picker_relationships' )]
@@ -2232,6 +2345,11 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 					'',
 					'',
 					array(
+						'confirmation'      => array(
+							'artifact_identity' => 'asset-2.0.0',
+							'artifact_sha256'   => hash( 'sha256', '2.0.0' ),
+							'installed_version' => '1.0.0',
+						),
 						'identity'          => 'rel-2.0.0',
 						'tag'               => 'v2.0.0',
 						'version'           => '2.0.0',
@@ -2800,6 +2918,11 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$rate_limit                                 = $unavailable_controls->process_switch_preflight_request( $preflight_request() );
 		self::assertSame( 'lookup_rate_limited', $rate_limit['code'] );
 		self::assertStringContainsString( 'rate-limited this public release lookup', $rate_limit['data']['message'] );
+		$unavailable->anonymous_rate_limit_provider = null;
+		$unavailable->lookup_rate_limited           = true;
+		$rate_limit                                 = $unavailable_controls->process_switch_preflight_request( $preflight_request() );
+		self::assertSame( 'rate_limited', $rate_limit['code'] );
+		self::assertSame( 'The Git provider rate-limited this lookup. Try again later.', $rate_limit['data']['message'] );
 
 		// Invalid nonce & missing capability.
 		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
@@ -2872,8 +2995,32 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	private function switch_candidates( string ...$versions ): RepositoryReleaseCandidateList {
 		require_once dirname( __DIR__, 3 ) . '/vendor/ran/wp-release-updater/src/Contract/ReleaseVersion.php';
 		return new RepositoryReleaseCandidateList(
-			array_map( static fn ( string $version ): RepositoryReleaseCandidate => new RepositoryReleaseCandidate( 'rel-' . $version, 'v' . $version, $version, false, '2026-06-01T00:00:00Z', array( 'plugin.zip' ) ), array_values( $versions ) )
+			array_map( static fn ( string $version ): RepositoryReleaseCandidate => new RepositoryReleaseCandidate( 'rel-' . $version, 'v' . $version, $version, false, '2026-06-01T00:00:00Z', array( 'plugin.zip' ), 'asset-' . $version, hash( 'sha256', $version ) ), array_values( $versions ) )
 		);
+	}
+
+	public function test_both_switch_choosers_offer_a_bound_release_when_the_newer_asset_is_unverified(): void {
+		$tracking                 = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$bound                    = $this->switch_candidates( '1.1.0' )->candidates[0];
+		$unbound                  = new RepositoryReleaseCandidate( 'rel-1.2', 'v1.2.0', '1.2.0', false, '2026-06-02T00:00:00Z', array( 'one.zip' ) );
+		$tracking->candidate_list = new RepositoryReleaseCandidateList( array( $unbound, $bound ) );
+		$controls                 = ReleaseManagementFixture::controls( $tracking );
+		$response                 = $controls->process_switch_preflight_request( $this->managed_request( 'preflight' ) );
+		self::assertTrue( $response['successful'] );
+		self::assertSame( 'rel-1.1.0', $response['data']['release_identity'] );
+		self::assertStringContainsString( 'Release 1.2.0 was skipped.', $response['data']['fallback_message'] );
+		self::assertStringNotContainsString( 'digest', $response['data']['fallback_message'] );
+
+		$_GET            = $this->query_of( $controls->process_admin_post_request( 'enable', $this->request( 'enable' ) ) );
+		$_GET['page']    = 'ran-booster-plugins';
+		$_GET['package'] = 'example/example.php';
+		$package         = new PackageProjection( 'branch' );
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'name="confirmed_release_version" value="1.1.0"', $html );
+		self::assertStringContainsString( $response['data']['fallback_message'], $html );
+		self::assertSame( array( 'list_candidates', 'list_candidates' ), array_column( $tracking->calls, 0 ) );
 	}
 
 	public function test_chooser_skips_metadata_incompatible_zip_count_without_inspecting_and_preserves_selected_identity(): void {
@@ -2896,6 +3043,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		foreach ( array( 'identity', 'tag', 'version' ) as $field ) {
 			$request[ 'confirmed_release_' . $field ] = $data[ 'release_' . $field ];
 		}
+		$request['artifact_identity']           = $data['artifact_identity'];
+		$request['artifact_sha256']             = $data['artifact_sha256'];
 		$request['confirmed_release_nonce']     = $data['confirmed_release_nonce'];
 		$request['confirmed_installed_version'] = $data['confirmed_installed_version'];
 		$request['confirm_switch']              = '1';
@@ -2956,6 +3105,28 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array(), $tracking->calls );
 	}
 
+	public function test_native_preview_requires_the_original_adoption_and_installed_version(): void {
+		foreach ( array( 'adoption', 'installed_version' ) as $change ) {
+			$tracking        = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+			$controls        = ReleaseManagementFixture::controls( $tracking );
+			$_GET            = $this->query_of( $controls->process_admin_post_request( 'enable', $this->request( 'enable' ) ) );
+			$_GET['page']    = 'ran-booster-plugins';
+			$_GET['package'] = 'example/example.php';
+			if ( 'adoption' === $change ) {
+				$tracking->adoption_scope = '-new-adoption';
+			} else {
+				$tracking->set_status( ReleaseManagementFixture::status( installed_version: '1.0.1' ) );
+			}
+			$controls = ReleaseManagementFixture::controls( $tracking );
+			$package  = new PackageProjection( 'branch' );
+			ob_start();
+			$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( 'data-ran-booster-switch-confirmation', $html );
+			self::assertSame( array(), $tracking->calls );
+		}
+	}
+
 	public function test_native_switch_submits_one_exact_signed_choice_and_refuses_tampering(): void {
 		foreach ( array(
 			'installed' => '1.0.0',
@@ -2988,7 +3159,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 					$request[ $field->getAttribute( 'name' ) ] = $field->getAttribute( 'value' );
 				}
 			}
-			foreach ( array( 'confirmed_release_identity', 'confirmed_release_tag', 'confirmed_release_version', 'confirmed_release_nonce', 'confirmed_installed_version', 'confirmed_release_older', 'release_channel', 'expected_source_revision' ) as $key ) {
+			foreach ( array( 'artifact_identity', 'artifact_sha256', 'confirmed_release_identity', 'confirmed_release_tag', 'confirmed_release_version', 'confirmed_release_nonce', 'confirmed_installed_version', 'confirmed_release_older', 'release_channel', 'expected_source_revision' ) as $key ) {
 				$tampered         = $request;
 				$tampered[ $key ] = 'changed';
 				$controls->process_admin_post_request( 'enable', $tampered );
@@ -3005,6 +3176,11 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			self::assertSame( array( 'list_candidates', 'enable' ), array_column( $tracking->calls, 0 ) );
 			self::assertSame(
 				array(
+					'confirmation'      => array(
+						'artifact_identity' => 'asset-' . $version,
+						'artifact_sha256'   => hash( 'sha256', $version ),
+						'installed_version' => '1.0.0',
+					),
 					'identity'          => 'rel-' . $version,
 					'tag'               => 'v' . $version,
 					'version'           => $version,
@@ -3295,8 +3471,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 	/** @return array<string,string> */
 	private function confirmed_release_fields( string $type, string $identifier, string $channel ): array {
-		$payload = \RAN\Admin\ReleaseManagement\wp_json_encode( array( $type, $identifier, 3, $channel, 'rel-2.0.0', 'v2.0.0', '2.0.0', false, '1.0.0' ) );
+		$payload = \RAN\Admin\ReleaseManagement\wp_json_encode( array( $type, $identifier, 3, $channel, 'rel-2.0.0', 'v2.0.0', '2.0.0', false, '1.0.0', 'nonce-for-release-tracking-enable-' . $type . '-' . $identifier . '-3', 'asset-2.0.0', hash( 'sha256', '2.0.0' ) ) );
 		return array(
+			'artifact_identity'           => 'asset-2.0.0',
+			'artifact_sha256'             => hash( 'sha256', '2.0.0' ),
 			'confirmed_release_identity'  => 'rel-2.0.0',
 			'confirmed_release_tag'       => 'v2.0.0',
 			'confirmed_release_version'   => '2.0.0',

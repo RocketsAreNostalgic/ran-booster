@@ -609,7 +609,7 @@ final class SettingsPageTest extends TestCase {
 		$xpath = $this->general_view( $bindings );
 		foreach ( array(
 			'branch_sources'     => array( 'ran-booster-branch-sources', 'Allow branch sources', 'branch-token', 'Branch sources' ),
-			'prerelease_sources' => array( 'ran-booster-prerelease-sources', 'Allow Preview tracks', 'preview-token', 'Preview tracks' ),
+			'prerelease_sources' => array( 'ran-booster-prerelease-sources', 'Allow Preview tracks and downgrades', 'preview-token', 'Preview tracks' ),
 		) as $scope => [ $id, $label, $token, $legend ] ) {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-general-heading"]' . $form( $scope ) . '/fieldset[@class="ran-booster-settings__group" and legend="' . $legend . '"])' ), $scope . ': its own group inside its own form, as Appearance.' );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( $scope ) . '[input[@name="ran_booster[action]" and @value="save-general-settings"] and input[@name="ran_booster[scope]" and @value="' . $scope . '"] and input[@name="ran_booster[token]" and @value="' . $token . '"] and fieldset/input[@type="hidden" and @name="ran_booster[preferences][' . $scope . ']" and @value="0"]])' ), $scope );
@@ -647,7 +647,7 @@ final class SettingsPageTest extends TestCase {
 		$xpath = $this->general_view( $bindings );
 		foreach ( array(
 			'branch_sources'     => array( 'ran-booster-branch-sources', 'Branch sources are always enabled in development.' ),
-			'prerelease_sources' => array( 'ran-booster-prerelease-sources', 'Preview tracks are always enabled in development.' ),
+			'prerelease_sources' => array( 'ran-booster-prerelease-sources', 'Preview tracks and downgrades are always enabled in development.' ),
 		) as $scope => [ $id, $line ] ) {
 			self::assertSame( $line, $help( $xpath, $id ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $id . '" and @checked and @disabled])' ), $scope . ' is forced on and cannot be changed.' );
@@ -669,7 +669,7 @@ final class SettingsPageTest extends TestCase {
 			self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][' . $scope . ']"])' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//button[@id="ran-booster-save-' . $scope . '" and @disabled])' ) );
 		}
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( 'prerelease_sources' ) . '/div[@data-ran-booster-admin-mutation-error and not(@hidden)]//p[@id="ran-booster-prerelease-sources-error" and .="Allow Preview tracks: The configured value is invalid. Correct the named constant; runtime safety restrictions still apply."])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( 'prerelease_sources' ) . '/div[@data-ran-booster-admin-mutation-error and not(@hidden)]//p[@id="ran-booster-prerelease-sources-error" and .="Allow Preview tracks and downgrades: The configured value is invalid. Correct the named constant; runtime safety restrictions still apply."])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="ran-booster-prerelease-sources" and @aria-invalid="true" and @aria-describedby="ran-booster-prerelease-sources-help ran-booster-prerelease-sources-error"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form( 'branch_sources' ) . '/div[@data-ran-booster-admin-mutation-error and @hidden])' ) );
 

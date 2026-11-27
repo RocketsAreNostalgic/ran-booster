@@ -74,7 +74,9 @@ final class FeedbackFlashTest extends TestCase {
 	}
 
 	public function test_a_coded_check_result_is_its_inline_notice_and_never_a_flash_item(): void {
-		FeedbackFlash::enqueue( 'refresh_skipped_disabled', 'refresh_check_failed', 'refresh_unchecked' );
+		FeedbackFlash::enqueue( 'refresh_skipped_disabled', 'refresh_check_failed', 'refresh_unchecked', 'refresh_rate_limited' );
+
+		self::assertSame( array( 'warning', 'The Git provider rate-limited this lookup. Try again later.', '' ), FeedbackFlash::check_result( 'refresh_rate_limited' ) );
 
 		self::assertSame( array(), $this->meta() );
 		self::assertSame( '', $this->render() );

@@ -972,6 +972,8 @@ test('both choices submit their exact preflight tuple in one click', async () =>
 								installed_version: '1.0',
 								release_version: '1.1.0',
 								release_identity: 'latest-id',
+								artifact_identity: 'latest-id-zip',
+								artifact_sha256: 'a'.repeat(64),
 								release_tag: 'v1.1.0',
 								confirmed_release_nonce: 'latest-nonce',
 								version_relationship: 'newer',
@@ -979,6 +981,8 @@ test('both choices submit their exact preflight tuple in one click', async () =>
 								matching_release: {
 									release_version: '1.0.0',
 									release_identity: 'same-id',
+									artifact_identity: 'same-id-zip',
+									artifact_sha256: 'b'.repeat(64),
 									release_tag: 'v1.0.0',
 									confirmed_release_nonce: 'same-nonce',
 									version_relationship: 'same',
@@ -1006,6 +1010,11 @@ test('both choices submit their exact preflight tuple in one click', async () =>
 		const field = (name) =>
 			env.form.querySelector('input[type="hidden"][name="' + name + '"]')
 				?.value;
+		assert.equal(field('artifact_identity'), identity + '-zip');
+		assert.equal(
+			field('artifact_sha256'),
+			(index === 1 ? 'b' : 'a').repeat(64)
+		);
 		assert.equal(field('confirmed_release_identity'), identity);
 		assert.equal(field('confirmed_release_version'), version);
 		assert.equal(field('confirmed_release_nonce'), nonce);

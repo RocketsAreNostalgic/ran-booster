@@ -23,7 +23,7 @@ final class ReleaseManagementDisplay {
 	/**
 	 * @param array<string,string> $nonce_actions
 	 * @param list<array{name:string,url:string,type:string,view_all?:bool}> $repository_conflict
-	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity:string,release_tag:string,confirmed_release_nonce:string,fallback_message:string,confirmed_installed_version?:string,matching_release?:array{relationship:'same',release_version:string,release_identity:string,release_tag:string,confirmed_release_nonce:string,confirmed_installed_version:string}}|null $switch_confirmation
+	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity:string,release_tag:string,artifact_identity:string,artifact_sha256:string,confirmed_release_nonce:string,fallback_message:string,confirmed_installed_version?:string,matching_release?:array{relationship:'same',release_version:string,release_identity:string,release_tag:string,artifact_identity:string,artifact_sha256:string,confirmed_release_nonce:string,confirmed_installed_version:string}}|null $switch_confirmation
 	 * @param list<array{version:string,tag:string,prerelease:bool}> $browse_candidates
 	 */
 	public function render_settings(
@@ -397,7 +397,7 @@ final class ReleaseManagementDisplay {
 	/**
 	 * Inline fallback confirmation step when the switch runs without JavaScript.
 	 *
-	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity:string,release_tag:string,confirmed_release_nonce:string,fallback_message:string,confirmed_installed_version?:string,matching_release?:array{relationship:'same',release_version:string,release_identity:string,release_tag:string,confirmed_release_nonce:string,confirmed_installed_version:string}} $confirmation
+	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity:string,release_tag:string,artifact_identity:string,artifact_sha256:string,confirmed_release_nonce:string,fallback_message:string,confirmed_installed_version?:string,matching_release?:array{relationship:'same',release_version:string,release_identity:string,release_tag:string,artifact_identity:string,artifact_sha256:string,confirmed_release_nonce:string,confirmed_installed_version:string}} $confirmation
 	 */
 	private function render_switch_confirmation(
 		PackageDisplayProjection $package,
@@ -450,6 +450,8 @@ final class ReleaseManagementDisplay {
 						<?php if ( ! empty( $choice['confirmed_installed_version'] ) ) { ?>
 							<input type="hidden" name="confirmed_installed_version" value="<?php echo esc_attr( $choice['confirmed_installed_version'] ); ?>">
 						<?php } ?>
+						<input type="hidden" name="artifact_identity" value="<?php echo esc_attr( $choice['artifact_identity'] ); ?>">
+						<input type="hidden" name="artifact_sha256" value="<?php echo esc_attr( $choice['artifact_sha256'] ); ?>">
 						<input type="hidden" name="confirmed_release_identity" value="<?php echo esc_attr( $choice['release_identity'] ); ?>">
 						<input type="hidden" name="confirmed_release_tag" value="<?php echo esc_attr( $choice['release_tag'] ); ?>">
 						<input type="hidden" name="confirmed_release_version" value="<?php echo esc_attr( $choice['release_version'] ); ?>">
@@ -499,6 +501,8 @@ final class ReleaseManagementDisplay {
 				data-ran-booster-branch-stable="<?php echo esc_attr( $nonce_actions['branch_list_stable'] ); ?>"
 				data-ran-booster-branch-preview="<?php echo esc_attr( $nonce_actions['branch_list_prerelease'] ); ?>"
 				<?php } else { ?>
+				data-ran-booster-managed-release-post-url="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+				data-ran-booster-managed-release-older="<?php echo 'manual' === $status->deployment_policy() && \RAN\Deployment\PackageSourceGate::allows( 'prerelease_sources' ) ? 'true' : 'false'; ?>"
 				data-ran-booster-managed-release-inspect-nonce="<?php echo esc_attr( $inspect_nonce ); ?>"
 				<?php } ?>
 			data-ran-booster-managed-release-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
@@ -530,6 +534,7 @@ final class ReleaseManagementDisplay {
 			</fieldset>
 			<?php if ( $enabled && null === $branch_channel ) { ?>
 				<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" hidden aria-disabled="true" data-ran-booster-managed-release-review><?php esc_html_e( 'Review selected release', 'ran-booster' ); ?></button>
+				<div hidden data-ran-booster-managed-release-chosen></div>
 			<?php } ?>
 			<div class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-managed-release-status>
 				<h4 data-ran-booster-managed-release-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
@@ -598,7 +603,7 @@ final class ReleaseManagementDisplay {
 	 * @param array<string,string> $nonce_actions
 	 * @param array{providers?:list<string>,list_candidates?:string,inspect?:string,install?:string} $prospective
 	 * @param list<array{name:string,url:string,type:string,view_all?:bool}> $repository_conflict
-	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity:string,release_tag:string,confirmed_release_nonce:string,fallback_message:string,confirmed_installed_version?:string,matching_release?:array{relationship:'same',release_version:string,release_identity:string,release_tag:string,confirmed_release_nonce:string,confirmed_installed_version:string}}|null $switch_confirmation
+	 * @param array{relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity:string,release_tag:string,artifact_identity:string,artifact_sha256:string,confirmed_release_nonce:string,fallback_message:string,confirmed_installed_version?:string,matching_release?:array{relationship:'same',release_version:string,release_identity:string,release_tag:string,artifact_identity:string,artifact_sha256:string,confirmed_release_nonce:string,confirmed_installed_version:string}}|null $switch_confirmation
 	 * @param list<array{version:string,tag:string,prerelease:bool}> $browse_candidates
 	 */
 	public function render_advanced_source_section(
@@ -1336,6 +1341,8 @@ final class ReleaseManagementDisplay {
 		return match ( $code ) {
 			'release_repository_conflict',
 			'repository_release_owner_exists' => __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' ),
+			'chosen_installed' => __( 'The chosen release was installed.', 'ran-booster' ),
+			'confirmation_changed' => __( 'The release or installed version changed. Inspect the release again.', 'ran-booster' ),
 			'installed' => __( 'The published release was installed and is now managed by Booster. WordPress activation was not changed.', 'ran-booster' ),
 			'release_enabled' => $this->switch_enabled_message( $status ),
 			'switch_failed_unchanged' => $this->switch_failed_unchanged_message( $type, $status ),
@@ -1371,6 +1378,7 @@ final class ReleaseManagementDisplay {
 			'refresh_newer_while_off',
 			'refresh_current_while_off',
 			'refresh_rejected',
+			'refresh_rate_limited',
 			'refresh_check_failed' => FeedbackFlash::check_result( $code, $detail )[1] ?? '',
 			'source_changed' => __( 'Package settings changed after this browser page was opened. Refresh the page, review the current settings, then try again.', 'ran-booster' ),
 			'lock_unavailable' => __( 'The WordPress package updater lock blocked the switch to Branch. Wait for any running update or deployment to finish, then choose Use branch again. If the lock remains, ask your site administrator to check for an interrupted update.', 'ran-booster' ),
@@ -1395,6 +1403,7 @@ final class ReleaseManagementDisplay {
 			'no_releases' => __( 'No eligible published release is available for the selected channel. No package was installed.', 'ran-booster' ),
 			'release_invalid' => __( 'The selected release does not satisfy the selected channel requirements. No package was installed.', 'ran-booster' ),
 			'release_changed' => __( 'The release changed after it was inspected. No package was installed. Use Check releases and try again.', 'ran-booster' ),
+			'rate_limited' => __( 'The Git provider rate-limited this lookup. Try again later.', 'ran-booster' ),
 			'lookup_rate_limited' => __( 'The Git provider rate-limited this public release lookup. Try again later or choose a dedicated lookup credential in provider settings.', 'ran-booster' ),
 			'version_comparison_unavailable' => __( 'Booster could not compare the installed version with the published release version. No package was installed.', 'ran-booster' ),
 			'unable_to_check' => __( 'Published releases could not be checked. No package was installed and no package settings were changed.', 'ran-booster' ),

@@ -21,8 +21,8 @@ final class ManagedReleaseLatestEligibleTest extends TestCase {
 		$tracking->candidate_list = new RepositoryReleaseCandidateList(
 			array(
 				new RepositoryReleaseCandidate( 'missing', 'v5.0.0', '5.0.0', false, '2026-01-01T00:00:00Z', array() ),
-				new RepositoryReleaseCandidate( 'lower', 'v2.0.0', '2.0.0', false, '2026-01-01T00:00:00Z', array( 'one.zip' ) ),
-				new RepositoryReleaseCandidate( 'winner', 'v3.0.0', '3.0.0', false, '2026-01-01T00:00:00Z', array( 'one.zip' ) ),
+				new RepositoryReleaseCandidate( 'unbound', 'v6.0.0', '6.0.0', false, '2026-01-01T00:00:00Z', array( 'one.zip' ) ),
+				new RepositoryReleaseCandidate( 'winner', 'v3.0.0', '3.0.0', false, '2026-01-01T00:00:00Z', array( 'one.zip' ), 'asset3', str_repeat( 'a', 64 ) ),
 				new RepositoryReleaseCandidate( 'ambiguous', 'v4.0.0', '4.0.0', false, '2026-01-01T00:00:00Z', array( 'one.zip', 'two.zip' ) ),
 			)
 		);

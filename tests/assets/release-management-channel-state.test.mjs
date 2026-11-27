@@ -148,12 +148,12 @@ for (const picker of ['managed', 'prospective']) {
 			'request',
 			`
 			${earlierDisclosureHelpers}
-			let sequence=0, requestSequence=0, selected=null; const window={};
+			let sequence=0, requestSequence=0, selected=null; const window={}; const branch=false;
 			const candidateList=document.createElement('div'), candidates={hidden:true}; const review=null;
 			const form={querySelector:()=>({value:'example'})};
 			const hasSubdirectory=()=>false, providerSupported=()=>true;
 			const forceBranchForSubdirectory=()=>{}, forceBranchForUnsupportedProvider=()=>{};
-			const clearError=()=>{}, setListBusy=()=>{};
+			const clearChosen=()=>{}, clearError=()=>{}, setListBusy=()=>{};
 			const showPlaceholder=()=>{}, setStatus=()=>{}, setChecking=()=>{}, showUnavailable=()=>{}, showError=()=>{};
 			const showCandidates=()=>{}, inspect=()=>{};
 			const candidateElements=new Map(); let selectedOutcome=null;
@@ -1178,7 +1178,7 @@ for (const enhanced of [true, false]) {
 			'window',
 			'wp',
 			'request',
-			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, setStatus=()=>{}, showError=()=>{}, showPlaceholder=()=>{}; const candidates=null, observations=null; const renderListingObservations=()=>{}; ${declaration('list')} return list;`
+			`let sequence = 0, selected = null; const clearChosen=()=>{}, clearError=()=>{}, setListBusy=()=>{}, setStatus=()=>{}, showError=()=>{}, showPlaceholder=()=>{}; const candidates=null, observations=null; const renderListingObservations=()=>{}; ${declaration('list')} return list;`
 		)(
 			candidateList,
 			review,

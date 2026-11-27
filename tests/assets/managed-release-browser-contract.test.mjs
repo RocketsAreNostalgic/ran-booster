@@ -38,6 +38,13 @@ class Node {
 		this.classList = {
 			add: (...names) => names.forEach((name) => this.classes.add(name)),
 			contains: (name) => this.classes.has(name),
+			replace: (oldName, newName) => {
+				if (!this.classes.delete(oldName)) {
+					return false;
+				}
+				this.classes.add(newName);
+				return true;
+			},
 			remove: (...names) =>
 				names.forEach((name) => this.classes.delete(name)),
 			toggle: (name, force) => {
@@ -56,11 +63,43 @@ class Node {
 		};
 		this.hidden = false;
 	}
+	get isConnected() {
+		return this.parentNode?.tagName === 'dialog';
+	}
 	append(...children) {
-		this.children.push(...children);
+		for (const child of children) {
+			if (typeof child === 'object') {
+				child.remove?.();
+				child.parentNode = this;
+			}
+			this.children.push(child);
+		}
+	}
+	prepend(child) {
+		child.remove?.();
+		child.parentNode = this;
+		this.children.unshift(child);
+	}
+	appendChild(child) {
+		this.append(child);
+		return child;
+	}
+	remove() {
+		if (this.parentNode) {
+			this.parentNode.children = this.parentNode.children.filter(
+				(child) => child !== this
+			);
+			this.parentNode = null;
+		}
 	}
 	replaceChildren(...children) {
-		this.children = children;
+		for (const child of this.children) {
+			if (typeof child === 'object') {
+				child.parentNode = null;
+			}
+		}
+		this.children = [];
+		this.append(...children);
 	}
 	addEventListener(type, listener) {
 		this.listeners[type] ||= [];
@@ -121,7 +160,7 @@ class Node {
 }
 
 const descendants = (node) =>
-	node.children.flatMap((child) => [child, ...descendants(child)]);
+	(node.children || []).flatMap((child) => [child, ...descendants(child)]);
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 const deferred = () => {
 	let resolve;
@@ -143,6 +182,7 @@ const createHarness = (
 ) => {
 	const nodes = new Map();
 	const browser = new Node('section');
+	browser.closest = () => null;
 	browser.dataset = {
 		ranBoosterManagedReleaseType: 'plugin',
 		ranBoosterManagedReleaseIdentifier: 'example/plugin.php',
@@ -157,6 +197,7 @@ const createHarness = (
 	for (const name of [
 		'candidates',
 		'placeholder',
+		'chosen',
 		'candidate-list',
 		'review',
 		'heading',
@@ -194,6 +235,7 @@ const createHarness = (
 	}
 	const documentListeners = new Map();
 	const noticeCalls = [];
+	const dialogs = [];
 	let swappedBrowser = null;
 	const context = {
 		CustomEvent: class {
@@ -207,6 +249,9 @@ const createHarness = (
 		URL,
 		wp: {
 			i18n: {
+				_x(text) {
+					return translations[text] || text;
+				},
 				__(text) {
 					return translations[text] || text;
 				},
@@ -246,6 +291,42 @@ const createHarness = (
 			}),
 		},
 		window: {
+			ranBoosterOpenDialog(trigger, body, options) {
+				const bodyHost = body.parentNode;
+				const footerHost = options.footer.parentNode;
+				const surface = new Node('dialog');
+				surface.append(body, options.footer);
+				const dialog = {
+					trigger,
+					body,
+					options,
+					surface,
+					closed: false,
+					title: options.title,
+					closeWithoutTeardown() {
+						this.closed = true;
+					},
+					finishTeardown() {
+						bodyHost.append(body);
+						footerHost.append(options.footer);
+					},
+				};
+				const close = () => {
+					dialog.closeWithoutTeardown();
+					dialog.finishTeardown();
+				};
+				dialogs.push(dialog);
+				return {
+					get isOpen() {
+						return !dialog.closed;
+					},
+					setTitle(title) {
+						dialog.title = title;
+					},
+					close,
+					teardown: close,
+				};
+			},
 			location: {
 				href: 'https://example.test/wp-admin/plugins.php',
 				origin: 'https://example.test',
@@ -287,6 +368,7 @@ const createHarness = (
 		browser,
 		nodes,
 		noticeCalls,
+		dialogs,
 		requests,
 		requestedUrls,
 		initialize: context.initialize,
@@ -377,6 +459,47 @@ test('branch latest marker follows the server choice while all rows remain inert
 		)
 	);
 });
+
+for (const type of ['plugin', 'theme']) {
+	for (const swapped of [false, true]) {
+		test(`collapsed ${type} picker defers List after ${swapped ? 'a swap' : 'page load'}`, async () => {
+			const harness = createHarness(installedAndNewer.slice());
+			harness.browser.dataset.ranBoosterManagedReleaseType = type;
+			const details = new Node('details');
+			details.open = false;
+			const host = new Node('div');
+			host.querySelector = () => details;
+			harness.browser.closest = () => host;
+			let notify;
+			harness.window.MutationObserver = class {
+				constructor(callback) {
+					notify = callback;
+				}
+				observe() {}
+				disconnect() {}
+			};
+			if (swapped) {
+				harness.afterPackageSwap();
+			} else {
+				harness.initialize(harness.browser);
+			}
+			await flush();
+			assert.equal(harness.requests.length, 0);
+			details.open = true;
+			notify();
+			await flush();
+			assert.deepEqual(
+				harness.requests.map((request) => request.get('action')),
+				['ran_booster_managed_release_list_candidates']
+			);
+			details.open = false;
+			notify();
+			details.open = true;
+			notify();
+			assert.equal(harness.requests.length, 1);
+		});
+	}
+}
 
 test('branch track changes and refresh list metadata without selecting or inspecting releases', async () => {
 	const slow = deferred();
@@ -531,13 +654,7 @@ test('managed browser selects and explicitly reviews the newest current candidat
 		disclosure.children[1].children[0].textContent,
 		/Downgrades are unavailable/
 	);
-	assert.equal(
-		descendants(harness.nodes.get('candidate-list')).find(
-			(node) =>
-				node.className === 'ran-booster-release-candidate__outcome'
-		).hidden,
-		false
-	);
+	assert.match(dialogText(harness), /Installed: 2\.0\.0 → Selected: 2\.0\.0/);
 	assert.equal(
 		harness.nodes.get('native-update').getAttribute('aria-disabled'),
 		'true'
@@ -634,6 +751,10 @@ const radioFor = (harness, releaseId) =>
 	descendants(harness.nodes.get('candidate-list')).find(
 		(node) => node.type === 'radio' && node.dataset.releaseId === releaseId
 	);
+const dialogText = (harness) =>
+	descendants(harness.dialogs.at(-1).body)
+		.map((node) => node.textContent || '')
+		.join(' ');
 const listText = (harness) =>
 	descendants(harness.nodes.get('candidate-list'))
 		.map((node) => node.textContent || '')
@@ -651,6 +772,83 @@ const installedAndNewer = [
 		},
 	},
 ];
+
+for (const [relationship, version, label] of [
+	['same', '2.0.0', 'Reinstall 2.0.0'],
+	['older', '1.0.0', 'Downgrade to 1.0.0'],
+	['newer', '3.0.0', 'Upgrade to 3.0.0'],
+]) {
+	test(`chosen ${relationship} release posts the inspected identity and consent`, async () => {
+		const chosen = {
+			release_id: 'A',
+			release_tag: 'v' + version,
+			release_version: version,
+			artifact_identity: 'asset-A',
+			artifact_sha256: 'a'.repeat(64),
+			installed_version: '2.0.0',
+			_wpnonce: 'exact-nonce',
+		};
+		const listing = {
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [candidate('A', version, relationship, '')],
+			},
+		};
+		const harness = createHarness([
+			listing,
+			readyResponse(version, relationship, { chosen_install: chosen }),
+		]);
+		harness.browser.dataset.ranBoosterManagedReleaseOlder = 'true';
+		harness.browser.dataset.ranBoosterManagedReleasePostUrl =
+			'/wp-admin/admin-post.php';
+		harness.initialize(harness.browser);
+		await flush();
+		await harness.nodes.get('review').dispatch('click');
+		const dialog = harness.dialogs.at(-1);
+		const form = descendants(dialog.body).find(
+			(node) => node.tagName === 'form'
+		);
+		assert.equal(dialog.title, label + '?');
+		assert.equal(
+			dialog.body.children.filter((node) => /^h[1-6]$/.test(node.tagName))
+				.length,
+			0
+		);
+		assert.equal(form.method, 'post');
+		assert.equal(form.action, '/wp-admin/admin-post.php');
+		assert.equal(
+			form.children.find((node) => node.name === 'artifact_sha256').value,
+			chosen.artifact_sha256
+		);
+		assert.equal(
+			form.children.find((node) => node.name === 'action').value,
+			'ran_booster_release_install_chosen'
+		);
+		assert.equal(
+			dialog.options.footer.children.find(
+				(node) => node.type === 'submit'
+			).textContent,
+			label
+		);
+		const consent = form.children.find((node) => node.tagName === 'label')
+			?.children[0];
+		assert.equal(Boolean(consent?.required), relationship === 'older');
+		if (consent) {
+			const submit = dialog.options.footer.children.find(
+				(node) => node.type === 'submit'
+			);
+			assert.equal(submit.disabled, true);
+			consent.checked = true;
+			await consent.dispatch('change');
+			assert.equal(submit.disabled, false);
+			consent.checked = false;
+			await consent.dispatch('change');
+			assert.equal(submit.disabled, true);
+		}
+	});
+}
 
 for (const type of ['plugin', 'theme']) {
 	test(`managed ${type} prerelease review requires a click and preserves native offer B`, async () => {
@@ -682,7 +880,7 @@ for (const type of ['plugin', 'theme']) {
 		nativeUpdate.removeAttribute('aria-disabled');
 		nativeUpdate.textContent = `Update to ${version}`;
 
-		// The panel can be initialized while its disclosure is collapsed.
+		// This harness represents the visible picker.
 		harness.initialize(harness.browser);
 		await flush();
 		assert.deepEqual(
@@ -704,8 +902,7 @@ for (const type of ['plugin', 'theme']) {
 		const review = harness.nodes.get('review');
 		assert.equal(review.getAttribute('aria-disabled'), 'false');
 		const reviewed = review.dispatch('click');
-		assert.equal(review.getAttribute('aria-disabled'), 'true');
-		await review.dispatch('click');
+		assert.match(dialogText(harness), /Checking release/);
 		assert.equal(harness.requests.length, 3);
 		assert.equal(
 			harness.requests[2].get('action'),
@@ -724,7 +921,7 @@ for (const type of ['plugin', 'theme']) {
 		await reviewed;
 		assert.equal(harness.requests.length, 3);
 		assert.equal(review.getAttribute('aria-disabled'), 'false');
-		assert.match(listText(harness), /dev\.1 was inspected/);
+		assert.match(dialogText(harness), /passed inspection/);
 		assert.equal(nativeUpdate.getAttribute('href'), href);
 		assert.equal(nativeUpdate.getAttribute('aria-disabled'), null);
 		assert.equal(nativeUpdate.textContent, `Update to ${version}`);
@@ -769,10 +966,7 @@ for (const type of ['plugin', 'theme']) {
 		assert.equal(harness.requests.length, 2);
 		assert.equal(harness.requests[1].get('release_id'), 'same');
 		assert.match(listText(harness), /Installed\/current/);
-		assert.match(
-			harness.nodes.get('message').textContent,
-			/matches the installed version/
-		);
+		assert.match(dialogText(harness), /matches the installed version/);
 		assert.equal(
 			harness.nodes.get('native-update').getAttribute('href'),
 			null
@@ -828,16 +1022,7 @@ for (const type of ['plugin', 'theme']) {
 				['ran_booster_managed_release_list_candidates']
 			);
 			assert.equal(checkedRadio(harness)?.dataset.releaseId, 'A');
-			const row = harness.nodes
-				.get('candidate-list')
-				.children.find((candidateRow) =>
-					candidateRow.children.includes(checkedRadio(harness))
-				);
-			const outcome = row.children.find(
-				(node) =>
-					node.className === 'ran-booster-release-candidate__outcome'
-			);
-			assert.equal(outcome.hidden, true);
+			assert.equal(harness.dialogs.length, 0);
 
 			await harness.nodes.get('review').dispatch('click');
 			assert.equal(harness.requests.length, 2);
@@ -846,20 +1031,17 @@ for (const type of ['plugin', 'theme']) {
 				'ran_booster_managed_release_inspect'
 			);
 			assert.equal(harness.requests[1].get('release_id'), 'A');
-			assert.equal(outcome.hidden, false);
 			assert.match(
-				outcome.textContent,
-				/2\.1\.0 was inspected and matches the installed version/
+				dialogText(harness),
+				/Installed: 2\.1 → Selected: 2\.1\.0/
 			);
+			assert.match(dialogText(harness), /matches the installed version/);
 			assert.equal(
-				harness.nodes.get('heading').textContent,
-				'Release checked'
+				descendants(harness.dialogs.at(-1).body).some(
+					(node) => node.tagName === 'form'
+				),
+				false
 			);
-			assert.equal(
-				harness.nodes.get('message').textContent,
-				outcome.textContent
-			);
-			assert.equal(outcome.children.length, 0);
 			assert.equal(nativeUpdate.getAttribute('href'), href);
 			assert.equal(nativeUpdate.getAttribute('aria-disabled'), null);
 			assert.equal(nativeUpdate.textContent, 'Update to 3.0.0');
@@ -886,15 +1068,9 @@ test('managed browser preselects and explicitly reviews the installed release ev
 		'the newer release stays first in the list'
 	);
 	const text = listText(harness);
-	assert.match(
-		text,
-		/3\.0\.0 \(v3\.0\.0\).*Latest eligible.*Newer than installed/
-	);
-	assert.match(text, /2\.0\.0 \(v2\.0\.0\).*Installed\/current/);
-	assert.match(
-		harness.nodes.get('message').textContent,
-		/matches the installed version/
-	);
+	assert.match(text, /3\.0\.0.*Latest eligible.*Newer than installed/);
+	assert.match(text, /2\.0\.0.*Installed\/current/);
+	assert.match(dialogText(harness), /matches the installed version/);
 });
 
 test('managed browser leaves Update now disabled, with no fallback link, while the installed release is selected', async () => {
@@ -954,10 +1130,7 @@ test('managed browser inspects the newer release without changing the toolbar', 
 	const update = harness.nodes.get('native-update');
 	assert.equal(update.getAttribute('aria-disabled'), 'true');
 	assert.equal(update.getAttribute('href'), null);
-	assert.match(
-		harness.nodes.get('message').textContent,
-		/See WordPress Updates for the current offer/
-	);
+	assert.match(dialogText(harness), /passed inspection/);
 });
 
 test('managed browser shows the WordPress screen link only after the newer release without an offer is reviewed', async () => {
@@ -971,9 +1144,11 @@ test('managed browser shows the WordPress screen link only after the newer relea
 	await flush();
 	assert.equal(harness.requests.length, 1);
 	const links = () =>
-		descendants(harness.nodes.get('candidate-list')).filter(
-			(node) => node.tagName === 'a'
-		);
+		harness.dialogs.length
+			? descendants(harness.dialogs.at(-1).body).filter(
+					(node) => node.tagName === 'a'
+				)
+			: [];
 	assert.equal(links().length, 0);
 
 	const newer = radioFor(harness, 'new');
@@ -1033,11 +1208,11 @@ test('managed browser keeps a review busy while radio events are dispatched', as
 
 	const reviewButton = harness.nodes.get('review');
 	const reviewed = reviewButton.dispatch('click');
+	await reviewButton.dispatch('click');
 	await checkedRadio(harness).dispatch('change');
 	assert.equal(harness.requests.length, 2);
-	assert.equal(harness.nodes.get('candidates').disabled, true);
-	assert.equal(harness.browser.getAttribute('aria-busy'), 'true');
-	assert.equal(harness.nodes.get('retry').disabled, true);
+	assert.match(dialogText(harness), /Checking release/);
+	assert.equal(harness.nodes.get('retry').disabled, false);
 
 	inspection.resolve({
 		successful: true,
@@ -1169,15 +1344,8 @@ test('managed browser keeps installed version separate and ignores stale respons
 		'Installed version: 2.0.0'
 	);
 	await harness.nodes.get('retry').dispatch('click');
-	await flush();
-	await flush();
-	assert.equal(
-		descendants(harness.nodes.get('candidate-list')).find(
-			(node) =>
-				node.className === 'ran-booster-release-candidate__outcome'
-		).hidden,
-		true
-	);
+	const staleDialog = harness.dialogs[0];
+	assert.equal(staleDialog.closed, true);
 	staleInspection.resolve({
 		successful: true,
 		code: 'release_ready',
@@ -1191,9 +1359,9 @@ test('managed browser keeps installed version separate and ignores stale respons
 	await reviewed;
 	assert.equal(checkedRadio(harness)?.dataset.releaseId, 'same');
 	assert.equal(harness.requests.length, 3);
-	assert.match(
-		harness.nodes.get('message').textContent,
-		/Review the selected release/
+	assert.equal(
+		descendants(staleDialog.body).some((node) => node.tagName === 'form'),
+		false
 	);
 	assert.equal(
 		harness.nodes.get('native-update').getAttribute('aria-disabled'),
@@ -1240,14 +1408,8 @@ test('managed browser keeps inspection separate from the native offer identity',
 	harness.initialize(harness.browser);
 	await flush();
 	await harness.nodes.get('review').dispatch('click');
-	const outcome = descendants(harness.nodes.get('candidate-list')).find(
-		(node) => node.className === 'ran-booster-release-candidate__outcome'
-	);
-	assert.equal(outcome.hidden, false);
-	assert.equal(
-		outcome.textContent,
-		'Version 3.0.0 was inspected. See WordPress Updates for the current offer.'
-	);
+	assert.match(dialogText(harness), /Installed: 2\.0\.0 → Selected: 3\.0\.0/);
+	assert.match(dialogText(harness), /passed inspection/);
 });
 
 test('managed browser preserves provider order when previous page data names another offer', async () => {
@@ -1299,14 +1461,14 @@ test('managed browser preserves provider order when previous page data names ano
 		descendants(harness.nodes.get('candidate-list'))
 			.map((node) => node.textContent || '')
 			.join(' '),
-		/3\.1\.0 \(v3\.1\.0\).*Latest eligible/
+		/3\.1\.0.*Latest eligible/
 	);
 });
 
 test('managed browser sends a newer theme release without an offer to the Themes screen', async () => {
 	for (const [type, expected] of [
-		['plugin', /Plugins screen/],
-		['theme', /Themes screen/],
+		['plugin', /Open WordPress Plugins/],
+		['theme', /Open WordPress Themes/],
 	]) {
 		const harness = createHarness([
 			{
@@ -1336,14 +1498,18 @@ test('managed browser sends a newer theme release without an offer to the Themes
 			},
 		]);
 		harness.browser.dataset.ranBoosterManagedReleaseType = type;
+		harness.browser.dataset.ranBoosterManagedReleaseWordpressUrl =
+			'/wp-admin/' + type + 's.php';
 		harness.initialize(harness.browser);
 		await flush();
 		await harness.nodes.get('review').dispatch('click');
 
-		assert.match(harness.nodes.get('message').textContent, expected, type);
+		assert.match(dialogText(harness), expected, type);
 		assert.doesNotMatch(
-			harness.nodes.get('message').textContent,
-			type === 'theme' ? /Plugins screen/ : /Themes screen/,
+			dialogText(harness),
+			type === 'theme'
+				? /Open WordPress Plugins/
+				: /Open WordPress Themes/,
 			type
 		);
 	}
@@ -1403,9 +1569,9 @@ test('managed browser requires identity to match a same-version WordPress offer'
 		'other',
 		'the provider order is preserved'
 	);
-	assert.match(harness.nodes.get('message').textContent, /was inspected/);
+	assert.match(dialogText(harness), /passed inspection/);
 	assert.doesNotMatch(
-		harness.nodes.get('message').textContent,
+		dialogText(harness),
 		/matches the current WordPress update offer/
 	);
 });
@@ -1444,10 +1610,9 @@ test('managed browser shows a visible WordPress screen link beside a newer relea
 	await flush();
 	await harness.nodes.get('review').dispatch('click');
 
-	const outcome = descendants(harness.nodes.get('candidate-list')).find(
-		(node) => node.className === 'ran-booster-release-candidate__outcome'
-	);
-	const link = outcome.children.find((node) => node?.tagName === 'a');
+	const link = harness.dialogs
+		.at(-1)
+		.body.children.find((node) => node?.tagName === 'a');
 	assert.ok(link, 'a visible link to the WordPress screen is expected');
 	assert.equal(link.href, '/wp-admin/plugins.php');
 	assert.equal(link.textContent, 'Open WordPress Plugins');
@@ -1648,14 +1813,7 @@ test('managed inspection reports an unavailable comparison after selection', asy
 	await harness.nodes.get('review').dispatch('click');
 
 	assert.equal(harness.requests.length, 2);
-	assert.match(
-		harness.nodes.get('message').textContent,
-		/Version comparison unavailable/
-	);
-	const outcome = descendants(harness.nodes.get('candidate-list')).find(
-		(node) => node.className === 'ran-booster-release-candidate__outcome'
-	);
-	assert.equal(outcome.hidden, true);
+	assert.match(dialogText(harness), /Version comparison unavailable/);
 	const radio = radioFor(harness, 'new');
 	assert.equal(radio.disabled, true);
 	assert.equal(radio.checked, false);
@@ -1674,7 +1832,12 @@ test('managed inspection reports an unavailable comparison after selection', asy
 	assert.equal(harness.requests.length, 2);
 	assert.equal(nativeUpdate.getAttribute('aria-disabled'), null);
 	assert.match(nativeUpdate.getAttribute('href'), /_wpnonce=B$/);
-	assert.equal(outcome.children.length, 0);
+	assert.equal(
+		descendants(harness.dialogs.at(-1).body).some(
+			(node) => node.tagName === 'form'
+		),
+		false
+	);
 });
 
 test('managed browser shows an explicit no-downgrade warning when Preview offers only older releases', async () => {
@@ -2201,4 +2364,256 @@ test('the standalone native update link survives inspection and a candidate refr
 	assert.equal(button.getAttribute('aria-disabled'), null);
 	assert.equal(button.getAttribute('href'), href);
 	assert.equal(button.textContent, 'Update to 3.0.0');
+});
+
+test('review opens checking immediately and cancelling prevents a late install form', async () => {
+	const pending = deferred();
+	const harness = createHarness([
+		installedAndNewer[0],
+		() => pending.promise,
+	]);
+	harness.browser.dataset.ranBoosterManagedReleasePostUrl =
+		'/wp-admin/admin-post.php';
+	harness.initialize(harness.browser);
+	await flush();
+	assert.equal(harness.requests.length, 1);
+	assert.equal(
+		harness.nodes.get('review').textContent,
+		'Review release 2.0.0'
+	);
+	const review = harness.nodes.get('review').dispatch('click');
+	const dialog = harness.dialogs[0];
+	assert.equal(dialog.options.title, 'Review 2.0.0');
+	assert.equal(
+		dialog.body.children[0].textContent,
+		'Checking release 2.0.0…'
+	);
+	assert.equal(harness.requests.length, 2);
+	await dialog.options.footer.children[0].dispatch('click');
+	pending.resolve({
+		ok: true,
+		json: async () =>
+			readyResponse('2.0.0', 'same', {
+				chosen_install: {
+					release_id: 'same',
+					release_tag: 'v2.0.0',
+					release_version: '2.0.0',
+					installed_version: '2.0.0',
+					artifact_identity: 'asset',
+					artifact_sha256: 'a'.repeat(64),
+					_wpnonce: 'nonce',
+				},
+			}),
+	});
+	await review;
+	assert.equal(dialog.closed, true);
+	assert.equal(
+		descendants(dialog.body).some((node) => node.tagName === 'form'),
+		false
+	);
+});
+
+test('listing omits redundant tags, stable markers and zero skip counts', async () => {
+	const distinct = {
+		...candidate('distinct', '3.0.0', 'newer', ''),
+		tag: 'release-three',
+		prerelease: true,
+	};
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [candidate('same', '2.0.0', 'same', ''), distinct],
+				diagnostics: { scanned_count: 2, dropped_count: 0 },
+			},
+		},
+	]);
+	harness.initialize(harness.browser);
+	await flush();
+	assert.doesNotMatch(listText(harness), /v2\.0\.0|Stable|0 skipped/);
+	assert.match(listText(harness), /release-three.*Preview/);
+	assert.equal(harness.requests.length, 1);
+	const radio = radioFor(harness, 'distinct');
+	radio.checked = true;
+	await radio.dispatch('change');
+	assert.equal(harness.requests.length, 1);
+	assert.equal(
+		harness.nodes.get('review').textContent,
+		'Review release 3.0.0'
+	);
+});
+
+test('reselecting and reopening ignores the previous inspection response', async () => {
+	const pending = deferred();
+	const harness = createHarness([
+		installedAndNewer[0],
+		() => pending.promise,
+		readyResponse('3.0.0', 'newer'),
+	]);
+	harness.initialize(harness.browser);
+	await flush();
+	const firstReview = harness.nodes.get('review').dispatch('click');
+	const firstDialog = harness.dialogs[0];
+	await firstDialog.options.footer.children[0].dispatch('click');
+	const newer = radioFor(harness, 'new');
+	newer.checked = true;
+	await newer.dispatch('change');
+	await harness.nodes.get('review').dispatch('click');
+	const secondDialog = harness.dialogs[1];
+	assert.match(dialogText(harness), /Selected: 3\.0\.0/);
+	pending.resolve({
+		ok: true,
+		json: async () =>
+			readyResponse('2.0.0', 'same', {
+				chosen_install: {
+					release_id: 'same',
+					release_tag: 'v2.0.0',
+					release_version: '2.0.0',
+					installed_version: '2.0.0',
+					artifact_identity: 'asset',
+					artifact_sha256: 'a'.repeat(64),
+					_wpnonce: 'nonce',
+				},
+			}),
+	});
+	await firstReview;
+	assert.equal(firstDialog.closed, true);
+	assert.equal(secondDialog.closed, false);
+	assert.match(dialogText(harness), /Selected: 3\.0\.0/);
+	assert.equal(
+		descendants(firstDialog.body).some((node) => node.tagName === 'form'),
+		false
+	);
+	assert.equal(
+		descendants(secondDialog.body).some((node) => node.tagName === 'form'),
+		false
+	);
+});
+
+test('external close blocks a late inspection before asynchronous teardown', async () => {
+	const pending = deferred();
+	const harness = createHarness([
+		installedAndNewer[0],
+		() => pending.promise,
+	]);
+	harness.browser.dataset.ranBoosterManagedReleasePostUrl =
+		'/wp-admin/admin-post.php';
+	harness.initialize(harness.browser);
+	await flush();
+	const review = harness.nodes.get('review').dispatch('click');
+	const dialog = harness.dialogs[0];
+	assert.equal(dialog.title, 'Review 2.0.0');
+	dialog.closeWithoutTeardown();
+	assert.equal(dialog.body.parentNode, dialog.surface);
+	pending.resolve({
+		ok: true,
+		json: async () =>
+			readyResponse('2.0.0', 'same', {
+				chosen_install: {
+					release_id: 'same',
+					release_tag: 'v2.0.0',
+					release_version: '2.0.0',
+					installed_version: '2.0.0',
+					artifact_identity: 'asset',
+					artifact_sha256: 'a'.repeat(64),
+					_wpnonce: 'nonce',
+				},
+			}),
+	});
+	await review;
+	assert.equal(
+		descendants(dialog.body).some((node) => node.tagName === 'form'),
+		false
+	);
+	assert.equal(
+		dialog.options.footer.children.some((node) => node.type === 'submit'),
+		false
+	);
+	assert.equal(dialog.title, 'Review 2.0.0');
+	dialog.finishTeardown();
+});
+
+test('inspection rate limits stay inside the review dialog for every relationship', async () => {
+	const hint = {
+		text: 'A dedicated lookup credential helps avoid rate limits.',
+		link: 'Choose a lookup credential',
+		url: 'https://example.test/wp-admin/admin.php?page=ran-booster#lookup',
+	};
+	for (const [relationship, version] of [
+		['same', '2.0.0'],
+		['older', '1.0.0'],
+		['newer', '3.0.0'],
+	]) {
+		for (const lookupHint of [hint, undefined]) {
+			const listing = {
+				successful: true,
+				code: 'release_candidates_available',
+				data: {
+					installed_version: '2.0.0',
+					candidates: [candidate('A', version, relationship, '')],
+				},
+			};
+			const failure = {
+				successful: false,
+				code: 'unable_to_check',
+				data: {
+					rejection_reason: 'rate_limited',
+					lookup_hint: lookupHint,
+				},
+			};
+			const harness = createHarness([
+				listing,
+				failure,
+				readyResponse(version, relationship),
+			]);
+			harness.browser.dataset.ranBoosterManagedReleaseOlder = 'true';
+			harness.initialize(harness.browser);
+			await flush();
+			await harness.nodes.get('review').dispatch('click');
+			assert.match(
+				dialogText(harness),
+				/provider rate-limited this lookup/i
+			);
+			assert.equal(harness.noticeCalls.at(-1).intent, 'warning');
+			assert.equal(harness.nodes.get('error').hidden, true);
+			const dialog = harness.dialogs.at(-1);
+			const links = descendants(dialog.body).filter(
+				(node) => node.tagName === 'a'
+			);
+			assert.equal(links.length, lookupHint ? 1 : 0);
+			if (lookupHint) {
+				assert.equal(links[0].href, hint.url);
+			}
+			assert.equal(
+				descendants(dialog.body).some(
+					(node) => node.tagName === 'form'
+				),
+				false
+			);
+			assert.equal(
+				dialog.options.footer.children.some(
+					(node) => node.type === 'submit'
+				),
+				false
+			);
+			await dialog.options.footer.children[0].dispatch('click');
+			await harness.nodes.get('review').dispatch('click');
+			assert.match(dialogText(harness), /Installed: 2\.0\.0/);
+		}
+	}
+});
+
+test('generic inspection failure is not described as a rate limit', async () => {
+	const harness = createHarness([
+		...installedAndNewer,
+		{ successful: false, code: 'unable_to_check', data: {} },
+	]);
+	harness.initialize(harness.browser);
+	await flush();
+	await harness.nodes.get('review').dispatch('click');
+	assert.match(dialogText(harness), /could not check the selected release/i);
+	assert.doesNotMatch(dialogText(harness), /rate.limit|credential/i);
+	assert.equal(harness.nodes.get('error').hidden, true);
 });

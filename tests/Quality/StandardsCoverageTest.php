@@ -51,9 +51,12 @@ final class StandardsCoverageTest extends TestCase {
 	}
 
 	public function test_a_checker_exclusion_exposes_the_omitted_owned_file(): void {
-		$tracked  = $this->tracked_php_files( dirname( __DIR__, 2 ) );
-		$selected = $this->selected_php_files( array( '--ignore=*/RAN/Theme.php' ) );
-		self::assertSame( array( dirname( __DIR__, 2 ) . '/RAN/Theme.php' ), array_values( array_diff( $tracked, $selected ) ) );
+		$excluded = __DIR__ . '/TypeContractRegressionTest.php';
+		$files    = array( __FILE__, $excluded );
+		$selected = $this->selected_php_files( array( '--ignore=*/' . basename( $excluded ), ...$files ) );
+		self::assertSame( array( __FILE__ ), $selected );
+		self::assertSame( array( $excluded ), array_values( array_diff( $files, $selected ) ) );
+		self::assertSame( $files, $this->selected_php_files( $files ) );
 	}
 
 	public function test_a_new_tracked_root_reaches_discovery_and_the_blanket_guard(): void {

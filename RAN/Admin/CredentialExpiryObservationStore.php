@@ -33,14 +33,6 @@ class CredentialExpiryObservationStore {
 		return $this->all( $this->read_option() );
 	}
 
-	/** Fresh replacement generation; it changes whenever the profile's secret is replaced or removed. */
-	public function generation( string $provider, string $profile_id ): int {
-		$this->require_provider_id( $provider );
-		$this->require_profile_id( $profile_id );
-
-		return $this->all( $this->read_option( true ) )[ $provider ][ $profile_id ]['event_generation'] ?? 0;
-	}
-
 	public function set_manual_expiry( string $provider, string $profile_id, ?string $expires_on ): void {
 		$this->require_provider_id( $provider );
 		$this->require_profile_id( $profile_id );
@@ -71,16 +63,11 @@ class CredentialExpiryObservationStore {
 		);
 	}
 
-	/** Clear the observation but keep an advanced generation, so a pending validation cannot match a removed credential. */
 	public function clear( string $provider, string $profile_id ): void {
-		$this->reset_for_replacement( $provider, $profile_id );
-	}
-
-	/** Advance the generation before a secret changes, so a failed write still fails safe as a mismatch. */
-	public function invalidate( string $provider, string $profile_id ): void {
 		$this->require_provider_id( $provider );
 		$this->require_profile_id( $profile_id );
-		$this->mutate( $provider, $profile_id, array(), true );
+
+		$this->mutate( $provider, $profile_id, null );
 	}
 
 	/** Clear stale expiry evidence while retaining a non-secret replacement generation. */

@@ -24,8 +24,7 @@ final class ExplodingCredentialSecretsFile extends SecretsFile {
 		?string $id,
 		array $metadata,
 		?string $secret,
-		bool $submitted = false,
-		?callable $before_write = null
+		bool $submitted = false
 	): string {
 		// The canary verifies Dispatcher redacts unexpected storage failures.
 		throw new RuntimeException( 'Storage failed after receiving ' . $this->canary . '.' );

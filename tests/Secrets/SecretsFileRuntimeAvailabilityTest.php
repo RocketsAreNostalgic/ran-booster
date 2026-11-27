@@ -44,22 +44,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 		self::assertArrayNotHasKey( 'expired_profile', $secrets->credential_profiles( 'gh' ) );
 		self::assertNull( $secrets->credential_material( 'gh', 'expired_profile' ) );
-		try {
-			$secrets->purge_expired_credentials( static fn () => throw new \RuntimeException( 'generation not advanced' ) );
-			self::fail( 'A failed pre-removal step must abort the purge.' );
-		} catch ( \RuntimeException $failure ) {
-			self::assertSame( 'generation not advanced', $failure->getMessage() );
-		}
-		$seen = null;
-		self::assertSame(
-			array( 'gh' => array( 'expired_profile' ) ),
-			$secrets->purge_expired_credentials(
-				static function ( array $ids ) use ( &$seen ): void {
-					$seen = $ids;
-				}
-			)
-		);
-		self::assertSame( array( 'gh' => array( 'expired_profile' ) ), $seen );
+		self::assertSame( array( 'gh' => array( 'expired_profile' ) ), $secrets->purge_expired_credentials() );
 		self::assertSame( array(), $secrets->credential_profiles( 'gh' ) );
 
 		InMemorySiteKeyStore::reset( $path );
@@ -92,8 +77,6 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			'self-destruct-provider-secret-canary'
 		);
 		$secrets->record_credential_provider_expiry( 'gh', 'provider_expiry', '2020-01-01' );
-		// A later, longer observation must not move the earlier deadline.
-		$secrets->record_credential_provider_expiry( 'gh', 'provider_expiry', '2029-06-01' );
 
 		self::assertNull( $secrets->credential_material( 'gh', 'provider_expiry' ) );
 		self::assertSame( array( 'gh' => array( 'provider_expiry' ) ), $secrets->purge_expired_credentials() );

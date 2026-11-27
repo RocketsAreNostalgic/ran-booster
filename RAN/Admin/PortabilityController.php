@@ -86,8 +86,9 @@ final readonly class PortabilityController {
 		}
 
 		$root = get_temp_dir();
-		$path = is_dir( $root ) ? tempnam( $root, 'ran-booster-blueprint-' ) : false;
-		// tempnam() silently falls back to the system directory when the configured root is unusable.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Native probe before native tempnam(); WP_Filesystem is not loaded for this request.
+		$path = is_dir( $root ) && is_writable( $root ) ? tempnam( $root, 'ran-booster-blueprint-' ) : false;
+		// tempnam() otherwise falls back to the system directory, with a notice, when the configured root is unusable.
 		if ( false === $path || realpath( dirname( $path ) ) !== realpath( $root ) ) {
 			if ( is_string( $path ) && is_file( $path ) ) {
 				unlink( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only this request's misplaced staging file.

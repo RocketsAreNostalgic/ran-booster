@@ -667,17 +667,15 @@ class SecretsFile {
 	/**
 	 * Create or update a provider credential and return its stable ID.
 	 *
-	 * @param array<string, mixed>  $metadata Non-secret label, kind and configuration.
-	 * @param bool                  $submitted Apply provider checks for a newly submitted admin secret.
-	 * @param (callable(): void)|null $before_write Runs under the storage lock after every check, immediately before the write.
+	 * @param array<string, mixed> $metadata Non-secret label, kind and configuration.
+	 * @param bool                 $submitted Apply provider checks for a newly submitted admin secret.
 	 */
 	public function save_credential(
 		ProviderCode|string $provider,
 		?string $id,
 		array $metadata,
 		#[\SensitiveParameter] ?string $secret,
-		bool $submitted = false,
-		?callable $before_write = null
+		bool $submitted = false
 	): string {
 		$this->assert_available();
 		$provider_code = $this->provider_value( $provider );
@@ -712,12 +710,7 @@ class SecretsFile {
 
 				return array( $document, $id );
 			},
-			function () use ( $provider_code, $record, $before_write ): void {
-				$this->assert_credential_access( $provider_code, $record );
-				if ( null !== $before_write ) {
-					$before_write();
-				}
-			}
+			fn () => $this->assert_credential_access( $provider_code, $record )
 		);
 	}
 
@@ -745,7 +738,7 @@ class SecretsFile {
 	 *
 	 * This is deliberately separate from the advisory expiry observation option.
 	 * It remains encrypted with the credential and can only shorten its local
-	 * retention window: a later observation never moves an earlier date.
+	 * retention window.
 	 */
 	public function record_credential_provider_expiry( ProviderCode|string $provider, string $id, string $expires_on ): void {
 		$this->assert_available();
@@ -755,10 +748,8 @@ class SecretsFile {
 
 		$this->mutate(
 			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expires_on ): array {
-				$record  = $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ?? null;
-				$current = is_array( $record ) ? ( $record['provider_destroy_on'] ?? null ) : null;
-				// Provider observations may only shorten retention, so the earliest reported date wins.
-				if ( ! is_array( $record ) || empty( $record['self_destruct'] ) || ( is_string( $current ) && $current <= $expires_on ) ) {
+				$record = $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ?? null;
+				if ( ! is_array( $record ) || empty( $record['self_destruct'] ) ) {
 					return array( $document, null, false );
 				}
 				$record['provider_destroy_on']                          = $expires_on;
@@ -772,11 +763,9 @@ class SecretsFile {
 	/**
 	 * Remove credentials whose encrypted self-destruct deadline has passed.
 	 *
-	 * @param (callable(array<string, list<string>>): mixed)|null $before_remove Receives the IDs under the storage lock before
-	 *                                                                         they are removed; a throw removes nothing.
 	 * @return array<string, list<string>> Provider-scoped removed IDs.
 	 */
-	public function purge_expired_credentials( ?callable $before_remove = null ): array {
+	public function purge_expired_credentials(): array {
 		$this->assert_available();
 
 		$document    = $this->file_document();
@@ -793,9 +782,8 @@ class SecretsFile {
 			return array();
 		}
 
-		$removed = array();
 		return $this->mutate(
-			function ( #[\SensitiveParameter] array $document ) use ( &$removed ): array {
+			function ( #[\SensitiveParameter] array $document ): array {
 				$removed = array();
 				foreach ( $document[ self::CREDENTIALS ] as $provider => &$records ) {
 					foreach ( $records as $id => $record ) {
@@ -809,9 +797,6 @@ class SecretsFile {
 				unset( $records );
 
 				return array( $document, $removed, array() !== $removed );
-			},
-			null === $before_remove ? null : static function () use ( &$removed, $before_remove ): void {
-				$before_remove( $removed );
 			}
 		);
 	}

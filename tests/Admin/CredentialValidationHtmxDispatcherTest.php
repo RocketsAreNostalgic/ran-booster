@@ -385,131 +385,18 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		self::assertSame( 'credential.valid', $completions[0]['args'][1] );
 	}
 
-	public function test_a_validation_finishing_after_replacement_or_purge_is_reported_stale_and_writes_nothing(): void {
-		$stale  = 'This credential changed during the check. Validate it again.';
-		$known  = CredentialValidationResult::valid( \RAN\RepositoryProvider\CredentialExpiryReport::known( '2027-04-30T12:34:56Z' ) );
-		$expiry = new InMemoryCredentialExpiryObservationStore();
-		// Native request, replaced token, known expiry.
-		$secrets = $this->createMock( SecretsFile::class );
-		$secrets->expects( self::never() )->method( 'record_credential_provider_expiry' );
-		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'set_credential_validation_feedback' )->with( 'bb', 'credential_1', null, $stale );
-		$_POST['ran_booster'] = $this->request();
-		$this->dispatcher( $dashboard, $known, secrets: $secrets, expiry: $expiry, on_validate: static fn () => $expiry->reset_for_replacement( 'bb', 'credential_1' ) )->dispatch_post_requests();
-		self::assertSame( array( 'event_generation' => 1 ), $expiry->get( 'bb', 'credential_1' ) );
-		self::assertStringContainsString( '"outcome_code":"credential_replaced"', implode( "\n", $this->captured_log_lines() ) );
-
-		// Enhanced request, purged first-generation profile, no expiry reported: still stale.
-		$purged                     = new InMemoryCredentialExpiryObservationStore();
-		$_SERVER['HTTP_HX_REQUEST'] = 'true';
-		try {
-			$this->dispatcher( $this->createMock( Dashboard::class ), CredentialValidationResult::valid(), expiry: $purged, on_validate: static fn () => $purged->clear( 'bb', 'credential_1' ) )->dispatch_post_requests();
-			self::fail( 'An HTMX response must end the request.' );
-		} catch ( HtmxCredentialValidationResponse $response ) {
-			self::assertSame( array( $stale, 422 ), array( $response->error, $response->status ) );
-		}
-		unset( $_SERVER['HTTP_HX_REQUEST'] );
-
-		// A rejection of the old token is not reported as a rejection of its replacement.
-		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'set_credential_validation_feedback' )->with( 'bb', 'credential_1', null, $stale );
-		$rejected = new InMemoryCredentialExpiryObservationStore();
-		$this->dispatcher( $dashboard, CredentialValidationResult::invalid(), expiry: $rejected, on_validate: static fn () => $rejected->reset_for_replacement( 'bb', 'credential_1' ) )->dispatch_post_requests();
-
-		// Validating the unchanged replacement records both observations.
-		$secrets = $this->createMock( SecretsFile::class );
-		$secrets->expects( self::once() )->method( 'record_credential_provider_expiry' )->with( self::anything(), 'credential_1', '2027-04-30' );
-		$this->dispatcher( $this->createMock( Dashboard::class ), $known, secrets: $secrets, expiry: $expiry )->dispatch_post_requests();
-		self::assertSame( '2027-04-30T12:34:56Z', $expiry->observations()['bb']['credential_1']['provider_expires_at'] ?? null );
-
-		// While file changes are disallowed, validation keeps the advisory observation but never writes the sidecar.
+	public function test_validation_keeps_the_advisory_observation_but_never_writes_the_sidecar_while_file_changes_are_disallowed(): void {
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->expects( self::never() )->method( 'record_credential_provider_expiry' );
-		$advisory = new InMemoryCredentialExpiryObservationStore();
+		$expiry               = new InMemoryCredentialExpiryObservationStore();
+		$_POST['ran_booster'] = $this->request();
 		try {
-			$this->dispatcher( $this->createMock( Dashboard::class ), $known, secrets: $secrets, expiry: $advisory )->dispatch_post_requests();
+			$this->dispatcher( $this->createMock( Dashboard::class ), CredentialValidationResult::valid( \RAN\RepositoryProvider\CredentialExpiryReport::known( '2027-04-30T12:34:56Z' ) ), secrets: $secrets, expiry: $expiry )->dispatch_post_requests();
 		} finally {
 			unset( $GLOBALS['ran_booster_package_mutation_guard_file_mods'] );
 		}
-		self::assertSame( '2027-04-30T12:34:56Z', $advisory->observations()['bb']['credential_1']['provider_expires_at'] ?? null );
-	}
-
-	public function test_validation_reads_its_generation_under_the_lock_and_a_purge_cannot_split_its_commit(): void {
-		$held     = false;
-		$holds    = array();
-		$expiry   = new InMemoryCredentialExpiryObservationStore();
-		$lock     = $this->updater_lock( $held, $expiry, $holds );
-		$secrets  = new class() extends SecretsFile {
-			public bool $removed = false;
-			public function __construct() {
-				parent::__construct( null, array() );
-			}
-			public function purge_expired_credentials( ?callable $before_remove = null ): array {
-				$ids = array( 'bb' => array( 'credential_1' ) );
-				if ( null !== $before_remove ) {
-					$before_remove( $ids );
-				}
-				$this->removed = true;
-				return $ids;
-			}
-		};
-		$evidence = new class() extends \RAN\Admin\RepositoryBranchCheckEvidenceStore {
-			public function bump_profile_generation( string $provider, string $profile_id ): void {}
-			public function bump_provider_generation( string $provider ): void {}
-		};
-		$purger   = new \RAN\Admin\CredentialSelfDestructPurger( $secrets, $expiry, new InMemoryPublicRepositoryLookupProfileStore(), $evidence, $lock );
-		$known    = CredentialValidationResult::valid( \RAN\RepositoryProvider\CredentialExpiryReport::known( '2027-04-30T12:34:56Z' ) );
-		$sidecar  = $this->createMock( SecretsFile::class );
-		$sidecar->expects( self::once() )->method( 'record_credential_provider_expiry' );
-		$_POST['ran_booster'] = $this->request();
-
-		// By the provider call, one lock hold has read the starting generation and been released.
-		$provider_call = static function () use ( &$held, &$holds ): void {
-			self::assertFalse( $held );
-			self::assertCount( 1, $holds );
-			self::assertGreaterThan( $holds[0][0], $holds[0][1] );
-		};
-		// The purge arrives between the commit's comparison and its write, and cannot take the lock.
-		$expiry->before_write = static fn () => $purger->purge();
-		$this->dispatcher( $this->createMock( Dashboard::class ), $known, secrets: $sidecar, expiry: $expiry, lock: $lock, on_validate: $provider_call )->dispatch_post_requests();
-		self::assertFalse( $secrets->removed );
-		self::assertStringContainsString( 'Expired credential purge failed.', implode( "\n", $this->captured_log_lines() ) );
-		self::assertSame( array( 'provider_expires_at' => '2027-04-30T12:34:56Z' ), array_intersect_key( $expiry->get( 'bb', 'credential_1' ), array_flip( array( 'provider_expires_at', 'event_generation' ) ) ) );
-
-		// A purge during the provider call advances the generation first, so the late result is discarded.
-		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->expects( self::once() )->method( 'set_credential_validation_feedback' )->with( 'bb', 'credential_1', null, 'This credential changed during the check. Validate it again.' );
-		$this->dispatcher( $dashboard, $known, secrets: $this->createMock( SecretsFile::class ), expiry: $expiry, lock: $lock, on_validate: static fn () => $purger->purge() )->dispatch_post_requests();
-		self::assertTrue( $secrets->removed );
-		self::assertSame( array( 'event_generation' => 2 ), $expiry->get( 'bb', 'credential_1' ) );
-	}
-
-	/**
-	 * Models the shared lock: acquisition fails while another request holds it.
-	 *
-	 * @param list<array{int, int}> $holds Expiry-store read counts at each acquire and release.
-	 */
-	private function updater_lock( bool &$held = false, ?InMemoryCredentialExpiryObservationStore $expiry = null, array &$holds = array() ): WordPressUpdaterLock {
-		$lock = $this->createStub( WordPressUpdaterLock::class );
-		$lock->method( 'acquire' )->willReturnCallback(
-			static function () use ( &$held, &$holds, $expiry ): string {
-				if ( $held ) {
-					throw new \RuntimeException( 'The WordPress updater is already running.' );
-				}
-				$held    = true;
-				$holds[] = array( $expiry->read_count ?? 0, 0 );
-				return 'validation-fixture-lock';
-			}
-		);
-		$lock->method( 'release' )->willReturnCallback(
-			static function () use ( &$held, &$holds, $expiry ): bool {
-				$held                                 = false;
-				$holds[ array_key_last( $holds ) ][1] = $expiry->read_count ?? 0;
-				return true;
-			}
-		);
-		return $lock;
+		self::assertSame( '2027-04-30T12:34:56Z', $expiry->observations()['bb']['credential_1']['provider_expires_at'] ?? null );
 	}
 
 	public function test_a_configured_constant_validates_with_advisory_expiry_and_no_storage_mutation(): void {
@@ -542,12 +429,14 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		);
 	}
 
-	private function dispatcher( Dashboard $dashboard, CredentialValidationResult $result, ?\RAN\Activity\ActivityStore $activity = null, ?\RAN\Admin\RepositoryBranchCheckEvidenceStore $evidence = null, ?SecretsFile $secrets = null, ?InMemoryCredentialExpiryObservationStore $expiry = null, ?\Closure $on_validate = null, ?WordPressUpdaterLock $lock = null ): Dispatcher {
+	private function dispatcher( Dashboard $dashboard, CredentialValidationResult $result, ?\RAN\Activity\ActivityStore $activity = null, ?\RAN\Admin\RepositoryBranchCheckEvidenceStore $evidence = null, ?SecretsFile $secrets = null, ?InMemoryCredentialExpiryObservationStore $expiry = null, ?\Closure $on_validate = null ): Dispatcher {
 		$provider  = new CredentialValidationProvider( $result, $on_validate );
 		$providers = new ProviderRegistry( array( $provider ) );
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
-		$lock    ??= $this->updater_lock();
+		$lock      = $this->createMock( WordPressUpdaterLock::class );
+		$lock->expects( self::never() )->method( 'acquire' );
+		$lock->expects( self::never() )->method( 'release' );
 
 		$this->controller = new HtmxCredentialValidationTestController(
 			$dashboard,

@@ -56,7 +56,7 @@ final class CredentialExpiryObservationStoreTest extends TestCase {
 			$store->set_manual_expiry( 'gh', 'other-profile', '2028-01-01' );
 		};
 		$store->clear( 'gh', 'public-profile' );
-		self::assertSame( array( 'event_generation' => 1 ), $store->get( 'gh', 'public-profile' ) );
+		self::assertSame( array(), $store->get( 'gh', 'public-profile' ) );
 		self::assertSame( array( 'manual_expires_on' => '2028-01-01' ), $store->get( 'gh', 'other-profile' ) );
 	}
 
@@ -76,8 +76,14 @@ final class CredentialExpiryObservationStoreTest extends TestCase {
 		$store->set_manual_expiry( 'gh', 'public-profile', '2027-01-01' );
 		self::assertSame( array( 'manual_expires_on' => '2027-01-01' ), $store->get( 'gh', 'public-profile' ) );
 		$store->clear( 'gh', 'public-profile' );
-		// Only the advanced generation remains, so a validation pending across the removal cannot match.
-		self::assertSame( array( 'gh' => array( 'public-profile' => array( 'event_generation' => 1 ) ) ), $store->observations() );
+		self::assertSame( array(), $store->observations() );
+		self::assertSame(
+			array(
+				'version'  => 1,
+				'profiles' => array(),
+			),
+			$store->document
+		);
 	}
 
 	public function test_false_write_accepts_an_identical_readback(): void {

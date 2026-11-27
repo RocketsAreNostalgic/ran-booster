@@ -1429,11 +1429,9 @@ final class PortabilityControllerTest extends TestCase {
 
 		self::assertSame( array_fill( 0, count( $lines ), '[ran-booster] Blueprint export failed. {"operation":"portability_export","step":"temp_dir","http_status":"500"}' ), $lines );
 		self::assertNotSame( array(), $lines );
-		// A file tempnam() silently staged in the system directory is removed, never exported.
-		foreach ( array_filter( $GLOBALS['ran_booster_repository_admin_temporary_files'] ?? array(), 'is_string' ) as $path ) {
-			self::assertFileDoesNotExist( $path );
-		}
-		self::assertCount( count( $lines ) - 1, $notices );
+		// Neither root reaches tempnam(), so nothing is staged in the system directory and no fallback notice is raised.
+		self::assertSame( array(), array_filter( $GLOBALS['ran_booster_repository_admin_temporary_files'] ?? array(), 'is_string' ) );
+		self::assertSame( array(), $notices );
 	}
 
 	#[DataProvider( 'invalid_credential_selections' )]

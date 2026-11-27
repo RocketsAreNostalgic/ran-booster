@@ -45,17 +45,29 @@ if ( ! function_exists( __NAMESPACE__ . '\\disk_free_space' ) ) {
 if ( ! function_exists( __NAMESPACE__ . '\\wp_safe_remote_get' ) ) {
 	/** @param array<string, mixed> $arguments */
 	function wp_safe_remote_get( string $url, array $arguments ): mixed {
-		$filters = \RAN\RepositoryProvider\authenticated_archive_filters( 'http_request_args' );
-		usort( $filters, static fn ( array $left, array $right ): int => $left['priority'] <=> $right['priority'] );
-		foreach ( $filters as $filter ) {
-			$arguments = $filter['callback']( $arguments, $url );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- This isolated WordPress HTTP double models the hook stack around callbacks, including recursive requests.
+		$GLOBALS['wp_current_filter'][] = 'http_request_args';
+		try {
+			$filters = \RAN\RepositoryProvider\authenticated_archive_filters( 'http_request_args' );
+			usort( $filters, static fn ( array $left, array $right ): int => $left['priority'] <=> $right['priority'] );
+			foreach ( $filters as $filter ) {
+				$arguments = $filter['callback']( $arguments, $url );
+			}
+			$before = $GLOBALS['ran_booster_admitted_http_request_args'] ?? null;
+			if ( is_callable( $before ) ) {
+				$before( $url, $arguments );
+			}
+		} finally {
+			array_pop( $GLOBALS['wp_current_filter'] );
 		}
-		$before = $GLOBALS['ran_booster_admitted_http_request_args'] ?? null;
-		if ( is_callable( $before ) ) {
-			$before( $url, $arguments );
-		}
-		foreach ( $GLOBALS['ran_booster_admitted_http_guards'] ?? array() as $guard ) {
-			$guard( false, $arguments, $url );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- This isolated WordPress HTTP double models the hook stack around callbacks, including recursive requests.
+		$GLOBALS['wp_current_filter'][] = 'pre_http_request';
+		try {
+			foreach ( $GLOBALS['ran_booster_admitted_http_guards'] ?? array() as $guard ) {
+				$guard( false, $arguments, $url );
+			}
+		} finally {
+			array_pop( $GLOBALS['wp_current_filter'] );
 		}
 		$GLOBALS['ran_booster_admitted_http_calls'][] = array(
 			'url'       => $url,

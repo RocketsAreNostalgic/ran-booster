@@ -197,9 +197,9 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		foreach ( array( 'valid', 'url', 'revision', 'cleanup' ) as $case ) {
 			$archive = $this->private_archive( $this->authorizer( 'Basic fixture' ) );
 			$url     = $archive->get_url();
-			$retry   = $archive->reserve_download_retry( $args['filename'] );
+			$retry   = $archive->reserve_download_retry( static fn ( array $request ): bool => $args === $request );
 			self::assertNotNull( $retry );
-			self::assertNull( $archive->reserve_download_retry( $args['filename'] ) );
+			self::assertNull( $archive->reserve_download_retry( static fn ( array $request ): bool => $args === $request ) );
 			self::assertSame( array( 'headers' => array() ), $this->apply_filters( $url ) );
 			self::assertSame( 'Basic fixture', $archive->authenticate_request( $args, $url )['headers']['Authorization'] );
 			if ( 'cleanup' === $case ) {

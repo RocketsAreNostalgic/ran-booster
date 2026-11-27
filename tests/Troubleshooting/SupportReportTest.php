@@ -349,7 +349,7 @@ final class SupportReportTest extends TestCase {
 		}
 	}
 
-	public function test_report_distinguishes_attention_review_and_missing_selected_provider(): void {
+	public function test_report_distinguishes_attention_and_review_activity_stages(): void {
 		$this->environment();
 		$connection                              = new ActivityConnection();
 		$connection->read_results                = array(
@@ -372,26 +372,10 @@ final class SupportReportTest extends TestCase {
 			),
 		);
 		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
-		$facts                                   = new InstallationFacts(
-			new ProviderRegistry(),
-			github_observation: static fn(): array => array(
-				'state'                  => 'replacement_load_failed',
-				'admitted'               => false,
-				'selected'               => 'external',
-				'version'                => '2.3.4',
-				'provider_api'           => 15,
-				'compatibility_revision' => 'private-revision-canary',
-				'identity'               => null,
-			)
-		);
+		$facts                                   = new InstallationFacts( new ProviderRegistry() );
 		$text                                    = ( new SupportReport( $facts, activity: new ActivityStore( $connection ) ) )->generate( array() )['text'];
 		$data                                    = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
-		$selection                               = $data['sections']['installation']['data']['github_selection'];
-		self::assertSame( 'replacement_load_failed', $selection['state'] );
-		self::assertFalse( $selection['admitted'] );
-		self::assertSame( 'external', $selection['selected'] );
-		self::assertSame( '2.3.4', $selection['version'] );
-		self::assertSame( 15, $selection['provider_api'] );
+		self::assertArrayNotHasKey( 'github_selection', $data['sections']['installation']['data'] );
 		$records = $data['sections']['activity']['data']['records'];
 		self::assertSame( array( 'deployment.needs_attention', 'deployment.operator_reviewed', 'Unknown' ), array_column( $records, 'stage' ) );
 		self::assertSame( array( 'incomplete', 'incomplete', 'incomplete' ), array_column( $records, 'status' ) );

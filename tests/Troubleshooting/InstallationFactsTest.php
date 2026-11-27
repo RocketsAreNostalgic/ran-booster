@@ -181,36 +181,6 @@ final class InstallationFactsTest extends TestCase {
 		self::assertStringContainsString( 'CredentialValidator', $rows[0]['Capabilities'] );
 	}
 
-	public function test_github_attribution_is_one_captured_bootstrap_observation(): void {
-		$registry   = new ProviderRegistry( array( new SupportReportProvider( 'gh', 'GitHub' ) ) );
-		$generation = 1;
-		$reads      = 0;
-		$observe    = static function () use ( &$generation, &$reads ): array {
-			++$reads;
-			return array(
-				'state'                  => 'missing',
-				'admitted'               => false,
-				'selected'               => 'external',
-				'version'                => '2.3.4',
-				'provider_api'           => 15,
-				'compatibility_revision' => '1',
-				'identity'               => array(
-					'provider_code'              => 'gh',
-					'selection_generation'       => $generation,
-					'implementation_fingerprint' => str_repeat( 'a', 64 ),
-				),
-			);
-		};
-		$facts      = new InstallationFacts( $registry, github_observation: $observe );
-		$first      = $facts->implementation( 'gh' );
-		self::assertSame( 'missing', $facts->github_selection()['state'] );
-		$generation = 2;
-		self::assertSame( $first, $facts->implementation( 'gh' ) );
-		self::assertSame( 1, $reads );
-		self::assertNotSame( $first, ( new InstallationFacts( $registry, github_observation: $observe ) )->implementation( 'gh' ) );
-		self::assertSame( 2, $reads );
-	}
-
 	public function test_registered_addons_share_provider_bound_without_running_renderers(): void {
 		$addons = new AdminAddOnRegistry();
 		for ( $index = 0; $index < 35; ++$index ) {

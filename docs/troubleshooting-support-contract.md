@@ -234,27 +234,11 @@ If Booster/admin cannot load, use the established WordPress recovery and hosting
 support routes, sharing only independently reviewed evidence. The report cannot
 collect evidence through an unavailable bootstrap or recover pre-capture events.
 
-## Pre-edit review correction: captured GitHub declarations
+## Retired: captured GitHub declarations
 
-Independent source review identified that an injected `expectation()` reader
-would repeat GitHub active-manifest discovery (up to 1,024 active plugin entries)
-merely to fill a passive component summary. Reject that extra scan. Add one
-internal `GitHubProviderSelection::support_observation()` method, projected 45
-production lines, returning only constructor-captured selection/admission state,
-selected kind, declared API/compatibility metadata, safe version from at most one
-8 KiB selected-plugin header, and internal generation/fingerprint attribution.
-No authority reload, candidate re-discovery, provider call, health test or recovery
-scan. Facts reuses that one request-local observation for report fields and
-retained diagnostic attribution. It is explicitly an earlier bootstrap
-observation, not fresh remote access evidence or verified continuity.
-
-Actual source growth exceeded the initial 1,100-line estimate: before this
-correction it was 1,400 additions / 114 removals. The separately counted 120-line
-passive-reader boundary and 269-line CAS/expiry owner are substantive costs rather
-than hidden existing behavior. This correction adds one internal owner method and
-one private projection dependency, no concrete type, public extension API or
-persistent state. Final exact production/test/documentation deltas are recorded
-with delivery evidence.
+Installation and the support report no longer project GitHub replacement
+selection state, declarations or candidates. #1253 retires external GitHub
+replacement arbitration, so GitHub is reported like any other admitted provider.
 
 ## Verification and custody
 

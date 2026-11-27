@@ -354,7 +354,6 @@ final class BoosterServiceProvider {
 			static fn ( CoreContainer $container ): \RAN\Troubleshooting\InstallationFacts => new \RAN\Troubleshooting\InstallationFacts(
 				$container->make( ProviderRegistry::class ),
 				$container->make( \RAN\Troubleshooting\CoreSelfUpdateStatus::class ),
-				$container->make( GitHubProviderSelection::class )->support_observation( ... ),
 				$container->make( AdminAddOnRegistry::class )
 			)
 		);

@@ -40,7 +40,6 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/Storage/PackagePersistenceFailureTest.php',
 		'tests/Storage/PackageProviderIdentityTest.php',
 		// Proves the installation report shows every value the shipped provider declares.
-		'tests/Troubleshooting/TroubleshootingServiceTest.php',
 		'tests/Webhook/SignedWebhookVerifierTest.php',
 		'tests/Webhook/WebhookProcessorTest.php',
 		'tests/WordPress/ManagedReleaseRuntimeTest.php',

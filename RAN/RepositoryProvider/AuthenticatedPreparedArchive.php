@@ -22,6 +22,7 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	private bool $redirect_scrubber_registered     = false;
 	private bool $cleaned                          = false;
 	private ?Closure $authorizer;
+	private ?string $download_destination = null;
 	/** @var WeakReference<object>|null */
 	private ?WeakReference $redirect_hooks = null;
 
@@ -77,12 +78,38 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	}
 
 	/**
+	 * Reserve one fresh invocation of the provider authorizer for the admitted stream.
+	 *
+	 * @internal Branch download transport only.
+	 * @return null|Closure(string,string):void
+	 */
+	public function reserve_download_retry( string $destination ): ?Closure {
+		$authorizer = $this->authorizer;
+		if ( null === $authorizer || null !== $this->download_destination ) {
+			return null;
+		}
+		$this->download_destination = $destination;
+		return function ( string $url, string $revision ) use ( &$authorizer ): void {
+			$retry      = $authorizer;
+			$authorizer = null;
+			if ( null === $retry || $this->cleaned || $this->authentication_filter_registered || $url !== $this->url || $revision !== $this->resolved_ref ) {
+				throw new RuntimeException( 'Provider archive retry is unavailable.' );
+			}
+			$this->assert_operation_allowed();
+			$this->authorizer = $retry;
+			add_filter( 'http_request_args', array( $this, 'authenticate_request' ), 10, 2 );
+			$this->authentication_filter_registered = true;
+		};
+	}
+
+	/**
 	 * @param array<string, mixed> $arguments WordPress HTTP request arguments.
 	 * @return array<string, mixed>
 	 */
 
 	public function authenticate_request( array $arguments, mixed $url ): array {
-		if ( ! is_string( $url ) || $url !== $this->url ) {
+		if ( $url !== $this->url || ( null !== $this->download_destination && ( true !== ( $arguments['stream'] ?? null )
+			|| ( $arguments['filename'] ?? null ) !== $this->download_destination || 0 !== ( $arguments['redirection'] ?? null ) ) ) ) {
 			return $arguments;
 		}
 

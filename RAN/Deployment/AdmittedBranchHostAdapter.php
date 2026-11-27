@@ -13,6 +13,7 @@ use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ArchiveRequest;
+use RAN\RepositoryProvider\AuthenticatedPreparedArchive;
 use RAN\RepositoryProvider\PreparedArchive as ProviderPreparedArchive;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -284,11 +285,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			$provider->value,
 			(string) $data['provider_repository_id'],
 			$resolved_ref,
-			function ( string $destination, int $provider_maximum_artifact_bytes ) use ( $provider_archive, $maximum_artifact_bytes ): void {
+			function ( string $destination, int $provider_maximum_artifact_bytes ) use ( $provider_archive, $maximum_artifact_bytes, $resolved_ref ): void {
 				if ( $provider_maximum_artifact_bytes !== $maximum_artifact_bytes ) {
 					$this->stage( DeploymentOutcome::CODE_ARCHIVE_LIMIT_INVALID );
 				}
-				$this->download_provider_archive( $provider_archive, $destination, $maximum_artifact_bytes );
+				$this->download_provider_archive( $provider_archive, $destination, $maximum_artifact_bytes, $resolved_ref );
 			},
 			function () use ( $provider_archive ): void {
 				$this->verify_provider_head( $provider_archive );
@@ -517,21 +518,41 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 		}
 	}
 
-	private function download_provider_archive( ProviderPreparedArchive $archive, string $destination, int $maximum_artifact_bytes ): void {
+	private function download_provider_archive( ProviderPreparedArchive $archive, string $destination, int $maximum_artifact_bytes, string $resolved_ref ): void {
+		$request       = $this->attempt->get_request();
+		$retry_outcome = null;
+		$initial_hop   = true;
 		try {
-			$url = $archive->get_url();
+			$authorize_retry = $archive instanceof AuthenticatedPreparedArchive ? $archive->reserve_download_retry( $destination ) : null;
+			$url             = $archive->get_url();
 			$this->assert_safe_https_url( $url );
 			for ( $attempt = 1; $attempt <= self::DOWNLOAD_ATTEMPTS; ++$attempt ) {
 				for ( $redirect = 0; 3 >= $redirect; ++$redirect ) {
 					$this->assert_provider_current();
-					$guard = function ( mixed $preempt, #[\SensitiveParameter] array $arguments, string $request_url ) use ( $url, $destination ): mixed {
+					$authenticated = false;
+					$guard         = function ( mixed $preempt, #[\SensitiveParameter] array $arguments, string $request_url ) use ( $url, $destination, &$authenticated, $retry_outcome, $initial_hop ): mixed {
 						if ( $url === $request_url && true === ( $arguments['stream'] ?? null ) && ( $arguments['filename'] ?? null ) === $destination ) {
 							$this->assert_provider_current();
+							foreach ( $arguments['headers'] ?? array() as $name => $value ) {
+								if ( 'authorization' === strtolower( (string) $name ) && is_string( $value ) && '' !== trim( $value ) ) {
+									$authenticated = true;
+									break;
+								}
+							}
+							if ( ! $initial_hop && $authenticated ) {
+								$this->stage( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );
+							}
+							if ( null !== $retry_outcome && ! $authenticated ) {
+								$this->stage( $retry_outcome );
+							}
 						}
 						return $preempt;
 					};
 					add_filter( 'pre_http_request', $guard, PHP_INT_MAX, 3 );
 					try {
+						if ( null !== $retry_outcome && null !== $authorize_retry ) {
+							$authorize_retry( $url, $resolved_ref );
+						}
 						$response = wp_safe_remote_get(
 							$url,
 							array(
@@ -543,6 +564,14 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 								'limit_response_size' => $maximum_artifact_bytes + 1,
 							)
 						);
+					} catch ( AdmittedBranchStageFailure $failure ) {
+						throw $failure;
+					} catch ( Throwable $failure ) {
+						if ( null === $retry_outcome ) {
+							throw $failure;
+						}
+						$this->assert_provider_current();
+						$this->stage( $retry_outcome );
 					} finally {
 						remove_filter( 'pre_http_request', $guard, PHP_INT_MAX );
 					}
@@ -556,7 +585,10 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 						$this->stage( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );
 					}
 					$this->assert_safe_https_url( $location );
-					$url = $location;
+					$url             = $location;
+					$initial_hop     = false;
+					$authorize_retry = null;
+					$retry_outcome   = null;
 				}
 
 				if ( is_wp_error( $response ) ) {
@@ -572,6 +604,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 				if ( 429 === $status || in_array( $status, array( 502, 503, 504 ), true ) ) {
 					// One retry, only after a numeric Retry-After no longer than the cap; any other answer is not waited for.
 					if ( $attempt < self::DOWNLOAD_ATTEMPTS && 1 === preg_match( '/\A[0-9]{1,3}\z/', $retry_after ) && (int) $retry_after <= self::RETRY_AFTER_CAP ) {
+						if ( $initial_hop && ( $authenticated || $request->is_private || null !== $request->credential_id || null !== $authorize_retry ) ) {
+							$retry_outcome = DeploymentOutcome::from_provider_failure( new RuntimeException( '', $status ) )->get_code();
+							if ( null === $authorize_retry ) {
+								$this->stage( $retry_outcome );
+							}
+						}
 						sleep( (int) $retry_after );
 						continue;
 					}

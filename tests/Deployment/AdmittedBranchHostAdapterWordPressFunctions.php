@@ -5,6 +5,8 @@ declare(strict_types=1);
 
 namespace RAN\Deployment;
 
+require_once __DIR__ . '/../RepositoryProvider/AuthenticatedPreparedArchiveWordPressFunctions.php';
+
 if ( ! defined( 'ABSPATH' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned constant without changing its runtime identity.
 	define( 'ABSPATH', sys_get_temp_dir() . '/ran-booster-admitted-parity-wp/' );
@@ -43,6 +45,11 @@ if ( ! function_exists( __NAMESPACE__ . '\\disk_free_space' ) ) {
 if ( ! function_exists( __NAMESPACE__ . '\\wp_safe_remote_get' ) ) {
 	/** @param array<string, mixed> $arguments */
 	function wp_safe_remote_get( string $url, array $arguments ): mixed {
+		$filters = \RAN\RepositoryProvider\authenticated_archive_filters( 'http_request_args' );
+		usort( $filters, static fn ( array $left, array $right ): int => $left['priority'] <=> $right['priority'] );
+		foreach ( $filters as $filter ) {
+			$arguments = $filter['callback']( $arguments, $url );
+		}
 		$before = $GLOBALS['ran_booster_admitted_http_request_args'] ?? null;
 		if ( is_callable( $before ) ) {
 			$before( $url, $arguments );

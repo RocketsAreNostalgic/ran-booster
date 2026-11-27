@@ -184,3 +184,56 @@ snapshot, failure email and support export do not include the code.
 
 Native release message replacement remains held pending a suitable producer
 boundary. Other branch reasons need separate work.
+
+## Public actions
+
+Site code and audit tools may use these WordPress actions. Each is per site: it
+fires in the site whose tables recorded the event and keeps no network-wide
+state.
+
+### `ran_booster_activity_recorded`
+
+Fires once when an Activity record's outcome is stored, whatever the operation.
+Listeners filter on `operation`: `install` and `update` are deployments; the
+others include `release.check`, `branch.check`, `credential.validate`,
+`diagnostics.run`, `webhook.*` and `workflow.*`.
+
+The one argument is an array holding only these fields:
+
+| Field | Value |
+| --- | --- |
+| `correlation` | The record's 32-character reference. |
+| `operation` | The operation name. |
+| `provider` | The provider code. |
+| `subject_type` | `plugin`, `theme`, `repository` or `provider`. |
+| `subject_identity` | The package, repository or provider the record is about, at most 255 bytes. |
+| `status` | `succeeded`, `failed`, `rejected`, `skipped` or `needs_attention`. |
+| `reason` | A bounded reason code. |
+| `actor` | The WordPress user ID, or `0` when none is recorded. |
+| `started_at` | UTC, `Y-m-d H:i:s`. |
+| `completed_at` | UTC, `Y-m-d H:i:s`. |
+
+Messages, remediation text, facts, source context and adoption tokens are not
+passed.
+
+A deployment's action fires after the journal transaction commits, so a
+rolled-back outcome is never announced. Other outcomes fire straight after their
+own write. Starts, progress, an operator's review and a repeated skip that
+Booster discards fire nothing.
+
+Listeners run synchronously in the request or worker that recorded the outcome,
+so keep them quick and hand slow work off. A listener that throws does not change
+the outcome: Booster logs one code-only line, and WordPress runs no later
+listener for that firing. Delivery is not guaranteed, for example if the process
+stops after the write. Activity remains the record.
+
+```php
+add_action(
+	'ran_booster_activity_recorded',
+	static function ( array $record ): void {
+		if ( in_array( $record['operation'], array( 'install', 'update' ), true ) ) {
+			error_log( 'Deployment ' . $record['status'] . ': ' . $record['subject_identity'] );
+		}
+	}
+);
+```

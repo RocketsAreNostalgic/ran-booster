@@ -10,6 +10,7 @@ use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\Storage\DeploymentWriteConnection;
+use Throwable;
 
 /**
  * Durable reporting; deployment writes join the journal's database transaction.
@@ -30,6 +31,8 @@ final class ActivityStore {
 	private string $table;
 	/** @var array<int, array{string, string}> Operation and correlation of each row begun here, so a refused write can be logged without SQL. */
 	private array $begun = array();
+	/** @var list<string> Correlations whose stored outcome waits for the caller's transaction to commit. */
+	private array $uncommitted = array();
 
 	public function __construct( private ?object $database = null, ?string $table = null ) {
 		if ( null === $this->database ) {
@@ -268,6 +271,10 @@ final class ActivityStore {
 				$correlation
 			)
 		);
+		// This stage is the stored outcome of a deployment, whose row stays incomplete.
+		if ( 1 === $result && 'deployment.needs_attention' === $code ) {
+			$this->uncommitted[] = $correlation;
+		}
 		return false === $result ? $this->unrecorded( 'progress', 'failed', correlation: $correlation ) : 1 === $result;
 	}
 
@@ -333,6 +340,12 @@ final class ActivityStore {
 			)
 		);
 		if ( 1 === $result ) {
+			// A correlation-addressed write is inside its caller's transaction; settle_transaction() announces it.
+			if ( null === $id ) {
+				$this->uncommitted[] = (string) $correlation;
+			} else {
+				$this->announce( 'id = %d', $id );
+			}
 			return true;
 		}
 		if ( 0 !== $result ) {
@@ -352,6 +365,67 @@ final class ActivityStore {
 		}
 		// The row is gone, unreadable or already finished with another outcome.
 		return $this->unrecorded( 'complete', 'refused', $id, $correlation );
+	}
+
+	/**
+	 * The owner of the transaction around correlation-addressed writes calls this when it ends: the outcomes they
+	 * stored are announced after a commit and dropped otherwise.
+	 */
+	public function settle_transaction( bool $committed ): void {
+		$stored            = $this->uncommitted;
+		$this->uncommitted = array();
+		if ( $committed ) {
+			foreach ( $stored as $correlation ) {
+				$this->announce( 'correlation = %s', $correlation );
+			}
+		}
+	}
+
+	/** The outcome is already stored: neither this read nor a listener may change the write's result. */
+	private function announce( string $where, int|string $value ): void {
+		$record = null;
+		try {
+			if ( ! has_action( 'ran_booster_activity_recorded' ) ) {
+				return;
+			}
+			$row = $this->rows( $this->prepare( "SELECT correlation,operation,provider,subject_type,subject_identity,status,reason,actor,started_at,completed_at,facts FROM {$this->table} WHERE $where", $value ) )[0] ?? null;
+			if ( null !== $row ) {
+				// Only a deployment needing attention is announced while its row is incomplete.
+				$attention = 'incomplete' === $row['status'];
+				$facts     = $attention ? json_decode( (string) $row['facts'], true ) : null;
+				$record    = array(
+					'correlation'      => (string) $row['correlation'],
+					'operation'        => (string) $row['operation'],
+					'provider'         => (string) $row['provider'],
+					'subject_type'     => (string) $row['subject_type'],
+					'subject_identity' => (string) $row['subject_identity'],
+					'status'           => $attention ? 'needs_attention' : (string) $row['status'],
+					'reason'           => (string) ( $attention ? ( $facts['deployment_outcome'] ?? '' ) : $row['reason'] ),
+					'actor'            => (int) $row['actor'],
+					'started_at'       => (string) $row['started_at'],
+					'completed_at'     => (string) $row['completed_at'],
+				);
+				/**
+				 * Fires once when an Activity record's outcome is stored. See docs/deployment-activity-reporting.md.
+				 *
+				 * @param array{correlation:string,operation:string,provider:string,subject_type:string,subject_identity:string,status:string,reason:string,actor:int,started_at:string,completed_at:string} $record
+				 */
+				do_action( 'ran_booster_activity_recorded', $record );
+				return;
+			}
+		} catch ( Throwable ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Logged below, codes only.
+		}
+		BoosterLogger::log(
+			'An Activity action was not delivered.',
+			array_filter(
+				array(
+					'step'           => 'activity.recorded',
+					'event'          => null === $record ? 'unreadable' : 'listener_failed',
+					'operation'      => $record['operation'] ?? null,
+					'correlation_id' => $record['correlation'] ?? null,
+				)
+			)
+		);
 	}
 
 	/**

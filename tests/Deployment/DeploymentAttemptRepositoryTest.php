@@ -51,6 +51,79 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 	}
 
+	/** @return iterable<string, array{string, bool, list<array{string, string}>}> */
+	public static function announced_deployment_outcomes(): iterable {
+		yield 'success' => array( 'deployed', false, array( array( 'succeeded', 'deployed' ) ) );
+		yield 'needs attention' => array( 'interrupted', false, array( array( 'needs_attention', 'interrupted' ) ) );
+		yield 'rolled back' => array( 'deployed', true, array() );
+	}
+
+	/** @param list<array{string, string}> $expected */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'announced_deployment_outcomes' )]
+	public function test_a_deployment_outcome_is_announced_only_after_its_commit( string $code, bool $fail_commit, array $expected ): void {
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$this->repository                        = new DeploymentAttemptRepository(
+			$this->database,
+			'wp_ran_booster_deployment_attempts',
+			clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-27 00:00:00 UTC' ),
+			database_lifecycle: $this->database_lifecycle,
+			activity: new ActivityStore( $this->activity_reading_connection(), 'wp_ran_booster_activity' ),
+			selection: $this->queued_selection( $this->database )
+		);
+		$heard                                   = array();
+		$GLOBALS['ran_booster_activity_listeners']['ran_booster_activity_recorded'] = function ( array $record ) use ( &$heard ): void {
+			$heard[] = array( $record['status'], $record['reason'], $this->database->in_transaction() );
+		};
+		try {
+			$this->webhook( 'example' );
+			$running = $this->repository->claim_next();
+			self::assertNotNull( $running );
+			$this->database->fail_commit = $fail_commit;
+			try {
+				$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( $code ) );
+				self::assertFalse( $fail_commit );
+			} catch ( DeploymentStorageFailure ) {
+				self::assertTrue( $fail_commit );
+			}
+			// A later transaction must not announce what an earlier one dropped.
+			$this->database->fail_commit = false;
+			$this->webhook( 'other' );
+
+			self::assertSame( array_map( static fn ( array $outcome ): array => array( $outcome[0], $outcome[1], false ), $expected ), $heard );
+		} finally {
+			unset( $GLOBALS['ran_booster_activity_listeners'] );
+		}
+	}
+
+	/** The shared fixture does not answer the announcement's read; this serves it from the fixture's rows. */
+	private function activity_reading_connection(): \RAN\Storage\DeploymentWriteConnection {
+		return new class( $this->database ) implements \RAN\Storage\DeploymentWriteConnection {
+			public function __construct( private AttemptRepositoryDatabase $database ) {}
+			public function prepare( string $query, mixed ...$arguments ): mixed {
+				return $this->database->prepare( $query, ...$arguments );
+			}
+			public function get_results( string $query ): mixed {
+				if ( 1 !== preg_match( "/^SELECT correlation,operation,.* WHERE correlation = '([a-f0-9]{32})'$/", $query, $match ) ) {
+					return $this->database->get_results( $query );
+				}
+				$rows = array_filter( $this->database->activity_rows, static fn ( array $row ): bool => $row['correlation'] === $match[1] );
+				return array_map(
+					static fn ( array $row ): object => (object) ( $row + array(
+						'reason'       => '',
+						'completed_at' => '2026-11-27 00:00:00',
+					) ),
+					array_values( $rows )
+				);
+			}
+			public function query( string $query ): mixed {
+				return $this->database->query( $query );
+			}
+			public function insert( string $table, array $data ): mixed {
+				return $this->database->insert( $table, $data );
+			}
+		};
+	}
+
 	public function test_an_unmatched_push_is_recorded_once_per_repository_reason_and_hour(): void {
 		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
 		$connection                              = new \RAN\Tests\Activity\ActivityConnection();

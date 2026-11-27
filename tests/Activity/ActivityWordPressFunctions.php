@@ -21,6 +21,16 @@ function update_option( string $name, mixed $value, bool $autoload ): bool {
 	return true;
 }
 
+function has_action( string $hook ): bool {
+	return isset( $GLOBALS['ran_booster_activity_listeners'][ $hook ] );
+}
+
+function do_action( string $hook, mixed ...$arguments ): void {
+	if ( has_action( $hook ) ) {
+		$GLOBALS['ran_booster_activity_listeners'][ $hook ]( ...$arguments );
+	}
+}
+
 function current_time( string $type ): string {
 	return 'mysql' === $type ? '2026-10-12 17:00:00' : '';
 }

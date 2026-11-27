@@ -857,15 +857,16 @@ checked against the tag before each write attempt, but a replacement can still
 land between that check and the option write; an observation is therefore
 stored under its tag and shown only while that tag is the credential's current
 one, so a stale one stays hidden. A stored credential keeps one observation.
-The constant keeps observations for up to two tags and drops the one recorded
-first when a third arrives, so a request that still holds a rotated value
-writes beside the new one rather than over it. Replacement and purge cleanup
-keep only the observation of the current material, and a purged credential's
-tag can never be current again. The manual date is not tagged, and the purger
-runs without the updater lock, so purge cleanup also clears a manual date
-entered on a reused identifier before that cleanup runs. A result that is not
-recorded logs a coded line. A record saved before tags existed records nothing
-until it is next saved.
+The constant keeps observations for up to two tags and drops the least recently
+written one when a third arrives, so a request that still holds a rotated value
+writes beside the new one rather than over it. If three different values are in
+flight at once, the current one can be dropped and stays hidden until the next
+validation. Replacement and purge cleanup keep only the observation of the
+current material, and a purged credential's tag can never be current again. The
+manual date is not tagged, and the purger runs without the updater lock, so
+purge cleanup also clears a manual date entered on a reused identifier before
+that cleanup runs. A result that is not recorded logs a coded line. A record
+saved before tags existed records nothing until it is next saved.
 
 A provider that implements `RepositoryBrowser` receives one public-owner or
 one selected-credential `RepositoryBrowseRequest`. It must claim every remote

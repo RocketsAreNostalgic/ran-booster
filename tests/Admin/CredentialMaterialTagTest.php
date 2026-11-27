@@ -163,9 +163,10 @@ final class CredentialMaterialTagTest extends TestCase {
 		self::assertTrue( $newer_first ? $record( $older, $old_tag, '2027-01-01' ) : $record( $newer, $new_tag, '2027-06-01' ) );
 		self::assertSame( '2027-06-01T00:00:00Z', $newer->get( 'gh', SecretsFile::CONSTANT_PROFILE )['provider_expires_at'] ?? null );
 		self::assertSame( '2027-01-01T00:00:00Z', $older->get( 'gh', SecretsFile::CONSTANT_PROFILE )['provider_expires_at'] ?? null );
-		// A third constant evicts the entry written first.
+		// Refreshing the first-written entry protects it: a third constant evicts the least recently written.
+		self::assertTrue( $newer_first ? $record( $newer, $new_tag, '2027-06-01' ) : $record( $older, $old_tag, '2027-01-01' ) );
 		self::assertTrue( $record( $latest, $third_tag, '2028-01-01' ) );
-		self::assertSame( array( $newer_first ? $old_tag : $new_tag, $third_tag ), array_keys( $older->document['profiles']['gh'][ SecretsFile::CONSTANT_PROFILE ]['provider_observations'] ) );
+		self::assertSame( array( $newer_first ? $new_tag : $old_tag, $third_tag ), array_keys( $older->document['profiles']['gh'][ SecretsFile::CONSTANT_PROFILE ]['provider_observations'] ) );
 	}
 
 	/** @return iterable<string, array{string, string, string, string}> */
@@ -207,12 +208,29 @@ final class CredentialMaterialTagTest extends TestCase {
 		self::assertSame( $manual_only, $unbound->get( 'gh', 'cred_1' ) );
 		self::assertFalse( $unbound->record_provider_expiry( 'gh', 'cred_1', CredentialExpiryReport::unknown(), '2026-11-28T00:00:00Z', $this->tag() ) );
 		self::assertSame( array( 'gh' => array( 'cred_1' => $manual_only ) ), $throwing->observations() );
-		self::assertSame( array_fill( 0, 3, self::UNAVAILABLE ), $this->captured_log_lines() );
+		// A malformed tag from the reader is never written; a numeric one would become an integer key.
+		$malformed = clone $unbound;
+		$malformed->read_material_tags_with( static fn (): string => '123' );
+		self::assertFalse( $malformed->record_provider_expiry( 'gh', 'cred_1', CredentialExpiryReport::unknown(), '2026-11-28T00:00:00Z', '123' ) );
+		self::assertSame( array_fill( 0, 4, self::UNAVAILABLE ), $this->captured_log_lines() );
 		self::assertSame( $this->observations->document, $unbound->document );
-		// A map holding more entries than any profile keeps is not trusted.
-		$oversized = clone $this->observations;
-		$oversized->document['profiles']['gh']['cred_1']['provider_observations'] += array_fill_keys( array( str_repeat( 'a', 32 ), str_repeat( 'b', 32 ) ), array( 'provider_checked_at' => '2026-11-27T00:00:00Z' ) );
-		self::assertSame( $manual_only, $oversized->get( 'gh', 'cred_1' ) );
+		self::assertSame( $this->observations->document, $malformed->document );
+		// Not trusted: a non-array entry, two entries on a stored credential, and the earlier top-level fields.
+		$observation = array( 'provider_checked_at' => '2026-11-27T00:00:00Z' );
+		foreach ( array(
+			array( 'provider_observations' => array( $this->tag() => new \stdClass() ) ),
+			array(
+				'provider_observations' => array(
+					$this->tag()          => $observation,
+					str_repeat( 'a', 32 ) => $observation,
+				),
+			),
+			array( 'material_tag' => $this->tag() ) + $observation,
+		) as $corrupt ) {
+			$copy                                       = clone $this->observations;
+			$copy->document['profiles']['gh']['cred_1'] = $corrupt + $manual_only;
+			self::assertSame( $manual_only, $copy->get( 'gh', 'cred_1' ) );
+		}
 		// Production gives the shared store its reader when it builds the expiry reminder or the purger.
 		foreach ( array(
 			fn ( $store ) => new \RAN\Admin\CredentialExpiryReminder( new \RAN\RepositoryProvider\ProviderRegistry( array() ), $this->secrets, $store ),
@@ -226,7 +244,11 @@ final class CredentialMaterialTagTest extends TestCase {
 		// A replacement saved without resetting the option still hides the old observation.
 		$this->save( 'replacement-secret' );
 		self::assertSame( $manual_only, $this->observations->get( 'gh', 'cred_1' ) );
-		// A stored credential keeps a single observation slot.
+		// A stored credential keeps a single observation slot, even when its record held two.
+		$this->observations->document['profiles']['gh']['cred_1']['provider_observations'] = array(
+			$this->tag()          => $observation,
+			str_repeat( 'a', 32 ) => $observation,
+		);
 		$this->validation( '2027-06-01' )();
 		self::assertSame( array( $this->tag() ), array_keys( $this->observations->document['profiles']['gh']['cred_1']['provider_observations'] ) );
 	}

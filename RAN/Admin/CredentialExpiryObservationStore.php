@@ -163,7 +163,7 @@ class CredentialExpiryObservationStore {
 					continue;
 				}
 
-				$record = $this->normalise_record( $candidate );
+				$record = $this->normalise_record( $candidate, $this->observation_bound( $profile_id ) );
 				if ( $trusted ) {
 					$record = $this->trusted( $provider, $profile_id, $record );
 				}
@@ -186,7 +186,7 @@ class CredentialExpiryObservationStore {
 	 * @param array<string, mixed> $candidate Stored observation candidate.
 	 * @return StoredObservation
 	 */
-	private function normalise_record( array $candidate ): array {
+	private function normalise_record( array $candidate, int $bound ): array {
 		$record = array();
 
 		if ( is_string( $candidate['manual_expires_on'] ?? null )
@@ -197,8 +197,8 @@ class CredentialExpiryObservationStore {
 
 		// A provider observation is trusted only under the tag of the credential it was made for.
 		$stored = $candidate['provider_observations'] ?? null;
-		foreach ( is_array( $stored ) && count( $stored ) <= 2 ? $stored : array() as $tag => $observation ) {
-			if ( is_string( $tag ) && 1 === preg_match( '/\A[0-9a-f]{32}\z/', $tag )
+		foreach ( is_array( $stored ) && count( $stored ) <= $bound ? $stored : array() as $tag => $observation ) {
+			if ( is_string( $tag ) && $this->is_material_tag( $tag ) && is_array( $observation )
 				&& is_string( $observation['provider_checked_at'] ?? null )
 				&& $this->is_utc_timestamp( $observation['provider_checked_at'] )
 			) {
@@ -242,8 +242,9 @@ class CredentialExpiryObservationStore {
 	private function current_tag( string $provider, string $profile_id ): ?string {
 		try {
 			$reader = $this->material_tags ?? throw new RuntimeException( 'No material tag reader is bound.' );
+			$tag    = $reader( $provider, $profile_id );
 
-			return $reader( $provider, $profile_id );
+			return null === $tag || $this->is_material_tag( $tag ) ? $tag : throw new RuntimeException( 'The material tag is malformed.' );
 		} catch ( \Throwable ) {
 			BoosterLogger::log(
 				'Credential expiry observation unavailable.',
@@ -297,9 +298,10 @@ class CredentialExpiryObservationStore {
 				$record['event_generation'] = ( $previous['event_generation'] ?? 0 ) + 1;
 			}
 			if ( isset( $patch['observation'] ) ) {
-				// An existing tag keeps its place; a new one evicts the oldest beyond the bound.
+				// The written tag moves last, so the bound evicts the least recently written.
+				unset( $observations[ $patch['material_tag'] ] );
 				$observations[ $patch['material_tag'] ] = $patch['observation'];
-				$record['provider_observations']        = array_slice( $observations, SecretsFile::CONSTANT_PROFILE === $profile_id ? -2 : -1, null, true );
+				$record['provider_observations']        = array_slice( $observations, -$this->observation_bound( $profile_id ), null, true );
 			} elseif ( null !== $patch && array_key_exists( 'manual_expires_on', $patch ) ) {
 				unset( $record['manual_expires_on'] );
 				if ( null !== $patch['manual_expires_on'] ) {
@@ -345,6 +347,15 @@ class CredentialExpiryObservationStore {
 		if ( ! $this->is_utc_timestamp( $value ) ) {
 			throw new RuntimeException( 'Credential expiry timestamp is invalid.' );
 		}
+	}
+
+	/** The constant keeps two observations, so a request holding a rotated value writes beside the new one. */
+	private function observation_bound( string $profile_id ): int {
+		return SecretsFile::CONSTANT_PROFILE === $profile_id ? 2 : 1;
+	}
+
+	private function is_material_tag( string $value ): bool {
+		return 1 === preg_match( '/\A[0-9a-f]{32}\z/', $value );
 	}
 
 	private function is_date( string $value ): bool {

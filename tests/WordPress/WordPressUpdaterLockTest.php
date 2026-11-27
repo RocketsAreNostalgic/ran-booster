@@ -41,6 +41,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 
 	#[After]
 	protected function restore_database(): void {
+		WordPressUpdaterLock::take_refusal();
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the WordPress database boundary installed by this isolated test.
 		$GLOBALS['wpdb'] = $this->previous_database;
 	}

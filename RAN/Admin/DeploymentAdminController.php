@@ -18,7 +18,8 @@ final class DeploymentAdminController {
 		private ?DeploymentCoordinator $coordinator = null,
 		private ?DeploymentAttemptRepository $attempts = null,
 		private ?BackgroundDeploymentFailureMonitor $monitor = null,
-		private NoticePreference $preferences = new NoticePreference()
+		private NoticePreference $preferences = new NoticePreference(),
+		private ?\RAN\WordPress\WordPressUpdaterLock $updater_lock = null
 	) {
 	}
 
@@ -63,6 +64,16 @@ final class DeploymentAdminController {
 		try {
 			if ( 'resolve-needs-attention' === $action ) {
 				$this->resolve_needs_attention( $request );
+				return;
+			}
+			if ( 'release-updater-lock' === $action ) {
+				// Only the operator's confirmation stands for the recorded operation having stopped (#1180).
+				if ( null === $this->updater_lock || '1' !== ( $request['confirm_stopped'] ?? null ) || ! is_string( $request['lock_token'] ?? null )
+					|| ! current_user_can( 'update_plugins' ) || ! current_user_can( 'update_themes' )
+					|| ! $this->updater_lock->release_recorded_owner( $request['lock_token'] ) ) {
+					throw new \RuntimeException( 'The recorded updater lock was not released.' );
+				}
+				$this->dashboard->add_message( __( 'The package lock was released.', 'ran-booster' ) );
 				return;
 			}
 			if ( null === $this->coordinator ) {

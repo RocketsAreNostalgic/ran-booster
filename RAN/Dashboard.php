@@ -48,6 +48,9 @@ class Dashboard {
 	/** @var list<mixed> */
 	public $messages = array();
 
+	/** @var array{token: string, operation: string, started_at: int}|null The recorded owner of a lock that refused this request's action. */
+	private ?array $updater_lock_owner = null;
+
 	/** @var Booster */
 	private $booster;
 
@@ -1486,6 +1489,14 @@ class Dashboard {
 	 */
 	public function add_failure_message( $message, Throwable $failure, array $context = array() ): void {
 		$this->record_message( $message, $failure, $context );
+		// An action refused the updater lock: name the Booster operation recorded as holding it (#1180).
+		if ( \RAN\WordPress\WordPressUpdaterLock::take_refusal() ) {
+			try {
+				$this->updater_lock_owner = ( new \RAN\WordPress\WordPressUpdaterLock() )->recorded_owner();
+			} catch ( Throwable ) {
+				$this->updater_lock_owner = null;
+			}
+		}
 	}
 
 	/**
@@ -1927,6 +1938,7 @@ class Dashboard {
 		$data['name']     = $this->booster->get_name();
 
 		$data['core_self_update_development_notice'] = $this->core_self_update_development_notice;
+		$data['updater_lock_owner']                  = $this->updater_lock_owner;
 		if ( ! isset( $data['tabs'] ) ) {
 			$data['tabs'] = $this->tab_navigation( '' );
 		}

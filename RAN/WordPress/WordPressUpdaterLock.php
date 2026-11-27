@@ -24,6 +24,8 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	public const OWNER_OPTION      = 'ran_booster_updater_lock_owner';
 	private const OWNER_PATTERN    = '/\A([0-9]+\.[0-9]{27})\|([a-z][a-z0-9_]{0,63})\|([0-9]{1,10})\z/D';
 
+	private static bool $refused = false;
+
 	/**
 	 * Run one synchronous operation while this exact lock token is held.
 	 *
@@ -91,6 +93,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		} catch ( BranchDeploymentLockStorageFailure ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
+		self::$refused = self::$refused || null === $token;
 		return null === $token ? null : $this->recorded( $token, $owner_operation );
 	}
 
@@ -255,6 +258,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 				'var'
 			);
 			if ( ! self::valid_token( $stored ) || self::live_token( $stored, $now ) ) {
+				self::$refused = true;
 				return null;
 			}
 
@@ -267,6 +271,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 				throw DeploymentStorageFailure::unavailable();
 			}
 			if ( 1 !== $deleted ) {
+				self::$refused = true;
 				return null;
 			}
 
@@ -370,7 +375,15 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	}
 
 	protected function contention_failure(): RuntimeException {
+		self::$refused = true;
 		return new RuntimeException( 'The WordPress updater is already running.' );
+	}
+
+	/** Whether a Booster action in this request was refused the lock since the last call; the screen then names its owner. */
+	public static function take_refusal(): bool {
+		$refused       = self::$refused;
+		self::$refused = false;
+		return $refused;
 	}
 
 	private function require_options_table(): string {

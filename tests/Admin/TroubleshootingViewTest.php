@@ -1270,6 +1270,73 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 	}
 
+	public function test_a_confirmed_stopped_attempt_offers_release_only_for_the_recorded_booster_lock(): void {
+		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
+		$journal                                 = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$journal->rows                           = array(
+			array(
+				'id'                      => 17,
+				'correlation_id'          => str_repeat( 'a', 32 ),
+				'source'                  => 'manual',
+				'operation'               => 'update',
+				'package_type'            => 'plugin',
+				'package_slug'            => 'example',
+				'package_source'          => 'branch',
+				'package_source_revision' => 1,
+				'release_identity'        => null,
+				'provider'                => 'gh',
+				'provider_repository_id'  => 'R_example',
+				'requested_ref'           => 'main',
+				'resolved_ref'            => null,
+				'delivery_id'             => null,
+				'delivery_digest'         => null,
+				'state'                   => 'failed',
+				'mutation_started_at'     => null,
+				'outcome_code'            => 'worker_stopped',
+				'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
+				'created_at'              => '2026-11-17 00:00:00',
+				'finished_at'             => '2026-11-17 00:00:01',
+			),
+		);
+		$attempts                                = new \RAN\Deployment\DeploymentAttemptRepository( $journal, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->createStub( \RAN\Storage\Database::class ) );
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$presenter                               = new \RAN\Admin\DeploymentAdminPresenter( attempts: $attempts, activity_store: new \RAN\Activity\ActivityStore( $db ) );
+		$troubleshooting_base                    = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+		$token                                   = '1700000000.123456789123456789123456789';
+		$previous_database                       = $GLOBALS['wpdb'] ?? null;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The updater lock reads its row through this isolated fake.
+		$GLOBALS['wpdb'] = $journal;
+		$_GET            = array(
+			'attempt'   => '17',
+			'reference' => str_repeat( 'a', 32 ),
+		);
+		$rendered        = array();
+		try {
+			// The recorded owner's lock is held, then a different lock row holds it.
+			foreach ( array( $token, '1700000001' ) as $row ) {
+				$journal->option_rows = array(
+					'auto_updater.lock' => $row,
+					\RAN\WordPress\WordPressUpdaterLock::OWNER_OPTION => $token . '|package_operation|1700000000',
+				);
+				$db->read_results     = array( array() );
+				$deployment_activity  = $presenter->activity();
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/attempts/detail.php';
+				$rendered[] = (string) ob_get_clean();
+			}
+		} finally {
+			$_GET = array();
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the database boundary replaced above.
+			$GLOBALS['wpdb'] = $previous_database;
+		}
+
+		self::assertStringContainsString( 'A Booster package operation started at ', $rendered[0] );
+		self::assertStringContainsString( 'name="ran_booster[action]" value="release-updater-lock"', $rendered[0] );
+		self::assertStringContainsString( 'name="ran_booster[lock_token]" value="' . $token . '"', $rendered[0] );
+		self::assertStringContainsString( 'name="ran_booster[confirm_stopped]" value="1" required', $rendered[0] );
+		self::assertStringNotContainsString( 'release-updater-lock', $rendered[1] );
+	}
+
 	public function test_a_run_the_pause_refused_shows_as_skipped_in_activity(): void {
 		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
 		$journal                                 = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();

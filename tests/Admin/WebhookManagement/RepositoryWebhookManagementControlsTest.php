@@ -190,8 +190,17 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	}
 
 	public function test_operator_requests_need_secret_authority_and_allowed_file_changes_before_any_webhook_work(): void {
+		$calls  = array();
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
-		foreach ( array( 'target', 'assess_setup', 'assess_remove', 'setup', 'remove', 'forget' ) as $method ) {
+		foreach ( array( 'target', 'forget_target' ) as $method ) {
+			$facade->method( $method )->willReturnCallback(
+				static function () use ( &$calls, $method ): ?AssistanceTarget {
+					$calls[] = $method;
+					return null;
+				}
+			);
+		}
+		foreach ( array( 'assess_setup', 'assess_remove', 'setup', 'remove', 'forget' ) as $method ) {
 			$facade->expects( self::never() )->method( $method );
 		}
 		$responses   = array();
@@ -212,43 +221,55 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		);
 		$controller = ( new \ReflectionProperty( RepositoryWebhookManagementControls::class, 'controller' ) )->getValue( $controls );
 		self::assertInstanceOf( WebhookManagementController::class, $controller );
-		$operate = static function ( string $operation, string $profile ) use ( $controller ): void {
-			try {
-				$controller->handle_admin_post(
-					array(
-						'repository_webhook_management_operation' => $operation,
-						'provider_code'      => 'fixture-provider',
-						'repository_id'      => '1234',
-						'webhook_profile_id' => $profile,
-						'return_url'         => 'https://example.test/wp-admin/admin.php?page=ran-booster',
-					),
-					'nonce'
-				);
-			} catch ( \RuntimeException $responded ) {
-				self::assertSame( 'responded', $responded->getMessage() );
+		// Each request carries the valid nonce for its own operation, so only the gates under test can stop it.
+		$operate_all = static function () use ( $controller ): void {
+			foreach ( array(
+				'setup'  => WebhookManagementController::CREATE_REPOSITORY_SECRET,
+				'remove' => '',
+				'forget' => '',
+			) as $operation => $profile ) {
+				try {
+					$controller->handle_admin_post(
+						array(
+							'repository_webhook_management_operation' => $operation,
+							'provider_code'      => 'fixture-provider',
+							'repository_id'      => '1234',
+							'webhook_profile_id' => $profile,
+							'return_url'         => 'https://example.test/wp-admin/admin.php?page=ran-booster',
+						),
+						'nonce-for-' . hash( 'sha256', 'ran_booster_repository_webhook_' . $operation . '_fixture-provider_1234' )
+					);
+				} catch ( \RuntimeException $responded ) {
+					self::assertSame( 'responded', $responded->getMessage() );
+				}
 			}
 		};
+		$forbidden   = 'validation_failure: You are not permitted to manage this repository webhook. Nothing was changed.';
 
 		// The controls compose the controller with its default authority check: manage_options alone is not enough.
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities'] = array( 'manage_options' => true );
-		$operate( 'setup', WebhookManagementController::CREATE_REPOSITORY_SECRET );
+		$operate_all();
+		self::assertSame( array(), $calls );
 
 		// With authority, operations that can create or delete a stored signing secret stop before the provider while file changes are disallowed.
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['activate_plugins'] = true;
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods']                               = false;
 		$this->start_log_capture();
 		try {
-			$operate( 'setup', WebhookManagementController::CREATE_REPOSITORY_SECRET );
-			$operate( 'remove', '' );
-			$operate( 'forget', '' );
+			$operate_all();
 			$lines = $this->captured_log_lines();
 		} finally {
 			$this->stop_log_capture();
 			unset( $GLOBALS['ran_booster_package_mutation_guard_file_mods'] );
 		}
-
-		self::assertSame( array_fill( 0, 4, 'validation_failure: You are not permitted to manage this repository webhook. Nothing was changed.' ), $responses );
+		self::assertSame( array(), $calls );
+		self::assertSame( array_fill( 0, 6, $forbidden ), $responses );
 		self::assertSame( array_fill( 0, 3, '[ran-booster] Webhook operation refused. {"operation":"webhook_management","outcome_code":"file_mods_disallowed"}' ), $lines );
+
+		// Control: with authority and file changes allowed, the same requests reach target resolution.
+		$operate_all();
+		self::assertSame( array( 'target', 'target', 'target', 'forget_target' ), $calls );
+		self::assertNotContains( $forbidden, array_slice( $responses, 6 ) );
 	}
 
 	public function test_partial_absent_missing_and_malformed_providers_receive_no_placement_before_provider_work(): void {

@@ -54,7 +54,8 @@ final class ManagedReleaseInspectOfferTest extends TestCase {
 		$tracking                       = new ReleaseTrackingFacadeDouble( $status );
 		$tracking->candidate_inspection = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', 'https://example.test/releases/v1.2.0', 'v1.2.0', '1.2.0', 'newer' );
 
-		$result = ( new ManagedReleaseBrowserOperations( $tracking, $tracking ) )->inspect( 'plugin', 'example/example.php', 3, '42', 'v1.2.0', 'stable', 'nonce' );
+		$scope  = $tracking->nonce_action( 'inspect_candidate', 'plugin', 'example/example.php', 3, 'stable' );
+		$result = ( new ManagedReleaseBrowserOperations( $tracking, $tracking ) )->inspect( 'plugin', 'example/example.php', 3, '42', 'v1.2.0', 'stable', 'nonce', $scope );
 		self::assertTrue( $result['successful'] );
 
 		return $result['data']['native_offer'];

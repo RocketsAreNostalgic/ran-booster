@@ -342,7 +342,16 @@ final class PackageAdminController {
 			// A saved branch is checked on the settings page it returns to, unless the save skipped the provider.
 			$check_branch = 'edited' === $status && null === $check_skipped && PackageSource::BRANCH === $result['package']->get_source();
 
-			$rate_limit = 'edit-rate-limited' === $check_skipped && is_array( $request['repository_check_rate_limit'] ?? null ) ? $request['repository_check_rate_limit'] : null;
+			// Only stored_repository_fallback() sets these facts; manage() drops any browser-supplied copy.
+			$carried    = $request['repository_check_rate_limit'] ?? null;
+			$provider   = is_array( $carried ) ? ( $carried['provider'] ?? null ) : null;
+			$retry_at   = is_array( $carried ) ? ( $carried['retry_at'] ?? null ) : null;
+			$rate_limit = 'edit-rate-limited' === $check_skipped && is_string( $provider ) && ( null === $retry_at || is_int( $retry_at ) )
+				? array(
+					'provider' => $provider,
+					'retry_at' => $retry_at,
+				)
+				: null;
 
 			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status, $check_skipped, $check_branch, $rate_limit );
 		}

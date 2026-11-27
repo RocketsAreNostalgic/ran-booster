@@ -90,6 +90,50 @@ final class PackageBlueprintTest extends TestCase {
 		self::assertStringNotContainsString( 'source_id', $json );
 	}
 
+	public function test_only_a_credential_bearing_blueprint_carries_a_fresh_id_salt_that_its_reader_requires(): void {
+		$credential = new BlueprintCredential( 'gh', 'Team token', 'classic', array(), 'secret-canary-value', array( $this->identity() ) );
+		$package    = new PackageBlueprint( array( $this->package() ) );
+		$first      = new PackageBlueprint( array( $this->package() ), array( $credential ) );
+		$second     = new PackageBlueprint( array( $this->package() ), array( $credential ) );
+
+		self::assertStringNotContainsString( 'credential_id_salt', $package->canonical_json() );
+		self::assertSame( 1, preg_match( '/"credential_id_salt":"([0-9a-f]{64})"/', $first->canonical_json(), $match ) );
+		$salt = $match[1] ?? '';
+		self::assertNotSame( $first->artifact_identity(), $second->artifact_identity() );
+		$reread = PackageBlueprint::from_json( $first->canonical_json() );
+		self::assertSame( array( $first->canonical_json(), $first->artifact_identity() ), array( $reread->canonical_json(), $reread->artifact_identity() ) );
+		self::assertSame( $first->canonical_json(), ( new PackageBlueprint( array( $this->package() ), array( $credential ), $salt ) )->canonical_json() );
+
+		$json    = $first->canonical_json();
+		$refused = array(
+			'missing'              => str_replace( '"credential_id_salt":"' . $salt . '",', '', $json ),
+			'short'                => str_replace( $salt, substr( $salt, 1 ), $json ),
+			'upper case'           => str_replace( $salt, strtoupper( $salt ), $json ),
+			'not a string'         => str_replace( '"' . $salt . '"', '1', $json ),
+			'without credentials'  => str_replace( '{"credentials"', '{"credential_id_salt":"' . $salt . '","credentials"', $package->canonical_json() ),
+			'version 1 credential' => '{"format":"ran-booster-package-blueprint","version":1,"packages":[{"type":"plugin","identifier":"example/example.php","display_name":"Example Plugin","provider":"gh","provider_repository_id":"123","repository":"owner/repository","branch":"main","subdirectory":null}],"credentials":[{"provider":"gh","label":"Team token","kind":"classic","configuration":{},"secret":"secret-canary-value","packages":[{"type":"plugin","identifier":"example/example.php"}]}]}',
+		);
+		foreach ( $refused as $case => $document ) {
+			self::assertNotSame( $json, $document, $case );
+			try {
+				PackageBlueprint::from_json( $document );
+				self::fail( 'Expected refusal: ' . $case );
+			} catch ( \InvalidArgumentException $exception ) {
+				self::assertSame( 'The portability blueprint is invalid.', $exception->getMessage(), $case );
+			}
+		}
+		$constructed = array();
+		foreach ( array( array( array(), $salt ), array( array( $credential ), 'not-hex' ) ) as list( $credentials, $value ) ) {
+			try {
+				new PackageBlueprint( array( $this->package() ), $credentials, $value );
+				$constructed[] = $value;
+			} catch ( \InvalidArgumentException ) {
+				continue;
+			}
+		}
+		self::assertSame( array(), $constructed );
+	}
+
 	public function test_credential_keeps_the_secret_private_but_projects_exact_portable_material(): void {
 		$secret     = 'private-storage-secret-marker';
 		$credential = new BlueprintCredential(

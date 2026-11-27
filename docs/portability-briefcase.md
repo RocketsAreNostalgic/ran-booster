@@ -164,14 +164,26 @@ processing; generic PHP serialization is refused. The canonical Blueprint
 archive format and encryption are unchanged. Revealed strings and arrays remain
 ordinary PHP values, with no isolation or erasure guarantee.
 
-That omission also applies to older Blueprint V1 archives. A target cannot
-reconstruct whether Booster once had a source-local automatic-removal date, so
-legacy archives receive the same explicit import, saved-target or leave choice
-without any lifecycle assurance.
+Blueprint V1 documents that carry a credential are refused. They predate the
+portable ID salt described below, and Booster does not give an imported
+credential an unsalted ID.
 
-`BlueprintArchive` writes and reads the briefcase ZIP. It supports a canonical
-JSON-only archive and an encrypted AES-256 variant when the runtime can prove
-that the ZipArchive AES-256 API is available.
+`BlueprintArchive` writes and reads the briefcase ZIP. A package-only
+Blueprint is stored as one canonical `blueprint.json` entry. A credential-bearing
+one is stored as one `blueprint.sealed.json` entry: the Blueprint JSON encrypted
+with libsodium's XChaCha20-Poly1305 under an Argon2id key derived from the
+password. The header (format, version, Argon2id parameters, salt and nonce) is
+authenticated with the ciphertext, and a header naming parameters outside the
+allowed set is refused before a key is derived.
+
+**Re-export required:** credential-bearing archives exported with the earlier
+ZIP AES-256 encryption are refused. Export them again from the source site.
+Package-only archives are unaffected.
+
+A credential-bearing Blueprint also carries a random `credential_id_salt` inside
+the sealed payload. It keys the portable credential IDs, so an ID cannot confirm
+a guessed secret. Re-importing the same file reuses its credentials; importing a
+second export of the same credential creates a separate profile.
 
 ## Current delivery boundary
 
@@ -359,9 +371,10 @@ The code currently enforces the following limits:
 - `PackageBlueprint::MAX_PACKAGES` is 128.
 - `PackageBlueprint::MAX_CREDENTIALS` is 128.
 - `BlueprintArchive::MAX_BYTES` is 1048576 bytes.
-- Encrypted briefcase passwords must be high-entropy strings between 20 and 256
-  characters.
-- Only AES-256 encryption is accepted for the encrypted branch.
+- Briefcase passwords must be between 20 and 256 characters, counted as
+  characters rather than bytes, with at least 10 distinct characters.
+- Only the sealed format is accepted for credentials; ZIP encryption is
+  refused.
 
 The code also rejects unsafe repository locators, control characters, duplicate
 package identities, duplicate encrypted credential payloads, and mismatched

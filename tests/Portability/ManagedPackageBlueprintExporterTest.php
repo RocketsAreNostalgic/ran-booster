@@ -686,6 +686,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 		yield 'unknown profile' => array( array( 'gh' => array( 'unknown-profile' ) ) );
 		yield 'wrong provider' => array( array( 'bb' => array( 'credential-id-canary' ) ) );
 		yield 'constant' => array( array( 'gh' => array( SecretsFile::CONSTANT_PROFILE ) ) );
+		yield 'request-only profile' => array( array( 'gh' => array( 'tmp_' . str_repeat( 'a', 32 ) ) ) );
 		yield 'duplicate' => array( array( 'gh' => array( 'credential-id-canary', 'credential-id-canary' ) ) );
 		yield 'invalid provider' => array( array( 'GitHub' => array( 'credential-id-canary' ) ) );
 		yield 'invalid profile' => array( array( 'gh' => array( 'invalid profile' ) ) );

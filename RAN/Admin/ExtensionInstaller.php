@@ -267,7 +267,7 @@ final class ExtensionInstaller {
 					throw new RuntimeException( 'Release archive is too large.' );
 				}
 				$total_size += $stat['size'];
-				$stream      = $zip->getStreamIndex( $i );
+				$stream      = $zip->getStream( $name );
 				if ( '' === $relative || isset( $files[ $relative ] ) || ! is_resource( $stream ) ) {
 					throw new RuntimeException( 'Invalid release archive entry.' );
 				}

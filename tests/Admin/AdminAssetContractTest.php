@@ -1161,7 +1161,10 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/:first-child,[^{]*> \[aria-hidden="true"\],[^{]*__entry-heading \{\s*display: contents;/', $narrow );
 		self::assertMatchesRegularExpression( '/__entry-title \{\s*grid-row: 1;\s*grid-column: 1;/', $narrow );
 		self::assertMatchesRegularExpression( '/__entry-meta\s*\) \{\s*grid-row: 1;\s*grid-column: 2;/', $narrow );
-		self::assertMatchesRegularExpression( '/> :last-child \{\s*grid-row: 1;\s*grid-column: 3;/', $narrow );
+		// The native chevron takes the mounted chevron's column, so nothing moves on mount.
+		self::assertMatchesRegularExpression( '/> :last-child,[^{]*> summary::after \{\s*grid-row: 1;\s*grid-column: 3;/', $narrow );
+		// The native summary outranks the shared fallback summary flex rule.
+		self::assertStringContainsString( "__installation-entry[data-ran-booster-ui-disclosure]:not(\n\t\t\t[data-ran-booster-ui-disclosure-warned]\n\t\t)\n\t\t> details[data-ran-booster-ui-disclosure-fallback]\n\t\t> summary,", $narrow );
 		// The strapline spans every column on its own row under the title, badge and chevron.
 		self::assertMatchesRegularExpression( '/__entry-description \{\s*grid-row: 2;\s*grid-column: 1 \/ -1;/', $narrow );
 		// The padding belongs to the header rules (16px Installation, 24px Settings), never to the narrow rule.

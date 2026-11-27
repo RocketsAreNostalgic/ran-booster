@@ -187,7 +187,9 @@
  * wrappers around the title and strapline stop generating boxes so the title,
  * badge, chevron and strapline are its items. The markup and the accessible
  * name are unchanged. Wide Cards keep the stacked title and strapline at the
- * start with the badge and chevron at the end.
+ * start with the badge and chevron at the end. The native summary selector
+ * outranks the shared fallback summary rule in 25-admin-primitives.css, so the
+ * header keeps the same rows before and after the Disclosure mounts.
  */
 
 .ran-booster-admin .ran-booster-troubleshooting__installation-entry {
@@ -200,7 +202,9 @@
 		.ran-booster-ui-disclosure__header
 		> [role="button"],
 	.ran-booster-admin
-		.ran-booster-troubleshooting__installation-entry
+		.ran-booster-troubleshooting__installation-entry[data-ran-booster-ui-disclosure]:not(
+			[data-ran-booster-ui-disclosure-warned]
+		)
 		> details[data-ran-booster-ui-disclosure-fallback]
 		> summary,
 	.ran-booster-admin
@@ -251,7 +255,11 @@
 		.ran-booster-troubleshooting__installation-entry
 		.ran-booster-ui-disclosure__header
 		> [role="button"]
-		> :last-child {
+		> :last-child,
+	.ran-booster-admin
+		.ran-booster-troubleshooting__installation-entry
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary::after {
 		grid-row: 1;
 		grid-column: 3;
 	}

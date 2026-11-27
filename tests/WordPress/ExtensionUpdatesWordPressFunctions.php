@@ -10,6 +10,14 @@ if ( ! function_exists( 'add_action' ) ) {
 	}
 }
 
+if ( ! function_exists( 'add_filter' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
+	function add_filter( string $hook, callable $callback, int $priority = 10 ): bool {
+		$GLOBALS['ran_booster_extension_update_filters'][ $hook ][ $priority ][] = $callback;
+		return true;
+	}
+}
+
 if ( ! function_exists( 'esc_html__' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function esc_html__( string $text, string $domain ): string {

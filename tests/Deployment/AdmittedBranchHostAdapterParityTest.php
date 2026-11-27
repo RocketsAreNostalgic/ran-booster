@@ -593,6 +593,214 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertNotNull( $this->database->rows[0]['mutation_started_at'] );
 	}
 
+	/** @return iterable<string, array{list<int|array<string,mixed>>,list<bool>}> */
+	public static function private_archive_requests(): iterable {
+		$redirect = array(
+			'response' => array( 'code' => 302 ),
+			'headers'  => array( 'location' => 'https://example.test/download.zip' ),
+		);
+		$limited  = array(
+			'response' => array( 'code' => 429 ),
+			'headers'  => array( 'retry-after' => '0' ),
+		);
+		yield 'initial retry' => array( array( $limited, 200 ), array( true, true ) );
+		yield 'ordinary redirect' => array( array( $redirect, 200 ), array( true, false ) );
+		yield 'redirect after initial retry' => array( array( $limited, $redirect, 200 ), array( true, true, false ) );
+		$back = array(
+			'response' => array( 'code' => 307 ),
+			'headers'  => array( 'location' => 'https://api.github.com/repos/owner/install-plugin/zipball/' . str_repeat( 'a', 40 ) ),
+		);
+		yield 'anonymous redirect back to the initial URL' => array( array( $redirect, $back, 200 ), array( true, false, false ) );
+		yield 'transient on redirect' => array( array( $redirect, $limited, 200 ), array( true, false, false ) );
+	}
+
+	/**
+	 * @param list<int|array<string,mixed>> $responses
+	 * @param list<bool>                    $expected_auth
+	 */
+	#[DataProvider( 'private_archive_requests' )]
+	public function test_guarded_github_archive_scopes_authorization_to_initial_request_and_retry( array $responses, array $expected_auth ): void {
+		$commit = str_repeat( 'a', 40 );
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array( $this->github_repository_response( true, 'owner/install-plugin', 'R_install_plugin' ), $this->github_sha_response( $commit ) )
+		);
+		$this->download_fixture( 'example' );
+		$adapter                                        = $this->adapter(
+			$this->running_install( 'example', is_private: true, credential_id: 'private-profile' ),
+			$this->guarded_github_provider( array( 'private-profile' => self::TOKEN_SENTINEL ) )
+		);
+		$GLOBALS['ran_booster_admitted_http_responses'] = $responses;
+		$artifact                                       = $adapter->prepare( $adapter->declaration(), null );
+		$artifact->cleanup();
+
+		self::assertCount( 2, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
+		$calls = $GLOBALS['ran_booster_admitted_http_calls'];
+		self::assertCount( count( $expected_auth ), $calls );
+		$expected_url = 'https://api.github.com/repos/owner/install-plugin/zipball/' . $commit;
+		foreach ( $expected_auth as $index => $authenticated ) {
+			self::assertSame( $authenticated, hash_equals( 'Bearer ' . self::TOKEN_SENTINEL, $calls[ $index ]['arguments']['headers']['Authorization'] ?? '' ) );
+			self::assertSame( $expected_url, $calls[ $index ]['url'] );
+			if ( is_array( $responses[ $index ] ) ) {
+				$expected_url = $responses[ $index ]['headers']['location'] ?? $expected_url;
+			}
+			self::assertSame( $authenticated, isset( $calls[ $index ]['arguments']['headers']['Authorization'] ) );
+		}
+	}
+
+	/** @return iterable<string, array{mixed, bool}> */
+	public static function redirect_headers(): iterable {
+		yield 'ordinary raw fields' => array( "Accept: application/zip\r\nX-Example: one\n two", true );
+		yield 'ordinary map' => array( array( 'Accept' => 'application/zip' ), true );
+		yield 'raw authorization field' => array( "Accept: application/zip\r\naUtHoRiZaTiOn: fixture", false );
+		yield 'authorization map' => array( array( 'AUTHORIZATION' => 'fixture' ), false );
+		yield 'repeated authorization field' => array( array( 'Authorization' => array( 'fixture', 'fixture' ) ), false );
+		yield 'unsupported header representation' => array( new \stdClass(), false );
+	}
+
+	#[DataProvider( 'redirect_headers' )]
+	public function test_redirect_requires_inspectable_anonymous_headers( mixed $headers, bool $allowed ): void {
+		$archive = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$adapter = $this->adapter( $this->running_update(), new ParityRepositoryProvider( $archive ) );
+		$this->download_fixture( 'example' );
+		$redirect = 'https://example.test/download.zip';
+		\RAN\RepositoryProvider\add_filter(
+			'http_request_args',
+			static function ( array $arguments, string $url ) use ( $redirect, $headers ): array {
+				if ( $url === $redirect ) {
+					$arguments['headers'] = $headers;
+				}
+				return $arguments;
+			}
+		);
+		$GLOBALS['ran_booster_admitted_http_responses'] = array(
+			array(
+				'response' => array( 'code' => 302 ),
+				'headers'  => array( 'location' => $redirect ),
+			),
+			200,
+		);
+		try {
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() )->cleanup();
+			self::assertTrue( $allowed );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertFalse( $allowed );
+			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID, $failure->outcome_code );
+		}
+		self::assertCount( $allowed ? 2 : 1, $GLOBALS['ran_booster_admitted_http_calls'] );
+	}
+
+	/** @return iterable<string, array{string, mixed}> */
+	public static function retry_stream_changes(): iterable {
+		yield 'stream disabled' => array( 'stream', false );
+		yield 'destination changed' => array( 'filename', 'other-fixture' );
+		yield 'automatic redirects enabled' => array( 'redirection', 1 );
+		yield 'request identity removed' => array( 'ran_booster_stream', null );
+		yield 'byte limit changed' => array( 'limit_response_size', 1 );
+	}
+
+	#[DataProvider( 'retry_stream_changes' )]
+	public function test_changed_retry_stream_preserves_the_transient_before_transport( string $field, mixed $value ): void {
+		$archive = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$adapter = $this->adapter( $this->running_update(), new ParityRepositoryProvider( $archive ) );
+		$this->download_fixture( 'example' );
+		\RAN\RepositoryProvider\add_filter(
+			'http_request_args',
+			static function ( array $args ) use ( $field, $value ): array {
+				if ( array() !== $GLOBALS['ran_booster_admitted_http_calls'] ) {
+					$args[ $field ] = $value;
+				}
+				return $args;
+			}
+		);
+		$GLOBALS['ran_booster_admitted_http_responses'] = array( $this->status_with_retry_after( 429, '0' ), 404 );
+		try {
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+			self::fail( 'Changed stream configuration must refuse the retry.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_RATE_LIMITED, $failure->outcome_code );
+		}
+		self::assertCount( 1, $GLOBALS['ran_booster_admitted_http_calls'] );
+		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
+	public function test_nested_request_with_matching_arguments_leaves_the_owned_retry_available(): void {
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array( $this->github_repository_response( true, 'owner/install-plugin', 'R_install_plugin' ), $this->github_sha_response( str_repeat( 'a', 40 ) ) )
+		);
+		$this->download_fixture( 'example' );
+		$adapter = $this->adapter(
+			$this->running_install( 'example', is_private: true, credential_id: 'private-profile' ),
+			$this->guarded_github_provider( array( 'private-profile' => self::TOKEN_SENTINEL ) )
+		);
+		$nested  = false;
+		\RAN\RepositoryProvider\add_filter(
+			'http_request_args',
+			static function ( array $args, string $url ) use ( &$nested ): array {
+				if ( ! $nested && 1 === count( $GLOBALS['ran_booster_admitted_http_calls'] ) ) {
+					$nested = true;
+					\RAN\Deployment\wp_safe_remote_get( $url, $args );
+				}
+				return $args;
+			},
+			5
+		);
+		$GLOBALS['ran_booster_admitted_http_responses'] = array( $this->status_with_retry_after( 429, '0' ), 304, 200 );
+		$adapter->prepare( $adapter->declaration(), null )->cleanup();
+		$calls = $GLOBALS['ran_booster_admitted_http_calls'];
+		self::assertCount( 3, $calls );
+		self::assertTrue( isset( $calls[0]['arguments']['headers']['Authorization'] ) );
+		self::assertFalse( isset( $calls[1]['arguments']['headers']['Authorization'] ) );
+		self::assertTrue( isset( $calls[2]['arguments']['headers']['Authorization'] ) );
+	}
+
+	public function test_private_archive_preserves_transient_when_retry_authorization_fails(): void {
+		$commit = str_repeat( 'a', 40 );
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array( $this->github_repository_response( true, 'owner/install-plugin', 'R_install_plugin' ), $this->github_sha_response( $commit ) )
+		);
+		$this->download_fixture( 'example' );
+		$adapter = $this->adapter(
+			$this->running_install( 'example', is_private: true, credential_id: 'private-profile' ),
+			$this->guarded_github_provider( array( 'private-profile' => self::TOKEN_SENTINEL ) )
+		);
+		// A conflicting header prevents the one-use authorizer from signing the second request.
+		$GLOBALS['ran_booster_admitted_http_request_args'] = static function (): void {
+			\RAN\RepositoryProvider\add_filter(
+				'http_request_args',
+				static function ( array $arguments ): array {
+					$arguments['headers']['Authorization'] = 'fixture-conflict';
+					return $arguments;
+				},
+				5
+			);
+		};
+		$GLOBALS['ran_booster_admitted_http_responses']    = array( $this->status_with_retry_after( 429, '0' ), 404 );
+		try {
+			$adapter->prepare( $adapter->declaration(), null );
+			self::fail( 'The refused retry must preserve the original throttle.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_RATE_LIMITED, $failure->outcome_code );
+		}
+		self::assertCount( 1, $GLOBALS['ran_booster_admitted_http_calls'] );
+		self::assertCount( 2, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
+	}
+
+	public function test_private_provider_without_retry_authority_stops_on_the_initial_transient(): void {
+		$archive = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$adapter = $this->adapter( $this->running_install( 'example', is_private: true, credential_id: 'fixture' ), new ParityRepositoryProvider( $archive ) );
+		$this->download_fixture( 'example' );
+		$GLOBALS['ran_booster_admitted_http_responses'] = array( $this->status_with_retry_after( 503, '0' ), 404 );
+		try {
+			$adapter->prepare( $adapter->declaration(), null );
+			self::fail( 'Private archive without fresh authorization must retain the transient outcome.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::from_provider_failure( new RuntimeException( '', 503 ) )->get_code(), $failure->outcome_code );
+		}
+		self::assertCount( 1, $GLOBALS['ran_booster_admitted_http_calls'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_admitted_sleeps'] );
+		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
 	public function test_guarded_webhook_rechecks_the_current_head_after_archive_cleanup(): void {
 		$commit = 'abcdef0123456789abcdef0123456789abcdef01';
 		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(

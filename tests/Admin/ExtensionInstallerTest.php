@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ExtensionInstaller;
 use RAN\Deployment\PreparedArtifact;
+use RAN\PackageArtifactLimit;
 use RAN\WordPress\CorePackageExecutionResult;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\WordPressUpdaterLock;
@@ -70,6 +71,7 @@ final class ExtensionInstallerTest extends TestCase {
 	}
 
 	public function test_success_installs_exact_bytes_inactive_and_cleans_temp(): void {
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES );
 		$this->executor->install                       = true;
 		$GLOBALS['ran_booster_extension_test_plugins'] = array( 'example/example.php' => array( 'Version' => '1.2.3' ) );
 		$before                                        = glob( sys_get_temp_dir() . '/ran-extension-*' );
@@ -78,6 +80,27 @@ final class ExtensionInstallerTest extends TestCase {
 		self::assertSame( 1, $this->lock->acquires );
 		self::assertSame( $before, glob( sys_get_temp_dir() . '/ran-extension-*' ) );
 		self::assertFileExists( WP_PLUGIN_DIR . '/example/example.php' );
+		self::assertSame( PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES + 1, $GLOBALS['ran_booster_extension_test_limit'] );
+	}
+
+	public function test_download_over_the_configured_ceiling_is_refused_before_install(): void {
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES );
+		$zip = new ZipArchive();
+		self::assertTrue( $zip->open( $this->zip ) );
+		self::assertTrue( $zip->addFromString( 'example/assets/data.txt', str_repeat( 'a', PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES ) ) );
+		self::assertTrue( $zip->setCompressionName( 'example/assets/data.txt', ZipArchive::CM_STORE ) );
+		self::assertTrue( $zip->close() );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the exact fixture bytes supplied by the test transport.
+		$download = file_get_contents( $this->zip );
+		self::assertIsString( $download );
+		$GLOBALS['ran_booster_extension_test_download'] = $download;
+		$this->entry['asset_sha256']                    = hash_file( 'sha256', $this->zip );
+
+		self::assertGreaterThan( PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES, strlen( $download ) );
+		self::assertSame( 'failed', $this->installer()->install( 'example' ) );
+		self::assertSame( PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES + 1, $GLOBALS['ran_booster_extension_test_limit'] );
+		self::assertSame( 0, $this->lock->acquires );
+		self::assertSame( 0, $this->executor->calls );
 	}
 
 	public function test_tampered_download_fails_before_mutation_and_cleans_temp(): void {

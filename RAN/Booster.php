@@ -389,13 +389,7 @@ class Booster {
 		}
 		( new \RAN\WordPress\ExtensionUpdates(
 			$this->service( \RAN\WordPress\ManagedReleaseUpdaterRegistrar::class ),
-			function ( string $plugin ): bool {
-				try {
-					return null !== $this->service( 'RAN\\Storage\\PluginRepository' )->native_recovery_record( $plugin );
-				} catch ( \Throwable ) {
-					return true;
-				}
-			},
+			fn ( string $plugin ): bool => null !== $this->service( 'RAN\\Storage\\PluginRepository' )->native_recovery_record( $plugin ),
 			// Registers during plugin load, so it must not translate display text.
 			fn (): array => $this->extension_cards( get_plugins(), false )
 		) )->register();

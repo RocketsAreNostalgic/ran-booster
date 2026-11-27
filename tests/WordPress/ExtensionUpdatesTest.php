@@ -12,8 +12,11 @@ use RAN\WordPress\ExtensionUpdates;
 use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
 
 final class ExtensionUpdatesTest extends TestCase {
+	private bool $ownership_read_failed = false;
+
 	#[RunInSeparateProcess]
 	public function test_registers_compatible_active_and_inactive_catalogue_extensions_through_one_path(): void {
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 2097152 );
 		if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
 			define( 'WP_PLUGIN_DIR', '/tmp/wp-plugins' );
 		}
@@ -40,7 +43,13 @@ final class ExtensionUpdatesTest extends TestCase {
 		};
 		$updates = new ExtensionUpdates(
 			new ManagedReleaseUpdaterRegistrar( $runtime ),
-			static fn ( string $plugin ): bool => '' === $plugin && false,
+			function ( string $plugin ): bool {
+				unset( $plugin );
+				if ( $this->ownership_read_failed ) {
+					throw new \RuntimeException( 'Synthetic ownership read failure.' );
+				}
+				return false;
+			},
 			fn (): array => array( $this->extension( 'Active' ), $this->extension( 'Installed, inactive' ) )
 		);
 
@@ -49,9 +58,13 @@ final class ExtensionUpdatesTest extends TestCase {
 		self::assertCount( 2, $runtime->plugins );
 		self::assertSame( 'manual', $runtime->plugins[0][5] );
 		self::assertSame( 'manual', $runtime->plugins[1][5] );
+		self::assertSame( 2097152, $runtime->plugins[0][7] );
+		self::assertSame( 2097152, $runtime->plugins[1][7] );
 		self::assertTrue( ( $runtime->admissions[0] )( $this->descriptor() ) );
 		self::assertFalse( ( $runtime->admissions[0] )( $this->descriptor( version: '1.2.3-beta.2' ) ) );
 		self::assertFalse( ( $runtime->admissions[0] )( $this->descriptor( digest: str_repeat( 'b', 64 ) ) ) );
+		$this->ownership_read_failed = true;
+		self::assertFalse( ( $runtime->admissions[0] )( $this->descriptor() ) );
 	}
 
 	#[RunInSeparateProcess]
@@ -85,37 +98,80 @@ final class ExtensionUpdatesTest extends TestCase {
 		self::assertFalse( ( $runtime->admission )( $this->descriptor() ) );
 	}
 
-	public function test_does_not_register_an_incompatible_or_owned_catalogue_extension(): void {
-		$runtime                    = new class() {
-			public int $registrations = 0;
-			public function with_descriptor_admission( callable $admission ): object {
-				unset( $admission );
-				$registrations = &$this->registrations;
-				return new class( function () use ( &$registrations ): void {
-					++$registrations;
-				} ) {
-					public function __construct( private \Closure $record ) {}
-					public function plugin( mixed ...$arguments ): object {
-						unset( $arguments );
-						( $this->record )();
-						return new class() { public function register(): bool {
-								return true;
-						} };
-					}
-				};
-			}
-		};
-		$incompatible               = $this->extension( 'Active' );
-		$incompatible['compatible'] = false;
-		$updates                    = new ExtensionUpdates(
-			new ManagedReleaseUpdaterRegistrar( $runtime ),
-			static fn ( string $plugin ): bool => '' !== $plugin,
-			static fn (): array => array( $incompatible )
+	#[RunInSeparateProcess]
+	public function test_ineligible_ownership_is_checked_only_for_matching_offers(): void {
+		require_once __DIR__ . '/ExtensionUpdatesWordPressFunctions.php';
+		$entries = array();
+		foreach ( array( 'managed', 'unmanaged', 'unknown', 'absent' ) as $slug ) {
+			$extension               = $this->extension( 'absent' === $slug ? 'Not installed' : 'Active' );
+			$extension['plugin']     = "$slug/$slug.php";
+			$extension['compatible'] = 'absent' === $slug;
+			$entries[]               = $extension;
+		}
+		$checked = array();
+		$updates = new ExtensionUpdates(
+			new ManagedReleaseUpdaterRegistrar( new \stdClass() ),
+			static function ( string $plugin ) use ( &$checked ): bool {
+				$checked[] = $plugin;
+				if ( 'unknown/unknown.php' === $plugin ) {
+					throw new \RuntimeException( 'Synthetic ownership read failure.' );
+				}
+				return 'managed/managed.php' === $plugin;
+			},
+			static fn (): array => $entries
 		);
 
 		$updates->register();
 
-		self::assertSame( 0, $runtime->registrations );
+		self::assertSame( array(), $checked );
+		self::assertArrayNotHasKey( 'ran_booster_extension_update_actions', $GLOBALS );
+		$offer   = (object) array( 'new_version' => '1.2.4' );
+		$sibling = array( 'other/other.php' => $offer );
+		self::assertSame( array(), $this->read_offers( array() ) );
+		self::assertSame( $sibling, $this->read_offers( $sibling ) );
+		self::assertSame( array(), $checked );
+
+		$plugin_ids = array_column( $entries, 'plugin' );
+		self::assertSame(
+			$sibling + array( 'managed/managed.php' => $offer ),
+			$this->read_offers( $sibling + array_fill_keys( $plugin_ids, $offer ) )
+		);
+		self::assertSame( $plugin_ids, $checked );
+	}
+
+	#[RunInSeparateProcess]
+	public function test_eligible_ownership_read_failure_blocks_registration_and_only_its_offer(): void {
+		require_once __DIR__ . '/ExtensionUpdatesWordPressFunctions.php';
+		$checked = array();
+		$updates = new ExtensionUpdates(
+			new ManagedReleaseUpdaterRegistrar( new \stdClass() ),
+			static function ( string $plugin ) use ( &$checked ): bool {
+				$checked[] = $plugin;
+				throw new \RuntimeException( 'Synthetic ownership read failure.' );
+			},
+			fn (): array => array( $this->extension( 'Installed, inactive' ) )
+		);
+
+		$updates->register();
+
+		self::assertSame( array( 'example/example.php' ), $checked );
+		self::assertArrayNotHasKey( 'ran_booster_extension_update_actions', $GLOBALS );
+		$offer   = (object) array( 'new_version' => '1.2.4' );
+		$sibling = array( 'other/other.php' => $offer );
+		self::assertSame( $sibling, $this->read_offers( $sibling + array( 'example/example.php' => $offer ) ) );
+		self::assertSame( array( 'example/example.php' ), $checked );
+	}
+
+	/**
+	 * @param array<string, object> $offers
+	 * @return array<string, object>
+	 */
+	private function read_offers( array $offers ): array {
+		$transient = (object) array( 'response' => $offers );
+		foreach ( $GLOBALS['ran_booster_extension_update_filters']['site_transient_update_plugins'][ PHP_INT_MAX ] ?? array() as $filter ) {
+			$transient = $filter( $transient );
+		}
+		return $transient->response;
 	}
 
 	public function test_does_not_register_a_compatible_catalogue_extension_with_existing_management(): void {

@@ -6,6 +6,7 @@ namespace RAN\WordPress;
 
 use Closure;
 use RAN\Deployment\PackageMutationGuard;
+use RAN\PackageArtifactLimit;
 use RAN\WPReleaseUpdater\V1\Contract\IdentityDescriptor;
 final class ExtensionUpdates {
 	/** @var Closure(): list<array<string, mixed>> */
@@ -31,21 +32,20 @@ final class ExtensionUpdates {
 			}
 			$plugin = $extension['plugin'];
 			if ( ! $this->eligible( $extension ) ) {
-				$this->suppress( $plugin );
-				continue;
-			}
-			if ( ( $this->managed_package_exists )( $plugin ) ) {
-				$this->suppress( $plugin );
-				continue;
-			}
-			$admitted = $this->registrar->with_descriptor_admission( fn ( IdentityDescriptor $descriptor ): bool => $this->admits( $extension, $descriptor ) );
-			if ( null === $admitted ) {
-				$this->notice();
-				$this->suppress( $plugin );
+				$this->suppress( $plugin, true );
 				continue;
 			}
 			try {
-				$target = $admitted->plugin( 'github', WP_PLUGIN_DIR . '/' . $plugin, $extension['repository'], $extension['repository_id'], 'prerelease', 'manual', null );
+				if ( ( $this->managed_package_exists )( $plugin ) ) {
+					continue;
+				}
+				$admitted = $this->registrar->with_descriptor_admission( fn ( IdentityDescriptor $descriptor ): bool => $this->admits( $extension, $descriptor ) );
+				if ( null === $admitted ) {
+					$this->notice();
+					$this->suppress( $plugin );
+					continue;
+				}
+				$target = $admitted->plugin( 'github', WP_PLUGIN_DIR . '/' . $plugin, $extension['repository'], $extension['repository_id'], 'prerelease', 'manual', null, PackageArtifactLimit::resolve() );
 				if ( ! is_callable( array( $target, 'register' ) ) || ! $target->register() ) {
 					$this->suppress( $plugin );
 				}
@@ -104,14 +104,25 @@ final class ExtensionUpdates {
 		return null;
 	}
 
-	private function suppress( string $plugin ): void {
+	private function suppress( string $plugin, bool $check_managed = false ): void {
 		if ( function_exists( 'add_filter' ) ) {
 			add_filter(
 				'site_transient_update_plugins',
-				static function ( mixed $transient ) use ( $plugin ): mixed {
-					if ( is_object( $transient ) && isset( $transient->response ) && is_array( $transient->response ) ) {
-						unset( $transient->response[ $plugin ] );
+				function ( mixed $transient ) use ( $plugin, $check_managed ): mixed {
+					if ( ! is_object( $transient ) || ! isset( $transient->response ) || ! is_array( $transient->response ) || ! isset( $transient->response[ $plugin ] ) ) {
+						return $transient;
 					}
+					if ( $check_managed ) {
+						try {
+							$managed = ( $this->managed_package_exists )( $plugin );
+						} catch ( \Throwable ) {
+							$managed = false;
+						}
+						if ( $managed ) {
+							return $transient;
+						}
+					}
+					unset( $transient->response[ $plugin ] );
 					return $transient;
 				},
 				PHP_INT_MAX

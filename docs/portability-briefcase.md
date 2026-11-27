@@ -151,7 +151,8 @@ locator and source-specific tracking configuration. Branch records carry branch 
 code must parse, the repository locator must be acceptable to the provider
 layer, and the subdirectory must already be normalized.
 
-`BlueprintCredential` is the optional encrypted credential record. It keeps the
+`BlueprintCredential` is the optional credential record, carried only inside a
+sealed archive. It keeps the
 credential provider, label, kind, configuration, secret, and the package list
 that it belongs to. The record is normalized and bounded before it is written
 into a blueprint. Source profile IDs and local self-destruct dates are never
@@ -328,16 +329,22 @@ hostname after normalization. If the hostname is unavailable, unsafe,
 unconvertible or too long to fit, the filename uses `site`.
 An enhanced download also falls back to
 `ran-booster-blueprint.zip` if its filename header is unavailable or invalid.
-The JSON entry inside the archive is always `blueprint.json`.
+The archive holds exactly one entry: `blueprint.json` for a package-only
+Blueprint, or `blueprint.sealed.json` for a credential-bearing one. A
+credential-bearing archive with a `blueprint.json` entry, or with a
+ZIP-encrypted entry, is not a valid current export.
 
 `PackageBlueprint::from_json()` accepts only canonical JSON that matches the
-computed output exactly. The current format is:
+computed output exactly. In a sealed archive this is the decrypted payload. The
+current format is:
 
 - format: `ran-booster-package-blueprint`
 - version: `2`
 - packages: a list of package records
-- credentials: a list of encrypted credential records when the briefcase option
-  is used
+- credentials: a list of credential records when the briefcase option is used;
+  a non-empty list is accepted only from a sealed archive
+- credential_id_salt: 64 lowercase hexadecimal characters, present exactly when
+  credentials are
 
 The package record fields are:
 
@@ -377,7 +384,7 @@ The code currently enforces the following limits:
   refused.
 
 The code also rejects unsafe repository locators, control characters, duplicate
-package identities, duplicate encrypted credential payloads, and mismatched
+package identities, duplicate credential payloads, and mismatched
 package-to-credential associations.
 
 Package-only preview, export and Apply need `manage_options`. Credential

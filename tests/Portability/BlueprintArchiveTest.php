@@ -81,13 +81,18 @@ final class BlueprintArchiveTest extends TestCase {
 		self::assertSame( $blueprint->canonical_json(), $archive->read_from( $this->file, self::PASSWORD )->canonical_json() );
 	}
 
-	public function test_password_floor_counts_characters_and_variety_and_accepts_the_generator_output(): void {
+	public function test_password_floor_counts_characters_and_variety_and_accepts_the_generator_encoding(): void {
 		self::assertTrue( BlueprintArchive::accepts_password( self::PASSWORD ) );
 		self::assertTrue( BlueprintArchive::accepts_password( str_repeat( 'é', 10 ) . 'abcdefghij' ) );
 		foreach ( array( null, str_repeat( '😀', 5 ), str_repeat( 'a', 25 ), 'abababababababababababab', 'abcdefgh' . str_repeat( 'z', 20 ), str_repeat( 'abcdefghij', 25 ) . 'abcdefg', "valid-length-password\n", "valid-length-pass\x7fword" ) as $password ) {
 			self::assertFalse( BlueprintArchive::accepts_password( $password ), (string) $password );
 		}
-		// The Portability screen generates base64url text from 24 random bytes; the floor must never refuse it.
+		// Four-byte characters reach exactly 1,024 bytes at 256 characters; anything longer is refused before it is split.
+		$wide = str_repeat( '😀😁😂😃😄😅😆😇😈😉', 25 ) . '😀😁😂😃😄😅';
+		self::assertTrue( BlueprintArchive::accepts_password( $wide ) );
+		self::assertFalse( BlueprintArchive::accepts_password( $wide . 'a' ) );
+		self::assertFalse( BlueprintArchive::accepts_password( str_repeat( 'abcdefghij', 1048576 ) ) );
+		// Reproduces the Portability screen generator's encoding (base64url of 24 random bytes) in PHP; the floor must never refuse it.
 		for ( $sample = 0; $sample < 100000; ++$sample ) {
 			$generated = rtrim( strtr( base64_encode( random_bytes( 24 ) ), '+/', '-_' ), '=' ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Reproduces the browser generator's encoding.
 			if ( ! BlueprintArchive::accepts_password( $generated ) ) {
@@ -161,13 +166,15 @@ final class BlueprintArchiveTest extends TestCase {
 		$archive = new BlueprintArchive();
 		$json    = $this->credential_blueprint()->canonical_json();
 		$this->start_log_capture();
-		foreach ( array( 'salt', 'nonce', 'ciphertext', 'short salt', 'short nonce' ) as $field ) {
+		// The non-canonical variants decode to the genuine header, so only the exact-bytes check refuses them.
+		$tampered = array( 'salt', 'nonce', 'ciphertext', 'short salt', 'short nonce', 'short ciphertext', 'whitespace', 'escape', 'duplicate' );
+		foreach ( $tampered as $field ) {
 			$this->write_sealed( $json, tamper: $field );
 			$this->assert_invalid( fn() => $archive->read_from( $this->file, self::PASSWORD ) );
 		}
 		$this->write_sealed( $json );
 		self::assertCount( 1, $archive->read_from( $this->file, self::PASSWORD )->credentials );
-		self::assertSame( array_fill( 0, 5, $this->refusal( 'unseal_failed' ) ), $this->captured_log_lines() );
+		self::assertSame( array_fill( 0, count( $tampered ), $this->refusal( 'unseal_failed' ) ), $this->captured_log_lines() );
 	}
 
 	public function test_header_parameters_outside_the_allowed_set_are_refused_before_key_derivation(): void {
@@ -337,15 +344,26 @@ final class BlueprintArchiveTest extends TestCase {
 		$key        = $derive ? sodium_crypto_pwhash( SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES, self::PASSWORD, $salt, (int) $opslimit, $memlimit, SODIUM_CRYPTO_PWHASH_ALG_ARGON2ID13 ) : random_bytes( SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_KEYBYTES );
 		$ciphertext = sodium_crypto_aead_xchacha20poly1305_ietf_encrypt( $json, (string) json_encode( $header, JSON_UNESCAPED_SLASHES ), $nonce, $key ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Reproduces the exact authenticated header bytes.
 		$header    += array( 'ciphertext' => sodium_bin2base64( $ciphertext, SODIUM_BASE64_VARIANT_ORIGINAL ) );
-		if ( null !== $tamper ) {
+		if ( in_array( $tamper, array( 'salt', 'nonce', 'ciphertext', 'short salt', 'short nonce', 'short ciphertext' ), true ) ) {
 			$field   = str_replace( 'short ', '', $tamper );
 			$encoded = $header[ $field ];
 			self::assertIsString( $encoded );
-			$bytes            = sodium_base642bin( $encoded, SODIUM_BASE64_VARIANT_ORIGINAL );
-			$bytes            = $field === $tamper ? chr( ord( $bytes[0] ) ^ 1 ) . substr( $bytes, 1 ) : substr( $bytes, 1 );
+			$bytes = sodium_base642bin( $encoded, SODIUM_BASE64_VARIANT_ORIGINAL );
+			$bytes = match ( $tamper ) {
+				$field => chr( ord( $bytes[0] ) ^ 1 ) . substr( $bytes, 1 ),
+				'short ciphertext' => substr( $bytes, 0, SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES - 1 ),
+				default => substr( $bytes, 1 ),
+			};
 			$header[ $field ] = sodium_bin2base64( $bytes, SODIUM_BASE64_VARIANT_ORIGINAL );
 		}
-		$this->write_raw( (string) json_encode( $header, JSON_UNESCAPED_SLASHES ), ZipArchive::EM_NONE, null, BlueprintArchive::SEALED_ENTRY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only sealed fixture.
+		$envelope = (string) json_encode( $header, JSON_UNESCAPED_SLASHES ); // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only sealed fixture.
+		$envelope = match ( $tamper ) {
+			'whitespace' => str_replace( ',"', ', "', $envelope ),
+			'escape' => str_replace( '"argon2id13"', '"\\u0061rgon2id13"', $envelope ),
+			'duplicate' => '{"format":"other",' . substr( $envelope, 1 ),
+			default => $envelope,
+		};
+		$this->write_raw( $envelope, ZipArchive::EM_NONE, null, BlueprintArchive::SEALED_ENTRY );
 	}
 
 	private function refusal( string $code ): string {

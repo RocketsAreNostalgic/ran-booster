@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Portability;
 
 use InvalidArgumentException;
-use JsonException;
 use RAN\Logging\BoosterLogger;
 use Throwable;
 use ZipArchive;
@@ -123,11 +122,12 @@ final class BlueprintArchive {
 
 	/**
 	 * At least 20 and at most 256 characters, with at least 10 distinct ones.
+	 * Input over 1,024 bytes is refused before it is split into characters.
 	 *
 	 * @phpstan-assert-if-true =string $password
 	 */
 	public static function accepts_password( ?string $password ): bool {
-		if ( null === $password || 1 === preg_match( '/[\x00-\x1F\x7F]/', $password ) ) {
+		if ( null === $password || strlen( $password ) > 1024 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $password ) ) {
 			return false;
 		}
 		$characters = preg_split( '//u', $password, -1, PREG_SPLIT_NO_EMPTY );
@@ -144,8 +144,8 @@ final class BlueprintArchive {
 		if ( ! self::accepts_password( $password ) ) {
 			throw new InvalidArgumentException();
 		}
-		$nonce     = random_bytes( SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES );
-		$header    = array(
+		$nonce  = random_bytes( SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES );
+		$header = array(
 			'format'   => self::SEAL_FORMAT,
 			'version'  => self::SEAL_VERSION,
 			'kdf'      => 'argon2id13',
@@ -154,9 +154,12 @@ final class BlueprintArchive {
 			'salt'     => sodium_bin2base64( random_bytes( SODIUM_CRYPTO_PWHASH_SALTBYTES ), SODIUM_BASE64_VARIANT_ORIGINAL ),
 			'nonce'    => sodium_bin2base64( $nonce, SODIUM_BASE64_VARIANT_ORIGINAL ),
 		);
-		$key       = self::sealing_key( $password, $header );
-		$encrypted = sodium_crypto_aead_xchacha20poly1305_ietf_encrypt( $json, self::encode( $header ), $nonce, $key );
-		sodium_memzero( $key );
+		$key    = self::sealing_key( $password, $header );
+		try {
+			$encrypted = sodium_crypto_aead_xchacha20poly1305_ietf_encrypt( $json, self::encode( $header ), $nonce, $key );
+		} finally {
+			sodium_memzero( $key );
+		}
 
 		return self::encode( $header + array( 'ciphertext' => sodium_bin2base64( $encrypted, SODIUM_BASE64_VARIANT_ORIGINAL ) ) );
 	}
@@ -167,14 +170,11 @@ final class BlueprintArchive {
 			$code = 'sealing_unavailable';
 			throw new InvalidArgumentException();
 		}
-		$code = 'unseal_failed';
-		try {
-			$header = json_decode( $envelope, true, 2, JSON_THROW_ON_ERROR );
-		} catch ( JsonException ) {
-			throw new InvalidArgumentException();
-		}
+		$code   = 'unseal_failed';
+		$header = json_decode( $envelope, true, 2, JSON_THROW_ON_ERROR );
+		// Only the exact canonical bytes are accepted, so no whitespace, escape or duplicate member variant authenticates as the same header.
 		if ( ! is_array( $header ) || array( 'format', 'version', 'kdf', 'opslimit', 'memlimit', 'salt', 'nonce', 'ciphertext' ) !== array_keys( $header )
-			|| self::SEAL_FORMAT !== $header['format'] || self::SEAL_VERSION !== $header['version'] || 'argon2id13' !== $header['kdf'] ) {
+			|| ! hash_equals( self::encode( $header ), $envelope ) || self::SEAL_FORMAT !== $header['format'] || self::SEAL_VERSION !== $header['version'] || 'argon2id13' !== $header['kdf'] ) {
 			throw new InvalidArgumentException();
 		}
 		// A crafted header must not choose the memory or time spent deriving the key.
@@ -182,12 +182,19 @@ final class BlueprintArchive {
 			$code = 'seal_parameters_rejected';
 			throw new InvalidArgumentException();
 		}
-		// libsodium throws on a salt or nonce of the wrong length, which is refused like a failed tag.
+		// Everything that can fail is checked before a key exists; libsodium still refuses a salt of the wrong length.
+		$nonce      = self::decoded( $header['nonce'] );
 		$ciphertext = self::decoded( $header['ciphertext'] );
+		if ( SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES !== strlen( $nonce ) || strlen( $ciphertext ) < SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_ABYTES ) {
+			throw new InvalidArgumentException();
+		}
 		unset( $header['ciphertext'] );
-		$key  = self::sealing_key( $password, $header );
-		$json = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt( $ciphertext, self::encode( $header ), self::decoded( $header['nonce'] ), $key );
-		sodium_memzero( $key );
+		$key = self::sealing_key( $password, $header );
+		try {
+			$json = sodium_crypto_aead_xchacha20poly1305_ietf_decrypt( $ciphertext, self::encode( $header ), $nonce, $key );
+		} finally {
+			sodium_memzero( $key );
+		}
 		if ( ! is_string( $json ) ) {
 			throw new InvalidArgumentException();
 		}

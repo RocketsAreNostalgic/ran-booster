@@ -496,12 +496,18 @@ record, and that the Branch case from 2026-11-21 uses the same record.
   recovery request takes `auto_updater.lock` through
   `acquire_replacing_owner()` or `acquire()`, so while it holds the lock it is
   recorded like any other operation, and the record goes when it releases.
-- After an operator's action is refused by a lock, Booster names the operation
-  and its start time only when the recorded token is the holder that refused
-  it, read by the same query that refused it, and offers Release behind an explicit confirmation that the operation
-  stopped. The form's nonce is bound to that token. Release deletes only that
-  exact lock row. A refused bulk action carries the token in its signed result
-  page; Check branch names it on the page that ran the check.
+- Booster names a lock's operation and start time only when the recorded
+  token is the holder that refused the action, read by the same query that
+  refused it, and offers Release behind an explicit confirmation that the
+  operation stopped. The form's nonce is bound to that token, and Release
+  deletes only that exact lock row. Each acquisition clears any refusal left
+  from earlier in the request, so a later success never names an old holder.
+- Where it is named: any error notice on a Dashboard page rendered in the
+  request that the lock refused, which covers refused manual Branch
+  deployments, Unlink and Unlink and delete, and the non-htmx GitHub adoption;
+  a bulk action refused with `unavailable`, through the token in its signed
+  result page; and a Check branch that returns `unable_to_check`, on the page
+  that ran it. The htmx adoption answers with a fragment and shows no owner.
 - Activity pages offer no Release. A deployment attempt row holds no lock
   token, so nothing ties whoever holds the lock now to a stopped attempt.
 - Persistent-state cost: one option row per site, not autoloaded, removed on

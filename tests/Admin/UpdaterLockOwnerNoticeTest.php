@@ -6,6 +6,7 @@ namespace RAN\Tests\Admin;
 
 use PHPUnit\Framework\Attributes\After;
 use PHPUnit\Framework\Attributes\Before;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Dashboard;
 use RAN\Tests\Deployment\AttemptRepositoryDatabase;
@@ -36,114 +37,80 @@ final class UpdaterLockOwnerNoticeTest extends TestCase {
 		$GLOBALS['wpdb'] = $this->previous_database;
 	}
 
-	public function test_only_a_failure_after_a_refused_lock_names_the_recorded_owner(): void {
-		$token     = ( new WordPressUpdaterLock() )->acquire();
-		$dashboard = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
-		$owner     = new \ReflectionProperty( Dashboard::class, 'updater_lock_owner' );
-
-		$dashboard->add_failure_message( new \WP_Error( 'ran_booster_test', 'Unrelated failure.' ), new RuntimeException( 'unrelated' ) );
-		self::assertNull( $owner->getValue( $dashboard ) );
-
-		$refused = null;
-		try {
-			( new WordPressUpdaterLock() )->acquire();
-		} catch ( RuntimeException $failure ) {
-			$refused = $failure;
-		}
-		self::assertInstanceOf( RuntimeException::class, $refused );
-		$dashboard->add_failure_message( new \WP_Error( 'ran_booster_test', 'Another package operation is in progress.' ), $refused );
-		self::assertSame(
-			array(
-				'token'      => $token,
-				'operation'  => WordPressUpdaterLock::DEFAULT_OPERATION,
-				'started_at' => (int) $token,
-			),
-			$owner->getValue( $dashboard )
+	/** @return iterable<string, array{\Closure(AttemptRepositoryDatabase): void, bool}> */
+	public static function refusals(): iterable {
+		yield 'an unrelated failure' => array( static function (): void {}, false );
+		yield 'a refused acquire' => array( static fn () => self::refuse( 'acquire' ), true );
+		yield 'a refused try' => array( static fn () => self::refuse( 'try' ), true );
+		yield 'the holder hands off after the refusal' => array(
+			static function ( AttemptRepositoryDatabase $database ): void {
+				self::refuse( 'try' );
+				self::hand_off( $database );
+			},
+			false,
 		);
-		// The refusal is reported once per refused attempt, naming the holder it observed.
-		self::assertNull( WordPressUpdaterLock::take_refusal() );
-		self::assertNull( ( new WordPressUpdaterLock() )->try_acquire_without_reclaim() );
-		self::assertSame( $token, WordPressUpdaterLock::take_refusal() );
-	}
-
-	public function test_a_refusal_names_no_owner_after_the_lock_changed_hands(): void {
-		$first     = new WordPressUpdaterLock();
-		$token     = $first->acquire();
-		$dashboard = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
-		self::assertNull( ( new WordPressUpdaterLock() )->try_acquire_without_reclaim() );
-		// The refused holder finishes and an unrelated operation takes the lock before the notice is built.
-		self::assertTrue( $first->release( $token ) );
-		( new WordPressUpdaterLock() )->acquire();
-		$dashboard->add_failure_message( new \WP_Error( 'ran_booster_test', 'Another package operation is in progress.' ), new RuntimeException( 'refused' ) );
-		self::assertNull( ( new \ReflectionProperty( Dashboard::class, 'updater_lock_owner' ) )->getValue( $dashboard ) );
-	}
-
-	public function test_a_refusal_names_only_the_holder_its_own_read_observed(): void {
-		$database = $this->database;
-		$later    = time() . '.' . str_repeat( '5', 27 );
-		// Right after the refused request's first statement on the lock row, its holder releases and an unrelated operation takes the lock.
-		$handoff = static function () use ( $database, $later ): void {
-			$database->option_rows = array(
-				'auto_updater.lock'                => $later,
-				WordPressUpdaterLock::OWNER_OPTION => $later . '|package_operation|' . time(),
+		foreach ( array( 'acquire', 'try' ) as $path ) {
+			// The holder releases and an unrelated operation takes the lock right after the refusing request's first lock-row statement.
+			yield "the holder hands off inside the {$path} refusal" => array(
+				static function ( AttemptRepositoryDatabase $database ) use ( $path ): void {
+					$seen                   = false;
+					$database->before_query = static function ( string $query ) use ( $database, &$seen ): void {
+						if ( $seen ) {
+							$database->before_query = null;
+							self::hand_off( $database );
+						}
+						$seen = $seen || str_contains( $query, "'auto_updater.lock'" );
+					};
+					self::refuse( $path );
+				},
+				false,
 			);
-		};
-		foreach ( array( 'try_acquire_without_reclaim', 'acquire' ) as $path ) {
-			$database->option_rows = array();
-			( new WordPressUpdaterLock() )->acquire();
-			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The refused request reads through this interleaving wrapper.
-			$GLOBALS['wpdb'] = new class( $database, $handoff ) {
-				public string $options    = 'wp_options';
-				public string $last_error = '';
-				private bool $handed_off  = false;
-
-				/** @param \Closure(): void $handoff */
-				public function __construct( private AttemptRepositoryDatabase $inner, private \Closure $handoff ) {}
-
-				public function prepare( string $query, mixed ...$arguments ): string {
-					return $this->inner->prepare( $query, ...$arguments );
-				}
-
-				public function query( string $query ): int|false {
-					$result = $this->inner->query( $query );
-					$this->after( $query );
-					return $result;
-				}
-
-				public function get_var( string $query ): mixed {
-					$result = $this->inner->get_var( $query );
-					$this->after( $query );
-					return $result;
-				}
-
-				public function get_row( string $query ): mixed {
-					$result = $this->inner->get_row( $query );
-					$this->after( $query );
-					return $result;
-				}
-
-				private function after( string $query ): void {
-					$this->last_error = $this->inner->last_error;
-					if ( ! $this->handed_off && str_contains( $query, "'auto_updater.lock'" ) ) {
-						$this->handed_off = true;
-						( $this->handoff )();
-					}
-				}
-			};
-			try {
-				'acquire' === $path ? ( new WordPressUpdaterLock() )->acquire() : ( new WordPressUpdaterLock() )->try_acquire_without_reclaim();
-			} catch ( RuntimeException $failure ) {
-				// The acquire path reports the refusal by throwing; the other returns null.
-				self::assertSame( 'The WordPress updater is already running.', $failure->getMessage() );
-			} finally {
-				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the fake replaced above.
-				$GLOBALS['wpdb'] = $database;
-			}
-			$dashboard = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
-			$dashboard->add_failure_message( new \WP_Error( 'ran_booster_test', 'Another package operation is in progress.' ), new RuntimeException( 'refused' ) );
-			self::assertSame( $later, $database->option_rows['auto_updater.lock'], $path );
-			self::assertNull( ( new \ReflectionProperty( Dashboard::class, 'updater_lock_owner' ) )->getValue( $dashboard ), $path );
 		}
+		yield 'a later acquisition reclaims an expired row' => array(
+			static function ( AttemptRepositoryDatabase $database ): void {
+				self::refuse( 'try' );
+				$database->option_rows['auto_updater.lock'] = (string) ( time() - 7200 );
+				( new WordPressUpdaterLock() )->acquire();
+				// A started acquisition clears the earlier refusal.
+				self::assertNull( WordPressUpdaterLock::take_refusal() );
+			},
+			false,
+		);
+	}
+
+	#[DataProvider( 'refusals' )]
+	public function test_an_error_names_only_the_booster_owner_whose_lock_refused_it( \Closure $scenario, bool $named ): void {
+		$token = ( new WordPressUpdaterLock() )->acquire();
+		$scenario( $this->database );
+		$dashboard = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
+		// A success notice leaves the refusal for the error that reports it.
+		$dashboard->add_message( 'Unrelated success.' );
+		$dashboard->add_message( new \WP_Error( 'ran_booster_test', 'Another package operation is in progress.' ) );
+		$owner = ( new \ReflectionProperty( Dashboard::class, 'updater_lock_owner' ) )->getValue( $dashboard );
+		self::assertSame( $named ? $token : null, $owner['token'] ?? null );
+		self::assertSame( $named ? WordPressUpdaterLock::DEFAULT_OPERATION : null, $owner['operation'] ?? null );
+		// The refusal is reported once.
+		self::assertNull( WordPressUpdaterLock::take_refusal() );
+	}
+
+	private static function refuse( string $path ): void {
+		try {
+			if ( 'acquire' === $path ) {
+				( new WordPressUpdaterLock() )->acquire();
+			} else {
+				self::assertNull( ( new WordPressUpdaterLock() )->try_acquire_without_reclaim() );
+			}
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'The WordPress updater is already running.', $failure->getMessage() );
+		}
+	}
+
+	private static function hand_off( AttemptRepositoryDatabase $database ): void {
+		$later                 = time() . '.' . str_repeat( '5', 27 );
+		$database->option_rows = array(
+			'auto_updater.lock'                => $later,
+			WordPressUpdaterLock::OWNER_OPTION => $later . '|package_operation|' . time(),
+		);
 	}
 
 	public function test_the_failure_notices_offer_a_confirmed_release_only_with_a_recorded_owner(): void {

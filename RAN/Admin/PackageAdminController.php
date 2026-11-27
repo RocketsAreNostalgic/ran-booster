@@ -518,7 +518,7 @@ final class PackageAdminController {
 		}
 		$data = $result->notice_data();
 		// A refused updater lock travels with the signed result, so the result page can name its Booster owner (#1180).
-		$holder = '' !== $result->error_code ? WordPressUpdaterLock::take_refusal() : null;
+		$holder = 'unavailable' === $result->error_code ? WordPressUpdaterLock::take_refusal() : null;
 		if ( null !== $holder && 1 === preg_match( WordPressUpdaterLock::OWNER_TOKEN, $holder ) ) {
 			$data['lock'] = $holder;
 		}

@@ -89,6 +89,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	}
 
 	public function try_acquire_without_reclaim( string $owner_operation = self::DEFAULT_OPERATION ): ?string {
+		self::$refused_by = null;
 		// The read that finds a row present refuses and names its holder; an insert lost to a racing owner names none.
 		$holder = $this->read_lock_value( $this->require_options_table() );
 		if ( null === $holder ) {
@@ -107,6 +108,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	}
 
 	public function acquire( string $owner_operation = self::DEFAULT_OPERATION ): string {
+		self::$refused_by = null;
 		// A live or malformed row is refused on this read, which names its holder; free and expired rows take the Branch updater's path.
 		$holder  = $this->read_lock_value( $this->require_options_table() );
 		$expired = self::valid_token( $holder ) && ! self::live_token( $holder, $this->now() );
@@ -142,8 +144,9 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	 * lock for the interrupted owner's lock.
 	 */
 	public function acquire_replacing_owner( string $expected_owner, string $owner_operation = self::DEFAULT_OPERATION ): string {
-		$options_table = $this->require_options_table();
-		$now           = $this->now();
+		self::$refused_by = null;
+		$options_table    = $this->require_options_table();
+		$now              = $this->now();
 		do {
 			$token = $this->new_token();
 		} while ( $token === $expected_owner );
@@ -244,6 +247,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	 */
 	public function acquire_or_reclaim_expired_sql( callable $same_connection, callable $execute, string $owner_operation = self::DEFAULT_OPERATION ): ?string {
 		global $wpdb;
+		self::$refused_by = null;
 		if ( ! isset( $wpdb ) || ! is_object( $wpdb ) || ! isset( $wpdb->options ) || ! is_string( $wpdb->options ) || '' === $wpdb->options || true !== $same_connection( $wpdb, $wpdb->options ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
@@ -252,7 +256,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		$token         = $this->new_token();
 		$owner         = $this->owner_value( $token, $owner_operation );
 		$record        = static function () use ( $execute, $options_table, $owner, $token ): void {
-			$written = $execute( 'INSERT INTO %i (option_name, option_value, autoload) SELECT %s, %s, %s FROM %i AS held WHERE held.option_name = %s AND CAST(held.option_value AS BINARY) = CAST(%s AS BINARY) FOR UPDATE ON DUPLICATE KEY UPDATE option_value = %s', array( $options_table, self::OWNER_OPTION, $owner, 'off', $options_table, self::OPTION_NAME, $token, $owner ), 'affected' );
+			$written = $execute( 'INSERT INTO %i (option_name, option_value, autoload) SELECT %s, %s, %s FROM %i AS held WHERE held.option_name = %s AND CAST(held.option_value AS BINARY) = CAST(%s AS BINARY) FOR UPDATE ON DUPLICATE KEY UPDATE option_value = %s, autoload = %s', array( $options_table, self::OWNER_OPTION, $owner, 'off', $options_table, self::OPTION_NAME, $token, $owner, 'off' ), 'affected' );
 			if ( ! is_int( $written ) || $written < 1 ) {
 				throw DeploymentStorageFailure::unavailable();
 			}
@@ -291,7 +295,6 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 				throw DeploymentStorageFailure::unavailable();
 			}
 			if ( 1 !== $deleted ) {
-				self::$refused_by = null;
 				return null;
 			}
 
@@ -337,10 +340,12 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	}
 
 	private function owner_value( string $token, string $operation ): string {
-		if ( 1 !== preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/D', $operation ) ) {
-			$operation = self::DEFAULT_OPERATION;
-		}
-		return sprintf( '%s|%s|%d', $token, $operation, $this->now() );
+		return sprintf( '%s|%s|%d', $token, self::operation_code( $operation ), $this->now() );
+	}
+
+	/** The operation code a record and its log carry; anything else becomes the generic code. */
+	private static function operation_code( string $operation ): string {
+		return 1 === preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/D', $operation ) ? $operation : self::DEFAULT_OPERATION;
 	}
 
 	/**
@@ -354,22 +359,24 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 			$options_table = $this->require_options_table();
 			// The locking read holds the lock row until the record is written, so a replacing owner cannot slip between them under READ COMMITTED.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Uncached owner record beside the uncached auto_updater.lock row.
-			$written = $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (option_name, option_value, autoload) SELECT %s, %s, %s FROM %i AS held WHERE held.option_name = %s AND CAST(held.option_value AS BINARY) = CAST(%s AS BINARY) FOR UPDATE ON DUPLICATE KEY UPDATE option_value = %s', $options_table, self::OWNER_OPTION, $owner, 'off', $options_table, self::OPTION_NAME, $token, $owner ) );
+			$written = $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (option_name, option_value, autoload) SELECT %s, %s, %s FROM %i AS held WHERE held.option_name = %s AND CAST(held.option_value AS BINARY) = CAST(%s AS BINARY) FOR UPDATE ON DUPLICATE KEY UPDATE option_value = %s, autoload = %s', $options_table, self::OWNER_OPTION, $owner, 'off', $options_table, self::OPTION_NAME, $token, $owner, 'off' ) );
 		} catch ( Throwable ) {
 			$written = false;
 		}
 		if ( is_int( $written ) && $written > 0 ) {
 			return $token;
 		}
+		// Zero rows without a database error: the lock row no longer holds this token.
+		$lost = 0 === $written && ! ( is_object( $wpdb ) && property_exists( $wpdb, 'last_error' ) && '' !== trim( (string) $wpdb->last_error ) );
 		BoosterLogger::log(
 			'updater lock owner not recorded',
 			array(
 				'step'      => 'updater_lock_owner',
-				'operation' => $operation,
-				'event'     => 0 === $written ? 'ownership_lost' : 'write_failed',
+				'operation' => self::operation_code( $operation ),
+				'event'     => $lost ? 'ownership_lost' : 'write_failed',
 			)
 		);
-		return 0 === $written ? null : $token;
+		return $lost ? null : $token;
 	}
 
 	/** Remove the released token's record; a record left behind names no lock row, so it is never shown. */

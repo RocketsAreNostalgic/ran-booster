@@ -41,7 +41,9 @@ namespace RAN\Tests\Deployment {
 		public ?\Closure $on_management_read = null;
 		/** @var \Closure():void|null */
 		public ?\Closure $on_lock_release = null;
-		public string $options            = 'wp_options';
+		/** @var \Closure(string):void|null Runs before each query or read, to interleave another request. */
+		public ?\Closure $before_query = null;
+		public string $options         = 'wp_options';
 		public \RAN\Tests\RepositoryProvider\SelectionContextDatabase $selection;
 		/** @var array<string, array<string, mixed>> */
 		public array $management_rows = array();
@@ -160,6 +162,7 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function query( string $query ): int|false {
+			$this->before_query?->__invoke( $query );
 			if ( str_starts_with( $query, '[' ) ) {
 				$result           = $this->selection->query( $query );
 				$this->last_error = $this->selection->last_error;
@@ -225,7 +228,7 @@ namespace RAN\Tests\Deployment {
 				unset( $activity );
 				return 0;
 			}
-			if ( preg_match( "/^INSERT INTO `wp_options` .* SELECT '(ran_booster_updater_lock_owner)', '([^']+)', 'off' FROM `wp_options` AS held WHERE held.option_name = '([^']+)' AND CAST\\(held.option_value AS BINARY\\) = CAST\\('([^']+)' AS BINARY\\) FOR UPDATE ON DUPLICATE KEY UPDATE option_value = '\\2'$/", $query, $matches ) === 1 ) {
+			if ( preg_match( "/^INSERT INTO `wp_options` .* SELECT '(ran_booster_updater_lock_owner)', '([^']+)', 'off' FROM `wp_options` AS held WHERE held.option_name = '([^']+)' AND CAST\\(held.option_value AS BINARY\\) = CAST\\('([^']+)' AS BINARY\\) FOR UPDATE ON DUPLICATE KEY UPDATE option_value = '\\2', autoload = 'off'$/", $query, $matches ) === 1 ) {
 				if ( ( $this->option_rows[ $matches[3] ] ?? null ) !== $matches[4] ) {
 					return 0;
 				}
@@ -344,6 +347,7 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function get_var( string $query ): mixed {
+			$this->before_query?->__invoke( $query );
 			$this->queries[] = $query;
 			if ( 'SELECT @@lower_case_table_names' === $query ) {
 				return $this->selection->get_var( $query );

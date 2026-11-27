@@ -162,6 +162,26 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		self::assertStringContainsString( 'DELETE FROM `wp_options`', $queries );
 	}
 
+	public function test_a_refused_manual_branch_deployment_leaves_the_refusing_holder_for_its_failure_notice(): void {
+		WordPressUpdaterLock::take_refusal();
+		$token   = ( new WordPressUpdaterLock() )->acquire();
+		$adapter = $this->adapter( $this->running_update(), new ProviderRegistry() );
+		$ran     = array();
+		try {
+			$adapter->run(
+				static function () use ( &$ran ): void {
+					$ran[] = 'mutation';
+				}
+			);
+		} catch ( RuntimeException $failure ) {
+			$ran[] = $failure->getMessage();
+		}
+		// Recording the terminal attempt takes no lock, so the refusal survives until the failure notice reports it.
+		$adapter->finish( DeploymentOutcome::CODE_LOCK_UNAVAILABLE );
+		self::assertSame( array( 'The WordPress updater is already running.' ), $ran );
+		self::assertSame( $token, WordPressUpdaterLock::take_refusal() );
+	}
+
 	public function test_provider_archive_is_cleaned_when_its_resolved_revision_is_invalid(): void {
 		$archive     = new BoundaryProviderArchive( '' );
 		$provider    = new BoundaryRepositoryProvider( $archive );

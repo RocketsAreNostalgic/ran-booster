@@ -523,6 +523,8 @@ final class PackageRemovalServiceTest extends TestCase {
 					$result                                     = $service->execute( PackageOperation::from_input( $action, $this->input() ) );
 					self::assertSame( 'operation_in_progress', $result->outcome_code );
 					self::assertSame( $held, $database->option_rows['auto_updater.lock'] );
+					// The refused Unlink leaves the holder its read observed for the failure notice to name.
+					self::assertSame( $held, WordPressUpdaterLock::take_refusal() );
 					self::assertFalse( $fixture->plugins->unlinked );
 					self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
 					self::assertSame( 7, $fixture->plugin->get_source_revision() );

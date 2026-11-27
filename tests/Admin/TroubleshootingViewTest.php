@@ -1273,31 +1273,7 @@ final class TroubleshootingViewTest extends TestCase {
 	public function test_a_stopped_attempt_never_offers_release_for_whoever_holds_the_lock_now(): void {
 		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
 		$journal                                 = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-		$journal->rows                           = array(
-			array(
-				'id'                      => 17,
-				'correlation_id'          => str_repeat( 'a', 32 ),
-				'source'                  => 'manual',
-				'operation'               => 'update',
-				'package_type'            => 'plugin',
-				'package_slug'            => 'example',
-				'package_source'          => 'branch',
-				'package_source_revision' => 1,
-				'release_identity'        => null,
-				'provider'                => 'gh',
-				'provider_repository_id'  => 'R_example',
-				'requested_ref'           => 'main',
-				'resolved_ref'            => null,
-				'delivery_id'             => null,
-				'delivery_digest'         => null,
-				'state'                   => 'failed',
-				'mutation_started_at'     => null,
-				'outcome_code'            => 'worker_stopped',
-				'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
-				'created_at'              => '2026-11-17 00:00:00',
-				'finished_at'             => '2026-11-17 00:00:01',
-			),
-		);
+		$journal->rows                           = array( self::attempt_row( 'worker_stopped' ) );
 		$attempts                                = new \RAN\Deployment\DeploymentAttemptRepository( $journal, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->createStub( \RAN\Storage\Database::class ) );
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
 		$presenter                               = new \RAN\Admin\DeploymentAdminPresenter( attempts: $attempts, activity_store: new \RAN\Activity\ActivityStore( $db ) );
@@ -1341,29 +1317,7 @@ final class TroubleshootingViewTest extends TestCase {
 	public function test_a_run_the_pause_refused_shows_as_skipped_in_activity(): void {
 		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
 		$journal                                 = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-		$row                                     = array(
-			'id'                      => 17,
-			'correlation_id'          => str_repeat( 'a', 32 ),
-			'source'                  => 'manual',
-			'operation'               => 'update',
-			'package_type'            => 'plugin',
-			'package_slug'            => 'example',
-			'package_source'          => 'branch',
-			'package_source_revision' => 1,
-			'release_identity'        => null,
-			'provider'                => 'gh',
-			'provider_repository_id'  => 'R_example',
-			'requested_ref'           => 'main',
-			'resolved_ref'            => null,
-			'delivery_id'             => null,
-			'delivery_digest'         => null,
-			'state'                   => 'failed',
-			'mutation_started_at'     => null,
-			'outcome_code'            => 'source_paused',
-			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
-			'created_at'              => '2026-11-17 00:00:00',
-			'finished_at'             => '2026-11-17 00:00:01',
-		);
+		$row                                     = self::attempt_row( 'source_paused' );
 		$journal->rows                           = array( $row );
 		$attempts                                = new \RAN\Deployment\DeploymentAttemptRepository( $journal, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->createStub( \RAN\Storage\Database::class ) );
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
@@ -1421,29 +1375,7 @@ final class TroubleshootingViewTest extends TestCase {
 	public function test_working_copy_list_and_detail_copy_requires_core_provenance_and_exact_tuple(): void {
 		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
 		$journal                                 = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-		$row                                     = array(
-			'id'                      => 17,
-			'correlation_id'          => str_repeat( 'a', 32 ),
-			'source'                  => 'manual',
-			'operation'               => 'update',
-			'package_type'            => 'plugin',
-			'package_slug'            => 'example',
-			'package_source'          => 'branch',
-			'package_source_revision' => 1,
-			'release_identity'        => null,
-			'provider'                => 'gh',
-			'provider_repository_id'  => 'R_example',
-			'requested_ref'           => 'main',
-			'resolved_ref'            => null,
-			'delivery_id'             => null,
-			'delivery_digest'         => null,
-			'state'                   => 'failed',
-			'mutation_started_at'     => null,
-			'outcome_code'            => 'policy_blocked',
-			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
-			'created_at'              => '2026-11-17 00:00:00',
-			'finished_at'             => '2026-11-17 00:00:01',
-		);
+		$row                                     = self::attempt_row( 'policy_blocked' );
 		$journal->rows                           = array( $row );
 		$attempts                                = new \RAN\Deployment\DeploymentAttemptRepository( $journal, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->createStub( \RAN\Storage\Database::class ) );
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
@@ -4864,6 +4796,33 @@ final class TroubleshootingViewTest extends TestCase {
 				'target_placeholder' => 'organization-or-user',
 				'description'        => '',
 			),
+		);
+	}
+
+	/** @return array<string, mixed> A failed manual Branch attempt with the given outcome. */
+	private static function attempt_row( string $outcome ): array {
+		return array(
+			'id'                      => 17,
+			'correlation_id'          => str_repeat( 'a', 32 ),
+			'source'                  => 'manual',
+			'operation'               => 'update',
+			'package_type'            => 'plugin',
+			'package_slug'            => 'example',
+			'package_source'          => 'branch',
+			'package_source_revision' => 1,
+			'release_identity'        => null,
+			'provider'                => 'gh',
+			'provider_repository_id'  => 'R_example',
+			'requested_ref'           => 'main',
+			'resolved_ref'            => null,
+			'delivery_id'             => null,
+			'delivery_digest'         => null,
+			'state'                   => 'failed',
+			'mutation_started_at'     => null,
+			'outcome_code'            => $outcome,
+			'request_json'            => '{"repository":"org/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"manual","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
+			'created_at'              => '2026-11-17 00:00:00',
+			'finished_at'             => '2026-11-17 00:00:01',
 		);
 	}
 }

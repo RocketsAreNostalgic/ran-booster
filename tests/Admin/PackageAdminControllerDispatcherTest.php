@@ -380,7 +380,10 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			$token = ( new WordPressUpdaterLock() )->acquire();
 			self::assertNull( ( new WordPressUpdaterLock() )->try_acquire_without_reclaim() );
 			$controller = new PackageAdminController();
-			$url        = $controller->bulk_redirect( 'plugin', BulkPackageResult::error( BulkPackageAction::QUEUE_UPDATE, 2, 'unavailable' ), array() );
+			// A non-lock bulk error never names the holder of a refusal left over from earlier in the request.
+			$url = $controller->bulk_redirect( 'plugin', BulkPackageResult::error( BulkPackageAction::QUEUE_UPDATE, 2, 'credential_unavailable' ), array() );
+			self::assertStringNotContainsString( 'ran_booster_bulk_lock', $url );
+			$url = $controller->bulk_redirect( 'plugin', BulkPackageResult::error( BulkPackageAction::QUEUE_UPDATE, 2, 'unavailable' ), array() );
 			self::assertNull( WordPressUpdaterLock::take_refusal() );
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test reconstructs the signed redirect query.
 			parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $query );

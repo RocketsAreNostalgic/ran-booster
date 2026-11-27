@@ -1178,8 +1178,11 @@ class Dashboard {
 			}
 		}
 
+		\RAN\WordPress\WordPressUpdaterLock::take_refusal();
 		$outcome = $this->provider_settings->check_package_repository_branch( $type, $package );
-		$this->name_refusing_lock_owner( \RAN\WordPress\WordPressUpdaterLock::take_refusal() );
+		if ( 'unable_to_check' === $outcome ) {
+			$this->name_refusing_lock_owner( \RAN\WordPress\WordPressUpdaterLock::take_refusal() );
+		}
 		set_transient( $marker, $outcome, 3600 );
 		BoosterLogger::log(
 			'repository branch check completed',
@@ -1490,12 +1493,11 @@ class Dashboard {
 	 */
 	public function add_failure_message( $message, Throwable $failure, array $context = array() ): void {
 		$this->record_message( $message, $failure, $context );
-		$this->name_refusing_lock_owner( \RAN\WordPress\WordPressUpdaterLock::take_refusal() );
 	}
 
 	/** Name the Booster owner of a lock that refused this operator, only while that exact holder still holds it (#1180). */
 	public function name_refusing_lock_owner( ?string $holder ): void {
-		if ( null === $holder ) {
+		if ( null === $holder || 1 !== preg_match( \RAN\WordPress\WordPressUpdaterLock::OWNER_TOKEN, $holder ) ) {
 			return;
 		}
 		try {
@@ -1533,6 +1535,10 @@ class Dashboard {
 			);
 		}
 		$severity = $this->message_severity( $message );
+		// Any error after an action the updater lock refused names that lock's Booster owner (#1180).
+		if ( 'error' === $severity ) {
+			$this->name_refusing_lock_owner( \RAN\WordPress\WordPressUpdaterLock::take_refusal() );
+		}
 		if ( null !== $severity ) {
 			$context = array(
 				'diagnostic_id' => $this->message_diagnostic_id( $message, $severity ),

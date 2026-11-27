@@ -166,7 +166,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			(string) $data['operation'],
 			$request->subdirectory,
 			$identifier,
-			...( null === $request->selected_commit ? array() : array( 'selected_commit' => $request->selected_commit ) ),
+			// The Branch updater reads selected_commit as confirmed rollback intent; updates keep its downgrade check (#1326).
+			...( null === $request->selected_commit || 'install' !== $data['operation'] ? array() : array( 'selected_commit' => $request->selected_commit ) ),
 			...( null === $request->expected_identifier ? array() : array( 'expected_identifier' => $request->expected_identifier ) )
 		);
 	}

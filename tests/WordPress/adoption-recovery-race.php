@@ -185,7 +185,7 @@ if ( str_contains( $ran_booster_race_action, 'native' ) ) {
 		}
 		if ( is_file( $ran_booster_race_dir . '/killed-lock-token' ) ) {
 			$ran_booster_cleanup_token = $ran_booster_race_filesystem->get_contents( $ran_booster_race_dir . '/killed-lock-token' );
-			if ( is_string( $ran_booster_cleanup_token ) && 1 === preg_match( '/\A[1-9]\d*\z/D', trim( $ran_booster_cleanup_token ) ) ) {
+			if ( is_string( $ran_booster_cleanup_token ) && 1 === preg_match( '/\A[1-9][0-9]*(?:\.[0-9]{27})?\z/D', trim( $ran_booster_cleanup_token ) ) ) {
 				$ran_booster_cleanup_lock = $ran_booster_race_container->make( \RAN\WordPress\WordPressUpdaterLock::class );
 				if ( $ran_booster_cleanup_lock->current_token() === trim( $ran_booster_cleanup_token ) && ! $ran_booster_cleanup_lock->release( trim( $ran_booster_cleanup_token ) ) ) {
 					throw new RuntimeException( 'Native killed-lock cleanup failed.' );
@@ -352,7 +352,7 @@ if ( str_contains( $ran_booster_race_action, 'native' ) ) {
 	if ( 'assert-native-commit-killed' === $ran_booster_race_action ) {
 		$ran_booster_killed_token = $ran_booster_race_filesystem->get_contents( $ran_booster_race_dir . '/killed-lock-token' );
 		$ran_booster_killed_lock  = $ran_booster_race_container->make( \RAN\WordPress\WordPressUpdaterLock::class );
-		if ( ! is_string( $ran_booster_killed_token ) || 1 !== preg_match( '/\A[1-9]\d*\z/D', trim( $ran_booster_killed_token ) ) ) {
+		if ( ! is_string( $ran_booster_killed_token ) || 1 !== preg_match( '/\A[1-9][0-9]*(?:\.[0-9]{27})?\z/D', trim( $ran_booster_killed_token ) ) ) {
 			throw new RuntimeException( 'Killed hold-clear lock token fixture is missing.' );
 		}
 		$ran_booster_killed_token = trim( $ran_booster_killed_token );

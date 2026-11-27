@@ -611,3 +611,38 @@ test('picker status speaks only while open and on change, errors assertively', (
 		},
 	]);
 });
+
+test('a rate-limited picker error uses the shared sentence on the browser clock', () => {
+	const calls = [];
+	const window = {
+		ranBoosterRateLimit: {
+			message: (rateLimit) => {
+				calls.push(rateLimit);
+				return 'GitHub is limiting lookups from this site. Try again after 2:14 AM.';
+			},
+		},
+	};
+	const getErrorMessage = loadFunction('getErrorMessage', {
+		activeMode: 'public',
+		__: (text) => text,
+		window,
+	});
+	const rateLimit = { provider: 'GitHub', retry_at: 1800003540 };
+
+	assert.equal(
+		getErrorMessage({
+			data: {
+				message:
+					'GitHub is limiting lookups from this site. Try again in about 59 minutes.',
+				rate_limit: rateLimit,
+			},
+		}),
+		'GitHub is limiting lookups from this site. Try again after 2:14 AM.'
+	);
+	assert.deepEqual(calls, [rateLimit]);
+	// Any other failure keeps the server's sentence.
+	assert.equal(
+		getErrorMessage({ data: { message: 'Repository browsing failed.' } }),
+		'Repository browsing failed.'
+	);
+});

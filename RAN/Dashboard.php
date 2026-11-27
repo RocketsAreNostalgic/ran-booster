@@ -143,7 +143,8 @@ class Dashboard {
 		?\RAN\Settings\GeneralPreferenceStore $general_preferences = null,
 		?\RAN\Admin\GitHubVisibility $github_visibility = null,
 		?\RAN\Troubleshooting\CoreSelfUpdateStatus $core_updates = null,
-		private ?\RAN\Admin\CredentialExpiryNotice $credential_expiry_notice = null
+		private ?\RAN\Admin\CredentialExpiryNotice $credential_expiry_notice = null,
+		?\RAN\RepositoryProvider\ProviderRegistry $providers = null
 	) {
 		$this->overview_activity   = $activity;
 		$this->general_preferences = $general_preferences;
@@ -168,7 +169,8 @@ class Dashboard {
 			links: $this->tab_links()
 		);
 
-		$this->package_admin = new PackageAdminController( $package_operations, deployments: $this->deployment_admin, removals: $this->removals );
+		// The registry names the provider in result notices this controller shows.
+		$this->package_admin = new PackageAdminController( $package_operations, providers: $providers, deployments: $this->deployment_admin, removals: $this->removals );
 		$this->plugin_pages  = PackagePagePresenter::plugin();
 		$this->theme_pages   = PackagePagePresenter::theme();
 

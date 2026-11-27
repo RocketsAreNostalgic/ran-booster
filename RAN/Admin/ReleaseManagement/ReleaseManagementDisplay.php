@@ -1404,7 +1404,6 @@ final class ReleaseManagementDisplay {
 			'release_invalid' => __( 'The selected release does not satisfy the selected channel requirements. No package was installed.', 'ran-booster' ),
 			'release_changed' => __( 'The release changed after it was inspected. No package was installed. Use Check releases and try again.', 'ran-booster' ),
 			'rate_limited' => __( 'The Git provider rate-limited this lookup. Try again later.', 'ran-booster' ),
-			'lookup_rate_limited' => __( 'The Git provider rate-limited this public release lookup. Try again later or choose a dedicated lookup credential in provider settings.', 'ran-booster' ),
 			'version_comparison_unavailable' => __( 'Booster could not compare the installed version with the published release version. No package was installed.', 'ran-booster' ),
 			'unable_to_check' => __( 'Published releases could not be checked. No package was installed and no package settings were changed.', 'ran-booster' ),
 			default => $successful

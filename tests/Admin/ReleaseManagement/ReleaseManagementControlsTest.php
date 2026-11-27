@@ -119,7 +119,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertSame( array( 'ran-booster-release-management' ), array_keys( $GLOBALS['ran_booster_release_management_test_scripts'] ?? array() ) );
 		self::assertSame( array( 'ran-booster-release-management' ), array_keys( $GLOBALS['ran_booster_release_management_test_styles'] ?? array() ) );
 		self::assertSame(
-			array( 'ran-booster-packages', 'wp-i18n' ),
+			array( 'ran-booster-packages', 'ran-booster-rate-limit', 'wp-i18n' ),
 			$GLOBALS['ran_booster_release_management_test_scripts']['ran-booster-release-management']['dependencies']
 		);
 		self::assertSame(
@@ -159,7 +159,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 			$controls->enqueue_prospective_assets();
 
 			self::assertSame(
-				array( 'ran-booster-packages', 'wp-i18n', 'ran-booster-dialog' ),
+				array( 'ran-booster-packages', 'ran-booster-rate-limit', 'wp-i18n', 'ran-booster-dialog' ),
 				$GLOBALS['ran_booster_release_management_test_scripts']['ran-booster-release-management']['dependencies']
 			);
 		}

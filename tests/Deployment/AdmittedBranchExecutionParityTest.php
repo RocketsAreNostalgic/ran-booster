@@ -109,17 +109,18 @@ final class AdmittedBranchExecutionParityTest extends TestCase {
 		self::assertContains( 'finish:deployed', $host->events );
 	}
 
-	public function test_cleanup_failure_after_mutation_is_projected_as_interrupted(): void {
+	public function test_cleanup_failure_after_verified_mutation_keeps_the_deployed_outcome(): void {
 		$host                  = new ParityAdmittedHost();
 		$host->cleanup_failure = true;
 
 		$code = $this->deploy( $host, 'update' );
 
-		self::assertSame( DeploymentOutcome::CODE_INTERRUPTED, $code );
+		// Branch updater beta.20 no longer downgrades a verified deployment when archive cleanup fails afterwards.
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $code );
 		self::assertContains( 'mutation', $host->events );
 		self::assertContains( 'execute', $host->events );
 		self::assertContains( 'cleanup', $host->events );
-		self::assertContains( 'finish:interrupted', $host->events );
+		self::assertContains( 'finish:deployed', $host->events );
 	}
 
 	private function deploy( ParityAdmittedHost $host, string $operation ): string {

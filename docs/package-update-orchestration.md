@@ -662,7 +662,8 @@ sequenceDiagram
     C->>B: Execute claimed attempt
     B->>P: Prepare authenticated immutable archive
     P-->>B: URL, auth, resolved ref, and expected-head verifier
-    B->>B: Download once, preflight, lock, and recheck target/head/artifact
+    B->>B: Download once, preflight, and make the last branch-head observation
+    B->>B: Lock, then recheck target, downgrade, artifact and maintenance
     B->>W: Local ZIP through Branch WordPressCorePackageExecutor
     W-->>B: Upgrader result and completion callback
     B->>D: Persist terminal outcome
@@ -682,8 +683,9 @@ Execution later rejects the attempt if that stored package source or revision
 has changed.
 
 The provider receives the configured branch as an expected-head constraint for
-webhook work. Before mutation it rejects a delayed push whose authenticated
-commit is no longer the branch head. Replayed deliveries with the same provider
+webhook work. In its last remote-head observation, before the updater lock is
+taken, it rejects a delayed push whose authenticated commit is no longer the
+branch head. Replayed deliveries with the same provider
 delivery ID and body digest reuse the existing admission and do not create
 another mutation. Reusing an ID with different authenticated content is a
 conflict.

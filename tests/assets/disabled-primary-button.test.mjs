@@ -7,11 +7,11 @@ const read = (path) =>
 const buttons = read('ran-booster/10-buttons.css');
 const foundations = read('ran-booster/00-foundations.css');
 
+const selector =
+	'.ran-wp-ui-button:is(:disabled, [aria-disabled="true"]):not(.is-loading) {';
 const rule = (() => {
-	const start = buttons.indexOf(
-		'.ran-wp-ui-button.is-brand.is-solid:is([disabled], [aria-disabled="true"])'
-	);
-	assert.notEqual(start, -1, 'The shared disabled primary rule must exist.');
+	const start = buttons.indexOf(selector);
+	assert.notEqual(start, -1, 'The shared disabled button rule must exist.');
 	return buttons.slice(start, buttons.indexOf('}', start) + 1);
 })();
 
@@ -52,11 +52,10 @@ const contrast = (first, second) => {
 	return (light + 0.05) / (dark + 0.05);
 };
 
-test('disabled and unavailable brand solid buttons share one treatment', () => {
-	assert.match(rule, /\):not\(\s*\.is-loading\s*\) \{/);
+test('every disabled or unavailable button variant shares one treatment', () => {
 	assert.match(
 		rule,
-		/--wp-ui-button-background-color-disabled: var\(--ran-booster-surface\);/
+		/--wp-ui-button-background-color-disabled: var\(--ran-booster-surface-subtle\);/
 	);
 	assert.match(
 		rule,
@@ -70,20 +69,27 @@ test('disabled and unavailable brand solid buttons share one treatment', () => {
 	assert.match(rule, /opacity: 1;/);
 });
 
-test('the disabled treatment uses tokens only and never dims or recolours on hover', () => {
+test('no tone or variant rule overrides the shared disabled colours', () => {
+	assert.doesNotMatch(
+		buttons.replace(rule, ''),
+		/--wp-ui-button-[a-z-]+-disabled:/
+	);
+});
+
+test('the disabled treatment uses tokens only and never dims', () => {
 	assert.doesNotMatch(rule, /#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
 	assert.doesNotMatch(rule, /opacity: (0|0?\.\d+);/);
-	assert.doesNotMatch(rule, /:(hover|active|focus)/);
 });
 
 test('the disabled treatment meets 4.5:1 for text and 3:1 for the stroke', () => {
-	const fill = token('--ran-booster-surface');
+	const fill = token('--ran-booster-surface-subtle');
 	const text = token('--ran-booster-text-muted');
 	const stroke = token('--ran-booster-control-border');
-	const grey = token('--ran-booster-surface-subtle');
-	assert.ok(contrast(text, fill) >= 4.5, 'text on the white fill');
-	assert.ok(contrast(stroke, fill) >= 3, 'stroke on the white fill');
-	assert.ok(contrast(stroke, grey) >= 3, 'stroke on the grey page surface');
+	const white = token('--ran-booster-surface');
+	assert.notEqual(fill, white, 'the fill is distinct from white');
+	assert.ok(contrast(text, fill) >= 4.5, 'text on the pale-grey fill');
+	assert.ok(contrast(stroke, fill) >= 3, 'stroke on the fill and grey page');
+	assert.ok(contrast(stroke, white) >= 3, 'stroke on a white surface');
 });
 
 test('the static wp-ui stylesheet is not edited for the treatment', () => {

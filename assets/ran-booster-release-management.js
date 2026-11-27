@@ -47,6 +47,10 @@ const appendLookupHint = (target, hint) => {
 	}
 };
 
+// The shared rate-limit sentence: the provider and its retry time on this browser's clock.
+const rateLimitMessage = (rateLimit) =>
+	window.ranBoosterRateLimit.message(rateLimit);
+
 const renderListingObservations = (
 	target,
 	data = null,
@@ -488,9 +492,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					const { host, content } =
 						window.ranBoosterNotice.create('warning');
 					const text = document.createElement('p');
-					text.textContent = __(
-						'The Git provider rate-limited this lookup. Try again later.',
-						'ran-booster'
+					text.textContent = rateLimitMessage(
+						response.data?.rate_limit
 					);
 					appendLookupHint(text, response.data?.lookup_hint);
 					content.append(text);
@@ -655,10 +658,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					failureMessage =
 						lookupHint ||
 						response.data?.rejection_reason === 'rate_limited'
-							? wp.i18n.__(
-									'The Git provider rate-limited this lookup. Try again later.',
-									'ran-booster'
-								)
+							? rateLimitMessage(response.data?.rate_limit)
 							: wp.i18n.__(
 									'Booster could not list releases for this package. Try again.',
 									'ran-booster'
@@ -1196,10 +1196,19 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			);
 			return;
 		}
-		const message =
+		let message =
 			typeof data?.message === 'string' && data.message
 				? data.message
 				: fallbackMessage;
+		if (data?.rate_limit && typeof data.rate_limit === 'object') {
+			message = rateLimitMessage(data.rate_limit);
+			if (
+				typeof data.message_suffix === 'string' &&
+				data.message_suffix
+			) {
+				message += ` ${data.message_suffix}`;
+			}
+		}
 		target.appendChild(document.createTextNode(message));
 	}
 
@@ -2185,7 +2194,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		return response.json();
 	};
 
-	const showUnavailable = (code, hint = null) => {
+	const showUnavailable = (code, hint = null, rateLimit = null) => {
 		renderListingObservations(observations);
 		if (code === 'unsupported_provider') {
 			forceBranchForUnsupportedProvider();
@@ -2218,6 +2227,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				'No eligible releases were found in this search.',
 				'ran-booster'
 			);
+		} else if (rateLimit && typeof rateLimit === 'object') {
+			statusMessage = rateLimitMessage(rateLimit);
 		}
 		selectedRelease = null;
 		setChoiceState('unavailable');
@@ -2384,7 +2395,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			) {
 				showCandidates(response.data);
 			} else {
-				showUnavailable(response.code, response.data?.lookup_hint);
+				showUnavailable(
+					response.code,
+					response.data?.lookup_hint,
+					response.data?.rate_limit
+				);
 			}
 			if (
 				(response.successful &&

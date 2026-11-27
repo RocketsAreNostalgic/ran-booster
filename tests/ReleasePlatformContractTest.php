@@ -53,10 +53,6 @@ final class ReleasePlatformContractTest extends TestCase {
 					'kind' => 'file',
 				),
 				array(
-					'path' => 'bootstrap.php',
-					'kind' => 'file',
-				),
-				array(
 					'path' => 'src',
 					'kind' => 'directory',
 				),

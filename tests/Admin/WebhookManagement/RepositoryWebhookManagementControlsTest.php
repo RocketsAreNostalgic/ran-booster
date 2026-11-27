@@ -634,6 +634,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Validate</button>', $html );
 		self::assertStringContainsString( 'Manage credentials</a>', $html );
 		self::assertStringContainsString( 'Manage signing secrets</a>', $html );
+		$this->assert_inactive_setup_does_not_dim_disabled_buttons( $html );
 	}
 
 	public function test_remote_hook_step_names_an_unconfirmed_setup_and_a_hook_deleted_on_the_provider(): void {
@@ -823,6 +824,27 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		);
 		self::assertSame( 'is-pending|Booster has not set up a webhook for this repository.', $step( $render( array() ) ) );
 		self::assertSame( 'is-pending|Booster has not set up a webhook for this repository.', $step( $render( array( '9999' => '2026-08-21 09:30:15' ) ) ) );
+	}
+
+	/** Opacity on any ancestor dims a disabled Button below 4.5:1, and the Button cannot undo it. */
+	private function assert_inactive_setup_does_not_dim_disabled_buttons( string $html ): void {
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$ancestors = ( new \DOMXPath( $document ) )->query( '//details[contains(@class,"is-inactive")]//button[@disabled]/ancestor::*/@class' );
+		self::assertNotFalse( $ancestors );
+		self::assertGreaterThan( 0, $ancestors->length );
+		$assets = dirname( __DIR__, 3 ) . '/assets/';
+		$css    = '';
+		foreach ( array_merge( array( $assets . 'ran-booster-repository-webhook-management.css' ), (array) glob( $assets . 'ran-booster/*.css' ) ) as $sheet ) {
+			$css .= (string) file_get_contents( (string) $sheet ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Shipped stylesheet on disk.
+		}
+		foreach ( $ancestors as $attribute ) {
+			preg_match_all( '/\S+/', (string) $attribute->nodeValue, $classes ); // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native DOM property.
+			foreach ( $classes[0] as $class_name ) {
+				// A rule whose subject carries this class and sets a partial opacity.
+				self::assertSame( 0, preg_match( '/\.' . preg_quote( $class_name, '/' ) . '(?![\w-])[.\w-]*\s*\{[^}]*(?<![\w-])opacity:\s*0/', $css ), $class_name . ' dims a disabled button.' );
+			}
+		}
 	}
 
 	/** The webhook actions are the last child of the Webhook setup disclosure content, outside the management form, and name that form with form=. */

@@ -141,6 +141,74 @@ final readonly class ProviderFailure {
 		return is_int( $code ) && isset( self::LEGACY_REASONS[ $code ] ) ? new self( self::LEGACY_REASONS[ $code ], $code ) : null;
 	}
 
+	/**
+	 * Display facts for a rate limit: the provider's label and when to try again, as a Unix time.
+	 * The reset time wins when it falls within a day; otherwise the retry delay counts from $now.
+	 * Null when this failure is not a rate limit; a null time when the provider gave none.
+	 *
+	 * @return array{provider:string,retry_at:int|null}|null
+	 */
+	public function rate_limit( string $provider_label, int $now ): ?array {
+		if ( ! in_array( $this->reason, self::RATE, true ) ) {
+			return null;
+		}
+		$retry_at = null !== $this->reset_at && $this->reset_at > $now && $this->reset_at <= $now + 86400
+			? $this->reset_at
+			: ( null !== $this->retry_after ? $now + $this->retry_after : null );
+
+		return array(
+			'provider' => $provider_label,
+			'retry_at' => $retry_at,
+		);
+	}
+
+	/**
+	 * The server sentence for rate-limit facts. The server cannot know the visitor's time zone, so it
+	 * counts minutes; browser surfaces format the same Unix time on the visitor's clock instead.
+	 *
+	 * @param array{provider?:mixed,retry_at?:mixed}|null $rate_limit Facts from rate_limit().
+	 */
+	public static function rate_limit_message( ?array $rate_limit, ?int $now = null ): string {
+		$provider = is_string( $rate_limit['provider'] ?? null ) && '' !== $rate_limit['provider']
+			? $rate_limit['provider']
+			: __( 'The Git provider', 'ran-booster' );
+		$minutes  = self::minutes_until( $rate_limit['retry_at'] ?? null, $now ?? time() );
+		if ( null !== $minutes ) {
+			return sprintf(
+				/* translators: 1: Git provider name, such as GitHub. 2: Whole minutes until the provider allows lookups again. */
+				_n( '%1$s is limiting lookups from this site. Try again in about %2$d minute.', '%1$s is limiting lookups from this site. Try again in about %2$d minutes.', $minutes, 'ran-booster' ),
+				$provider,
+				$minutes
+			);
+		}
+
+		/* translators: %s: Git provider name, such as GitHub. */
+		return sprintf( __( '%s is limiting lookups from this site. Try again later.', 'ran-booster' ), $provider );
+	}
+
+	/**
+	 * The server sentence as notice HTML. A usable retry time is printed inside <time datetime>, so the
+	 * shared script can show it on the visitor's clock; without JavaScript the minutes stay.
+	 *
+	 * @param array{provider?:mixed,retry_at?:mixed}|null $rate_limit Facts from rate_limit().
+	 */
+	public static function rate_limit_html( ?array $rate_limit, ?int $now = null ): string {
+		$now    ??= time();
+		$text     = esc_html( self::rate_limit_message( $rate_limit, $now ) );
+		$retry_at = $rate_limit['retry_at'] ?? null;
+		if ( ! is_int( $retry_at ) || null === self::minutes_until( $retry_at, $now ) ) {
+			return $text;
+		}
+		$provider = is_string( $rate_limit['provider'] ?? null ) ? $rate_limit['provider'] : '';
+
+		return '<time datetime="' . esc_attr( gmdate( 'Y-m-d\TH:i:s\Z', $retry_at ) ) . '" data-ran-booster-rate-limit="' . esc_attr( $provider ) . '">' . $text . '</time>';
+	}
+
+	/** Whole minutes, rounded up, until a retry time within the next day; otherwise null. */
+	private static function minutes_until( mixed $retry_at, int $now ): ?int {
+		return is_int( $retry_at ) && $retry_at > $now && $retry_at <= $now + 86400 ? (int) ceil( ( $retry_at - $now ) / 60 ) : null;
+	}
+
 	/** Whether a retry later may succeed without any change by the administrator. */
 	public function is_transient(): bool {
 		return in_array( $this->reason, array( ...self::RATE, ...self::TRANSPORT, 'http_5xx', 'credential_store_unavailable' ), true );
@@ -242,14 +310,15 @@ final readonly class ProviderFailure {
 	}
 
 	private function retry_message(): string {
-		$seconds = $this->retry_after ?? ( null === $this->reset_at ? null : $this->reset_at - time() );
-		if ( null === $seconds || $seconds < 1 || $seconds > 86400 ) {
+		$now      = time();
+		$retry_at = $this->rate_limit( '', $now )['retry_at'] ?? null;
+		$minutes  = self::minutes_until( $retry_at, $now );
+		if ( null === $minutes || null === $retry_at ) {
 			return '';
 		}
-		if ( $seconds < 60 ) {
+		if ( $retry_at - $now < 60 ) {
 			return __( 'Try again in less than a minute.', 'ran-booster' );
 		}
-		$minutes = (int) ceil( $seconds / 60 );
 
 		/* translators: %d: whole minutes until the request may be retried. */
 		return sprintf( _n( 'Try again in about %d minute.', 'Try again in about %d minutes.', $minutes, 'ran-booster' ), $minutes );

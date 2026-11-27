@@ -1692,6 +1692,16 @@
 				return response.data;
 			}
 
+			if (
+				response.data.rate_limit &&
+				typeof response.data.rate_limit === 'object' &&
+				window.ranBoosterRateLimit
+			) {
+				return window.ranBoosterRateLimit.message(
+					response.data.rate_limit
+				);
+			}
+
 			return response.data.message || fallback;
 		}
 

@@ -239,7 +239,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			->with(
 				self::callback(
 					static fn ( mixed $message ): bool => $message instanceof WP_Error
-						&& 'The Git provider rate limit has been reached. Nothing was saved. Try again later.' === $message->get_error_message()
+						&& 'GitHub is limiting lookups from this site. Try again later. Nothing was saved.' === $message->get_error_message()
 				)
 			);
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );
@@ -981,7 +981,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			->with(
 				self::callback(
 					static fn ( mixed $message ): bool => $message instanceof WP_Error
-						&& 'The Git provider rate limit has been reached. Nothing was saved. Try again later.' === $message->get_error_message()
+						&& 'GitHub is limiting lookups from this site. Try again later. Nothing was saved.' === $message->get_error_message()
 				)
 			);
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );

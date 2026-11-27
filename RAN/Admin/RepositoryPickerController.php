@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\Internal\AnonymousLookupCooldown;
 use InvalidArgumentException;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
 use RAN\Logging\BoosterLogger;
@@ -55,6 +56,8 @@ final class RepositoryPickerController {
 
 		$public_lookup_requested = false;
 		$provider_name           = '';
+		$mode                    = '';
+		$credential_id           = null;
 
 		try {
 			$provider_input = isset( $_POST['provider'] ) ? wp_unslash( $_POST['provider'] ) : '';
@@ -82,11 +85,29 @@ final class RepositoryPickerController {
 				$owner                   = is_string( $owner_input ) ? $owner_input : '';
 				$public_lookup_requested = is_string( $identity_input ) && 'anonymous' !== sanitize_key( $identity_input );
 				$credential_id           = $this->public_lookup_profile_id( $provider_code );
-				$browser                 = $this->providers->require_capability(
+				$retry_at                = null === $credential_id ? AnonymousLookupCooldown::until( $provider_name ) : null;
+				if ( null !== $retry_at ) {
+					BoosterLogger::log(
+						'anonymous repository browse skipped during rate limit',
+						array(
+							'event'     => 'anonymous_lookup_cooldown',
+							'operation' => 'repository_browse',
+							'provider'  => $provider_name,
+						)
+					);
+
+					return $this->rate_limited_response(
+						array(
+							'provider' => $this->providers->metadata()[ $provider_name ]->label ?? '',
+							'retry_at' => $retry_at,
+						)
+					);
+				}
+				$browser = $this->providers->require_capability(
 					$provider_code,
 					null === $credential_id ? RepositoryBrowser::class : CredentialedPublicRepositoryBrowser::class
 				);
-				$result                  = $browser->browse_repositories(
+				$result  = $browser->browse_repositories(
 					RepositoryBrowseRequest::public_owner(
 						$owner,
 						$credential_id
@@ -124,7 +145,7 @@ final class RepositoryPickerController {
 						$repositories
 					),
 					'partial'                  => $result->is_partial(),
-					'message'                  => $this->partial_message( $result ),
+					'message'                  => $this->partial_message( $result, $this->providers->metadata()[ $provider_name ]->label ?? '' ),
 					'public_lookup_profile_id' => 'public' === $mode ? $credential_id ?? '' : '',
 				)
 			);
@@ -179,10 +200,21 @@ final class RepositoryPickerController {
 				$status = 500;
 			}
 
+			// A provider that reports a rate limit only by its HTTP status is named too.
+			$failure    = ProviderFailure::carried( $exception );
+			$rate_limit = ProviderFailure::from_throwable( $exception )?->rate_limit( $this->providers->metadata()[ $provider_name ]->label ?? '', time() );
+			if ( null !== $rate_limit ) {
+				if ( 'public' === $mode && null === $credential_id ) {
+					AnonymousLookupCooldown::record( $provider_name, $rate_limit );
+				}
+
+				return $this->rate_limited_response( $rate_limit, $status );
+			}
+
 			return wp_send_json_error(
 				array(
 					// A provider's own reason is worded by Core; a plain exception keeps the status copy.
-					'message' => ProviderFailure::carried( $exception )?->message() ?? $this->error_message_for_status( $status ),
+					'message' => $failure?->message() ?? $this->error_message_for_status( $status ),
 				),
 				$status
 			);
@@ -205,6 +237,22 @@ final class RepositoryPickerController {
 		}
 	}
 
+	/**
+	 * The provider-named rate-limit sentence, with its facts so the browser can show the time on the
+	 * visitor's clock.
+	 *
+	 * @param array{provider:string,retry_at:int|null} $rate_limit
+	 */
+	private function rate_limited_response( array $rate_limit, int $status = 429 ): mixed {
+		return wp_send_json_error(
+			array(
+				'message'    => ProviderFailure::rate_limit_message( $rate_limit ),
+				'rate_limit' => $rate_limit,
+			),
+			$status
+		);
+	}
+
 	private function error_message_for_status( int $status ): string {
 		return match ( $status ) {
 			400 => __( 'The repository request is invalid. Check the selected Git provider and repository details.', 'ran-booster' ),
@@ -213,7 +261,6 @@ final class RepositoryPickerController {
 			404 => __( 'The requested repository owner could not be found.', 'ran-booster' ),
 			413 => __( 'The Git provider returned too much data. Enter the repository manually or narrow the account.', 'ran-booster' ),
 			422 => __( 'The Git provider returned an invalid response. Try again or enter the repository manually.', 'ran-booster' ),
-			429 => __( 'The Git provider rate limit has been reached. Try again later.', 'ran-booster' ),
 			503, 504 => __( 'Repository browsing took too long. Try again or enter the repository manually.', 'ran-booster' ),
 			default => __( 'Repository browsing failed. Please try again.', 'ran-booster' ),
 		};
@@ -278,11 +325,15 @@ final class RepositoryPickerController {
 		throw new InvalidArgumentException( 'The public lookup profile is unavailable.' );
 	}
 
-	private function partial_message( RepositoryBrowseResult $result ): ?string {
+	private function partial_message( RepositoryBrowseResult $result, string $provider_label ): ?string {
 
 		return match ( $result->partial_reason ) {
 			RepositoryBrowseResult::AUTHORIZATION => __( 'Some repositories are shown, but the selected credential stopped authorizing the request.', 'ran-booster' ),
-			RepositoryBrowseResult::RATE_LIMIT => __( 'Some repositories are shown. The Git provider rate limit was reached; try again later for a complete list.', 'ran-booster' ),
+			RepositoryBrowseResult::RATE_LIMIT => sprintf(
+				/* translators: %s: Git provider name, such as GitHub. */
+				__( 'Some repositories are shown. %s is limiting lookups from this site. Try again later for a complete list.', 'ran-booster' ),
+				'' !== $provider_label ? $provider_label : __( 'The Git provider', 'ran-booster' )
+			),
 			RepositoryBrowseResult::LIMIT => __( 'The first available repositories are shown. Enter a repository manually if it is not listed.', 'ran-booster' ),
 			RepositoryBrowseResult::PROVIDER => __( 'Some repositories are shown, but the Git provider could not complete the list.', 'ran-booster' ),
 			default => null,

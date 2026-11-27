@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\AddOn\ReleaseTracking;
 
+use RAN\Internal\AnonymousLookupCooldown;
 use RAN\UpdaterSupport\V1\PackageDirectory;
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentOutcome;
@@ -14,6 +15,7 @@ use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\GitHubProviderSelection;
+use RAN\RepositoryProvider\ProviderFailure;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
@@ -73,7 +75,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	private WordPressUpdaterLock $updater_lock;
 	private RepositorySourceGuard $source_guard;
 	private ?string $anonymous_rate_limit_provider = null;
-	private bool $lookup_rate_limited              = false;
+	/** @var array{provider:string,retry_at:int|null}|null */
+	private ?array $lookup_rate_limit = null;
 
 	/** @var \Closure(string, string): mixed */
 	private \Closure $check_without_offer;
@@ -433,7 +436,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $nonce
 	): ?\RAN\RepositoryProvider\RepositoryReleaseCandidateList {
 		$this->anonymous_rate_limit_provider = null;
-		$this->lookup_rate_limited           = false;
+		$this->lookup_rate_limit             = null;
 		$package                             = $this->authorized( 'list_candidates', $type, $identifier, $expected_source_revision, $nonce, $channel );
 		if ( ! RuntimeSupport::current()->allows_managed_operations()
 			|| ! $this->valid_channel( $channel )
@@ -452,9 +455,12 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$listing = $this->providers->require_capability( (string) $package->get_provider_code(), RepositoryReleaseCandidateListing::class );
 
 			foreach ( $this->release_browser_repositories( $package ) as $repository ) {
+				if ( $this->cooling_down( $repository, (string) $package->get_provider_code(), 'list_release_candidates' ) ) {
+					continue;
+				}
 				try {
 					$candidates                          = $listing->list_release_candidates( $type, $repository, $channel );
-					$this->lookup_rate_limited           = false;
+					$this->lookup_rate_limit             = null;
 					$this->anonymous_rate_limit_provider = null;
 					return $candidates;
 				} catch ( RepositoryReleaseReadUnavailable $unavailable ) {
@@ -483,13 +489,48 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		return $this->anonymous_rate_limit_provider;
 	}
 
-	public function lookup_rate_limited(): bool {
-		return $this->lookup_rate_limited;
+	/**
+	 * The provider label and retry time of the last rate-limited listing or inspection, if any.
+	 *
+	 * @return array{provider:string,retry_at:int|null}|null
+	 */
+	public function lookup_rate_limit(): ?array {
+		return $this->lookup_rate_limit;
 	}
 
 	private function record_lookup_failure( RepositoryReleaseReadUnavailable $unavailable, RepositoryReference $repository, string $provider ): void {
-		$this->lookup_rate_limited           = in_array( $unavailable->failure?->reason, array( 'rate_limited', 'rate_limited_secondary' ), true );
-		$this->anonymous_rate_limit_provider = $this->lookup_rate_limited && ! $repository->private && null === $repository->credential_id ? $provider : null;
+		// A provider that reports a rate limit only by its HTTP status is named too.
+		$this->lookup_rate_limit             = ProviderFailure::from_throwable( $unavailable )?->rate_limit( $this->providers->metadata()[ $provider ]->label ?? '', time() );
+		$this->anonymous_rate_limit_provider = null !== $this->lookup_rate_limit && ! $repository->private && null === $repository->credential_id ? $provider : null;
+		if ( null !== $this->anonymous_rate_limit_provider ) {
+			AnonymousLookupCooldown::record( $provider, $this->lookup_rate_limit );
+		}
+	}
+
+	/**
+	 * Skips an anonymous lookup while the provider's recorded rate limit lasts, reporting it as that
+	 * rate limit. A credentialed lookup is never skipped.
+	 */
+	private function cooling_down( RepositoryReference $repository, string $provider, string $operation ): bool {
+		$retry_at = ! $repository->private && null === $repository->credential_id ? AnonymousLookupCooldown::until( $provider ) : null;
+		if ( null === $retry_at ) {
+			return false;
+		}
+		$this->lookup_rate_limit             = array(
+			'provider' => $this->providers->metadata()[ $provider ]->label ?? '',
+			'retry_at' => $retry_at,
+		);
+		$this->anonymous_rate_limit_provider = $provider;
+		BoosterLogger::log(
+			'anonymous release lookup skipped during rate limit',
+			array(
+				'event'     => 'anonymous_lookup_cooldown',
+				'operation' => $operation,
+				'provider'  => $provider,
+			)
+		);
+
+		return true;
 	}
 
 	public function inspect_candidate(
@@ -502,7 +543,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $nonce
 	): ?ReleaseTrackingPreflight {
 		$this->anonymous_rate_limit_provider = null;
-		$this->lookup_rate_limited           = false;
+		$this->lookup_rate_limit             = null;
 		$package                             = $this->authorized( 'inspect_candidate', $type, $identifier, $expected_source_revision, $nonce, $channel );
 		if ( ! RuntimeSupport::current()->allows_managed_operations()
 
@@ -530,8 +571,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$inspection = null;
 			$repository = null;
 			foreach ( $this->release_browser_repositories( $package ) as $repository ) {
-				$this->lookup_rate_limited           = false;
+				$this->lookup_rate_limit             = null;
 				$this->anonymous_rate_limit_provider = null;
+				if ( $this->cooling_down( $repository, $provider, 'inspect_release' ) ) {
+					continue;
+				}
 				try {
 					$inspection = $inspector->inspect_release( $type, $repository, $release_id, $tag, $channel );
 					break;
@@ -552,7 +596,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				}
 			}
 			if ( null === $inspection || null === $repository ) {
-				return $this->lookup_rate_limited
+				return null !== $this->lookup_rate_limit
 					? new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $configuration->package_root(), reason_code: 'rate_limited' )
 					: null;
 			}

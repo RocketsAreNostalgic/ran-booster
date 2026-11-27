@@ -586,10 +586,9 @@ return static function ( wpdb $database ): void {
 				$expect( null === $lock_row(), 'clean up trailing-space malformed lock fixture' );
 			}
 
-			$fixed_now         = time();
-			$own               = (string) $fixed_now;
-			$expected_recovery = (string) ( $fixed_now + 1 );
-			$fixed_lock        = new class( $fixed_now ) extends WordPressUpdaterLock {
+			$fixed_now  = time();
+			$own        = (string) $fixed_now;
+			$fixed_lock = new class( $fixed_now ) extends WordPressUpdaterLock {
 				public function __construct( private readonly int $fixed_now ) {}
 
 				protected function now(): int {
@@ -600,8 +599,8 @@ return static function ( wpdb $database ): void {
 			$query( $database->prepare( 'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $table, 'auto_updater.lock', $own, 'no' ) );
 			try {
 				$prime_lock_cache();
-				$acquired = $fixed_lock->acquire_replacing_owner( $own );
-				$expect( $expected_recovery === $acquired && $expected_recovery === $lock_row() && $expected_recovery === $lock->current_token(), 'same-second handoff must atomically install distinct recovery token' );
+				$expected_recovery = $fixed_lock->acquire_replacing_owner( $own );
+				$expect( 1 === preg_match( '/\A' . $fixed_now . '\.[0-9]{27}\z/D', $expected_recovery ) && $expected_recovery === $lock_row() && $expected_recovery === $lock->current_token(), 'same-second handoff must atomically install a distinct fractional recovery token' );
 				$expect_lock_cache( false, 'successful same-second handoff must invalidate option cache' );
 				$prime_lock_cache();
 				$concurrent_refused = false;

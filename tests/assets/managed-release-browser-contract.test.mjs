@@ -7,6 +7,11 @@ const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-release-management.js', import.meta.url),
 	'utf8'
 );
+// The shared rate-limit sentence loads before this script on every Booster page.
+const rateLimitSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-rate-limit.js', import.meta.url),
+	'utf8'
+);
 const styles = fs.readFileSync(
 	new URL('../../assets/ran-booster-release-management.css', import.meta.url),
 	'utf8'
@@ -360,8 +365,10 @@ const createHarness = (
 		},
 	};
 	context.globalThis = context;
+	context.window.wp = context.wp;
+	context.window.document = context.document;
 	vm.runInNewContext(
-		`${source}\nglobalThis.initialize = initializeManagedReleaseBrowser;`,
+		`${rateLimitSource}\n${source}\nglobalThis.initialize = initializeManagedReleaseBrowser;`,
 		context
 	);
 	return {
@@ -1944,7 +1951,10 @@ test('managed browser adds the lookup-credential hint only when the server suppl
 	await flush();
 	const message = hinted.nodes.get('error-message');
 	assert.equal(hinted.nodes.get('error').hidden, false);
-	assert.match(message.textContent, /provider rate-limited this lookup/i);
+	assert.match(
+		message.textContent,
+		/^The Git provider is limiting lookups from this site\. Try again later\./
+	);
 	assert.equal(message.children[0], ` ${hint.text} `);
 	assert.equal(message.children[1].tagName, 'a');
 	assert.equal(message.children[1].href, hint.url);
@@ -1963,6 +1973,68 @@ test('managed browser adds the lookup-credential hint only when the server suppl
 		await flush();
 		assert.equal(plain.nodes.get('error').hidden, false);
 		assert.deepEqual(plain.nodes.get('error-message').children, []);
+	}
+});
+
+test('a rate limit names the provider and the retry time on the browser clock', async () => {
+	const zone = process.env.TZ;
+	// A zone far from UTC: the time shown must be the browser's, never the server's.
+	process.env.TZ = 'Pacific/Auckland';
+	try {
+		const retryAt = Math.floor(Date.now() / 1000) + 3540;
+		const options = { hour: 'numeric', minute: '2-digit' };
+		const shown = new Date(Math.ceil(retryAt / 60) * 60000);
+		const local = shown.toLocaleTimeString(undefined, options);
+		assert.notEqual(
+			local,
+			shown.toLocaleTimeString(undefined, { ...options, timeZone: 'UTC' })
+		);
+		for (const [rateLimit, expected] of [
+			[
+				{ provider: 'GitHub', retry_at: retryAt },
+				`GitHub is limiting lookups from this site. Try again after ${local}.`,
+			],
+			[
+				{ provider: 'GitHub', retry_at: null },
+				'GitHub is limiting lookups from this site. Try again later.',
+			],
+			[
+				{ provider: 'GitHub', retry_at: retryAt - 7200 },
+				'GitHub is limiting lookups from this site. Try again later.',
+			],
+			[
+				{ provider: 'GitHub', retry_at: retryAt + 86400 },
+				'GitHub is limiting lookups from this site. Try again later.',
+			],
+			[
+				{ provider: '', retry_at: String(retryAt) },
+				'The Git provider is limiting lookups from this site. Try again later.',
+			],
+		]) {
+			const harness = createHarness([
+				{
+					successful: false,
+					code: 'unable_to_check',
+					data: {
+						rejection_reason: 'rate_limited',
+						rate_limit: rateLimit,
+					},
+				},
+			]);
+			harness.initialize(harness.browser);
+			await flush();
+			await flush();
+			assert.equal(
+				harness.nodes.get('error-message').textContent,
+				expected
+			);
+		}
+	} finally {
+		if (zone === undefined) {
+			delete process.env.TZ;
+		} else {
+			process.env.TZ = zone;
+		}
 	}
 });
 
@@ -2574,7 +2646,7 @@ test('inspection rate limits stay inside the review dialog for every relationshi
 			await harness.nodes.get('review').dispatch('click');
 			assert.match(
 				dialogText(harness),
-				/provider rate-limited this lookup/i
+				/The Git provider is limiting lookups from this site\. Try again later\./
 			);
 			assert.equal(harness.noticeCalls.at(-1).intent, 'warning');
 			assert.equal(harness.nodes.get('error').hidden, true);

@@ -196,6 +196,65 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertArrayNotHasKey( 'ran_booster_repository_branch_check', $query );
 	}
 
+	public function test_a_rate_limited_stored_save_signs_the_provider_code_and_retry_time_into_its_redirect(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator(), $this->plugin() );
+		$retry_at  = time() + 3540;
+
+		$redirect = $dashboard->post_package_operation(
+			'edit-plugin',
+			$this->input(
+				'edit-plugin',
+				array(
+					'deployment_policy'           => DeploymentPolicy::DISABLED->value,
+					'repository_check_skipped'    => 'rate_limited',
+					'repository_check_rate_limit' => array(
+						'code'     => 'gh',
+						'retry_at' => $retry_at,
+					),
+				)
+			)
+		);
+
+		self::assertIsString( $redirect );
+		$query = $this->redirect_query( $redirect );
+		self::assertSame( 'edit-rate-limited', $query['ran_booster_result'] );
+		self::assertSame( 'gh', $query['ran_booster_retry_provider'] ?? null );
+		self::assertSame( (string) $retry_at, $query['ran_booster_retry_at'] ?? null );
+		self::assertSame( 1, \RAN\wp_verify_nonce( $query['_ran_booster_notice_nonce'], 'ran-booster-package-retry|plugin|edit-rate-limited|gh|' . $retry_at . '|example/example.php' ) );
+	}
+
+	public function test_the_dashboard_names_the_provider_in_the_notice_after_a_rate_limited_stored_save(): void {
+		$providers = new \RAN\RepositoryProvider\ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'gh' ) ) );
+		$dashboard = $this->dashboard( new OperationCoordinator(), $this->plugin(), $providers );
+		$retry_at  = time() + 3540;
+		$redirect  = $dashboard->post_package_operation(
+			'edit-plugin',
+			$this->input(
+				'edit-plugin',
+				array(
+					'deployment_policy'           => DeploymentPolicy::DISABLED->value,
+					'repository_check_skipped'    => 'rate_limited',
+					'repository_check_rate_limit' => array(
+						'code'     => 'gh',
+						'retry_at' => $retry_at,
+					),
+				)
+			)
+		);
+		self::assertIsString( $redirect );
+
+		// The settings page that the redirect opens shows its notice through the Dashboard's own controller.
+		$_GET       = $this->redirect_query( $redirect );
+		$controller = ( new \ReflectionProperty( Dashboard::class, 'package_admin' ) )->getValue( $dashboard );
+		self::assertInstanceOf( PackageAdminController::class, $controller );
+		self::assertNotNull( $controller->add_success_notice( $dashboard, 'plugin' ) );
+		$messages = $dashboard->messages;
+		self::assertSame(
+			'Your settings were saved using the repository details Booster already had. <time datetime="' . gmdate( 'Y-m-d\\TH:i:s\\Z', $retry_at ) . '" data-ran-booster-rate-limit="Fixture provider">Fixture provider is limiting lookups from this site. Try again in about 59 minutes.</time>',
+			end( $messages )['message'] ?? null
+		);
+	}
+
 	/** @return array<string, array{string, string, string}> */
 	public static function unchecked_save_notices(): array {
 		return array(
@@ -1634,7 +1693,7 @@ final class PackageOperationServiceTest extends TestCase {
 				array(
 					'type'     => 'warning',
 					'feedback' => 'package_edit_unverified',
-					'message'  => 'Your settings were saved. The Git provider was limiting requests, so Booster used the repository details it already had.',
+					'message'  => 'Your settings were saved using the repository details Booster already had. The Git provider is limiting lookups from this site. Try again later.',
 				),
 			),
 			$dashboard->messages
@@ -1643,6 +1702,39 @@ final class PackageOperationServiceTest extends TestCase {
 		$forged                            = $this->dashboard( new OperationCoordinator() );
 		self::assertNull( $this->invoke_package_success_notice( $forged, $type ) );
 		self::assertSame( array(), $forged->messages );
+
+		// A signed provider code and retry time print the registry label and minutes inside <time>, so the shared
+		// script can show a local clock time.
+		$retry_at  = time() + 3540;
+		$providers = new \RAN\RepositoryProvider\ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'gh' ) ) );
+		$_GET      = array(
+			'ran_booster_result'         => 'edit-rate-limited',
+			'ran_booster_package'        => $identifier,
+			'ran_booster_retry_provider' => 'gh',
+			'ran_booster_retry_at'       => (string) $retry_at,
+			'_ran_booster_notice_nonce'  => \RAN\wp_create_nonce( 'ran-booster-package-retry|' . $type . '|edit-rate-limited|gh|' . $retry_at . '|' . $identifier ),
+		);
+		$timed     = $this->dashboard( new OperationCoordinator() );
+		self::assertNotNull( $this->invoke_package_success_notice( $timed, $type, $providers ) );
+		self::assertSame(
+			'Your settings were saved using the repository details Booster already had. <time datetime="' . gmdate( 'Y-m-d\\TH:i:s\\Z', $retry_at ) . '" data-ran-booster-rate-limit="Fixture provider">Fixture provider is limiting lookups from this site. Try again in about 59 minutes.</time>',
+			$timed->messages[0]['message'] ?? null
+		);
+		// A changed time or provider code no longer matches the signed tuple.
+		foreach ( array(
+			'ran_booster_retry_at'       => array( (string) ( $retry_at + 600 ), (string) $retry_at ),
+			'ran_booster_retry_provider' => array( 'bb', 'gh' ),
+		) as $key => [ $changed, $signed ] ) {
+			$_GET[ $key ] = $changed;
+			$tampered     = $this->dashboard( new OperationCoordinator() );
+			self::assertNull( $this->invoke_package_success_notice( $tampered, $type, $providers ) );
+			self::assertSame( array(), $tampered->messages );
+			$_GET[ $key ] = $signed;
+		}
+		// The retry facts cannot be moved into the package identifier of an ordinary result.
+		$_GET['_ran_booster_notice_nonce'] = \RAN\wp_create_nonce( 'ran-booster-package-success|' . $type . '|edit-rate-limited|' . $identifier . '|gh|' . $retry_at );
+		$shifted                           = $this->dashboard( new OperationCoordinator() );
+		self::assertNull( $this->invoke_package_success_notice( $shifted, $type, $providers ) );
 	}
 
 	public function test_unsigned_unverified_edit_marker_cannot_create_a_notice(): void {
@@ -2345,7 +2437,7 @@ final class PackageOperationServiceTest extends TestCase {
 		return new GitHubProviderSelection( $store, '/unused', $bundled );
 	}
 
-	private function dashboard( OperationCoordinator $coordinator, ?Plugin $plugin = null ): Dashboard {
+	private function dashboard( OperationCoordinator $coordinator, ?Plugin $plugin = null, ?\RAN\RepositoryProvider\ProviderRegistry $providers = null ): Dashboard {
 		$plugins = new OperationPluginRepository( $plugin ?? $this->plugin() );
 		$themes  = new OperationThemeRepository( new OperationTheme( 'example' ) );
 
@@ -2358,13 +2450,14 @@ final class PackageOperationServiceTest extends TestCase {
 			( new \ReflectionClass( TroubleshootingService::class ) )->newInstanceWithoutConstructor(),
 			null,
 			null,
-			$this->service( $plugins, $themes, $coordinator )
+			$this->service( $plugins, $themes, $coordinator ),
+			providers: $providers
 		);
 	}
 
 	/** @return array{operation: string, identifier: string}|null */
-	private function invoke_package_success_notice( Dashboard $dashboard, string $type ): ?array {
-		return ( new PackageAdminController() )->add_success_notice( $dashboard, $type );
+	private function invoke_package_success_notice( Dashboard $dashboard, string $type, ?\RAN\RepositoryProvider\ProviderRegistry $providers = null ): ?array {
+		return ( new PackageAdminController( providers: $providers ) )->add_success_notice( $dashboard, $type );
 	}
 
 	/** @return array<string, string> */

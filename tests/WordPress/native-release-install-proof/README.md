@@ -218,9 +218,15 @@ public switch preflight and admin POST processor, the release updater's
 exact-release path and WordPress's own upgrader (count-one `bulk_upgrade` for a
 plugin, `upgrade` for a theme). Remote HTTP is synthetic; every other component
 is the installed code, attested against the Core ZIP under test before and after
-each switch. Preflight and POST ZIP streams are counted separately. Each case seeds a Branch package at 1.0.0, switches in a second
-process and reads back in a third, which stands in for the next admin page
-load.
+each switch. Preflight and POST ZIP streams are counted separately. Each case
+seeds a Branch package at the case's starting version, switches in a new process
+and reads back in another, which stands in for the next admin page load.
+
+To save WordPress starts, a case whose last process is `readback` or `retried`
+also seeds the next case there. `run` and `retry` leave an update-check deletion
+for request end, and `fresh` and `branch-return` change that cache too, so a
+case that follows `fresh` or `branch-return` seeds in its own process, as the
+first case does. Every `run` asserts that its seeded offer is still stored.
 
 | Case | Result | Source after | Native custody |
 | --- | --- | --- | --- |
@@ -288,11 +294,21 @@ Two negative controls each mutate one line of the Core archive under test:
 
 Every readback reads the raw `_site_transient_update_*` row and fails if the
 one-off offer reached it. Each case seeds a still-fresh stored check holding an
-ordinary offer. After a refused or failed switch, the readback runs WordPress's
-`_maybe_update_*()` and requires a check newer than the readback's start that
-holds the ordinary offer again. Run against a build with Core's end-of-request
-recheck removed, `older` and `disabled` fail that assertion for both package
-types.
+ordinary offer. What else the readback requires of that check depends on the
+case:
+
+- `comparison-unavailable`, `stale-confirmation`, `prerelease-no-consent` and
+  `older` are refused before installation. The seeded offer must still be
+  stored.
+- `choice-disappeared`, `replaced-asset`, `failed-download`, `incompatible-zip`,
+  `pre-install`, `pre-install-throw`, `missing` and `failed-install` run
+  WordPress's `_maybe_update_*()`, which must leave a check newer than the
+  readback's start that holds the ordinary offer again.
+- `disabled`, `conflict`, the killed cases and the cases that switch get neither
+  requirement. `disabled` proves the `policy_disabled` refusal with the Branch
+  source and files unchanged.
+
+A `form-` or `fresh-` case follows its base case here.
 
 ```sh
 PHP_BIN=/path/to/php8.2 \

@@ -824,10 +824,12 @@ state rather than finishing a form. It wraps on narrow widths.
   `disabled` attribute, so it stays focusable), with a reason message in the
   row and the reason tooltip on hover and keyboard focus. It is never hidden.
 
-A disabled or unavailable brand solid button draws as a white fill with a 1px
-`--ran-booster-control-border` stroke (3:1 or more against white and the grey
-surface), muted text at 4.5:1 or more on the fill, `cursor: not-allowed`, no
-opacity and no hover change. Meaning never rests on a grey fill or opacity.
+A disabled or unavailable button of every tone and variant, including one
+disabled while busy, draws as a pale-grey `--ran-booster-surface-subtle` fill
+with a 1px `--ran-booster-control-border` stroke (3:1 or more against white and
+the grey surface), muted text at 4.5:1 or more on the fill, no opacity and no
+hover change. Where the button receives pointer events its cursor is
+`not-allowed`; a busy form keeps its progress cursor.
 
 ## Add-on generation and service delivery
 

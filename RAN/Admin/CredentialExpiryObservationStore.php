@@ -6,16 +6,18 @@ namespace RAN\Admin;
 
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\CredentialExpiryReport;
+use RAN\Secrets\SecretsFile;
 use RuntimeException;
 
 /**
  * Stores non-secret, provider-scoped credential expiry observations.
  *
- * A provider observation carries the material tag of the credential it was made
- * for, and is returned only while that tag is still the credential's current one.
+ * Provider observations are keyed by the material tag they were made for, and only the current tag's is returned.
+ * A stored credential keeps one; the constant keeps two, so a request holding a rotated value writes beside the new one.
  *
+ * @phpstan-type ProviderObservation array{provider_checked_at: string, provider_expires_at?: string}
  * @phpstan-type Observation array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}
- * @phpstan-type StoredObservation array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int, material_tag?: string, material_since?: int}
+ * @phpstan-type StoredObservation array{manual_expires_on?: string, event_generation?: int, provider_observations?: array<string, ProviderObservation>}
  */
 class CredentialExpiryObservationStore {
 
@@ -28,6 +30,7 @@ class CredentialExpiryObservationStore {
 
 	/**
 	 * Set the reader of current material tags once; until then provider observations are hidden and not recorded.
+	 * The store belongs to one SecretsFile, so a later binding is ignored.
 	 *
 	 * @param \Closure(string, string): ?string $reader
 	 */
@@ -74,10 +77,8 @@ class CredentialExpiryObservationStore {
 			$provider,
 			$profile_id,
 			array(
-				'material_tag'        => $material_tag,
-				'material_since'      => $this->request_started_at(),
-				'provider_checked_at' => $checked_at,
-				'provider_expires_at' => $report->is_known() ? (string) $report->expires_at : null,
+				'material_tag' => $material_tag,
+				'observation'  => array( 'provider_checked_at' => $checked_at ) + ( $report->is_known() ? array( 'provider_expires_at' => (string) $report->expires_at ) : array() ),
 			)
 		);
 	}
@@ -103,13 +104,6 @@ class CredentialExpiryObservationStore {
 			wp_cache_delete( 'notoptions', 'options' );
 		}
 		return get_option( self::OPTION_NAME, null );
-	}
-
-	/** Microseconds since the epoch when this request began; a constant credential cannot change within a request. */
-	protected function request_started_at(): int {
-		$started = $_SERVER['REQUEST_TIME_FLOAT'] ?? null;
-
-		return (int) round( ( is_numeric( $started ) ? (float) $started : microtime( true ) ) * 1000000 );
 	}
 
 	/** @param array<string, mixed> $replacement Canonical option document. */
@@ -201,21 +195,19 @@ class CredentialExpiryObservationStore {
 			$record['manual_expires_on'] = $candidate['manual_expires_on'];
 		}
 
-		// A provider observation without the tag of the credential it was made for is never trusted.
-		if ( is_string( $candidate['provider_checked_at'] ?? null )
-			&& $this->is_utc_timestamp( $candidate['provider_checked_at'] )
-			&& is_string( $candidate['material_tag'] ?? null )
-			&& $this->is_material_tag( $candidate['material_tag'] )
-		) {
-			$record['material_tag']        = $candidate['material_tag'];
-			$record['provider_checked_at'] = $candidate['provider_checked_at'];
-			if ( is_int( $candidate['material_since'] ?? null ) && $candidate['material_since'] > 0 ) {
-				$record['material_since'] = $candidate['material_since'];
-			}
-			if ( is_string( $candidate['provider_expires_at'] ?? null )
-				&& $this->is_utc_timestamp( $candidate['provider_expires_at'] )
+		// A provider observation is trusted only under the tag of the credential it was made for.
+		$stored = $candidate['provider_observations'] ?? null;
+		foreach ( is_array( $stored ) && count( $stored ) <= 2 ? $stored : array() as $tag => $observation ) {
+			if ( is_string( $tag ) && 1 === preg_match( '/\A[0-9a-f]{32}\z/', $tag )
+				&& is_string( $observation['provider_checked_at'] ?? null )
+				&& $this->is_utc_timestamp( $observation['provider_checked_at'] )
 			) {
-				$record['provider_expires_at'] = $candidate['provider_expires_at'];
+				$record['provider_observations'][ $tag ] = array( 'provider_checked_at' => $observation['provider_checked_at'] );
+				if ( is_string( $observation['provider_expires_at'] ?? null )
+					&& $this->is_utc_timestamp( $observation['provider_expires_at'] )
+				) {
+					$record['provider_observations'][ $tag ]['provider_expires_at'] = $observation['provider_expires_at'];
+				}
 			}
 		}
 		if ( is_int( $candidate['event_generation'] ?? null ) && $candidate['event_generation'] > 0 ) {
@@ -226,28 +218,33 @@ class CredentialExpiryObservationStore {
 	}
 
 	/**
-	 * Drop the tag, and the provider observation unless its tag is the credential's current one.
+	 * Keep only the provider observation made for the credential's current tag.
 	 *
 	 * @param StoredObservation $record
 	 * @return Observation
 	 */
 	private function trusted( string $provider, string $profile_id, array $record ): array {
-		$tag = $record['material_tag'] ?? null;
-		unset( $record['material_tag'], $record['material_since'] );
-		if ( null !== $tag && ! $this->is_current_tag( $provider, $profile_id, $tag ) ) {
-			unset( $record['provider_checked_at'], $record['provider_expires_at'] );
-		}
+		$observations = $record['provider_observations'] ?? array();
+		unset( $record['provider_observations'] );
+		$current = array() === $observations ? null : $this->current_tag( $provider, $profile_id );
 
-		return $record;
+		return $record + ( array_values( $this->current_observations( $observations, $current ) )[0] ?? array() );
 	}
 
-	private function is_current_tag( string $provider, string $profile_id, string $tag ): bool {
+	/**
+	 * @param array<string, ProviderObservation> $observations
+	 * @return array<string, ProviderObservation>
+	 */
+	private function current_observations( array $observations, ?string $current ): array {
+		return array_filter( $observations, static fn ( string $tag ): bool => null !== $current && hash_equals( $current, $tag ), ARRAY_FILTER_USE_KEY );
+	}
+
+	private function current_tag( string $provider, string $profile_id ): ?string {
 		try {
-			$current = null === $this->material_tags ? false : ( $this->material_tags )( $provider, $profile_id );
+			$reader = $this->material_tags ?? throw new RuntimeException( 'No material tag reader is bound.' );
+
+			return $reader( $provider, $profile_id );
 		} catch ( \Throwable ) {
-			$current = false;
-		}
-		if ( false === $current ) {
 			BoosterLogger::log(
 				'Credential expiry observation unavailable.',
 				array(
@@ -255,14 +252,14 @@ class CredentialExpiryObservationStore {
 					'outcome_code' => 'material_tag_unavailable',
 				)
 			);
-		}
 
-		return is_string( $current ) && hash_equals( $current, $tag );
+			return null;
+		}
 	}
 
 	/**
-	 * @param array<string, array<string, array<string, string|int>>> $profiles
-	 * @param array<string, string|int>                           $record
+	 * @param array<string, array<string, StoredObservation>> $profiles
+	 * @param StoredObservation                               $record
 	 */
 	private function replace_record( array &$profiles, string $provider, string $profile_id, array $record ): void {
 		if ( array() === $record ) {
@@ -279,37 +276,34 @@ class CredentialExpiryObservationStore {
 	}
 
 	/**
-	 * A patch that carries a material tag is written only while that tag is current, checked again on every attempt.
-	 * Clearing keeps only a provider observation of the credential's current material.
+	 * A provider observation is written only while its tag is current, checked again on every attempt.
+	 * Clearing keeps only the current material's provider observation.
 	 *
-	 * @param array<string, string|int|null>|null $patch Fields to replace, or null to clear the record.
+	 * @param array{manual_expires_on: ?string}|array{material_tag: string, observation: ProviderObservation}|null $patch Null clears the record.
 	 */
 	private function mutate( string $provider, string $profile_id, ?array $patch, bool $replacement = false ): bool {
-		$tag = is_string( $patch['material_tag'] ?? null ) ? $patch['material_tag'] : null;
+		$tag = isset( $patch['material_tag'] ) ? $patch['material_tag'] : null;
 		for ( $attempt = 0; $attempt < 5; ++$attempt ) {
-			$expected = $this->read_option( true );
-			if ( null !== $tag && ! $this->is_current_tag( $provider, $profile_id, $tag ) ) {
+			$expected     = $this->read_option( true );
+			$profiles     = $this->all( $expected );
+			$previous     = $profiles[ $provider ][ $profile_id ] ?? array();
+			$observations = $previous['provider_observations'] ?? array();
+			$current      = null !== $tag || ( null === $patch && array() !== $observations ) ? $this->current_tag( $provider, $profile_id ) : null;
+			if ( null !== $tag && ( null === $current || ! hash_equals( $current, $tag ) ) ) {
 				return false;
 			}
-			$profiles = $this->all( $expected );
-			$previous = $profiles[ $provider ][ $profile_id ] ?? array();
-			// A request that began before another tag was observed may still see an old constant; it never replaces that observation.
-			if ( null !== $tag && isset( $previous['material_tag'] ) && $tag !== $previous['material_tag'] && ( $previous['material_since'] ?? 0 ) >= $patch['material_since'] ) {
-				return false;
-			}
-			$record = $previous;
-			if ( null === $patch ) {
-				$current = isset( $previous['material_tag'] ) && $this->is_current_tag( $provider, $profile_id, $previous['material_tag'] );
-				$record  = $current ? array_intersect_key( $previous, array_flip( array( 'material_tag', 'material_since', 'provider_checked_at', 'provider_expires_at' ) ) ) : array();
-			}
+			$record = null === $patch ? array_filter( array( 'provider_observations' => $this->current_observations( $observations, $current ) ) ) : $previous;
 			if ( $replacement ) {
 				$record['event_generation'] = ( $previous['event_generation'] ?? 0 ) + 1;
 			}
-			foreach ( $patch ?? array() as $field => $value ) {
-				if ( null === $value ) {
-					unset( $record[ $field ] );
-				} else {
-					$record[ $field ] = $value;
+			if ( isset( $patch['observation'] ) ) {
+				// An existing tag keeps its place; a new one evicts the oldest beyond the bound.
+				$observations[ $patch['material_tag'] ] = $patch['observation'];
+				$record['provider_observations']        = array_slice( $observations, SecretsFile::CONSTANT_PROFILE === $profile_id ? -2 : -1, null, true );
+			} elseif ( null !== $patch && array_key_exists( 'manual_expires_on', $patch ) ) {
+				unset( $record['manual_expires_on'] );
+				if ( null !== $patch['manual_expires_on'] ) {
+					$record['manual_expires_on'] = $patch['manual_expires_on'];
 				}
 			}
 			$this->replace_record( $profiles, $provider, $profile_id, $record );
@@ -351,10 +345,6 @@ class CredentialExpiryObservationStore {
 		if ( ! $this->is_utc_timestamp( $value ) ) {
 			throw new RuntimeException( 'Credential expiry timestamp is invalid.' );
 		}
-	}
-
-	private function is_material_tag( string $value ): bool {
-		return 1 === preg_match( '/\A[0-9a-f]{32}\z/', $value );
 	}
 
 	private function is_date( string $value ): bool {

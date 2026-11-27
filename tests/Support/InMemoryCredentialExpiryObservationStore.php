@@ -21,13 +21,6 @@ final class InMemoryCredentialExpiryObservationStore extends CredentialExpiryObs
 	public bool $fail_writes   = false;
 	public bool $last_autoload = true;
 
-	/** Simulates the start of the request that records an observation. */
-	public ?int $request_started_at = null;
-
-	protected function request_started_at(): int {
-		return $this->request_started_at ?? parent::request_started_at();
-	}
-
 	/** @return array<string, mixed> */
 	protected function read_option( bool $fresh = false ): array {
 		++$this->read_count;

@@ -854,13 +854,18 @@ salts. The automatic-removal deadline is a compare-and-set under the secrets
 file lock, so it changes only while the record still carries that tag, and a
 provider-reported date can only bring it earlier. The advisory observation is
 checked against the tag before each write attempt, but a replacement can still
-land between that check and the option write; an observation is therefore shown
-only while its tag is the credential's current one, and a stale one stays
-hidden. Replacement and purge cleanup keep an observation of the current
-material. A request that began before another tag was observed never replaces
-that observation, because a constant cannot change within a request. A result
-that is not recorded logs a coded line. A record saved before tags existed
-records nothing until it is next saved.
+land between that check and the option write; an observation is therefore
+stored under its tag and shown only while that tag is the credential's current
+one, so a stale one stays hidden. A stored credential keeps one observation.
+The constant keeps observations for up to two tags and drops the one recorded
+first when a third arrives, so a request that still holds a rotated value
+writes beside the new one rather than over it. Replacement and purge cleanup
+keep only the observation of the current material, and a purged credential's
+tag can never be current again. The manual date is not tagged, and the purger
+runs without the updater lock, so purge cleanup also clears a manual date
+entered on a reused identifier before that cleanup runs. A result that is not
+recorded logs a coded line. A record saved before tags existed records nothing
+until it is next saved.
 
 A provider that implements `RepositoryBrowser` receives one public-owner or
 one selected-credential `RepositoryBrowseRequest`. It must claim every remote

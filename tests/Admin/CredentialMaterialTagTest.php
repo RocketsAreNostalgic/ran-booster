@@ -6,9 +6,8 @@ namespace RAN\Tests\Admin;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RAN\Portability\BlueprintCredential;
-use RAN\Portability\BlueprintPackage;
-use RAN\Portability\PackageBlueprint;
+use RAN\Admin\CredentialSelfDestructPurger;
+use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\RepositoryProvider\CredentialExpiryReport;
 use RAN\Secrets\EncryptedSecretsEnvelopeCodec;
 use RAN\Secrets\SecretsFile;
@@ -17,6 +16,7 @@ use RAN\Tests\Secrets\InMemorySiteKeyStore;
 use RAN\Tests\Secrets\SecretsFileTestFactory;
 use RAN\Tests\Support\CapturesBoosterLog;
 use RAN\Tests\Support\InMemoryCredentialExpiryObservationStore;
+use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 require_once dirname( __DIR__ ) . '/Secrets/MaterialTagWordPressFunctions.php';
 
@@ -30,7 +30,6 @@ final class CredentialMaterialTagTest extends TestCase {
 	private string $path;
 	private SecretsFile $secrets;
 	private InMemoryCredentialExpiryObservationStore $observations;
-	private int $requests = 0;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
@@ -88,9 +87,9 @@ final class CredentialMaterialTagTest extends TestCase {
 		self::assertSame( $before, hash_file( 'sha256', $this->path ) );
 		self::assertSame(
 			array(
+				'event_generation'    => 1,
 				'provider_checked_at' => '2026-11-28T00:00:00Z',
 				'provider_expires_at' => '2027-06-01T00:00:00Z',
-				'event_generation'    => 1,
 			),
 			$this->observations->get( 'gh', 'cred_1' )
 		);
@@ -98,32 +97,49 @@ final class CredentialMaterialTagTest extends TestCase {
 
 	/** @return iterable<string, array{string}> */
 	public static function cleanups(): iterable {
-		yield 'replacement reset' => array( 'replace' );
-		yield 'purge cleanup after the ID is reused' => array( 'purge' );
+		yield 'replacement validated in the same process before its reset' => array( 'reset' );
+		yield 'replacement validated while its reset is written' => array( 'reset racing' );
+		yield 'purged ID reused and validated while the purge cleanup is written' => array( 'purge racing' );
 	}
 
 	#[DataProvider( 'cleanups' )]
-	public function test_cleanup_after_the_new_material_is_validated_keeps_only_its_observation( string $cleanup ): void {
+	public function test_cleanup_keeps_only_the_current_material_observation( string $cleanup ): void {
 		$this->save( 'original-secret' );
-		$this->validation( '2027-01-01' )();
+		// A past provider date makes the original due for removal by the purger.
+		$this->validation( 'purge racing' === $cleanup ? '2020-01-01' : '2027-01-01' )();
 		$this->observations->set_manual_expiry( 'gh', 'cred_1', '2026-12-01' );
-		if ( 'purge' === $cleanup ) {
-			self::assertTrue( $this->secrets->delete_credential( 'gh', 'cred_1' ) );
-		}
-		$this->save( 'new-secret' );
-		self::assertSame( array( true, true ), $this->validation( '2027-06-01' )() );
-		if ( 'purge' === $cleanup ) {
-			$this->observations->clear( 'gh', 'cred_1' );
+		$renew = function () use ( $cleanup ): void {
+			if ( 'purge racing' === $cleanup ) {
+				$this->save( 'new-secret' );
+			}
+			self::assertSame( array( true, true ), $this->validation( '2027-06-01' )() );
+		};
+		if ( 'purge racing' === $cleanup ) {
+			$this->observations->before_write = $renew;
+			$evidence                         = new class() extends RepositoryBranchCheckEvidenceStore {
+				public function bump_profile_generation( string $provider, string $profile_id ): void {
+					unset( $provider, $profile_id );
+				}
+			};
+			$this->start_log_capture();
+			( new CredentialSelfDestructPurger( $this->secrets, $this->observations, new InMemoryPublicRepositoryLookupProfileStore(), $evidence ) )->purge();
+			self::assertSame( array( '[ran-booster] Expired credential purged. {"operation":"credential_purge","provider":"gh"}' ), $this->captured_log_lines() );
 		} else {
+			$this->save( 'new-secret' );
+			if ( 'reset' === $cleanup ) {
+				$renew();
+			} else {
+				$this->observations->before_write = $renew;
+			}
 			$this->observations->reset_for_replacement( 'gh', 'cred_1' );
 		}
 
 		// The manual date is cleared as before; the new material's observation survives.
 		self::assertSame(
-			array(
+			( 'purge racing' === $cleanup ? array() : array( 'event_generation' => 1 ) ) + array(
 				'provider_checked_at' => '2026-11-27T00:00:00Z',
 				'provider_expires_at' => '2027-06-01T00:00:00Z',
-			) + ( 'replace' === $cleanup ? array( 'event_generation' => 1 ) : array() ),
+			),
 			$this->observations->get( 'gh', 'cred_1' )
 		);
 	}
@@ -135,30 +151,21 @@ final class CredentialMaterialTagTest extends TestCase {
 	}
 
 	#[DataProvider( 'constant_request_orders' )]
-	public function test_a_request_holding_a_rotated_constant_never_replaces_a_newer_observation( bool $newer_first ): void {
-		$requests = array();
-		foreach ( array(
-			'a' => 1,
-			'b' => 2,
-		) as $character => $started ) {
-			$secrets = SecretsFileTestFactory::create( $this->path, array( 'RAN_BOOSTER_GITHUB_TOKEN' => 'ghp_' . str_repeat( $character, 36 ) ), ShippedSecretPolicyCatalog::create() );
-			$store   = new InMemoryCredentialExpiryObservationStore();
-			$store->read_material_tags_with( $secrets->credential_material_tag( ... ) );
-			$store->request_started_at = $started;
-			$requests[]                = array( $store, $secrets->credential_material_tag( 'gh', SecretsFile::CONSTANT_PROFILE ) ?? '' );
-		}
-		[ $older, $newer ]  = $requests;
-		$newer[0]->document = &$older[0]->document;
-		$record             = static fn ( array $request, string $date ): bool => $request[0]->record_provider_expiry( 'gh', SecretsFile::CONSTANT_PROFILE, CredentialExpiryReport::known( $date . 'T00:00:00Z' ), '2026-11-27T00:00:00Z', $request[1] );
+	public function test_requests_holding_old_and_new_constants_keep_separate_observations( bool $newer_first ): void {
+		[ $older, $old_tag ]    = $this->constant_request( 'a' );
+		[ $newer, $new_tag ]    = $this->constant_request( 'b' );
+		[ $latest, $third_tag ] = $this->constant_request( 'c' );
+		$newer->document        = &$older->document;
+		$latest->document       = &$older->document;
+		$record                 = static fn ( InMemoryCredentialExpiryObservationStore $store, string $tag, string $date ): bool => $store->record_provider_expiry( 'gh', SecretsFile::CONSTANT_PROFILE, CredentialExpiryReport::known( $date . 'T00:00:00Z' ), '2026-11-27T00:00:00Z', $tag );
 
-		if ( $newer_first ) {
-			self::assertTrue( $record( $newer, '2027-06-01' ) );
-			self::assertFalse( $record( $older, '2027-01-01' ) );
-		} else {
-			self::assertTrue( $record( $older, '2027-01-01' ) );
-			self::assertTrue( $record( $newer, '2027-06-01' ) );
-		}
-		self::assertSame( '2027-06-01T00:00:00Z', $newer[0]->get( 'gh', SecretsFile::CONSTANT_PROFILE )['provider_expires_at'] ?? null );
+		self::assertTrue( $newer_first ? $record( $newer, $new_tag, '2027-06-01' ) : $record( $older, $old_tag, '2027-01-01' ) );
+		self::assertTrue( $newer_first ? $record( $older, $old_tag, '2027-01-01' ) : $record( $newer, $new_tag, '2027-06-01' ) );
+		self::assertSame( '2027-06-01T00:00:00Z', $newer->get( 'gh', SecretsFile::CONSTANT_PROFILE )['provider_expires_at'] ?? null );
+		self::assertSame( '2027-01-01T00:00:00Z', $older->get( 'gh', SecretsFile::CONSTANT_PROFILE )['provider_expires_at'] ?? null );
+		// A third constant evicts the entry written first.
+		self::assertTrue( $record( $latest, $third_tag, '2028-01-01' ) );
+		self::assertSame( array( $newer_first ? $old_tag : $new_tag, $third_tag ), array_keys( $older->document['profiles']['gh'][ SecretsFile::CONSTANT_PROFILE ]['provider_observations'] ) );
 	}
 
 	/** @return iterable<string, array{string, string, string, string}> */
@@ -202,16 +209,29 @@ final class CredentialMaterialTagTest extends TestCase {
 		self::assertSame( array( 'gh' => array( 'cred_1' => $manual_only ) ), $throwing->observations() );
 		self::assertSame( array_fill( 0, 3, self::UNAVAILABLE ), $this->captured_log_lines() );
 		self::assertSame( $this->observations->document, $unbound->document );
-		// Production gives the shared store its reader when it builds the expiry reminder.
-		new \RAN\Admin\CredentialExpiryReminder( new \RAN\RepositoryProvider\ProviderRegistry( array() ), $this->secrets, $unbound );
-		self::assertSame( $current, $unbound->get( 'gh', 'cred_1' ) );
+		// A map holding more entries than any profile keeps is not trusted.
+		$oversized = clone $this->observations;
+		$oversized->document['profiles']['gh']['cred_1']['provider_observations'] += array_fill_keys( array( str_repeat( 'a', 32 ), str_repeat( 'b', 32 ) ), array( 'provider_checked_at' => '2026-11-27T00:00:00Z' ) );
+		self::assertSame( $manual_only, $oversized->get( 'gh', 'cred_1' ) );
+		// Production gives the shared store its reader when it builds the expiry reminder or the purger.
+		foreach ( array(
+			fn ( $store ) => new \RAN\Admin\CredentialExpiryReminder( new \RAN\RepositoryProvider\ProviderRegistry( array() ), $this->secrets, $store ),
+			fn ( $store ) => new CredentialSelfDestructPurger( $this->secrets, $store, new InMemoryPublicRepositoryLookupProfileStore(), new RepositoryBranchCheckEvidenceStore() ),
+		) as $build ) {
+			$store = clone $unbound;
+			$build( $store );
+			self::assertSame( $current, $store->get( 'gh', 'cred_1' ) );
+		}
 
 		// A replacement saved without resetting the option still hides the old observation.
 		$this->save( 'replacement-secret' );
 		self::assertSame( $manual_only, $this->observations->get( 'gh', 'cred_1' ) );
+		// A stored credential keeps a single observation slot.
+		$this->validation( '2027-06-01' )();
+		self::assertSame( array( $this->tag() ), array_keys( $this->observations->document['profiles']['gh']['cred_1']['provider_observations'] ) );
 	}
 
-	public function test_only_a_new_secret_an_import_or_an_untagged_record_gets_a_new_tag(): void {
+	public function test_only_a_new_secret_or_an_untagged_record_gets_a_new_tag(): void {
 		$this->save( 'original-secret' );
 		$tag = $this->tag();
 		self::assertMatchesRegularExpression( '/\A[0-9a-f]{32}\z/', $tag );
@@ -229,39 +249,16 @@ final class CredentialMaterialTagTest extends TestCase {
 		self::assertSame( $before, hash_file( 'sha256', $this->path ) );
 		$this->save( null, 'Tagged again' );
 		self::assertMatchesRegularExpression( '/\A[0-9a-f]{32}\z/', $this->tag() );
-
-		$credential = new BlueprintCredential(
-			'gh',
-			'Imported',
-			'classic',
-			array( 'owner' => '' ),
-			'ghp_' . str_repeat( 'b', 36 ),
-			array(
-				array(
-					'type'       => 'plugin',
-					'identifier' => 'fixture/fixture.php',
-				),
-			)
-		);
-		$blueprint  = new PackageBlueprint( array( new BlueprintPackage( 'plugin', 'fixture/fixture.php', 'Fixture', 'gh', '1', 'fixture/repository', 'main', null ) ), array( $credential ) );
-		$ids        = $this->secrets->import_credentials_if_absent( $blueprint, $credential );
-		$imported   = $this->secrets->credential_material_tag( 'gh', $ids[0] );
-		self::assertMatchesRegularExpression( '/\A[0-9a-f]{32}\z/', (string) $imported );
-		self::assertSame( $ids, $this->secrets->import_credentials_if_absent( $blueprint, $credential ) );
-		self::assertSame( $imported, $this->secrets->credential_material_tag( 'gh', $ids[0] ) );
 	}
 
 	public function test_a_constant_is_tagged_with_a_site_keyed_hmac_and_observed_without_a_storage_write(): void {
-		$value   = 'ghp_' . str_repeat( 'a', 36 );
-		$secrets = SecretsFileTestFactory::create( $this->path, array( 'RAN_BOOSTER_GITHUB_TOKEN' => $value ), ShippedSecretPolicyCatalog::create() );
-		$tag     = $secrets->credential_material_tag( 'gh', SecretsFile::CONSTANT_PROFILE ) ?? '';
+		$value           = 'ghp_' . str_repeat( 'a', 36 );
+		[ $store, $tag ] = $this->constant_request( 'a' );
 		self::assertMatchesRegularExpression( '/\A[0-9a-f]{32}\z/', $tag );
 		foreach ( array( hash( 'sha256', $value ), hash( 'sha256', "gh\0" . $value ), hash_hmac( 'sha256', "gh\0" . $value, 'ran-booster-credential-material-tag-v1' ) ) as $unkeyed ) {
 			self::assertNotSame( substr( $unkeyed, 0, 32 ), $tag );
 		}
 
-		$store = new InMemoryCredentialExpiryObservationStore();
-		$store->read_material_tags_with( $secrets->credential_material_tag( ... ) );
 		self::assertTrue( $store->record_provider_expiry( 'gh', SecretsFile::CONSTANT_PROFILE, CredentialExpiryReport::known( '2027-01-01T00:00:00Z' ), '2026-11-27T00:00:00Z', $tag ) );
 		self::assertSame( '2027-01-01T00:00:00Z', $store->get( 'gh', SecretsFile::CONSTANT_PROFILE )['provider_expires_at'] ?? null );
 		self::assertFileDoesNotExist( $this->path );
@@ -274,19 +271,27 @@ final class CredentialMaterialTagTest extends TestCase {
 		}
 	}
 
-	/** Starts a request that reads the tag first, as the controller does before its provider call; the closure records the result. */
+	/** Reads the tag first, as the controller does before its provider call; the closure records the result. */
 	private function validation( string $expires_on, string $checked_at = '2026-11-27T00:00:00Z' ): \Closure {
-		$tag     = $this->tag();
-		$started = ++$this->requests;
+		$tag = $this->tag();
 
-		return function () use ( $expires_on, $checked_at, $tag, $started ): array {
-			$this->observations->request_started_at = $started;
+		return fn (): array => array(
+			$this->observations->record_provider_expiry( 'gh', 'cred_1', CredentialExpiryReport::known( $expires_on . 'T00:00:00Z' ), $checked_at, $tag ),
+			$this->secrets->record_credential_provider_expiry( 'gh', 'cred_1', $expires_on, $tag ),
+		);
+	}
 
-			return array(
-				$this->observations->record_provider_expiry( 'gh', 'cred_1', CredentialExpiryReport::known( $expires_on . 'T00:00:00Z' ), $checked_at, $tag ),
-				$this->secrets->record_credential_provider_expiry( 'gh', 'cred_1', $expires_on, $tag ),
-			);
-		};
+	/**
+	 * A request's store and tag while the GitHub constant holds a token of $character.
+	 *
+	 * @return array{InMemoryCredentialExpiryObservationStore, string}
+	 */
+	private function constant_request( string $character ): array {
+		$secrets = SecretsFileTestFactory::create( $this->path, array( 'RAN_BOOSTER_GITHUB_TOKEN' => 'ghp_' . str_repeat( $character, 36 ) ), ShippedSecretPolicyCatalog::create() );
+		$store   = new InMemoryCredentialExpiryObservationStore();
+		$store->read_material_tags_with( $secrets->credential_material_tag( ... ) );
+
+		return array( $store, $secrets->credential_material_tag( 'gh', SecretsFile::CONSTANT_PROFILE ) ?? '' );
 	}
 
 	/** Mirrors the controller's replacement: the new secret is saved, then the observation is reset. */

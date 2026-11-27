@@ -3144,12 +3144,50 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		}
 	}
 
+	public function test_switch_chooser_uses_the_updater_release_order(): void {
+		require_once dirname( __DIR__, 3 ) . '/vendor/ran/wp-release-updater/src/Contract/ReleaseVersion.php';
+		foreach ( self::managed_picker_relationships() as $case => list( $installed, $candidate, $expected, $runtime_available ) ) {
+			// A runtime cannot be unloaded here; the managed picker test covers that row in its own process.
+			if ( ! $runtime_available ) {
+				continue;
+			}
+			$tracking                 = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( installed_version: $installed ) );
+			$tracking->candidate_list = new RepositoryReleaseCandidateList(
+				array( new RepositoryReleaseCandidate( '42', 'v' . $candidate, $candidate, false, '2026-06-01T00:00:00Z', array( 'plugin.zip' ), 'asset-42', hash( 'sha256', $candidate ) ) )
+			);
+			$controls                 = ReleaseManagementFixture::controls( $tracking );
+			$response                 = $controls->process_switch_preflight_request( $this->managed_request( 'preflight' ) );
+			$_GET                     = $this->query_of( $controls->process_admin_post_request( 'enable', $this->request( 'enable' ) ) );
+			$_GET['page']             = 'ran-booster-plugins';
+			$_GET['package']          = 'example/example.php';
+			$package                  = new PackageProjection( 'branch' );
+			ob_start();
+			$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+			$html = (string) ob_get_clean();
+			if ( 'invalid' === $expected ) {
+				$refusal = 'Booster could not compare the installed version with the published release version.';
+				self::assertFalse( $response['successful'], $case );
+				self::assertSame( 'version_comparison_unavailable', $response['code'], $case );
+				self::assertStringContainsString( $refusal, $response['data']['message'], $case );
+				self::assertStringContainsString( $refusal, $html, $case );
+				self::assertStringNotContainsString( 'data-ran-booster-switch-confirmation', $html, $case );
+			} else {
+				self::assertSame( $expected, $response['data']['version_relationship'], $case );
+				self::assertStringContainsString( 'data-ran-booster-switch-confirmation', $html, $case );
+				// One candidate only, so the notice cannot come from a second, matching release.
+				self::assertSame( 'same' === $expected, str_contains( $html, 'Same version: this replaces the installed files with the release.' ), $case );
+			}
+			// The AJAX preflight and the standard form each list once; neither inspects an archive.
+			self::assertSame( array( 'list_candidates', 'list_candidates' ), array_column( $tracking->calls, 0 ), $case );
+		}
+	}
+
 	public function test_native_switch_submits_one_exact_signed_choice_and_refuses_tampering(): void {
 		foreach ( array(
-			'installed' => '1.0.0',
-			'latest'    => '2.0.0',
-			'older'     => '0.9.0',
-		) as $choice => $version ) {
+			'installed' => array( '1.0.0', 'Reinstall 1.0.0 (current)' ),
+			'latest'    => array( '2.0.0', 'Upgrade to 2.0.0 (latest)' ),
+			'older'     => array( '0.9.0', 'Install 0.9.0 (latest)' ),
+		) as $choice => list( $version, $button ) ) {
 			$tracking                 = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
 			$tracking->candidate_list = 'older' === $choice ? $this->switch_candidates( $version ) : $this->switch_candidates( '1.0.0', '2.0.0' );
 			$controls                 = ReleaseManagementFixture::controls( $tracking );
@@ -3167,8 +3205,18 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			$forms = $xpath->query( '//div[@data-ran-booster-switch-confirmation]//form' );
 			self::assertNotFalse( $forms );
 			self::assertCount( 'older' === $choice ? 1 : 2, $forms );
+			$consent = $xpath->query( '//div[@data-ran-booster-switch-confirmation]//form//input[@type="checkbox" and @name="confirm_older_release" and @required]' );
+			self::assertNotFalse( $consent );
+			self::assertCount( 'older' === $choice ? 1 : 0, $consent );
+			self::assertSame( 'older' !== $choice, str_contains( $html, 'Same version: this replaces the installed files with the release.' ) );
 			self::assertSame( array( 'list_candidates' ), array_column( $tracking->calls, 0 ) );
-			$fields = $xpath->query( '//div[@data-ran-booster-switch-confirmation]//form[input[@name="confirmed_release_version" and @value="' . $version . '"]]//input' );
+			// Submit the form that the visible button belongs to, as a browser would.
+			$submitted = $xpath->query( '//div[@data-ran-booster-switch-confirmation]//form[button[normalize-space(.)="' . $button . '"]]' );
+			self::assertNotFalse( $submitted );
+			self::assertCount( 1, $submitted );
+			$form = $submitted->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $form );
+			$fields = $xpath->query( './/input', $form );
 			self::assertNotFalse( $fields );
 			$request = array();
 			foreach ( $fields as $field ) {
@@ -3186,7 +3234,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			unset( $GLOBALS['ran_booster_release_management_test_nonce_age'] );
 			if ( 'older' === $choice ) {
 				$controls->process_admin_post_request( 'enable', $request );
-				$request['confirm_older_release'] = '1';
+				$checkbox = $consent->item( 0 );
+				self::assertInstanceOf( \DOMElement::class, $checkbox );
+				self::assertSame( '1', $checkbox->getAttribute( 'value' ) );
+				$request[ $checkbox->getAttribute( 'name' ) ] = $checkbox->getAttribute( 'value' );
 			}
 			self::assertSame( array( 'list_candidates' ), array_column( $tracking->calls, 0 ) );
 			$controls->process_admin_post_request( 'enable', $request );

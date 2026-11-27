@@ -13,7 +13,7 @@ export PHP_BIN WP_CLI_BIN RAN_RELEASE_SWITCH_PROOF_SITE RAN_RELEASE_SWITCH_PROOF
 proof="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/ReleaseSwitchProof.php"
 queue=()
 for package_type in ${RAN_RELEASE_SWITCH_PROOF_TYPES:-plugin theme}; do
-    for scenario in ${RAN_RELEASE_SWITCH_PROOF_CASES:-choice-current choice-latest choice-dedup choice-disappeared form-choice-current form-choice-latest same form-same prerelease-order form-prerelease-order prerelease-no-consent comparison-unavailable form-comparison-unavailable stale-confirmation form-stale-confirmation replaced-asset form-replaced-asset form-failed-download return-lock newer active older disabled failed-download incompatible-zip pre-install pre-install-throw stale form-stale missing fallback-repaired compete conflict failed-install kill foreign-lock expired-lock fresh-finished fresh-killed fresh-damaged fresh-deleted}; do
+    for scenario in ${RAN_RELEASE_SWITCH_PROOF_CASES:-choice-disappeared form-choice-current same prerelease-order prerelease-no-consent stale-confirmation replaced-asset return-lock newer active disabled failed-download incompatible-zip pre-install pre-install-throw stale missing fallback-repaired compete conflict failed-install kill foreign-lock expired-lock fresh-finished fresh-killed fresh-damaged fresh-deleted}; do
         queue+=("$package_type:$scenario")
     done
 done

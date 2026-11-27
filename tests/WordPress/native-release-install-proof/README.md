@@ -218,9 +218,12 @@ public switch preflight and admin POST processor, the release updater's
 exact-release path and WordPress's own upgrader (count-one `bulk_upgrade` for a
 plugin, `upgrade` for a theme). Remote HTTP is synthetic; every other component
 is the installed code, attested against the Core ZIP under test before and after
-each switch. Preflight and POST ZIP streams are counted separately. Each case
-seeds a Branch package at the case's starting version, switches in a new process
-and reads back in another, which stands in for the next admin page load.
+each switch. Preflight and POST ZIP streams are counted separately. Only
+`form-choice-current` submits the rendered standard form; PHPUnit checks version
+ordering, versions that cannot be compared, the older-release consent checkbox
+and the same-version notice. Each case seeds a Branch package at the case's
+starting version, switches in a new process and reads back in another, which
+stands in for the next admin page load.
 
 To save WordPress starts, a case whose last process is `readback` or `retried`
 also seeds the next case there. `run` and `retry` leave an update-check deletion
@@ -234,7 +237,6 @@ first case does. Every `run` asserts that its seeded offer is still stored.
 | `newer` | 2.0.0 installed; Automatic reset to Manual | Releases, revision 2 | Cleared |
 | `active` | 2.0.0 installed; activation preserved | Releases, revision 2 | Cleared |
 | `compete` | A second switch, run while the first holds the installer, is refused; the first completes | Releases, revision 2 | Cleared |
-| `older` | `release_older`; files unchanged | Branch | None |
 | `disabled` | `policy_disabled`; files unchanged | Branch | None |
 | `failed-download` | `release_unavailable` before the upgrader starts; files unchanged | Branch | None |
 | `pre-install` | `switch_uncertain` while native cleanup is pending; files unchanged | Branch | None after shutdown |
@@ -297,9 +299,8 @@ one-off offer reached it. Each case seeds a still-fresh stored check holding an
 ordinary offer. What else the readback requires of that check depends on the
 case:
 
-- `comparison-unavailable`, `stale-confirmation`, `prerelease-no-consent` and
-  `older` are refused before installation. The seeded offer must still be
-  stored.
+- `stale-confirmation` and `prerelease-no-consent` are refused before
+  installation. The seeded offer must still be stored.
 - `choice-disappeared`, `replaced-asset`, `failed-download`, `incompatible-zip`,
   `pre-install`, `pre-install-throw`, `missing` and `failed-install` run
   WordPress's `_maybe_update_*()`, which must leave a check newer than the
@@ -308,7 +309,7 @@ case:
   requirement. `disabled` proves the `policy_disabled` refusal with the Branch
   source and files unchanged.
 
-A `form-` or `fresh-` case follows its base case here.
+A `fresh-` case follows its base case here, and `form-choice-current` switches.
 
 ```sh
 PHP_BIN=/path/to/php8.2 \

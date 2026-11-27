@@ -77,6 +77,8 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 			'self-destruct-provider-secret-canary'
 		);
 		$secrets->record_credential_provider_expiry( 'gh', 'provider_expiry', '2020-01-01' );
+		// A later, longer observation must not move the earlier deadline.
+		$secrets->record_credential_provider_expiry( 'gh', 'provider_expiry', '2029-06-01' );
 
 		self::assertNull( $secrets->credential_material( 'gh', 'provider_expiry' ) );
 		self::assertSame( array( 'gh' => array( 'provider_expiry' ) ), $secrets->purge_expired_credentials() );

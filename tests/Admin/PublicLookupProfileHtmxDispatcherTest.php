@@ -94,7 +94,7 @@ final class PublicLookupProfileHtmxDispatcherTest extends TestCase {
 		self::assertSame( array(), $store->profiles );
 		self::assertSame( 1, $this->evidence->records['generation'] );
 		self::assertNull( $this->controller->response );
-		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( 'manage_options', 'activate_plugins' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( 'ran-booster-save-public-lookup-profile' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 

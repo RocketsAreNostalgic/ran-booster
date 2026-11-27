@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use InvalidArgumentException;
+use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\BoosterLogger;
 use RAN\Portability\BlueprintArchive;
 use RAN\Portability\BlueprintCredentialAction;
@@ -58,6 +59,10 @@ final readonly class PortabilityController {
 		} catch ( InvalidArgumentException $failure ) {
 			return $this->export_failure( __( 'The selected packages or repository credentials changed or are invalid. Reload this page and try again.', 'ran-booster' ), 400, 'selection', $failure );
 		}
+		// Exporting secret material needs the secret authority that changing it does; nothing on this site changes.
+		if ( array() !== $credentials && ! current_user_can( 'activate_plugins' ) ) {
+			return $this->export_failure( __( 'You do not have permission to export repository credentials.', 'ran-booster' ), 403, 'authority' );
+		}
 		$password       = $this->password_from_request( 'password' );
 		$confirmation   = $this->password_from_request( 'password_confirmation' );
 		$password_error = $this->export_password_error( array() !== $credentials, $password, $confirmation );
@@ -80,20 +85,18 @@ final readonly class PortabilityController {
 			return $this->export_failure( __( 'Booster could not read the managed package selection. Try again.', 'ran-booster' ), 500, 'export', $failure );
 		}
 
-		try {
-			if ( array() === $blueprint->credentials ) {
-				$password = null;
-			}
-			$path = tempnam( sys_get_temp_dir(), 'ran-booster-blueprint-' );
-			if ( false === $path ) {
-				throw new InvalidArgumentException();
-			}
-			$this->archive->write_to( $path, $blueprint, $password );
-		} catch ( Throwable $failure ) {
-			return $this->export_failure( __( 'Booster could not create the Blueprint ZIP. Try again.', 'ran-booster' ), 500, 'archive_write', $failure );
+		$path = tempnam( get_temp_dir(), 'ran-booster-blueprint-' );
+		if ( false === $path ) {
+			return $this->export_failure( __( 'Booster could not create the Blueprint ZIP. Try again.', 'ran-booster' ), 500, 'archive_write' );
 		}
-
+		// A fatal error after this point skips the finally below; never leave the archive behind.
+		register_shutdown_function( static fn () => is_file( $path ) && unlink( $path ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only this request's generated ZIP.
 		try {
+			try {
+				$this->archive->write_to( $path, $blueprint, array() === $blueprint->credentials ? null : $password );
+			} catch ( Throwable $failure ) {
+				return $this->export_failure( __( 'Booster could not create the Blueprint ZIP. Try again.', 'ran-booster' ), 500, 'archive_write', $failure );
+			}
 			$bytes = $this->archive_bytes( $path );
 			nocache_headers();
 			header( 'Content-Type: application/zip' );
@@ -229,13 +232,26 @@ final readonly class PortabilityController {
 			$target_credentials = $this->target_credential_ids();
 			$blueprint          = $this->archive->read_from( $upload['tmp_name'], $this->password_from_request( 'password' ) );
 			$package            = $blueprint->packages[ $row ] ?? null;
+			$ordinal            = $package instanceof BlueprintPackage ? $this->credential_ordinal_for_package( $blueprint, $package ) : null;
 			try {
 				$decisions = $this->credential_decisions( $blueprint );
-				if ( $package instanceof BlueprintPackage && $this->credential_ordinal_for_package( $blueprint, $package ) !== null && isset( $target_credentials[ $row ] ) ) {
+				if ( null !== $ordinal && isset( $target_credentials[ $row ] ) ) {
 					throw new InvalidArgumentException();
 				}
 			} catch ( InvalidArgumentException ) {
 				return wp_send_json_error( array( 'message' => __( 'The repository credential decisions are invalid. Review the Blueprint again.', 'ran-booster' ) ), 400 );
+			}
+			// Importing secret material changes stored credentials, so it needs that authority and file changes allowed.
+			if ( null !== $ordinal && BlueprintCredentialAction::IMPORT === ( $decisions[ $ordinal ]['action'] ?? null )
+				&& ( ! current_user_can( 'activate_plugins' ) || PackageMutationGuard::file_mods_disabled() ) ) {
+				BoosterLogger::log(
+					'Blueprint credential import refused.',
+					array(
+						'operation'    => 'portability_apply',
+						'outcome_code' => 'credential_authority_missing',
+					)
+				);
+				return wp_send_json_error( array( 'message' => __( 'You cannot import repository credentials on this site. Choose another credential decision.', 'ran-booster' ) ), 403 );
 			}
 			$release_review = null;
 			$expectation    = null;
@@ -486,6 +502,9 @@ final readonly class PortabilityController {
 		}
 		if ( $password !== $confirmation ) {
 			return __( 'The passwords do not match. Nothing was exported.', 'ran-booster' );
+		}
+		if ( ! BlueprintArchive::accepts_password( $password ) ) {
+			return __( 'Use at least 20 characters, or generate one. Nothing was exported.', 'ran-booster' );
 		}
 
 		return null;

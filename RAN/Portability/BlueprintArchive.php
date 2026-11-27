@@ -18,7 +18,7 @@ final class BlueprintArchive {
 	public function write_to( string $path, #[\SensitiveParameter] PackageBlueprint $blueprint, #[\SensitiveParameter] ?string $password ): void {
 		$password  = '' === $password ? null : $password;
 		$encrypted = array() !== $blueprint->credentials;
-		if ( ( null !== $password ) !== $encrypted || ( $encrypted && ! self::valid_password( $password ) ) || ! self::zip_available( $encrypted ) ) {
+		if ( ( null !== $password ) !== $encrypted || ( $encrypted && ! self::accepts_password( $password ) ) || ! self::zip_available( $encrypted ) ) {
 			throw new InvalidArgumentException( 'The portability archive could not be written.' );
 		}
 
@@ -63,7 +63,7 @@ final class BlueprintArchive {
 			if ( ! is_array( $stat ) || self::ENTRY !== $stat['name'] || str_ends_with( $stat['name'], '/' ) || $stat['size'] > self::MAX_BYTES
 				|| ! in_array( $encryption, array( ZipArchive::EM_NONE, ZipArchive::EM_AES_256 ), true )
 				|| ( ZipArchive::EM_NONE === $encryption && null !== $password )
-				|| ( ZipArchive::EM_AES_256 === $encryption && ( ! self::valid_password( $password ) || ! self::zip_available( true ) || ! $zip->setPassword( $password ) ) ) ) {
+				|| ( ZipArchive::EM_AES_256 === $encryption && ( ! self::accepts_password( $password ) || ! self::zip_available( true ) || ! $zip->setPassword( $password ) ) ) ) {
 				throw new InvalidArgumentException();
 			}
 			$json = $zip->getFromIndex( 0, PackageBlueprint::MAX_BYTES + 1 );
@@ -83,8 +83,8 @@ final class BlueprintArchive {
 		}
 	}
 
-	/** @phpstan-assert-if-true string $password */
-	private static function valid_password( ?string $password ): bool {
+	/** @phpstan-assert-if-true =string $password */
+	public static function accepts_password( ?string $password ): bool {
 		return null !== $password && strlen( $password ) >= 20 && strlen( $password ) <= 256 && 1 === preg_match( '//u', $password ) && ! preg_match( '/[\x00-\x1F\x7F]/', $password );
 	}
 

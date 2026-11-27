@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use RAN\Dashboard;
+use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\BoosterLogger;
-use RAN\RepositoryProvider\{Admin\ProviderAdminMetadata, CredentialedPublicRepositoryBrowser, CredentialValidator, InvalidCredentialInput, InvalidWebhookInput, ProviderCode, ProviderRegistry, UnsupportedProviderCapability, WebhookNormalizer};
+use RAN\RepositoryProvider\{Admin\ProviderAdminMetadata, CredentialedPublicRepositoryBrowser, CredentialExpiryReport, CredentialValidator, InvalidCredentialInput, InvalidWebhookInput, ProviderCode, ProviderRegistry, UnsupportedProviderCapability, WebhookNormalizer};
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\CredentialUsageReader;
 use RAN\WordPress\WordPressUpdaterLock;
@@ -172,6 +173,17 @@ class ProviderProfileAdminController {
 			if ( null !== $this->interaction ) {
 				$interaction_request = $this->interaction->provider_profile_request( $action, $provider->value );
 			}
+			if ( PackageMutationGuard::file_mods_disabled() ) {
+				BoosterLogger::log(
+					'Credential change refused.',
+					array(
+						'operation'    => 'credential_profile',
+						'outcome_code' => 'file_mods_disallowed',
+					)
+				);
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+				throw new CredentialRequestException( __( 'This site does not allow file changes, so Booster cannot change saved credentials.', 'ran-booster' ) );
+			}
 			$id = $this->profile_id( $request );
 			if ( 'delete-access-profile' === $action ) {
 				$message = $this->delete_access_profile( $provider, $id );
@@ -215,6 +227,7 @@ class ProviderProfileAdminController {
 			} catch ( UnsupportedProviderCapability ) {
 				throw new CredentialRequestException( __( 'Credential validation is unavailable for this Git provider.', 'ran-booster' ) );
 			}
+			$generation  = $this->expiry_observations->generation( $provider->value, $id );
 			$activity_id = $this->begin_credential_activity( $provider, $id );
 			$result      = $validator->validate_credential( $id );
 			$this->complete_credential_activity( $activity_id, $result );
@@ -230,20 +243,7 @@ class ProviderProfileAdminController {
 			}
 			if ( $result->is_valid() ) {
 				if ( null !== $result->expiry ) {
-
-					$this->expiry_observations->record_provider_expiry(
-						$provider->value,
-						$id,
-						$result->expiry,
-						gmdate( 'Y-m-d\\TH:i:s\\Z' )
-					);
-					if ( $result->expiry->is_known() && is_string( $result->expiry->expires_at ) ) {
-						$this->secrets->record_credential_provider_expiry(
-							$provider,
-							$id,
-							substr( $result->expiry->expires_at, 0, 10 )
-						);
-					}
+					$this->commit_validation_expiry( $provider, $id, $generation, $result->expiry );
 				}
 				$message = __( 'Repository credential validated successfully.', 'ran-booster' );
 
@@ -278,6 +278,30 @@ class ProviderProfileAdminController {
 		if ( $htmx_request && $provider instanceof ProviderCode && is_string( $id ) ) {
 			$this->respond_to_htmx_credential_validation( $id, $message, $error, $status );
 		}
+	}
+
+	/** Record expiry evidence only while the validated credential is still current; rotation holds the same lock. */
+	private function commit_validation_expiry( ProviderCode $provider, string $id, int $generation, CredentialExpiryReport $expiry ): void {
+		$this->updater_lock->run(
+			function () use ( $provider, $id, $generation, $expiry ): void {
+				if ( $generation !== $this->expiry_observations->generation( $provider->value, $id ) ) {
+					BoosterLogger::log(
+						'Credential validation expiry discarded.',
+						array(
+							'operation'    => 'credential_validation',
+							'provider'     => $provider->value,
+							'outcome_code' => 'credential_replaced',
+						)
+					);
+					return;
+				}
+				$this->expiry_observations->record_provider_expiry( $provider->value, $id, $expiry, gmdate( 'Y-m-d\\TH:i:s\\Z' ) );
+				// A deployment-configured constant is read-only; only its advisory observation is kept.
+				if ( SecretsFile::CONSTANT_PROFILE !== $id && $expiry->is_known() && is_string( $expiry->expires_at ) ) {
+					$this->secrets->record_credential_provider_expiry( $provider, $id, substr( $expiry->expires_at, 0, 10 ) );
+				}
+			}
+		);
 	}
 
 	private function begin_credential_activity( ProviderCode $provider, string $id ): ?int {
@@ -636,8 +660,9 @@ class ProviderProfileAdminController {
 		}
 		return __( 'Push-to-Deploy secret removed.', 'ran-booster' );
 	}
+	/** Using, validating or changing a credential needs the same secret authority as the storage actions. */
 	private function authorize( string $nonce ): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'activate_plugins' ) ) {
 			$message = 'ran-booster-save-public-lookup-profile' === $nonce
 				? esc_html__( 'You do not have sufficient permissions to manage Booster Git provider settings.', 'ran-booster' )
 				: esc_html__( 'You do not have sufficient permissions to manage Booster credentials.', 'ran-booster' );

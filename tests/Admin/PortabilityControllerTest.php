@@ -51,6 +51,7 @@ require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 
 final class PortabilityControllerTest extends TestCase {
 	use \RAN\Tests\Support\CapturesBoosterLog;
@@ -1299,6 +1300,60 @@ final class PortabilityControllerTest extends TestCase {
 
 		self::assertSame( 400, $result['status'] );
 		self::assertSame( array( '[ran-booster] Blueprint export failed. {"operation":"portability_export","step":"password","http_status":"400"}' ), $lines );
+	}
+
+	public function test_credential_export_needs_secret_authority_and_a_valid_password_before_secrets_are_read(): void {
+		$_POST['packages']                                    = array( 'plugin' => array( 'example/example.php' ) );
+		$_POST['response_format']                             = 'json';
+		$_POST['credentials']                                 = array( 'gh' => array( 'valid-profile' ) );
+		$_POST['password']                                    = 'too-short-password';
+		$_POST['password_confirmation']                       = 'too-short-password';
+		$GLOBALS['ran_booster_repository_admin_capabilities'] = array( 'activate_plugins' => false );
+
+		$result = $this->export_controller()->handle_export();
+		self::assertSame( 403, $result['status'] );
+		self::assertSame( 'You do not have permission to export repository credentials.', $result['data']['message'] );
+
+		// With authority, a weak password is refused before the exporter reads unavailable secret storage (409).
+		unset( $GLOBALS['ran_booster_repository_admin_capabilities'] );
+		$result = $this->export_controller()->handle_export();
+		self::assertSame( 400, $result['status'] );
+		self::assertSame( 'Use at least 20 characters, or generate one. Nothing was exported.', $result['data']['message'] );
+
+		// Package-only export keeps working without that authority; it fails later, at the stubbed archive read.
+		unset( $_POST['credentials'], $_POST['password'], $_POST['password_confirmation'] );
+		$GLOBALS['ran_booster_repository_admin_capabilities'] = array( 'activate_plugins' => false );
+		$GLOBALS['ran_booster_repository_admin_file_read']    = false;
+		self::assertSame( 500, $this->export_controller()->handle_export()['status'] );
+	}
+
+	public function test_credential_import_needs_secret_authority_and_allowed_file_changes(): void {
+		$controller = new PortabilityController(
+			( new ReflectionClass( ManagedPackageBlueprintExporter::class ) )->newInstanceWithoutConstructor(),
+			new BlueprintArchive(),
+			( new ReflectionClass( PortabilityApplicationService::class ) )->newInstanceWithoutConstructor(),
+			( new ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor()
+		);
+		$file       = $this->blueprint_archive( $this->credential_blueprint(), 'correct-horse-battery-staple' );
+		$this->set_uploaded_blueprint( $file );
+		$_POST['row']                  = '0';
+		$_POST['review_action']        = 'install';
+		$_POST['password']             = 'correct-horse-battery-staple';
+		$_POST['credential_decisions'] = array( array( 'action' => 'import' ) );
+
+		try {
+			foreach ( array( 'capability', 'file_mods' ) as $refusal ) {
+				$GLOBALS['ran_booster_repository_admin_capabilities']    = array( 'activate_plugins' => 'capability' !== $refusal );
+				$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = 'file_mods' !== $refusal;
+				$result = $controller->handle_apply();
+				self::assertSame( 403, $result['status'] );
+				self::assertSame( 'You cannot import repository credentials on this site. Choose another credential decision.', $result['data']['message'] );
+			}
+		} finally {
+			unset( $GLOBALS['ran_booster_package_mutation_guard_file_mods'] );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
+			unlink( $file );
+		}
 	}
 
 	#[DataProvider( 'invalid_credential_selections' )]

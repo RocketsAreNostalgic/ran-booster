@@ -59,6 +59,12 @@ function is_uploaded_file( string $filename ): bool {
 	return in_array( $filename, $GLOBALS['ran_booster_repository_admin_uploaded_files'] ?? array(), true );
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\get_temp_dir' ) ) {
+	function get_temp_dir(): string {
+		return rtrim( sys_get_temp_dir(), '/' ) . '/';
+	}
+}
+
 function tempnam( string $directory, string $prefix ): string|false {
 	$path = \tempnam( $directory, $prefix );
 	$GLOBALS['ran_booster_repository_admin_temporary_files'][] = $path;

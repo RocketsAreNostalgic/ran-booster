@@ -13,6 +13,7 @@ use RAN\Admin\ProviderProfileAdminController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentCoordinator;
+use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\ProviderDiagnosticRequest;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -332,6 +333,9 @@ class Dispatcher {
 				wp_die( esc_html__( 'You do not have sufficient permissions to configure Booster storage.', 'ran-booster' ) );
 			}
 		}
+		if ( PackageMutationGuard::file_mods_disabled() ) {
+			wp_die( esc_html__( 'This site does not allow file changes, so Booster cannot change its secure storage.', 'ran-booster' ) );
+		}
 
 		check_admin_referer( 'ran-booster-create-secure-storage' );
 		if ( ! $this->storage_route_is_current( $request ) ) {
@@ -393,6 +397,9 @@ class Dispatcher {
 				wp_die( esc_html__( 'You do not have sufficient permissions to recover Booster storage.', 'ran-booster' ) );
 			}
 		}
+		if ( PackageMutationGuard::file_mods_disabled() ) {
+			wp_die( esc_html__( 'This site does not allow file changes, so Booster cannot change its secure storage.', 'ran-booster' ) );
+		}
 
 		check_admin_referer( 'ran-booster-adopt-secure-storage' );
 		if ( ! $this->storage_route_is_current( $request ) ) {
@@ -451,6 +458,9 @@ class Dispatcher {
 			if ( ! current_user_can( $capability ) ) {
 				wp_die( esc_html__( 'You do not have sufficient permissions to reset Booster storage.', 'ran-booster' ) );
 			}
+		}
+		if ( PackageMutationGuard::file_mods_disabled() ) {
+			wp_die( esc_html__( 'This site does not allow file changes, so Booster cannot change its secure storage.', 'ran-booster' ) );
 		}
 
 		check_admin_referer( 'ran-booster-reset-empty-storage' );
@@ -655,7 +665,7 @@ class Dispatcher {
 
 	/** @param array<string, mixed> $request */
 	private function run_troubleshooting( array $request ): void {
-		foreach ( array( 'manage_options', 'install_plugins', 'update_plugins', 'install_themes', 'update_themes' ) as $capability ) {
+		foreach ( array( 'manage_options', 'activate_plugins', 'install_plugins', 'update_plugins', 'install_themes', 'update_themes' ) as $capability ) {
 			if ( ! current_user_can( $capability ) ) {
 				wp_die( esc_html__( 'You do not have sufficient permissions to run troubleshooting.', 'ran-booster' ) );
 			}

@@ -738,7 +738,7 @@ class SecretsFile {
 	 *
 	 * This is deliberately separate from the advisory expiry observation option.
 	 * It remains encrypted with the credential and can only shorten its local
-	 * retention window.
+	 * retention window: a later observation never moves an earlier date.
 	 */
 	public function record_credential_provider_expiry( ProviderCode|string $provider, string $id, string $expires_on ): void {
 		$this->assert_available();
@@ -748,8 +748,10 @@ class SecretsFile {
 
 		$this->mutate(
 			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expires_on ): array {
-				$record = $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ?? null;
-				if ( ! is_array( $record ) || empty( $record['self_destruct'] ) ) {
+				$record  = $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ?? null;
+				$current = is_array( $record ) ? ( $record['provider_destroy_on'] ?? null ) : null;
+				// Provider observations may only shorten retention, so the earliest reported date wins.
+				if ( ! is_array( $record ) || empty( $record['self_destruct'] ) || ( is_string( $current ) && $current <= $expires_on ) ) {
 					return array( $document, null, false );
 				}
 				$record['provider_destroy_on']                          = $expires_on;

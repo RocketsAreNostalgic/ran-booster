@@ -33,6 +33,14 @@ class CredentialExpiryObservationStore {
 		return $this->all( $this->read_option() );
 	}
 
+	/** Fresh replacement generation; it changes whenever the profile's secret is replaced or removed. */
+	public function generation( string $provider, string $profile_id ): int {
+		$this->require_provider_id( $provider );
+		$this->require_profile_id( $profile_id );
+
+		return $this->all( $this->read_option( true ) )[ $provider ][ $profile_id ]['event_generation'] ?? 0;
+	}
+
 	public function set_manual_expiry( string $provider, string $profile_id, ?string $expires_on ): void {
 		$this->require_provider_id( $provider );
 		$this->require_profile_id( $profile_id );

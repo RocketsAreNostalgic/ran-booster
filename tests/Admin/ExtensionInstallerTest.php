@@ -174,6 +174,7 @@ final class ExtensionInstallerTest extends TestCase {
 final class FakeExtensionLock extends WordPressUpdaterLock {
 	public int $acquires = 0;
 	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
+		unset( $owner_operation );
 		++$this->acquires;
 		return 'token'; }
 	public function release( string $token ): bool {

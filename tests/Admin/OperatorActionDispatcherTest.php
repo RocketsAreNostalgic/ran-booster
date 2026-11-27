@@ -507,11 +507,52 @@ final class OperatorActionDispatcherTest extends TestCase {
 		self::assertStringContainsString( "WHERE id = 12 AND state = 'running'", implode( "\n", $database->queries ) );
 	}
 
+	public function test_dispatcher_releases_only_the_confirmed_recorded_updater_lock(): void {
+		$database          = new AttemptRepositoryDatabase();
+		$previous_database = $GLOBALS['wpdb'] ?? null;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The updater lock reads its row through this isolated fake.
+		$GLOBALS['wpdb'] = $database;
+		try {
+			$lock      = new WordPressUpdaterLock();
+			$token     = $lock->acquire();
+			$dashboard = $this->createMock( Dashboard::class );
+			$dashboard->expects( self::exactly( 3 ) )->method( 'add_failure_message' );
+			$dashboard->expects( self::once() )->method( 'add_message' )->with( 'The package lock was released.' );
+			$request = array(
+				'action'     => 'release-updater-lock',
+				'lock_token' => $token,
+			);
+			$held    = array();
+			// Unconfirmed, the wrong token, a missing package capability, then the confirmed exact token.
+			foreach ( array(
+				$request,
+				array(
+					'confirm_stopped' => '1',
+					'lock_token'      => $token . '1',
+				) + $request,
+				array( 'confirm_stopped' => '1' ) + $request,
+				array( 'confirm_stopped' => '1' ) + $request,
+			) as $case => $post ) {
+				$GLOBALS['ran_booster_test_capabilities']['update_themes'] = 2 !== $case;
+				$_POST['ran_booster']                                      = $post;
+				$this->dispatcher( $dashboard, lock: $lock )->dispatch_post_requests();
+				$held[] = $database->option_rows['auto_updater.lock'] ?? null;
+			}
+			self::assertSame( array( $token, $token, $token, null ), $held );
+			self::assertArrayNotHasKey( WordPressUpdaterLock::OWNER_OPTION, $database->option_rows );
+			self::assertSame( array_fill( 0, 4, 'ran-booster-release-updater-lock' ), $GLOBALS['ran_booster_test_nonce_checks'] );
+		} finally {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the database boundary replaced above.
+			$GLOBALS['wpdb'] = $previous_database;
+		}
+	}
+
 	private function dispatcher(
 		Dashboard $dashboard,
 		?TemporaryDebugCapture $capture = null,
 		?DeploymentAttemptRepository $attempts = null,
-		?DeploymentCoordinator $coordinator = null
+		?DeploymentCoordinator $coordinator = null,
+		?WordPressUpdaterLock $lock = null
 	): Dispatcher {
 		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
@@ -525,7 +566,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			new SecretsFile( null, array() ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
 			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
-			$this->createStub( WordPressUpdaterLock::class ),
+			$lock ?? $this->createStub( WordPressUpdaterLock::class ),
 			$coordinator,
 			null,
 			null,

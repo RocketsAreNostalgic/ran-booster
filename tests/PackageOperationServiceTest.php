@@ -2527,6 +2527,7 @@ final class OperationUpdaterLock extends WordPressUpdaterLock {
 	public array $events = array();
 
 	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
+		unset( $owner_operation );
 		$this->events[] = 'acquire';
 		if ( ! $this->available ) {
 			throw new \RuntimeException( 'Fixture lock unavailable.' );
@@ -2540,6 +2541,7 @@ final class OperationUpdaterLock extends WordPressUpdaterLock {
 		return $this->token;
 	}
 	public function try_acquire_without_reclaim( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): ?string {
+		unset( $owner_operation );
 		$this->events[] = 'acquire';
 		if ( ! $this->available ) {
 			return null;

@@ -88,7 +88,8 @@ class Dispatcher {
 		$this->deployment_admin  = new DeploymentAdminController(
 			$dashboard,
 			$deployment_coordinator,
-			$deployment_attempts
+			$deployment_attempts,
+			updater_lock: $updater_lock
 		);
 	}
 
@@ -191,6 +192,7 @@ class Dispatcher {
 
 			$deployment_actions = array(
 				'reconcile-deployment-worker',
+				'release-updater-lock',
 				'request-deployment-runner',
 				'resolve-needs-attention',
 			);

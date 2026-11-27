@@ -163,18 +163,15 @@ adds an allowed pair or a version; it does not change the format.
 
 Credential-bearing archives written before this change are refused and must be
 exported again. Booster is pre-release, so no reader for the old format is
-kept. Package-only archives are unchanged. Blueprint V1 credential documents
-are refused for the same reason, which leaves PT-020's legacy V1 import case
-with nothing to apply to.
+kept. Package-only archives are unchanged. Credentials travel only in sealed
+archives, which always hold a V2 document, so Blueprint V1 credential documents
+are refused too. That leaves PT-020's legacy V1 import case with nothing to
+apply to.
 
-Each credential-bearing Blueprint also carries a random 256-bit
-`credential_id_salt`, inside the sealed payload only. The portable credential
-ID already hashes the whole Blueprint, so the salt keeps the ID from confirming
-a guessed secret. Re-importing one file reuses its credential; a second export
-of the same credential imports as a separate profile. A document without a
-valid salt is refused, never given an unsalted ID. The ID is not keyed with the
-site's secrets-storage key, because that key is created only on the first
-write and replaced whenever the store is reset.
+The portable credential ID is unchanged by sealing: it is still computed as
+before, and re-importing an archive reuses its credential. Whether the ID
+should stop hashing the secret is tracked separately in
+[#1335](https://github.com/RocketsAreNostalgic/ran-booster/issues/1335).
 
 Passwords are counted in characters, 20 to 256, and need at least 10 distinct
 characters. A character-class rule was rejected because Booster's own generated

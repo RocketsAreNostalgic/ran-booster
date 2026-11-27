@@ -67,8 +67,8 @@ final class BlueprintArchiveTest extends TestCase {
 		$envelope = $zip->getFromIndex( 0 );
 		$zip->close();
 		self::assertIsString( $envelope );
-		// Neither the secret, the package nor the ID salt is readable without the password.
-		foreach ( array( 'token-canary-value', 'example/example.php', 'credential_id_salt' ) as $hidden ) {
+		// Neither the secret nor the package is readable without the password.
+		foreach ( array( 'token-canary-value', 'example/example.php' ) as $hidden ) {
 			self::assertStringNotContainsString( $hidden, $envelope );
 		}
 		$header = json_decode( $envelope, true );
@@ -207,21 +207,6 @@ final class BlueprintArchiveTest extends TestCase {
 		self::assertSame( array( $this->refusal( 'credentials_unsealed' ), $this->refusal( 'document_invalid' ) ), $this->captured_log_lines() );
 	}
 
-	public function test_a_sealed_credential_document_without_a_valid_id_salt_is_refused(): void {
-		$archive = new BlueprintArchive();
-		$json    = $this->credential_blueprint()->canonical_json();
-		$this->start_log_capture();
-		foreach ( array(
-			'missing'   => (string) preg_replace( '/"credential_id_salt":"[0-9a-f]{64}",/', '', $json ),
-			'malformed' => (string) preg_replace( '/"credential_id_salt":"[0-9a-f]{64}"/', '"credential_id_salt":"' . str_repeat( 'g', 64 ) . '"', $json ),
-		) as $case => $document ) {
-			self::assertNotSame( $json, $document, $case );
-			$this->write_sealed( $document );
-			$this->assert_invalid( fn() => $archive->read_from( $this->file, self::PASSWORD ) );
-		}
-		self::assertSame( array_fill( 0, 2, $this->refusal( 'document_invalid' ) ), $this->captured_log_lines() );
-	}
-
 	public function test_zip_encrypted_credential_archives_need_a_new_export(): void {
 		$this->require_aes();
 		$this->write_raw( $this->credential_blueprint()->canonical_json(), ZipArchive::EM_AES_256, self::PASSWORD );
@@ -272,7 +257,7 @@ final class BlueprintArchiveTest extends TestCase {
 		$archive = new BlueprintArchive();
 		$this->write_raw( $legacy, ZipArchive::EM_NONE, null );
 		self::assertSame( 'main', $archive->read_from( $this->file, null )->packages[0]->branch );
-		// A V1 credential has no ID salt, so it is refused even when sealed rather than imported with an unsalted ID.
+		// Credentials travel only in sealed V2 archives, so a V1 credential document is refused even when sealed.
 		$credential  = '{"provider":"gh","label":"Token","kind":"classic","configuration":{},"secret":"legacy-canary","packages":[{"type":"plugin","identifier":"example/example.php"}]}';
 		$with_secret = str_replace( '"credentials":[]', '"credentials":[' . $credential . ']', $legacy );
 		$this->write_sealed( $with_secret );

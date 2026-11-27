@@ -165,9 +165,8 @@ processing; generic PHP serialization is refused. The canonical Blueprint
 archive format and encryption are unchanged. Revealed strings and arrays remain
 ordinary PHP values, with no isolation or erasure guarantee.
 
-Blueprint V1 documents that carry a credential are refused. They predate the
-portable ID salt described below, and Booster does not give an imported
-credential an unsalted ID.
+Blueprint V1 documents that carry a credential are refused. Credentials travel
+only in sealed archives, which always hold a V2 document.
 
 `BlueprintArchive` writes and reads the briefcase ZIP. A package-only
 Blueprint is stored as one canonical `blueprint.json` entry. A credential-bearing
@@ -180,11 +179,6 @@ allowed set is refused before a key is derived.
 **Re-export required:** credential-bearing archives exported with the earlier
 ZIP AES-256 encryption are refused. Export them again from the source site.
 Package-only archives are unaffected.
-
-A credential-bearing Blueprint also carries a random `credential_id_salt` inside
-the sealed payload. It keys the portable credential IDs, so an ID cannot confirm
-a guessed secret. Re-importing the same file reuses its credentials; importing a
-second export of the same credential creates a separate profile.
 
 ## Current delivery boundary
 
@@ -343,8 +337,6 @@ current format is:
 - packages: a list of package records
 - credentials: a list of credential records when the briefcase option is used;
   a non-empty list is accepted only from a sealed archive
-- credential_id_salt: 64 lowercase hexadecimal characters, present exactly when
-  credentials are
 
 The package record fields are:
 

@@ -699,7 +699,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		self::assertSame( 0, $this->calls->events_under_lock() );
 	}
 
-	public function test_each_export_salts_its_portable_ids_while_a_re_import_of_one_file_reuses_its_own(): void {
+	public function test_a_re_import_of_the_same_file_reuses_its_credential_without_a_write(): void {
 		$credential = new BlueprintCredential(
 			'alpha',
 			'Portable credential',
@@ -713,23 +713,14 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 				),
 			)
 		);
-		$packages   = array( new BlueprintPackage( 'plugin', 'fixture/fixture.php', 'Fixture', 'alpha', 'fixture-repository-id', 'fixture/repository', 'main', null ) );
-		$first      = new PackageBlueprint( $packages, array( $credential ) );
-		$first_ids  = $this->secrets->import_credentials_if_absent( $first, $credential );
+		$blueprint  = new PackageBlueprint( array( new BlueprintPackage( 'plugin', 'fixture/fixture.php', 'Fixture', 'alpha', 'fixture-repository-id', 'fixture/repository', 'main', null ) ), array( $credential ) );
+		$ids        = $this->secrets->import_credentials_if_absent( $blueprint, $credential );
 		$before     = hash_file( 'sha256', $this->path );
+		$reread     = PackageBlueprint::from_json( $blueprint->canonical_json() );
 
-		// The same file read again keeps its salt, so the retry reuses the stored credential without a write.
-		$reread = PackageBlueprint::from_json( $first->canonical_json() );
-		self::assertSame( $first_ids, $this->secrets->import_credentials_if_absent( $reread, $reread->credentials[0] ) );
+		self::assertSame( $ids, $this->secrets->import_credentials_if_absent( $reread, $reread->credentials[0] ) );
 		self::assertSame( $before, hash_file( 'sha256', $this->path ) );
-
-		// A second export of the same credential carries a new salt: a separate portable ID, neither a conflict nor a reuse.
-		$second     = new PackageBlueprint( $packages, array( $credential ) );
-		$second_ids = $this->secrets->import_credentials_if_absent( $second, $credential );
-		self::assertNotSame( $first_ids, $second_ids );
-		self::assertCount( 2, $this->secrets->credential_profiles( 'alpha' ) );
-		// The first import's credential, which a package row may already name, is left in place.
-		self::assertSame( 'synthetic-portable-value', $this->secrets->credential_material( 'alpha', $first_ids[0] )['secret'] ?? null );
+		self::assertCount( 1, $this->secrets->credential_profiles( 'alpha' ) );
 	}
 
 	public function test_tampered_and_authenticated_non_canonical_documents_fail_before_policy(): void {

@@ -404,7 +404,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertSame( 'Repository browsing failed. Please try again.', $result['data']['message'] );
 	}
 
-	public function test_rate_limit_failure_returns_aprovider_neutral_notice_without_upstream_details(): void {
+	public function test_a_rate_limit_reported_only_by_status_names_the_provider_without_upstream_details(): void {
 		$provider = new class() implements RepositoryProvider, RepositoryBrowser {
 
 			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -432,8 +432,15 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertFalse( $result['success'] );
 		self::assertSame( 429, $result['status'] );
 		self::assertSame(
-			'The Git provider rate limit has been reached. Try again later.',
+			'GitHub is limiting lookups from this site. Try again later.',
 			$result['data']['message']
+		);
+		self::assertSame(
+			array(
+				'provider' => 'GitHub',
+				'retry_at' => null,
+			),
+			$result['data']['rate_limit']
 		);
 		self::assertStringNotContainsString( 'upstream-response-canary', $result['data']['message'] );
 		self::assertStringNotContainsString( 'header-canary', $result['data']['message'] );
@@ -612,13 +619,13 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertTrue( $result['success'], isset( $result['data']['message'] ) ? (string) $result['data']['message'] : 'Expected successful partial results.' );
 		self::assertTrue( $result['data']['partial'] );
 		self::assertSame(
-			'Some repositories are shown. The Git provider rate limit was reached; try again later for a complete list.',
+			'Some repositories are shown. GitHub is limiting lookups from this site. Try again later for a complete list.',
 			$result['data']['message']
 		);
 	}
 
 	public function test_partial_result_display_copy_uses_the_plugin_translation_domain(): void {
-		$source = 'Some repositories are shown. The Git provider rate limit was reached; try again later for a complete list.';
+		$source = 'Some repositories are shown. %s is limiting lookups from this site. Try again later for a complete list.';
 		$GLOBALS['ran_booster_repository_admin_translations'] = array(
 			'ran-booster' => array( $source => 'Les dépôts affichés sont incomplets.' ),
 		);

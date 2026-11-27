@@ -845,9 +845,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			$retry_at = $first['rate_limit']['retry_at'] ?? null;
 			self::assertIsInt( $retry_at );
 			self::assertSame( $retry_at, $GLOBALS['ran_booster_cooldown_transients']['ran_booster_anonymous_cooldown_gh']['value'] ?? null );
+			self::assertSame( 1, ProspectiveRepositoryProvider::$resolve_calls );
 			self::assertSame( 1, ProspectiveRepositoryProvider::$listing_calls );
 
-			// The next anonymous listing is not sent and reports the same limit.
+			// The next anonymous listing sends neither the repository resolution nor the listing, and reports the same limit.
 			$second = $facade->list_candidates( 'plugin', $this->repository_request(), 'stable', 'valid-nonce' );
 			self::assertSame( 'unable_to_check', $second->code() );
 			self::assertSame(
@@ -860,7 +861,35 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 				),
 				$second->data()
 			);
+			self::assertSame( 1, ProspectiveRepositoryProvider::$resolve_calls );
 			self::assertSame( 1, ProspectiveRepositoryProvider::$listing_calls );
+		} finally {
+			unset( $GLOBALS['ran_booster_cooldown_transients'] );
+		}
+	}
+
+	public function test_a_rate_limited_anonymous_repository_resolution_names_the_provider_and_pauses_lookups(): void {
+		require_once __DIR__ . '/../Internal/AnonymousLookupCooldownWordPressFunctions.php';
+		$GLOBALS['ran_booster_cooldown_transients'] = array();
+		try {
+			$provider = new ProspectiveRepositoryProvider( resolve_failure: new ProviderRequestFailed( new ProviderFailure( 'rate_limited', 429, 3540 ) ) );
+			$facade   = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor(), provider: $provider );
+			$first    = $facade->list_candidates( 'plugin', $this->repository_request(), 'stable', 'valid-nonce' );
+			$retry_at = $first->data()['rate_limit']['retry_at'] ?? null;
+
+			self::assertSame( 'unable_to_check', $first->code() );
+			self::assertIsInt( $retry_at );
+			self::assertSame( 'gh', $first->data()['rate_limited_provider'] ?? null );
+			self::assertSame( 'Prospective provider', $first->data()['rate_limit']['provider'] ?? null );
+			self::assertSame( $retry_at, $GLOBALS['ran_booster_cooldown_transients']['ran_booster_anonymous_cooldown_gh']['value'] ?? null );
+
+			$facade->list_candidates( 'plugin', $this->repository_request(), 'stable', 'valid-nonce' );
+			self::assertSame( 1, ProspectiveRepositoryProvider::$resolve_calls );
+			self::assertSame( 0, ProspectiveRepositoryProvider::$listing_calls );
+
+			// A credentialed lookup still reaches the provider during the anonymous pause.
+			$facade->list_candidates( 'plugin', array( 'credential_id' => 'profile' ) + $this->repository_request(), 'stable', 'valid-nonce' );
+			self::assertSame( 2, ProspectiveRepositoryProvider::$resolve_calls );
 		} finally {
 			unset( $GLOBALS['ran_booster_cooldown_transients'] );
 		}

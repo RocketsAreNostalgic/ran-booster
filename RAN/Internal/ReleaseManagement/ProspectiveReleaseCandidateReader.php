@@ -10,6 +10,7 @@ use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Logging\BoosterLogger;
+use RAN\RepositoryProvider\ProviderFailure;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReference;
 use RAN\RepositoryProvider\RepositoryReleaseAcquirer;
@@ -17,7 +18,6 @@ use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
 use RAN\RepositoryProvider\RepositoryReleaseMetadata;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
-use RAN\RepositoryProvider\RepositoryReleaseReadUnavailable;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Runtime\UnsupportedRuntimeException;
 use Throwable;
@@ -49,8 +49,16 @@ final class ProspectiveReleaseCandidateReader {
 			return ProspectiveReleaseResult::failure( 'unsupported_provider' );
 		}
 		$listing = $capabilities['listing'];
+		// With no credential or lookup profile, even the repository resolution reaches the provider
+		// anonymously, so an anonymous limit is waited out before the first provider call.
+		$blank     = static fn ( mixed $value ): bool => ! is_string( $value ) || '' === trim( $value );
+		$anonymous = $blank( $repository_request['credential_id'] ?? null ) && $blank( $repository_request['public_lookup_profile_id'] ?? null );
 
 		try {
+			$cooling = $anonymous ? $this->cooldown_failure( $provider ) : null;
+			if ( null !== $cooling ) {
+				return $cooling;
+			}
 
 			$repository_request['deployment_policy'] = DeploymentPolicy::MANUAL->value;
 
@@ -63,27 +71,11 @@ final class ProspectiveReleaseCandidateReader {
 				'1' === ( $repository['private'] ?? null ),
 				is_string( $repository['credential_id'] ?? null ) && '' !== $repository['credential_id'] ? $repository['credential_id'] : null
 			);
-			$retry_at   = ! $reference->private && null === $reference->credential_id ? AnonymousLookupCooldown::until( $provider ) : null;
-			if ( null !== $retry_at ) {
-				BoosterLogger::log(
-					'anonymous release lookup skipped during rate limit',
-					array(
-						'event'     => 'anonymous_lookup_cooldown',
-						'operation' => 'list_release_candidates',
-						'provider'  => $provider,
-					)
-				);
-
-				return ProspectiveReleaseResult::failure(
-					'unable_to_check',
-					array(
-						'rate_limit'            => array(
-							'provider' => $this->providers->metadata()[ $provider ]->label ?? '',
-							'retry_at' => $retry_at,
-						),
-						'rate_limited_provider' => $provider,
-					)
-				);
+			// A lookup profile verifies the repository, but the listing itself can still be anonymous.
+			$anonymous = ! $reference->private && null === $reference->credential_id;
+			$cooling   = $anonymous ? $this->cooldown_failure( $provider ) : null;
+			if ( null !== $cooling ) {
+				return $cooling;
 			}
 			$result   = $listing->list_release_candidates( $type, $reference, $channel );
 			$metadata = array(
@@ -130,14 +122,12 @@ final class ProspectiveReleaseCandidateReader {
 					'provider'  => $provider,
 				)
 			);
-			$rate_limit = $failure instanceof RepositoryReleaseReadUnavailable
-				? $failure->failure?->rate_limit( $this->providers->metadata()[ $provider ]->label ?? '', time() )
-				: null;
+			// A rate-limited repository resolution counts as much as a rate-limited listing.
+			$rate_limit = ProviderFailure::from_throwable( $failure )?->rate_limit( $this->providers->metadata()[ $provider ]->label ?? '', time() );
 			if ( null === $rate_limit ) {
 				return ProspectiveReleaseResult::failure( 'unable_to_check' );
 			}
 			// Only an anonymous public lookup that was rate-limited can be helped by a lookup credential.
-			$anonymous = isset( $reference ) && ! $reference->private && null === $reference->credential_id;
 			if ( $anonymous ) {
 				AnonymousLookupCooldown::record( $provider, $rate_limit );
 			}
@@ -146,6 +136,33 @@ final class ProspectiveReleaseCandidateReader {
 		}
 	}
 
+
+	/** The rate-limit failure for an anonymous lookup while the provider's anonymous limit lasts, else null. */
+	private function cooldown_failure( string $provider ): ?ProspectiveReleaseResult {
+		$retry_at = AnonymousLookupCooldown::until( $provider );
+		if ( null === $retry_at ) {
+			return null;
+		}
+		BoosterLogger::log(
+			'anonymous release lookup skipped during rate limit',
+			array(
+				'event'     => 'anonymous_lookup_cooldown',
+				'operation' => 'list_release_candidates',
+				'provider'  => $provider,
+			)
+		);
+
+		return ProspectiveReleaseResult::failure(
+			'unable_to_check',
+			array(
+				'rate_limit'            => array(
+					'provider' => $this->providers->metadata()[ $provider ]->label ?? '',
+					'retry_at' => $retry_at,
+				),
+				'rate_limited_provider' => $provider,
+			)
+		);
+	}
 
 	public function supports_provider_code( string $provider ): bool {
 		return null !== $this->release_capabilities( $provider );

@@ -3072,7 +3072,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertNull( $list() );
 		self::assertNull( $facade->anonymous_rate_limit_provider() );
 
-		self::assertTrue( $facade->lookup_rate_limited() );
+		self::assertNotNull( $facade->lookup_rate_limit() );
 
 		// A successful listing clears the previous report.
 		$current = 'public';
@@ -3100,10 +3100,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$reason->fallback = 'none';
 		$results[]        = $inspect()?->ready();
-		self::assertFalse( $facade->lookup_rate_limited() );
+		self::assertNull( $facade->lookup_rate_limit() );
 		$reason->fallback = 'http_5xx';
 		$results[]        = $inspect();
-		self::assertFalse( $facade->lookup_rate_limited() );
+		self::assertNull( $facade->lookup_rate_limit() );
 		self::assertSame( 9, $reason->inspections );
 		self::assertSame( array( 'rate_limited', 'rate_limited', null, 'rate_limited', true, null ), $results );
 	}

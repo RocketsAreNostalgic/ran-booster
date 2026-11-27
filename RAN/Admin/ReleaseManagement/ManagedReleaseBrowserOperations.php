@@ -34,11 +34,12 @@ final class ManagedReleaseBrowserOperations {
 		}
 		$candidates = $this->browser->list_candidates( $type, $identifier, $revision, $channel, $nonce );
 		if ( null === $candidates ) {
-			$provider = $this->browser->anonymous_rate_limit_provider();
-			$data     = null === $provider ? array() : array( 'rate_limited_provider' => $provider );
-			if ( $this->browser->lookup_rate_limited() ) {
+			$provider   = $this->browser->anonymous_rate_limit_provider();
+			$data       = null === $provider ? array() : array( 'rate_limited_provider' => $provider );
+			$rate_limit = $this->browser->lookup_rate_limit();
+			if ( null !== $rate_limit ) {
 				$data['rejection_reason'] = 'rate_limited';
-				$data['rate_limit']       = $this->browser->lookup_rate_limit();
+				$data['rate_limit']       = $rate_limit;
 			}
 			return $this->outcome( 'unable_to_check', false, $data );
 		}

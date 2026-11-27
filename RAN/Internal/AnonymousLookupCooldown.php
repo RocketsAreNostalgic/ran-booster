@@ -43,7 +43,8 @@ final class AnonymousLookupCooldown {
 		$key      = self::key( $provider );
 		$retry_at = $rate_limit['retry_at'] ?? null;
 		$now    ??= time();
-		if ( null === $key || ! is_int( $retry_at ) || $retry_at <= $now || $retry_at > $now + 86400 ) {
+		// An overlapping response with an earlier deadline never shortens the stored one.
+		if ( null === $key || ! is_int( $retry_at ) || $retry_at <= $now || $retry_at > $now + 86400 || $retry_at <= ( self::until( $provider, $now ) ?? 0 ) ) {
 			return;
 		}
 		try {

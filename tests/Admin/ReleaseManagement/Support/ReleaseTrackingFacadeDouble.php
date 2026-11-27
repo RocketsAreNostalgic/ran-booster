@@ -123,10 +123,6 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 		return $this->anonymous_rate_limit_provider;
 	}
 
-	public function lookup_rate_limited(): bool {
-		return $this->lookup_rate_limited;
-	}
-
 	/** @return array{provider:string,retry_at:int|null}|null */
 	public function lookup_rate_limit(): ?array {
 		return $this->lookup_rate_limited ? $this->lookup_rate_limit : null;

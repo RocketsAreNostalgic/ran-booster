@@ -17,9 +17,6 @@ final class NativeManagedReleaseBrowser implements ManagedReleaseBrowser {
 	public function anonymous_rate_limit_provider(): ?string {
 		return $this->releases->anonymous_rate_limit_provider();
 	}
-	public function lookup_rate_limited(): bool {
-		return $this->releases->lookup_rate_limited();
-	}
 	public function lookup_rate_limit(): ?array {
 		return $this->releases->lookup_rate_limit();
 	}

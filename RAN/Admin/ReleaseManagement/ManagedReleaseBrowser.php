@@ -14,8 +14,6 @@ interface ManagedReleaseBrowser {
 	/** The provider whose anonymous public lookup was rate-limited in the last listing or inspection, if any. */
 	public function anonymous_rate_limit_provider(): ?string;
 
-	public function lookup_rate_limited(): bool;
-
 	/** @return array{provider:string,retry_at:int|null}|null */
 	public function lookup_rate_limit(): ?array;
 

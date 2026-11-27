@@ -488,10 +488,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		return $this->anonymous_rate_limit_provider;
 	}
 
-	public function lookup_rate_limited(): bool {
-		return null !== $this->lookup_rate_limit;
-	}
-
 	/**
 	 * The provider label and retry time of the last rate-limited listing or inspection, if any.
 	 *

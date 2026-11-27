@@ -132,7 +132,7 @@ final class RepositoryPickerController {
 						$repositories
 					),
 					'partial'                  => $result->is_partial(),
-					'message'                  => $this->partial_message( $result ),
+					'message'                  => $this->partial_message( $result, $this->providers->metadata()[ $provider_name ]->label ?? '' ),
 					'public_lookup_profile_id' => 'public' === $mode ? $credential_id ?? '' : '',
 				)
 			);
@@ -187,8 +187,9 @@ final class RepositoryPickerController {
 				$status = 500;
 			}
 
+			// A provider that reports a rate limit only by its HTTP status is named too.
 			$failure    = ProviderFailure::carried( $exception );
-			$rate_limit = $failure?->rate_limit( $this->providers->metadata()[ $provider_name ]->label ?? '', time() );
+			$rate_limit = ProviderFailure::from_throwable( $exception )?->rate_limit( $this->providers->metadata()[ $provider_name ]->label ?? '', time() );
 			if ( null !== $rate_limit ) {
 				if ( 'public' === $mode && null === $credential_id ) {
 					AnonymousLookupCooldown::record( $provider_name, $rate_limit );
@@ -247,7 +248,6 @@ final class RepositoryPickerController {
 			404 => __( 'The requested repository owner could not be found.', 'ran-booster' ),
 			413 => __( 'The Git provider returned too much data. Enter the repository manually or narrow the account.', 'ran-booster' ),
 			422 => __( 'The Git provider returned an invalid response. Try again or enter the repository manually.', 'ran-booster' ),
-			429 => __( 'The Git provider rate limit has been reached. Try again later.', 'ran-booster' ),
 			503, 504 => __( 'Repository browsing took too long. Try again or enter the repository manually.', 'ran-booster' ),
 			default => __( 'Repository browsing failed. Please try again.', 'ran-booster' ),
 		};
@@ -312,11 +312,15 @@ final class RepositoryPickerController {
 		throw new InvalidArgumentException( 'The public lookup profile is unavailable.' );
 	}
 
-	private function partial_message( RepositoryBrowseResult $result ): ?string {
+	private function partial_message( RepositoryBrowseResult $result, string $provider_label ): ?string {
 
 		return match ( $result->partial_reason ) {
 			RepositoryBrowseResult::AUTHORIZATION => __( 'Some repositories are shown, but the selected credential stopped authorizing the request.', 'ran-booster' ),
-			RepositoryBrowseResult::RATE_LIMIT => __( 'Some repositories are shown. The Git provider rate limit was reached; try again later for a complete list.', 'ran-booster' ),
+			RepositoryBrowseResult::RATE_LIMIT => sprintf(
+				/* translators: %s: Git provider name, such as GitHub. */
+				__( 'Some repositories are shown. %s is limiting lookups from this site. Try again later for a complete list.', 'ran-booster' ),
+				'' !== $provider_label ? $provider_label : __( 'The Git provider', 'ran-booster' )
+			),
 			RepositoryBrowseResult::LIMIT => __( 'The first available repositories are shown. Enter a repository manually if it is not listed.', 'ran-booster' ),
 			RepositoryBrowseResult::PROVIDER => __( 'Some repositories are shown, but the Git provider could not complete the list.', 'ran-booster' ),
 			default => null,

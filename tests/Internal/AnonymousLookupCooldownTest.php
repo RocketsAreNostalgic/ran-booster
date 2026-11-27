@@ -56,6 +56,25 @@ final class AnonymousLookupCooldownTest extends TestCase {
 		self::assertSame( self::NOW + 3540, AnonymousLookupCooldown::until( 'gh', self::NOW ) );
 	}
 
+	public function test_overlapping_limits_keep_the_later_deadline_in_either_order(): void {
+		foreach ( array( array( 600, 3540 ), array( 3540, 600 ) ) as $delays ) {
+			$GLOBALS['ran_booster_cooldown_transients'] = array();
+			foreach ( $delays as $delay ) {
+				AnonymousLookupCooldown::record(
+					'gh',
+					array(
+						'provider' => 'GitHub',
+						'retry_at' => self::NOW + $delay,
+					),
+					self::NOW
+				);
+			}
+
+			self::assertSame( self::NOW + 3540, AnonymousLookupCooldown::until( 'gh', self::NOW ) );
+			self::assertSame( 3540, $GLOBALS['ran_booster_cooldown_transients']['ran_booster_anonymous_cooldown_gh']['expiration'] );
+		}
+	}
+
 	public function test_an_unknown_past_or_distant_deadline_is_never_stored(): void {
 		foreach ( array( null, self::NOW, self::NOW - 60, self::NOW + 86401, '1800003540', 1.5 ) as $retry_at ) {
 			AnonymousLookupCooldown::record(

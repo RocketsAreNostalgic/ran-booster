@@ -42,8 +42,9 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		?callable $acquire_lock = null,
 		?callable $release_lock = null
 	) {
+		// Webhook operations read signing secrets and authenticate with saved credentials.
 		$this->can_manage   = null === $can_manage
-			? static fn (): bool => current_user_can( 'manage_options' )
+			? static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' )
 			: \Closure::fromCallable( $can_manage );
 		$this->endpoint     = null === $endpoint
 			? static fn ( string $provider_code ): string => rest_url( 'ran-booster/v1/webhooks/' . rawurlencode( $provider_code ) )

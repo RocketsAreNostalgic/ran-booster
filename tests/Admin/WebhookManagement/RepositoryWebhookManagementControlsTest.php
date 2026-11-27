@@ -20,6 +20,7 @@ use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\Tests\Support\AbsentWebhookManagementCapabilityProvider;
+use RAN\Admin\WebhookManagement\WebhookManagementController;
 use RAN\Tests\Support\CapturesBoosterLog;
 use RAN\Tests\Support\CompleteWebhookManagementCapabilityProvider;
 use RAN\Tests\Support\FitnessOnlyWebhookManagementCapabilityProvider;
@@ -34,6 +35,7 @@ require_once dirname( __DIR__, 2 ) . '/Support/PackageViewWordPressFunctions.php
 require_once __DIR__ . '/Display/WebhookDisplayModelWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/Support/CapturesBoosterLog.php';
 require_once dirname( __DIR__, 2 ) . '/Support/DocumentationHookWordPressFunctions.php';
+require_once dirname( __DIR__, 2 ) . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 
 final class RepositoryWebhookManagementControlsTest extends TestCase {
 	use CapturesBoosterLog;
@@ -161,6 +163,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 
 		$controls->handle_delivery_status();
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$controls->handle_delivery_status();
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['activate_plugins'] = true;
 		// No stored record, so no delivery is confirmed.
 		$controls->handle_delivery_status();
 		$_GET['repository_id'] = '5678';
@@ -174,6 +178,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame(
 			array(
 				$denied,
+				$denied,
 				array(
 					'success' => true,
 					'data'    => array( 'delivered' => false ),
@@ -182,6 +187,68 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			),
 			$GLOBALS['ran_booster_repository_webhook_management_json']
 		);
+	}
+
+	public function test_operator_requests_need_secret_authority_and_allowed_file_changes_before_any_webhook_work(): void {
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		foreach ( array( 'target', 'assess_setup', 'assess_remove', 'setup', 'remove', 'forget' ) as $method ) {
+			$facade->expects( self::never() )->method( $method );
+		}
+		$responses   = array();
+		$interaction = $this->createMock( AdminInteractionFacade::class );
+		$interaction->method( 'respond' )->willReturnCallback(
+			static function ( \RAN\Admin\Interaction\AdminInteractionOutcome $outcome ) use ( &$responses ): never {
+				$responses[] = $outcome->kind() . ': ' . $outcome->message();
+				throw new \RuntimeException( 'responded' );
+			}
+		);
+		$controls   = new RepositoryWebhookManagementControls(
+			$facade,
+			$interaction,
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->package_authorities()
+		);
+		$controller = ( new \ReflectionProperty( RepositoryWebhookManagementControls::class, 'controller' ) )->getValue( $controls );
+		self::assertInstanceOf( WebhookManagementController::class, $controller );
+		$operate = static function ( string $operation, string $profile ) use ( $controller ): void {
+			try {
+				$controller->handle_admin_post(
+					array(
+						'repository_webhook_management_operation' => $operation,
+						'provider_code'      => 'fixture-provider',
+						'repository_id'      => '1234',
+						'webhook_profile_id' => $profile,
+						'return_url'         => 'https://example.test/wp-admin/admin.php?page=ran-booster',
+					),
+					'nonce'
+				);
+			} catch ( \RuntimeException $responded ) {
+				self::assertSame( 'responded', $responded->getMessage() );
+			}
+		};
+
+		// The controls compose the controller with its default authority check: manage_options alone is not enough.
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities'] = array( 'manage_options' => true );
+		$operate( 'setup', WebhookManagementController::CREATE_REPOSITORY_SECRET );
+
+		// With authority, operations that can create or delete a stored signing secret stop before the provider while file changes are disallowed.
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['activate_plugins'] = true;
+		$GLOBALS['ran_booster_package_mutation_guard_file_mods']                               = false;
+		$this->start_log_capture();
+		try {
+			$operate( 'setup', WebhookManagementController::CREATE_REPOSITORY_SECRET );
+			$operate( 'remove', '' );
+			$operate( 'forget', '' );
+			$lines = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+			unset( $GLOBALS['ran_booster_package_mutation_guard_file_mods'] );
+		}
+
+		self::assertSame( array_fill( 0, 4, 'validation_failure: You are not permitted to manage this repository webhook. Nothing was changed.' ), $responses );
+		self::assertSame( array_fill( 0, 3, '[ran-booster] Webhook operation refused. {"operation":"webhook_management","outcome_code":"file_mods_disallowed"}' ), $lines );
 	}
 
 	public function test_partial_absent_missing_and_malformed_providers_receive_no_placement_before_provider_work(): void {

@@ -86,9 +86,14 @@ final readonly class PortabilityController {
 		}
 
 		$root = get_temp_dir();
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Native probe before native tempnam(); WP_Filesystem is not loaded for this request.
-		$path = is_dir( $root ) && is_writable( $root ) ? tempnam( $root, 'ran-booster-blueprint-' ) : false;
-		// tempnam() otherwise falls back to the system directory, with a notice, when the configured root is unusable.
+		// tempnam() falls back to the system directory with a notice when a writable root is still unusable; contain the notice and refuse below.
+		set_error_handler( static fn (): bool => true, E_NOTICE ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Scoped to this one native call.
+		try {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Native probe before native tempnam(); WP_Filesystem is not loaded for this request.
+			$path = is_dir( $root ) && is_writable( $root ) ? tempnam( $root, 'ran-booster-blueprint-' ) : false;
+		} finally {
+			restore_error_handler();
+		}
 		if ( false === $path || realpath( dirname( $path ) ) !== realpath( $root ) ) {
 			if ( is_string( $path ) && is_file( $path ) ) {
 				unlink( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only this request's misplaced staging file.
@@ -462,14 +467,14 @@ final readonly class PortabilityController {
 	}
 
 	/**
-	 * Using a saved profile needs the secret authority; importing also needs file changes allowed.
+	 * Using any credential, saved or carried, needs the secret authority; importing also needs file changes allowed.
 	 *
 	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $decisions
 	 * @param array<int, string>                                                    $targets
 	 */
 	private function credential_refusal( array $decisions, array $targets, bool $imports ): ?string {
-		$saved = array() !== $targets || in_array( BlueprintCredentialAction::TARGET, array_column( $decisions, 'action' ), true );
-		if ( ( $saved || $imports ) && ! current_user_can( 'activate_plugins' ) ) {
+		$uses = array() !== $targets || array() !== array_filter( $decisions, static fn ( array $decision ): bool => BlueprintCredentialAction::LEAVE !== $decision['action'] );
+		if ( ( $uses || $imports ) && ! current_user_can( 'activate_plugins' ) ) {
 			return 'credential_authority_missing';
 		}
 

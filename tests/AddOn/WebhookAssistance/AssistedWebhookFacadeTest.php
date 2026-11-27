@@ -6,6 +6,8 @@ namespace RAN\Tests\AddOn\WebhookAssistance;
 
 require_once __DIR__ . '/WebhookAssistanceWordPressFunctions.php';
 
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
@@ -51,6 +53,25 @@ final class AssistedWebhookFacadeTest extends TestCase {
 		self::assertStringNotContainsString( 'ran_booster_webhook_cleanup_ready', $bootstrap );
 		self::assertFalse( interface_exists( 'RAN\\AddOn\\WebhookAssistance\\WebhookCleanupFacade' ) );
 		self::assertFalse( class_exists( 'RAN\\AddOn\\WebhookAssistance\\ProvisioningCallbackResult' ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_default_authority_needs_the_secret_capability_before_offering_credentials(): void {
+		$GLOBALS['ran_booster_assisted_facade_capabilities'] = array( 'manage_options' );
+		// phpcs:ignore Squiz.PHP.Eval.Discouraged -- Isolated separate-process test defines the namespace-local WordPress capability check without leaking across tests.
+		eval( 'namespace RAN\\AddOn\\WebhookAssistance; function current_user_can( string $cap ): bool { return in_array( $cap, $GLOBALS["ran_booster_assisted_facade_capabilities"], true ); }' );
+		$secrets = new FixedFacadeSecretsFile();
+		$package = new FixedFacadePackage( new ManagedRepository( 'gh', 'owner/example', '101', 'main' ) );
+		$facade  = new AssistedWebhookFacade(
+			new WebhookAssistanceReadinessEvaluator( new FixedPluginRepository( $package ), new FixedThemeRepository(), $secrets, new FixedDatabase(), static fn (): bool => true ),
+			$secrets,
+			new ProviderRegistry( array( new FixedWebhookProvider() ) )
+		);
+
+		self::assertSame( array(), $facade->credential_choices( 'gh' ) );
+		$GLOBALS['ran_booster_assisted_facade_capabilities'][] = 'activate_plugins';
+		self::assertCount( 1, $facade->credential_choices( 'gh' ) );
 	}
 
 	public function test_setup_keeps_both_secrets_inside_core_and_provider(): void {

@@ -1421,6 +1421,11 @@ Missing completion
 remains unconfirmed; progress is coalesced into the latest stage and terminal
 records cannot be reopened. Diagnostic logging remains separate.
 
+Report completion only after your own database transaction commits. `complete()`
+fires the public `ran_booster_activity_recorded` action and Core does not check
+for an enclosing transaction, so a completion reported inside one may be
+announced before it is durable.
+
 Branch verification remains a separate, bounded operational record in the existing
 option. A check captures its adoption, source and access context before work and
 replaces earlier verification with a per-check token. Completion may establish

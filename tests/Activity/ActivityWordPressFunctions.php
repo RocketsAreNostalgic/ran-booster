@@ -26,6 +26,7 @@ function has_action( string $hook ): bool {
 }
 
 function do_action( string $hook, mixed ...$arguments ): void {
+	$GLOBALS['ran_booster_activity_fired'][] = array( $hook, $arguments );
 	if ( has_action( $hook ) ) {
 		$GLOBALS['ran_booster_activity_listeners'][ $hook ]( ...$arguments );
 	}

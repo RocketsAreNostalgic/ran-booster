@@ -108,7 +108,9 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				}
 				$rows = array_filter( $this->database->activity_rows, static fn ( array $row ): bool => $row['correlation'] === $match[1] );
 				return array_map(
+					// The fixture ignores the COALESCE() completion time and never sets unwritten columns.
 					static fn ( array $row ): object => (object) ( $row + array(
+						'stage'        => '',
 						'reason'       => '',
 						'completed_at' => '2026-11-27 00:00:00',
 					) ),

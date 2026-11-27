@@ -189,7 +189,7 @@ boundary. Other branch reasons need separate work.
 
 Site code and audit tools may use these WordPress actions. Each is per site: it
 fires in the site whose tables recorded the event and keeps no network-wide
-state.
+state. Booster still supports single-site WordPress only.
 
 ### `ran_booster_activity_recorded`
 
@@ -203,12 +203,12 @@ The one argument is an array holding only these fields:
 | Field | Value |
 | --- | --- |
 | `correlation` | The record's 32-character reference. |
-| `operation` | The operation name. |
+| `operation` | The operation name, or empty. |
 | `provider` | The provider code. |
 | `subject_type` | `plugin`, `theme`, `repository` or `provider`. |
-| `subject_identity` | The package, repository or provider the record is about, at most 255 bytes. |
+| `subject_identity` | The package, repository or provider the record is about, at most 255 bytes, or empty. |
 | `status` | `succeeded`, `failed`, `rejected`, `skipped` or `needs_attention`. |
-| `reason` | A bounded reason code. |
+| `reason` | A bounded reason code, or empty. |
 | `actor` | The WordPress user ID, or `0` when none is recorded. |
 | `started_at` | UTC, `Y-m-d H:i:s`. |
 | `completed_at` | UTC, `Y-m-d H:i:s`. |
@@ -216,16 +216,31 @@ The one argument is an array holding only these fields:
 Messages, remediation text, facts, source context and adoption tokens are not
 passed.
 
+Values are screened when the action fires, so older records get the same
+treatment. `operation` and `reason` are empty unless they pass Booster's
+identifier screen. `subject_identity` is empty unless it has the shape of its
+subject type, with no whitespace, and is always empty for a repository identity
+that a provider reported. That is a shape check, not secret detection.
+
 A deployment's action fires after the journal transaction commits, so a
-rolled-back outcome is never announced. Other outcomes fire straight after their
-own write. Starts, progress, an operator's review and a repeated skip that
-Booster discards fire nothing.
+rolled-back outcome is not announced. Other outcomes fire straight after their
+own write. Either way the action fires only when the stored record holds that
+outcome; otherwise, for example when a database session is lost before its
+commit, Booster writes one code-only line if WordPress debug logging or
+Booster's capture is on. Starts, progress, an operator's review and a repeated
+skip that Booster discards fire nothing.
+
+Providers must report completion only after their own transaction commits. A
+completion reported inside an open transaction may be announced before it is
+durable.
 
 Listeners run synchronously in the request or worker that recorded the outcome,
-so keep them quick and hand slow work off. A listener that throws does not change
-the outcome: Booster logs one code-only line, and WordPress runs no later
-listener for that firing. Delivery is not guaranteed, for example if the process
-stops after the write. Activity remains the record.
+so keep them quick and hand slow work off. A listener's exception propagates to
+the caller, as with any WordPress action. The outcome is already stored, but the
+caller's later work can be skipped: for a deployment that includes the finished
+log and the background failure notification, and the request or worker can fail.
+Catch whatever your listener can throw. Delivery is not guaranteed, for example
+if the process stops after the write. Activity remains the record.
 
 ```php
 add_action(

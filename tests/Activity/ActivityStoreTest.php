@@ -153,20 +153,25 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertStringContainsString( 'WHERE correlation = %s AND status = \'incomplete\'', $query );
 	}
 
-	/** @return array<string, int|string|null> */
-	private static function stored_row( string $status = 'succeeded', string $reason = 'no_candidates', string $facts = '{}' ): array {
-		return array(
+	/**
+	 * @param array<string, string|null> $overrides
+	 * @return array<string, string|null>
+	 */
+	private static function stored_row( array $overrides = array() ): array {
+		return $overrides + array(
 			'correlation'      => str_repeat( 'a', 32 ),
 			'operation'        => 'release.check',
 			'provider'         => 'gh',
 			'subject_type'     => 'plugin',
 			'subject_identity' => 'example/example.php',
-			'status'           => $status,
-			'reason'           => $reason,
+			'status'           => 'succeeded',
+			'stage'            => '',
+			'reason'           => 'no_candidates',
 			'actor'            => '7',
 			'started_at'       => '2026-11-27 10:00:00',
 			'completed_at'     => '2026-11-27 10:00:01',
-			'facts'            => $facts,
+			'facts'            => '[]',
+			'provenance'       => 'core',
 			'message'          => 'Private free text.',
 			'adoption_token'   => 'private-token',
 		);
@@ -183,7 +188,7 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 
 	#[\PHPUnit\Framework\Attributes\After]
 	protected function forget_listeners(): void {
-		unset( $GLOBALS['ran_booster_activity_listeners'] );
+		unset( $GLOBALS['ran_booster_activity_listeners'], $GLOBALS['ran_booster_activity_fired'] );
 	}
 
 	public function test_an_outcome_written_by_id_is_announced_once_with_only_the_public_fields(): void {
@@ -192,28 +197,28 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 
 		self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
 
-		$expected          = array_diff_key( self::stored_row(), array_flip( array( 'facts', 'message', 'adoption_token' ) ) );
-		$expected['actor'] = 7;
-		self::assertSame( array( $expected ), $heard->getArrayCopy() );
-		$query = end( $this->connection->queries );
-		self::assertIsString( $query );
-		self::assertStringEndsWith( 'WHERE id = %d', $query );
+		self::assertSame(
+			array(
+				array(
+					'correlation'      => str_repeat( 'a', 32 ),
+					'operation'        => 'release.check',
+					'provider'         => 'gh',
+					'subject_type'     => 'plugin',
+					'subject_identity' => 'example/example.php',
+					'status'           => 'succeeded',
+					'reason'           => 'no_candidates',
+					'actor'            => 7,
+					'started_at'       => '2026-11-27 10:00:00',
+					'completed_at'     => '2026-11-27 10:00:01',
+				),
+			),
+			$heard->getArrayCopy()
+		);
 
 		// A repeat changes no row, so it only confirms the stored outcome.
 		$this->connection->query_results = array( 0 );
-		$this->connection->read_results  = array(
-			array(
-				(object) array(
-					'status'      => 'succeeded',
-					'reason'      => 'no_candidates',
-					'message'     => '',
-					'remediation' => '',
-					'facts'       => '[]',
-					'effect'      => 'none',
-				),
-			),
-		);
-		self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
+		$this->connection->read_results  = array( array( (object) array_intersect_key( self::stored_row() + array( 'effect' => 'none' ), array_flip( array( 'status', 'reason', 'message', 'remediation', 'facts', 'effect' ) ) ) ) );
+		$this->store->complete( 1, 'succeeded', 'no_candidates' );
 		self::assertCount( 1, $heard );
 	}
 
@@ -228,9 +233,21 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		$this->store->settle_transaction( true );
 		self::assertCount( 0, $heard );
 
+		$facts = array(
+			'deployment_outcome' => 'interrupted',
+			'deployment_state'   => 'needs_attention',
+		);
+		$row   = self::stored_row(
+			array(
+				'status' => 'incomplete',
+				'stage'  => 'deployment.needs_attention',
+				'reason' => '',
+				'facts'  => (string) wp_json_encode( $facts ),
+			)
+		);
 		// The empty result answers the write's own storage check; the row answers the announcement.
-		$this->connection->read_results = array( array(), array( (object) self::stored_row( 'incomplete', '', '{"deployment_outcome":"interrupted"}' ) ) );
-		self::assertTrue( $this->store->progress_by_correlation( $correlation, 'deployment.needs_attention' ) );
+		$this->connection->read_results = array( array(), array( (object) $row ) );
+		self::assertTrue( $this->store->progress_by_correlation( $correlation, 'deployment.needs_attention', facts: $facts ) );
 		self::assertCount( 0, $heard );
 		$this->store->settle_transaction( true );
 		$this->store->settle_transaction( true );
@@ -239,11 +256,26 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertSame( array( 'needs_attention', 'interrupted' ), array( $heard[0]['status'] ?? null, $heard[0]['reason'] ?? null ) );
 	}
 
-	public function test_a_throwing_listener_keeps_the_outcome_and_logs_codes_only(): void {
-		$GLOBALS['ran_booster_activity_listeners']['ran_booster_activity_recorded'] = static function (): void {
-			throw new \Error( 'Private listener detail.' );
-		};
-		$this->connection->read_results = array( array( (object) self::stored_row() ) );
+	/** @return iterable<string, array{array<string, string|null>}> */
+	public static function rows_that_do_not_hold_the_write(): iterable {
+		yield 'still the earlier row' => array(
+			array(
+				'status'       => 'incomplete',
+				'reason'       => '',
+				'completed_at' => null,
+			),
+		);
+		yield 'another outcome' => array( array( 'status' => 'failed' ) );
+		yield 'another reason' => array( array( 'reason' => 'update_available' ) );
+		yield 'other facts' => array( array( 'facts' => '{}' ) );
+		yield 'no completion time' => array( array( 'completed_at' => null ) );
+	}
+
+	/** @param array<string, string|null> $overrides */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'rows_that_do_not_hold_the_write' )]
+	public function test_a_row_that_does_not_hold_the_write_fires_nothing_and_logs_codes_only( array $overrides ): void {
+		$heard                          = self::listen();
+		$this->connection->read_results = array( array( (object) self::stored_row( $overrides ) ) );
 		$this->start_log_capture();
 		try {
 			self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
@@ -252,10 +284,113 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 			$this->stop_log_capture();
 		}
 
-		self::assertCount( 1, $lines );
-		self::assertStringContainsString( 'listener_failed', $lines[0] );
-		self::assertStringContainsString( str_repeat( 'a', 32 ), $lines[0] );
-		self::assertStringNotContainsString( 'Private', $lines[0] );
+		self::assertCount( 0, $heard );
+		self::assertSame( array( '[ran-booster] An Activity action was not fired. {"step":"activity.recorded","event":"unconfirmed"}' ), $lines );
+	}
+
+	/** @return iterable<string, array{array<string, string>, string, string, string}> */
+	public static function published_values(): iterable {
+		$plain = array(
+			'operation' => 'release.check',
+			'reason'    => 'no_candidates',
+		);
+		foreach ( array(
+			'single file plugin'  => array( 'plugin', 'hello.php', 'core' ),
+			'theme'               => array( 'theme', 'twentytwentyfive', 'core' ),
+			'repository name'     => array( 'repository', 'owner/example', 'core' ),
+			'repository identity' => array( 'repository', 'gh:123456', 'core' ),
+			'provider'            => array( 'provider', 'gh', 'provider' ),
+		) as $name => list( $type, $identity, $provenance ) ) {
+			yield $name => array(
+				array(
+					'subject_type'     => $type,
+					'subject_identity' => $identity,
+					'provenance'       => $provenance,
+				) + $plain,
+				$identity,
+				'release.check',
+				'no_candidates',
+			);
+		}
+		yield 'a sentence as an identity' => array(
+			array(
+				'subject_type'     => 'repository',
+				'subject_identity' => 'please keep this private',
+			) + $plain,
+			'',
+			'release.check',
+			'no_candidates',
+		);
+		yield 'a provider-reported repository identity' => array(
+			array(
+				'subject_type'     => 'repository',
+				'subject_identity' => '123456',
+				'provenance'       => 'provider',
+			) + $plain,
+			'',
+			'release.check',
+			'no_candidates',
+		);
+		yield 'a path outside the plugin shape' => array( array( 'subject_identity' => '/var/www/private.php' ) + $plain, '', 'release.check', 'no_candidates' );
+		$token = 'ghp_abcdefghijklmnopqrstuvwxyz0123456789';
+		yield 'a token as the codes' => array(
+			array(
+				'operation' => $token,
+				'reason'    => $token,
+			),
+			'example/example.php',
+			'',
+			'',
+		);
+	}
+
+	/** @param array<string, string> $stored */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'published_values' )]
+	public function test_published_values_are_screened_when_the_action_fires( array $stored, string $identity, string $operation, string $reason ): void {
+		$heard                          = self::listen();
+		$row                            = self::stored_row( $stored );
+		$this->connection->read_results = array( array( (object) $row ) );
+
+		self::assertTrue( $this->store->complete( 1, 'succeeded', (string) $row['reason'] ) );
+
+		self::assertCount( 1, $heard );
+		self::assertSame( array( $identity, $operation, $reason ), array( $heard[0]['subject_identity'] ?? null, $heard[0]['operation'] ?? null, $heard[0]['reason'] ?? null ) );
+	}
+
+	public function test_without_a_listener_the_action_is_counted_and_no_row_is_read(): void {
+		self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
+
+		self::assertSame( array( array( 'ran_booster_activity_recorded', array() ) ), $GLOBALS['ran_booster_activity_fired'] );
+		self::assertSame( array(), array_filter( $this->connection->queries, static fn ( string $sql ): bool => str_starts_with( $sql, 'SELECT' ) ) );
+	}
+
+	public function test_an_all_listener_receives_the_record(): void {
+		$GLOBALS['ran_booster_activity_listeners']['all'] = static function (): void {};
+		$this->connection->read_results                   = array( array( (object) self::stored_row() ) );
+
+		self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
+
+		self::assertSame( 'example/example.php', $GLOBALS['ran_booster_activity_fired'][0][1][0]['subject_identity'] );
+	}
+
+	public function test_a_listener_exception_propagates_and_leaves_nothing_queued(): void {
+		$calls = new \ArrayObject();
+		$GLOBALS['ran_booster_activity_listeners']['ran_booster_activity_recorded'] = static function () use ( $calls ): void {
+			$calls->append( true );
+			throw new \DomainException( 'Listener failure.' );
+		};
+		$this->connection->read_results = array( array(), array(), array( (object) self::stored_row() ) );
+		self::assertTrue( $this->store->complete_by_correlation( str_repeat( 'a', 32 ), 'succeeded', 'no_candidates' ) );
+		self::assertTrue( $this->store->complete_by_correlation( str_repeat( 'b', 32 ), 'succeeded', 'no_candidates' ) );
+
+		try {
+			$this->store->settle_transaction( true );
+			self::fail( 'The listener exception must reach the caller.' );
+		} catch ( \DomainException ) {
+			$this->store->settle_transaction( true );
+		}
+
+		self::assertCount( 1, $calls );
 	}
 
 	public function test_exact_correlation_lookup_is_bounded_and_validated(): void {

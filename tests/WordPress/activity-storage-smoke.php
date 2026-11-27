@@ -576,6 +576,57 @@ return static function ( wpdb $database ): void {
 		$query( $database->prepare( 'ALTER TABLE %i ENGINE=InnoDB', $table ) );
 		$journal->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
 		$expect( 'succeeded' === $database->get_var( $database->prepare( 'SELECT status FROM %i WHERE correlation = %s', $table, $attempt->get_correlation_id() ) ), 'restored InnoDB permits atomic completion' );
+
+		// The public action (#1049): a COMMIT acknowledged by a replacement session announces nothing.
+		$heard   = new ArrayObject();
+		$listen  = static function ( array $record ) use ( $heard ): void {
+			$heard->append( array( $record['correlation'], $record['status'] ) );
+		};
+		$lost    = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$dropped = false;
+		$drop    = static function ( string $sql ) use ( $lost, &$dropped, $expect ): string {
+			if ( ! $dropped && 'COMMIT' === $sql ) {
+				$dropped = true;
+				$expect( $lost->close() && $lost->db_connect( false ), 'writer reconnects before its commit' );
+			}
+			return $sql;
+		};
+		add_action( 'ran_booster_activity_recorded', $listen );
+		try {
+			$interrupted = $journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+			add_filter( 'query', $drop );
+			try {
+				( new DeploymentAttemptRepository( $lost, $journal_table, database_lifecycle: new Database( $database ), activity: new ActivityStore( $lost, $table ) ) )->finish( $interrupted->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_INTERRUPTED ) );
+			} finally {
+				remove_filter( 'query', $drop );
+				$lost->close();
+			}
+			$expect( $dropped && DeploymentState::RUNNING === $journal->find_exact( $interrupted->get_id() )?->get_state(), 'the lost transaction rolled back' );
+			$expect( 0 === $heard->count(), 'a rolled-back outcome fires nothing' );
+			$journal->finish( $interrupted->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
+			$expect( array( array( $interrupted->get_correlation_id(), 'succeeded' ) ) === $heard->getArrayCopy(), 'a committed outcome fires once' );
+
+			// A listener's exception reaches the caller, after the outcome is stored and the queue is empty.
+			$throw  = static function (): void {
+				throw new DomainException( 'activity proof listener' );
+			};
+			$thrown = $journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
+			add_action( 'ran_booster_activity_recorded', $throw );
+			try {
+				$journal->finish( $thrown->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
+				throw new RuntimeException( 'The listener exception did not reach the caller.' );
+			} catch ( DomainException ) {
+				$expect( DeploymentState::SUCCEEDED === $journal->find_exact( $thrown->get_id() )?->get_state(), 'the journal outcome stays stored' );
+				$expect( 'succeeded' === $database->get_var( $database->prepare( 'SELECT status FROM %i WHERE correlation = %s', $table, $thrown->get_correlation_id() ) ), 'the Activity outcome stays stored' );
+			} finally {
+				remove_action( 'ran_booster_activity_recorded', $throw );
+			}
+			$heard->exchangeArray( array() );
+			$store->settle_transaction( true );
+			$expect( 0 === $heard->count(), 'nothing stays queued after a listener exception' );
+		} finally {
+			remove_action( 'ran_booster_activity_recorded', $listen );
+		}
 		foreach ( array( 'activity', 'commit' ) as $failure ) {
 			$refused    = $journal->admit_and_claim_manual( 'install', 'plugin', 'gh', 'activity-proof', $deploy, 'main', 'branch', 1 );
 			$injected   = false;

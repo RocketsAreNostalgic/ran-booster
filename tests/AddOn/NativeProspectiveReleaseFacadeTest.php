@@ -802,20 +802,36 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 
 	public function test_candidate_reader_marks_only_an_anonymous_rate_limited_listing_for_the_lookup_hint(): void {
 		$cases = array(
-			'rate limited'    => array( new ProviderFailure( 'rate_limited', 429, 90 ), array( 'rate_limited_provider' => 'gh' ) ),
-			'throttled'       => array( new ProviderFailure( 'rate_limited_secondary', 403, 60 ), array( 'rate_limited_provider' => 'gh' ) ),
-			'unrelated'       => array( new ProviderFailure( 'http_5xx', 502 ), array() ),
-			'no typed reason' => array( null, array() ),
+			'rate limited'    => array( new ProviderFailure( 'rate_limited', 429, 90 ), 90 ),
+			'throttled'       => array( new ProviderFailure( 'rate_limited_secondary', 403, 60 ), 60 ),
+			'no time'         => array( new ProviderFailure( 'rate_limited', 429 ), null ),
+			'unrelated'       => array( new ProviderFailure( 'http_5xx', 502 ), false ),
+			'no typed reason' => array( null, false ),
 		);
 
-		foreach ( $cases as $name => [ $failure, $expected ] ) {
+		foreach ( $cases as $name => [ $failure, $delay ] ) {
 			$provider = new ProspectiveRepositoryProvider( candidate_list: new RepositoryReleaseReadUnavailable( 'listing-failure', 0, null, $failure ) );
 			$facade   = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor(), provider: $provider );
+			$before   = time();
 			$result   = $facade->list_candidates( 'plugin', $this->repository_request(), 'stable', 'valid-nonce' );
+			$after    = time();
 
 			self::assertFalse( $result->successful(), $name );
 			self::assertSame( 'unable_to_check', $result->code(), $name );
-			self::assertSame( $expected, $result->data(), $name );
+			if ( false === $delay ) {
+				self::assertSame( array(), $result->data(), $name );
+				continue;
+			}
+			$data = $result->data();
+			self::assertSame( array( 'rate_limit', 'rate_limited_provider' ), array_keys( $data ), $name );
+			self::assertSame( 'gh', $data['rate_limited_provider'], $name );
+			self::assertSame( 'Prospective provider', $data['rate_limit']['provider'], $name );
+			if ( null === $delay ) {
+				self::assertNull( $data['rate_limit']['retry_at'], $name );
+				continue;
+			}
+			self::assertGreaterThanOrEqual( $before + $delay, $data['rate_limit']['retry_at'], $name );
+			self::assertLessThanOrEqual( $after + $delay, $data['rate_limit']['retry_at'], $name );
 		}
 	}
 

@@ -83,7 +83,16 @@ final class LookupCredentialHintTest extends TestCase {
 
 		$tracking->lookup_rate_limited = true;
 		$outcome                       = $controls->process_managed_browser_request( 'list_candidates', $this->managed_request() );
-		self::assertSame( array( 'rejection_reason' => 'rate_limited' ), $outcome['data'] );
+		self::assertSame(
+			array(
+				'rejection_reason' => 'rate_limited',
+				'rate_limit'       => array(
+					'provider' => 'GitHub',
+					'retry_at' => null,
+				),
+			),
+			$outcome['data']
+		);
 	}
 
 	public function test_selected_release_review_distinguishes_credentialed_and_anonymous_rate_limits_from_other_failures(): void {

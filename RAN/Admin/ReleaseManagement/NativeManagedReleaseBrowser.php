@@ -20,6 +20,9 @@ final class NativeManagedReleaseBrowser implements ManagedReleaseBrowser {
 	public function lookup_rate_limited(): bool {
 		return $this->releases->lookup_rate_limited();
 	}
+	public function lookup_rate_limit(): ?array {
+		return $this->releases->lookup_rate_limit();
+	}
 	public function inspect_candidate( string $type, string $identifier, int $revision, string $release_id, string $tag, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
 		return $this->releases->inspect_candidate( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce );
 	}

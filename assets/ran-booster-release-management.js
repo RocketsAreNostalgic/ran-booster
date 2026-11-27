@@ -47,6 +47,47 @@ const appendLookupHint = (target, hint) => {
 	}
 };
 
+// The server's rate-limit facts as a sentence: the provider and its retry time on this browser's clock.
+const rateLimitMessage = (rateLimit) => {
+	const { __, sprintf } = wp.i18n;
+	const provider =
+		typeof rateLimit?.provider === 'string' && rateLimit.provider
+			? rateLimit.provider
+			: __('The Git provider', 'ran-booster');
+	const retryAt = rateLimit?.retry_at;
+	const now = Date.now() / 1000;
+	if (Number.isInteger(retryAt) && retryAt > now && retryAt <= now + 86400) {
+		const options = { hour: 'numeric', minute: '2-digit' };
+		const date = new Date(Math.ceil(retryAt / 60) * 60000);
+		let time;
+		try {
+			time = date.toLocaleTimeString(
+				document.documentElement?.lang || undefined,
+				options
+			);
+		} catch {
+			time = date.toLocaleTimeString(undefined, options);
+		}
+		return sprintf(
+			/* translators: 1: Git provider name, such as GitHub. 2: Time on the viewer's clock, such as 2:14 am. */
+			__(
+				'%1$s is limiting lookups from this site. Try again after %2$s.',
+				'ran-booster'
+			),
+			provider,
+			time
+		);
+	}
+	return sprintf(
+		/* translators: %s: Git provider name, such as GitHub. */
+		__(
+			'%s is limiting lookups from this site. Try again later.',
+			'ran-booster'
+		),
+		provider
+	);
+};
+
 const renderListingObservations = (
 	target,
 	data = null,
@@ -488,9 +529,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					const { host, content } =
 						window.ranBoosterNotice.create('warning');
 					const text = document.createElement('p');
-					text.textContent = __(
-						'The Git provider rate-limited this lookup. Try again later.',
-						'ran-booster'
+					text.textContent = rateLimitMessage(
+						response.data?.rate_limit
 					);
 					appendLookupHint(text, response.data?.lookup_hint);
 					content.append(text);
@@ -655,10 +695,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					failureMessage =
 						lookupHint ||
 						response.data?.rejection_reason === 'rate_limited'
-							? wp.i18n.__(
-									'The Git provider rate-limited this lookup. Try again later.',
-									'ran-booster'
-								)
+							? rateLimitMessage(response.data?.rate_limit)
 							: wp.i18n.__(
 									'Booster could not list releases for this package. Try again.',
 									'ran-booster'
@@ -1196,10 +1233,19 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			);
 			return;
 		}
-		const message =
+		let message =
 			typeof data?.message === 'string' && data.message
 				? data.message
 				: fallbackMessage;
+		if (data?.rate_limit && typeof data.rate_limit === 'object') {
+			message = rateLimitMessage(data.rate_limit);
+			if (
+				typeof data.message_suffix === 'string' &&
+				data.message_suffix
+			) {
+				message += ` ${data.message_suffix}`;
+			}
+		}
 		target.appendChild(document.createTextNode(message));
 	}
 
@@ -2185,7 +2231,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		return response.json();
 	};
 
-	const showUnavailable = (code, hint = null) => {
+	const showUnavailable = (code, hint = null, rateLimit = null) => {
 		renderListingObservations(observations);
 		if (code === 'unsupported_provider') {
 			forceBranchForUnsupportedProvider();
@@ -2218,6 +2264,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				'No eligible releases were found in this search.',
 				'ran-booster'
 			);
+		} else if (rateLimit && typeof rateLimit === 'object') {
+			statusMessage = rateLimitMessage(rateLimit);
 		}
 		selectedRelease = null;
 		setChoiceState('unavailable');
@@ -2384,7 +2432,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			) {
 				showCandidates(response.data);
 			} else {
-				showUnavailable(response.code, response.data?.lookup_hint);
+				showUnavailable(
+					response.code,
+					response.data?.lookup_hint,
+					response.data?.rate_limit
+				);
 			}
 			if (
 				(response.successful &&

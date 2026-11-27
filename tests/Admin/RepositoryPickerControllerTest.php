@@ -443,7 +443,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 	/** @return array<string, array{ProviderFailure, int, string}> */
 	public static function carried_failure_provider(): array {
 		return array(
-			'rate limit with a retry time' => array( new ProviderFailure( 'rate_limited', retry_after: 120 ), 429, 'The Git provider rate limit has been reached. Try again in about 2 minutes.' ),
+			'rate limit with a retry time' => array( new ProviderFailure( 'rate_limited', retry_after: 120 ), 429, 'GitHub is limiting lookups from this site. Try again in about 2 minutes.' ),
 			'expired credential'           => array( new ProviderFailure( 'credential_expired' ), 401, 'The credential has expired.' ),
 			'under-scoped credential'      => array( new ProviderFailure( 'permission_denied', 403 ), 403, 'The credential lacks permission for this request.' ),
 			'dns failure'                  => array( new ProviderFailure( 'dns_failed' ), 504, 'This site could not look up the Git provider host.' ),

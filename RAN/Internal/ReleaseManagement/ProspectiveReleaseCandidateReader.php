@@ -107,14 +107,16 @@ final class ProspectiveReleaseCandidateReader {
 					'provider'  => $provider,
 				)
 			);
+			$rate_limit = $failure instanceof RepositoryReleaseReadUnavailable
+				? $failure->failure?->rate_limit( $this->providers->metadata()[ $provider ]->label ?? '', time() )
+				: null;
+			if ( null === $rate_limit ) {
+				return ProspectiveReleaseResult::failure( 'unable_to_check' );
+			}
 			// Only an anonymous public lookup that was rate-limited can be helped by a lookup credential.
-			$anonymous_rate_limited = $failure instanceof RepositoryReleaseReadUnavailable
-				&& isset( $reference )
-				&& ! $reference->private
-				&& null === $reference->credential_id
-				&& in_array( $failure->failure?->reason, array( 'rate_limited', 'rate_limited_secondary' ), true );
+			$anonymous = isset( $reference ) && ! $reference->private && null === $reference->credential_id;
 
-			return ProspectiveReleaseResult::failure( 'unable_to_check', $anonymous_rate_limited ? array( 'rate_limited_provider' => $provider ) : array() );
+			return ProspectiveReleaseResult::failure( 'unable_to_check', array( 'rate_limit' => $rate_limit ) + ( $anonymous ? array( 'rate_limited_provider' => $provider ) : array() ) );
 		}
 	}
 

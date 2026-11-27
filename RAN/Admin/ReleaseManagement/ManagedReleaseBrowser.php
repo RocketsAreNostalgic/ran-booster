@@ -16,5 +16,8 @@ interface ManagedReleaseBrowser {
 
 	public function lookup_rate_limited(): bool;
 
+	/** @return array{provider:string,retry_at:int|null}|null */
+	public function lookup_rate_limit(): ?array;
+
 	public function inspect_candidate( string $type, string $identifier, int $revision, string $release_id, string $tag, string $channel, string $nonce ): ?ReleaseTrackingPreflight;
 }

@@ -61,9 +61,21 @@ final class ProspectiveReleaseOperations {
 			if ( 'no_releases' === $result->code() && isset( $data['candidates'] ) && array() === $data['candidates'] && ( $data['channel'] ?? $channel ) === $channel ) {
 				return $outcome( 'no_releases', false, $data );
 			}
-			$provider = $result->data()['rate_limited_provider'] ?? null;
+			$provider   = $result->data()['rate_limited_provider'] ?? null;
+			$rate_limit = $result->data()['rate_limit'] ?? null;
+			$facts      = array();
+			if ( 'unable_to_check' === $result->code() && is_string( $provider ) && 1 === preg_match( '/\A[a-z0-9][a-z0-9_-]{0,31}\z/D', $provider ) ) {
+				$facts['rate_limited_provider'] = $provider;
+			}
+			if ( 'unable_to_check' === $result->code() && is_array( $rate_limit ) && is_string( $rate_limit['provider'] ?? null ) && 1 === preg_match( '/\A[^\x00-\x1F\x7F<>]{0,64}\z/Du', $rate_limit['provider'] )
+				&& ( null === ( $rate_limit['retry_at'] ?? null ) || is_int( $rate_limit['retry_at'] ) ) ) {
+				$facts['rate_limit'] = array(
+					'provider' => $rate_limit['provider'],
+					'retry_at' => $rate_limit['retry_at'] ?? null,
+				);
+			}
 
-			return $outcome( $result->code(), false, 'unable_to_check' === $result->code() && is_string( $provider ) && 1 === preg_match( '/\A[a-z0-9][a-z0-9_-]{0,31}\z/D', $provider ) ? array( 'rate_limited_provider' => $provider ) : array() );
+			return $outcome( $result->code(), false, $facts );
 		}
 		if ( $result->successful() && 'release_candidates_available' === $result->code() && isset( $data['candidates'] ) && count( $data['candidates'] ) > 0 && count( $data['candidates'] ) <= 8 && ( ! isset( $data['channel'] ) || hash_equals( $channel, (string) $data['channel'] ) ) ) {
 			return $outcome( 'release_candidates_available', true, $data );

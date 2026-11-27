@@ -740,9 +740,11 @@ final class PackageAdminController {
 				return $stored_fallback;
 			}
 			// A provider's own reason is worded by Core; a plain exception keeps the status copy.
-			$message = match ( ProviderFailure::from_throwable( $failure )?->reason ) {
+			$provider   = is_string( $request['provider'] ?? null ) ? sanitize_key( $request['provider'] ) : '';
+			$rate_limit = ProviderFailure::carried( $failure )?->rate_limit( $this->providers?->metadata()[ $provider ]->label ?? '', time() );
+			$message    = match ( ProviderFailure::from_throwable( $failure )?->reason ) {
 				'ref_not_found' => __( 'The selected branch could not be found. Check the branch name on the provider.', 'ran-booster' ),
-				default => ProviderFailure::carried( $failure )?->message() ?? match ( $failure->getCode() ) {
+				default => ( null === $rate_limit ? null : ProviderFailure::rate_limit_message( $rate_limit ) . ' ' . __( 'Nothing was saved.', 'ran-booster' ) ) ?? ProviderFailure::carried( $failure )?->message() ?? match ( $failure->getCode() ) {
 					401 => __( 'The Git provider rejected the selected credential.', 'ran-booster' ),
 					403 => __( 'The Git provider denied access. Check credential permissions or rate limits.', 'ran-booster' ),
 					404 => __( 'The repository could not be found, or the selected credential cannot access it.', 'ran-booster' ),

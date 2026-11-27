@@ -166,10 +166,13 @@ final class RepositoryPickerController {
 				$status = 500;
 			}
 
+			$failure    = ProviderFailure::carried( $exception );
+			$rate_limit = $failure?->rate_limit( $this->providers->metadata()[ $provider_name ]->label ?? '', time() );
+
 			return wp_send_json_error(
 				array(
 					// A provider's own reason is worded by Core; a plain exception keeps the status copy.
-					'message' => ProviderFailure::carried( $exception )?->message() ?? $this->error_message_for_status( $status ),
+					'message' => null !== $rate_limit ? ProviderFailure::rate_limit_message( $rate_limit ) : ( $failure?->message() ?? $this->error_message_for_status( $status ) ),
 				),
 				$status
 			);

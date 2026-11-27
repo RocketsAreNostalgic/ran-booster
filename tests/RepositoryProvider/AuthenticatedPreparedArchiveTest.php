@@ -188,6 +188,42 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		}
 	}
 
+	public function test_download_retry_is_bound_to_one_stream_url_revision_and_owner(): void {
+		$args = array(
+			'filename'    => '/fixture/stream',
+			'stream'      => true,
+			'redirection' => 0,
+		);
+		foreach ( array( 'valid', 'url', 'revision', 'cleanup' ) as $case ) {
+			$archive = $this->private_archive( $this->authorizer( 'Basic fixture' ) );
+			$url     = $archive->get_url();
+			$retry   = $archive->reserve_download_retry( static fn ( array $request ): bool => $args === $request );
+			self::assertNotNull( $retry );
+			self::assertNull( $archive->reserve_download_retry( static fn ( array $request ): bool => $args === $request ) );
+			self::assertSame( array( 'headers' => array() ), $this->apply_filters( $url ) );
+			self::assertSame( 'Basic fixture', $archive->authenticate_request( $args, $url )['headers']['Authorization'] );
+			if ( 'cleanup' === $case ) {
+				$archive->cleanup();
+			}
+			try {
+				$retry( 'url' === $case ? $url . '?other' : $url, 'revision' === $case ? 'other-ref' : self::REF );
+				self::assertSame( 'valid', $case );
+				self::assertSame( 'Basic fixture', $archive->authenticate_request( $args, $url )['headers']['Authorization'] );
+			} catch ( RuntimeException $failure ) {
+				self::assertNotSame( 'valid', $case );
+				self::assertSame( 'Provider archive retry is unavailable.', $failure->getMessage() );
+			}
+			try {
+				$retry( $url, self::REF );
+				self::fail( 'Retry authority must be consumed once.' );
+			} catch ( RuntimeException $failure ) {
+				self::assertSame( 'Provider archive retry is unavailable.', $failure->getMessage() );
+			}
+			$archive->cleanup();
+			$this->assert_no_hooks();
+		}
+	}
+
 	public function test_cleanup_is_idempotent_and_verifier_survives_it(): void {
 		$verified = 0;
 		$archive  = new AuthenticatedPreparedArchive(

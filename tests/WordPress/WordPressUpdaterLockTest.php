@@ -422,7 +422,11 @@ final class WordPressUpdaterLockTest extends TestCase {
 
 	public function test_a_lost_owner_record_keeps_the_lock_and_shows_no_owner(): void {
 		// A failed write, and zero rows that come with a database error, both keep the lock without an owner.
-		foreach ( array( 'fail_query_contains', 'zero_query_contains' ) as $failure ) {
+		// The log carries the normalised operation code, never the raw operation.
+		foreach ( array(
+			'fail_query_contains' => 'Not a code <b>',
+			'zero_query_contains' => 'package_operation',
+		) as $failure => $operation ) {
 			$database               = $this->database;
 			$database->{$failure}   = 'ON DUPLICATE KEY UPDATE';
 			$database->before_query = static function ( string $query ) use ( $database ): void {
@@ -431,8 +435,8 @@ final class WordPressUpdaterLockTest extends TestCase {
 			$lock                   = new WordPressUpdaterLock();
 			$token                  = '';
 			$logged                 = $this->logged_lines(
-				static function () use ( $lock, &$token ): void {
-					$token = $lock->acquire();
+				static function () use ( $lock, $operation, &$token ): void {
+					$token = $lock->acquire( $operation );
 				}
 			);
 			$database->{$failure}   = null;

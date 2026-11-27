@@ -568,7 +568,7 @@ final class PackageAdminController {
 
 		$plural = 'plugin' === $type ? __( 'plugins', 'ran-booster' ) : __( 'themes', 'ran-booster' );
 		if ( '' !== $result->error_code ) {
-			if ( isset( $data['lock'] ) && 1 === preg_match( WordPressUpdaterLock::OWNER_TOKEN, $data['lock'] ) ) {
+			if ( 'unavailable' === $result->error_code && isset( $data['lock'] ) && 1 === preg_match( WordPressUpdaterLock::OWNER_TOKEN, $data['lock'] ) ) {
 				$dashboard->name_refusing_lock_owner( $data['lock'] );
 			}
 			$can_follow = current_user_can( 'manage_options' );

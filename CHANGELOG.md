@@ -1,5 +1,43 @@
 # Changelog
 
+## [1.0.0-beta.50](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.49...v1.0.0-beta.50) (2026-11-27)
+
+
+### Features
+
+* **packages:** install the release when switching from branch ([#1177](https://github.com/RocketsAreNostalgic/ran-booster/issues/1177)) ([ed4cb90](https://github.com/RocketsAreNostalgic/ran-booster/commit/ed4cb90657508a3c6681b2c195bc576418fa619e))
+* **release-management:** add branch-to-releases switch UI ([#1255](https://github.com/RocketsAreNostalgic/ran-booster/issues/1255)) ([ef9d281](https://github.com/RocketsAreNostalgic/ran-booster/commit/ef9d281c64218084d859e8dbb183f2398ba8034d))
+* **webhooks:** check for the signed delivery without a reload ([#1172](https://github.com/RocketsAreNostalgic/ran-booster/issues/1172)) ([f26d61e](https://github.com/RocketsAreNostalgic/ran-booster/commit/f26d61ee34fc985d05e89b8ea0b540762ec154a6))
+* **webhooks:** send a ping after a webhook repair ([#1164](https://github.com/RocketsAreNostalgic/ran-booster/issues/1164)) ([d2468bb](https://github.com/RocketsAreNostalgic/ran-booster/commit/d2468bbb6d8408e5bc318f2e10abec0bcc3c8405))
+
+
+### Bug Fixes
+
+* **admin-ui:** finish credential and reference copy changes ([#1157](https://github.com/RocketsAreNostalgic/ran-booster/issues/1157)) ([38693bd](https://github.com/RocketsAreNostalgic/ran-booster/commit/38693bd1cb9279be6ff32533ec2d2670e4a127eb))
+* **admin-ui:** improve plugin and theme settings save feedback ([#1280](https://github.com/RocketsAreNostalgic/ran-booster/issues/1280)) ([b6e8b96](https://github.com/RocketsAreNostalgic/ran-booster/commit/b6e8b962ed8ef91c096c5040c327e535e44c3a8c))
+* **admin-ui:** recover when the page load after a save fails ([#1175](https://github.com/RocketsAreNostalgic/ran-booster/issues/1175)) ([c8ef0f1](https://github.com/RocketsAreNostalgic/ran-booster/commit/c8ef0f1bea0750c6e66d3822fd0277950c1ad5fd))
+* **admin-ui:** show a result after deleting a credential ([#1178](https://github.com/RocketsAreNostalgic/ran-booster/issues/1178)) ([ef2307b](https://github.com/RocketsAreNostalgic/ran-booster/commit/ef2307b9d3f8d062b08598a03235288a033fdb06))
+* **blueprint:** refuse a mismatched folder name in the plan ([#1173](https://github.com/RocketsAreNostalgic/ran-booster/issues/1173)) ([a010058](https://github.com/RocketsAreNostalgic/ran-booster/commit/a0100587e32b47d4e7aae5520152114ca8338ebf))
+* **core:** harden autoloader, admission, sidecar and docs ([#1256](https://github.com/RocketsAreNostalgic/ran-booster/issues/1256)) ([aa3b243](https://github.com/RocketsAreNostalgic/ran-booster/commit/aa3b243015851af0def457b70fc346e686814b2c))
+* **deployment:** show a pause-refused run as Skipped ([#1163](https://github.com/RocketsAreNostalgic/ran-booster/issues/1163)) ([51a646a](https://github.com/RocketsAreNostalgic/ran-booster/commit/51a646ab635593dbfcc782d87d31cdf73fb5231b))
+* harden admin requests, file writes, and update guards ([#1210](https://github.com/RocketsAreNostalgic/ran-booster/issues/1210)) ([af0bae1](https://github.com/RocketsAreNostalgic/ran-booster/commit/af0bae1f6b56599b185d29f1c6924987e2684920))
+* **packages:** clean up damaged or deleted managed packages ([#1232](https://github.com/RocketsAreNostalgic/ran-booster/issues/1232)) ([7c1f425](https://github.com/RocketsAreNostalgic/ran-booster/commit/7c1f4254ffeb36a3e9bc1bef8bb1b29fc93083b4))
+* **packages:** install the confirmed release on switch ([#1264](https://github.com/RocketsAreNostalgic/ran-booster/issues/1264)) ([65d19f3](https://github.com/RocketsAreNostalgic/ran-booster/commit/65d19f362cd19f463fdccee8ba0151804496000d))
+* **packages:** load package pages with no Git provider ([#1170](https://github.com/RocketsAreNostalgic/ran-booster/issues/1170)) ([08b76af](https://github.com/RocketsAreNostalgic/ran-booster/commit/08b76af6868693a90d78a8461073ecb109aad45d))
+* **packages:** make an empty branch field use the default branch ([#1168](https://github.com/RocketsAreNostalgic/ran-booster/issues/1168)) ([80224a3](https://github.com/RocketsAreNostalgic/ran-booster/commit/80224a3a95df40ace0034d240b5e8c0c1909d1d1))
+* **packages:** record the installed theme folder's own spelling ([#1171](https://github.com/RocketsAreNostalgic/ran-booster/issues/1171)) ([6fd2e97](https://github.com/RocketsAreNostalgic/ran-booster/commit/6fd2e97ae4f7fb5c768ba5e0ec5a935dc0c93aaf))
+* **packages:** release an unfinished install's hold in place ([#1183](https://github.com/RocketsAreNostalgic/ran-booster/issues/1183)) ([2b224ec](https://github.com/RocketsAreNostalgic/ran-booster/commit/2b224ec1b46ded8bd1c8352fbdaee2612ed5a293))
+* **packages:** show one notice for a missing Update URI ([#1159](https://github.com/RocketsAreNostalgic/ran-booster/issues/1159)) ([3d94186](https://github.com/RocketsAreNostalgic/ran-booster/commit/3d94186ae3cce5fa0016f660a4eb09deb78c50c8))
+* **packages:** store the last branch check and say it truly ([#1165](https://github.com/RocketsAreNostalgic/ran-booster/issues/1165)) ([59c5d1f](https://github.com/RocketsAreNostalgic/ran-booster/commit/59c5d1fb9b8af68a5af4a39fec4092d6da508195))
+* **provider:** fix WP 7.0 selection and wporg update filter ([#1233](https://github.com/RocketsAreNostalgic/ran-booster/issues/1233)) ([344ceb1](https://github.com/RocketsAreNostalgic/ran-booster/commit/344ceb15673b747de9b06296d3d617a0bd72510d))
+* **releases:** confirm release choices and switch outcomes ([#1277](https://github.com/RocketsAreNostalgic/ran-booster/issues/1277)) ([24703bd](https://github.com/RocketsAreNostalgic/ran-booster/commit/24703bdff3dcd2bd9c4cb339aa53d5a2f32bc260))
+* **releases:** show a snackbar after a confirmed switch ([#1278](https://github.com/RocketsAreNostalgic/ran-booster/issues/1278)) ([a2479bd](https://github.com/RocketsAreNostalgic/ran-booster/commit/a2479bd0d43e352dbff0a04b482175579b30e9f4))
+* **releases:** show native offers before archive inspection ([#1275](https://github.com/RocketsAreNostalgic/ran-booster/issues/1275)) ([bcb94c9](https://github.com/RocketsAreNostalgic/ran-booster/commit/bcb94c9a234bce8c97163a0fae01a9035b60f511))
+* **release:** verify Core file bytes and normalize ZIP modes ([#1224](https://github.com/RocketsAreNostalgic/ran-booster/issues/1224)) ([1294843](https://github.com/RocketsAreNostalgic/ran-booster/commit/1294843206f5f9d1a2064226a5a0ac083eb5c04a))
+* **storage:** allow MySQL db.php drop-ins and lower-case tables ([#1223](https://github.com/RocketsAreNostalgic/ran-booster/issues/1223)) ([579ba57](https://github.com/RocketsAreNostalgic/ran-booster/commit/579ba57702cd545de0317d25ec307beb4d2ab26d))
+* **webhooks:** finish the webhook result and step wording ([#1162](https://github.com/RocketsAreNostalgic/ran-booster/issues/1162)) ([85eb90d](https://github.com/RocketsAreNostalgic/ran-booster/commit/85eb90d8382ec01e202e0df47f44a211e3843bb7))
+* **webhooks:** show a signed delivery as the webhook working ([#1156](https://github.com/RocketsAreNostalgic/ran-booster/issues/1156)) ([9a06343](https://github.com/RocketsAreNostalgic/ran-booster/commit/9a06343f592023a8677d1665cfc91b59c66cbb3a))
+
 ## [1.0.0-beta.49](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.48...v1.0.0-beta.49) (2026-11-21)
 
 

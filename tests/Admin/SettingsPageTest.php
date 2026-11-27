@@ -386,6 +386,9 @@ final class SettingsPageTest extends TestCase {
 			self::assertStringNotContainsString( 'Troubleshooting', $navigation );
 			self::assertStringContainsString( 'tab=github', $navigation );
 		}
+		preg_match_all( '/<a\b[^>]*>/', $shell_navigation[0], $shell_links );
+		preg_match_all( '/<a\b[^>]*>/', $partial_navigation[0], $partial_links );
+		self::assertSame( $shell_links[0], $partial_links[0], 'The in-place navigation must keep the shell link markup.' );
 
 		self::assertSame( 1, preg_match_all( '/<h1\b/', $shell_html ) );
 		self::assertStringContainsString( '>Booster</h1>', $shell_html );

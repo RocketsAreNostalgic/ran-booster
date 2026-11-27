@@ -582,7 +582,7 @@ final class ProviderContractsTest extends TestCase {
 		self::assertSame( 'commit:0123456789abcdef', $inspection->provider_commit_id );
 		self::assertSame( 'provider:v2:0123456789abcdef', $inspection->fingerprint );
 		self::assertSame(
-			array( 'provider_release_id', 'tag', 'version', 'provider_commit_id', 'package_root', 'main_file', 'fingerprint' ),
+			array( 'provider_release_id', 'tag', 'version', 'provider_commit_id', 'package_root', 'main_file', 'fingerprint', 'artifact_identity', 'artifact_sha256' ),
 			array_map(
 				static fn ( \ReflectionProperty $property ): string => $property->name,
 				( new \ReflectionClass( RepositoryReleaseInspection::class ) )->getProperties( \ReflectionProperty::IS_PUBLIC )

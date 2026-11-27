@@ -7,19 +7,21 @@ namespace RAN\Admin\ReleaseManagement;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\PackageSource;
+use RAN\Deployment\PackageSourceGate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WPReleaseUpdater\V1\Contract\ReleaseVersion;
 
 /**
  * @internal Projects only revision-bound managed release discovery and inspection.
- * @phpstan-type Candidate array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,version_relationship:string,zip_count?:int,latest_eligible?:bool}
+ * @phpstan-type Candidate array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,version_relationship:string,artifact_identity?:string,artifact_sha256?:string,zip_count?:int,latest_eligible?:bool}
  */
 final class ManagedReleaseBrowserOperations {
 	public function __construct( private readonly ManagedReleaseBrowser $browser, private readonly ReleaseTrackingFacade $releases ) {
 	}
 
-	/** @return array{code:string,successful:bool,data:array{candidates?:list<Candidate>,installed_version?:string,channel?:string,search_exhausted?:bool|null,diagnostics?:array<mixed>|null,rate_limited_provider?:string}} */
+	/** @return array{code:string,successful:bool,data:array{candidates?:list<Candidate>,installed_version?:string,channel?:string,search_exhausted?:bool|null,diagnostics?:array<mixed>|null,rejection_reason?:string,rate_limited_provider?:string}} */
 
 	public function list_candidates( string $type, string $identifier, int $revision, string $channel, string $nonce, bool $on_branch = false ): array {
 		if ( ! $this->valid_request( $type, $identifier, $revision, $channel ) ) {
@@ -33,8 +35,11 @@ final class ManagedReleaseBrowserOperations {
 		$candidates = $this->browser->list_candidates( $type, $identifier, $revision, $channel, $nonce );
 		if ( null === $candidates ) {
 			$provider = $this->browser->anonymous_rate_limit_provider();
-
-			return $this->outcome( 'unable_to_check', false, null === $provider ? array() : array( 'rate_limited_provider' => $provider ) );
+			$data     = null === $provider ? array() : array( 'rate_limited_provider' => $provider );
+			if ( $this->browser->lookup_rate_limited() ) {
+				$data['rejection_reason'] = 'rate_limited';
+			}
+			return $this->outcome( 'unable_to_check', false, $data );
 		}
 		$status = $this->releases->status( $type, $identifier );
 		if ( $revision !== $status->source_revision() || $source !== $status->source() ) {
@@ -88,12 +93,19 @@ final class ManagedReleaseBrowserOperations {
 		}
 
 		$inspection = $this->browser->inspect_candidate( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce );
-		if ( null !== $inspection && ! $inspection->ready() && 'digest_missing' === $inspection->reason_code() ) {
+		if ( null !== $inspection && ! $inspection->ready() && '' !== $inspection->reason_code() ) {
 			$status = $this->releases->status( $type, $identifier );
 			if ( $revision !== $status->source_revision() || 'release_asset' !== $status->source() ) {
 				return $this->outcome( 'source_changed' );
 			}
-			return $this->outcome( 'unable_to_check', false, array( 'rejection_reason' => 'digest_missing' ) );
+			$data = array( 'rejection_reason' => $inspection->reason_code() );
+			if ( 'rate_limited' === $inspection->reason_code() ) {
+				$provider = $this->browser->anonymous_rate_limit_provider();
+				if ( null !== $provider ) {
+					$data['rate_limited_provider'] = $provider;
+				}
+			}
+			return $this->outcome( 'unable_to_check', false, $data );
 		}
 		if ( null === $inspection || ! $inspection->ready()
 			|| ! hash_equals( $tag, $inspection->release_tag() ) ) {
@@ -106,6 +118,20 @@ final class ManagedReleaseBrowserOperations {
 
 		$offered = self::persisted_offer_version( $status );
 
+		$chosen = array();
+		if ( '' !== $inspection->artifact_identity && '' !== $inspection->artifact_sha256 && $this->chosen_allowed( $status, $revision, $channel, $release_id, $inspection->latest_version() )
+			&& $inspection->release_identity() === $release_id ) {
+			$chosen             = array(
+				'release_id'        => $release_id,
+				'release_tag'       => $tag,
+				'release_version'   => $inspection->latest_version(),
+				'artifact_identity' => $inspection->artifact_identity,
+				'artifact_sha256'   => $inspection->artifact_sha256,
+				'installed_version' => $status->installed_version(),
+			);
+			$chosen['_wpnonce'] = wp_create_nonce( $this->chosen_action( $status, $chosen ) );
+		}
+
 		return $this->outcome(
 			'release_ready',
 			true,
@@ -113,6 +139,7 @@ final class ManagedReleaseBrowserOperations {
 				'tag'                  => $inspection->release_tag(),
 				'version'              => $inspection->latest_version(),
 				'details_url'          => $inspection->release_url(),
+				'chosen_install'       => $chosen,
 				'installed_version'    => $status->installed_version(),
 				'version_relationship' => self::version_relationship( $inspection->latest_version(), $status->installed_version() ),
 				'native_offer'         => array(
@@ -123,6 +150,81 @@ final class ManagedReleaseBrowserOperations {
 				),
 			)
 		);
+	}
+
+	/** @param array<string,mixed> $request */
+	public function install_chosen( string $type, string $identifier, int $revision, string $channel, array $request ): string {
+		$chosen = array();
+		foreach ( array( 'release_id', 'release_tag', 'release_version', 'artifact_identity', 'artifact_sha256', 'installed_version' ) as $key ) {
+			if ( ! is_string( $request[ $key ] ?? null ) || ! $this->valid_opaque( $request[ $key ], 255 ) ) {
+				return 'invalid_request';
+			}
+			$chosen[ $key ] = wp_unslash( $request[ $key ] );
+		}
+		$nonce = $request['_wpnonce'] ?? null;
+		if ( ! is_string( $nonce ) ) {
+			return 'invalid_request';
+		}
+		$check   = function () use ( $type, $identifier, $revision, $channel, $chosen, $nonce ): string {
+			$status = $this->releases->status( $type, $identifier );
+			return match ( true ) {
+				1 !== wp_verify_nonce( $nonce, $this->chosen_action( $status, $chosen ) ) => 'invalid_request',
+				$status->installed_version() !== $chosen['installed_version'] => 'confirmation_changed',
+				! $this->chosen_allowed( $status, $revision, $channel, $chosen['release_id'], $chosen['release_version'] ) => 'invalid_request',
+				default => '',
+			};
+		};
+		$blocker = $check();
+		if ( '' !== $blocker ) {
+			return $blocker;
+		}
+		$older = 'older' === self::version_relationship( $chosen['release_version'], $chosen['installed_version'] );
+		if ( $older && '1' !== ( $request['confirm_older'] ?? null ) ) {
+			return 'invalid_request';
+		}
+		$result = ManagedReleaseTargetRegistrar::install_release(
+			$type,
+			$identifier,
+			$chosen['release_id'],
+			$chosen['release_tag'],
+			$older,
+			$chosen['release_version'],
+			array(
+				'artifact_identity' => $chosen['artifact_identity'],
+				'artifact_sha256'   => $chosen['artifact_sha256'],
+				'installed_version' => $chosen['installed_version'],
+			),
+			static fn (): bool => '' === $check()
+		);
+		return match ( $result ) {
+			'installed' => 'chosen_installed',
+			'confirmation_changed' => 'confirmation_changed',
+			default => 'install_failed',
+		};
+	}
+
+	/** @param array<string,string> $chosen */
+	private function chosen_action( ReleaseTrackingStatus $status, array $chosen ): string {
+		$scope = $this->releases->nonce_action( 'inspect_candidate', $status->type(), $status->identifier(), $status->source_revision(), $status->channel() );
+		return 'ran_booster_install_chosen_' . hash( 'sha256', $scope . (string) wp_json_encode( $chosen, JSON_THROW_ON_ERROR ) );
+	}
+
+	private function chosen_allowed( ReleaseTrackingStatus $status, int $revision, string $channel, string $release_id, string $version ): bool {
+		$core_target = 'plugin' === $status->type() && 0 === strcasecmp(
+			ltrim( str_replace( '\\', '/', $status->identifier() ), '/' ),
+			plugin_basename( dirname( __DIR__, 3 ) . '/ran-booster.php' )
+		);
+		if ( $core_target || 'release_asset' !== $status->source() || 'manual' !== $status->deployment_policy() || ! $status->eligible()
+			|| $status->source_revision() !== $revision || $status->channel() !== $channel || '' !== ReleaseTrackingOperations::repository_blocker( $status )
+			|| PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel, true ) ) {
+			return false;
+		}
+		return match ( self::version_relationship( $version, $status->installed_version() ) ) {
+			'same' => true,
+			'newer' => $release_id !== $status->native_offer_release_id() || '' === self::persisted_offer_version( $status ),
+			'older' => PackageSourceGate::allows( 'prerelease_sources', true ),
+			default => false,
+		};
 	}
 
 	/** The current native action uses WordPress's filtered offer. */
@@ -146,7 +248,11 @@ final class ManagedReleaseBrowserOperations {
 
 			'published_at'         => $candidate->published_at,
 			'version_relationship' => self::version_relationship( $candidate->version, $installed_version ),
-		) + ( $on_branch ? array( 'zip_count' => count( $candidate->expected_asset_names ) ) : array() );
+		) + ( $on_branch ? array(
+			'zip_count'         => count( $candidate->expected_asset_names ),
+			'artifact_identity' => $candidate->artifact_identity,
+			'artifact_sha256'   => $candidate->artifact_sha256,
+		) : array() );
 	}
 
 	/**

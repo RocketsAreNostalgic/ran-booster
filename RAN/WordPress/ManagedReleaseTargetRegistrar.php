@@ -63,6 +63,9 @@ final class ManagedReleaseTargetRegistrar {
 	/** @var array<string, array{configuration: ManagedReleaseConfiguration, revision: int, token: string, user: int, installed_version?:string}> This request's Branch-to-release switch, never stored. */
 	private array $switches = array();
 
+	/** @var array<string,callable():bool> Active, request-local consent checks for chosen release installs. */
+	private static array $chosen_guards = array();
+
 	public function __construct(
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
@@ -88,7 +91,7 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		if ( function_exists( 'add_filter' ) ) {
 			add_action( 'ran_wp_release_updater_check_started_v1', array( $this, 'activity_check_started' ), 1 );
-			add_action( 'ran_wp_release_updater_check_completed_v1', array( $this, 'activity_check_completed' ), 1 );
+			add_action( 'ran_wp_release_updater_check_completed_v1', array( $this, 'activity_check_completed' ), 1, 2 );
 			add_filter( 'upgrader_pre_download', array( $this, 'authorize_native_download' ), PHP_INT_MIN, 4 );
 			add_filter( 'upgrader_pre_install', array( $this, 'fence_native_mutation' ), 1, 2 );
 			add_filter( 'site_transient_update_plugins', array( $this, 'suppress_unauthorized_plugin_offers' ), PHP_INT_MAX );
@@ -140,6 +143,56 @@ final class ManagedReleaseTargetRegistrar {
 		return 'plugin' === $package_type
 			&& null !== $this->core_self_update_plugin_identifier
 			&& hash_equals( $this->core_self_update_plugin_identifier, self::plugin_target_identity( $installed_identifier ) );
+	}
+
+	/**
+	 * @param array{artifact_identity:string,artifact_sha256:string,installed_version:string}|null $confirmation
+	 * @param (callable():bool)|null $chosen_guard Rechecks operator consent and policy before download and under the install lock.
+	 */
+	public static function install_release( string $type, string $identifier, string $release_identity, string $tag, bool $allow_older, string $version, ?array $confirmation = null, ?callable $chosen_guard = null ): string {
+		require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+		$key = self::key( $type, $identifier );
+		if ( isset( self::$chosen_guards[ $key ] ) ) {
+			return 'refused';
+		}
+		if ( null !== $chosen_guard ) {
+			self::$chosen_guards[ $key ] = $chosen_guard;
+		}
+		try {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented exact-install filter.
+			$report = null === $confirmation ? apply_filters( 'ran_wp_release_updater_install_exact_release_v1', null, $type, $identifier, $release_identity, $tag, $version, $allow_older )
+				: apply_filters( 'ran_wp_release_updater_install_confirmed_release_v1', null, $type, $identifier, $release_identity, $tag, $version, $allow_older, $confirmation ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Shared updater confirmation contract.
+		} finally {
+			unset( self::$chosen_guards[ $key ] );
+		}
+		if ( ! is_array( $report ) || ! is_string( $report['code'] ?? null ) ) {
+			return 'unsupported';
+		}
+		if ( 'installed' === ( $report['status'] ?? null ) && 'update_completed' === $report['code'] ) {
+			$finalization = $report['finalization'] ?? null;
+
+			return false === ( $report['finalization_pending'] ?? null )
+				&& is_array( $finalization )
+				&& 'completed' === ( $finalization['commit'] ?? null )
+				&& 'completed' === ( $finalization['host_completion'] ?? null ) ? 'installed' : 'uncertain';
+		}
+		if ( true === ( $report['finalization_pending'] ?? null )
+			|| in_array( $report['code'], array( 'host_completion_failed', 'install_commit_failed', 'lease_release_failed', 'archive_cleanup_failed', 'unexpected_failure', 'unverified_install_result' ), true ) ) {
+			return 'uncertain';
+		}
+		if ( 'failed' === ( $report['status'] ?? null ) ) {
+			return 'failed';
+		}
+
+		if ( 'refused' !== ( $report['status'] ?? null ) || false !== ( $report['finalization_pending'] ?? null ) ) {
+			return 'unsupported';
+		}
+
+		// The updater reports refusal only when WordPress has not started its upgrader.
+		return match ( $report['code'] ) {
+			'confirmation_changed', 'release_older', 'candidate_descriptor_mismatch', 'policy_disabled', 'policy_forced_off' => $report['code'],
+			default => 'refused',
+		};
 	}
 
 	/**
@@ -246,6 +299,10 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		try {
 			PackageMutationGuard::assert_filesystem_mutation_allowed();
+			$guard = self::$chosen_guards[ $key ] ?? null;
+			if ( null !== $guard && ! $guard() ) {
+				throw new \RuntimeException( 'The chosen release permission changed.' );
+			}
 		} catch ( Throwable ) {
 			return $this->native_update_error( 'authority_changed' );
 		}
@@ -363,6 +420,10 @@ final class ManagedReleaseTargetRegistrar {
 				}
 			} else {
 				$lock_token = $lock->acquire();
+			}
+			$guard = self::$chosen_guards[ $key ] ?? null;
+			if ( null !== $guard && ! $guard() ) {
+				throw new \RuntimeException( 'The chosen release permission changed.' );
 			}
 			$snapshot = $this->native_authority_snapshot( $target['type'], $target['identifier'], true );
 			$current  = $snapshot['authority'];
@@ -674,7 +735,7 @@ final class ManagedReleaseTargetRegistrar {
 	}
 
 	/** @param array<string, mixed> $event Completion uses only its captured begin identity. */
-	public function activity_check_completed( array $event ): void {
+	public function activity_check_completed( array $event, mixed $rate_limited = false ): void {
 		$id  = is_string( $event['check_id'] ?? null ) ? ( $this->activity_checks[ $event['check_id'] ] ?? null ) : null;
 		$key = is_string( $event['check_id'] ?? null ) ? ( $this->check_targets[ $event['check_id'] ] ?? null ) : null;
 		if ( null === $key || array_diff( array( 'check_id', 'status', 'reason', 'relationship', 'installed_version', 'candidate_version', 'offered_version', 'candidate_validation_code' ), array_keys( $event ) ) || count( $event ) !== 8 || ! is_string( $event['status'] ?? null ) || ! is_string( $event['reason'] ?? null ) ) {
@@ -702,7 +763,7 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		$this->check_outcomes[ $key ] = array(
 			'status' => $event['status'],
-			'reason' => $event['reason'],
+			'reason' => true === $rate_limited && in_array( $event['reason'], array( 'release_list_failed', 'candidate_inspection_failed' ), true ) ? 'rate_limited' : $event['reason'],
 		);
 		if ( null === $this->activity || null === $id ) {
 			return;

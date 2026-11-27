@@ -16,7 +16,9 @@ final readonly class RepositoryReleaseCandidate {
 		public string $version,
 		public bool $prerelease,
 		public string $published_at,
-		public array $expected_asset_names
+		public array $expected_asset_names,
+		public string $artifact_identity = '',
+		public string $artifact_sha256 = ''
 	) {
 		if ( 1 !== preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $provider_release_id )
 			|| 1 !== preg_match( '/\A[^\x00-\x1F\x7F]{1,100}\z/D', $tag )

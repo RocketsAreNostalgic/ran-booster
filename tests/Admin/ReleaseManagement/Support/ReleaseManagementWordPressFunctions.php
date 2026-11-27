@@ -253,6 +253,10 @@ function wp_localize_script( string $handle, string $name, array $data ): bool {
 	return true;
 }
 
+function plugin_basename( string $path ): string {
+	return basename( dirname( $path ) ) . '/' . basename( $path );
+}
+
 function wp_json_encode( mixed $value ): string|false {
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- WordPress encoder fixture.
 	return json_encode( $value );

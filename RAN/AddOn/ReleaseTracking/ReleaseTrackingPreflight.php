@@ -32,7 +32,9 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 		private string $version_relationship = '',
 		string $reason_code = '',
 		private string $detail = '',
-		private string $release_identity = ''
+		private string $release_identity = '',
+		public string $artifact_identity = '',
+		public string $artifact_sha256 = ''
 	) {
 		if ( ! in_array(
 			$code,
@@ -141,6 +143,7 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 	public static function reason_codes(): array {
 		return array(
 			'provider_unavailable',
+			'rate_limited',
 			'no_releases',
 			'invalid_release',
 			'release_identity_mismatch',

@@ -13,6 +13,8 @@ use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use RuntimeException;
 
 final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, ManagedReleaseBrowser {
+	public string $adoption_scope = '';
+
 	public int $status_reads = 0;
 
 	public int $status_list_reads = 0;
@@ -30,7 +32,9 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 	public bool $throw_on_nonce = false;
 
 	public ?RepositoryReleaseCandidateList $candidate_list = null;
-	public ?string $anonymous_rate_limit_provider          = null;
+	public bool $lookup_rate_limited                       = false;
+
+	public ?string $anonymous_rate_limit_provider = null;
 
 	public ?ReleaseTrackingPreflight $candidate_inspection = null;
 
@@ -86,7 +90,7 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 		}
 
 		return 'release-tracking-' . $operation . '-' . $type . '-' . $identifier . '-' . $source_revision
-			. ( '' === $channel ? '' : '-' . $channel );
+			. $this->adoption_scope . ( '' === $channel ? '' : '-' . $channel );
 	}
 
 	public function preflight( string $type, string $identifier, int $expected_source_revision, string $channel, string $nonce ): ?ReleaseTrackingPreflight {
@@ -112,6 +116,10 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 
 	public function anonymous_rate_limit_provider(): ?string {
 		return $this->anonymous_rate_limit_provider;
+	}
+
+	public function lookup_rate_limited(): bool {
+		return $this->lookup_rate_limited;
 	}
 
 	public function set_status( ReleaseTrackingStatus $status ): void {

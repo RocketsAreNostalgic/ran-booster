@@ -112,6 +112,7 @@ final class FeedbackFlash {
 			'refresh_skipped_forced_off' => array( 'info', __( 'Check not run. Site configuration turns updates off.', 'ran-booster' ), __( 'Nothing is wrong. Site configuration blocks updates for every package; change it there to allow checks.', 'ran-booster' ) ),
 			'refresh_unchecked'          => array( 'warning', __( 'Releases were not checked. Use Check releases to retry.', 'ran-booster' ), '' ),
 			'refresh_rejected'           => array( 'warning', __( 'The newest release cannot be used.', 'ran-booster' ), __( 'It did not pass Booster\'s eligibility checks. Activity records the reason.', 'ran-booster' ) ),
+			'refresh_rate_limited'       => array( 'warning', __( 'The Git provider rate-limited this lookup. Try again later.', 'ran-booster' ), '' ),
 			'refresh_check_failed'       => array( 'error', __( 'The release check failed.', 'ran-booster' ), __( 'Booster could not finish the check. Try again; if it repeats, see Activity.', 'ran-booster' ) ),
 			'refresh_failed'             => array( 'error', __( 'The release check could not start. Review this package’s published release settings, then retry.', 'ran-booster' ), '' ),
 			default                      => null,

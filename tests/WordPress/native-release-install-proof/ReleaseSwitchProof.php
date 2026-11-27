@@ -66,7 +66,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 		}
 		$scenario = str_starts_with( $case_name, 'form-' ) ? substr( $case_name, 5 ) : $case_name;
 		if ( ! in_array( $kind, array( 'plugin', 'theme' ), true )
-			|| ! in_array( $scenario, array( 'choice-current', 'choice-latest', 'choice-dedup', 'choice-disappeared', 'same', 'prerelease-order', 'prerelease-no-consent', 'comparison-unavailable', 'stale-confirmation', 'return-lock', 'newer', 'active', 'older', 'disabled', 'failed-download', 'incompatible-zip', 'pre-install', 'pre-install-throw', 'stale', 'missing', 'fallback-repaired', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock', 'fresh-finished', 'fresh-killed', 'fresh-damaged', 'fresh-deleted' ), true ) ) {
+			|| ! in_array( $scenario, array( 'choice-current', 'choice-latest', 'choice-dedup', 'choice-disappeared', 'same', 'prerelease-order', 'prerelease-no-consent', 'comparison-unavailable', 'stale-confirmation', 'replaced-asset', 'return-lock', 'newer', 'active', 'older', 'disabled', 'failed-download', 'incompatible-zip', 'pre-install', 'pre-install-throw', 'stale', 'missing', 'fallback-repaired', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock', 'fresh-finished', 'fresh-killed', 'fresh-damaged', 'fresh-deleted' ), true ) ) {
 			throw new RuntimeException( 'Unknown proof case.' );
 		}
 		$this->scenario = self::FRESH[ $scenario ] ?? $scenario;
@@ -135,7 +135,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			'prerelease-order' => array( 'release_enabled', '1.2.0-alpha', true, false ),
 			'prerelease-no-consent' => array( 'release_older', '1.2.0-dev', false, false ),
 			'comparison-unavailable' => array( 'version_comparison_unavailable', 'local', false, false ),
-			'stale-confirmation' => array( 'release_selection_changed', '1.0.0', false, false ),
+			'stale-confirmation', 'replaced-asset' => array( 'release_selection_changed', '1.0.0', false, false ),
 			'newer', 'active', 'compete', 'return-lock' => array( 'release_enabled', '2.0.0', true, false ),
 			'older' => array( 'release_older', '1.0.0', false, false ),
 			'disabled' => array( 'policy_disabled', '1.0.0', false, false ),
@@ -226,6 +226,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 
 	/** @return array<string,mixed> */
 	private function release( int $number ): array {
+		$asset_id = ( 'replaced-asset' === $this->scenario && $this->mutating ? 300 : 200 ) + $number;
 		return array(
 			'id'           => 100 + $number,
 			'tag_name'     => 'v' . self::VERSIONS[ $number ],
@@ -236,13 +237,13 @@ final class RAN_Booster_ReleaseSwitchProof {
 			'html_url'     => 'https://github.com/' . $this->repository . '/releases/tag/v' . self::VERSIONS[ $number ],
 			'assets'       => ( 'fallback-repaired' === $this->scenario && ! $this->selection_changed && 2 === $number ) ? array() : array(
 				array(
-					'id'                   => 200 + $number,
+					'id'                   => $asset_id,
 					'name'                 => basename( $this->archive( $number ) ),
 					'size'                 => filesize( $this->archive( $number ) ),
 					'state'                => 'uploaded',
 					// The digest disappears after authorisation, so the upgrader's fresh inspection refuses it.
 					'digest'               => $this->changed ? null : 'sha256:' . hash_file( 'sha256', $this->archive( $number ) ),
-					'browser_download_url' => 'https://api.github.com/repos/' . $this->repository . '/releases/assets/' . ( 200 + $number ),
+					'browser_download_url' => 'https://api.github.com/repos/' . $this->repository . '/releases/assets/' . $asset_id,
 				),
 			),
 		);
@@ -340,7 +341,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 		}
 		$has_consent = str_contains( $html, 'name="confirm_older_release" value="1" required' );
 		$same_notice = str_contains( $html, 'Same version: this replaces the installed files with the release.' );
-		if ( ( 'prerelease' === $this->channel() ) !== $has_consent || ( in_array( $this->scenario, array( 'same', 'choice-current', 'choice-latest', 'stale-confirmation', 'failed-download' ), true ) ) !== $same_notice ) {
+		if ( ( 'prerelease' === $this->channel() ) !== $has_consent || ( in_array( $this->scenario, array( 'same', 'choice-current', 'choice-latest', 'stale', 'stale-confirmation', 'replaced-asset', 'failed-download' ), true ) ) !== $same_notice ) {
 			throw new RuntimeException( 'The standard form showed the wrong relationship or consent.' );
 		}
 		$dom = new DOMDocument();
@@ -355,7 +356,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			}
 			$form_selector .= 'choice-current' === $this->scenario ? '[button[contains(., "Reinstall")]]' : '[button[contains(., "Upgrade")]]';
 		}
-		if ( in_array( $this->scenario, array( 'stale-confirmation', 'failed-download' ), true ) ) {
+		if ( in_array( $this->scenario, array( 'stale-confirmation', 'replaced-asset', 'failed-download' ), true ) ) {
 			$form_selector .= '[button[contains(., "Upgrade to 2.0.0")]]';
 		}
 		$forms = $xpath->query( $form_selector );
@@ -444,6 +445,8 @@ final class RAN_Booster_ReleaseSwitchProof {
 				}
 			}
 			$request['confirmed_installed_version'] = $data['confirmed_installed_version'];
+			$request['artifact_identity']           = $data['artifact_identity'];
+			$request['artifact_sha256']             = $data['artifact_sha256'];
 
 			if ( 'fallback-repaired' === $this->scenario
 			&& ( ! str_contains( (string) ( $data['fallback_message'] ?? '' ), '2.0.0' )
@@ -491,7 +494,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 		if ( in_array( $this->scenario, array( 'choice-current', 'choice-latest', 'choice-dedup', 'same', 'prerelease-order', 'newer', 'active', 'compete', 'stale', 'fallback-repaired', 'incompatible-zip' ), true ) && 1 !== $mutation_streams ) {
 			throw new RuntimeException( 'Expected exactly one mutation ZIP stream, got ' . $mutation_streams . ' for ' . $result . '.' );
 		}
-		if ( in_array( $this->scenario, array( 'choice-disappeared', 'missing', 'stale-confirmation', 'prerelease-no-consent' ), true ) && 0 !== $mutation_streams ) {
+		if ( in_array( $this->scenario, array( 'choice-disappeared', 'missing', 'replaced-asset', 'stale-confirmation', 'prerelease-no-consent' ), true ) && 0 !== $mutation_streams ) {
 			throw new RuntimeException( 'Unverified release downloaded a mutation ZIP.' );
 		}
 		echo wp_json_encode(

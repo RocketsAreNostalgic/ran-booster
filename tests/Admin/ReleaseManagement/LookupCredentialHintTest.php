@@ -11,6 +11,7 @@ require_once __DIR__ . '/../CredentialExpiryWordPressFunctions.php';
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\Admin\AdminTabRegistry;
 use RAN\Admin\ProviderTabLinks;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -79,6 +80,39 @@ final class LookupCredentialHintTest extends TestCase {
 
 		self::assertSame( 'unable_to_check', $outcome['code'] );
 		self::assertSame( array(), $outcome['data'] );
+
+		$tracking->lookup_rate_limited = true;
+		$outcome                       = $controls->process_managed_browser_request( 'list_candidates', $this->managed_request() );
+		self::assertSame( array( 'rejection_reason' => 'rate_limited' ), $outcome['data'] );
+	}
+
+	public function test_selected_release_review_distinguishes_credentialed_and_anonymous_rate_limits_from_other_failures(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			$status                         = ReleaseManagementFixture::status( 'release_asset', $type );
+			$tracking                       = new ReleaseTrackingFacadeDouble( $status );
+			$controls                       = ReleaseManagementFixture::controls( $tracking, links: $this->links() );
+			$request                        = array(
+				'expected_type'            => $type,
+				'expected_identifier'      => $status->identifier(),
+				'expected_source_revision' => '3',
+				'release_channel'          => 'stable',
+				'release_id'               => '11',
+				'release_tag'              => 'v1.0.0',
+				'_wpnonce'                 => 'nonce-for-release-tracking-inspect_candidate-' . $type . '-' . $status->identifier() . '-3-stable',
+			);
+			$tracking->candidate_inspection = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, 'example', reason_code: 'rate_limited' );
+			foreach ( array( 'gh', null ) as $provider ) {
+				$tracking->anonymous_rate_limit_provider = $provider;
+				$outcome                                 = $controls->process_managed_browser_request( 'inspect_candidate', $request );
+				self::assertSame( 'unable_to_check', $outcome['code'] );
+				self::assertFalse( $outcome['successful'] );
+				self::assertSame( 'rate_limited', $outcome['data']['rejection_reason'] );
+				self::assertSame( null === $provider ? null : self::CARD, $outcome['data']['lookup_hint']['url'] ?? null );
+				self::assertArrayNotHasKey( 'rate_limited_provider', $outcome['data'] );
+			}
+			$tracking->candidate_inspection = null;
+			self::assertSame( array(), $controls->process_managed_browser_request( 'inspect_candidate', $request )['data'] );
+		}
 	}
 
 	public function test_the_release_track_card_hint_follows_a_hidden_provider_tab_to_overview(): void {

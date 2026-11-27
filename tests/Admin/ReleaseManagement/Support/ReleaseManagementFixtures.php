@@ -49,7 +49,8 @@ final class ReleaseManagementFixture {
 		string $deployment_policy = 'manual',
 		string $last_checked_at = '2026-07-24T20:00:00+00:00',
 		string $preflight_reason = '',
-		int $revision = 3
+		int $revision = 3,
+		string $installed_version = '1.0.0'
 	): ReleaseTrackingStatus {
 		$identifier = 'theme' === $type ? 'example-theme' : 'example/example.php';
 
@@ -74,7 +75,7 @@ final class ReleaseManagementFixture {
 				)
 				: new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, 'example-plugin', reason_code: $preflight_reason ),
 			'example-plugin',
-			'1.0.0',
+			$installed_version,
 			'1.1.0',
 			$update_available,
 			$last_checked_at,

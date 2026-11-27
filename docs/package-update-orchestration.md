@@ -395,13 +395,14 @@ push. **Disabled** permits neither.
    with the installed header using the elected updater's ordering. It offers
    the latest eligible version and, when distinct and available, a release
    matching the installed version. Opening the chooser downloads no ZIP.
-5. The operator chooses the release to install. Core checks the signed
-   choice and installed version, then passes the release ID, tag, version
-   and any explicit downgrade consent to
-   `ran_wp_release_updater_install_exact_release_v1`. The updater reacquires
-   the chosen release, checks its ZIP and runs the WordPress upgrader.
-   If the release disappears or its ZIP fails validation, choosing another
-   release requires a fresh confirmation.
+5. Both confirmation paths bind the package adoption, installed header
+   version, chosen release ID, tag, version, ZIP asset ID and SHA-256
+   digest from the listing. Core passes these artifact facts and any
+   explicit downgrade consent to
+   `ran_wp_release_updater_install_confirmed_release_v1`. The updater
+   reacquires the chosen ZIP and checks it before WordPress replaces files.
+   A change to the selected asset ID, digest or installed version requires
+   fresh confirmation. An unrelated new release leaves the choice valid.
 6. A successful switch commits the source change, records the release
    configuration, increments the source revision, clears native custody and
    leaves subsequent updates on Manual. The landing page checks the

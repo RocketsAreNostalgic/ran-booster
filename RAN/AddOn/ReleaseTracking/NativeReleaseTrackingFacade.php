@@ -73,6 +73,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	private WordPressUpdaterLock $updater_lock;
 	private RepositorySourceGuard $source_guard;
 	private ?string $anonymous_rate_limit_provider = null;
+	private bool $lookup_rate_limited              = false;
 
 	/** @var \Closure(string, string): mixed */
 	private \Closure $check_without_offer;
@@ -80,7 +81,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** The default read-only check is throttled; an injected one is not. */
 	private bool $check_cooldown;
 
-	/** @var \Closure(string, string, string, string, bool, string): string */
+	/** @var \Closure(string, string, string, string, bool, string, ?array{artifact_identity:string,artifact_sha256:string,installed_version:string}): string */
 	private \Closure $switch_install;
 
 	/**
@@ -91,7 +92,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	 * @param callable(string): void|null         $invalidate_native
 	 * @param callable(string): ?string|null      $public_lookup_profile
 	 * @param callable(string, string): mixed|null $check_without_offer
-	 * @param callable(string, string, string, string, bool, string): string|null $switch_install Installs one exact release.
+	 * @param callable(string, string, string, string, bool, string, ?array{artifact_identity:string,artifact_sha256:string,installed_version:string}): string|null $switch_install Installs one exact release.
 	 */
 	public function __construct(
 		private PluginRepository $plugins,
@@ -111,7 +112,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		?callable $switch_install = null,
 		private ?GitHubProviderSelection $github_selection = null
 	) {
-		$this->switch_install = null === $switch_install ? \Closure::fromCallable( array( self::class, 'install_release' ) ) : \Closure::fromCallable( $switch_install );
+		$this->switch_install = null === $switch_install ? \Closure::fromCallable( array( ManagedReleaseTargetRegistrar::class, 'install_release' ) ) : \Closure::fromCallable( $switch_install );
 
 		$this->updater_lock = $updater_lock;
 
@@ -432,6 +433,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $nonce
 	): ?\RAN\RepositoryProvider\RepositoryReleaseCandidateList {
 		$this->anonymous_rate_limit_provider = null;
+		$this->lookup_rate_limited           = false;
 		$package                             = $this->authorized( 'list_candidates', $type, $identifier, $expected_source_revision, $nonce, $channel );
 		if ( ! RuntimeSupport::current()->allows_managed_operations()
 			|| ! $this->valid_channel( $channel )
@@ -451,7 +453,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 			foreach ( $this->release_browser_repositories( $package ) as $repository ) {
 				try {
-					return $listing->list_release_candidates( $type, $repository, $channel );
+					$candidates                          = $listing->list_release_candidates( $type, $repository, $channel );
+					$this->lookup_rate_limited           = false;
+					$this->anonymous_rate_limit_provider = null;
+					return $candidates;
 				} catch ( RepositoryReleaseReadUnavailable $unavailable ) {
 					BoosterLogger::log_provider_failure(
 						'release read failed',
@@ -461,11 +466,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 							'provider'  => (string) $package->get_provider_code(),
 						)
 					);
-					if ( ! $repository->private
-						&& null === $repository->credential_id
-						&& in_array( $unavailable->failure?->reason, array( 'rate_limited', 'rate_limited_secondary' ), true ) ) {
-						$this->anonymous_rate_limit_provider = (string) $package->get_provider_code();
-					}
+					$this->record_lookup_failure( $unavailable, $repository, (string) $package->get_provider_code() );
 					continue;
 				}
 			}
@@ -477,9 +478,18 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	}
 
 
-	/** The provider whose anonymous public lookup was rate-limited in the last candidate listing, if any. */
+	/** The provider whose anonymous public lookup was rate-limited in the last candidate listing or inspection, if any. */
 	public function anonymous_rate_limit_provider(): ?string {
 		return $this->anonymous_rate_limit_provider;
+	}
+
+	public function lookup_rate_limited(): bool {
+		return $this->lookup_rate_limited;
+	}
+
+	private function record_lookup_failure( RepositoryReleaseReadUnavailable $unavailable, RepositoryReference $repository, string $provider ): void {
+		$this->lookup_rate_limited           = in_array( $unavailable->failure?->reason, array( 'rate_limited', 'rate_limited_secondary' ), true );
+		$this->anonymous_rate_limit_provider = $this->lookup_rate_limited && ! $repository->private && null === $repository->credential_id ? $provider : null;
 	}
 
 	public function inspect_candidate(
@@ -491,7 +501,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $channel,
 		string $nonce
 	): ?ReleaseTrackingPreflight {
-		$package = $this->authorized( 'inspect_candidate', $type, $identifier, $expected_source_revision, $nonce, $channel );
+		$this->anonymous_rate_limit_provider = null;
+		$this->lookup_rate_limited           = false;
+		$package                             = $this->authorized( 'inspect_candidate', $type, $identifier, $expected_source_revision, $nonce, $channel );
 		if ( ! RuntimeSupport::current()->allows_managed_operations()
 
 			|| '' === $release_id
@@ -518,8 +530,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$inspection = null;
 			$repository = null;
 			foreach ( $this->release_browser_repositories( $package ) as $repository ) {
+				$this->lookup_rate_limited           = false;
+				$this->anonymous_rate_limit_provider = null;
 				try {
-
 					$inspection = $inspector->inspect_release( $type, $repository, $release_id, $tag, $channel );
 					break;
 				} catch ( RepositoryReleaseReadUnavailable $unavailable ) {
@@ -531,14 +544,17 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 							'provider'  => (string) $package->get_provider_code(),
 						)
 					);
+					$this->record_lookup_failure( $unavailable, $repository, $provider );
 					continue;
 				} catch ( RepositoryReleaseInspectionRejected $rejection ) {
-					return RepositoryReleaseInspectionRejected::INCOMPATIBLE === $rejection->reason && 'digest_missing' === $rejection->detail
-						? new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $configuration->package_root(), reason_code: 'digest_missing' ) : null;
+					return RepositoryReleaseInspectionRejected::INCOMPATIBLE === $rejection->reason && in_array( $rejection->detail, array( 'digest_missing', 'package_asset_missing', 'package_asset_ambiguous', 'package_header_missing', 'package_header_invalid', 'package_header_ambiguous', 'release_version_mismatch' ), true )
+						? new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $configuration->package_root(), reason_code: $rejection->detail ) : null;
 				}
 			}
 			if ( null === $inspection || null === $repository ) {
-				return null;
+				return $this->lookup_rate_limited
+					? new ReleaseTrackingPreflight( ReleaseTrackingPreflight::PREFLIGHT_UNAVAILABLE, $configuration->package_root(), reason_code: 'rate_limited' )
+					: null;
 			}
 
 			if ( ! hash_equals( $release_id, $inspection->provider_release_id )
@@ -559,7 +575,10 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				$inspection->version,
 				$url,
 				$inspection->tag,
-				$inspection->version
+				$inspection->version,
+				release_identity: $inspection->provider_release_id,
+				artifact_identity: $inspection->artifact_identity,
+				artifact_sha256: $inspection->artifact_sha256
 			);
 		} catch ( Throwable ) {
 			return null;
@@ -601,7 +620,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		return $repository->with_credential( $credential_id );
 	}
 
-	/** @param array{identity:string,tag:string,version:string,installed_version?:string}|null $confirmed_release Core confirmation, bound by the admin nonce. */
+	/** @param array{identity:string,tag:string,version:string,installed_version?:string,confirmation?:array{artifact_identity:string,artifact_sha256:string,installed_version:string}}|null $confirmed_release Core confirmation, bound by the admin nonce. */
 	public function enable(
 		string $type,
 		string $identifier,
@@ -719,7 +738,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					return ReleaseTrackingResult::failed( 'release_older', 'The eligible release changed after older-release confirmation.' );
 				}
 				try {
-					$installed = ( $this->switch_install )( $type, $identifier, $confirmed_release['identity'], $confirmed_release['tag'], $allow_older, $confirmed_release['version'] );
+					$installed = ( $this->switch_install )( $type, $identifier, $confirmed_release['identity'], $confirmed_release['tag'], $allow_older, $confirmed_release['version'], $confirmed_release['confirmation'] ?? null );
 				} catch ( Throwable ) {
 					// Pending native completion owns any recovery after an interrupted upgrade.
 					$installed = 'uncertain';
@@ -739,7 +758,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				'uncertain' => 'management_state_uncertain',
 				'unsupported', 'runtime_busy', 'filesystem_unavailable', 'discovery_not_admitted', 'offer_token_unavailable', 'runtime_liveness_lost' => 'service_unavailable',
 				'release_older' => 'release_older',
-				'candidate_descriptor_mismatch' => 'release_selection_changed',
+				'confirmation_changed', 'candidate_descriptor_mismatch' => 'release_selection_changed',
 				'policy_disabled' => 'policy_disabled',
 				'policy_forced_off' => 'policy_forced_off',
 				default => 'release_unavailable',
@@ -909,6 +928,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				return ReleaseTrackingResult::failed(
 					match ( $check['reason'] ) {
 						'policy_disabled' => 'refresh_skipped_disabled',
+						'rate_limited' => 'refresh_rate_limited',
 						'policy_forced_off' => 'refresh_skipped_forced_off',
 						default => match ( $check['status'] ) {
 							'skipped' => 'refresh_unchecked',
@@ -947,6 +967,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$status = 'skipped';
 			$reason = 'check_not_observed';
 		}
+		// The v1 report keeps its original failure code; newer runtimes qualify its matching observation.
+		$limited = 'failed' === $status && in_array( $reason, array( 'release_list_failed', 'candidate_inspection_failed' ), true ) && 'rate_limited' === ( $observed['reason'] ?? null );
 		$version = is_string( $report['candidate_version'] ?? null ) ? ReleaseTrackingPreflight::detail( explode( '+', $report['candidate_version'], 2 )[0] ) : '';
 		$code    = match ( true ) {
 			'cooldown_active' === $reason => 'refresh_recent',
@@ -955,6 +977,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			'succeeded' === $status && 'newer_release_observed' === $reason => 'refresh_newer_while_off',
 			'succeeded' === $status && in_array( $reason, array( 'no_newer_candidate', 'no_candidates' ), true ) => 'refresh_current_while_off',
 			'rejected' === $status => 'refresh_rejected',
+			$limited => 'refresh_rate_limited',
 			'failed' === $status => 'refresh_check_failed',
 			default => 'refresh_unchecked',
 		};
@@ -967,7 +990,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$code,
 			'Published release information was not offered.',
 			detail: 'refresh_newer_while_off' === $code ? $version : '',
-			check_reason: $reason
+			check_reason: $limited ? 'rate_limited' : $reason
 		);
 	}
 
@@ -1107,40 +1130,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 	}
 
-	/** Run the published exact-install operation with the selected listing entry. */
-	private static function install_release( string $type, string $identifier, string $release_identity, string $tag, bool $allow_older, string $version ): string {
-		require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented exact-install filter.
-		$report = apply_filters( 'ran_wp_release_updater_install_exact_release_v1', null, $type, $identifier, $release_identity, $tag, $version, $allow_older );
-		if ( ! is_array( $report ) || ! is_string( $report['code'] ?? null ) ) {
-			return 'unsupported';
-		}
-		if ( 'installed' === ( $report['status'] ?? null ) && 'update_completed' === $report['code'] ) {
-			$finalization = $report['finalization'] ?? null;
-
-			return false === ( $report['finalization_pending'] ?? null )
-				&& is_array( $finalization )
-				&& 'completed' === ( $finalization['commit'] ?? null )
-				&& 'completed' === ( $finalization['host_completion'] ?? null ) ? 'installed' : 'uncertain';
-		}
-		if ( true === ( $report['finalization_pending'] ?? null )
-			|| in_array( $report['code'], array( 'host_completion_failed', 'install_commit_failed', 'lease_release_failed', 'archive_cleanup_failed', 'unexpected_failure', 'unverified_install_result' ), true ) ) {
-			return 'uncertain';
-		}
-		if ( 'failed' === ( $report['status'] ?? null ) ) {
-			return 'failed';
-		}
-
-		if ( 'refused' !== ( $report['status'] ?? null ) || false !== ( $report['finalization_pending'] ?? null ) ) {
-			return 'unsupported';
-		}
-
-		// The updater reports refusal only when WordPress has not started its upgrader.
-		return match ( $report['code'] ) {
-			'release_older', 'candidate_descriptor_mismatch', 'policy_disabled', 'policy_forced_off' => $report['code'],
-			default => 'refused',
-		};
-	}
 
 	private function package( string $type, string $identifier ): Package {
 		if ( 'plugin' === $type ) {

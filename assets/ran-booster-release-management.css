@@ -75,20 +75,6 @@
 	cursor: not-allowed;
 }
 
-.ran-booster-admin
-	.ran-booster-release-candidate:has(input:disabled)
-	.ran-booster-release-candidate__outcome {
-	color: var(--ran-booster-text-subtle);
-}
-
-.ran-booster-admin .ran-booster-release-candidate__outcome {
-	display: inline-block;
-	grid-column: 2;
-	margin: var(--ran-booster-space-3) 0 0;
-	padding-block-end: var(--ran-booster-space-5);
-	color: var(--ran-booster-text-muted);
-}
-
 .ran-booster-admin .ran-booster-release-candidate > .ran-wp-ui-button {
 	grid-column: 2;
 	justify-self: start;
@@ -213,6 +199,12 @@
 	align-items: flex-start;
 	gap: var(--ran-booster-space-8);
 	font-weight: 600;
+}
+
+.ran-booster-switch-dialog__consent > input[type="checkbox"],
+.ran-booster-switch-confirmation__consent > input[type="checkbox"] {
+	flex-shrink: 0;
+	margin: 2px 0 0;
 }
 
 .ran-booster-switch-dialog__actions,

@@ -14,10 +14,10 @@ final class ReleaseTrackingOperations {
 	/** @var array<string, ReleaseTrackingStatus|null> */
 	private array $statuses = array();
 
-	/** @var (\Closure(string,string,int,string,string,string,string,?array{identity:string,tag:string,version:string,installed_version?:string}):ReleaseTrackingResult)|null */
+	/** @var (\Closure(string,string,int,string,string,string,string,?array{identity:string,tag:string,version:string,installed_version?:string,confirmation?:array{artifact_identity:string,artifact_sha256:string,installed_version:string}}):ReleaseTrackingResult)|null */
 	private readonly ?\Closure $confirmed_enable;
 
-	/** @param (callable(string,string,int,string,string,string,string,?array{identity:string,tag:string,version:string,installed_version?:string}):ReleaseTrackingResult)|null $confirmed_enable */
+	/** @param (callable(string,string,int,string,string,string,string,?array{identity:string,tag:string,version:string,installed_version?:string,confirmation?:array{artifact_identity:string,artifact_sha256:string,installed_version:string}}):ReleaseTrackingResult)|null $confirmed_enable */
 	public function __construct( private readonly ReleaseTrackingFacade $releases, ?callable $confirmed_enable = null ) {
 		$this->confirmed_enable = null === $confirmed_enable ? null : \Closure::fromCallable( $confirmed_enable );
 	}
@@ -78,7 +78,7 @@ final class ReleaseTrackingOperations {
 	}
 
 	/**
-	 * @param array{identity:string,tag:string,version:string,installed_version?:string}|null $confirmed_release
+	 * @param array{identity:string,tag:string,version:string,installed_version?:string,confirmation?:array{artifact_identity:string,artifact_sha256:string,installed_version:string}}|null $confirmed_release
 	 * @return array{type:string,identifier:string,code:string,successful:bool,reason?:string,check_reason?:string,detail?:string}
 	 */
 	public function execute( string $operation, string $type, string $identifier, int $revision, string $channel, string $nonce, string $confirmed_older_release_identity = '', string $confirmed_older_release_tag = '', ?array $confirmed_release = null ): array {

@@ -142,7 +142,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 		'hide_github' => array( 'hide_github' => array( 'ran-booster-hide-github-error', __( 'Hide GitHub UI', 'ran-booster' ) ) ),
 		'self_update_discovery' => array( 'self_update_discovery' => array( 'ran-booster-self-update-discovery-error', __( 'Check for Core updates', 'ran-booster' ) ) ),
 		'branch_sources' => array( 'branch_sources' => array( 'ran-booster-branch-sources-error', __( 'Allow branch sources', 'ran-booster' ) ) ),
-		'prerelease_sources' => array( 'prerelease_sources' => array( 'ran-booster-prerelease-sources-error', __( 'Allow Preview tracks', 'ran-booster' ) ) ),
+		'prerelease_sources' => array( 'prerelease_sources' => array( 'ran-booster-prerelease-sources-error', __( 'Allow Preview tracks and downgrades', 'ran-booster' ) ) ),
 		default => array(
 			'history_rows'       => array( 'ran-booster-history-rows-error', __( 'Maximum records', 'ran-booster' ) ),
 			'history_days'       => array( 'ran-booster-history-days-error', __( 'Retention days', 'ran-booster' ) ),
@@ -295,7 +295,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 $source_scopes = array_filter(
 	array(
 		'branch_sources'     => __( 'Allow branch sources', 'ran-booster' ),
-		'prerelease_sources' => __( 'Allow Preview tracks', 'ran-booster' ),
+		'prerelease_sources' => __( 'Allow Preview tracks and downgrades', 'ran-booster' ),
 	),
 	static fn ( string $scope ): bool => 'all' === $general_scope || $scope === $general_scope,
 	ARRAY_FILTER_USE_KEY
@@ -304,7 +304,7 @@ foreach ( $source_scopes as $source_scope => $source_label ) {
 	$source      = $field( $source_scope );
 	$source_id   = 'ran-booster-' . str_replace( '_', '-', $source_scope );
 	$source_help = match ( true ) {
-		$development_site => 'branch_sources' === $source_scope ? __( 'Branch sources are always enabled in development.', 'ran-booster' ) : __( 'Preview tracks are always enabled in development.', 'ran-booster' ),
+		$development_site => 'branch_sources' === $source_scope ? __( 'Branch sources are always enabled in development.', 'ran-booster' ) : __( 'Preview tracks and downgrades are always enabled in development.', 'ran-booster' ),
 		'code' === $source['source'] => $source_labels['code'] . '.',
 		'address_changed' === $source['error'] => __( 'Turned off: the site address changed.', 'ran-booster' ),
 		true === $source['value'] => sprintf( /* translators: %s: site address. */ __( 'On for %s', 'ran-booster' ), $site_address ),
@@ -332,6 +332,9 @@ foreach ( $source_scopes as $source_scope => $source_label ) {
 		);
 		?>
 		</div>
+		<?php if ( 'prerelease_sources' === $source_scope ) { ?>
+		<p class="description"><?php esc_html_e( 'Allow preview release tracks and installation of older releases.', 'ran-booster' ); ?></p>
+		<?php } ?>
 		<?php if ( null !== $source_help ) { ?>
 		<div id="<?php echo esc_attr( $source_id ); ?>-help" class="notice notice-info inline ran-booster-settings__reason ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $source_help ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 		<?php } ?>

@@ -201,6 +201,7 @@
 		});
 		const host = doc.createElement('div');
 		const portal = doc.createElement('div');
+		let title = options.title;
 		let open = true;
 		let finished = false;
 
@@ -449,7 +450,7 @@
 													'ran-booster-ui-dialog__banner-title',
 											}
 										: null,
-									options.title
+									title
 								),
 								createElement(
 									dialog.CloseIconButton,
@@ -476,6 +477,15 @@
 		}
 
 		const handle = {
+			get isOpen() {
+				return open;
+			},
+			setTitle(nextTitle) {
+				if (open && nextTitle && nextTitle !== title) {
+					title = nextTitle;
+					render();
+				}
+			},
 			close() {
 				if (!open || finished) {
 					return;

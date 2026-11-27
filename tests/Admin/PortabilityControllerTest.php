@@ -1373,26 +1373,67 @@ final class PortabilityControllerTest extends TestCase {
 		foreach ( array( 'credential_authority_missing', 'file_mods_disallowed', 'credential_authority_missing' ) as $index => $code ) {
 			self::assertSame( '[ran-booster] Blueprint credential use refused. {"operation":"portability_credentials","outcome_code":"' . $code . '"}', $lines[ $index ] ?? null );
 		}
+
+		// Each Apply submits every row's choices; a saved target on the credential row does not block a package-only row.
+		$credential = $this->credential_blueprint();
+		$file       = $this->blueprint_archive( new PackageBlueprint( array( $credential->packages[0], $this->blueprint_package( 'theme' ) ), $credential->credentials ), 'correct-horse-battery-staple' );
+		$this->set_uploaded_blueprint( $file );
+		$_POST['row']                  = '1';
+		$_POST['credential_decisions'] = array(
+			array(
+				'action'    => 'target',
+				'target_id' => 'saved-profile',
+			),
+		);
+		try {
+			$result = $controller->handle_apply();
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
+			unlink( $file );
+		}
+		self::assertTrue( $result['success'] );
 	}
 
 	public function test_export_refuses_an_unavailable_temporary_root_without_staging_elsewhere(): void {
 		$_POST['packages']                                 = array( 'plugin' => array( 'example/example.php' ) );
 		$_POST['response_format']                          = 'json';
-		$GLOBALS['ran_booster_repository_admin_temp_dir']  = sys_get_temp_dir() . '/ran-booster-missing-' . bin2hex( random_bytes( 4 ) ) . '/';
 		$GLOBALS['ran_booster_repository_admin_file_read'] = false;
-
+		$missing  = sys_get_temp_dir() . '/ran-booster-missing-' . bin2hex( random_bytes( 4 ) ) . '/';
+		$readonly = sys_get_temp_dir() . '/ran-booster-readonly-' . bin2hex( random_bytes( 4 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native read-only fixture directory; no WordPress filesystem is loaded.
+		self::assertTrue( mkdir( $readonly, 0500 ) );
+		$notices = array();
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Captures tempnam()'s fallback notice for the read-only root.
+		set_error_handler(
+			static function ( int $level, string $message ) use ( &$notices ): bool {
+				$notices[] = $level . ':' . $message;
+				return true;
+			},
+			E_NOTICE
+		);
 		$this->start_log_capture();
 		try {
-			$result = $this->export_controller()->handle_export();
-			$lines  = $this->captured_log_lines();
+			// A root user can write anywhere, so the read-only case only applies where the directory is really read-only.
+			foreach ( is_writable( $readonly ) ? array( $missing ) : array( $missing, $readonly . '/' ) as $root ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable -- Native fixture probe.
+				$GLOBALS['ran_booster_repository_admin_temp_dir'] = $root;
+				$result = $this->export_controller()->handle_export();
+				self::assertSame( array( 500, 'Booster could not create the Blueprint ZIP. Try again.' ), array( $result['status'], $result['data']['message'] ) );
+			}
+			$lines = $this->captured_log_lines();
 		} finally {
 			$this->stop_log_capture();
+			restore_error_handler();
 			unset( $GLOBALS['ran_booster_repository_admin_temp_dir'] );
+			rmdir( $readonly ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Removes this test's own directory.
 		}
 
-		self::assertSame( array( 500, 'Booster could not create the Blueprint ZIP. Try again.' ), array( $result['status'], $result['data']['message'] ) );
-		self::assertSame( array( '[ran-booster] Blueprint export failed. {"operation":"portability_export","step":"temp_dir","http_status":"500"}' ), $lines );
-		self::assertSame( array(), array_filter( $GLOBALS['ran_booster_repository_admin_temporary_files'] ?? array(), 'is_string' ) );
+		self::assertSame( array_fill( 0, count( $lines ), '[ran-booster] Blueprint export failed. {"operation":"portability_export","step":"temp_dir","http_status":"500"}' ), $lines );
+		self::assertNotSame( array(), $lines );
+		// A file tempnam() silently staged in the system directory is removed, never exported.
+		foreach ( array_filter( $GLOBALS['ran_booster_repository_admin_temporary_files'] ?? array(), 'is_string' ) as $path ) {
+			self::assertFileDoesNotExist( $path );
+		}
+		self::assertCount( count( $lines ) - 1, $notices );
 	}
 
 	#[DataProvider( 'invalid_credential_selections' )]

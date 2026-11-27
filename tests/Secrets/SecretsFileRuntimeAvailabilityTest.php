@@ -44,7 +44,22 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 
 		self::assertArrayNotHasKey( 'expired_profile', $secrets->credential_profiles( 'gh' ) );
 		self::assertNull( $secrets->credential_material( 'gh', 'expired_profile' ) );
-		self::assertSame( array( 'gh' => array( 'expired_profile' ) ), $secrets->purge_expired_credentials() );
+		try {
+			$secrets->purge_expired_credentials( static fn () => throw new \RuntimeException( 'generation not advanced' ) );
+			self::fail( 'A failed pre-removal step must abort the purge.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'generation not advanced', $failure->getMessage() );
+		}
+		$seen = null;
+		self::assertSame(
+			array( 'gh' => array( 'expired_profile' ) ),
+			$secrets->purge_expired_credentials(
+				static function ( array $ids ) use ( &$seen ): void {
+					$seen = $ids;
+				}
+			)
+		);
+		self::assertSame( array( 'gh' => array( 'expired_profile' ) ), $seen );
 		self::assertSame( array(), $secrets->credential_profiles( 'gh' ) );
 
 		InMemorySiteKeyStore::reset( $path );

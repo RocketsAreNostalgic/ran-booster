@@ -667,15 +667,17 @@ class SecretsFile {
 	/**
 	 * Create or update a provider credential and return its stable ID.
 	 *
-	 * @param array<string, mixed> $metadata Non-secret label, kind and configuration.
-	 * @param bool                 $submitted Apply provider checks for a newly submitted admin secret.
+	 * @param array<string, mixed>  $metadata Non-secret label, kind and configuration.
+	 * @param bool                  $submitted Apply provider checks for a newly submitted admin secret.
+	 * @param (callable(): void)|null $before_write Runs under the storage lock after every check, immediately before the write.
 	 */
 	public function save_credential(
 		ProviderCode|string $provider,
 		?string $id,
 		array $metadata,
 		#[\SensitiveParameter] ?string $secret,
-		bool $submitted = false
+		bool $submitted = false,
+		?callable $before_write = null
 	): string {
 		$this->assert_available();
 		$provider_code = $this->provider_value( $provider );
@@ -710,7 +712,12 @@ class SecretsFile {
 
 				return array( $document, $id );
 			},
-			fn () => $this->assert_credential_access( $provider_code, $record )
+			function () use ( $provider_code, $record, $before_write ): void {
+				$this->assert_credential_access( $provider_code, $record );
+				if ( null !== $before_write ) {
+					$before_write();
+				}
+			}
 		);
 	}
 
@@ -765,9 +772,11 @@ class SecretsFile {
 	/**
 	 * Remove credentials whose encrypted self-destruct deadline has passed.
 	 *
+	 * @param (callable(array<string, list<string>>): mixed)|null $before_remove Receives the IDs under the storage lock before
+	 *                                                                         they are removed; a throw removes nothing.
 	 * @return array<string, list<string>> Provider-scoped removed IDs.
 	 */
-	public function purge_expired_credentials(): array {
+	public function purge_expired_credentials( ?callable $before_remove = null ): array {
 		$this->assert_available();
 
 		$document    = $this->file_document();
@@ -784,8 +793,9 @@ class SecretsFile {
 			return array();
 		}
 
+		$removed = array();
 		return $this->mutate(
-			function ( #[\SensitiveParameter] array $document ): array {
+			function ( #[\SensitiveParameter] array $document ) use ( &$removed ): array {
 				$removed = array();
 				foreach ( $document[ self::CREDENTIALS ] as $provider => &$records ) {
 					foreach ( $records as $id => $record ) {
@@ -799,6 +809,9 @@ class SecretsFile {
 				unset( $records );
 
 				return array( $document, $removed, array() !== $removed );
+			},
+			null === $before_remove ? null : static function () use ( &$removed, $before_remove ): void {
+				$before_remove( $removed );
 			}
 		);
 	}

@@ -13,6 +13,7 @@ use RAN\Admin\CredentialSelfDestructPurger;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Secrets\SecretsFile;
+use RAN\WordPress\WordPressUpdaterLock;
 
 final class CredentialSelfDestructPurgerTest extends TestCase {
 	use \RAN\Tests\Support\CapturesBoosterLog;
@@ -48,7 +49,7 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 						return true;
 					}
 				};
-				$purger             = new CredentialSelfDestructPurger( new PurgerSecretsFile( array( 'gh' => array( 'expired-profile' ) ) ), new PurgerObservations(), $profiles, $evidence );
+				$purger             = new CredentialSelfDestructPurger( new PurgerSecretsFile( array( 'gh' => array( 'expired-profile' ) ) ), new PurgerObservations(), $profiles, $evidence, $this->updater_lock() );
 				$purger->purge();
 				self::assertNull( $profiles->get( 'gh' ) );
 				self::assertSame( null === $connection ? null : 2, $evidence->records['generation'] ?? null );
@@ -70,7 +71,8 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 			new PurgerSecretsFile( array( 'gh' => array( 'expired-profile' ) ) ),
 			new PurgerObservations(),
 			$profiles,
-			$evidence
+			$evidence,
+			$this->updater_lock()
 		);
 
 		$this->start_log_capture();
@@ -94,7 +96,8 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 			new PurgerSecretsFile( array( 'gh' => array( 'expired-profile' ) ) ),
 			new PurgerObservations(),
 			$profiles,
-			new ThrowingPurgerEvidenceStore()
+			new ThrowingPurgerEvidenceStore(),
+			$this->updater_lock()
 		);
 
 		$this->start_log_capture();
@@ -111,12 +114,57 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 		self::assertStringNotContainsString( 'expired-profile', implode( "\n", $lines ) );
 	}
 
+	public function test_purge_advances_the_validation_generation_under_the_updater_lock_before_removal(): void {
+		// A validation commit holding the lock: nothing is advanced or removed, and the next request retries.
+		$busy         = true;
+		$secrets      = new PurgerSecretsFile( array( 'gh' => array( 'expired-profile' ) ) );
+		$observations = new PurgerObservations();
+		$this->start_log_capture();
+		try {
+			( new CredentialSelfDestructPurger( $secrets, $observations, new PurgerLookupProfiles(), new PurgerEvidenceStore(), $this->updater_lock( $busy ) ) )->purge();
+			$lines = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+		self::assertSame( array( false, array() ), array( $secrets->removed_after_hook, $observations->events ) );
+		self::assertSame( array( '[ran-booster] Expired credential purge failed. {"operation":"credential_purge","exception_class":"RuntimeException","exception_code":"0"}' ), $lines );
+
+		$busy = false;
+		( new CredentialSelfDestructPurger( $secrets, $observations, new PurgerLookupProfiles(), new PurgerEvidenceStore(), $this->updater_lock( $busy ) ) )->purge();
+		self::assertTrue( $secrets->removed_after_hook );
+		self::assertSame( array( 'invalidate gh:expired-profile while locked', 'clear gh:expired-profile' ), $observations->events );
+		self::assertFalse( $busy );
+	}
+
+	/** Models the shared lock: acquisition fails while another request holds it. */
+	private function updater_lock( bool &$held = false ): WordPressUpdaterLock {
+		$lock = $this->createStub( WordPressUpdaterLock::class );
+		$lock->method( 'acquire' )->willReturnCallback(
+			static function () use ( &$held ): string {
+				if ( $held ) {
+					throw new \RuntimeException( 'The WordPress updater is already running.' );
+				}
+				$held                                    = true;
+				$GLOBALS['ran_booster_purger_lock_held'] = true;
+				return 'purger-fixture-lock';
+			}
+		);
+		$lock->method( 'release' )->willReturnCallback(
+			static function () use ( &$held ): bool {
+				$held                                    = false;
+				$GLOBALS['ran_booster_purger_lock_held'] = false;
+				return true;
+			}
+		);
+		return $lock;
+	}
+
 	public function test_unavailable_storage_stays_silent_and_any_other_failure_logs_its_class(): void {
 		$lines = array();
 		foreach ( array( new \RAN\Secrets\SecretsStorageUnavailable( 'marker storage text' ), new \LogicException( 'marker failure text', 9 ) ) as $failure ) {
 			$this->start_log_capture();
 			try {
-				( new CredentialSelfDestructPurger( new PurgerSecretsFile( array(), $failure ), new PurgerObservations(), new PurgerLookupProfiles(), new PurgerEvidenceStore() ) )->purge();
+				( new CredentialSelfDestructPurger( new PurgerSecretsFile( array(), $failure ), new PurgerObservations(), new PurgerLookupProfiles(), new PurgerEvidenceStore(), $this->updater_lock() ) )->purge();
 				$lines = array_merge( $lines, $this->captured_log_lines() );
 			} finally {
 				$this->stop_log_capture();
@@ -162,7 +210,8 @@ final class CredentialSelfDestructPurgerTest extends TestCase {
 			$secrets,
 			new PurgerObservations(),
 			new PurgerLookupProfiles(),
-			new PurgerEvidenceStore()
+			new PurgerEvidenceStore(),
+			$this->updater_lock()
 		);
 
 		$purger->purge();
@@ -181,11 +230,17 @@ final class PurgerSecretsFile extends SecretsFile {
 		parent::__construct( null, array() );
 	}
 
+	public bool $removed_after_hook = false;
+
 	/** @return array<string, list<string>> */
-	public function purge_expired_credentials(): array {
+	public function purge_expired_credentials( ?callable $before_remove = null ): array {
 		++$this->calls;
 		if ( null !== $this->failure ) {
 			throw $this->failure;
+		}
+		if ( null !== $before_remove && array() !== $this->removed ) {
+			$before_remove( $this->removed );
+			$this->removed_after_hook = true;
 		}
 		return $this->removed;
 	}
@@ -194,7 +249,15 @@ final class PurgerSecretsFile extends SecretsFile {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused purger collaborators stay beside the lifecycle contract test.
 final class PurgerObservations extends CredentialExpiryObservationStore {
 
+	/** @var list<string> */
+	public array $events = array();
+
+	public function invalidate( string $provider, string $profile_id ): void {
+		$this->events[] = 'invalidate ' . $provider . ':' . $profile_id . ( empty( $GLOBALS['ran_booster_purger_lock_held'] ) ? ' unlocked' : ' while locked' );
+	}
+
 	public function clear( string $provider, string $profile_id ): void {
+		$this->events[] = 'clear ' . $provider . ':' . $profile_id;
 	}
 }
 

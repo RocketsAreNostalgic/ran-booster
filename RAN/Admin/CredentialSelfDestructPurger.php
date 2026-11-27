@@ -7,6 +7,7 @@ namespace RAN\Admin;
 use RAN\Logging\BoosterLogger;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\SecretsStorageUnavailable;
+use RAN\WordPress\WordPressUpdaterLock;
 
 /**
  * Performs best-effort physical removal of credentials whose encrypted local
@@ -19,7 +20,8 @@ final class CredentialSelfDestructPurger {
 		private SecretsFile $secrets,
 		private CredentialExpiryObservationStore $observations,
 		private PublicRepositoryLookupProfileStore $public_lookup_profiles,
-		private RepositoryBranchCheckEvidenceStore $branch_check_evidence
+		private RepositoryBranchCheckEvidenceStore $branch_check_evidence,
+		private WordPressUpdaterLock $updater_lock
 	) {
 	}
 
@@ -29,7 +31,18 @@ final class CredentialSelfDestructPurger {
 		}
 
 		try {
-			$removed = $this->secrets->purge_expired_credentials();
+			// Advance each validation generation under the lock validation commits hold, before anything is removed.
+			$removed = $this->secrets->purge_expired_credentials(
+				fn ( array $expired ) => $this->updater_lock->run(
+					function () use ( $expired ): void {
+						foreach ( $expired as $provider => $ids ) {
+							foreach ( $ids as $id ) {
+								$this->observations->invalidate( $provider, $id );
+							}
+						}
+					}
+				)
+			);
 			foreach ( $removed as $provider => $ids ) {
 				foreach ( $ids as $id ) {
 					// One line per removed credential: its provider only, never its identifier.

@@ -781,6 +781,34 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertSame( $secret_before, $material['secret'] );
 	}
 
+	public function test_a_replacement_failing_after_its_write_still_leaves_the_generation_advanced(): void {
+		$interaction          = new CapturingProviderProfileInteraction();
+		$dashboard            = $this->getMockBuilder( Dashboard::class )->disableOriginalConstructor()->onlyMethods( array( 'add_message' ) )->getMock();
+		$expiry               = new InMemoryCredentialExpiryObservationStore();
+		$expiry->before_write = static function () use ( $expiry ): void {
+			// The pre-write advance succeeds; every later observation write (the post-write reset) fails.
+			$expiry->before_write = static function () use ( $expiry ): void {
+				$expiry->fail_writes = true;
+			};
+		};
+		$_GET['view']         = 'credentials';
+		$_POST['ran_booster'] = array(
+			'action'        => 'save-access-profile',
+			'provider'      => 'fixture',
+			'id'            => 'credential_existing',
+			'label'         => 'Replacement credential',
+			'kind'          => 'api-key',
+			'configuration' => array( 'tenant' => 'existing' ),
+			'secret'        => 'replacement-secret-canary',
+		);
+
+		$this->native_failure( $dashboard, $interaction, $this->dispatcher( $dashboard, $this->secrets, $interaction, new InMemoryPublicRepositoryLookupProfileStore(), $expiry ) );
+
+		self::assertSame( 'replacement-secret-canary', $this->secrets->credential_material( 'fixture', 'credential_existing' )['secret'] ?? null );
+		// A validation that read generation 0 before the replacement can no longer commit.
+		self::assertSame( array( 'event_generation' => 1 ), $expiry->get( 'fixture', 'credential_existing' ) );
+	}
+
 	public function test_credential_replacement_does_not_persist_when_the_validation_generation_cannot_advance(): void {
 		$interaction          = new CapturingProviderProfileInteraction();
 		$dashboard            = $this->getMockBuilder( Dashboard::class )->disableOriginalConstructor()->onlyMethods( array( 'add_message' ) )->getMock();
@@ -1092,8 +1120,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			$message
 		);
 		self::assertStringNotContainsString( 'secret-value', $message );
-		// A refused replacement keeps the observation; only the generation advances, so a pending validation fails safe.
-		$observation_before['profiles']['fixture']['credential_existing'] = array( 'event_generation' => 1 ) + $observation_before['profiles']['fixture']['credential_existing'];
+		// A rejected replacement leaves the observation and its generation untouched, so the reminder identity
+		// (CredentialExpiryReminder::events() hashes event_generation) keeps a dismissed or snoozed reminder closed.
 		self::assertSame( $observation_before, $expiry_observations->document );
 	}
 

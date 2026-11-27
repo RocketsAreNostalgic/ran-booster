@@ -251,7 +251,12 @@ final readonly class PortabilityController {
 			} catch ( InvalidArgumentException ) {
 				return wp_send_json_error( array( 'message' => __( 'The repository credential decisions are invalid. Review the Blueprint again.', 'ran-booster' ) ), 400 );
 			}
-			$refusal = $this->credential_refusal( $decisions, $target_credentials, null !== $ordinal && BlueprintCredentialAction::IMPORT === ( $decisions[ $ordinal ]['action'] ?? null ) );
+			// Each Apply submits every row's choices but uses only this row's credential.
+			$refusal = $this->credential_refusal(
+				null === $ordinal ? array() : array_intersect_key( $decisions, array( $ordinal => true ) ),
+				array_intersect_key( $target_credentials, array( $row => true ) ),
+				null !== $ordinal && BlueprintCredentialAction::IMPORT === ( $decisions[ $ordinal ]['action'] ?? null )
+			);
 			if ( null !== $refusal ) {
 				return $this->credential_refused( $refusal );
 			}

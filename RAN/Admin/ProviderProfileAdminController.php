@@ -227,7 +227,9 @@ class ProviderProfileAdminController {
 			} catch ( UnsupportedProviderCapability ) {
 				throw new CredentialRequestException( __( 'Credential validation is unavailable for this Git provider.', 'ran-booster' ) );
 			}
-			$generation  = $this->expiry_observations->generation( $provider->value, $id );
+			// Rotation and purge advance this generation and change the secret in one lock hold, so a read under
+			// that lock can never pair a half-finished change with the old secret.
+			$generation  = $this->updater_lock->run( fn (): int => $this->expiry_observations->generation( $provider->value, $id ) );
 			$activity_id = $this->begin_credential_activity( $provider, $id );
 			$result      = $validator->validate_credential( $id );
 			$this->complete_credential_activity( $activity_id, $result );
@@ -241,21 +243,22 @@ class ProviderProfileAdminController {
 					)
 				);
 			}
+			// A result for a secret that changed during the check says nothing about the current one, valid or not.
+			$current = $result->is_valid() && null !== $result->expiry
+				? $this->commit_validation_expiry( $provider, $id, $generation, $result->expiry )
+				: $generation === $this->expiry_observations->generation( $provider->value, $id );
+			if ( ! $current ) {
+				BoosterLogger::log(
+					'Credential validation result discarded.',
+					array(
+						'operation'    => 'credential_validation',
+						'provider'     => $provider->value,
+						'outcome_code' => 'credential_replaced',
+					)
+				);
+				throw new CredentialRequestException( __( 'This credential changed during the check. Validate it again.', 'ran-booster' ) );
+			}
 			if ( $result->is_valid() ) {
-				$current = null === $result->expiry
-					? $generation === $this->expiry_observations->generation( $provider->value, $id )
-					: $this->commit_validation_expiry( $provider, $id, $generation, $result->expiry );
-				if ( ! $current ) {
-					BoosterLogger::log(
-						'Credential validation result discarded.',
-						array(
-							'operation'    => 'credential_validation',
-							'provider'     => $provider->value,
-							'outcome_code' => 'credential_replaced',
-						)
-					);
-					throw new CredentialRequestException( __( 'This credential changed during the check. Validate it again.', 'ran-booster' ) );
-				}
 				$message = __( 'Repository credential validated successfully.', 'ran-booster' );
 
 				if ( ! $htmx_request ) {
@@ -488,10 +491,7 @@ class ProviderProfileAdminController {
 				if ( $access_changed && null !== $id ) {
 					$this->branch_check_evidence->bump_profile_generation( $provider->value, $id );
 				}
-				if ( $is_replacement && null !== $id ) {
-					$this->expiry_observations->invalidate( $provider->value, $id );
-				}
-				$saved_id      = $this->secrets->save_credential(
+				$saved_id = $this->secrets->save_credential(
 					$provider,
 					$id,
 					array(
@@ -502,7 +502,9 @@ class ProviderProfileAdminController {
 						'destroy_on'    => $self_destruct ? $manual_expiry : null,
 					),
 					$secret,
-					true
+					true,
+					// Invalidate in-flight validations only once the replacement passed every check and is about to be written.
+					$is_replacement && null !== $id ? fn () => $this->expiry_observations->invalidate( $provider->value, $id ) : null
 				);
 				$saved_profile = $this->secrets->credential_profiles( $provider )[ $saved_id ] ?? null;
 				if ( ! is_array( $saved_profile )

@@ -486,7 +486,8 @@ final class TrackingSecretsFile extends SecretsFile {
 		return false;
 	}
 
-	public function purge_expired_credentials(): array {
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture retains the production method contract; nothing is ever expired here.
+	public function purge_expired_credentials( ?callable $before_remove = null ): array {
 		++$this->purges;
 
 		return array();

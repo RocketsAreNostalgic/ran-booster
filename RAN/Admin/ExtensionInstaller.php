@@ -6,6 +6,7 @@ namespace RAN\Admin;
 
 use Closure;
 use RAN\Deployment\PreparedArtifact;
+use RAN\PackageArtifactLimit;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
@@ -14,8 +15,6 @@ use ZipArchive;
 
 /** Installs only the exact release selected by Core's fixed catalogue. */
 final class ExtensionInstaller {
-	private const MAX_ARCHIVE_BYTES = 16777216;
-
 	/** @var Closure(): list<array<string, mixed>> */
 	private Closure $catalogue;
 
@@ -53,13 +52,14 @@ final class ExtensionInstaller {
 		$attempted          = false;
 		$result             = 'failed';
 		try {
+			$maximum_bytes      = PackageArtifactLimit::resolve();
 			$directory          = $this->temporary_directory();
 			$directory_identity = lstat( $directory );
 			if ( false === $directory_identity ) {
 				throw new RuntimeException( 'Temporary directory identity unavailable.' );
 			}
 			$path = $directory . '/release.zip';
-			$this->download( $extension, $path, $created );
+			$this->download( $extension, $path, $maximum_bytes, $created );
 			$identity = PreparedArtifact::regular_file_identity( $path );
 			if ( null === $identity || 0600 !== $identity['permissions'] || 1 !== $identity['links'] ) {
 				throw new RuntimeException( 'Invalid temporary artifact.' );
@@ -77,7 +77,7 @@ final class ExtensionInstaller {
 				$directory
 			);
 			$artifact->assert_unchanged();
-			$files  = $this->archive_files( $path, $extension );
+			$files  = $this->archive_files( $path, $extension, $maximum_bytes );
 			$result = $this->lock->run(
 				function () use ( $id, $extension, $artifact, $files, &$attempted ): string {
 					$current = $this->find( $id );
@@ -182,7 +182,7 @@ final class ExtensionInstaller {
 	 * @param array{device: int, inode: int, size: int, permissions: int, links: int}|null $created
 	 * @param-out array{device: int, inode: int, size: int, permissions: int, links: int} $created
 	 */
-	private function download( array $extension, string $path, ?array &$created ): void {
+	private function download( array $extension, string $path, int $maximum_bytes, ?array &$created ): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Exclusive local creation establishes archive custody.
 		$file = fopen( $path, 'xb' );
 		if ( false === $file ) {
@@ -206,14 +206,14 @@ final class ExtensionInstaller {
 				'redirection'         => 5,
 				'stream'              => true,
 				'filename'            => $path,
-				'limit_response_size' => self::MAX_ARCHIVE_BYTES + 1,
+				'limit_response_size' => $maximum_bytes + 1,
 			)
 		);
 		clearstatcache( true, $path );
 		$size         = filesize( $path );
 		$digest       = hash_file( 'sha256', $path );
 		$current_file = PreparedArtifact::regular_file_identity( $path );
-		if ( null === $current_file || $created['device'] !== $current_file['device'] || $created['inode'] !== $current_file['inode'] || 1 !== $current_file['links'] || 0600 !== $current_file['permissions'] || is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) || false === $size || $size <= 0 || $size > self::MAX_ARCHIVE_BYTES || ! is_string( $digest ) || ! hash_equals( $extension['asset_sha256'], $digest ) ) {
+		if ( null === $current_file || $created['device'] !== $current_file['device'] || $created['inode'] !== $current_file['inode'] || 1 !== $current_file['links'] || 0600 !== $current_file['permissions'] || is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) || false === $size || $size <= 0 || $size > $maximum_bytes || ! is_string( $digest ) || ! hash_equals( $extension['asset_sha256'], $digest ) ) {
 			throw new RuntimeException( 'Selected release could not be verified.' );
 		}
 	}
@@ -221,7 +221,7 @@ final class ExtensionInstaller {
 	/** @param array{id: string, plugin: string, release_version: string, asset_url: string, asset_sha256: string, compatible: bool, state: string} $extension
 	 * @return array<string, string> Relative names and sha256 digests.
 	 */
-	private function archive_files( string $path, array $extension ): array {
+	private function archive_files( string $path, array $extension, int $maximum_bytes ): array {
 		$zip = new ZipArchive();
 		if ( true !== $zip->open( $path ) ) {
 			throw new RuntimeException( 'Invalid selected release archive.' );
@@ -263,20 +263,30 @@ final class ExtensionInstaller {
 				if ( ! is_array( $stat ) || ! isset( $stat['size'] ) || ! is_int( $stat['size'] ) || $stat['size'] < 0 ) {
 					throw new RuntimeException( 'Invalid release archive size.' );
 				}
-				$total_size += $stat['size'];
-				if ( $total_size > self::MAX_ARCHIVE_BYTES ) {
+				if ( $stat['size'] > $maximum_bytes - $total_size ) {
 					throw new RuntimeException( 'Release archive is too large.' );
 				}
-				$content = $zip->getFromIndex( $i );
-				if ( '' === $relative || isset( $files[ $relative ] ) || ! is_string( $content ) ) {
+				$total_size += $stat['size'];
+				$stream      = $zip->getStream( $name );
+				if ( '' === $relative || isset( $files[ $relative ] ) || ! is_resource( $stream ) ) {
 					throw new RuntimeException( 'Invalid release archive entry.' );
 				}
+				$hash = hash_init( 'sha256' );
+				try {
+					if ( hash_update_stream( $hash, $stream, $stat['size'] + 1 ) !== $stat['size'] ) {
+						throw new RuntimeException( 'Invalid release archive entry size.' );
+					}
+				} finally {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native stream opened for this ZIP member.
+					fclose( $stream );
+				}
 				if ( $name === $extension['plugin'] ) {
-					$header              = substr( $content, 0, 8192 );
-					$plugin_header_valid = 1 === preg_match( '/^[ \t\/*#@]*Plugin Name:[ \t]*\S.+$/mi', $header )
+					$header              = $zip->getFromIndex( $i, 8192 );
+					$plugin_header_valid = is_string( $header )
+						&& 1 === preg_match( '/^[ \t\/*#@]*Plugin Name:[ \t]*\S.+$/mi', $header )
 						&& 1 === preg_match( '/^[ \t\/*#@]*Version:[ \t]*' . preg_quote( $extension['release_version'], '/' ) . '[ \t]*$/mi', $header );
 				}
-				$files[ $relative ] = hash( 'sha256', $content );
+				$files[ $relative ] = hash_final( $hash );
 			}
 		} finally {
 			$zip->close();
@@ -303,7 +313,7 @@ final class ExtensionInstaller {
 				return false;
 			}
 			if ( $entry->isFile() ) {
-				$observed[ substr( $entry->getPathname(), strlen( $destination ) + 1 ) ] = true;
+				$observed[ $this->installed_relative_path( $destination, $entry->getPathname(), DIRECTORY_SEPARATOR ) ] = true;
 			}
 		}
 		if ( count( $observed ) !== count( $files ) || array_diff_key( $observed, $files ) ) {
@@ -317,5 +327,9 @@ final class ExtensionInstaller {
 			}
 		}
 		return true;
+	}
+
+	private function installed_relative_path( string $destination, string $pathname, string $separator ): string {
+		return str_replace( $separator, '/', substr( $pathname, strlen( $destination ) + 1 ) );
 	}
 }

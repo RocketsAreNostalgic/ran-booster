@@ -4,17 +4,33 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\CredentialExpiryReport;
 use RuntimeException;
 
 /**
  * Stores non-secret, provider-scoped credential expiry observations.
+ *
+ * A provider observation carries the material tag of the credential it was made
+ * for, and is returned only while that tag is still the credential's current one.
  */
 class CredentialExpiryObservationStore {
 
 	public const OPTION_NAME = 'ran_booster_credential_expiry_observations';
 
 	private const SCHEMA_VERSION = 1;
+
+	/** @var (\Closure(string, string): ?string)|null */
+	private ?\Closure $material_tags = null;
+
+	/**
+	 * Set the reader of current material tags once; until then provider observations are hidden and not recorded.
+	 *
+	 * @param \Closure(string, string): ?string $reader
+	 */
+	public function read_material_tags_with( \Closure $reader ): void {
+		$this->material_tags ??= $reader;
+	}
 
 	/**
 	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}
@@ -23,14 +39,24 @@ class CredentialExpiryObservationStore {
 		$this->require_provider_id( $provider );
 		$this->require_profile_id( $profile_id );
 
-		return $this->all( $this->read_option() )[ $provider ][ $profile_id ] ?? array();
+		return $this->trusted( $provider, $profile_id, $this->all( $this->read_option() )[ $provider ][ $profile_id ] ?? array() );
 	}
 
 	/**
 	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}>>
 	 */
 	public function observations(): array {
-		return $this->all( $this->read_option() );
+		$profiles = $this->all( $this->read_option() );
+		foreach ( $profiles as $provider => &$records ) {
+			foreach ( $records as $profile_id => &$record ) {
+				$record = $this->trusted( $provider, $profile_id, $record );
+			}
+			unset( $record );
+			$records = array_filter( $records );
+		}
+		unset( $records );
+
+		return array_filter( $profiles );
 	}
 
 	public function set_manual_expiry( string $provider, string $profile_id, ?string $expires_on ): void {
@@ -43,20 +69,23 @@ class CredentialExpiryObservationStore {
 		$this->mutate( $provider, $profile_id, array( 'manual_expires_on' => $expires_on ) );
 	}
 
+	/** @return bool False when the credential no longer carries $material_tag, or its tag cannot be read. */
 	public function record_provider_expiry(
 		string $provider,
 		string $profile_id,
 		CredentialExpiryReport $report,
-		string $checked_at
-	): void {
+		string $checked_at,
+		string $material_tag
+	): bool {
 		$this->require_provider_id( $provider );
 		$this->require_profile_id( $profile_id );
 		$this->require_utc_timestamp( $checked_at );
 
-		$this->mutate(
+		return $this->mutate(
 			$provider,
 			$profile_id,
 			array(
+				'material_tag'        => $material_tag,
 				'provider_checked_at' => $checked_at,
 				'provider_expires_at' => $report->is_known() ? (string) $report->expires_at : null,
 			)
@@ -119,7 +148,7 @@ class CredentialExpiryObservationStore {
 	}
 
 	/**
-	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}>>
+	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int, material_tag?: string}>>
 	 */
 	private function all( mixed $document ): array {
 		if ( ! is_array( $document ) || self::SCHEMA_VERSION !== ( $document['version'] ?? null )
@@ -163,7 +192,7 @@ class CredentialExpiryObservationStore {
 
 	/**
 	 * @param array<string, mixed> $candidate Stored observation candidate.
-	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}
+	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int, material_tag?: string}
 	 */
 	private function normalise_record( array $candidate ): array {
 		$record = array();
@@ -174,9 +203,13 @@ class CredentialExpiryObservationStore {
 			$record['manual_expires_on'] = $candidate['manual_expires_on'];
 		}
 
+		// A provider observation without the tag of the credential it was made for is never trusted.
 		if ( is_string( $candidate['provider_checked_at'] ?? null )
 			&& $this->is_utc_timestamp( $candidate['provider_checked_at'] )
+			&& is_string( $candidate['material_tag'] ?? null )
+			&& $this->is_material_tag( $candidate['material_tag'] )
 		) {
+			$record['material_tag']        = $candidate['material_tag'];
 			$record['provider_checked_at'] = $candidate['provider_checked_at'];
 			if ( is_string( $candidate['provider_expires_at'] ?? null )
 				&& $this->is_utc_timestamp( $candidate['provider_expires_at'] )
@@ -189,6 +222,41 @@ class CredentialExpiryObservationStore {
 		}
 
 		return $record;
+	}
+
+	/**
+	 * Drop the tag, and the provider observation unless its tag is the credential's current one.
+	 *
+	 * @param array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int, material_tag?: string} $record
+	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}
+	 */
+	private function trusted( string $provider, string $profile_id, array $record ): array {
+		$tag = $record['material_tag'] ?? null;
+		unset( $record['material_tag'] );
+		if ( null !== $tag && ! $this->is_current_tag( $provider, $profile_id, $tag ) ) {
+			unset( $record['provider_checked_at'], $record['provider_expires_at'] );
+		}
+
+		return $record;
+	}
+
+	private function is_current_tag( string $provider, string $profile_id, string $tag ): bool {
+		try {
+			$current = null === $this->material_tags ? false : ( $this->material_tags )( $provider, $profile_id );
+		} catch ( \Throwable ) {
+			$current = false;
+		}
+		if ( false === $current ) {
+			BoosterLogger::log(
+				'Credential expiry observation unavailable.',
+				array(
+					'operation'    => 'credential_expiry_observation',
+					'outcome_code' => 'material_tag_unavailable',
+				)
+			);
+		}
+
+		return is_string( $current ) && hash_equals( $current, $tag );
 	}
 
 	/**
@@ -209,10 +277,17 @@ class CredentialExpiryObservationStore {
 		$profiles[ $provider ][ $profile_id ] = $record;
 	}
 
-	/** @param array<string, string|null>|null $patch Fields to replace, or null to clear the record. */
-	private function mutate( string $provider, string $profile_id, ?array $patch, bool $replacement = false ): void {
+	/**
+	 * A patch that carries a material tag is written only while that tag is current, checked again on every attempt.
+	 *
+	 * @param array<string, string|null>|null $patch Fields to replace, or null to clear the record.
+	 */
+	private function mutate( string $provider, string $profile_id, ?array $patch, bool $replacement = false ): bool {
 		for ( $attempt = 0; $attempt < 5; ++$attempt ) {
 			$expected = $this->read_option( true );
+			if ( is_string( $patch['material_tag'] ?? null ) && ! $this->is_current_tag( $provider, $profile_id, $patch['material_tag'] ) ) {
+				return false;
+			}
 			$profiles = $this->all( $expected );
 			$previous = $profiles[ $provider ][ $profile_id ] ?? array();
 			$record   = null === $patch ? array() : $previous;
@@ -237,7 +312,7 @@ class CredentialExpiryObservationStore {
 				'profiles' => $profiles,
 			);
 			if ( $expected === $document || $this->write_option( $expected, $document ) ) {
-				return;
+				return true;
 			}
 		}
 		throw new RuntimeException( 'Booster could not save credential expiry information.' );
@@ -265,6 +340,10 @@ class CredentialExpiryObservationStore {
 		if ( ! $this->is_utc_timestamp( $value ) ) {
 			throw new RuntimeException( 'Credential expiry timestamp is invalid.' );
 		}
+	}
+
+	private function is_material_tag( string $value ): bool {
+		return 1 === preg_match( '/\A[0-9a-f]{32}\z/', $value );
 	}
 
 	private function is_date( string $value ): bool {

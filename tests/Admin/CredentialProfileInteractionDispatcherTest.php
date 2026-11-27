@@ -585,11 +585,13 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->getMockBuilder( Dashboard::class )->disableOriginalConstructor()->onlyMethods( array( 'add_message' ) )->getMock();
 		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
+		$expiry_observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 		$expiry_observations->record_provider_expiry(
 			'fixture',
 			'credential_existing',
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
+			'2026-08-08T12:00:00Z',
+			$this->secrets->credential_material_tag( 'fixture', 'credential_existing' ) ?? ''
 		);
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$_GET['view']         = 'credentials';
@@ -629,11 +631,13 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->createMock( Dashboard::class );
 		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
+		$expiry_observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 		$expiry_observations->record_provider_expiry(
 			'fixture',
 			'credential_existing',
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
+			'2026-08-08T12:00:00Z',
+			$this->secrets->credential_material_tag( 'fixture', 'credential_existing' ) ?? ''
 		);
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
@@ -672,11 +676,13 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->createMock( Dashboard::class );
 		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
+		$expiry_observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 		$expiry_observations->record_provider_expiry(
 			'fixture',
 			'credential_existing',
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
+			'2026-08-08T12:00:00Z',
+			$this->secrets->credential_material_tag( 'fixture', 'credential_existing' ) ?? ''
 		);
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
@@ -1034,11 +1040,13 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$dashboard           = $this->getMockBuilder( Dashboard::class )->disableOriginalConstructor()->onlyMethods( array( 'add_message' ) )->getMock();
 		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
 		$expiry_observations->set_manual_expiry( 'fixture', 'credential_existing', '2026-09-01' );
+		$expiry_observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 		$expiry_observations->record_provider_expiry(
 			'fixture',
 			'credential_existing',
 			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
+			'2026-08-08T12:00:00Z',
+			$this->secrets->credential_material_tag( 'fixture', 'credential_existing' ) ?? ''
 		);
 		$observation_before   = $expiry_observations->document;
 		$_POST['ran_booster'] = array(

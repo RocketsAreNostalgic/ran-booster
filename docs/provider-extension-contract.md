@@ -846,6 +846,17 @@ takes precedence over Booster's optional manual profile date. A provider that
 does not report expiry remains fully compatible and receives the same manual
 fallback, row status, and administrator notice behavior.
 
+Core records a result only for the credential that was checked. Before the
+provider call it reads the credential's material tag: a random value kept in
+the encrypted record and replaced with every new secret, or, for the read-only
+constant, an HMAC of the configured value under a key derived from the site's
+salts. The observation and the automatic-removal deadline are written only while
+that tag is still current, the deadline under the secrets file lock, and an
+observation is shown only while its tag matches. A result for a credential
+replaced during validation is discarded with a coded log line. A record saved
+before tags existed records nothing until it is next saved. A provider-reported
+date can only bring the removal deadline earlier.
+
 A provider that implements `RepositoryBrowser` receives one public-owner or
 one selected-credential `RepositoryBrowseRequest`. It must claim every remote
 call from that request, apply its response-size limit and return a

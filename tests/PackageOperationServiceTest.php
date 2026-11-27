@@ -1688,15 +1688,14 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 		// A changed time or provider no longer matches the signed marker.
 		foreach ( array(
-			'ran_booster_retry_at'       => (string) ( $retry_at + 600 ),
-			'ran_booster_retry_provider' => 'Elsewhere',
-		) as $key => $value ) {
-			$original     = $_GET[ $key ];
-			$_GET[ $key ] = $value;
+			'ran_booster_retry_at'       => array( (string) ( $retry_at + 600 ), (string) $retry_at ),
+			'ran_booster_retry_provider' => array( 'Elsewhere', 'GitHub' ),
+		) as $key => [ $changed, $signed ] ) {
+			$_GET[ $key ] = $changed;
 			$tampered     = $this->dashboard( new OperationCoordinator() );
 			self::assertNull( $this->invoke_package_success_notice( $tampered, $type ) );
 			self::assertSame( array(), $tampered->messages );
-			$_GET[ $key ] = $original;
+			$_GET[ $key ] = $signed;
 		}
 	}
 

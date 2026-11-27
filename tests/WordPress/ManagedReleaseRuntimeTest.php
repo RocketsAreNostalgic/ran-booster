@@ -3130,7 +3130,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				throw new RepositoryReleaseReadUnavailable( 'Fixture rate limit.', 0, null, new ProviderFailure( 'rate_limited', 429, 3540 ) );
 			}
 		);
-		$facade    = $this->facade(
+		$facade = $this->facade(
 			$plugins,
 			$themes,
 			$store,
@@ -3142,7 +3142,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			metadata_eligible: static fn (): bool => true,
 			public_lookup_profile: static fn ( string $provider ): ?string => $profiles->get( $provider )
 		);
-		$list      = static fn (): ?RepositoryReleaseCandidateList => $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' ) );
+		$list   = static fn (): ?RepositoryReleaseCandidateList => $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' ) );
 
 		$before = time();
 		self::assertNull( $list() );

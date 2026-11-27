@@ -6,6 +6,8 @@ namespace RAN\Tests\Internal;
 
 require_once __DIR__ . '/AnonymousLookupCooldownWordPressFunctions.php';
 
+use PHPUnit\Framework\Attributes\After;
+use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use RAN\Internal\AnonymousLookupCooldown;
@@ -15,11 +17,13 @@ final class AnonymousLookupCooldownTest extends TestCase {
 
 	private const NOW = 1_800_000_000;
 
-	protected function setUp(): void {
+	#[Before]
+	protected function prepare(): void {
 		$GLOBALS['ran_booster_cooldown_transients'] = array();
 	}
 
-	protected function tearDown(): void {
+	#[After]
+	protected function restore(): void {
 		unset( $GLOBALS['ran_booster_cooldown_transients'] );
 	}
 

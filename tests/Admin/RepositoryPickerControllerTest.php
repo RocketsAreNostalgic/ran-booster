@@ -444,7 +444,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		require_once __DIR__ . '/../Internal/AnonymousLookupCooldownWordPressFunctions.php';
 		$GLOBALS['ran_booster_cooldown_transients'] = array();
 		try {
-			$provider = new class() implements RepositoryProvider, RepositoryBrowser {
+			$provider   = new class() implements RepositoryProvider, RepositoryBrowser {
 
 				use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 

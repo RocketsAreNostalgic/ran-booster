@@ -14,6 +14,7 @@
 	}
 
 	onDomReady(function () {
+		initShellOffset();
 		initDocumentationDeepLinks();
 		initTroubleshootingCredentialChoices();
 		initProviderRepositoryFilter();
@@ -22,6 +23,32 @@
 		initAutoSubmitSelects();
 		initReceiverSetup();
 	});
+
+	// Publish where the sticky Admin Shell ends, however its rows wrap, so
+	// sticky sidebars and focused or targeted elements stop below it.
+	function initShellOffset() {
+		const shell = document.querySelector('header.ran-admin-shell');
+		if (!shell || typeof window.ResizeObserver !== 'function') {
+			return;
+		}
+		const publish = function () {
+			const style = window.getComputedStyle(shell);
+			const offset =
+				style.position === 'sticky'
+					? (parseFloat(style.top) || 0) +
+						shell.getBoundingClientRect().height
+					: 0;
+			document.documentElement.style.setProperty(
+				'--ran-booster-shell-offset',
+				Math.ceil(offset) + 'px'
+			);
+		};
+		new window.ResizeObserver(publish).observe(shell, {
+			box: 'border-box',
+		});
+		// The shell's sticky top changes at the admin bar breakpoints.
+		window.addEventListener('resize', publish);
+	}
 
 	// The webhook receiver card: Automated/Manual tabs and the repository
 	// chooser. Without JavaScript both panels stay visible and the GET form

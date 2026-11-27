@@ -339,8 +339,18 @@
 
 .ran-booster-admin .ran-booster-repository-detail__sidebar {
 	position: sticky;
-	inset-block-start: 54px;
+	inset-block-start: var(--ran-booster-sticky-top);
 	min-inline-size: 0;
+}
+
+/* While it sticks, a sidebar taller than the window scrolls inside itself. */
+@media screen and (min-width: 961px) {
+	.ran-booster-admin .ran-booster-repository-detail__sidebar {
+		max-block-size: calc(
+			100vh - var(--ran-booster-sticky-top) - var(--ran-booster-space-16)
+		);
+		overflow-y: auto;
+	}
 }
 
 .ran-booster-admin

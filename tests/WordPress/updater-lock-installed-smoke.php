@@ -78,9 +78,7 @@ final class RAN_Booster_UpdaterLockInstalledSmoke {
 
 			$fixed_now            = time();
 			$own                  = (string) $fixed_now;
-			$expected_recovery    = (string) ( $fixed_now + 1 );
 			$this->owned_tokens[] = $own;
-			$this->owned_tokens[] = $expected_recovery;
 			$fixed_lock           = new class( $fixed_now ) extends WordPressUpdaterLock {
 				public function __construct( private readonly int $fixed_now ) {}
 
@@ -90,8 +88,9 @@ final class RAN_Booster_UpdaterLockInstalledSmoke {
 			};
 			$this->insert_row( $own );
 			$this->prime_cache();
-			$acquired = $fixed_lock->acquire_replacing_owner( $own );
-			$this->check( $expected_recovery === $acquired && $expected_recovery === $this->row() && $expected_recovery === $lock->current_token(), 'Same-second recovery handoff must replace the owner row with a distinct live token.' );
+			$expected_recovery    = $fixed_lock->acquire_replacing_owner( $own );
+			$this->owned_tokens[] = $expected_recovery;
+			$this->check( 1 === preg_match( '/\A' . $fixed_now . '\.[0-9]{27}\z/D', $expected_recovery ) && $expected_recovery === $this->row() && $expected_recovery === $lock->current_token(), 'Same-second recovery handoff must replace the owner row with a distinct fractional live token.' );
 			$this->check_cache( false );
 			$this->prime_cache();
 			try {

@@ -19,6 +19,9 @@ use RAN\WordPress\WordPressUpdaterLock;
  * selection/active-file/native-marker changes and use its exact mutation owner.
  */
 final class GitHubProviderSelection {
+	// Updater-lock owner tags: a set marker bit in the high half, and the low half's flag for a whole-seconds token.
+	private const TAG_MARKER         = 1 << 62;
+	private const WHOLE_SECONDS_FLAG = 1 << 62;
 	/** @var array<string, mixed>|null */
 	private ?array $state = null;
 	/** @var array<string, array{selection_generation:int,owner_tag:string,target_type:string,installed_identity:string,phase:string}> */
@@ -482,14 +485,10 @@ final class GitHubProviderSelection {
 		$marker = $this->store->selection_transaction(
 			function ( \Closure $execute ) use ( $type, $identity, $owns_lock, $lock_token ): array {
 				$state = $this->store->read( true );
-				if ( isset( $state['native_mutation'] ) || ( null !== $lock_token && 1 !== preg_match( '/\A[1-9]\d{0,15}\z/D', $lock_token ) ) || ! $this->owns_native_lock( $owns_lock, $execute ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
+				if ( isset( $state['native_mutation'] ) || ( null !== $lock_token && null === self::native_lock_tag( $lock_token ) ) || ! $this->owns_native_lock( $owns_lock, $execute ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
 						throw new \RuntimeException( 'GitHub native mutation is unavailable.' );
 				}
-				$prefix                  = null === $lock_token ? str_repeat( '0', 16 ) : sprintf( '%016x', (int) $lock_token );
-				$nonce                   = null === $lock_token ? '' : bin2hex( random_bytes( 4 ) );
-				$owner_tag               = null === $lock_token
-					? $prefix . bin2hex( random_bytes( 8 ) )
-					: $prefix . $nonce . substr( hash( 'sha256', 'ran-booster-native-lock-v1:' . $prefix . ':' . $nonce ), 0, 8 );
+				$owner_tag               = null === $lock_token ? str_repeat( '0', 16 ) . bin2hex( random_bytes( 8 ) ) : (string) self::native_lock_tag( $lock_token );
 				$marker                  = array(
 					'selection_generation' => $state['selection_generation'],
 					'owner_tag'            => $owner_tag,
@@ -604,19 +603,33 @@ final class GitHubProviderSelection {
 	 */
 	public static function native_lock_token( array $marker ): ?string {
 		$tag = $marker['owner_tag'] ?? null;
-		if ( ! is_string( $tag ) || 1 !== preg_match( '/\A([0-9a-f]{16})([0-9a-f]{8})([0-9a-f]{8})\z/D', $tag, $matches ) ) {
+		if ( ! is_string( $tag ) || 1 !== preg_match( '/\A[4-7][0-9a-f]{15}[0-4][0-9a-f]{15}\z/D', $tag ) ) {
 			return null;
 		}
-		$prefix = $matches[1];
-		if ( 1 !== preg_match( '/\A0+[1-9a-f][0-9a-f]{0,13}\z/D', $prefix ) ) {
+		$high    = (int) hexdec( substr( $tag, 0, 16 ) );
+		$low     = (int) hexdec( substr( $tag, 16 ) );
+		$seconds = ( $high >> 28 ) & 0x3FFFFFFFF;
+		$token   = self::WHOLE_SECONDS_FLAG === $low
+			? (string) $seconds
+			: sprintf( '%d.%09d%09d%09d', $seconds, ( ( $high & 0xFFFFFFF ) << 2 ) | ( $low >> 60 ), ( $low >> 30 ) & 0x3FFFFFFF, $low & 0x3FFFFFFF );
+		// Only the canonical encoding of a valid token decodes.
+		return self::native_lock_tag( $token ) === $tag ? $token : null;
+	}
+
+	/**
+	 * Losslessly pack an updater lock token into the 32-hex owner tag, so recovery gets back the exact lock value.
+	 * The high half carries a marker bit, 34 bits of seconds and the first fraction group's top 28 bits; the low
+	 * half carries the rest of the three 30-bit nine-digit groups, or only a flag for a whole-seconds token.
+	 */
+	private static function native_lock_tag( string $token ): ?string {
+		if ( 1 === preg_match( '/\A[1-9][0-9]{0,9}\z/D', $token ) ) {
+			return sprintf( '%016x%016x', self::TAG_MARKER | ( (int) $token << 28 ), self::WHOLE_SECONDS_FLAG );
+		}
+		if ( 1 !== preg_match( '/\A([1-9][0-9]{0,9})\.([0-9]{9})([0-9]{9})([0-9]{9})\z/D', $token, $matches ) ) {
 			return null;
 		}
-		$expected = substr( hash( 'sha256', 'ran-booster-native-lock-v1:' . $prefix . ':' . $matches[2] ), 0, 8 );
-		if ( ! hash_equals( $expected, $matches[3] ) ) {
-			return null;
-		}
-		$token = (string) hexdec( ltrim( $prefix, '0' ) );
-		return 1 === preg_match( '/\A[1-9]\d{0,15}\z/D', $token ) ? $token : null;
+		$first = (int) $matches[2];
+		return sprintf( '%016x%016x', self::TAG_MARKER | ( (int) $matches[1] << 28 ) | ( $first >> 2 ), ( ( $first & 3 ) << 60 ) | ( (int) $matches[3] << 30 ) | (int) $matches[4] );
 	}
 
 	/** @return array<string,mixed> Internal recovery authority; never expose the native owner in public status. */

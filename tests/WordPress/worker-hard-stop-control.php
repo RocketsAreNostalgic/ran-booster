@@ -118,7 +118,7 @@ if ( 'assert-retained' === $mode ) {
 		if ( null !== $ran_booster_core ) {
 			throw new RuntimeException( 'The pre-acquisition kill unexpectedly owns the core lock.' );
 		}
-	} elseif ( ! is_string( $ran_booster_core ) || preg_match( '/^\d+$/D', $ran_booster_core ) !== 1 ) {
+	} elseif ( ! is_string( $ran_booster_core ) || preg_match( '/\A[0-9]+(?:\.[0-9]{27})?\z/D', $ran_booster_core ) !== 1 ) {
 		throw new RuntimeException( 'The post-acquisition kill did not retain the native core-lock token.' );
 	}
 	return;
@@ -129,7 +129,7 @@ if ( 'replace-core-lock' === $mode ) {
 		throw new RuntimeException( 'Only the foreign-lock proof may replace the core token.' );
 	}
 	$ran_booster_core = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
-	if ( ! is_string( $ran_booster_core ) || preg_match( '/^\d+$/D', $ran_booster_core ) !== 1 ) {
+	if ( ! is_string( $ran_booster_core ) || preg_match( '/\A[0-9]+(?:\.[0-9]{27})?\z/D', $ran_booster_core ) !== 1 ) {
 		throw new RuntimeException( 'The retained core lock is unavailable for replacement.' );
 	}
 	$ran_booster_foreign = (string) max( time(), (int) $ran_booster_core + 1 );

@@ -521,8 +521,8 @@ final class NativeRecoveryTest extends TestCase {
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'same_second_recovery_scenarios' )]
 	public function test_same_second_concurrent_recovery_is_refused_and_preserves_live_lock( string $operation, bool $initial_lock_present ): void {
 		$fixed_now      = time();
-		$own            = (string) $fixed_now;
-		$expected_token = (string) ( $fixed_now + 1 );
+		$own            = $fixed_now . '.' . str_repeat( '1', 27 );
+		$expected_token = null;
 		$lock           = new class( $fixed_now ) extends WordPressUpdaterLock {
 			public function __construct( private int $fixed_now ) {}
 
@@ -549,10 +549,11 @@ final class NativeRecoveryTest extends TestCase {
 		$digest         = $service->native_recovery_confirmation()['digest'];
 		$calls          = 0;
 		$second_refused = false;
-		$authorized     = function () use ( $service, $operation, $digest, $own, $expected_token, &$calls, &$second_refused ): bool {
+		$authorized     = function () use ( $service, $operation, $digest, $own, $fixed_now, &$expected_token, &$calls, &$second_refused ): bool {
 			if ( 2 === ++$calls ) {
-				self::assertSame( $expected_token, $this->db->option_rows['auto_updater.lock'] ?? null );
-				self::assertNotSame( $own, $this->db->option_rows['auto_updater.lock'] ?? null );
+				$expected_token = $this->db->option_rows['auto_updater.lock'] ?? null;
+				self::assertMatchesRegularExpression( '/\A' . $fixed_now . '\.[0-9]{27}\z/D', (string) $expected_token );
+				self::assertNotSame( $own, $expected_token );
 				self::assertTrue( $service->native_hold_lock_busy() );
 				try {
 					if ( 'release' === $operation ) {
@@ -1053,9 +1054,9 @@ final class NativeRecoveryTest extends TestCase {
 	}
 
 	private static function tag( string $lock_token ): string {
-		$prefix = sprintf( '%016x', (int) $lock_token );
-		$nonce  = 'bbbbbbbb';
-		return $prefix . $nonce . substr( hash( 'sha256', 'ran-booster-native-lock-v1:' . $prefix . ':' . $nonce ), 0, 8 );
+		$tag = ( new \ReflectionMethod( GitHubProviderSelection::class, 'native_lock_tag' ) )->invoke( null, $lock_token );
+		self::assertIsString( $tag );
+		return $tag;
 	}
 
 	private function release( ?string $digest = null ): void {

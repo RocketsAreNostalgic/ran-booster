@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\WordPress;
 
 use RAN\Deployment\DeploymentStorageFailure;
+use RAN\Logging\BoosterLogger;
 use RAN\WPBranchUpdater\V1\Runtime\BranchDeploymentLockStorageFailure;
 use RAN\WPBranchUpdater\V1\WordPress\WordPressUpdaterLock as BranchWordPressUpdaterLock;
 use RuntimeException;
@@ -16,6 +17,8 @@ use Throwable;
 class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	private const OPTION_NAME   = 'auto_updater.lock';
 	private const STALE_SECONDS = 3600;
+	// The Branch updater's token grammar: WordPress's integer timestamp, optionally with its 27-digit ownership fraction.
+	private const TOKEN_PATTERN = '/\A[0-9]+(?:\.[0-9]{27})?\z/D';
 
 	/**
 	 * Run one synchronous operation while this exact lock token is held.
@@ -36,18 +39,35 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 			throw null === $acquire_failure_message ? $failure : new RuntimeException( $acquire_failure_message, 0, $failure );
 		}
 
+		$operation_failure = null;
 		try {
 			return $operation();
+		} catch ( Throwable $failure ) {
+			$operation_failure = $failure;
+			throw $failure;
 		} finally {
+			$release_failure = null;
 			try {
 				$released = $this->release( $token );
 			} catch ( Throwable $failure ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal lock failures are not rendered; retain the public named-argument contract.
-				throw null === $release_failure_message ? $failure : new RuntimeException( $release_failure_message, 0, $failure );
+				$released        = false;
+				$release_failure = $failure;
 			}
 			if ( ! $released ) {
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The caller supplies an internal diagnostic via the public named-argument contract.
-				throw new RuntimeException( $release_failure_message ?? 'The WordPress updater lock could not be released.' );
+				BoosterLogger::log(
+					'updater lock release failed',
+					array(
+						'step'         => 'updater_lock_release',
+						'reason'       => null === $release_failure ? 'not_released' : 'release_failed',
+						'outcome_code' => null === $operation_failure ? 'operation_returned' : 'operation_failed',
+					)
+				);
+				if ( null !== $release_failure && null === $operation_failure && null === $release_failure_message ) {
+					throw $release_failure;
+				}
+				// A failed operation stays the cause, as in the Branch updater's run(); the release failure is the outcome.
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Internal lock failures are not rendered; retain the public named-argument contract.
+				throw new RuntimeException( $release_failure_message ?? 'The WordPress updater lock could not be released.', 0, $operation_failure ?? $release_failure );
 			}
 		}
 	}
@@ -93,7 +113,9 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	public function acquire_replacing_owner( string $expected_owner ): string {
 		$options_table = $this->require_options_table();
 		$now           = $this->now();
-		$token         = (string) $now === $expected_owner ? (string) ( $now + 1 ) : (string) $now;
+		do {
+			$token = $this->new_token();
+		} while ( $token === $expected_owner );
 
 		if ( $this->replace_lock_value( $options_table, $expected_owner, $token ) ) {
 			return $token;
@@ -103,7 +125,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		}
 
 		$stored = $this->read_lock_value( $options_table );
-		if ( null === $stored || 1 !== preg_match( '/^\d+$/D', $stored ) || (int) $stored > $now - self::STALE_SECONDS ) {
+		if ( ! self::valid_token( $stored ) || (int) $stored > $now - self::STALE_SECONDS ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
 			throw $this->contention_failure();
 		}
@@ -141,7 +163,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		if ( null !== $stored && ! is_string( $stored ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		return is_string( $stored ) && 1 === preg_match( '/^\d+$/D', $stored ) && (int) $stored > $this->now() - self::STALE_SECONDS ? $stored : null;
+		return self::valid_token( $stored ) && (int) $stored > $this->now() - self::STALE_SECONDS ? $stored : null;
 	}
 
 	/**
@@ -161,12 +183,12 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		}
 		$options_table = $wpdb->options;
 		$now           = $this->now();
-		$token         = (string) $now;
+		$token         = $this->new_token();
 
 		try {
 			$inserted = $execute(
 				'INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)',
-				array( $options_table, self::OPTION_NAME, $token, 'no' ),
+				array( $options_table, self::OPTION_NAME, $token, 'off' ),
 				'affected'
 			);
 			if ( ! is_int( $inserted ) ) {
@@ -181,7 +203,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 				array( $options_table, self::OPTION_NAME ),
 				'var'
 			);
-			if ( ! is_string( $stored ) || 1 !== preg_match( '/^\d+$/D', $stored ) || (int) $stored > $now - self::STALE_SECONDS ) {
+			if ( ! self::valid_token( $stored ) || (int) $stored > $now - self::STALE_SECONDS ) {
 				return null;
 			}
 
@@ -199,7 +221,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 
 			$reinserted = $execute(
 				'INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)',
-				array( $options_table, self::OPTION_NAME, $token, 'no' ),
+				array( $options_table, self::OPTION_NAME, $token, 'off' ),
 				'affected'
 			);
 			if ( ! is_int( $reinserted ) ) {
@@ -228,6 +250,16 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 
 	protected function now(): int {
 		return time();
+	}
+
+	/** A token in the Branch updater's format: the integer timestamp WordPress compares, plus a random ownership fraction. */
+	private function new_token(): string {
+		return sprintf( '%d.%09d%09d%09d', $this->now(), random_int( 0, 999999999 ), random_int( 0, 999999999 ), random_int( 0, 999999999 ) );
+	}
+
+	/** @phpstan-assert-if-true string $token */
+	private static function valid_token( mixed $token ): bool {
+		return is_string( $token ) && 1 === preg_match( self::TOKEN_PATTERN, $token );
 	}
 
 	protected function contention_failure(): RuntimeException {
@@ -273,7 +305,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		}
 		try {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic absent-row acquisition for the uncached auto_updater.lock row.
-			$result = $wpdb->query( $wpdb->prepare( 'INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $options_table, self::OPTION_NAME, $token, 'no' ) );
+			$result = $wpdb->query( $wpdb->prepare( 'INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $options_table, self::OPTION_NAME, $token, 'off' ) );
 		} catch ( Throwable ) {
 			throw DeploymentStorageFailure::unavailable();
 		}

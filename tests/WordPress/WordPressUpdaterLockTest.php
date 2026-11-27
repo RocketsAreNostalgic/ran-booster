@@ -247,20 +247,60 @@ final class WordPressUpdaterLockTest extends TestCase {
 		}
 	}
 
-	public function test_run_keeps_named_release_message_cause_and_finally_precedence(): void {
-		$failure = new RuntimeException( 'release failure' );
+	public function test_run_keeps_named_release_message_and_the_failed_operation_as_cause(): void {
+		$failure           = new RuntimeException( 'release failure' );
+		$operation_failure = new RuntimeException( 'operation failure' );
 		$this->expectException( RuntimeException::class );
 		$this->expectExceptionMessage( 'custom release' );
 		$lock = $this->createMock( WordPressUpdaterLock::class );
 		$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'subclass-token' );
 		$lock->expects( self::once() )->method( 'release' )->with( 'subclass-token' )->willThrowException( $failure );
 		try {
-			$lock->run( static fn () => throw new RuntimeException( 'operation failure' ), release_failure_message: 'custom release' );
+			$lock->run( static fn () => throw $operation_failure, release_failure_message: 'custom release' );
 		} catch ( RuntimeException $caught ) {
 			self::assertSame( 'custom release', $caught->getMessage() );
-			self::assertSame( $failure, $caught->getPrevious() );
+			// The failed operation stays the cause; the release failure is the outcome.
+			self::assertSame( $operation_failure, $caught->getPrevious() );
 			throw $caught;
 		}
+	}
+
+	public function test_run_keeps_the_failed_operation_as_cause_when_release_fails_without_a_message(): void {
+		$operation_failure = new RuntimeException( 'operation failure' );
+		$releases          = array(
+			'thrown'  => new RuntimeException( 'release failure' ),
+			'refused' => false,
+		);
+		$caught_cases      = array();
+		foreach ( $releases as $case => $release ) {
+			$lock   = $this->createMock( WordPressUpdaterLock::class );
+			$method = $lock->expects( self::once() )->method( 'release' )->with( 'subclass-token' );
+			$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'subclass-token' );
+			if ( false === $release ) {
+				$method->willReturn( false );
+			} else {
+				$method->willThrowException( $release );
+			}
+			try {
+				$lock->run( static fn () => throw $operation_failure );
+			} catch ( RuntimeException $caught ) {
+				self::assertSame( 'The WordPress updater lock could not be released.', $caught->getMessage(), $case );
+				self::assertSame( $operation_failure, $caught->getPrevious(), $case );
+				$caught_cases[] = $case;
+			}
+		}
+		self::assertSame( array_keys( $releases ), $caught_cases, 'A failed release must not be hidden.' );
+	}
+
+	public function test_core_accepts_and_issues_the_branch_updater_token_grammar(): void {
+		$lock     = new WordPressUpdaterLock();
+		$upstream = $lock->try_acquire_without_reclaim();
+		self::assertIsString( $upstream );
+		self::assertMatchesRegularExpression( '/\A[0-9]+\.[0-9]{27}\z/D', $upstream );
+		self::assertSame( $upstream, $lock->current_token() );
+		self::assertTrue( $lock->release( $upstream ) );
+		self::assertNotSame( $upstream, $lock->acquire_replacing_owner( $upstream ) );
+		self::assertMatchesRegularExpression( '/\A[0-9]+\.[0-9]{27}\z/D', (string) $lock->current_token() );
 	}
 
 	public function test_ordinary_release_override_failure_preserves_its_identity_during_stale_acquisition(): void {
@@ -529,8 +569,8 @@ final class WordPressUpdaterLockTest extends TestCase {
 				return $this->fixed_now;
 			}
 		};
-		$own       = (string) $fixed_now;
-		$expected  = (string) ( $fixed_now + 1 );
+		$own       = $fixed_now . '.' . str_repeat( '1', 27 );
+		$fresh     = static fn ( string $token ): string => 1 === preg_match( '/\A' . $fixed_now . '\.[0-9]{27}\z/D', $token ) && $own !== $token ? $token : self::fail( 'Recovery must take a fresh fractional token.' );
 		$caches    = array(
 			array( 'auto_updater.lock', 'options' ),
 			array( 'notoptions', 'options' ),
@@ -539,7 +579,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 		$this->database->option_rows['auto_updater.lock'] = $own;
 		$this->database->queries                          = array();
 		$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
-		self::assertSame( $expected, $lock->acquire_replacing_owner( $own ) );
+		$expected = $fresh( $lock->acquire_replacing_owner( $own ) );
 		self::assertSame( $expected, $this->database->option_rows['auto_updater.lock'] );
 		self::assertSame( $caches, $GLOBALS['ran_booster_attempt_cache_deletes'] );
 		$saw_binary_update = false;
@@ -564,7 +604,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 
 		unset( $this->database->option_rows['auto_updater.lock'] );
 		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
-		self::assertSame( $expected, $lock->acquire_replacing_owner( $own ) );
+		$expected                                     = $fresh( $lock->acquire_replacing_owner( $own ) );
 		self::assertSame( $expected, $this->database->option_rows['auto_updater.lock'] );
 		self::assertSame( $caches, $GLOBALS['ran_booster_attempt_cache_deletes'] );
 		try {
@@ -578,8 +618,8 @@ final class WordPressUpdaterLockTest extends TestCase {
 		$older_own                                        = (string) ( $fixed_now - 10 );
 		$this->database->option_rows['auto_updater.lock'] = $older_own;
 		$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
-		self::assertSame( $own, $lock->acquire_replacing_owner( $older_own ) );
-		self::assertSame( $own, $this->database->option_rows['auto_updater.lock'] );
+		$replaced = $fresh( $lock->acquire_replacing_owner( $older_own ) );
+		self::assertSame( $replaced, $this->database->option_rows['auto_updater.lock'] );
 		self::assertSame( $caches, $GLOBALS['ran_booster_attempt_cache_deletes'] );
 
 		foreach ( array( 'malformed', $own . ' ', (string) ( $fixed_now - 3601 ) . ' ', (string) ( $fixed_now + 5 ) ) as $foreign ) {
@@ -599,7 +639,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 		$this->database->option_rows['auto_updater.lock'] = $expired_foreign;
 		$this->database->queries                          = array();
 		$GLOBALS['ran_booster_attempt_cache_deletes']     = array();
-		self::assertSame( $expected, $lock->acquire_replacing_owner( $own ) );
+		$expected = $fresh( $lock->acquire_replacing_owner( $own ) );
 		self::assertSame( $expected, $this->database->option_rows['auto_updater.lock'] );
 		self::assertSame( $caches, $GLOBALS['ran_booster_attempt_cache_deletes'] );
 		foreach ( $this->database->queries as $query ) {

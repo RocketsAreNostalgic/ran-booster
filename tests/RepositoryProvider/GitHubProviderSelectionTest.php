@@ -29,7 +29,8 @@ require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 final class GitHubProviderSelectionTest extends TestCase {
 	use \RAN\Tests\Support\QueuedSelectionFixture;
 
-	private const LOCK_TOKEN = '1700000000';
+	private const LOCK_TOKEN            = '1700000000';
+	private const FRACTIONAL_LOCK_TOKEN = '1700000000.123456789000000001999999999';
 
 	private string $root;
 	private SelectionContextDatabase $db;
@@ -1085,15 +1086,21 @@ final class GitHubProviderSelectionTest extends TestCase {
 	}
 
 	public function test_native_owner_tag_carries_the_exact_lock_token(): void {
-		$this->context()->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
-		$marker = $this->store->read()['native_mutation'];
-		self::assertIsArray( $marker );
-		$owner_tag = (string) $marker['owner_tag'];
-		self::assertMatchesRegularExpression( '/\A000000006553f100[0-9a-f]{16}\z/D', $owner_tag );
-		self::assertSame( self::LOCK_TOKEN, GitHubProviderSelection::native_lock_token( $marker ) );
-		$tampered = substr( $owner_tag, 0, -1 ) . ( '0' === substr( $owner_tag, -1 ) ? '1' : '0' );
+		// The Branch updater's grammar: a whole-seconds token, or seconds plus a 27-digit ownership fraction.
+		foreach ( array( self::LOCK_TOKEN, self::FRACTIONAL_LOCK_TOKEN, '9999999999.999999999999999999999999999', '1.000000000000000000000000000' ) as $token ) {
+			$context = $this->context();
+			$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, $token );
+			$marker  = $this->store->read()['native_mutation'];
+			self::assertIsArray( $marker );
+			self::assertSame( $owner, $marker['owner_tag'] );
+			self::assertMatchesRegularExpression( '/\A[4-7][0-9a-f]{15}[0-4][0-9a-f]{15}\z/D', $owner );
+			self::assertSame( $token, GitHubProviderSelection::native_lock_token( $marker ) );
+			$tampered = substr( $owner, 0, -1 ) . ( '0' === substr( $owner, -1 ) ? '1' : '0' );
+			self::assertNotSame( $token, GitHubProviderSelection::native_lock_token( array( 'owner_tag' => $tampered ) ) );
+			$context->complete_native_mutation( $owner, 'theme', 'first', 'verified_success' );
+		}
 		// A tag that never carried a validated lock token is never mistaken for one.
-		foreach ( array( str_repeat( 'a', 32 ), str_repeat( '0', 32 ), str_repeat( '0', 16 ) . str_repeat( 'f', 16 ), str_repeat( '0', 20 ) . str_repeat( 'f', 12 ), '00abcd1234567890' . str_repeat( 'f', 16 ), '000000006553f100' . str_repeat( '0', 16 ), $tampered, 'not-a-tag' ) as $tag ) {
+		foreach ( array( str_repeat( 'a', 32 ), str_repeat( '0', 32 ), str_repeat( '0', 16 ) . str_repeat( 'f', 16 ), str_repeat( '0', 20 ) . str_repeat( 'f', 12 ), '00abcd1234567890' . str_repeat( 'f', 16 ), '000000006553f100' . str_repeat( '0', 16 ), '4000000000000000' . str_repeat( '0', 16 ), '400000001' . str_repeat( 'f', 23 ), 'not-a-tag' ) as $tag ) {
 			self::assertNull( GitHubProviderSelection::native_lock_token( array( 'owner_tag' => $tag ) ) );
 		}
 	}
@@ -1107,7 +1114,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 	}
 
 	public function test_native_begin_refuses_a_malformed_lock_token(): void {
-		foreach ( array( '', '0', '012', 'abc', '1.5', '12345678901234567' ) as $token ) {
+		foreach ( array( '', '0', '012', 'abc', '1.5', '12345678901', '0.000000000000000000000000000', '1700000000.12345678900000000199999999', self::FRACTIONAL_LOCK_TOKEN . ' ' ) as $token ) {
 			try {
 				$this->context()->begin_native_mutation( 'theme', 'first', static fn (): bool => true, $token );
 				self::fail( 'Malformed lock token admitted mutation.' );

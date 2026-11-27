@@ -1270,7 +1270,7 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 	}
 
-	public function test_a_confirmed_stopped_attempt_offers_release_only_for_the_recorded_booster_lock(): void {
+	public function test_a_stopped_attempt_never_offers_release_for_whoever_holds_the_lock_now(): void {
 		$db                                      = new \RAN\Tests\Activity\ActivityConnection();
 		$journal                                 = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
 		$journal->rows                           = array(
@@ -1312,7 +1312,7 @@ final class TroubleshootingViewTest extends TestCase {
 		);
 		$rendered        = array();
 		try {
-			// The recorded owner's lock is held, then a different lock row holds it.
+			// A later, unrelated Booster operation holds the lock with its own record, then a foreign lock row does.
 			foreach ( array( $token, '1700000001' ) as $row ) {
 				$journal->option_rows = array(
 					'auto_updater.lock' => $row,
@@ -1330,11 +1330,12 @@ final class TroubleshootingViewTest extends TestCase {
 			$GLOBALS['wpdb'] = $previous_database;
 		}
 
-		self::assertStringContainsString( 'A Booster package operation started at ', $rendered[0] );
-		self::assertStringContainsString( 'name="ran_booster[action]" value="release-updater-lock"', $rendered[0] );
-		self::assertStringContainsString( 'name="ran_booster[lock_token]" value="' . $token . '"', $rendered[0] );
-		self::assertStringContainsString( 'name="ran_booster[confirm_stopped]" value="1" required', $rendered[0] );
-		self::assertStringNotContainsString( 'release-updater-lock', $rendered[1] );
+		// The attempt record holds no lock token, so nothing ties the current holder to this attempt.
+		self::assertCount( 2, $rendered );
+		foreach ( $rendered as $page ) {
+			self::assertStringContainsString( 'Deployment activity details', $page );
+			self::assertStringNotContainsString( 'release-updater-lock', $page );
+		}
 	}
 
 	public function test_a_run_the_pause_refused_shows_as_skipped_in_activity(): void {

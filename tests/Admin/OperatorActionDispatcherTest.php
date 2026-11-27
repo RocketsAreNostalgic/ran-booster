@@ -522,25 +522,39 @@ final class OperatorActionDispatcherTest extends TestCase {
 				'action'     => 'release-updater-lock',
 				'lock_token' => $token,
 			);
+			$other   = '1700000000.' . str_repeat( '9', 27 );
 			$held    = array();
-			// Unconfirmed, the wrong token, a missing package capability, then the confirmed exact token.
+			// Unconfirmed, a different valid token, a missing package capability, then the confirmed exact token.
 			foreach ( array(
 				$request,
 				array(
 					'confirm_stopped' => '1',
-					'lock_token'      => $token . '1',
+					'lock_token'      => $other,
 				) + $request,
 				array( 'confirm_stopped' => '1' ) + $request,
 				array( 'confirm_stopped' => '1' ) + $request,
 			) as $case => $post ) {
 				$GLOBALS['ran_booster_test_capabilities']['update_themes'] = 2 !== $case;
 				$_POST['ran_booster']                                      = $post;
+				// A nonce minted for another token fails verification against this token's action and changes nothing.
+				if ( 3 === $case ) {
+					$GLOBALS['ran_booster_test_nonce_valid'] = false;
+					try {
+						$this->dispatcher( $dashboard, lock: $lock )->dispatch_post_requests();
+						self::fail( 'A nonce bound to another token released the lock.' );
+					} catch ( \RuntimeException $failure ) {
+						self::assertSame( 'Invalid nonce.', $failure->getMessage() );
+					}
+					self::assertSame( $token, $database->option_rows['auto_updater.lock'] ?? null );
+					$GLOBALS['ran_booster_test_nonce_valid'] = true;
+				}
 				$this->dispatcher( $dashboard, lock: $lock )->dispatch_post_requests();
 				$held[] = $database->option_rows['auto_updater.lock'] ?? null;
 			}
 			self::assertSame( array( $token, $token, $token, null ), $held );
 			self::assertArrayNotHasKey( WordPressUpdaterLock::OWNER_OPTION, $database->option_rows );
-			self::assertSame( array_fill( 0, 4, 'ran-booster-release-updater-lock' ), $GLOBALS['ran_booster_test_nonce_checks'] );
+			$bound = 'ran-booster-release-updater-lock|' . $token;
+			self::assertSame( array( $bound, 'ran-booster-release-updater-lock|' . $other, $bound, $bound, $bound ), $GLOBALS['ran_booster_test_nonce_checks'] );
 		} finally {
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the database boundary replaced above.
 			$GLOBALS['wpdb'] = $previous_database;

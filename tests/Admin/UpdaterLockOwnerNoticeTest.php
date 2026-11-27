@@ -60,10 +60,22 @@ final class UpdaterLockOwnerNoticeTest extends TestCase {
 			),
 			$owner->getValue( $dashboard )
 		);
-		// The refusal is reported once per refused attempt.
-		self::assertFalse( WordPressUpdaterLock::take_refusal() );
+		// The refusal is reported once per refused attempt, naming the holder it observed.
+		self::assertNull( WordPressUpdaterLock::take_refusal() );
 		self::assertNull( ( new WordPressUpdaterLock() )->try_acquire_without_reclaim() );
-		self::assertTrue( WordPressUpdaterLock::take_refusal() );
+		self::assertSame( $token, WordPressUpdaterLock::take_refusal() );
+	}
+
+	public function test_a_refusal_names_no_owner_after_the_lock_changed_hands(): void {
+		$first     = new WordPressUpdaterLock();
+		$token     = $first->acquire();
+		$dashboard = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
+		self::assertNull( ( new WordPressUpdaterLock() )->try_acquire_without_reclaim() );
+		// The refused holder finishes and an unrelated operation takes the lock before the notice is built.
+		self::assertTrue( $first->release( $token ) );
+		( new WordPressUpdaterLock() )->acquire();
+		$dashboard->add_failure_message( new \WP_Error( 'ran_booster_test', 'Another package operation is in progress.' ), new RuntimeException( 'refused' ) );
+		self::assertNull( ( new \ReflectionProperty( Dashboard::class, 'updater_lock_owner' ) )->getValue( $dashboard ) );
 	}
 
 	public function test_the_failure_notices_offer_a_confirmed_release_only_with_a_recorded_owner(): void {

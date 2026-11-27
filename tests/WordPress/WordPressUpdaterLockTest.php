@@ -452,6 +452,27 @@ final class WordPressUpdaterLockTest extends TestCase {
 		self::assertTrue( $lock->release( $token ) );
 	}
 
+	public function test_a_request_that_lost_the_lock_publishes_no_owner_record_over_the_new_owner(): void {
+		$other = '1700000000.' . str_repeat( '7', 27 );
+		$lock  = new class( $this->database, $other ) extends WordPressUpdaterLock {
+			private bool $paused = false;
+
+			public function __construct( private AttemptRepositoryDatabase $db, private string $other ) {}
+
+			protected function now(): int {
+				// Another owner reclaims the lock while this request pauses between acquiring it and recording its owner.
+				if ( ! $this->paused ) {
+					$this->paused                               = true;
+					$this->db->option_rows['auto_updater.lock'] = $this->other;
+					$this->db->option_rows['ran_booster_updater_lock_owner'] = $this->other . '|package_operation|1700000000';
+				}
+				return time();
+			}
+		};
+		$lock->acquire();
+		self::assertSame( $other . '|package_operation|1700000000', $this->database->option_rows[ self::OWNER ] );
+	}
+
 	public function test_transactional_acquisition_records_its_owner_in_the_same_transaction(): void {
 		$now         = time();
 		$lock        = $this->lock_at( $now );

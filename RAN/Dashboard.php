@@ -1489,13 +1489,15 @@ class Dashboard {
 	 */
 	public function add_failure_message( $message, Throwable $failure, array $context = array() ): void {
 		$this->record_message( $message, $failure, $context );
-		// An action refused the updater lock: name the Booster operation recorded as holding it (#1180).
-		if ( \RAN\WordPress\WordPressUpdaterLock::take_refusal() ) {
+		// An action refused the updater lock: name its Booster owner only while that exact lock is still held (#1180).
+		$holder = \RAN\WordPress\WordPressUpdaterLock::take_refusal();
+		if ( null !== $holder ) {
 			try {
-				$this->updater_lock_owner = ( new \RAN\WordPress\WordPressUpdaterLock() )->recorded_owner();
+				$owner = ( new \RAN\WordPress\WordPressUpdaterLock() )->recorded_owner();
 			} catch ( Throwable ) {
-				$this->updater_lock_owner = null;
+				$owner = null;
 			}
+			$this->updater_lock_owner = null !== $owner && hash_equals( $holder, $owner['token'] ) ? $owner : null;
 		}
 	}
 

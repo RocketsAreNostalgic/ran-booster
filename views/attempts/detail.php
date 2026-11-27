@@ -139,12 +139,6 @@ $package_settings_label = 'theme' === $package_type
 				</button>
 			</form>
 		<?php } ?>
-		<?php
-		if ( is_array( $deployment_activity['updater_lock_owner'] ?? null ) ) {
-			$updater_lock_owner = $deployment_activity['updater_lock_owner'];
-			require dirname( __DIR__ ) . '/updater-lock-owner.php';
-		}
-		?>
 		<?php if ( 'running' === $item['state'] ) { ?>
 			<form method="post" action="">
 				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-reconcile-deployment-worker' ); ?>

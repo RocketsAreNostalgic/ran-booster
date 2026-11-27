@@ -1,7 +1,7 @@
 <?php // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Included view bindings are supplied by the caller; declarations and hooks still require prefixes.
 
 /**
- * View locals supplied by views/notices.php and views/attempts/detail.php.
+ * View locals supplied by views/notices.php.
  *
  * @var array{token: string, operation: string, started_at: int} $updater_lock_owner
  */
@@ -17,7 +17,7 @@ $lock_started = (string) wp_date( 'Y-m-d H:i:s T', $updater_lock_owner['started_
 	<?php /* translators: %s: date and time the operation started. */ ?>
 	<p><?php echo esc_html( sprintf( __( 'A Booster package operation started at %s didn’t finish.', 'ran-booster' ), $lock_started ) ); ?></p>
 	<form method="post" action="" data-hx-boost="false">
-		<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-release-updater-lock' ); ?>
+		<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-release-updater-lock|' . $updater_lock_owner['token'] ); ?>
 		<input type="hidden" name="ran_booster[action]" value="release-updater-lock">
 		<input type="hidden" name="ran_booster[lock_token]" value="<?php echo esc_attr( $updater_lock_owner['token'] ); ?>">
 		<p><label><input type="checkbox" name="ran_booster[confirm_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that this operation has stopped.', 'ran-booster' ); ?></label></p>

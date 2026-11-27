@@ -224,14 +224,6 @@ final class DeploymentAdminPresenter {
 					$base['source_reference'] = null !== $page && $page['available'] && 1 === count( $page['records'] ) ? $this->source_reference( $page['records'][0] ) : null;
 					$base['source_label']     = $this->provider_label( $data['provider'], $provider_labels );
 				}
-				if ( null !== $base['detail'] && in_array( $base['detail']->get_outcome()?->get_code(), array( DeploymentOutcome::CODE_WORKER_STOPPED, DeploymentOutcome::CODE_INTERRUPTED ), true ) ) {
-					// A confirmed-stopped attempt may have left its updater lock held (#1180).
-					try {
-						$base['updater_lock_owner'] = ( new \RAN\WordPress\WordPressUpdaterLock() )->recorded_owner();
-					} catch ( Throwable ) {
-						$base['updater_lock_owner'] = null;
-					}
-				}
 				if ( null !== $base['detail'] && 'restoration_uncertain' === $base['detail']->get_outcome()?->get_code() ) {
 					$data    = $base['detail']->safe_data();
 					$summary = $this->attempts->package_activity_summary( (string) $data['package_type'], (string) $data['package_slug'], $base['detail']->get_request()->adoption_token );

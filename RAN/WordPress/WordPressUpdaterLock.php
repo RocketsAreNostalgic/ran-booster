@@ -58,7 +58,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 					'updater lock release failed',
 					array(
 						'step'         => 'updater_lock_release',
-						'reason'       => null === $release_failure ? 'not_released' : 'release_failed',
+						'event'        => null === $release_failure ? 'not_released' : 'release_failed',
 						'outcome_code' => null === $operation_failure ? 'operation_returned' : 'operation_failed',
 					)
 				);

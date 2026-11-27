@@ -10,6 +10,8 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Deployment\DeploymentStorageFailure;
+use RAN\Logging\BoosterLogger;
+use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -272,24 +274,50 @@ final class WordPressUpdaterLockTest extends TestCase {
 			'refused' => false,
 		);
 		$caught_cases      = array();
-		foreach ( $releases as $case => $release ) {
-			$lock   = $this->createMock( WordPressUpdaterLock::class );
-			$method = $lock->expects( self::once() )->method( 'release' )->with( 'subclass-token' );
-			$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'subclass-token' );
-			if ( false === $release ) {
-				$method->willReturn( false );
-			} else {
-				$method->willThrowException( $release );
+		$logged            = array();
+		$directory         = sys_get_temp_dir() . '/ran-updater-lock-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new TemporaryDebugCapture( $directory . '/secrets.json' );
+		BoosterLogger::configure_capture( $capture );
+		try {
+			foreach ( $releases as $case => $release ) {
+				$capture->start();
+				$lock   = $this->createMock( WordPressUpdaterLock::class );
+				$method = $lock->expects( self::once() )->method( 'release' )->with( 'subclass-token' );
+				$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'subclass-token' );
+				if ( false === $release ) {
+					$method->willReturn( false );
+				} else {
+					$method->willThrowException( $release );
+				}
+				try {
+					$lock->run( static fn () => throw $operation_failure );
+				} catch ( RuntimeException $caught ) {
+					self::assertSame( 'The WordPress updater lock could not be released.', $caught->getMessage(), $case );
+					self::assertSame( $operation_failure, $caught->getPrevious(), $case );
+					$caught_cases[] = $case;
+				}
+				$logged[ $case ] = array_column( $capture->snapshot()['entries'], 'line' );
 			}
-			try {
-				$lock->run( static fn () => throw $operation_failure );
-			} catch ( RuntimeException $caught ) {
-				self::assertSame( 'The WordPress updater lock could not be released.', $caught->getMessage(), $case );
-				self::assertSame( $operation_failure, $caught->getPrevious(), $case );
-				$caught_cases[] = $case;
+		} finally {
+			BoosterLogger::configure_capture( null );
+			foreach ( (array) glob( $directory . '/*' ) as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+				unlink( (string) $file );
 			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+			rmdir( $directory );
 		}
 		self::assertSame( array_keys( $releases ), $caught_cases, 'A failed release must not be hidden.' );
+		// The thrown and the refused release stay distinguishable in the log.
+		self::assertSame(
+			array(
+				'thrown'  => array( '[ran-booster] updater lock release failed {"step":"updater_lock_release","event":"release_failed","outcome_code":"operation_failed"}' ),
+				'refused' => array( '[ran-booster] updater lock release failed {"step":"updater_lock_release","event":"not_released","outcome_code":"operation_failed"}' ),
+			),
+			$logged
+		);
 	}
 
 	public function test_core_accepts_and_issues_the_branch_updater_token_grammar(): void {

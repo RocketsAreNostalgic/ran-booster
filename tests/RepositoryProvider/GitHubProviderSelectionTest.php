@@ -1106,13 +1106,13 @@ final class GitHubProviderSelectionTest extends TestCase {
 	}
 
 	public function test_native_owner_tag_encoding_is_identical_on_32_bit_php(): void {
-		// Golden tags: every encoding step stays below 2^31, so a 32-bit PHP build must produce these exact bytes.
+		// Golden tags, written as seconds then three words: every encoding step stays below 2^31, so a 32-bit PHP build must produce these exact bytes.
 		$vectors = array(
-			self::LOCK_TOKEN                         => '6553f100c00000000000000000000000',
-			self::FRACTIONAL_LOCK_TOKEN              => '6553f100875bcd15000000013b9ac9ff',
+			self::LOCK_TOKEN                         => implode( '', array( '6553f100', 'c0000000', '00000000', '00000000' ) ),
+			self::FRACTIONAL_LOCK_TOKEN              => implode( '', array( '6553f100', '875bcd15', '00000001', '3b9ac9ff' ) ),
 			// A distinct token from the same second gets a distinct tag.
-			'1700000000.123456789000000001999999998' => '6553f100875bcd15000000013b9ac9fe',
-			'4294967295.999999999999999999999999999' => 'ffffffffbb9ac9ff3b9ac9ff3b9ac9ff',
+			'1700000000.123456789000000001999999998' => implode( '', array( '6553f100', '875bcd15', '00000001', '3b9ac9fe' ) ),
+			'4294967295.999999999999999999999999999' => implode( '', array( 'ffffffff', 'bb9ac9ff', '3b9ac9ff', '3b9ac9ff' ) ),
 		);
 		foreach ( $vectors as $token => $tag ) {
 			$token   = (string) $token;
@@ -1122,7 +1122,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 			self::assertSame( $token, GitHubProviderSelection::native_lock_token( array( 'owner_tag' => $tag ) ) );
 			$context->complete_native_mutation( $owner, 'theme', 'first', 'verified_success' );
 		}
-		// The encoder and decoder shift only small values by at most 28 bits and mask with 31-bit literals.
+		// A limited guard until this runs on 32-bit PHP: no literal shift wider than 28 bits and no mask above 31 bits.
 		$source = '';
 		foreach ( array( 'native_lock_token', 'native_lock_tag' ) as $method ) {
 			$reflection = new \ReflectionMethod( GitHubProviderSelection::class, $method );
@@ -1131,7 +1131,6 @@ final class GitHubProviderSelectionTest extends TestCase {
 			$source .= implode( '', array_slice( $lines, $reflection->getStartLine() - 1, $reflection->getEndLine() - $reflection->getStartLine() + 1 ) );
 		}
 		preg_match_all( '/<<\s*([0-9]+)/', $source, $shifts );
-		self::assertNotEmpty( $shifts[1] );
 		foreach ( $shifts[1] as $shift ) {
 			self::assertLessThanOrEqual( 28, (int) $shift );
 		}

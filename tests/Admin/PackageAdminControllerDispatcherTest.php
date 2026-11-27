@@ -370,6 +370,47 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertSame( 'A selected package uses an unavailable <a href="https://example.test/wp-admin/network/admin.php?page=ran-booster-extensions">Git provider</a>.', $messages[0]['message'] );
 	}
 
+	public function test_a_refused_bulk_action_names_the_refusing_lock_owner_on_its_signed_result_page(): void {
+		$previous_database = $GLOBALS['wpdb'] ?? null;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The real updater lock reads its row through this isolated fake.
+		$GLOBALS['wpdb'] = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$_POST           = array();
+		WordPressUpdaterLock::take_refusal();
+		try {
+			$token = ( new WordPressUpdaterLock() )->acquire();
+			self::assertNull( ( new WordPressUpdaterLock() )->try_acquire_without_reclaim() );
+			$controller = new PackageAdminController();
+			$url        = $controller->bulk_redirect( 'plugin', BulkPackageResult::error( BulkPackageAction::QUEUE_UPDATE, 2, 'unavailable' ), array() );
+			self::assertNull( WordPressUpdaterLock::take_refusal() );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- The test reconstructs the signed redirect query.
+			parse_str( (string) parse_url( $url, PHP_URL_QUERY ), $query );
+			self::assertSame( $token, $query['ran_booster_bulk_lock'] ?? null );
+			// A different token edited into the signed result fails its nonce, so it names nothing and shows nothing.
+			foreach ( array(
+				$token                                => 1,
+				'1700000000.' . str_repeat( '9', 27 ) => 0,
+			) as $lock_token => $named ) {
+				$_GET      = array( 'ran_booster_bulk_lock' => (string) $lock_token ) + $query;
+				$dashboard = $this->createMock( Dashboard::class );
+				$dashboard->expects( self::exactly( $named ) )->method( 'name_refusing_lock_owner' )->with( $token );
+				$codes = array();
+				$controller->add_bulk_notice(
+					$dashboard,
+					'plugin',
+					static function ( array $message ) use ( &$codes ): void {
+						$codes[] = $message['code'];
+					}
+				);
+				self::assertSame( 1 === $named ? array( 'ran_booster_bulk_unavailable' ) : array(), $codes );
+			}
+		} finally {
+			WordPressUpdaterLock::take_refusal();
+			$_GET = array();
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the database boundary replaced above.
+			$GLOBALS['wpdb'] = $previous_database;
+		}
+	}
+
 	public function test_bulk_notices_stay_plain_for_a_user_who_cannot_open_the_targets(): void {
 		$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => false );
 		$_POST                                    = array();

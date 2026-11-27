@@ -6,6 +6,7 @@ namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -13,6 +14,7 @@ use RAN\Admin\PackageAdminController;
 use RAN\Admin\ProviderSettingsPresenter;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\RepositoryBranchCheckEvidenceStore;
+use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\Dashboard;
 use RAN\AbstractPackage;
@@ -34,11 +36,6 @@ final class DashboardBranchCheckCacheTest extends TestCase {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options']    = true;
 		$GLOBALS['ran_booster_dashboard_test_transients']              = array();
 		$GLOBALS['ran_booster_dashboard_test_transient_write_failure'] = $write_failure;
-		$package = $this->createStub( AbstractPackage::class );
-		$package->method( 'get_identifier' )->willReturn( 'example/example.php' );
-		$package->method( 'get_adoption_token' )->willReturn( 'gh:repo-42:11111111-1111-4111-8111-111111111111' );
-		$package->method( 'get_source' )->willReturn( PackageSource::BRANCH );
-		$package->method( 'get_source_revision' )->willReturn( 1 );
 		$checks = 0;
 		$lock   = $this->createStub( WordPressUpdaterLock::class );
 		$lock->method( 'acquire' )->willReturnCallback(
@@ -47,26 +44,8 @@ final class DashboardBranchCheckCacheTest extends TestCase {
 				throw new \RuntimeException( 'Controlled verifier lock failure.' );
 			}
 		);
-		$evidence = $this->createStub( RepositoryBranchCheckEvidenceStore::class );
-		$evidence->method( 'profile_fingerprint_for' )->willReturn( 'current-access' );
-		$evidence->method( 'find' )->willReturn( null );
-		$profiles = $this->createStub( PublicRepositoryLookupProfileStore::class );
-		$profiles->method( 'get' )->willReturn( null );
-		$presenter = ( new ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
-		foreach ( array(
-			'branch_check_lock'      => $lock,
-			'branch_check_evidence'  => $evidence,
-			'public_lookup_profiles' => $profiles,
-		) as $name => $dependency ) {
-			( new ReflectionProperty( ProviderSettingsPresenter::class, $name ) )->setValue( $presenter, $dependency );
-		}
-		$dashboard = ( new ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
-		( new ReflectionProperty( Dashboard::class, 'provider_settings' ) )->setValue( $dashboard, $presenter );
-		$_GET  = array(
-			'ran_booster_repository_branch_check'  => '1',
-			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
-		);
-		$check = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
+		list( $dashboard, $package ) = $this->branch_check_dashboard( $lock );
+		$check                       = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
 
 		try {
 			self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
@@ -87,5 +66,65 @@ final class DashboardBranchCheckCacheTest extends TestCase {
 			$_GET = $previous_get;
 			unset( $GLOBALS['ran_booster_dashboard_test_transient_write_failure'], $GLOBALS['ran_booster_dashboard_test_transients'] );
 		}
+	}
+
+	public function test_a_check_refused_by_the_lock_names_the_refusing_booster_owner(): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Preserve the test request before exercising the real nonce-checked route.
+		$previous_get      = $_GET;
+		$previous_database = $GLOBALS['wpdb'] ?? null;
+		$database          = new AttemptRepositoryDatabase();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The real updater lock reads its row through this isolated fake.
+		$GLOBALS['wpdb'] = $database;
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = true;
+		$GLOBALS['ran_booster_dashboard_test_transients']           = array();
+		WordPressUpdaterLock::take_refusal();
+		try {
+			$token                       = ( new WordPressUpdaterLock() )->acquire();
+			list( $dashboard, $package ) = $this->branch_check_dashboard( new WordPressUpdaterLock() );
+			$owner                       = new ReflectionProperty( Dashboard::class, 'updater_lock_owner' );
+			$check                       = new ReflectionMethod( Dashboard::class, 'requested_package_repository_branch_check' );
+			self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
+			self::assertSame( $token, $owner->getValue( $dashboard )['token'] ?? null );
+			// The cached result on reload names no owner: nothing was refused in that request.
+			$owner->setValue( $dashboard, null );
+			self::assertSame( 'unable_to_check', $check->invoke( $dashboard, $package, 'plugin' ) );
+			self::assertNull( $owner->getValue( $dashboard ) );
+		} finally {
+			WordPressUpdaterLock::take_refusal();
+			$_GET = $previous_get;
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the database boundary replaced above.
+			$GLOBALS['wpdb'] = $previous_database;
+			unset( $GLOBALS['ran_booster_dashboard_test_transients'] );
+		}
+	}
+
+	/** @return array{Dashboard, AbstractPackage} */
+	private function branch_check_dashboard( WordPressUpdaterLock $lock ): array {
+		$package = $this->createStub( AbstractPackage::class );
+		$package->method( 'get_identifier' )->willReturn( 'example/example.php' );
+		$package->method( 'get_adoption_token' )->willReturn( 'gh:repo-42:11111111-1111-4111-8111-111111111111' );
+		$package->method( 'get_source' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'get_source_revision' )->willReturn( 1 );
+		$evidence = $this->createStub( RepositoryBranchCheckEvidenceStore::class );
+		$evidence->method( 'profile_fingerprint_for' )->willReturn( 'current-access' );
+		$evidence->method( 'find' )->willReturn( null );
+		$profiles = $this->createStub( PublicRepositoryLookupProfileStore::class );
+		$profiles->method( 'get' )->willReturn( null );
+		$presenter = ( new ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
+		foreach ( array(
+			'branch_check_lock'      => $lock,
+			'branch_check_evidence'  => $evidence,
+			'public_lookup_profiles' => $profiles,
+		) as $name => $dependency ) {
+			( new ReflectionProperty( ProviderSettingsPresenter::class, $name ) )->setValue( $presenter, $dependency );
+		}
+		$dashboard = ( new ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
+		( new ReflectionProperty( Dashboard::class, 'provider_settings' ) )->setValue( $dashboard, $presenter );
+		$_GET = array(
+			'ran_booster_repository_branch_check'  => '1',
+			'_ran_booster_repository_branch_nonce' => \RAN\wp_create_nonce( PackageAdminController::repository_branch_check_action( $package, 'plugin' ) ),
+		);
+
+		return array( $dashboard, $package );
 	}
 }

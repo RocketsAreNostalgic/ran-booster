@@ -500,7 +500,8 @@ record, and that the Branch case from 2026-11-21 uses the same record.
   and its start time only when the recorded token is the holder that refused
   it, read by the same query that refused it, and offers Release behind an explicit confirmation that the operation
   stopped. The form's nonce is bound to that token. Release deletes only that
-  exact lock row.
+  exact lock row. A refused bulk action carries the token in its signed result
+  page; Check branch names it on the page that ran the check.
 - Activity pages offer no Release. A deployment attempt row holds no lock
   token, so nothing ties whoever holds the lock now to a stopped attempt.
 - Persistent-state cost: one option row per site, not autoloaded, removed on

@@ -1179,6 +1179,7 @@ class Dashboard {
 		}
 
 		$outcome = $this->provider_settings->check_package_repository_branch( $type, $package );
+		$this->name_refusing_lock_owner( \RAN\WordPress\WordPressUpdaterLock::take_refusal() );
 		set_transient( $marker, $outcome, 3600 );
 		BoosterLogger::log(
 			'repository branch check completed',
@@ -1489,16 +1490,20 @@ class Dashboard {
 	 */
 	public function add_failure_message( $message, Throwable $failure, array $context = array() ): void {
 		$this->record_message( $message, $failure, $context );
-		// An action refused the updater lock: name its Booster owner only while that exact lock is still held (#1180).
-		$holder = \RAN\WordPress\WordPressUpdaterLock::take_refusal();
-		if ( null !== $holder ) {
-			try {
-				$owner = ( new \RAN\WordPress\WordPressUpdaterLock() )->recorded_owner();
-			} catch ( Throwable ) {
-				$owner = null;
-			}
-			$this->updater_lock_owner = null !== $owner && hash_equals( $holder, $owner['token'] ) ? $owner : null;
+		$this->name_refusing_lock_owner( \RAN\WordPress\WordPressUpdaterLock::take_refusal() );
+	}
+
+	/** Name the Booster owner of a lock that refused this operator, only while that exact holder still holds it (#1180). */
+	public function name_refusing_lock_owner( ?string $holder ): void {
+		if ( null === $holder ) {
+			return;
 		}
+		try {
+			$owner = ( new \RAN\WordPress\WordPressUpdaterLock() )->recorded_owner();
+		} catch ( Throwable ) {
+			$owner = null;
+		}
+		$this->updater_lock_owner = null !== $owner && hash_equals( $holder, $owner['token'] ) ? $owner : null;
 	}
 
 	/**

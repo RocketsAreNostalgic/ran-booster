@@ -20,6 +20,7 @@ use RAN\PackageSource;
 use RAN\RepositoryProvider\{InvalidProviderCode, ProviderFailure, ProviderRegistry, UnknownProvider, UnsupportedProviderCapability};
 use RAN\Storage\{PackageStorageFailure, PluginRepository, ThemeRepository};
 use RAN\UpdaterSupport\V1\PackageDirectory;
+use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
 use Throwable;
 use WP_Error;
@@ -516,6 +517,11 @@ final class PackageAdminController {
 			throw new LogicException( 'The bulk package redirect type is invalid.' );
 		}
 		$data = $result->notice_data();
+		// A refused updater lock travels with the signed result, so the result page can name its Booster owner (#1180).
+		$holder = '' !== $result->error_code ? WordPressUpdaterLock::take_refusal() : null;
+		if ( null !== $holder && 1 === preg_match( WordPressUpdaterLock::OWNER_TOKEN, $holder ) ) {
+			$data['lock'] = $holder;
+		}
 		$args = array();
 		foreach ( $data as $key => $value ) {
 			$args[ 'ran_booster_bulk_' . $key ] = $value;
@@ -543,6 +549,9 @@ final class PackageAdminController {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
 			$data[ $key ] = wp_unslash( (string) $_GET[ $query_key ] );
 		}
+		if ( isset( $_GET['ran_booster_bulk_lock'] ) && is_string( $_GET['ran_booster_bulk_lock'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
+			$data['lock'] = wp_unslash( $_GET['ran_booster_bulk_lock'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
+		}
 		if ( ! isset( $_GET['_ran_booster_bulk_notice_nonce'] ) || ! is_scalar( $_GET['_ran_booster_bulk_notice_nonce'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The complete marker is verified below.
 			return;
 		}
@@ -559,6 +568,9 @@ final class PackageAdminController {
 
 		$plural = 'plugin' === $type ? __( 'plugins', 'ran-booster' ) : __( 'themes', 'ran-booster' );
 		if ( '' !== $result->error_code ) {
+			if ( isset( $data['lock'] ) && 1 === preg_match( WordPressUpdaterLock::OWNER_TOKEN, $data['lock'] ) ) {
+				$dashboard->name_refusing_lock_owner( $data['lock'] );
+			}
 			$can_follow = current_user_can( 'manage_options' );
 			$errors     = array(
 				'credential_unavailable' => __( 'A selected package does not have its required repository credential.', 'ran-booster' ),

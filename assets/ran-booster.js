@@ -200,6 +200,7 @@
 			if (error) {
 				error.hidden = false;
 				error.focus?.({ preventScroll: true });
+				error.scrollIntoView?.({ block: 'nearest' });
 			}
 		}
 
@@ -555,6 +556,7 @@
 			if (error) {
 				error.hidden = false;
 				error.focus?.({ preventScroll: true });
+				error.scrollIntoView?.({ block: 'nearest' });
 			}
 		}
 

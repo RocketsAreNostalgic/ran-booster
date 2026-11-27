@@ -859,6 +859,8 @@
 				syncCredentialResultRow(region);
 				region.removeAttribute?.('role');
 				region.focus?.({ preventScroll: true });
+				// Scroll-margin keeps the failure clear of the sticky Admin Shell.
+				region.scrollIntoView?.({ block: 'nearest' });
 				window.ranBoosterAnnounce(message, 'assertive');
 				return;
 			}
@@ -872,6 +874,7 @@
 					renderedFailureMessage(region) === message
 				) {
 					region.focus?.({ preventScroll: true });
+					region.scrollIntoView?.({ block: 'nearest' });
 				}
 			};
 			if (isBranchNotice) {

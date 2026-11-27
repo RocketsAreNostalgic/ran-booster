@@ -141,6 +141,9 @@ function fixture() {
 		focus(options) {
 			this.focusOptions = options;
 		},
+		scrollIntoView(options) {
+			this.scrollOptions = options;
+		},
 		hasAttribute(name) {
 			return errorAttributes.has(name);
 		},
@@ -1100,6 +1103,8 @@ test('enhanced mutation feedback allows only declared 422 error swaps and keeps 
 	assert.equal(state.error.hidden, false);
 	assert.equal(state.errorAttributes.has('role'), false);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	// Scroll-margin then keeps the failure clear of the sticky Admin Shell.
+	assert.deepEqual(state.error.scrollOptions, { block: 'nearest' });
 	assert.deepEqual(state.announcements, [
 		{ message: 'The setting could not be saved.', type: 'assertive' },
 	]);

@@ -78,9 +78,9 @@
 	margin: 0;
 }
 
+/* The background alone marks an inactive setup: opacity also dimmed its disabled Buttons. */
 .ran-booster-admin .ran-booster-repository-webhook-setup.is-inactive {
 	background: var(--ran-booster-surface-subtle);
-	opacity: 0.58;
 }
 
 /*

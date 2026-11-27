@@ -827,8 +827,9 @@ state rather than finishing a form. It wraps on narrow widths.
 A disabled or unavailable button of every tone and variant, including one
 disabled while busy, draws as a pale-grey `--ran-booster-surface-subtle` fill
 with a 1px `--ran-booster-control-border` stroke (3:1 or more against white and
-the grey surface), muted text at 4.5:1 or more on the fill,
-`cursor: not-allowed`, no opacity and no hover change.
+the grey surface), muted text at 4.5:1 or more on the fill, no opacity and no
+hover change. Where the button receives pointer events its cursor is
+`not-allowed`; a busy form keeps its progress cursor.
 
 ## Add-on generation and service delivery
 

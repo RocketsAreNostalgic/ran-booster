@@ -12,6 +12,8 @@ use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
 use RAN\Admin\WebhookManagement\Operation\WebhookOperationCoordinator;
 use RAN\Admin\WebhookManagement\Operation\WebhookValidationWrapper;
+use RAN\Deployment\PackageMutationGuard;
+use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
@@ -49,9 +51,10 @@ final class WebhookManagementController {
 		?callable $verify_nonce = null,
 		?callable $create_nonce = null
 	) {
-		$this->validation   = new WebhookValidationWrapper( $operations );
+		$this->validation = new WebhookValidationWrapper( $operations );
+		// Webhook operations read signing secrets and authenticate with saved credentials.
 		$this->can_manage   = null === $can_manage
-			? static fn (): bool => current_user_can( 'manage_options' )
+			? static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' )
 			: \Closure::fromCallable( $can_manage );
 		$this->verify_nonce = null === $verify_nonce
 			? static fn ( string $nonce, string $action ): bool => 1 === wp_verify_nonce( $nonce, $action )
@@ -91,6 +94,17 @@ final class WebhookManagementController {
 		$ping = null;
 
 		if ( ! ( $this->can_manage )() ) {
+			$result['code'] = 'forbidden';
+		} elseif ( ( in_array( $operation, array( 'remove', 'forget' ), true ) || ( 'setup' === $operation && self::CREATE_REPOSITORY_SECRET === $profile_id ) )
+			&& PackageMutationGuard::file_mods_disabled() ) {
+			// These can create or delete a stored signing secret; refuse before any remote change, so the two never diverge.
+			BoosterLogger::log(
+				'Webhook operation refused.',
+				array(
+					'operation'    => 'webhook_management',
+					'outcome_code' => 'file_mods_disallowed',
+				)
+			);
 			$result['code'] = 'forbidden';
 		} elseif ( 'setup' === $operation && '' === $profile_id ) {
 			$result['code'] = 'invalid_request';

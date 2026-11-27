@@ -367,6 +367,13 @@ The code also rejects unsafe repository locators, control characters, duplicate
 package identities, duplicate encrypted credential payloads, and mismatched
 package-to-credential associations.
 
+Package-only preview, export and Apply need `manage_options`. Credential
+material needs more authority. Exporting a selected credential also needs
+`activate_plugins`, and the password is checked before any secret is read.
+Importing a carried credential needs `activate_plugins` and is refused while
+`DISALLOW_FILE_MODS` or `wp_is_file_mod_allowed()` forbids file changes.
+Export changes nothing on the source site, so it has no file-change check.
+
 ## Operator procedures
 
 Complete database copies within the supported MySQL/MariaDB and InnoDB envelope

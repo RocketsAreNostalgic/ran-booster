@@ -124,6 +124,39 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertNull( $provider->request->get_credential_id() );
 	}
 
+	public function test_credentialed_browsing_needs_secret_authority_while_anonymous_browsing_does_not(): void {
+		$GLOBALS['ran_booster_repository_admin_capabilities'] = array( 'activate_plugins' => false );
+		$this->public_lookup_profiles->set( 'gh', 'Public_Profile' );
+		try {
+			foreach ( array( array( 'accessible', 'anonymous' ), array( 'public', 'default' ), array( 'public', 'profile' ) ) as list( $mode, $identity ) ) {
+				$provider = 'accessible' === $mode ? $this->browser_provider( ProviderCode::parse( 'gh' ), array() ) : $this->credentialed_public_browser_provider( ProviderCode::parse( 'gh' ), array() );
+				$_POST    = array(
+					'provider'                 => 'gh',
+					'mode'                     => $mode,
+					'credential_id'            => 'Public_Profile',
+					'owner'                    => 'RocketsAreNostalgic',
+					'public_lookup_identity'   => $identity,
+					'public_lookup_profile_id' => 'profile' === $identity ? 'Public_Profile' : '',
+				);
+				$result   = $this->controller( $provider, array( 'Public_Profile' ) )->handle();
+				self::assertSame( array( false, 403, 'You are not allowed to browse with saved credentials.' ), array( $result['success'], $result['status'], $result['data']['message'] ) );
+				self::assertNull( $provider->request );
+			}
+			self::assertSame( array_fill( 0, 3, '[ran-booster] Repository browse refused. {"operation":"repository_browse","provider":"gh","outcome_code":"credential_authority_missing"}' ), $this->captured_log_lines() );
+
+			$anonymous = $this->browser_provider( ProviderCode::parse( 'gh' ), array() );
+			$_POST     = array(
+				'provider' => 'gh',
+				'mode'     => 'public',
+				'owner'    => 'RocketsAreNostalgic',
+			);
+			self::assertTrue( $this->controller( $anonymous, array( 'Public_Profile' ) )->handle()['success'] );
+			self::assertNull( $anonymous->request?->get_credential_id() );
+		} finally {
+			unset( $GLOBALS['ran_booster_repository_admin_capabilities'] );
+		}
+	}
+
 	public function test_unreadable_sidecar_blocks_credentialed_browsing_before_the_provider_request(): void {
 		foreach ( array( 'accessible', 'public' ) as $mode ) {
 			$provider = 'accessible' === $mode

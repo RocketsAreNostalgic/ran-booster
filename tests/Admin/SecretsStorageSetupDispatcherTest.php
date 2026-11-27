@@ -6,6 +6,7 @@ namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -281,6 +282,30 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			self::assertSame( 0, $provisioner->provision_calls );
 			self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 		}
+	}
+
+	/** @return iterable<string, array{string, array<string,string>}> */
+	public static function storage_change_action_cases(): iterable {
+		yield 'create' => array( 'create-secure-storage', array() );
+		yield from self::overview_forbidden_action_cases();
+	}
+
+	/** @param array<string,string> $fields */
+	#[DataProvider( 'storage_change_action_cases' )]
+	public function test_storage_changes_are_refused_before_the_nonce_when_file_changes_are_disallowed( string $action, array $fields ): void {
+		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
+		$_POST['ran_booster']                                    = array_merge( array( 'action' => $action ), $fields );
+		$provisioner = new SetupActionProvisioner( SecretsStorageProvisioningResult::setup_available( '/private/canary/secrets.json' ) );
+
+		try {
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
+			self::fail( 'A storage change must stop when the site disallows file changes.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'This site does not allow file changes, so Booster cannot change its secure storage.', $failure->getMessage() );
+		} finally {
+			unset( $GLOBALS['ran_booster_package_mutation_guard_file_mods'] );
+		}
+		self::assertSame( array( 0, array(), array(), array() ), array( $provisioner->provision_calls, $provisioner->adopt_tokens, $provisioner->reset_confirmations, $GLOBALS['ran_booster_test_nonce_checks'] ) );
 	}
 
 	public function test_failure_stays_on_the_protected_response_without_redirect_or_global_notice(): void {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use RAN\Dashboard;
+use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\{Admin\ProviderAdminMetadata, CredentialedPublicRepositoryBrowser, CredentialValidator, InvalidCredentialInput, InvalidWebhookInput, ProviderCode, ProviderRegistry, UnsupportedProviderCapability, WebhookNormalizer};
 use RAN\Secrets\SecretsFile;
@@ -172,6 +173,17 @@ class ProviderProfileAdminController {
 			if ( null !== $this->interaction ) {
 				$interaction_request = $this->interaction->provider_profile_request( $action, $provider->value );
 			}
+			if ( PackageMutationGuard::file_mods_disabled() ) {
+				BoosterLogger::log(
+					'Credential change refused.',
+					array(
+						'operation'    => 'credential_profile',
+						'outcome_code' => 'file_mods_disallowed',
+					)
+				);
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+				throw new CredentialRequestException( __( 'This site does not allow file changes, so Booster cannot change saved credentials.', 'ran-booster' ) );
+			}
 			$id = $this->profile_id( $request );
 			if ( 'delete-access-profile' === $action ) {
 				$message = $this->delete_access_profile( $provider, $id );
@@ -237,7 +249,8 @@ class ProviderProfileAdminController {
 						$result->expiry,
 						gmdate( 'Y-m-d\\TH:i:s\\Z' )
 					);
-					if ( $result->expiry->is_known() && is_string( $result->expiry->expires_at ) ) {
+					// A configured constant is read-only, and validation never writes the sidecar while file changes are disallowed.
+					if ( SecretsFile::CONSTANT_PROFILE !== $id && $result->expiry->is_known() && is_string( $result->expiry->expires_at ) && ! PackageMutationGuard::file_mods_disabled() ) {
 						$this->secrets->record_credential_provider_expiry(
 							$provider,
 							$id,
@@ -636,8 +649,9 @@ class ProviderProfileAdminController {
 		}
 		return __( 'Push-to-Deploy secret removed.', 'ran-booster' );
 	}
+	/** Using, validating or changing a credential needs the same secret authority as the storage actions. */
 	private function authorize( string $nonce ): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'activate_plugins' ) ) {
 			$message = 'ran-booster-save-public-lookup-profile' === $nonce
 				? esc_html__( 'You do not have sufficient permissions to manage Booster Git provider settings.', 'ran-booster' )
 				: esc_html__( 'You do not have sufficient permissions to manage Booster credentials.', 'ran-booster' );

@@ -65,11 +65,24 @@ final class RepositoryPickerController {
 			$provider_name  = $provider_code->value;
 			$mode_input     = isset( $_POST['mode'] ) ? wp_unslash( $_POST['mode'] ) : 'authenticated';
 			$mode           = is_string( $mode_input ) ? sanitize_key( $mode_input ) : '';
+			$identity_input = isset( $_POST['public_lookup_identity'] ) ? wp_unslash( $_POST['public_lookup_identity'] ) : 'anonymous';
+			// Browsing with a saved credential needs the same secret authority as the credential screens; anonymous browsing does not.
+			if ( ( 'accessible' === $mode || ( 'public' === $mode && ( ! is_string( $identity_input ) || 'anonymous' !== sanitize_key( $identity_input ) ) ) )
+				&& ! current_user_can( 'activate_plugins' ) ) {
+				BoosterLogger::log(
+					'Repository browse refused.',
+					array(
+						'operation'    => 'repository_browse',
+						'provider'     => $provider_name,
+						'outcome_code' => 'credential_authority_missing',
+					)
+				);
+				return wp_send_json_error( array( 'message' => __( 'You are not allowed to browse with saved credentials.', 'ran-booster' ) ), 403 );
+			}
 
 			if ( 'public' === $mode ) {
 				$owner_input             = isset( $_POST['owner'] ) ? wp_unslash( $_POST['owner'] ) : '';
 				$owner                   = is_string( $owner_input ) ? $owner_input : '';
-				$identity_input          = isset( $_POST['public_lookup_identity'] ) ? wp_unslash( $_POST['public_lookup_identity'] ) : 'anonymous';
 				$public_lookup_requested = is_string( $identity_input ) && 'anonymous' !== sanitize_key( $identity_input );
 				$credential_id           = $this->public_lookup_profile_id( $provider_code );
 				$retry_at                = null === $credential_id ? AnonymousLookupCooldown::until( $provider_name ) : null;

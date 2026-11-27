@@ -815,22 +815,17 @@ final class ReleaseManagementControls {
 			if ( ! in_array( $relation, array( 'same', 'newer', 'older' ), true ) ) {
 				return $this->preflight_error_payload( 'version_comparison_unavailable' );
 			}
-			if ( 1 !== ( $candidate['zip_count'] ?? null ) ) {
+			$asset_problem = ManagedReleaseBrowserOperations::switch_asset_problem( $candidate );
+			if ( '' !== $asset_problem ) {
 				if ( '' === $skipped_version || 1 === ReleaseVersion::compare( $version, $skipped_version ) ) {
 					$skipped_version = $version;
-					$skipped_reason  = 0 === ( $candidate['zip_count'] ?? null ) ? 'package_asset_missing' : 'package_asset_ambiguous';
+					$skipped_reason  = $asset_problem;
 				}
 				continue;
 			}
 			$artifact_id = $this->bounded_release_token( $candidate['artifact_identity'] ?? null, 191 );
 			$digest      = $this->bounded_release_token( $candidate['artifact_sha256'] ?? null, 64 );
-			if ( '' === $artifact_id || 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $digest ) ) {
-				if ( true === ( $candidate['latest_eligible'] ?? null ) ) {
-					return $this->preflight_error_payload( 'release_unavailable', 'digest_missing' );
-				}
-				continue;
-			}
-			$option = array(
+			$option      = array(
 				'artifact_identity'           => $artifact_id,
 				'artifact_sha256'             => $digest,
 				'release_identity'            => $id,
@@ -995,7 +990,7 @@ final class ReleaseManagementControls {
 		$outcome     = $this->request_boundary(
 			fn (): array => 'list_candidates' === $operation
 				? $this->managed_browser->list_candidates( $type, $identifier, $revision, $channel, $nonce, 'branch' === $view_source )
-				: $this->managed_browser->inspect( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce ),
+				: $this->managed_browser->inspect( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce, $action ),
 			array(
 				'code'       => 'unable_to_check',
 				'successful' => false,

@@ -181,6 +181,13 @@ final class ManagedReleaseTargetRegistrar {
 			return 'uncertain';
 		}
 		if ( 'failed' === ( $report['status'] ?? null ) ) {
+			if ( 'confirmation_changed' === $report['code'] ) {
+				$finalization = $report['finalization'] ?? null;
+				return false === ( $report['finalization_pending'] ?? null ) && is_array( $finalization )
+					&& 'not_attempted' === ( $finalization['commit'] ?? null ) && 'clean' === ( $finalization['archive_cleanup'] ?? null )
+					&& in_array( $finalization['host_completion'] ?? null, array( 'completed', 'not_applicable' ), true )
+					&& in_array( $finalization['lease'] ?? null, array( 'released', 'not_held' ), true ) ? 'confirmation_changed' : 'uncertain';
+			}
 			return 'failed';
 		}
 

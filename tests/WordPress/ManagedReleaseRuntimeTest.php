@@ -2314,6 +2314,57 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array( array( 'ran_wp_release_updater_install_exact_release_v1', null, 'plugin', 'example/example.php', '101', 'v2.0.0', '2.0.0', false ) ), $GLOBALS['ran_booster_read_only_check']['calls'] );
 	}
 
+	/** @return array<string,array{string,string}> */
+	public static function late_confirmation_cleanup(): array {
+		return array(
+			'clean'  => array( 'clean', 'release_selection_changed' ),
+			'failed' => array( 'failed', 'management_state_uncertain' ),
+		);
+	}
+
+	#[DataProvider( 'late_confirmation_cleanup' )]
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_switch_surfaces_late_confirmation_change_after_verified_cleanup( string $cleanup, string $expected ): void {
+		require_once __DIR__ . '/ReadOnlyCheckWordPressFunctions.php';
+		$GLOBALS['ran_booster_read_only_check'] = array(
+			'calls'  => array(),
+			'answer' => array(
+				'status'               => 'failed',
+				'code'                 => 'confirmation_changed',
+				'finalization_pending' => false,
+				'finalization'         => array(
+					'commit'          => 'not_attempted',
+					'host_completion' => 'completed',
+					'lease'           => 'released',
+					'archive_cleanup' => $cleanup,
+				),
+			),
+		);
+		[ $facade, $store ]                     = $this->switch_facade( null );
+		$result                                 = $facade->enable(
+			'plugin',
+			'example/example.php',
+			1,
+			'stable',
+			'valid',
+			confirmed_release: array(
+				'identity'          => '101',
+				'tag'               => 'v2.0.0',
+				'version'           => '2.0.0',
+				'installed_version' => '1.0.0',
+				'confirmation'      => array(
+					'artifact_identity' => '77',
+					'artifact_sha256'   => str_repeat( 'a', 64 ),
+					'installed_version' => '1.0.0',
+				),
+			)
+		);
+		self::assertSame( $expected, $result->code() );
+		self::assertSame( array(), $store->transitions );
+		self::assertSame( array( 'ran_wp_release_updater_install_confirmed_release_v1' ), array_column( $GLOBALS['ran_booster_read_only_check']['calls'], 0 ) );
+	}
+
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_confirmed_install_rechecks_chosen_permission_under_lock_and_reports_replaced_assets(): void {

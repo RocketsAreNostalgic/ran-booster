@@ -930,6 +930,22 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array( 'inspect_candidate', 'plugin', 'example/example.php', 3, '42', 'v1.2.0', 'stable', 'nonce-for-release-tracking-inspect_candidate-plugin-example/example.php-3-stable' ), $tracking->calls[1] );
 	}
 
+	public function test_replacement_adoption_during_inspection_cannot_receive_install_consent(): void {
+		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking->candidate_inspection       = new ReleaseTrackingPreflight( ReleaseTrackingPreflight::READY, 'example-plugin', '1.2.0', release_tag: 'v1.2.0', release_identity: '42', artifact_identity: 'asset42', artifact_sha256: str_repeat( 'a', 64 ) );
+		$tracking->after_candidate_inspection = static function () use ( $tracking ): void {
+			$tracking->adoption_scope = '-replacement';
+		};
+		$request                              = $this->managed_request( 'inspect_candidate' ) + array(
+			'release_id'  => '42',
+			'release_tag' => 'v1.2.0',
+		);
+		$result                               = ReleaseManagementFixture::controls( $tracking )->process_managed_browser_request( 'inspect_candidate', $request );
+		self::assertSame( 'source_changed', $result['code'] );
+		self::assertFalse( $result['successful'] );
+		self::assertSame( array(), $result['data'] );
+	}
+
 	#[DataProvider( 'package_types' )]
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
@@ -986,6 +1002,20 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			),
 			$GLOBALS['ran_booster_read_only_check']['calls']
 		);
+		$answer = $GLOBALS['ran_booster_read_only_check']['answer'];
+		$GLOBALS['ran_booster_read_only_check']['answer'] = array(
+			'status'               => 'failed',
+			'code'                 => 'confirmation_changed',
+			'finalization_pending' => false,
+			'finalization'         => array(
+				'commit'          => 'not_attempted',
+				'host_completion' => 'completed',
+				'lease'           => 'released',
+				'archive_cleanup' => 'clean',
+			),
+		);
+		self::assertStringContainsString( 'confirmation_changed', $controls->process_admin_post_request( 'install_chosen', array_merge( $request, $chosen ) ) );
+		$GLOBALS['ran_booster_read_only_check']['answer'] = $answer;
 		$post                    = array_merge( $request, $chosen );
 		$post['artifact_sha256'] = str_repeat( 'b', 64 );
 		self::assertStringContainsString( 'invalid_request', $controls->process_admin_post_request( 'install_chosen', $post ) );
@@ -997,11 +1027,11 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'invalid_request', $controls->process_admin_post_request( 'install_chosen', $post ) );
 		$post['confirm_older'] = '1';
 		self::assertStringContainsString( 'chosen_installed', $controls->process_admin_post_request( 'install_chosen', $post ) );
-		self::assertSame( array( false, true ), array_column( $GLOBALS['ran_booster_read_only_check']['calls'], 7 ) );
+		self::assertSame( array( false, false, true ), array_column( $GLOBALS['ran_booster_read_only_check']['calls'], 7 ) );
 		$GLOBALS['ran_booster_test_environment_type'] = 'production';
 		define( 'RAN_BOOSTER_ALLOW_PRERELEASE_SOURCES', false );
 		self::assertStringContainsString( 'invalid_request', $controls->process_admin_post_request( 'install_chosen', $post ) );
-		self::assertCount( 2, $GLOBALS['ran_booster_read_only_check']['calls'] );
+		self::assertCount( 3, $GLOBALS['ran_booster_read_only_check']['calls'] );
 		$tracking->set_status( ReleaseManagementFixture::status( 'release_asset', $type, deployment_policy: 'automatic' ) );
 		self::assertStringContainsString( 'invalid_request', $controls->process_admin_post_request( 'install_chosen', array_merge( $request, $chosen ) ) );
 		$result = $controls->process_managed_browser_request( 'inspect_candidate', $request );
@@ -2967,6 +2997,30 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		return new RepositoryReleaseCandidateList(
 			array_map( static fn ( string $version ): RepositoryReleaseCandidate => new RepositoryReleaseCandidate( 'rel-' . $version, 'v' . $version, $version, false, '2026-06-01T00:00:00Z', array( 'plugin.zip' ), 'asset-' . $version, hash( 'sha256', $version ) ), array_values( $versions ) )
 		);
+	}
+
+	public function test_both_switch_choosers_offer_a_bound_release_when_the_newer_asset_is_unverified(): void {
+		$tracking                 = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$bound                    = $this->switch_candidates( '1.1.0' )->candidates[0];
+		$unbound                  = new RepositoryReleaseCandidate( 'rel-1.2', 'v1.2.0', '1.2.0', false, '2026-06-02T00:00:00Z', array( 'one.zip' ) );
+		$tracking->candidate_list = new RepositoryReleaseCandidateList( array( $unbound, $bound ) );
+		$controls                 = ReleaseManagementFixture::controls( $tracking );
+		$response                 = $controls->process_switch_preflight_request( $this->managed_request( 'preflight' ) );
+		self::assertTrue( $response['successful'] );
+		self::assertSame( 'rel-1.1.0', $response['data']['release_identity'] );
+		self::assertStringContainsString( 'Release 1.2.0 was skipped.', $response['data']['fallback_message'] );
+		self::assertStringNotContainsString( 'digest', $response['data']['fallback_message'] );
+
+		$_GET            = $this->query_of( $controls->process_admin_post_request( 'enable', $this->request( 'enable' ) ) );
+		$_GET['page']    = 'ran-booster-plugins';
+		$_GET['package'] = 'example/example.php';
+		$package         = new PackageProjection( 'branch' );
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'name="confirmed_release_version" value="1.1.0"', $html );
+		self::assertStringContainsString( $response['data']['fallback_message'], $html );
+		self::assertSame( array( 'list_candidates', 'list_candidates' ), array_column( $tracking->calls, 0 ) );
 	}
 
 	public function test_chooser_skips_metadata_incompatible_zip_count_without_inspecting_and_preserves_selected_identity(): void {

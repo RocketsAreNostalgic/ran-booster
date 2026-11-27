@@ -84,7 +84,7 @@ final class ManagedReleaseBrowserOperations {
 
 	/** @return array{code:string,successful:bool,data:array<mixed>} */
 
-	public function inspect( string $type, string $identifier, int $revision, string $release_id, string $tag, string $channel, string $nonce ): array {
+	public function inspect( string $type, string $identifier, int $revision, string $release_id, string $tag, string $channel, string $nonce, string $authorized_scope ): array {
 		if ( ! $this->valid_request( $type, $identifier, $revision, $channel )
 
 			|| ! $this->valid_opaque( $release_id, 191 )
@@ -93,6 +93,9 @@ final class ManagedReleaseBrowserOperations {
 		}
 
 		$inspection = $this->browser->inspect_candidate( $type, $identifier, $revision, $release_id, $tag, $channel, $nonce );
+		if ( $authorized_scope !== $this->releases->nonce_action( 'inspect_candidate', $type, $identifier, $revision, $channel ) ) {
+			return $this->outcome( 'source_changed' );
+		}
 		if ( null !== $inspection && ! $inspection->ready() && '' !== $inspection->reason_code() ) {
 			$status = $this->releases->status( $type, $identifier );
 			if ( $revision !== $status->source_revision() || 'release_asset' !== $status->source() ) {
@@ -129,7 +132,7 @@ final class ManagedReleaseBrowserOperations {
 				'artifact_sha256'   => $inspection->artifact_sha256,
 				'installed_version' => $status->installed_version(),
 			);
-			$chosen['_wpnonce'] = wp_create_nonce( $this->chosen_action( $status, $chosen ) );
+			$chosen['_wpnonce'] = wp_create_nonce( $this->chosen_action( $authorized_scope, $chosen ) );
 		}
 
 		return $this->outcome(
@@ -167,8 +170,9 @@ final class ManagedReleaseBrowserOperations {
 		}
 		$check   = function () use ( $type, $identifier, $revision, $channel, $chosen, $nonce ): string {
 			$status = $this->releases->status( $type, $identifier );
+			$scope  = $this->releases->nonce_action( 'inspect_candidate', $type, $identifier, $revision, $channel );
 			return match ( true ) {
-				1 !== wp_verify_nonce( $nonce, $this->chosen_action( $status, $chosen ) ) => 'invalid_request',
+				1 !== wp_verify_nonce( $nonce, $this->chosen_action( $scope, $chosen ) ) => 'invalid_request',
 				$status->installed_version() !== $chosen['installed_version'] => 'confirmation_changed',
 				! $this->chosen_allowed( $status, $revision, $channel, $chosen['release_id'], $chosen['release_version'] ) => 'invalid_request',
 				default => '',
@@ -204,8 +208,7 @@ final class ManagedReleaseBrowserOperations {
 	}
 
 	/** @param array<string,string> $chosen */
-	private function chosen_action( ReleaseTrackingStatus $status, array $chosen ): string {
-		$scope = $this->releases->nonce_action( 'inspect_candidate', $status->type(), $status->identifier(), $status->source_revision(), $status->channel() );
+	private function chosen_action( string $scope, array $chosen ): string {
 		return 'ran_booster_install_chosen_' . hash( 'sha256', $scope . (string) wp_json_encode( $chosen, JSON_THROW_ON_ERROR ) );
 	}
 
@@ -255,6 +258,18 @@ final class ManagedReleaseBrowserOperations {
 		) : array() );
 	}
 
+	/** @param array<mixed> $candidate */
+	public static function switch_asset_problem( array $candidate ): string {
+		$count = $candidate['zip_count'] ?? null;
+		if ( 1 !== $count ) {
+			return 0 === $count ? 'package_asset_missing' : 'package_asset_ambiguous';
+		}
+		$id     = $candidate['artifact_identity'] ?? null;
+		$digest = $candidate['artifact_sha256'] ?? null;
+		return is_string( $id ) && 1 === preg_match( '/\A[^\x00-\x1F\x7F]{1,191}\z/D', $id ) && sanitize_text_field( $id ) === $id
+			&& is_string( $digest ) && 1 === preg_match( '/\A[a-f0-9]{64}\z/D', $digest ) ? '' : 'invalid_release_assets';
+	}
+
 	/**
 	 * Select the same metadata candidate for both the chooser and branch list.
 	 *
@@ -282,7 +297,7 @@ final class ManagedReleaseBrowserOperations {
 			if ( ! in_array( ReleaseVersion::relationship( $candidate['version'], $installed ), array( 'same', 'newer', 'older' ), true ) ) {
 				return null;
 			}
-			if ( 1 === ( $candidate['zip_count'] ?? null ) && ( null === $latest || 1 === ReleaseVersion::compare( $candidate['version'], $candidates[ $latest ]['version'] ) ) ) {
+			if ( '' === self::switch_asset_problem( $candidate ) && ( null === $latest || 1 === ReleaseVersion::compare( $candidate['version'], $candidates[ $latest ]['version'] ) ) ) {
 				$latest = $index;
 			}
 		}

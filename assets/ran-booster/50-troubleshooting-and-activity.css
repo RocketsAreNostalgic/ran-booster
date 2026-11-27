@@ -189,7 +189,8 @@
  * name are unchanged. Wide Cards keep the stacked title and strapline at the
  * start with the badge and chevron at the end. The native summary selector
  * outranks the shared fallback summary rule in 25-admin-primitives.css, so the
- * header keeps the same rows before and after the Disclosure mounts.
+ * header keeps the same rows before and after the Disclosure mounts. Warned
+ * entries keep their own flex header from the warned rules above.
  */
 
 .ran-booster-admin .ran-booster-troubleshooting__installation-entry {
@@ -270,15 +271,6 @@
 		grid-row: 2;
 		grid-column: 1 / -1;
 		min-inline-size: 0;
-	}
-
-	.ran-booster-admin
-		.ran-booster-troubleshooting__installation-entry
-		> details[data-ran-booster-ui-disclosure-fallback]
-		> summary
-		> .ran-booster-troubleshooting__entry-warning {
-		grid-row: 3;
-		grid-column: 1 / -1;
 	}
 }
 

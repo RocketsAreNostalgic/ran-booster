@@ -25,24 +25,38 @@
 	});
 
 	// Publish where the sticky Admin Shell ends, however its rows wrap, so
-	// sticky sidebars and focused or targeted elements stop below it.
+	// sticky sidebars and focused or targeted elements stop below it. In
+	// short windows the shell stops sticking, but WordPress keeps its admin
+	// bar fixed above 600px wide, so content must still clear the bar.
 	function initShellOffset() {
 		const shell = document.querySelector('header.ran-admin-shell');
 		if (!shell || typeof window.ResizeObserver !== 'function') {
 			return;
 		}
+		let published = '';
+		const fixedBarBottom = function () {
+			const bar = document.getElementById('wpadminbar');
+			return bar && window.getComputedStyle(bar).position === 'fixed'
+				? bar.getBoundingClientRect().bottom
+				: 0;
+		};
 		const publish = function () {
 			const style = window.getComputedStyle(shell);
 			const offset =
 				style.position === 'sticky'
 					? (parseFloat(style.top) || 0) +
 						shell.getBoundingClientRect().height
-					: 0;
-			document.documentElement.style.setProperty(
-				'--ran-booster-shell-offset',
-				Math.ceil(offset) + 'px'
-			);
+					: fixedBarBottom();
+			const value = Math.ceil(offset) + 'px';
+			if (value !== published) {
+				published = value;
+				document.documentElement.style.setProperty(
+					'--ran-booster-shell-offset',
+					value
+				);
+			}
 		};
+		publish();
 		new window.ResizeObserver(publish).observe(shell, {
 			box: 'border-box',
 		});

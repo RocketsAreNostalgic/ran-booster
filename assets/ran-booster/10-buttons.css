@@ -52,17 +52,16 @@ a.ran-wp-ui-button[aria-disabled="true"] {
 }
 
 /*
- * A disabled or unavailable brand solid Button is a white Button with a
- * visible 3:1 stroke and muted text, not a faint grey fill. The static
- * disabled tokens (a grey fill and 2.66:1 text) vanish on the grey admin
- * surface and on the source switch bar. The state is drawn by colour and
- * cursor alone, never by opacity, and hover or focus change nothing.
+ * Every disabled, unavailable or busy-disabled Button, whatever its tone and
+ * variant, draws one pale-grey fill with a visible 3:1 stroke and muted text.
+ * The static disabled tokens (faint strokes and 2.66:1 text) vanish on the
+ * admin surfaces, and a white fill reads as an enabled outline Button. The
+ * state is drawn by colour and cursor alone, never by opacity, and hover or
+ * focus change nothing.
  */
 
-.ran-wp-ui-button.is-brand.is-solid:is([disabled], [aria-disabled="true"]):not(
-		.is-loading
-	) {
-	--wp-ui-button-background-color-disabled: var(--ran-booster-surface);
+.ran-wp-ui-button:is(:disabled, [aria-disabled="true"]):not(.is-loading) {
+	--wp-ui-button-background-color-disabled: var(--ran-booster-surface-subtle);
 	--wp-ui-button-border-color-disabled: var(--ran-booster-control-border);
 	--wp-ui-button-foreground-color-disabled: var(--ran-booster-text-muted);
 	cursor: not-allowed;
@@ -72,7 +71,7 @@ a.ran-wp-ui-button[aria-disabled="true"] {
 /*
  * Booster's danger tone sets only the Button's colour properties. On brand
  * solid it is the destructive confirmation; on neutral outline, the step that
- * arms one. Disabled, both draw as the disabled neutral outline.
+ * arms one. Disabled, both take the shared disabled rule above.
  */
 
 .ran-wp-ui-button.ran-booster-button--danger.is-solid {
@@ -82,23 +81,14 @@ a.ran-wp-ui-button[aria-disabled="true"] {
 	--wp-ui-button-background-color-active: var(
 		--wpds-color-background-interactive-error-strong-active
 	);
-	--wp-ui-button-background-color-disabled: var(
-		--wpds-color-background-interactive-neutral-weak-disabled
-	);
 	--wp-ui-button-border-color: var(
 		--wpds-color-stroke-interactive-error-strong
 	);
 	--wp-ui-button-border-color-active: var(
 		--wpds-color-stroke-interactive-error-active
 	);
-	--wp-ui-button-border-color-disabled: var(
-		--wpds-color-stroke-interactive-neutral-disabled
-	);
 	--wp-ui-button-foreground-color: var(--ran-booster-surface);
 	--wp-ui-button-foreground-color-active: var(--ran-booster-surface);
-	--wp-ui-button-foreground-color-disabled: var(
-		--wpds-color-foreground-interactive-neutral-disabled
-	);
 }
 
 .ran-wp-ui-button.ran-booster-button--danger.is-outline {

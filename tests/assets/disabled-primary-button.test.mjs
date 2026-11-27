@@ -7,11 +7,11 @@ const read = (path) =>
 const buttons = read('ran-booster/10-buttons.css');
 const foundations = read('ran-booster/00-foundations.css');
 
+const selector =
+	'.ran-wp-ui-button:is(:disabled, [aria-disabled="true"]):not(.is-loading) {';
 const rule = (() => {
-	const start = buttons.indexOf(
-		'.ran-wp-ui-button.is-brand.is-solid:is([disabled], [aria-disabled="true"])'
-	);
-	assert.notEqual(start, -1, 'The shared disabled primary rule must exist.');
+	const start = buttons.indexOf(selector);
+	assert.notEqual(start, -1, 'The shared disabled button rule must exist.');
 	return buttons.slice(start, buttons.indexOf('}', start) + 1);
 })();
 
@@ -52,11 +52,10 @@ const contrast = (first, second) => {
 	return (light + 0.05) / (dark + 0.05);
 };
 
-test('disabled and unavailable brand solid buttons share one treatment', () => {
-	assert.match(rule, /\):not\(\s*\.is-loading\s*\) \{/);
+test('every disabled or unavailable button variant shares one treatment', () => {
 	assert.match(
 		rule,
-		/--wp-ui-button-background-color-disabled: var\(--ran-booster-surface\);/
+		/--wp-ui-button-background-color-disabled: var\(--ran-booster-surface-subtle\);/
 	);
 	assert.match(
 		rule,
@@ -70,6 +69,13 @@ test('disabled and unavailable brand solid buttons share one treatment', () => {
 	assert.match(rule, /opacity: 1;/);
 });
 
+test('no tone or variant rule overrides the shared disabled colours', () => {
+	assert.doesNotMatch(
+		buttons.replace(rule, ''),
+		/--wp-ui-button-[a-z-]+-disabled:/
+	);
+});
+
 test('the disabled treatment uses tokens only and never dims or recolours on hover', () => {
 	assert.doesNotMatch(rule, /#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
 	assert.doesNotMatch(rule, /opacity: (0|0?\.\d+);/);
@@ -77,13 +83,68 @@ test('the disabled treatment uses tokens only and never dims or recolours on hov
 });
 
 test('the disabled treatment meets 4.5:1 for text and 3:1 for the stroke', () => {
-	const fill = token('--ran-booster-surface');
+	const fill = token('--ran-booster-surface-subtle');
 	const text = token('--ran-booster-text-muted');
 	const stroke = token('--ran-booster-control-border');
-	const grey = token('--ran-booster-surface-subtle');
-	assert.ok(contrast(text, fill) >= 4.5, 'text on the white fill');
-	assert.ok(contrast(stroke, fill) >= 3, 'stroke on the white fill');
-	assert.ok(contrast(stroke, grey) >= 3, 'stroke on the grey page surface');
+	const white = token('--ran-booster-surface');
+	assert.notEqual(fill, white, 'the fill is distinct from white');
+	assert.ok(contrast(text, fill) >= 4.5, 'text on the pale-grey fill');
+	assert.ok(contrast(stroke, fill) >= 3, 'stroke on the fill and grey page');
+	assert.ok(contrast(stroke, white) >= 3, 'stroke on a white surface');
+});
+
+/*
+ * A button disabled while busy has no loading look of its own: Booster never
+ * adds the library's is-loading class, so the shared rule paints it and the
+ * busy stripes sit on top.
+ */
+test('buttons disabled while busy keep the shared colours under the stripes', () => {
+	const root = new URL('../../', import.meta.url);
+	for (const folder of ['assets/', 'views/', 'RAN/']) {
+		for (const file of fs.readdirSync(new URL(folder, root), {
+			recursive: true,
+		})) {
+			if (!/\.(js|php)$/.test(file) || file.startsWith('lib/')) {
+				continue;
+			}
+			assert.doesNotMatch(
+				fs.readFileSync(new URL(`${folder}${file}`, root), 'utf8'),
+				/is-loading/,
+				`${folder}${file}`
+			);
+		}
+	}
+
+	const busy = [...buttons.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(
+		([, selectors]) => selectors.includes('.ran-booster-update-is-active')
+	);
+	assert.ok(busy.length > 0, 'The busy rules must exist.');
+	for (const [, , body] of busy) {
+		assert.doesNotMatch(
+			body,
+			/--wp-ui-button|(?<![-\w])(color|background|background-color|border-color):/
+		);
+	}
+
+	const stripe = token('--ran-booster-strong-divider');
+	const striped = (color) =>
+		`#${[1, 3, 5]
+			.map((at) =>
+				Math.round(
+					0.9 * parseInt(color.slice(at, at + 2), 16) +
+						0.1 * parseInt(stripe.slice(at, at + 2), 16)
+				)
+					.toString(16)
+					.padStart(2, '0')
+			)
+			.join('')}`;
+	assert.ok(
+		contrast(
+			striped(token('--ran-booster-text-muted')),
+			striped(token('--ran-booster-surface-subtle'))
+		) >= 4.5,
+		'text and fill under the darkest stripe'
+	);
 });
 
 test('the static wp-ui stylesheet is not edited for the treatment', () => {

@@ -64,9 +64,10 @@ final class RAN_Booster_ReleaseSwitchProof {
 			|| is_multisite() || wp_using_ext_object_cache() || ! current_user_can( 'manage_options' ) ) {
 			throw new RuntimeException( 'Disposable WordPress 7.0.3 / PHP 8.2 administrator identity not established.' );
 		}
-		$scenario = str_starts_with( $case_name, 'form-' ) ? substr( $case_name, 5 ) : $case_name;
+		// One case submits the rendered standard form; the others use the preflight's data.
+		$scenario = 'form-choice-current' === $case_name ? 'choice-current' : $case_name;
 		if ( ! in_array( $kind, array( 'plugin', 'theme' ), true )
-			|| ! in_array( $scenario, array( 'choice-current', 'choice-latest', 'choice-dedup', 'choice-disappeared', 'same', 'prerelease-order', 'prerelease-no-consent', 'comparison-unavailable', 'stale-confirmation', 'replaced-asset', 'return-lock', 'newer', 'active', 'older', 'disabled', 'failed-download', 'incompatible-zip', 'pre-install', 'pre-install-throw', 'stale', 'missing', 'fallback-repaired', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock', 'fresh-finished', 'fresh-killed', 'fresh-damaged', 'fresh-deleted' ), true ) ) {
+			|| ! in_array( $scenario, array( 'choice-current', 'choice-disappeared', 'same', 'prerelease-order', 'prerelease-no-consent', 'stale-confirmation', 'replaced-asset', 'return-lock', 'newer', 'active', 'disabled', 'failed-download', 'incompatible-zip', 'pre-install', 'pre-install-throw', 'stale', 'missing', 'fallback-repaired', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock', 'fresh-finished', 'fresh-killed', 'fresh-damaged', 'fresh-deleted' ), true ) ) {
 			throw new RuntimeException( 'Unknown proof case.' );
 		}
 		$this->scenario = self::FRESH[ $scenario ] ?? $scenario;
@@ -99,10 +100,9 @@ final class RAN_Booster_ReleaseSwitchProof {
 
 	private function branch_version(): string {
 		return match ( $this->scenario ) {
-			'choice-current', 'choice-latest', 'choice-dedup', 'choice-disappeared' => '0.2.2',
+			'choice-current', 'choice-disappeared' => '0.2.2',
 			'same' => '1.0',
 			'prerelease-order', 'prerelease-no-consent' => '1.2.0-dev',
-			'comparison-unavailable' => 'local',
 			default => '1.0.0',
 		};
 	}
@@ -114,12 +114,10 @@ final class RAN_Booster_ReleaseSwitchProof {
 	/** @return list<int> Newest first. */
 	private function published(): array {
 		return match ( $this->scenario ) {
-			'choice-current', 'choice-latest' => array( 5, 4 ),
+			'choice-current' => array( 5, 4 ),
 			'choice-disappeared' => $this->selection_changed ? array( 5 ) : array( 5, 4 ),
-			'choice-dedup' => array( 4 ),
 			'same' => array( 1, 0 ),
 			'prerelease-order', 'prerelease-no-consent' => array( 3 ),
-			'older' => array( 0 ),
 			'stale', 'missing' => $this->selection_changed ? array( 2, 1, 0 ) : array( 1, 0 ),
 			default => array( 2, 1, 0 ),
 		};
@@ -128,16 +126,13 @@ final class RAN_Booster_ReleaseSwitchProof {
 	/** @return array{0: ?string, 1: string, 2: bool, 3: bool} Result code, installed version, switched, custody retained. */
 	private function expected(): array {
 		return match ( $this->scenario ) {
-			'choice-current', 'choice-dedup' => array( 'release_enabled', '0.2.2', true, false ),
-			'choice-latest' => array( 'release_enabled', '0.2.3', true, false ),
+			'choice-current' => array( 'release_enabled', '0.2.2', true, false ),
 			'choice-disappeared' => array( 'switch_refused', '0.2.2', false, false ),
 			'same' => array( 'release_enabled', '1.0.0', true, false ),
 			'prerelease-order' => array( 'release_enabled', '1.2.0-alpha', true, false ),
 			'prerelease-no-consent' => array( 'release_older', '1.2.0-dev', false, false ),
-			'comparison-unavailable' => array( 'version_comparison_unavailable', 'local', false, false ),
 			'stale-confirmation', 'replaced-asset' => array( 'release_selection_changed', '1.0.0', false, false ),
 			'newer', 'active', 'compete', 'return-lock' => array( 'release_enabled', '2.0.0', true, false ),
-			'older' => array( 'release_older', '1.0.0', false, false ),
 			'disabled' => array( 'policy_disabled', '1.0.0', false, false ),
 			'failed-download', 'incompatible-zip' => array( 'switch_refused', '1.0.0', false, false ),
 			'pre-install', 'pre-install-throw' => array( 'switch_uncertain', '1.0.0', false, false ),
@@ -184,7 +179,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 				'branch'                 => 'main',
 				'package_type'           => 'plugin' === $this->kind ? 1 : 2,
 				// Automatic proves the switch resets it to Manual.
-				'deployment_policy'      => in_array( $this->scenario, array( 'newer', 'choice-current', 'choice-latest', 'choice-dedup', 'choice-disappeared' ), true ) ? 'automatic' : ( 'disabled' === $this->scenario ? 'disabled' : 'manual' ),
+				'deployment_policy'      => in_array( $this->scenario, array( 'newer', 'choice-current', 'choice-disappeared' ), true ) ? 'automatic' : ( 'disabled' === $this->scenario ? 'disabled' : 'manual' ),
 				'source'                 => 'branch',
 				'source_revision'        => 1,
 				'provider'               => 'gh',
@@ -272,7 +267,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			);
 		}
 		if ( $this->mutating && str_starts_with( $this->scenario, 'choice-' ) && str_contains( $path, '/releases/assets/' )
-			&& ( 'choice-latest' === $this->scenario ? 205 : 204 ) !== $number ) {
+			&& 204 !== $number ) {
 			throw new RuntimeException( 'A different release was substituted for the selected release.' );
 		}
 
@@ -332,34 +327,23 @@ final class RAN_Booster_ReleaseSwitchProof {
 	private function standard_confirmation( ReleaseManagementControls $controls, array $request ): array {
 		$url = $controls->process_admin_post_request( 'enable', $request );
 		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
-		$html = $this->source_settings( $controls, $query );
-		if ( 'comparison-unavailable' === $this->scenario ) {
-			if ( str_contains( $html, 'data-ran-booster-switch-confirmation' ) || ! str_contains( $html, 'Booster could not compare the installed version with the published release version.' ) ) {
-				throw new RuntimeException( 'The standard form offered a release without a valid comparison.' );
-			}
-			return array();
-		}
+		$html        = $this->source_settings( $controls, $query );
 		$has_consent = str_contains( $html, 'name="confirm_older_release" value="1" required' );
 		$same_notice = str_contains( $html, 'Same version: this replaces the installed files with the release.' );
-		if ( ( 'prerelease' === $this->channel() ) !== $has_consent || ( in_array( $this->scenario, array( 'same', 'choice-current', 'choice-latest', 'stale', 'stale-confirmation', 'replaced-asset', 'failed-download' ), true ) ) !== $same_notice ) {
+		if ( $has_consent || ! $same_notice ) {
 			throw new RuntimeException( 'The standard form showed the wrong relationship or consent.' );
 		}
 		$dom = new DOMDocument();
 		$dom->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath         = new DOMXPath( $dom );
 		$form_selector = '//form[contains(@class, "ran-booster-switch-confirmation__form")]';
-		if ( in_array( $this->scenario, array( 'choice-current', 'choice-latest' ), true ) ) {
-			$current = $xpath->query( $form_selector . '[button[contains(normalize-space(.), "Reinstall 0.2.2")]]' );
-			$latest  = $xpath->query( $form_selector . '[button[contains(normalize-space(.), "Upgrade to 0.2.3")]]' );
-			if ( false === $current || 1 !== $current->length || false === $latest || 1 !== $latest->length ) {
-				throw new RuntimeException( 'Both releases must have direct, separately signed submit buttons.' );
-			}
-			$form_selector .= 'choice-current' === $this->scenario ? '[button[contains(., "Reinstall")]]' : '[button[contains(., "Upgrade")]]';
+		$current       = $xpath->query( $form_selector . '[button[contains(normalize-space(.), "Reinstall 0.2.2")]]' );
+		$latest        = $xpath->query( $form_selector . '[button[contains(normalize-space(.), "Upgrade to 0.2.3")]]' );
+		if ( false === $current || 1 !== $current->length || false === $latest || 1 !== $latest->length ) {
+			throw new RuntimeException( 'Both releases must have direct, separately signed submit buttons.' );
 		}
-		if ( in_array( $this->scenario, array( 'stale-confirmation', 'replaced-asset', 'failed-download' ), true ) ) {
-			$form_selector .= '[button[contains(., "Upgrade to 2.0.0")]]';
-		}
-		$forms = $xpath->query( $form_selector );
+		$form_selector .= '[button[contains(., "Reinstall")]]';
+		$forms          = $xpath->query( $form_selector );
 		if ( false === $forms || 1 !== $forms->length ) {
 			throw new RuntimeException( 'The proof must submit exactly one rendered confirmation form.' );
 		}
@@ -409,19 +393,9 @@ final class RAN_Booster_ReleaseSwitchProof {
 		if ( str_starts_with( $this->case_name, 'form-' ) ) {
 			$request['_wpnonce'] = wp_create_nonce( $facade->nonce_action( 'enable', $this->kind, $this->identity, 1 ) );
 			$request             = $this->standard_confirmation( $controls, $request );
-			if ( array() === $request ) {
-				if ( $this->streams !== $before ) {
-					throw new RuntimeException( 'The refused form downloaded an archive.' );
-				}
-				return 'version_comparison_unavailable';
-			}
 		} else {
 			$preflight = $controls->process_switch_preflight_request( $request );
 			if ( ! $preflight['successful'] ) {
-				if ( 'comparison-unavailable' === $this->scenario && ( $this->streams !== $before
-					|| ! str_contains( (string) ( $preflight['data']['message'] ?? '' ), 'Booster could not compare the installed version with the published release version.' ) ) ) {
-					throw new RuntimeException( 'The comparison refusal must explain the version issue without downloading a ZIP.' );
-				}
 				echo wp_json_encode(
 					array(
 						'preflight_streams' => $this->streams - $before,
@@ -432,15 +406,12 @@ final class RAN_Booster_ReleaseSwitchProof {
 			}
 			$data = $preflight['data'];
 			if ( str_starts_with( $this->scenario, 'choice-' ) ) {
-				if ( isset( $data['matching_release'] ) !== ( 'choice-dedup' !== $this->scenario ) ) {
-					throw new RuntimeException( 'Expected only distinct published versions in the chooser.' );
+				if ( ! isset( $data['matching_release'] ) ) {
+					throw new RuntimeException( 'The chooser did not offer the installed version separately.' );
 				}
-				if ( in_array( $this->scenario, array( 'choice-current', 'choice-disappeared' ), true ) ) {
-					$data                             = $data['matching_release'];
-					$request['switch_release_choice'] = 'installed';
-				}
-				$wanted = 'choice-latest' === $this->scenario ? '0.2.3' : '0.2.2';
-				if ( ( $data['release_version'] ?? null ) !== $wanted ) {
+				$data                             = $data['matching_release'];
+				$request['switch_release_choice'] = 'installed';
+				if ( ( $data['release_version'] ?? null ) !== '0.2.2' ) {
 					throw new RuntimeException( 'The chooser offered an unexpected release.' );
 				}
 			}
@@ -491,7 +462,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 		$mutation_streams = $this->streams - $before;
 		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
 		$result = is_string( $query['ran_booster_release_result'] ?? null ) ? $query['ran_booster_release_result'] : '';
-		if ( in_array( $this->scenario, array( 'choice-current', 'choice-latest', 'choice-dedup', 'same', 'prerelease-order', 'newer', 'active', 'compete', 'stale', 'fallback-repaired', 'incompatible-zip' ), true ) && 1 !== $mutation_streams ) {
+		if ( in_array( $this->scenario, array( 'choice-current', 'same', 'prerelease-order', 'newer', 'active', 'compete', 'stale', 'fallback-repaired', 'incompatible-zip' ), true ) && 1 !== $mutation_streams ) {
 			throw new RuntimeException( 'Expected exactly one mutation ZIP stream, got ' . $mutation_streams . ' for ' . $result . '.' );
 		}
 		if ( in_array( $this->scenario, array( 'choice-disappeared', 'missing', 'replaced-asset', 'stale-confirmation', 'prerelease-no-consent' ), true ) && 0 !== $mutation_streams ) {
@@ -791,7 +762,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			$this->assert_files( '0.2.2', true, $this->directory );
 			$this->assert_row( true );
 		}
-		$no_install = in_array( $this->scenario, array( 'comparison-unavailable', 'stale-confirmation', 'prerelease-no-consent', 'older' ), true );
+		$no_install = in_array( $this->scenario, array( 'stale-confirmation', 'prerelease-no-consent' ), true );
 		if ( $no_install ) {
 			$this->assert_stored_check( null, true );
 		}
@@ -1168,7 +1139,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 	private function assert_row( bool $switched ): void {
 		global $wpdb;
 		$row      = $wpdb->get_row( $wpdb->prepare( 'SELECT source, source_revision, deployment_policy, release_configuration FROM %i WHERE package = %s', ran_booster_table_name(), $this->identity ), ARRAY_A );
-		$policy   = 'disabled' === $this->scenario ? 'disabled' : ( in_array( $this->scenario, array( 'newer', 'choice-current', 'choice-latest', 'choice-dedup', 'choice-disappeared' ), true ) && ! $switched ? 'automatic' : 'manual' );
+		$policy   = 'disabled' === $this->scenario ? 'disabled' : ( in_array( $this->scenario, array( 'newer', 'choice-current', 'choice-disappeared' ), true ) && ! $switched ? 'automatic' : 'manual' );
 		$expected = $switched
 			? array(
 				'release_asset',

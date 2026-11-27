@@ -55,4 +55,7 @@ foreach ( $notice_messages as $message ) {
 	}
 }
 echo \RAN\Admin\Feedback\FeedbackFlash::container( $feedback_items ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- container() escapes every dynamic value; the key is a closed code.
+if ( isset( $updater_lock_owner ) && is_array( $updater_lock_owner ) ) {
+	require __DIR__ . '/updater-lock-owner.php';
+}
 ?>

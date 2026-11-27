@@ -65,4 +65,30 @@ final class UpdaterLockOwnerNoticeTest extends TestCase {
 		self::assertNull( ( new WordPressUpdaterLock() )->try_acquire_without_reclaim() );
 		self::assertTrue( WordPressUpdaterLock::take_refusal() );
 	}
+
+	public function test_the_failure_notices_offer_a_confirmed_release_only_with_a_recorded_owner(): void {
+		$rendered = array();
+		foreach ( array(
+			null,
+			array(
+				'token'      => '1700000000.123456789123456789123456789',
+				'operation'  => 'package_operation',
+				'started_at' => 1700000000,
+			),
+		) as $updater_lock_owner ) {
+			$messages = array(
+				array(
+					'type'    => 'error',
+					'message' => 'Another package operation is in progress.',
+				),
+			);
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/notices.php';
+			$rendered[] = (string) ob_get_clean();
+		}
+		self::assertStringNotContainsString( 'release-updater-lock', $rendered[0] );
+		self::assertStringContainsString( 'A Booster package operation started at ', $rendered[1] );
+		self::assertStringContainsString( 'name="ran_booster[lock_token]" value="1700000000.123456789123456789123456789"', $rendered[1] );
+		self::assertStringContainsString( 'name="ran_booster[confirm_stopped]" value="1" required', $rendered[1] );
+	}
 }

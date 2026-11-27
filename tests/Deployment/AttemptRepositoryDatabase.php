@@ -59,6 +59,10 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function get_row( string $query ): mixed {
+			if ( preg_match( "/^SELECT option_value FROM `wp_options` WHERE option_name = '([^']+)'$/", $query ) === 1 ) {
+				$value = $this->get_var( $query );
+				return null === $value ? null : (object) array( 'option_value' => $value );
+			}
 			return $this->selection->get_row( $query );
 		}
 		/** @var array<int, array<string, mixed>> */
@@ -221,7 +225,7 @@ namespace RAN\Tests\Deployment {
 				unset( $activity );
 				return 0;
 			}
-			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('([^']+)', '([^']+)', 'no'\)$/", $query, $matches ) === 1 ) {
+			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('([^']+)', '([^']+)', 'off'\)$/", $query, $matches ) === 1 ) {
 				if ( isset( $this->option_rows[ stripslashes( $matches[1] ) ] ) ) {
 					return 0;
 				}
@@ -240,7 +244,7 @@ namespace RAN\Tests\Deployment {
 
 				return 1;
 			}
-			if ( preg_match( "/^DELETE FROM `wp_options` WHERE option_name = '([^']+)' AND (?:option_value = '([^']+)'|CAST\\(option_value AS BINARY\\) = CAST\\('([^']+)' AS BINARY\\))$/", $query, $matches ) === 1 ) {
+			if ( preg_match( "/^DELETE FROM `wp_options` WHERE option_name = '([^']+)' AND (?:option_value = '([^']+)'|CAST\\(option_value AS BINARY\\) = (?:CAST\\()?'([^']+)'(?: AS BINARY\\))?)$/", $query, $matches ) === 1 ) {
 				$name      = stripslashes( $matches[1] );
 				$raw_value = $matches[2] ?? '';
 				$value     = stripslashes( '' !== $raw_value ? $raw_value : ( $matches[3] ?? '' ) );

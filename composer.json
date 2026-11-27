@@ -51,7 +51,7 @@
         "ext-zip": "*",
         "ran/booster-github-provider": "1.0.0-beta.30",
         "ran/updater-support": "1.0.0-beta.11",
-        "ran/wp-branch-updater": "1.0.0-beta.18",
+        "ran/wp-branch-updater": "1.0.0-beta.20",
         "ran/wp-release-updater": "1.0.0-beta.25"
     },
     "extra": {

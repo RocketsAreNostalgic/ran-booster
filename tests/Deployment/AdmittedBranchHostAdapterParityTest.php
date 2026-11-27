@@ -976,7 +976,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$adapter = $this->adapter( $attempt, $provider );
 		$this->download_fixture( 'example' );
 		$declaration = $adapter->declaration();
-		self::assertSame( $commit, $declaration->selected_commit );
+		// The Branch updater treats selected_commit as rollback intent, so an update keeps it host-side only.
+		self::assertNull( $declaration->selected_commit );
 		self::assertNull( $declaration->expected_head );
 		$artifact = $adapter->prepare( $declaration, $this->update_baseline() );
 		self::assertNotNull( $provider->last_request );
@@ -984,6 +985,18 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( $commit, $provider->last_request->ref );
 		self::assertNull( $provider->last_request->expected_branch );
 		$artifact->cleanup();
+	}
+
+	public function test_update_to_an_older_selected_commit_is_refused_as_a_downgrade(): void {
+		$commit   = str_repeat( 'b', 40 );
+		$archive  = new ParityProviderArchive( $commit );
+		$provider = new ParityRepositoryProvider( $archive, 2 );
+		$attempt  = $this->running_update( $commit );
+		$this->download_fixture( 'example', '0.0.1' );
+		$outcome = $this->coordinator( $provider )->execute_claimed( $attempt );
+		self::assertSame( DeploymentOutcome::CODE_DOWNGRADE_BLOCKED, $outcome->get_code() );
+		self::assertSame( $commit, $provider->last_request?->selected_commit );
+		self::assertSame( 1, $archive->cleanup_calls );
 	}
 
 	public function test_coordinator_preserves_historical_selection_and_checks_installed_postconditions(): void {

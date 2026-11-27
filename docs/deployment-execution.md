@@ -184,10 +184,12 @@ It refuses to run outside `wp_doing_cron()`.
   its own plugin files.
 - `assert_deployment_target_count()` caps web hook fan-out at 64 targets.
 
-After archive preparation and lock acquisition, the admitted runner asks the
-host boundary to recheck the frozen target, provider head where applicable,
-artifact identity and maintenance state before writing the mutation fence and
-calling WordPress. These checks fail closed rather than infer safety from the
+After archive preparation and preflight, and before it takes the updater lock,
+the admitted runner asks the host boundary for its last remote-head
+observation where applicable. Under the lock it repeats the local checks: the
+frozen target and downgrade rule, artifact identity, maintenance state,
+mutation policy and preflight. Only then does it write the mutation fence and
+call WordPress. These checks fail closed rather than infer safety from the
 updater lock.
 
 ## Booster updates

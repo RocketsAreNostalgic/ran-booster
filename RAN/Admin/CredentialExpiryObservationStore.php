@@ -13,6 +13,9 @@ use RuntimeException;
  *
  * A provider observation carries the material tag of the credential it was made
  * for, and is returned only while that tag is still the credential's current one.
+ *
+ * @phpstan-type Observation array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}
+ * @phpstan-type StoredObservation array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int, material_tag?: string, material_since?: int}
  */
 class CredentialExpiryObservationStore {
 
@@ -32,9 +35,7 @@ class CredentialExpiryObservationStore {
 		$this->material_tags ??= $reader;
 	}
 
-	/**
-	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}
-	 */
+	/** @return Observation */
 	public function get( string $provider, string $profile_id ): array {
 		$this->require_provider_id( $provider );
 		$this->require_profile_id( $profile_id );
@@ -42,21 +43,9 @@ class CredentialExpiryObservationStore {
 		return $this->trusted( $provider, $profile_id, $this->all( $this->read_option() )[ $provider ][ $profile_id ] ?? array() );
 	}
 
-	/**
-	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}>>
-	 */
+	/** @return array<string, array<string, Observation>> */
 	public function observations(): array {
-		$profiles = $this->all( $this->read_option() );
-		foreach ( $profiles as $provider => &$records ) {
-			foreach ( $records as $profile_id => &$record ) {
-				$record = $this->trusted( $provider, $profile_id, $record );
-			}
-			unset( $record );
-			$records = array_filter( $records );
-		}
-		unset( $records );
-
-		return array_filter( $profiles );
+		return $this->all( $this->read_option(), true );
 	}
 
 	public function set_manual_expiry( string $provider, string $profile_id, ?string $expires_on ): void {
@@ -86,6 +75,7 @@ class CredentialExpiryObservationStore {
 			$profile_id,
 			array(
 				'material_tag'        => $material_tag,
+				'material_since'      => $this->request_started_at(),
 				'provider_checked_at' => $checked_at,
 				'provider_expires_at' => $report->is_known() ? (string) $report->expires_at : null,
 			)
@@ -99,7 +89,7 @@ class CredentialExpiryObservationStore {
 		$this->mutate( $provider, $profile_id, null );
 	}
 
-	/** Clear stale expiry evidence while retaining a non-secret replacement generation. */
+	/** Clear stale expiry evidence, keeping the current material's observation and a non-secret replacement generation. */
 	public function reset_for_replacement( string $provider, string $profile_id ): void {
 		$this->require_provider_id( $provider );
 		$this->require_profile_id( $profile_id );
@@ -113,6 +103,13 @@ class CredentialExpiryObservationStore {
 			wp_cache_delete( 'notoptions', 'options' );
 		}
 		return get_option( self::OPTION_NAME, null );
+	}
+
+	/** Microseconds since the epoch when this request began; a constant credential cannot change within a request. */
+	protected function request_started_at(): int {
+		$started = $_SERVER['REQUEST_TIME_FLOAT'] ?? null;
+
+		return (int) round( ( is_numeric( $started ) ? (float) $started : microtime( true ) ) * 1000000 );
 	}
 
 	/** @param array<string, mixed> $replacement Canonical option document. */
@@ -147,10 +144,8 @@ class CredentialExpiryObservationStore {
 		}
 	}
 
-	/**
-	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int, material_tag?: string}>>
-	 */
-	private function all( mixed $document ): array {
+	/** @return ($trusted is true ? array<string, array<string, Observation>> : array<string, array<string, StoredObservation>>) */
+	private function all( mixed $document, bool $trusted = false ): array {
 		if ( ! is_array( $document ) || self::SCHEMA_VERSION !== ( $document['version'] ?? null )
 			|| ! is_array( $document['profiles'] ?? null )
 		) {
@@ -175,6 +170,9 @@ class CredentialExpiryObservationStore {
 				}
 
 				$record = $this->normalise_record( $candidate );
+				if ( $trusted ) {
+					$record = $this->trusted( $provider, $profile_id, $record );
+				}
 				if ( array() !== $record ) {
 					$profiles[ $provider ][ $profile_id ] = $record;
 				}
@@ -192,7 +190,7 @@ class CredentialExpiryObservationStore {
 
 	/**
 	 * @param array<string, mixed> $candidate Stored observation candidate.
-	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int, material_tag?: string}
+	 * @return StoredObservation
 	 */
 	private function normalise_record( array $candidate ): array {
 		$record = array();
@@ -211,6 +209,9 @@ class CredentialExpiryObservationStore {
 		) {
 			$record['material_tag']        = $candidate['material_tag'];
 			$record['provider_checked_at'] = $candidate['provider_checked_at'];
+			if ( is_int( $candidate['material_since'] ?? null ) && $candidate['material_since'] > 0 ) {
+				$record['material_since'] = $candidate['material_since'];
+			}
 			if ( is_string( $candidate['provider_expires_at'] ?? null )
 				&& $this->is_utc_timestamp( $candidate['provider_expires_at'] )
 			) {
@@ -227,12 +228,12 @@ class CredentialExpiryObservationStore {
 	/**
 	 * Drop the tag, and the provider observation unless its tag is the credential's current one.
 	 *
-	 * @param array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int, material_tag?: string} $record
-	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}
+	 * @param StoredObservation $record
+	 * @return Observation
 	 */
 	private function trusted( string $provider, string $profile_id, array $record ): array {
 		$tag = $record['material_tag'] ?? null;
-		unset( $record['material_tag'] );
+		unset( $record['material_tag'], $record['material_since'] );
 		if ( null !== $tag && ! $this->is_current_tag( $provider, $profile_id, $tag ) ) {
 			unset( $record['provider_checked_at'], $record['provider_expires_at'] );
 		}
@@ -279,18 +280,28 @@ class CredentialExpiryObservationStore {
 
 	/**
 	 * A patch that carries a material tag is written only while that tag is current, checked again on every attempt.
+	 * Clearing keeps only a provider observation of the credential's current material.
 	 *
-	 * @param array<string, string|null>|null $patch Fields to replace, or null to clear the record.
+	 * @param array<string, string|int|null>|null $patch Fields to replace, or null to clear the record.
 	 */
 	private function mutate( string $provider, string $profile_id, ?array $patch, bool $replacement = false ): bool {
+		$tag = is_string( $patch['material_tag'] ?? null ) ? $patch['material_tag'] : null;
 		for ( $attempt = 0; $attempt < 5; ++$attempt ) {
 			$expected = $this->read_option( true );
-			if ( is_string( $patch['material_tag'] ?? null ) && ! $this->is_current_tag( $provider, $profile_id, $patch['material_tag'] ) ) {
+			if ( null !== $tag && ! $this->is_current_tag( $provider, $profile_id, $tag ) ) {
 				return false;
 			}
 			$profiles = $this->all( $expected );
 			$previous = $profiles[ $provider ][ $profile_id ] ?? array();
-			$record   = null === $patch ? array() : $previous;
+			// A request that began before another tag was observed may still see an old constant; it never replaces that observation.
+			if ( null !== $tag && isset( $previous['material_tag'] ) && $tag !== $previous['material_tag'] && ( $previous['material_since'] ?? 0 ) >= $patch['material_since'] ) {
+				return false;
+			}
+			$record = $previous;
+			if ( null === $patch ) {
+				$current = isset( $previous['material_tag'] ) && $this->is_current_tag( $provider, $profile_id, $previous['material_tag'] );
+				$record  = $current ? array_intersect_key( $previous, array_flip( array( 'material_tag', 'material_since', 'provider_checked_at', 'provider_expires_at' ) ) ) : array();
+			}
 			if ( $replacement ) {
 				$record['event_generation'] = ( $previous['event_generation'] ?? 0 ) + 1;
 			}

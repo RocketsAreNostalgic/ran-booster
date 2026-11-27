@@ -37,6 +37,7 @@ class ProviderProfileAdminController {
 	) {
 
 		$this->branch_check_evidence = $branch_check_evidence ?? new RepositoryBranchCheckEvidenceStore();
+		$this->expiry_observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 	}
 	/** @param array<string,mixed> $request Untrusted form data. */
 	public function adopt_github( array $request ): void {

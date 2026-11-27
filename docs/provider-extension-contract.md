@@ -850,12 +850,17 @@ Core records a result only for the credential that was checked. Before the
 provider call it reads the credential's material tag: a random value kept in
 the encrypted record and replaced with every new secret, or, for the read-only
 constant, an HMAC of the configured value under a key derived from the site's
-salts. The observation and the automatic-removal deadline are written only while
-that tag is still current, the deadline under the secrets file lock, and an
-observation is shown only while its tag matches. A result for a credential
-replaced during validation is discarded with a coded log line. A record saved
-before tags existed records nothing until it is next saved. A provider-reported
-date can only bring the removal deadline earlier.
+salts. The automatic-removal deadline is a compare-and-set under the secrets
+file lock, so it changes only while the record still carries that tag, and a
+provider-reported date can only bring it earlier. The advisory observation is
+checked against the tag before each write attempt, but a replacement can still
+land between that check and the option write; an observation is therefore shown
+only while its tag is the credential's current one, and a stale one stays
+hidden. Replacement and purge cleanup keep an observation of the current
+material. A request that began before another tag was observed never replaces
+that observation, because a constant cannot change within a request. A result
+that is not recorded logs a coded line. A record saved before tags existed
+records nothing until it is next saved.
 
 A provider that implements `RepositoryBrowser` receives one public-owner or
 one selected-credential `RepositoryBrowseRequest`. It must claim every remote

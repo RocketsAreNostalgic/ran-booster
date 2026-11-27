@@ -439,7 +439,8 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			}
 		);
 		$secrets->expects( null === $tag ? self::never() : self::once() )->method( 'record_credential_provider_expiry' )->with( self::anything(), 'credential_1', '2027-04-30', self::TAG )->willReturn( false );
-		$expiry               = $this->expiry_store();
+		// The controller gives a store without a reader its own secrets file's tags.
+		$expiry               = new InMemoryCredentialExpiryObservationStore();
 		$_POST['ran_booster'] = $this->request();
 		$this->start_log_capture();
 		$this->dispatcher(
@@ -452,7 +453,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			}
 		)->dispatch_post_requests();
 
-		self::assertSame( array( 'tag', 'provider' ), $order );
+		self::assertSame( array( 'tag', 'provider' ), array_slice( $order, 0, 2 ) );
 		self::assertSame( $observed, isset( $expiry->get( 'bb', 'credential_1' )['provider_expires_at'] ) );
 		self::assertSame( array( '[ran-booster] Credential validation result not recorded. {"operation":"credential_validation","outcome_code":"' . $code . '"}' ), $this->captured_log_lines() );
 	}

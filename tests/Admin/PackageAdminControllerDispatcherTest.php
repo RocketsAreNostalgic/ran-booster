@@ -905,7 +905,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			->with(
 				'edit-plugin',
 				self::callback(
-					static fn ( array $resolved ): bool => '1' === $resolved['repository_check_skipped']
+					static fn ( array $resolved ): bool => ( 429 === $code ? 'rate_limited' : '1' ) === $resolved['repository_check_skipped']
 						&& 'resolved' === $resolved['provider_repository_identity_source']
 						&& 'repository-id' === $resolved['provider_repository_id']
 						&& 'owner/original' === $resolved['repository']
@@ -1022,12 +1022,15 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertFalse( $result );
 	}
 
-	public function test_a_carried_rate_limit_still_lets_an_unchanged_settings_save_proceed(): void {
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'rate_limited', 403 ) )]
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'rate_limited_secondary', 403 ) )]
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'rate_limited', null ) )]
+	public function test_a_carried_rate_limit_still_lets_an_unchanged_settings_save_proceed( string $reason, ?int $status ): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
-		$providers = new ProviderRegistry( array( new FailingLookupProvider( 0, new \RAN\RepositoryProvider\ProviderFailure( 'rate_limited', retry_after: 60 ) ) ) );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( 0, new \RAN\RepositoryProvider\ProviderFailure( $reason, $status, retry_after: 60 ) ) ) );
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
-		$dashboard->expects( self::once() )->method( 'post_package_operation' )->willReturn( 'https://example.test/redirect' );
+		$dashboard->expects( self::once() )->method( 'post_package_operation' )->with( 'edit-plugin', self::callback( static fn ( array $resolved ): bool => 'rate_limited' === $resolved['repository_check_skipped'] ) )->willReturn( 'https://example.test/redirect' );
 
 		$result = ( new PackageAdminController(
 			repositories: new PackageRepositoryRequestResolver( $providers ),
@@ -1106,6 +1109,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	}
 
 	#[\PHPUnit\Framework\Attributes\TestWith( array( '1' ) )]
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'rate_limited' ) )]
 	#[\PHPUnit\Framework\Attributes\TestWith( array( 'updates_disabled' ) )]
 	public function test_a_browser_supplied_skipped_check_marker_is_discarded( string $marker ): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );

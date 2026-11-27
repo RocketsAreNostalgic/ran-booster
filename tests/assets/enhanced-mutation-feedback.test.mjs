@@ -2100,6 +2100,17 @@ test('General busy state leaves only the mounted switch subtree operable', () =>
 	}
 });
 
+function packageEditControls(type, action, identifier) {
+	const fields = new Map([
+		['ran_booster[action]', { value: action }],
+		[
+			type === 'plugin' ? 'ran_booster[file]' : 'ran_booster[stylesheet]',
+			{ value: identifier },
+		],
+	]);
+	return { namedItem: (name) => fields.get(name) || null };
+}
+
 test('package save feedback requires the matching authoritative edit response', () => {
 	for (const scenario of [
 		'plugin',
@@ -2116,13 +2127,17 @@ test('package save feedback requires the matching authoritative edit response', 
 		'partial-reinstall',
 		'recovery',
 		'failed-status',
+		'plugin-conflict',
+		'theme-conflict',
+		'other-target-conflict',
 		'stale',
 		'independent-pending',
 		'host-absent',
 		'host-refused',
 	]) {
 		const state = fixture();
-		const type = scenario === 'theme' ? 'theme' : 'plugin';
+		const conflict = scenario.endsWith('-conflict');
+		const type = scenario.startsWith('theme') ? 'theme' : 'plugin';
 		const identifier =
 			type === 'plugin' ? 'example/example.php' : 'example';
 		const handlers = new Map();
@@ -2131,6 +2146,9 @@ test('package save feedback requires the matching authoritative edit response', 
 			addEventListener() {},
 			getResponseHeader: () => null,
 		};
+		if (conflict) {
+			xhr.status = 409;
+		}
 		const button = state.button;
 		button.dataset = {};
 		button.isConnected = true;
@@ -2152,14 +2170,10 @@ test('package save feedback requires the matching authoritative edit response', 
 			? scenario
 			: `edit-${type}`;
 		button.form = {
-			elements: {
-				namedItem: (name) => ({
-					value: name === 'ran_booster[action]' ? action : identifier,
-				}),
-			},
+			elements: packageEditControls(type, action, identifier),
 		};
 		const oldRegion = {
-			id: 'wpbody-content',
+			id: 'ran-booster-package-edit-region',
 			isConnected: true,
 			contains: () => true,
 		};
@@ -2183,23 +2197,27 @@ test('package save feedback requires the matching authoritative edit response', 
 			scenario === 'wrong-returned-action'
 				? 'install-plugin'
 				: `edit-${type}`;
-		const returnedIdentifier =
-			scenario === 'wrong-returned-identifier' ? 'other' : identifier;
+		const returnedIdentifier = [
+			'wrong-returned-identifier',
+			'other-target-conflict',
+		].includes(scenario)
+			? 'other'
+			: identifier;
 		const newRegion = {
-			id: 'wpbody-content',
+			id: 'ran-booster-package-edit-region',
 			querySelector(selector) {
 				if (selector === '#ran-booster-package-edit-form') {
 					return scenario === 'recovery'
 						? null
 						: {
-								elements: {
-									namedItem: (name) => ({
-										value:
-											name === 'ran_booster[action]'
-												? returnedAction
-												: returnedIdentifier,
-									}),
-								},
+								hasAttribute: (name) =>
+									conflict &&
+									name === 'data-ran-booster-attempted',
+								elements: packageEditControls(
+									type,
+									returnedAction,
+									returnedIdentifier
+								),
 							};
 				}
 				return scenario === 'no-marker' ? null : notice;
@@ -2208,7 +2226,7 @@ test('package save feedback requires the matching authoritative edit response', 
 			insertAdjacentElement() {},
 		};
 		state.document.getElementById = (id) =>
-			id === 'wpbody-content' ? current : state.error;
+			id === 'ran-booster-package-edit-region' ? current : state.error;
 		if (scenario !== 'host-absent') {
 			state.window.ranBoosterFeedback = {
 				show: (message) => {
@@ -2257,6 +2275,24 @@ test('package save feedback requires the matching authoritative edit response', 
 					xhr: { addEventListener() {} },
 				},
 			});
+		}
+		if (conflict) {
+			const response = { getElementById: () => newRegion };
+			state.window.DOMParser = class {
+				parseFromString() {
+					return response;
+				}
+			};
+			newRegion.querySelectorAll = () => [];
+			detail.shouldSwap = false;
+			state.listeners.get('htmx:beforeSwap')({ detail });
+			assert.equal(
+				detail.shouldSwap,
+				scenario !== 'other-target-conflict',
+				scenario
+			);
+			assert.equal(rendered, 0);
+			continue;
 		}
 		current = newRegion;
 		state.listeners.get('htmx:afterSwap')({ detail });
@@ -2324,7 +2360,7 @@ test('an older same-target read cannot overtake or disrupt the newer package sav
 		const oldHandlers = new Map();
 		const saveHandlers = new Map();
 		const oldTarget = {
-			id: 'wpbody-content',
+			id: 'ran-booster-package-edit-region',
 			isConnected: true,
 			contains: () => true,
 		};
@@ -2355,20 +2391,17 @@ test('an older same-target read cannot overtake or disrupt the newer package sav
 			].includes(selector);
 		save.hasAttribute = () => false;
 		save.form = {
-			elements: {
-				namedItem: (name) => ({
-					value:
-						name === 'ran_booster[action]'
-							? 'edit-plugin'
-							: 'example/example.php',
-				}),
-			},
+			elements: packageEditControls(
+				'plugin',
+				'edit-plugin',
+				'example/example.php'
+			),
 		};
 		save.addEventListener = (name, handler) =>
 			saveHandlers.set(name, handler);
 		save.removeEventListener = () => {};
 		state.document.getElementById = (id) =>
-			id === 'wpbody-content' ? current : state.error;
+			id === 'ran-booster-package-edit-region' ? current : state.error;
 		loadFunction('initEnhancedMutationFeedback', {
 			document: state.document,
 			window: state.window,
@@ -2412,7 +2445,7 @@ test('an older same-target read cannot overtake or disrupt the newer package sav
 			},
 		};
 		current = {
-			id: 'wpbody-content',
+			id: 'ran-booster-package-edit-region',
 			querySelector: (selector) =>
 				selector === '#ran-booster-package-edit-form'
 					? save.form
@@ -2602,7 +2635,7 @@ test('a region can anchor its hidden confirmation beside its actions', () => {
 test('stale source and current save failures release their own controls for retry', () => {
 	const state = fixture();
 	const target = {
-		id: 'wpbody-content',
+		id: 'ran-booster-package-edit-region',
 		isConnected: true,
 		contains: () => true,
 	};
@@ -2622,14 +2655,11 @@ test('stale source and current save failures release their own controls for retr
 		].includes(selector);
 	save.hasAttribute = () => false;
 	save.form = {
-		elements: {
-			namedItem: (name) => ({
-				value:
-					name === 'ran_booster[action]'
-						? 'edit-plugin'
-						: 'example/example.php',
-			}),
-		},
+		elements: packageEditControls(
+			'plugin',
+			'edit-plugin',
+			'example/example.php'
+		),
 	};
 	save.addEventListener = () => {};
 	save.removeEventListener = () => {};
@@ -2637,10 +2667,17 @@ test('stale source and current save failures release their own controls for retr
 		document: state.document,
 		window: state.window,
 	})();
-	const oldDetail = { elt: old, target, xhr: makeXhr() };
+	state.sourceLinkAttributes.set('data-ran-booster-source-choice', 'branch');
+	const oldDetail = {
+		elt: old,
+		target: { ...target, id: 'wpbody-content' },
+		xhr: makeXhr(),
+	};
 	const saveDetail = { elt: save, target, xhr: makeXhr() };
 	state.listeners.get('htmx:beforeRequest')({ detail: oldDetail });
+	assert.equal(state.sourceProgress.hidden, false);
 	state.listeners.get('htmx:beforeRequest')({ detail: saveDetail });
+	assert.equal(state.sourceProgress.hidden, true);
 	state.listeners.get('htmx:sendError')({ detail: oldDetail });
 	assert.equal(state.sourceLinkAttributes.has('aria-busy'), false);
 	assert.equal(state.sourceLinkAttributes.has('aria-disabled'), false);

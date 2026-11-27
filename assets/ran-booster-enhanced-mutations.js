@@ -313,6 +313,15 @@
 		const requests = new WeakMap();
 		let armedSuccess = null;
 
+		function showSourceProgress(visible) {
+			const progress = document.querySelector(
+				'[data-ran-booster-source-progress]'
+			);
+			if (progress) {
+				progress.hidden = !visible;
+			}
+		}
+
 		function captureRequest(event, form) {
 			const detail = event.detail;
 			const general = form.matches?.('[data-ran-booster-general-form]');
@@ -324,9 +333,12 @@
 			)
 				? /^edit-(plugin|theme)$/.exec(operation || '')?.[1]
 				: null;
+			const identifierField =
+				packageType === 'plugin'
+					? 'ran_booster[file]'
+					: 'ran_booster[stylesheet]';
 			const identifier = packageType
-				? form.form.elements.namedItem(`ran_booster[${packageType}]`)
-						?.value
+				? form.form.elements.namedItem(identifierField)?.value
 				: null;
 			if (
 				!detail?.xhr ||
@@ -341,9 +353,15 @@
 						'ran-booster-general-numeric',
 					].includes(detail.target.id)) ||
 				(packageType &&
-					(!identifier || detail.target.id !== 'wpbody-content'))
+					(!identifier ||
+						detail.target.id !== 'ran-booster-package-edit-region'))
 			) {
 				return;
+			}
+			if (packageType) {
+				// An earlier source-choice read targets the enclosing WordPress page.
+				sourceRequest = null;
+				showSourceProgress(false);
 			}
 			const record = {
 				target: detail.target,
@@ -352,6 +370,7 @@
 				payload: null,
 				general,
 				packageType,
+				identifierField,
 				identifier,
 				operation,
 			};
@@ -367,7 +386,7 @@
 					!record.target.isConnected ||
 					!form.isConnected ||
 					(general && !record.target.contains(form)) ||
-					(!general && requests.get(record.target) !== record)
+					(!general && isStaleSourceRequest(response, form))
 				) {
 					response.preventDefault();
 					return;
@@ -476,6 +495,11 @@
 				form,
 				xhr,
 				scrollY: window.scrollY,
+				focusId: form.matches?.(
+					'[data-ran-booster-package-settings-save]'
+				)
+					? form.ownerDocument?.activeElement?.id
+					: null,
 			};
 			if (window.ranBoosterUI) {
 				window.ranBoosterUI.rememberedDisclosureStates =
@@ -504,6 +528,15 @@
 			}
 
 			pendingInteractionState = null;
+			if (
+				state.focusId &&
+				state.form.ownerDocument.activeElement ===
+					state.form.ownerDocument.body
+			) {
+				document
+					.getElementById(state.focusId)
+					?.focus({ preventScroll: true });
+			}
 			if (window.ranBoosterUI) {
 				window.ranBoosterUI.rememberedDisclosureStates = undefined;
 			}
@@ -1019,6 +1052,15 @@
 		document.addEventListener(
 			'submit',
 			function (event) {
+				if (
+					event.target.id === 'ran-booster-package-edit-form' &&
+					document
+						.getElementById('ran-booster-package-settings-save')
+						?.getAttribute('aria-busy') === 'true'
+				) {
+					event.preventDefault();
+					return;
+				}
 				const form = enhancedFormFrom(event.target);
 				if (form && event.submitter) {
 					submitters.set(form, event.submitter);
@@ -1045,13 +1087,16 @@
 				}
 
 				if (form.hasAttribute?.('data-ran-booster-source-choice')) {
-					sourceRequest = event.detail.xhr;
-					const progress = document.querySelector(
-						'[data-ran-booster-source-progress]'
-					);
-					if (progress) {
-						progress.hidden = false;
+					if (
+						document
+							.getElementById('ran-booster-package-settings-save')
+							?.getAttribute?.('aria-busy') === 'true'
+					) {
+						event.preventDefault();
+						return;
 					}
+					sourceRequest = event.detail.xhr;
+					showSourceProgress(true);
 				}
 				captureRequest(event, form);
 				if (!form.dataset?.ranBoosterSettingsScope) {
@@ -1085,6 +1130,55 @@
 		});
 
 		document.addEventListener('htmx:beforeSwap', function (event) {
+			const save = requests.get(event.detail?.xhr);
+			if (save?.packageType) {
+				const response = new window.DOMParser().parseFromString(
+					event.detail.xhr.responseText,
+					'text/html'
+				);
+				const region = response.getElementById(save.target.id);
+				const edit = region?.querySelector(
+					'#ran-booster-package-edit-form'
+				);
+				const failed = isScopedFailureStatus(event.detail.xhr.status);
+				const samePackage =
+					edit?.elements.namedItem('ran_booster[action]')?.value ===
+						save.operation &&
+					edit.elements.namedItem(save.identifierField)?.value ===
+						save.identifier;
+				const attempted = edit?.hasAttribute(
+					'data-ran-booster-attempted'
+				);
+				if (
+					samePackage &&
+					attempted &&
+					event.detail.xhr.status === 409 &&
+					save.ready &&
+					requests.get(save.target) === save
+				) {
+					// The conflict form carries the refreshed expected values for a retry.
+					event.detail.shouldSwap = true;
+					return;
+				}
+				if (failed || !samePackage || attempted) {
+					event.detail.shouldSwap = false;
+					restoreInteractionState(true);
+					const notice = renderedFailureNotice(
+						save.form,
+						region || response,
+						true
+					);
+					focusError(
+						save.form,
+						renderedFailureMessage(notice) ||
+							wp.i18n.__(
+								'We could not complete that request. Please try again.',
+								'ran-booster'
+							)
+					);
+				}
+				return;
+			}
 			const form = requestForm(event);
 			if (form && isScopedFailureStatus(event.detail?.xhr?.status)) {
 				event.detail.shouldSwap = !form.hasAttribute?.(
@@ -1163,8 +1257,8 @@
 					updated !== save.target &&
 					edit?.elements.namedItem('ran_booster[action]')?.value ===
 						`edit-${save.packageType}` &&
-					edit.elements.namedItem(`ran_booster[${save.packageType}]`)
-						?.value === save.identifier &&
+					edit.elements.namedItem(save.identifierField)?.value ===
+						save.identifier &&
 					notice?.dataset.ranBoosterSavedPackage ===
 						save.identifier &&
 					notice.dataset.ranBoosterSavedType === save.packageType
@@ -1384,12 +1478,7 @@
 		document.addEventListener('htmx:configRequest', boundFollowUp);
 		document.addEventListener('htmx:afterRequest', function (event) {
 			if (event.detail?.xhr === sourceRequest && sourceRequest) {
-				const progress = document.querySelector(
-					'[data-ran-booster-source-progress]'
-				);
-				if (progress) {
-					progress.hidden = true;
-				}
+				showSourceProgress(false);
 			}
 			if (
 				heldSave &&

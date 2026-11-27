@@ -279,7 +279,8 @@ class Dispatcher {
 	}
 
 	protected function redirect_to( string $url ): never {
-		if ( $this->is_htmx_request() ) {
+		// A scoped package save follows the native redirect in the same XMLHttpRequest.
+		if ( $this->is_htmx_request() && 'ran-booster-package-edit-region' !== ( $_SERVER['HTTP_HX_TARGET'] ?? null ) ) {
 			$location = wp_json_encode(
 				array(
 					'path'   => wp_make_link_relative( $url ),

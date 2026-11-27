@@ -899,7 +899,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	syncUseReleasesState();
 
 	const initializeManagedReleaseBrowserAfterSwap = (event) => {
-		if (event.detail?.target?.id !== 'wpbody-content') {
+		if (
+			!['wpbody-content', 'ran-booster-package-edit-region'].includes(
+				event.detail?.target?.id
+			)
+		) {
 			return;
 		}
 		const managedBrowser = document.querySelector(

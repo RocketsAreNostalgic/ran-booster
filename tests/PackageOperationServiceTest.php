@@ -170,6 +170,7 @@ final class PackageOperationServiceTest extends TestCase {
 		return array(
 			'updates disabled'     => array( 'updates_disabled', 'edit-unchecked' ),
 			'provider unavailable' => array( '1', 'edit-unverified' ),
+			'provider rate limit'  => array( 'rate_limited', 'edit-rate-limited' ),
 		);
 	}
 
@@ -298,6 +299,8 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	public function test_successful_package_operations_preserve_bounded_return_context(): void {
+		require_once __DIR__ . '/Admin/AdminViewWordPressFunctions.php';
+
 		$cases = array(
 			array( 'install-plugin', array(), 'ran-booster-plugins-create', false ),
 			array( 'install-plugin', array( 'install_another' => '1' ), 'ran-booster-plugins-create', false ),
@@ -314,6 +317,7 @@ final class PackageOperationServiceTest extends TestCase {
 				'return_policy'   => 'manual',
 				'provider'        => 'gh',
 				'return_url'      => 'https://evil.test/',
+				'source_view'     => 'release_asset',
 			);
 			if ( $settings ) {
 				$_GET['package'] = 'example/example.php';
@@ -328,6 +332,7 @@ final class PackageOperationServiceTest extends TestCase {
 			self::assertSame( 'branch', $query['return_source'], $action );
 			self::assertSame( 'manual', $query['return_policy'], $action );
 			self::assertArrayNotHasKey( 'return_url', $query );
+			self::assertSame( 'edit-plugin' === $action ? 'release_asset' : null, $query['source_view'] ?? null );
 			if ( isset( $overrides['install_another'] ) ) {
 				self::assertSame( 'gh', $query['provider'] );
 				self::assertSame( '1', $query['open_picker'] );
@@ -1580,32 +1585,64 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	public function test_signed_unverified_edit_marker_reports_the_save_and_the_skipped_repository_check(): void {
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'plugin', 'example/example.php' ) )]
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'theme', 'example' ) )]
+	public function test_signed_unverified_edit_marker_reports_only_the_saved_with_warning_outcome( string $type, string $identifier ): void {
 		$dashboard = $this->dashboard( new OperationCoordinator() );
 		$_GET      = array(
 			'ran_booster_result'        => 'edit-unverified',
-			'ran_booster_package'       => 'example/example.php',
-			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|edit-unverified|example/example.php' ),
+			'ran_booster_package'       => $identifier,
+			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|' . $type . '|edit-unverified|' . $identifier ),
 		);
-
-		$notice = $this->invoke_package_success_notice( $dashboard, 'plugin' );
-
 		self::assertSame(
 			array(
 				'operation'  => 'edit',
-				'identifier' => 'example/example.php',
+				'identifier' => $identifier,
 			),
-			$notice
+			$this->invoke_package_success_notice( $dashboard, $type )
 		);
-		self::assertSame( 'success', $dashboard->messages[0]['type'] );
-		self::assertSame( 'Plugin was successfully saved.', $dashboard->messages[0]['message'] );
-		// A qualified save (R12) is neither a snackbar success nor the enhanced save marker.
-		self::assertArrayNotHasKey( 'feedback', $dashboard->messages[0] );
-		self::assertArrayNotHasKey( 'saved_package', $dashboard->messages[0] );
-		self::assertSame( 'package_edit_unverified', $dashboard->messages[1]['feedback'] );
-		self::assertSame( 'warning', $dashboard->messages[1]['type'] );
-		self::assertStringContainsString( 'could not re-check the repository', $dashboard->messages[1]['message'] );
-		self::assertCount( 2, $dashboard->messages );
+		self::assertSame(
+			array(
+				array(
+					'type'     => 'warning',
+					'feedback' => 'package_edit_unverified',
+					'message'  => "Your settings were saved using the stored repository details. Booster couldn't recheck them with the Git provider.",
+				),
+			),
+			$dashboard->messages
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'plugin', 'example/example.php' ) )]
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'theme', 'example' ) )]
+	public function test_signed_rate_limited_marker_reports_the_reason_for_each_package_type( string $type, string $identifier ): void {
+		$dashboard = $this->dashboard( new OperationCoordinator() );
+		$_GET      = array(
+			'ran_booster_result'        => 'edit-rate-limited',
+			'ran_booster_package'       => $identifier,
+			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|' . $type . '|edit-rate-limited|' . $identifier ),
+		);
+		self::assertSame(
+			array(
+				'operation'  => 'edit',
+				'identifier' => $identifier,
+			),
+			$this->invoke_package_success_notice( $dashboard, $type )
+		);
+		self::assertSame(
+			array(
+				array(
+					'type'     => 'warning',
+					'feedback' => 'package_edit_unverified',
+					'message'  => 'Your settings were saved. The Git provider was limiting requests, so Booster used the repository details it already had.',
+				),
+			),
+			$dashboard->messages
+		);
+		$_GET['_ran_booster_notice_nonce'] = \RAN\wp_create_nonce( 'ran-booster-package-success|' . $type . '|edit-unverified|' . $identifier );
+		$forged                            = $this->dashboard( new OperationCoordinator() );
+		self::assertNull( $this->invoke_package_success_notice( $forged, $type ) );
+		self::assertSame( array(), $forged->messages );
 	}
 
 	public function test_unsigned_unverified_edit_marker_cannot_create_a_notice(): void {

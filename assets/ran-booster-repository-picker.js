@@ -30,7 +30,11 @@
 	});
 
 	document.addEventListener('htmx:afterSwap', function (event) {
-		if (event.detail?.target?.id === 'wpbody-content') {
+		if (
+			['wpbody-content', 'ran-booster-package-edit-region'].includes(
+				event.detail?.target?.id
+			)
+		) {
 			initRepositoryPicker();
 		}
 	});

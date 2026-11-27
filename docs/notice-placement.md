@@ -131,8 +131,9 @@ success has no item: its inline notice carries the closed key (`data-feedback-ke
 and its own `role`, so it is the one element, with or without JavaScript, and no
 stylesheet rule hides a duplicate. The host reads the key, the intent
 (`data-ran-booster-ui-notice-intent`) and the first paragraph of the notice and
-shows the snackbar. An error or warning snackbar is only a pointer to the notice
-(Show details); an info snackbar stands alone and the notice keeps any detail.
+shows the snackbar. An error or warning snackbar offers **Show details** when the inline
+notice has additional information or an action. Otherwise it shows the
+summary and a dismiss control. An info snackbar stands alone.
 
 - **Dashboard messages.** A message carries an optional closed `feedback` code
   (lowercase letters, digits and underscores). `views/notices.php` renders a

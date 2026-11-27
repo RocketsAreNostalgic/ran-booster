@@ -32,6 +32,10 @@
 					?.after(developmentNotice);
 			}
 			initPackageAdmin();
+		} else if (
+			event.detail?.target?.id === 'ran-booster-package-edit-region'
+		) {
+			initPackageAdmin();
 		}
 	});
 

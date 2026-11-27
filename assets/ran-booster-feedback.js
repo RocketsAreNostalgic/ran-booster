@@ -40,6 +40,21 @@
 						id: item.uid,
 						className: `ran-booster-snackbar--${item.intent} ran-booster-snackbar-${item.uid}`,
 						content: item.message,
+						icon: createElement('span', {
+							ref: (node) => {
+								if (!node) {
+									return;
+								}
+								const source = document
+									.getElementById('ran-booster-notice-icons')
+									?.content.querySelector(
+										`[data-ran-booster-notice-icon="${item.intent}"]`
+									);
+								node.replaceChildren(
+									...(source ? [source.cloneNode(true)] : [])
+								);
+							},
+						}),
 						explicitDismiss: true,
 						// The inline failure a pointer leads to owns the
 						// announcement, so the pointer stays silent.
@@ -230,6 +245,85 @@
 			.forEach((item) => remove(item.uid));
 	}
 
+	// The inline record can contain only the sentence already in the snackbar.
+	// Offer navigation only when it leads to additional content or an action.
+	function detail(target, message) {
+		const available = (node) =>
+			!node.closest(
+				'[hidden], [inert], :disabled, [aria-hidden="true"], [aria-disabled="true"]'
+			) && node.getClientRects().length > 0;
+		// Enhancement replaces the native details with a live trigger. Prefer it
+		// when both exist, as a retained fallback can be hidden.
+		const triggers = Array.from(
+			target.querySelectorAll?.(
+				'[data-ran-booster-ui-disclosure] [role="button"][aria-expanded], [data-ran-booster-ui-disclosure] button[aria-expanded]'
+			) || []
+		);
+		const native = Array.from(
+			target.querySelectorAll?.('details > summary') || []
+		);
+		const trigger = [...triggers, ...native].find(available);
+		if (trigger) {
+			return { node: trigger, disclosure: true };
+		}
+		const normalize = (text) => text.replace(/\s+/g, ' ').trim();
+		const content =
+			target.querySelector?.('[data-ran-booster-ui-notice-content]') ||
+			target;
+		const control = Array.from(
+			content.querySelectorAll?.(
+				'a[href], button, input:not([type="hidden"]), select, textarea'
+			) || []
+		).find(available);
+		if (control) {
+			return { node: control };
+		}
+		const paragraph = Array.from(
+			content.querySelectorAll?.('p') || []
+		).find(
+			(node) =>
+				available(node) &&
+				normalize(node.textContent) &&
+				normalize(node.textContent) !== normalize(message)
+		);
+		return paragraph ? { node: paragraph } : null;
+	}
+
+	function pointerAction(item, explicitAction) {
+		const found = detail(item.target, item.message);
+		if (!found) {
+			return explicitAction;
+		}
+		return {
+			label: window.wp.i18n.__('Show details', 'ran-booster'),
+			onClick: () => {
+				const current = detail(item.target, item.message);
+				if (!current) {
+					return;
+				}
+				const { node, disclosure } = current;
+				if (disclosure) {
+					const native =
+						node.matches('summary') && node.parentElement;
+					if (native) {
+						native.open = true;
+					} else if (node.getAttribute('aria-expanded') === 'false') {
+						node.click();
+					}
+				}
+				if (
+					!node.matches(
+						'a[href], button, input, select, textarea, summary, [role="button"]'
+					)
+				) {
+					node.setAttribute('tabindex', '-1');
+				}
+				node.focus({ preventScroll: true });
+				node.scrollIntoView?.({ block: 'nearest' });
+			},
+		};
+	}
+
 	// Show one confirmed result (fixed Core copy). Success items dismiss
 	// themselves after DURATION. An error or warning is only a pointer to its
 	// persistent inline message (options.target), never timed or shown alone.
@@ -257,6 +351,8 @@
 				window.wp?.a11y?.speak?.(text, 'polite');
 			} else {
 				duplicate.target = target;
+				duplicate.action = pointerAction(duplicate, action);
+				render();
 			}
 			if (duplicate.timer) {
 				arm(duplicate);
@@ -278,17 +374,9 @@
 			target,
 		};
 		if (!timed(intent)) {
-			item.action = {
-				label: window.wp.i18n.__('Show details', 'ran-booster'),
-				onClick: () => {
-					const { target: current } = item;
-					if (!current.matches('a[href], button, input, select')) {
-						current.setAttribute('tabindex', '-1');
-					}
-					current.focus();
-				},
-			};
+			item.action = pointerAction(item, action);
 		}
+
 		if (state.items.length >= LIMIT) {
 			// The oldest success goes. A pointer to a persistent error is never
 			// dropped: with only pointers visible the new item is not shown (a

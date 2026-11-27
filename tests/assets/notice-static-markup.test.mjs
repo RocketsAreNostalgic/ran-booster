@@ -264,16 +264,10 @@ test('in-place intent changes go through the notice helper', () => {
 	}
 });
 
-test('the shell prints the icon template once, after the page, where intents change', () => {
+test('the shell prints one shared icon template after the page on every screen', () => {
 	const base = fs.readFileSync('views/base.php', 'utf8');
 	assert.equal(base.match(/NoticeIcon::print_template\(\)/g)?.length, 1);
 	const tail = base.slice(base.lastIndexOf('</div>'));
 	assert.match(tail, /NoticeIcon::print_template\(\);/);
-	for (const screen of [
-		"'packages/index', 'packages/create', 'packages/edit'",
-		"'portability.php' === ( $tab_view ?? '' )",
-		"'credentials' === ( $provider_view ?? '' )",
-	]) {
-		assert.ok(tail.includes(screen), screen);
-	}
+	assert.doesNotMatch(tail, /\bif\s*\(/);
 });

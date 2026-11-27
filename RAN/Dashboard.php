@@ -1533,8 +1533,7 @@ class Dashboard {
 	/** @param array<string, mixed> $request */
 	public function post_package_operation( string $action, array $request ): bool|string {
 		$package_admin = $this->package_admin ?? new PackageAdminController();
-
-		return $package_admin->perform(
+		$result        = $package_admin->perform(
 			$this,
 			$action,
 			$request,
@@ -1545,6 +1544,13 @@ class Dashboard {
 				$this->add_message_with_context( $message, $context );
 			}
 		);
+		if ( is_string( $result ) && in_array( $action, array( 'edit-plugin', 'edit-theme' ), true ) ) {
+			$source_view = $this->requested_package_source_view();
+			if ( '' !== $source_view ) {
+				return add_query_arg( 'source_view', $source_view, $result );
+			}
+		}
+		return $result;
 	}
 
 	private function package_storage_failure_index( PackagePagePresenter $package_view, string $type, PackageStorageFailure|\InvalidArgumentException $failure ): mixed {

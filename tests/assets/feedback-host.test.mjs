@@ -41,6 +41,8 @@ function element(extra = {}) {
 			return this.attributes.has(name);
 		},
 		matches: () => false,
+		closest: () => null,
+		getClientRects: () => [{}],
 		focus() {
 			this.ownerDocument.activeElement = this;
 		},
@@ -106,6 +108,13 @@ function build(options = {}) {
 	};
 	const wpcontent = element();
 	targets.set('wpcontent', wpcontent);
+	targets.set('ran-booster-notice-icons', {
+		content: {
+			querySelector: (selector) => ({
+				cloneNode: (deep) => ({ selector, deep }),
+			}),
+		},
+	});
 	const window = {
 		innerWidth: 1000,
 		innerHeight: 800,
@@ -325,6 +334,29 @@ test('a success shows once with the success intent, explicit dismiss and a polit
 	);
 	assert.deepEqual(notice.actions, []);
 	assert.equal(env.host.className, 'ran-booster-snackbar-host');
+});
+
+test('each intent uses its matching decorative notice template icon', () => {
+	for (const intent of ['success', 'info', 'warning', 'error']) {
+		const env = boot();
+		const options =
+			intent === 'warning' || intent === 'error'
+				? { intent, target: env.target() }
+				: { intent };
+		env.feedback.show('Message', options);
+		let children;
+		env.notices[0].icon.props.ref({
+			replaceChildren: (...nodes) => {
+				children = nodes;
+			},
+		});
+		assert.deepEqual(children, [
+			{
+				selector: `[data-ran-booster-notice-icon="${intent}"]`,
+				deep: true,
+			},
+		]);
+	}
 });
 
 test('a success dismisses itself after exactly the one universal duration', () => {
@@ -575,7 +607,7 @@ test('a pointer renders silent, untimed and dismissible, and only with a connect
 	assert.match(notice.className, /ran-booster-snackbar--error/);
 	assert.equal(notice.explicitDismiss, true);
 	assert.equal(notice.spokenMessage, '');
-	assert.equal(notice.actions[0].label, 'Show details');
+	assert.deepEqual(notice.actions, []);
 	assert.equal(env.pendingTimers(), 0);
 	env.tick(DURATION * 100);
 	assert.equal(env.notices.length, 1, 'A pointer never auto-dismisses.');
@@ -597,13 +629,19 @@ test('a warning is a pointer too, with its own intent class and no timer', () =>
 
 test('the pointer action focuses the inline failure, making a plain element focusable', () => {
 	const env = boot();
-	const plain = env.target('plain');
+	const plain = env.target('plain', { textContent: 'Additional guidance.' });
+	plain.querySelectorAll = (selector) => (selector === 'p' ? [plain] : []);
 	env.feedback.show('Failed.', { intent: 'error', id: 'p', target: plain });
 	env.notices[0].actions[0].onClick();
 	assert.equal(plain.attributes.get('tabindex'), '-1');
 	assert.equal(env.document.activeElement, plain);
 
-	const field = env.target('field', { matches: (s) => s.includes('input') });
+	const field = env.target('field', {
+		matches: (s) => s.includes('input'),
+		textContent: 'Additional guidance.',
+	});
+	field.querySelectorAll = (selector) =>
+		selector.includes('textarea') ? [field] : [];
 	env.feedback.show('Failed too.', {
 		intent: 'error',
 		id: 'f',
@@ -716,7 +754,7 @@ test('a success then a warning with the same key are two items, the warning a pe
 	assert.match(env.notices[0].className, /--success/);
 	assert.deepEqual(env.notices[0].actions, []);
 	assert.match(env.notices[1].className, /--warning/);
-	assert.equal(env.notices[1].actions[0].label, 'Show details');
+	assert.deepEqual(env.notices[1].actions, []);
 	env.tick(DURATION);
 	assert.deepEqual(
 		env.notices.map((notice) => notice.content),
@@ -901,7 +939,7 @@ test('a coded failure notice becomes only a pointer to itself and stays in the p
 	assert.equal(env.notices.length, 1);
 	assert.equal(env.notices[0].content, 'The release check failed.');
 	assert.match(env.notices[0].className, /--error/);
-	assert.equal(env.notices[0].actions[0].label, 'Show details');
+	assert.deepEqual(env.notices[0].actions, []);
 	assert.equal(notice.hasAttribute('data-ran-booster-feedback-taken'), true);
 	// A later pass does not take the same notice again.
 	assert.equal(env.feedback.consume(), 0);
@@ -1238,6 +1276,10 @@ test('a repeated pointer refreshes its target and Show details follows it', () =
 	const env = boot();
 	const first = env.target('first');
 	const second = env.target('second');
+	for (const node of [first, second]) {
+		node.textContent = 'Additional guidance.';
+		node.querySelectorAll = (selector) => (selector === 'p' ? [node] : []);
+	}
 	env.feedback.show('Failed.', { intent: 'error', id: 'p', target: first });
 	const [{ actions }] = env.notices;
 	env.feedback.show('Failed.', { intent: 'error', id: 'p', target: second });
@@ -1645,4 +1687,75 @@ test('an unshown notice does not count as taken and the address is left alone', 
 	env.run();
 	assert.equal(env.notices.length, 0);
 	assert.deepEqual(replaced, []);
+});
+
+test('duplicate and whitespace detail omit the action, including after a repeat', () => {
+	const env = boot();
+	const target = env.target();
+	const paragraph = element({
+		textContent: ' Failed.  \n',
+		ownerDocument: env.document,
+	});
+	target.querySelectorAll = (selector) =>
+		selector === 'p' ? [paragraph, element({ textContent: '  \n ' })] : [];
+	env.feedback.show('Failed.', { intent: 'warning', id: 'rate', target });
+	assert.deepEqual(env.notices[0].actions, []);
+	paragraph.textContent = 'Try again later.';
+	env.feedback.show('Failed.', { intent: 'warning', id: 'rate', target });
+	assert.equal(env.notices[0].actions[0].label, 'Show details');
+	paragraph.textContent = ' Failed. ';
+	env.feedback.show('Failed.', { intent: 'warning', id: 'rate', target });
+	assert.deepEqual(env.notices[0].actions, []);
+	assert.equal(env.pendingTimers(), 0);
+});
+
+test('details opens native or enhanced disclosure and focuses its trigger', () => {
+	for (const enhanced of [false, true]) {
+		const env = boot();
+		const target = env.target();
+		const native = { open: false };
+		let clicks = 0;
+		let scrolled = false;
+		const trigger = element({
+			ownerDocument: env.document,
+			matches: (selector) => (selector === 'summary' ? !enhanced : true),
+			parentElement: enhanced ? {} : native,
+			getAttribute: () => 'false',
+			click: () => clicks++,
+			scrollIntoView: () => {
+				scrolled = true;
+			},
+		});
+		target.querySelectorAll = (selector) =>
+			(
+				enhanced
+					? selector.includes('aria-expanded')
+					: selector === 'details > summary'
+			)
+				? [trigger]
+				: [];
+		env.feedback.show('Failed.', { intent: 'error', target });
+		env.notices[0].actions[0].onClick();
+		assert.equal(env.document.activeElement, trigger);
+		assert.equal(scrolled, true);
+		assert.equal(native.open, !enhanced);
+		assert.equal(clicks, enhanced ? 1 : 0);
+	}
+});
+
+test('a linked action is focused and never followed automatically', () => {
+	const env = boot();
+	const target = env.target();
+	let clicks = 0;
+	const link = element({
+		ownerDocument: env.document,
+		matches: () => true,
+		click: () => clicks++,
+	});
+	target.querySelectorAll = (selector) =>
+		selector.includes('a[href]') ? [link] : [];
+	env.feedback.show('Failed.', { intent: 'error', target });
+	env.notices[0].actions[0].onClick();
+	assert.equal(env.document.activeElement, link);
+	assert.equal(clicks, 0);
 });

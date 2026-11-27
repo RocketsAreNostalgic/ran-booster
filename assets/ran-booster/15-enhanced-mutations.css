@@ -163,46 +163,26 @@
 }
 
 .ran-booster-snackbar-host .components-snackbar .components-snackbar__content {
-	align-items: center;
-	gap: var(--wpds-dimension-gap-md);
+	align-items: flex-start;
+	gap: var(--wpds-dimension-gap-xs);
 	justify-content: flex-start;
+	padding: 0;
+	line-height: var(--wpds-dimension-size-sm);
 }
 
-/*
- * A decorative glyph in the Notice icon colour. Each intent has its own shape
- * (check, "!", cross) so intent never relies on colour alone. The first
- * declaration is the fallback for browsers without alternative text.
- */
-
-.ran-booster-snackbar-host
-	.components-snackbar
-	.components-snackbar__content::before {
+.ran-booster-snackbar-host .components-snackbar .components-snackbar__icon {
+	position: static;
 	flex: none;
+	margin: 0;
 	color: var(--ran-booster-snackbar-icon);
-	font-weight: var(--ran-booster-font-weight-semibold);
-	content: "!";
-	content: "!" / "";
 }
 
-.ran-booster-snackbar-host
-	.components-snackbar.ran-booster-snackbar--success
-	.components-snackbar__content::before {
-	content: "\2713";
-	content: "\2713" / "";
-}
-
-.ran-booster-snackbar-host
-	.components-snackbar.ran-booster-snackbar--info
-	.components-snackbar__content::before {
-	content: "i";
-	content: "i" / "";
-}
-
-.ran-booster-snackbar-host
-	.components-snackbar.ran-booster-snackbar--error
-	.components-snackbar__content::before {
-	content: "\2716";
-	content: "\2716" / "";
+.ran-booster-snackbar-host .components-snackbar .ran-wp-ui-notice__icon {
+	display: block;
+	inline-size: var(--wpds-dimension-size-sm);
+	block-size: var(--wpds-dimension-size-sm);
+	margin: 0;
+	color: inherit;
 }
 
 .ran-booster-snackbar-host

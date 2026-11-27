@@ -14,6 +14,7 @@ use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
 final class ExtensionUpdatesTest extends TestCase {
 	#[RunInSeparateProcess]
 	public function test_registers_compatible_active_and_inactive_catalogue_extensions_through_one_path(): void {
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 2097152 );
 		if ( ! defined( 'WP_PLUGIN_DIR' ) ) {
 			define( 'WP_PLUGIN_DIR', '/tmp/wp-plugins' );
 		}
@@ -49,6 +50,8 @@ final class ExtensionUpdatesTest extends TestCase {
 		self::assertCount( 2, $runtime->plugins );
 		self::assertSame( 'manual', $runtime->plugins[0][5] );
 		self::assertSame( 'manual', $runtime->plugins[1][5] );
+		self::assertSame( 2097152, $runtime->plugins[0][7] );
+		self::assertSame( 2097152, $runtime->plugins[1][7] );
 		self::assertTrue( ( $runtime->admissions[0] )( $this->descriptor() ) );
 		self::assertFalse( ( $runtime->admissions[0] )( $this->descriptor( version: '1.2.3-beta.2' ) ) );
 		self::assertFalse( ( $runtime->admissions[0] )( $this->descriptor( digest: str_repeat( 'b', 64 ) ) ) );
@@ -116,6 +119,42 @@ final class ExtensionUpdatesTest extends TestCase {
 		$updates->register();
 
 		self::assertSame( 0, $runtime->registrations );
+	}
+
+	#[RunInSeparateProcess]
+	public function test_managed_offers_survive_while_ineligible_unmanaged_offers_are_suppressed(): void {
+		require_once __DIR__ . '/ExtensionUpdatesWordPressFunctions.php';
+		$managed                            = $this->extension( 'Active' );
+		$managed_incompatible               = $managed;
+		$managed_incompatible['plugin']     = 'managed/managed.php';
+		$managed_incompatible['compatible'] = false;
+		$unmanaged                          = $managed_incompatible;
+		$unmanaged['plugin']                = 'unmanaged/unmanaged.php';
+		$updates                            = new ExtensionUpdates(
+			new ManagedReleaseUpdaterRegistrar( new \stdClass() ),
+			static fn ( string $plugin ): bool => 'unmanaged/unmanaged.php' !== $plugin,
+			static fn (): array => array( $managed, $managed_incompatible, $unmanaged )
+		);
+		$offer                              = (object) array( 'new_version' => '1.2.4' );
+		$transient                          = (object) array(
+			'response' => array_fill_keys(
+				array( 'example/example.php', 'managed/managed.php', 'unmanaged/unmanaged.php', 'other/other.php' ),
+				$offer
+			),
+		);
+
+		$updates->register();
+
+		self::assertArrayNotHasKey( 'ran_booster_extension_update_actions', $GLOBALS );
+		$filters = $GLOBALS['ran_booster_extension_update_filters']['site_transient_update_plugins'][ PHP_INT_MAX ];
+		foreach ( $filters as $filter ) {
+			$transient = $filter( $transient );
+		}
+		self::assertSame(
+			array_fill_keys( array( 'example/example.php', 'managed/managed.php', 'other/other.php' ), $offer ),
+			$transient->response
+		);
+		self::assertCount( 1, $filters );
 	}
 
 	public function test_does_not_register_a_compatible_catalogue_extension_with_existing_management(): void {

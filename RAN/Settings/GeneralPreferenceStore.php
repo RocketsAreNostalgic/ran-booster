@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace RAN\Settings;
 
+use RAN\PackageArtifactLimit;
+
 /** Fixed non-secret site preferences shared by Settings and Core policies. */
 final class GeneralPreferenceStore {
 
 	public const OPTION_NAME = 'ran_booster_general_settings';
+
+	private const BYTES_PER_MIB = 1024 * 1024;
 
 	private const SCOPES = array(
 		'hide_github'           => array( 'hide_github' ),
@@ -29,7 +33,7 @@ final class GeneralPreferenceStore {
 		'self_update_discovery' => true,
 		'history_rows'          => 2000,
 		'history_days'          => 30,
-		'max_download_bytes'    => 52428800,
+		'max_download_bytes'    => PackageArtifactLimit::DEFAULT_MAXIMUM_ARTIFACT_BYTES,
 		'branch_sources'        => false,
 		'prerelease_sources'    => false,
 	);
@@ -135,7 +139,7 @@ final class GeneralPreferenceStore {
 	}
 
 	public function max_download_bytes(): ?int {
-		return $this->saved_integer( 'max_download_bytes', 1048576, 536870911 );
+		return $this->saved_integer( 'max_download_bytes', PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES, PackageArtifactLimit::MAXIMUM_ARTIFACT_BYTES );
 	}
 
 	public function self_update_discovery( bool $fresh = false ): ?bool {
@@ -353,10 +357,10 @@ final class GeneralPreferenceStore {
 			return null;
 		}
 		$mib = (float) $value;
-		if ( ! is_finite( $mib ) || $mib < 1 || $mib > ( 536870911 / 1048576 ) ) {
+		if ( ! is_finite( $mib ) || $mib < ( PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES / self::BYTES_PER_MIB ) || $mib > ( PackageArtifactLimit::MAXIMUM_ARTIFACT_BYTES / self::BYTES_PER_MIB ) ) {
 			return null;
 		}
-		$bytes = (int) round( $mib * 1048576 );
+		$bytes = (int) round( $mib * self::BYTES_PER_MIB );
 		return $this->valid_integer( 'max_download_bytes', $bytes ) ? $bytes : null;
 	}
 
@@ -380,7 +384,7 @@ final class GeneralPreferenceStore {
 			'self_update_discovery' => $this->self_update_projection( $document ),
 			'history_rows'          => $this->integer_projection( $document, 'history_rows', 'RAN_BOOSTER_HISTORY_ROWS', 200, 100000 ),
 			'history_days'          => $this->integer_projection( $document, 'history_days', 'RAN_BOOSTER_HISTORY_DAYS', 1, 365 ),
-			'max_download_bytes'    => $this->integer_projection( $document, 'max_download_bytes', 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 1048576, 536870911 ),
+			'max_download_bytes'    => $this->integer_projection( $document, 'max_download_bytes', 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES, PackageArtifactLimit::MAXIMUM_ARTIFACT_BYTES ),
 			'branch_sources'        => $this->source_override_projection( $document, 'branch_sources' ),
 			'prerelease_sources'    => $this->source_override_projection( $document, 'prerelease_sources' ),
 		);
@@ -531,7 +535,7 @@ final class GeneralPreferenceStore {
 		return match ( $key ) {
 			'history_rows' => $value >= 200 && $value <= 100000,
 			'history_days' => $value >= 1 && $value <= 365,
-			'max_download_bytes' => $value >= 1048576 && $value <= 536870911,
+			'max_download_bytes' => $value >= PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES && $value <= PackageArtifactLimit::MAXIMUM_ARTIFACT_BYTES,
 			default => false,
 		};
 	}
@@ -540,7 +544,7 @@ final class GeneralPreferenceStore {
 		return match ( $key ) {
 			'history_rows' => 2000,
 			'history_days' => 30,
-			'max_download_bytes' => 52428800,
+			'max_download_bytes' => self::DEFAULTS['max_download_bytes'],
 			default => throw new \LogicException( 'Unknown integer preference.' ),
 		};
 	}

@@ -6,6 +6,7 @@ namespace RAN\WordPress;
 
 use Closure;
 use RAN\Deployment\PackageMutationGuard;
+use RAN\PackageArtifactLimit;
 use RAN\WPReleaseUpdater\V1\Contract\IdentityDescriptor;
 final class ExtensionUpdates {
 	/** @var Closure(): list<array<string, mixed>> */
@@ -30,11 +31,10 @@ final class ExtensionUpdates {
 				continue;
 			}
 			$plugin = $extension['plugin'];
-			if ( ! $this->eligible( $extension ) ) {
-				$this->suppress( $plugin );
+			if ( ( $this->managed_package_exists )( $plugin ) ) {
 				continue;
 			}
-			if ( ( $this->managed_package_exists )( $plugin ) ) {
+			if ( ! $this->eligible( $extension ) ) {
 				$this->suppress( $plugin );
 				continue;
 			}
@@ -45,7 +45,7 @@ final class ExtensionUpdates {
 				continue;
 			}
 			try {
-				$target = $admitted->plugin( 'github', WP_PLUGIN_DIR . '/' . $plugin, $extension['repository'], $extension['repository_id'], 'prerelease', 'manual', null );
+				$target = $admitted->plugin( 'github', WP_PLUGIN_DIR . '/' . $plugin, $extension['repository'], $extension['repository_id'], 'prerelease', 'manual', null, PackageArtifactLimit::resolve() );
 				if ( ! is_callable( array( $target, 'register' ) ) || ! $target->register() ) {
 					$this->suppress( $plugin );
 				}

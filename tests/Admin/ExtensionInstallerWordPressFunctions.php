@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
-/** @param array{filename: string} $args
+/** @param array{filename: string, limit_response_size: int} $args
  * @return array{response: array{code: int}}
  */
 function wp_safe_remote_get( string $url, array $args ): array {
-	$GLOBALS['ran_booster_extension_test_url'] = $url;
+	$GLOBALS['ran_booster_extension_test_url']   = $url;
+	$GLOBALS['ran_booster_extension_test_limit'] = $args['limit_response_size'];
 	if ( ! empty( $GLOBALS['ran_booster_extension_test_replace_file'] ) ) {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Test-only fixture custody and cleanup.
 		rename( $args['filename'], $args['filename'] . '.original' );

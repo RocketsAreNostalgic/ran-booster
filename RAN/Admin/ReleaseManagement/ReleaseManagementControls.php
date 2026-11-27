@@ -14,6 +14,7 @@ use RAN\Admin\ProviderTabLinks;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\Deployment\PackageSourceGate;
 use RAN\PackageSource;
+use RAN\RepositoryProvider\ProviderFailure;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\WPReleaseUpdater\V1\Contract\ReleaseVersion;
 use Throwable;
@@ -21,7 +22,7 @@ use Throwable;
 /**
  * @internal Fixed Core placement for repository release capabilities.
  * @phpstan-type SwitchOption array{relationship:'newer'|'same'|'older',version_relationship:'newer'|'same'|'older',channel:'stable'|'prerelease',installed_version:string,release_version:string,release_identity:string,release_tag:string,artifact_identity:string,artifact_sha256:string,confirmed_release_nonce:string,fallback_message:string,confirmed_installed_version:string}
- * @phpstan-type SwitchError array{successful:false,code:string,data:array{message:string,reason?:string,detail?:string}}
+ * @phpstan-type SwitchError array{successful:false,code:string,data:array{message:string,reason?:string,detail?:string,rate_limit?:array{provider?:mixed,retry_at?:mixed},message_suffix?:string}}
  */
 final class ReleaseManagementControls {
 	private const RESULT_QUERY_KEY = 'ran_booster_release_result';
@@ -315,8 +316,8 @@ final class ReleaseManagementControls {
 						$message = array() === $candidates ? sprintf( __( '%s track: no published releases found in this lookup.', 'ran-booster' ), $label ) : '';
 					}
 				} elseif ( 'rate_limited' === ( $listing['data']['rejection_reason'] ?? '' ) || isset( $listing['data']['rate_limited_provider'] ) ) {
-					/* translators: Track name and, where applicable, a version or release tags. */
-					$message = sprintf( __( '%s track: the Git provider rate-limited this lookup. Try again later.', 'ran-booster' ), $label );
+					/* translators: 1: Track name. 2: Sentence naming the rate-limited Git provider and when to try again. */
+					$message = sprintf( __( '%1$s track: %2$s', 'ran-booster' ), $label, ProviderFailure::rate_limit_message( is_array( $listing['data']['rate_limit'] ?? null ) ? $listing['data']['rate_limit'] : null ) );
 				}
 			}
 			if ( $recheck_request ) {
@@ -500,7 +501,7 @@ final class ReleaseManagementControls {
 		}
 
 		$package_page = in_array( $page, array( 'ran-booster-plugins', 'ran-booster-themes' ), true );
-		$dependencies = $package_page ? array( 'ran-booster-packages', 'wp-i18n', 'ran-booster-dialog' ) : array( 'ran-booster-packages', 'wp-i18n' );
+		$dependencies = $package_page ? array( 'ran-booster-packages', 'ran-booster-rate-limit', 'wp-i18n', 'ran-booster-dialog' ) : array( 'ran-booster-packages', 'ran-booster-rate-limit', 'wp-i18n' );
 		$type         = str_contains( $page, 'themes' ) ? 'theme' : 'plugin';
 		$plugin_root  = dirname( __DIR__, 3 );
 		$asset_root   = $plugin_root . '/assets';
@@ -785,11 +786,9 @@ final class ReleaseManagementControls {
 			null
 		);
 		if ( null === $listing || ! $listing['successful'] || ! is_array( $listing['data']['candidates'] ?? null ) ) {
-			if ( 'unable_to_check' === ( $listing['code'] ?? '' ) && is_string( $listing['data']['rate_limited_provider'] ?? null ) ) {
-				return $this->preflight_error_payload( 'lookup_rate_limited' );
-			}
-			if ( 'rate_limited' === ( $listing['data']['rejection_reason'] ?? '' ) ) {
-				return $this->preflight_error_payload( 'rate_limited' );
+			$anonymous = 'unable_to_check' === ( $listing['code'] ?? '' ) && is_string( $listing['data']['rate_limited_provider'] ?? null );
+			if ( $anonymous || 'rate_limited' === ( $listing['data']['rejection_reason'] ?? '' ) ) {
+				return $this->rate_limited_payload( is_array( $listing['data']['rate_limit'] ?? null ) ? $listing['data']['rate_limit'] : null, $anonymous );
 			}
 			return $this->preflight_error_payload( $listing['code'] ?? 'unable_to_check' );
 		}
@@ -860,6 +859,30 @@ final class ReleaseManagementControls {
 			'successful' => true,
 			'code'       => 'ready',
 			'data'       => $latest,
+		);
+	}
+
+	/**
+	 * A rate-limited switch preflight. The server sentence counts minutes; the browser replaces it
+	 * with a local clock time from the same facts and keeps the lookup-credential suffix.
+	 *
+	 * @param array{provider?:mixed,retry_at?:mixed}|null $rate_limit
+	 * @return SwitchError
+	 */
+	private function rate_limited_payload( ?array $rate_limit, bool $anonymous ): array {
+		$suffix = $anonymous ? __( 'Or choose a dedicated lookup credential in provider settings.', 'ran-booster' ) : '';
+		$data   = array( 'message' => trim( ProviderFailure::rate_limit_message( $rate_limit ) . ' ' . $suffix ) );
+		if ( null !== $rate_limit ) {
+			$data['rate_limit'] = $rate_limit;
+		}
+		if ( '' !== $suffix ) {
+			$data['message_suffix'] = $suffix;
+		}
+
+		return array(
+			'successful' => false,
+			'code'       => $anonymous ? 'lookup_rate_limited' : 'rate_limited',
+			'data'       => $data,
 		);
 	}
 

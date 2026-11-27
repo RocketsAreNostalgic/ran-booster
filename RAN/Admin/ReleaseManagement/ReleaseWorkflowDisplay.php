@@ -276,7 +276,7 @@ final class ReleaseWorkflowDisplay {
 			. ' data-ran-booster-release-workflow-result data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . esc_attr( $intent ) . '"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>' . esc_html(
 				is_string( $view['result_message'] ?? null ) && '' !== $view['result_message']
 				? $view['result_message']
-				: $this->workflow_message( $code )
+				: $this->workflow_message( $code, is_string( $view['provider_label'] ?? null ) ? $view['provider_label'] : '' )
 			) . '</p></div>' . NoticeIcon::markup( $intent );
 		$observation = in_array( $code, array( 'workflow_release_automation_conflict', 'workflow_release_automation_present', 'workflow_inspected' ), true );
 		if ( ! $successful && ! $observation && in_array( $stage, array( 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ) {
@@ -393,8 +393,10 @@ final class ReleaseWorkflowDisplay {
 			. esc_html( $buttons[ $operation ] ) . '</button></p></form>';
 	}
 
-	private function workflow_message( string $code ): string {
+	private function workflow_message( string $code, string $provider_label = '' ): string {
 		return match ( $code ) {
+			/* translators: %s: Git provider name, such as GitHub. */
+			'workflow_rate_limited' => sprintf( __( '%s is limiting requests from this site. Booster made no change. Try again later.', 'ran-booster' ), '' !== $provider_label ? $provider_label : __( 'The Git provider', 'ran-booster' ) ),
 			'workflow_inspected' => __( 'Source-ready assessment passed. Review the exact template identity and changed paths.', 'ran-booster' ),
 			'workflow_setup_open' => __( 'The atomic draft pull request is open. Booster did not merge or change the default branch.', 'ran-booster' ),
 			'workflow_setup_recovered' => __( 'The existing exact draft pull request was recovered and verified.', 'ran-booster' ),
@@ -403,7 +405,6 @@ final class ReleaseWorkflowDisplay {
 			'workflow_pr_merged' => __( 'Booster verified that the recorded setup pull request was merged and its managed receipt is on the default branch. This does not prove a workflow ran or produced a release.', 'ran-booster' ),
 			'workflow_partial' => __( 'The Git provider may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch.', 'ran-booster' ),
 			'workflow_unauthorised' => __( 'The Git provider did not authorise the operation with the selected saved credential.', 'ran-booster' ),
-			'workflow_rate_limited' => __( 'The Git provider has temporarily rate-limited the release workflow request. Booster made no change.', 'ran-booster' ),
 			'workflow_invalid_response' => __( 'The Git provider returned an incomplete or invalid response. Booster made no change.', 'ran-booster' ),
 			'workflow_template_unavailable' => __( 'The canonical release template source is temporarily unavailable. Booster made no change.', 'ran-booster' ),
 			'workflow_preflight_unavailable' => __( 'Booster could not validate the package release before continuing. No draft was opened.', 'ran-booster' ),

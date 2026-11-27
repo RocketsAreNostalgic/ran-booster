@@ -192,6 +192,13 @@ return static function ( CoreContainer $container, string $type, string $identif
 					if ( 'rate' === $mode ) {
 						$hint = $data['lookup_hint'] ?? array();
 						$assert( 'A dedicated lookup credential helps avoid rate limits.' === ( $hint['text'] ?? null ) && 'Choose a lookup credential' === ( $hint['link'] ?? null ) && str_ends_with( $hint['url'] ?? '', '#ran-booster-public-lookup-profile-region' ) && ! isset( $data['rate_limited_provider'] ), 'The anonymous rate-limit hint was lost.' );
+						// The anonymous limit's retry time is kept, and a repeat lookup is answered without the provider.
+						$retry_at = get_site_transient( 'ran_booster_anonymous_cooldown_gh' );
+						$assert( is_numeric( $retry_at ) && (int) $retry_at > time() && (int) $retry_at <= time() + 120, 'The anonymous rate limit did not record its retry time.' );
+						$wire->start( 'nonempty' );
+						$repeat = 'managed' === $picker ? $controls->process_managed_browser_request( $operation, $request ) : $controls->process_prospective_request( $operation, $request );
+						$assert( array() === $wire->reads && 'unable_to_check' === $repeat['code'] && ! $repeat['successful'] && ( $repeat['data']['lookup_hint'] ?? null ) === $hint, 'The anonymous cooldown did not skip the provider.' );
+						delete_site_transient( 'ran_booster_anonymous_cooldown_gh' );
 					} else {
 						$assert( array() === $data, 'A service failure inherited the rate-limit hint.' );
 					}

@@ -21,7 +21,7 @@ final class ManagedReleaseBrowserOperations {
 	public function __construct( private readonly ManagedReleaseBrowser $browser, private readonly ReleaseTrackingFacade $releases ) {
 	}
 
-	/** @return array{code:string,successful:bool,data:array{candidates?:list<Candidate>,installed_version?:string,channel?:string,search_exhausted?:bool|null,diagnostics?:array<mixed>|null,rejection_reason?:string,rate_limited_provider?:string}} */
+	/** @return array{code:string,successful:bool,data:array{candidates?:list<Candidate>,installed_version?:string,channel?:string,search_exhausted?:bool|null,diagnostics?:array<mixed>|null,rejection_reason?:string,rate_limited_provider?:string,rate_limit?:array{provider:string,retry_at:int|null}|null}} */
 
 	public function list_candidates( string $type, string $identifier, int $revision, string $channel, string $nonce, bool $on_branch = false ): array {
 		if ( ! $this->valid_request( $type, $identifier, $revision, $channel ) ) {
@@ -34,10 +34,12 @@ final class ManagedReleaseBrowserOperations {
 		}
 		$candidates = $this->browser->list_candidates( $type, $identifier, $revision, $channel, $nonce );
 		if ( null === $candidates ) {
-			$provider = $this->browser->anonymous_rate_limit_provider();
-			$data     = null === $provider ? array() : array( 'rate_limited_provider' => $provider );
-			if ( $this->browser->lookup_rate_limited() ) {
+			$provider   = $this->browser->anonymous_rate_limit_provider();
+			$data       = null === $provider ? array() : array( 'rate_limited_provider' => $provider );
+			$rate_limit = $this->browser->lookup_rate_limit();
+			if ( null !== $rate_limit ) {
 				$data['rejection_reason'] = 'rate_limited';
+				$data['rate_limit']       = $rate_limit;
 			}
 			return $this->outcome( 'unable_to_check', false, $data );
 		}
@@ -103,7 +105,8 @@ final class ManagedReleaseBrowserOperations {
 			}
 			$data = array( 'rejection_reason' => $inspection->reason_code() );
 			if ( 'rate_limited' === $inspection->reason_code() ) {
-				$provider = $this->browser->anonymous_rate_limit_provider();
+				$data['rate_limit'] = $this->browser->lookup_rate_limit();
+				$provider           = $this->browser->anonymous_rate_limit_provider();
 				if ( null !== $provider ) {
 					$data['rate_limited_provider'] = $provider;
 				}

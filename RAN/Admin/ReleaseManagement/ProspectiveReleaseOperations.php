@@ -6,6 +6,7 @@ namespace RAN\Admin\ReleaseManagement;
 
 use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
+use RAN\RepositoryProvider\Admin\MetadataRules;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use Throwable;
 
@@ -61,9 +62,23 @@ final class ProspectiveReleaseOperations {
 			if ( 'no_releases' === $result->code() && isset( $data['candidates'] ) && array() === $data['candidates'] && ( $data['channel'] ?? $channel ) === $channel ) {
 				return $outcome( 'no_releases', false, $data );
 			}
-			$provider = $result->data()['rate_limited_provider'] ?? null;
+			$provider   = $result->data()['rate_limited_provider'] ?? null;
+			$rate_limit = $result->data()['rate_limit'] ?? null;
+			$facts      = array();
+			if ( 'unable_to_check' === $result->code() && is_string( $provider ) && 1 === preg_match( '/\A[a-z0-9][a-z0-9_-]{0,31}\z/D', $provider ) ) {
+				$facts['rate_limited_provider'] = $provider;
+			}
+			if ( 'unable_to_check' === $result->code() && is_array( $rate_limit ) && ( null === ( $rate_limit['retry_at'] ?? null ) || is_int( $rate_limit['retry_at'] ) ) ) {
+				// A label outside the registry's metadata contract is dropped, not the retry time; the
+				// browser then names "the Git provider" and writes the sentence as text.
+				$label               = $rate_limit['provider'] ?? null;
+				$facts['rate_limit'] = array(
+					'provider' => is_string( $label ) && strlen( $label ) <= MetadataRules::LABEL_LENGTH && 1 !== preg_match( '/[\x00-\x1F\x7F]/', $label ) ? $label : '',
+					'retry_at' => $rate_limit['retry_at'] ?? null,
+				);
+			}
 
-			return $outcome( $result->code(), false, 'unable_to_check' === $result->code() && is_string( $provider ) && 1 === preg_match( '/\A[a-z0-9][a-z0-9_-]{0,31}\z/D', $provider ) ? array( 'rate_limited_provider' => $provider ) : array() );
+			return $outcome( $result->code(), false, $facts );
 		}
 		if ( $result->successful() && 'release_candidates_available' === $result->code() && isset( $data['candidates'] ) && count( $data['candidates'] ) > 0 && count( $data['candidates'] ) <= 8 && ( ! isset( $data['channel'] ) || hash_equals( $channel, (string) $data['channel'] ) ) ) {
 			return $outcome( 'release_candidates_available', true, $data );

@@ -158,6 +158,7 @@ final class ReleaseWorkflowPresenter {
 				'correlation_reference' => $result['correlation_reference'],
 				'result_message'        => $result['message'],
 				'result_remediation'    => $result['remediation'],
+				'provider_label'        => $this->providers->metadata()[ (string) $package->provider_code() ]->label ?? '',
 			) : null;
 		$provider_code = (string) $package->provider_code();
 		$url           = null !== $this->workflow_provider( $provider_code )
@@ -280,7 +281,7 @@ final class ReleaseWorkflowPresenter {
 			'automation_notice'      => ! $shared && ! $conflicted,
 			'provider_workflow_url'  => 'existing_automation_detected' === $observation_kind ? ( $workflow_status?->provider_workflow_url() ?? '' ) : '',
 			'show_result_notice'     => null !== $result_observation && ( '' === $result_observation || ! hash_equals( $result_observation, $observation_kind ) ),
-			'workflow_view'          => $view,
+			'workflow_view'          => is_array( $view ) ? $view + array( 'provider_label' => $this->providers->metadata()[ $provider_code ]->label ?? '' ) : $view,
 		);
 	}
 

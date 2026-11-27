@@ -2917,12 +2917,29 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$unavailable->anonymous_rate_limit_provider = 'github';
 		$rate_limit                                 = $unavailable_controls->process_switch_preflight_request( $preflight_request() );
 		self::assertSame( 'lookup_rate_limited', $rate_limit['code'] );
-		self::assertStringContainsString( 'rate-limited this public release lookup', $rate_limit['data']['message'] );
+		self::assertSame( 'The Git provider is limiting lookups from this site. Try again later. Or choose a dedicated lookup credential in provider settings.', $rate_limit['data']['message'] );
+		self::assertSame( 'Or choose a dedicated lookup credential in provider settings.', $rate_limit['data']['message_suffix'] );
+		self::assertArrayNotHasKey( 'rate_limit', $rate_limit['data'] );
 		$unavailable->anonymous_rate_limit_provider = null;
 		$unavailable->lookup_rate_limited           = true;
 		$rate_limit                                 = $unavailable_controls->process_switch_preflight_request( $preflight_request() );
 		self::assertSame( 'rate_limited', $rate_limit['code'] );
-		self::assertSame( 'The Git provider rate-limited this lookup. Try again later.', $rate_limit['data']['message'] );
+		self::assertSame( 'GitHub is limiting lookups from this site. Try again later.', $rate_limit['data']['message'] );
+		self::assertSame(
+			array(
+				'provider' => 'GitHub',
+				'retry_at' => null,
+			),
+			$rate_limit['data']['rate_limit']
+		);
+		$unavailable->lookup_rate_limit = array(
+			'provider' => 'GitHub',
+			'retry_at' => time() + 3540,
+		);
+		$rate_limit                     = $unavailable_controls->process_switch_preflight_request( $preflight_request() );
+		self::assertSame( 'GitHub is limiting lookups from this site. Try again in about 59 minutes.', $rate_limit['data']['message'] );
+		self::assertSame( $unavailable->lookup_rate_limit, $rate_limit['data']['rate_limit'] );
+		self::assertArrayNotHasKey( 'message_suffix', $rate_limit['data'] );
 
 		// Invalid nonce & missing capability.
 		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );

@@ -404,7 +404,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertSame( 'Repository browsing failed. Please try again.', $result['data']['message'] );
 	}
 
-	public function test_rate_limit_failure_returns_aprovider_neutral_notice_without_upstream_details(): void {
+	public function test_a_rate_limit_reported_only_by_status_names_the_provider_without_upstream_details(): void {
 		$provider = new class() implements RepositoryProvider, RepositoryBrowser {
 
 			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
@@ -432,18 +432,87 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertFalse( $result['success'] );
 		self::assertSame( 429, $result['status'] );
 		self::assertSame(
-			'The Git provider rate limit has been reached. Try again later.',
+			'GitHub is limiting lookups from this site. Try again later.',
 			$result['data']['message']
+		);
+		self::assertSame(
+			array(
+				'provider' => 'GitHub',
+				'retry_at' => null,
+			),
+			$result['data']['rate_limit']
 		);
 		self::assertStringNotContainsString( 'upstream-response-canary', $result['data']['message'] );
 		self::assertStringNotContainsString( 'header-canary', $result['data']['message'] );
 		self::assertStringNotContainsString( 'token-canary', $result['data']['message'] );
 	}
 
+	public function test_an_anonymous_public_rate_limit_pauses_anonymous_browsing_and_carries_its_facts(): void {
+		require_once __DIR__ . '/../Internal/AnonymousLookupCooldownWordPressFunctions.php';
+		$GLOBALS['ran_booster_cooldown_transients'] = array();
+		try {
+			$provider   = new class() implements RepositoryProvider, RepositoryBrowser {
+
+				use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+				public int $calls = 0;
+
+				public function get_metadata(): ProviderMetadata {
+					return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
+				}
+
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of browse_repositories retains the production method contract.
+				public function browse_repositories( RepositoryBrowseRequest $request ): \RAN\RepositoryProvider\RepositoryBrowseResult {
+					++$this->calls;
+					throw new ProviderRequestFailed( new ProviderFailure( 'rate_limited', retry_after: 3540 ) );
+				}
+			};
+			$_POST      = array(
+				'provider' => 'gh',
+				'mode'     => 'public',
+				'owner'    => 'RocketsAreNostalgic',
+			);
+			$controller = $this->controller( $provider );
+
+			$first    = $controller->handle();
+			$retry_at = $first['data']['rate_limit']['retry_at'] ?? null;
+			self::assertFalse( $first['success'] );
+			self::assertSame( 'GitHub is limiting lookups from this site. Try again in about 59 minutes.', $first['data']['message'] );
+			self::assertSame( 'GitHub', $first['data']['rate_limit']['provider'] ?? null );
+			self::assertIsInt( $retry_at );
+			self::assertSame( $retry_at, $GLOBALS['ran_booster_cooldown_transients']['ran_booster_anonymous_cooldown_gh']['value'] ?? null );
+
+			// The next anonymous browse is not sent and reports the same limit.
+			$second = $controller->handle();
+			self::assertSame( 1, $provider->calls );
+			self::assertSame( 429, $second['status'] );
+			self::assertSame(
+				array(
+					'provider' => 'GitHub',
+					'retry_at' => $retry_at,
+				),
+				$second['data']['rate_limit']
+			);
+
+			// A credentialed browse is never paused and never records a cooldown.
+			$GLOBALS['ran_booster_cooldown_transients'] = array();
+			$_POST                                      = array(
+				'provider'      => 'gh',
+				'mode'          => 'accessible',
+				'credential_id' => 'fixture-profile',
+			);
+			$controller->handle();
+			self::assertSame( 2, $provider->calls );
+			self::assertSame( array(), $GLOBALS['ran_booster_cooldown_transients'] );
+		} finally {
+			unset( $GLOBALS['ran_booster_cooldown_transients'] );
+		}
+	}
+
 	/** @return array<string, array{ProviderFailure, int, string}> */
 	public static function carried_failure_provider(): array {
 		return array(
-			'rate limit with a retry time' => array( new ProviderFailure( 'rate_limited', retry_after: 120 ), 429, 'The Git provider rate limit has been reached. Try again in about 2 minutes.' ),
+			'rate limit with a retry time' => array( new ProviderFailure( 'rate_limited', retry_after: 120 ), 429, 'GitHub is limiting lookups from this site. Try again in about 2 minutes.' ),
 			'expired credential'           => array( new ProviderFailure( 'credential_expired' ), 401, 'The credential has expired.' ),
 			'under-scoped credential'      => array( new ProviderFailure( 'permission_denied', 403 ), 403, 'The credential lacks permission for this request.' ),
 			'dns failure'                  => array( new ProviderFailure( 'dns_failed' ), 504, 'This site could not look up the Git provider host.' ),
@@ -550,13 +619,13 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertTrue( $result['success'], isset( $result['data']['message'] ) ? (string) $result['data']['message'] : 'Expected successful partial results.' );
 		self::assertTrue( $result['data']['partial'] );
 		self::assertSame(
-			'Some repositories are shown. The Git provider rate limit was reached; try again later for a complete list.',
+			'Some repositories are shown. GitHub is limiting lookups from this site. Try again later for a complete list.',
 			$result['data']['message']
 		);
 	}
 
 	public function test_partial_result_display_copy_uses_the_plugin_translation_domain(): void {
-		$source = 'Some repositories are shown. The Git provider rate limit was reached; try again later for a complete list.';
+		$source = 'Some repositories are shown. %s is limiting lookups from this site. Try again later for a complete list.';
 		$GLOBALS['ran_booster_repository_admin_translations'] = array(
 			'ran-booster' => array( $source => 'Les dépôts affichés sont incomplets.' ),
 		);

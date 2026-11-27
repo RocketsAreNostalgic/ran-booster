@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Tests\WordPress;
 
 require_once __DIR__ . '/ManagedReleaseRuntimeWordPressFunctions.php';
+require_once __DIR__ . '/../Internal/AnonymousLookupCooldownWordPressFunctions.php';
 require_once __DIR__ . '/RuntimeReleaseStore.php';
 require_once __DIR__ . '/RuntimeUpdaterFacade.php';
 require_once __DIR__ . '/../Activity/ActivityConnection.php';
@@ -3021,6 +3022,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				if ( 'none' === $reason->value ) {
 					return new RepositoryReleaseCandidateList( array() );
 				}
+				if ( 'status_only' === $reason->value ) {
+					throw new RepositoryReleaseReadUnavailable( 'Fixture status failure.', 429 );
+				}
 
 				throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.', 0, null, new ProviderFailure( $reason->value, 'http_5xx' === $reason->value ? 502 : 429 ) );
 			},
@@ -3055,6 +3059,18 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$reason->value = 'rate_limited_secondary';
 		self::assertNull( $list() );
 		self::assertSame( 'gh', $facade->anonymous_rate_limit_provider() );
+		// A limit reported only by its HTTP status still names the provider, with no time.
+		$reason->value = 'status_only';
+		self::assertNull( $list() );
+		self::assertSame( 'gh', $facade->anonymous_rate_limit_provider() );
+		self::assertSame(
+			array(
+				'provider' => $providers->metadata()['gh']->label,
+				'retry_at' => null,
+			),
+			$facade->lookup_rate_limit()
+		);
+		$reason->value = 'rate_limited_secondary';
 
 		// An unrelated outage is not helped by a lookup credential.
 		$reason->value = 'http_5xx';
@@ -3071,7 +3087,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertNull( $list() );
 		self::assertNull( $facade->anonymous_rate_limit_provider() );
 
-		self::assertTrue( $facade->lookup_rate_limited() );
+		self::assertNotNull( $facade->lookup_rate_limit() );
 
 		// A successful listing clears the previous report.
 		$current = 'public';
@@ -3099,12 +3115,69 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$reason->fallback = 'none';
 		$results[]        = $inspect()?->ready();
-		self::assertFalse( $facade->lookup_rate_limited() );
+		self::assertNull( $facade->lookup_rate_limit() );
 		$reason->fallback = 'http_5xx';
 		$results[]        = $inspect();
-		self::assertFalse( $facade->lookup_rate_limited() );
+		self::assertNull( $facade->lookup_rate_limit() );
 		self::assertSame( 9, $reason->inspections );
 		self::assertSame( array( 'rate_limited', 'rate_limited', null, 'rate_limited', true, null ), $results );
+	}
+
+	public function test_an_anonymous_rate_limit_with_a_retry_time_pauses_anonymous_lookups_only(): void {
+		$GLOBALS['ran_booster_cooldown_transients'] = array();
+		$plugins                                    = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL ) );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore(
+			array( "plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ) )
+		);
+		$lock      = new RuntimeUpdaterLock();
+		$profiles  = new InMemoryPublicRepositoryLookupProfileStore();
+		$calls     = new class() {
+			/** @var list<?string> */
+			public array $credentials = array();
+		};
+		$providers = $this->release_metadata_registry(
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered provider callable signature while returning a controlled result.
+			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( $calls ): RepositoryReleaseCandidateList {
+				$calls->credentials[] = $repository->credential_id;
+
+				throw new RepositoryReleaseReadUnavailable( 'Fixture rate limit.', 0, null, new ProviderFailure( 'rate_limited', 429, 3540 ) );
+			}
+		);
+		$facade = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn ( string $nonce, string $action ): bool => hash_equals( $action, $nonce ),
+			metadata_eligible: static fn (): bool => true,
+			public_lookup_profile: static fn ( string $provider ): ?string => $profiles->get( $provider )
+		);
+		$list   = static fn (): ?RepositoryReleaseCandidateList => $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' ) );
+
+		$before = time();
+		self::assertNull( $list() );
+		$retry_at = $facade->lookup_rate_limit()['retry_at'] ?? null;
+		self::assertIsInt( $retry_at );
+		self::assertGreaterThanOrEqual( $before + 3540, $retry_at );
+		self::assertSame( $retry_at, $GLOBALS['ran_booster_cooldown_transients']['ran_booster_anonymous_cooldown_gh']['value'] ?? null );
+
+		// While it lasts, an anonymous lookup is not sent and reports the same limit and retry time.
+		self::assertNull( $list() );
+		self::assertSame( array( null ), $calls->credentials );
+		self::assertSame( 'gh', $facade->anonymous_rate_limit_provider() );
+		self::assertSame( $retry_at, $facade->lookup_rate_limit()['retry_at'] ?? null );
+
+		// A lookup credential is never paused by the anonymous cooldown.
+		$profiles->profiles = array( 'gh' => 'public-profile' );
+		self::assertNull( $list() );
+		self::assertSame( array( null, 'public-profile' ), $calls->credentials );
+		self::assertNull( $facade->anonymous_rate_limit_provider() );
+		unset( $GLOBALS['ran_booster_cooldown_transients'] );
 	}
 
 	public function test_private_enable_preflight_uses_only_the_saved_package_credential(): void {

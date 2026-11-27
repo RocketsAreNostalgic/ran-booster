@@ -298,6 +298,84 @@ final class ProviderFailureTest extends TestCase {
 		self::assertSame( 'The Git provider reported an error.', ( new ProviderFailure( 'http_5xx', 503, 120 ) )->message() );
 	}
 
+	public function test_rate_limit_facts_prefer_a_reset_within_a_day_then_the_retry_delay(): void {
+		$now = 1_800_000_000;
+
+		self::assertSame(
+			array(
+				'provider' => 'GitHub',
+				'retry_at' => $now + 3540,
+			),
+			( new ProviderFailure( 'rate_limited', retry_after: 60, reset_at: $now + 3540 ) )->rate_limit( 'GitHub', $now )
+		);
+		self::assertSame( $now + 120, ( new ProviderFailure( 'rate_limited_secondary', retry_after: 120 ) )->rate_limit( 'GitHub', $now )['retry_at'] ?? null );
+		// A reset already passed or more than a day away gives way to the delay, else to no time.
+		self::assertSame( $now + 60, ( new ProviderFailure( 'rate_limited', retry_after: 60, reset_at: $now - 5 ) )->rate_limit( 'GitHub', $now )['retry_at'] ?? null );
+		self::assertSame(
+			array(
+				'provider' => 'GitHub',
+				'retry_at' => null,
+			),
+			( new ProviderFailure( 'rate_limited', reset_at: $now + 90000 ) )->rate_limit( 'GitHub', $now )
+		);
+		self::assertSame(
+			array(
+				'provider' => '',
+				'retry_at' => null,
+			),
+			( new ProviderFailure( 'rate_limited' ) )->rate_limit( '', $now )
+		);
+		self::assertNull( ( new ProviderFailure( 'http_5xx', 503, 120 ) )->rate_limit( 'GitHub', $now ) );
+	}
+
+	public function test_the_rate_limit_sentence_names_the_provider_and_counts_whole_minutes(): void {
+		$now = 1_800_000_000;
+
+		self::assertSame(
+			'GitHub is limiting lookups from this site. Try again in about 59 minutes.',
+			ProviderFailure::rate_limit_message(
+				array(
+					'provider' => 'GitHub',
+					'retry_at' => $now + 3500,
+				),
+				$now
+			)
+		);
+		self::assertSame(
+			'GitHub is limiting lookups from this site. Try again in about 1 minute.',
+			ProviderFailure::rate_limit_message(
+				array(
+					'provider' => 'GitHub',
+					'retry_at' => $now + 5,
+				),
+				$now
+			)
+		);
+		foreach ( array( null, $now, $now - 60, $now + 86401, '1800000060', 1.5 ) as $retry_at ) {
+			self::assertSame(
+				'GitHub is limiting lookups from this site. Try again later.',
+				ProviderFailure::rate_limit_message(
+					array(
+						'provider' => 'GitHub',
+						'retry_at' => $retry_at,
+					),
+					$now
+				)
+			);
+		}
+		self::assertSame( 'The Git provider is limiting lookups from this site. Try again later.', ProviderFailure::rate_limit_message( null, $now ) );
+		self::assertSame(
+			'The Git provider is limiting lookups from this site. Try again later.',
+			ProviderFailure::rate_limit_message(
+				array(
+					'provider' => '',
+					'retry_at' => null,
+				),
+				$now
+			)
+		);
+	}
+
 	public function test_expired_credential_copy_shows_only_the_date(): void {
 		self::assertSame( 'The credential has expired.', ( new ProviderFailure( 'credential_expired' ) )->message() );
 		self::assertSame(

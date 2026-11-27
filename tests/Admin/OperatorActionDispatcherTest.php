@@ -518,43 +518,51 @@ final class OperatorActionDispatcherTest extends TestCase {
 			$dashboard = $this->createMock( Dashboard::class );
 			$dashboard->expects( self::exactly( 3 ) )->method( 'add_failure_message' );
 			$dashboard->expects( self::once() )->method( 'add_message' )->with( 'The package lock was released.' );
-			$request = array(
-				'action'     => 'release-updater-lock',
-				'lock_token' => $token,
-			);
-			$other   = '1700000000.' . str_repeat( '9', 27 );
-			$held    = array();
-			// Unconfirmed, a different valid token, a missing package capability, then the confirmed exact token.
-			foreach ( array(
-				$request,
-				array(
-					'confirm_stopped' => '1',
-					'lock_token'      => $other,
-				) + $request,
-				array( 'confirm_stopped' => '1' ) + $request,
-				array( 'confirm_stopped' => '1' ) + $request,
-			) as $case => $post ) {
-				$GLOBALS['ran_booster_test_capabilities']['update_themes'] = 2 !== $case;
-				$_POST['ran_booster']                                      = $post;
-				// A nonce minted for another token fails verification against this token's action and changes nothing.
-				if ( 3 === $case ) {
-					$GLOBALS['ran_booster_test_nonce_valid'] = false;
-					try {
-						$this->dispatcher( $dashboard, lock: $lock )->dispatch_post_requests();
-						self::fail( 'A nonce bound to another token released the lock.' );
-					} catch ( \RuntimeException $failure ) {
-						self::assertSame( 'Invalid nonce.', $failure->getMessage() );
-					}
-					self::assertSame( $token, $database->option_rows['auto_updater.lock'] ?? null );
-					$GLOBALS['ran_booster_test_nonce_valid'] = true;
+			$other  = '1700000000.' . str_repeat( '9', 27 );
+			$action = static fn ( string $lock_token ): string => 'ran-booster-release-updater-lock|' . $lock_token;
+			// The nonce action the rendered Release form actually mints for a recorded owner's token.
+			$minted = static function ( string $lock_token ): string {
+				$updater_lock_owner = array(
+					'token'      => $lock_token,
+					'operation'  => 'package_operation',
+					'started_at' => 1700000000,
+				);
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/updater-lock-owner.php';
+				if ( 1 !== preg_match( '/name="_wpnonce" value="(?:nonce-for-)?([^"]+)"/', (string) ob_get_clean(), $field ) ) {
+					self::fail( 'The Release form minted no nonce.' );
 				}
-				$this->dispatcher( $dashboard, lock: $lock )->dispatch_post_requests();
+				return html_entity_decode( $field[1], ENT_QUOTES );
+			};
+			self::assertSame( $action( $token ), $minted( $token ) );
+			$held = array();
+			// Unconfirmed; another token posted with this token's nonce; another token with its own nonce; no package capability; then confirmed.
+			foreach ( array(
+				array( $token, $token, false ),
+				array( $other, $token, true ),
+				array( $other, $other, true ),
+				array( $token, $token, true ),
+				array( $token, $token, true ),
+			) as $case => list( $posted, $form, $confirmed ) ) {
+				$GLOBALS['ran_booster_test_capabilities']['update_themes'] = 3 !== $case;
+				$_POST['_wpnonce']    = $minted( $form );
+				$_POST['ran_booster'] = array(
+					'action'     => 'release-updater-lock',
+					'lock_token' => $posted,
+				) + ( $confirmed ? array( 'confirm_stopped' => '1' ) : array() );
+				// WordPress verifies a nonce only against the action it was minted for.
+				$GLOBALS['ran_booster_test_nonce_valid'] = $minted( $form ) === $action( $posted );
+				try {
+					$this->dispatcher( $dashboard, lock: $lock )->dispatch_post_requests();
+					self::assertNotSame( 1, $case, 'A nonce minted for another token was accepted.' );
+				} catch ( \RuntimeException $failure ) {
+					self::assertSame( array( 1, 'Invalid nonce.' ), array( $case, $failure->getMessage() ) );
+				}
+				self::assertSame( $action( $posted ), end( $GLOBALS['ran_booster_test_nonce_checks'] ) );
 				$held[] = $database->option_rows['auto_updater.lock'] ?? null;
 			}
-			self::assertSame( array( $token, $token, $token, null ), $held );
+			self::assertSame( array( $token, $token, $token, $token, null ), $held );
 			self::assertArrayNotHasKey( WordPressUpdaterLock::OWNER_OPTION, $database->option_rows );
-			$bound = 'ran-booster-release-updater-lock|' . $token;
-			self::assertSame( array( $bound, 'ran-booster-release-updater-lock|' . $other, $bound, $bound, $bound ), $GLOBALS['ran_booster_test_nonce_checks'] );
 		} finally {
 			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the database boundary replaced above.
 			$GLOBALS['wpdb'] = $previous_database;

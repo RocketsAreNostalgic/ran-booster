@@ -480,11 +480,13 @@ record, and that the Branch case from 2026-11-21 uses the same record.
   their operation record `package_operation`; #1228 item 1 has them pass a
   specific code.
 - The transactional acquisition writes the record in the same transaction, so
-  the lock is not taken without it. Elsewhere a lost record write keeps the
+  the lock is not taken without it. Elsewhere a failed record write keeps the
   lock and only falls back to the hour-old reclaim.
 - The record is written only while the lock row still holds the writer's exact
-  token, so a request that lost the lock cannot overwrite the new owner's
-  record.
+  token, through a locking read of that row, so a replacing owner cannot slip
+  between the check and the write under READ COMMITTED. When the write finds
+  the row no longer holds the token, the request does not own the lock: its
+  acquisition fails and nothing runs.
 - A record counts only while its token is the exact current lock row. A record
   left behind and a lock WordPress took for its own updates (PU-017) therefore
   never show an owner.
@@ -496,7 +498,7 @@ record, and that the Branch case from 2026-11-21 uses the same record.
   recorded like any other operation, and the record goes when it releases.
 - After an operator's action is refused by a lock, Booster names the operation
   and its start time only when the recorded token is the holder that refused
-  it, and offers Release behind an explicit confirmation that the operation
+  it, read by the same query that refused it, and offers Release behind an explicit confirmation that the operation
   stopped. The form's nonce is bound to that token. Release deletes only that
   exact lock row.
 - Activity pages offer no Release. A deployment attempt row holds no lock

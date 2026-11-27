@@ -225,7 +225,7 @@ namespace RAN\Tests\Deployment {
 				unset( $activity );
 				return 0;
 			}
-			if ( preg_match( "/^INSERT INTO `wp_options` .* SELECT '(ran_booster_updater_lock_owner)', '([^']+)', 'off' FROM `wp_options` AS held WHERE held.option_name = '([^']+)' AND CAST\\(held.option_value AS BINARY\\) = CAST\\('([^']+)' AS BINARY\\) ON DUPLICATE KEY UPDATE option_value = '\\2'$/", $query, $matches ) === 1 ) {
+			if ( preg_match( "/^INSERT INTO `wp_options` .* SELECT '(ran_booster_updater_lock_owner)', '([^']+)', 'off' FROM `wp_options` AS held WHERE held.option_name = '([^']+)' AND CAST\\(held.option_value AS BINARY\\) = CAST\\('([^']+)' AS BINARY\\) FOR UPDATE ON DUPLICATE KEY UPDATE option_value = '\\2'$/", $query, $matches ) === 1 ) {
 				if ( ( $this->option_rows[ $matches[3] ] ?? null ) !== $matches[4] ) {
 					return 0;
 				}

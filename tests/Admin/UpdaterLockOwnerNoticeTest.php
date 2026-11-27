@@ -78,6 +78,74 @@ final class UpdaterLockOwnerNoticeTest extends TestCase {
 		self::assertNull( ( new \ReflectionProperty( Dashboard::class, 'updater_lock_owner' ) )->getValue( $dashboard ) );
 	}
 
+	public function test_a_refusal_names_only_the_holder_its_own_read_observed(): void {
+		$database = $this->database;
+		$later    = time() . '.' . str_repeat( '5', 27 );
+		// Right after the refused request's first statement on the lock row, its holder releases and an unrelated operation takes the lock.
+		$handoff = static function () use ( $database, $later ): void {
+			$database->option_rows = array(
+				'auto_updater.lock'                => $later,
+				WordPressUpdaterLock::OWNER_OPTION => $later . '|package_operation|' . time(),
+			);
+		};
+		foreach ( array( 'try_acquire_without_reclaim', 'acquire' ) as $path ) {
+			$database->option_rows = array();
+			( new WordPressUpdaterLock() )->acquire();
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The refused request reads through this interleaving wrapper.
+			$GLOBALS['wpdb'] = new class( $database, $handoff ) {
+				public string $options    = 'wp_options';
+				public string $last_error = '';
+				private bool $handed_off  = false;
+
+				/** @param \Closure(): void $handoff */
+				public function __construct( private AttemptRepositoryDatabase $inner, private \Closure $handoff ) {}
+
+				public function prepare( string $query, mixed ...$arguments ): string {
+					return $this->inner->prepare( $query, ...$arguments );
+				}
+
+				public function query( string $query ): int|false {
+					$result = $this->inner->query( $query );
+					$this->after( $query );
+					return $result;
+				}
+
+				public function get_var( string $query ): mixed {
+					$result = $this->inner->get_var( $query );
+					$this->after( $query );
+					return $result;
+				}
+
+				public function get_row( string $query ): mixed {
+					$result = $this->inner->get_row( $query );
+					$this->after( $query );
+					return $result;
+				}
+
+				private function after( string $query ): void {
+					$this->last_error = $this->inner->last_error;
+					if ( ! $this->handed_off && str_contains( $query, "'auto_updater.lock'" ) ) {
+						$this->handed_off = true;
+						( $this->handoff )();
+					}
+				}
+			};
+			try {
+				'acquire' === $path ? ( new WordPressUpdaterLock() )->acquire() : ( new WordPressUpdaterLock() )->try_acquire_without_reclaim();
+			} catch ( RuntimeException $failure ) {
+				// The acquire path reports the refusal by throwing; the other returns null.
+				self::assertSame( 'The WordPress updater is already running.', $failure->getMessage() );
+			} finally {
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the fake replaced above.
+				$GLOBALS['wpdb'] = $database;
+			}
+			$dashboard = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
+			$dashboard->add_failure_message( new \WP_Error( 'ran_booster_test', 'Another package operation is in progress.' ), new RuntimeException( 'refused' ) );
+			self::assertSame( $later, $database->option_rows['auto_updater.lock'], $path );
+			self::assertNull( ( new \ReflectionProperty( Dashboard::class, 'updater_lock_owner' ) )->getValue( $dashboard ), $path );
+		}
+	}
+
 	public function test_the_failure_notices_offer_a_confirmed_release_only_with_a_recorded_owner(): void {
 		$rendered = array();
 		foreach ( array(

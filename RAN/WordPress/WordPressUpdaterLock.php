@@ -89,24 +89,38 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	}
 
 	public function try_acquire_without_reclaim( string $owner_operation = self::DEFAULT_OPERATION ): ?string {
-		try {
-			$token = parent::try_acquire_without_reclaim();
-		} catch ( BranchDeploymentLockStorageFailure ) {
-			throw DeploymentStorageFailure::unavailable();
+		// The read that finds a row present refuses and names its holder; an insert lost to a racing owner names none.
+		$holder = $this->read_lock_value( $this->require_options_table() );
+		if ( null === $holder ) {
+			try {
+				$token = parent::try_acquire_without_reclaim();
+			} catch ( BranchDeploymentLockStorageFailure ) {
+				throw DeploymentStorageFailure::unavailable();
+			}
+			$token = null === $token ? null : $this->recorded( $token, $owner_operation );
+			if ( null !== $token ) {
+				return $token;
+			}
 		}
-		if ( null === $token ) {
-			self::$refused_by = $this->observed_holder();
-		}
-		return null === $token ? null : $this->recorded( $token, $owner_operation );
+		self::$refused_by = $holder;
+		return null;
 	}
 
 	public function acquire( string $owner_operation = self::DEFAULT_OPERATION ): string {
+		// A live or malformed row is refused on this read, which names its holder; free and expired rows take the Branch updater's path.
+		$holder  = $this->read_lock_value( $this->require_options_table() );
+		$expired = self::valid_token( $holder ) && ! self::live_token( $holder, $this->now() );
+		if ( null !== $holder && ! $expired ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
+			throw $this->contention_failure( $holder );
+		}
 		try {
 			$token = parent::acquire();
 		} catch ( BranchDeploymentLockStorageFailure ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		return $this->recorded( $token, $owner_operation );
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
+		return $this->recorded( $token, $owner_operation ) ?? throw $this->contention_failure();
 	}
 
 	public function release( string $token ): bool {
@@ -135,20 +149,22 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		} while ( $token === $expected_owner );
 
 		if ( $this->replace_lock_value( $options_table, $expected_owner, $token ) || $this->insert_lock_value( $options_table, $token ) ) {
-			return $this->recorded( $token, $owner_operation );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
+			return $this->recorded( $token, $owner_operation ) ?? throw $this->contention_failure();
 		}
 
 		$stored = $this->read_lock_value( $options_table );
 		if ( ! self::valid_token( $stored ) || self::live_token( $stored, $now ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
-			throw $this->contention_failure();
+			throw $this->contention_failure( $stored );
 		}
 		if ( ! $this->replace_lock_value( $options_table, $stored, $token ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
 			throw $this->contention_failure();
 		}
 
-		return $this->recorded( $token, $owner_operation );
+		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
+		return $this->recorded( $token, $owner_operation ) ?? throw $this->contention_failure();
 	}
 
 	/**
@@ -236,7 +252,8 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		$token         = $this->new_token();
 		$owner         = $this->owner_value( $token, $owner_operation );
 		$record        = static function () use ( $execute, $options_table, $owner, $token ): void {
-			if ( ! is_int( $execute( 'INSERT INTO %i (option_name, option_value, autoload) SELECT %s, %s, %s FROM %i AS held WHERE held.option_name = %s AND CAST(held.option_value AS BINARY) = CAST(%s AS BINARY) ON DUPLICATE KEY UPDATE option_value = %s', array( $options_table, self::OWNER_OPTION, $owner, 'off', $options_table, self::OPTION_NAME, $token, $owner ), 'affected' ) ) ) {
+			$written = $execute( 'INSERT INTO %i (option_name, option_value, autoload) SELECT %s, %s, %s FROM %i AS held WHERE held.option_name = %s AND CAST(held.option_value AS BINARY) = CAST(%s AS BINARY) FOR UPDATE ON DUPLICATE KEY UPDATE option_value = %s', array( $options_table, self::OWNER_OPTION, $owner, 'off', $options_table, self::OPTION_NAME, $token, $owner ), 'affected' );
+			if ( ! is_int( $written ) || $written < 1 ) {
 				throw DeploymentStorageFailure::unavailable();
 			}
 		};
@@ -274,7 +291,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 				throw DeploymentStorageFailure::unavailable();
 			}
 			if ( 1 !== $deleted ) {
-				self::$refused_by = $stored;
+				self::$refused_by = null;
 				return null;
 			}
 
@@ -326,28 +343,33 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		return sprintf( '%s|%s|%d', $token, $operation, $this->now() );
 	}
 
-	/** Record the Booster operation that took this lock; a lost record only falls back to the hour-old reclaim. */
-	private function recorded( string $token, string $operation ): string {
+	/**
+	 * Record the Booster operation that took this lock. Null when the lock row no longer holds this token: the request
+	 * does not own the lock and must not proceed. A failed write keeps the lock and falls back to the hour-old reclaim.
+	 */
+	private function recorded( string $token, string $operation ): ?string {
 		global $wpdb;
 		$owner = $this->owner_value( $token, $operation );
 		try {
 			$options_table = $this->require_options_table();
+			// The locking read holds the lock row until the record is written, so a replacing owner cannot slip between them under READ COMMITTED.
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Uncached owner record beside the uncached auto_updater.lock row.
-			$written = $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (option_name, option_value, autoload) SELECT %s, %s, %s FROM %i AS held WHERE held.option_name = %s AND CAST(held.option_value AS BINARY) = CAST(%s AS BINARY) ON DUPLICATE KEY UPDATE option_value = %s', $options_table, self::OWNER_OPTION, $owner, 'off', $options_table, self::OPTION_NAME, $token, $owner ) );
+			$written = $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (option_name, option_value, autoload) SELECT %s, %s, %s FROM %i AS held WHERE held.option_name = %s AND CAST(held.option_value AS BINARY) = CAST(%s AS BINARY) FOR UPDATE ON DUPLICATE KEY UPDATE option_value = %s', $options_table, self::OWNER_OPTION, $owner, 'off', $options_table, self::OPTION_NAME, $token, $owner ) );
 		} catch ( Throwable ) {
-			$written = null;
+			$written = false;
 		}
-		// Zero rows: this request no longer holds the lock, so it publishes no record over the new owner's.
-		if ( ! is_int( $written ) || $written < 1 ) {
-			BoosterLogger::log(
-				'updater lock owner not recorded',
-				array(
-					'step'      => 'updater_lock_owner',
-					'operation' => $operation,
-				)
-			);
+		if ( is_int( $written ) && $written > 0 ) {
+			return $token;
 		}
-		return $token;
+		BoosterLogger::log(
+			'updater lock owner not recorded',
+			array(
+				'step'      => 'updater_lock_owner',
+				'operation' => $operation,
+				'event'     => 0 === $written ? 'ownership_lost' : 'write_failed',
+			)
+		);
+		return 0 === $written ? null : $token;
 	}
 
 	/** Remove the released token's record; a record left behind names no lock row, so it is never shown. */
@@ -378,8 +400,9 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		return $token > $now - self::STALE_SECONDS;
 	}
 
-	protected function contention_failure(): RuntimeException {
-		self::$refused_by = $this->observed_holder();
+	/** The holder is the token read by the observation that refused this request, or null when that observation named none. */
+	protected function contention_failure( ?string $holder = null ): RuntimeException {
+		self::$refused_by = $holder;
 		return new RuntimeException( 'The WordPress updater is already running.' );
 	}
 
@@ -388,14 +411,6 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		$holder           = self::$refused_by;
 		self::$refused_by = null;
 		return $holder;
-	}
-
-	private function observed_holder(): ?string {
-		try {
-			return $this->read_lock_value( $this->require_options_table() );
-		} catch ( Throwable ) {
-			return null;
-		}
 	}
 
 	private function require_options_table(): string {

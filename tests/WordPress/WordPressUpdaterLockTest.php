@@ -443,24 +443,30 @@ final class WordPressUpdaterLockTest extends TestCase {
 	public function test_a_lost_owner_record_keeps_the_lock_and_shows_no_owner(): void {
 		$this->database->fail_query_contains = 'ON DUPLICATE KEY UPDATE';
 		$lock                                = new WordPressUpdaterLock();
-		$token                               = $lock->acquire();
+		$token                               = '';
+		$logged                              = $this->logged_lines(
+			static function () use ( $lock, &$token ): void {
+				$token = $lock->acquire();
+			}
+		);
 		// WordPress clears the failed write's error on its next query; this fake keeps it.
 		$this->database->last_error = '';
+		self::assertSame( array( '[ran-booster] updater lock owner not recorded {"step":"updater_lock_owner","operation":"package_operation","event":"write_failed"}' ), $logged );
 		self::assertSame( $token, $this->database->option_rows['auto_updater.lock'] );
 		self::assertArrayNotHasKey( self::OWNER, $this->database->option_rows );
 		self::assertNull( $lock->recorded_owner() );
 		self::assertTrue( $lock->release( $token ) );
 	}
 
-	public function test_a_request_that_lost_the_lock_publishes_no_owner_record_over_the_new_owner(): void {
-		$other = '1700000000.' . str_repeat( '7', 27 );
-		$lock  = new class( $this->database, $other ) extends WordPressUpdaterLock {
+	public function test_a_request_that_lost_the_lock_before_recording_its_owner_never_runs_the_operation(): void {
+		$other  = '1700000000.' . str_repeat( '7', 27 );
+		$lock   = new class( $this->database, $other ) extends WordPressUpdaterLock {
 			private bool $paused = false;
 
 			public function __construct( private AttemptRepositoryDatabase $db, private string $other ) {}
 
 			protected function now(): int {
-				// Another owner reclaims the lock while this request pauses between acquiring it and recording its owner.
+				// Another owner takes the lock while this request pauses between acquiring it and recording its owner.
 				if ( ! $this->paused ) {
 					$this->paused                               = true;
 					$this->db->option_rows['auto_updater.lock'] = $this->other;
@@ -469,8 +475,51 @@ final class WordPressUpdaterLockTest extends TestCase {
 				return time();
 			}
 		};
-		$lock->acquire();
+		$ran    = array();
+		$logged = $this->logged_lines(
+			static function () use ( $lock, &$ran ): void {
+				try {
+					$lock->run(
+						static function () use ( &$ran ): void {
+							$ran[] = 'operation';
+						}
+					);
+				} catch ( RuntimeException $failure ) {
+					$ran[] = $failure->getMessage();
+				}
+			}
+		);
+		self::assertSame( array( 'The WordPress updater is already running.' ), $ran );
+		self::assertSame( array( '[ran-booster] updater lock owner not recorded {"step":"updater_lock_owner","operation":"package_operation","event":"ownership_lost"}' ), $logged );
+		self::assertSame( $other, $this->database->option_rows['auto_updater.lock'] );
 		self::assertSame( $other . '|package_operation|1700000000', $this->database->option_rows[ self::OWNER ] );
+		// The lost request observed no holder that refused it, so no owner is named for it.
+		self::assertNull( WordPressUpdaterLock::take_refusal() );
+	}
+
+	/**
+	 * @param callable(): void $action
+	 * @return list<string>
+	 */
+	private function logged_lines( callable $action ): array {
+		$directory = sys_get_temp_dir() . '/ran-updater-lock-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new TemporaryDebugCapture( $directory . '/secrets.json' );
+		BoosterLogger::configure_capture( $capture );
+		try {
+			$capture->start();
+			$action();
+			return array_values( array_map( 'strval', array_column( $capture->snapshot()['entries'], 'line' ) ) );
+		} finally {
+			BoosterLogger::configure_capture( null );
+			foreach ( (array) glob( $directory . '/*' ) as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+				unlink( (string) $file );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+			rmdir( $directory );
+		}
 	}
 
 	public function test_transactional_acquisition_records_its_owner_in_the_same_transaction(): void {

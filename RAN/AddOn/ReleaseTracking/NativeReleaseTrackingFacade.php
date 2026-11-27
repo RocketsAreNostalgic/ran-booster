@@ -15,6 +15,7 @@ use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\GitHubProviderSelection;
+use RAN\RepositoryProvider\ProviderFailure;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
@@ -498,7 +499,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	}
 
 	private function record_lookup_failure( RepositoryReleaseReadUnavailable $unavailable, RepositoryReference $repository, string $provider ): void {
-		$this->lookup_rate_limit             = $unavailable->failure?->rate_limit( $this->providers->metadata()[ $provider ]->label ?? '', time() );
+		// A provider that reports a rate limit only by its HTTP status is named too.
+		$this->lookup_rate_limit             = ProviderFailure::from_throwable( $unavailable )?->rate_limit( $this->providers->metadata()[ $provider ]->label ?? '', time() );
 		$this->anonymous_rate_limit_provider = null !== $this->lookup_rate_limit && ! $repository->private && null === $repository->credential_id ? $provider : null;
 		if ( null !== $this->anonymous_rate_limit_provider ) {
 			AnonymousLookupCooldown::record( $provider, $this->lookup_rate_limit );

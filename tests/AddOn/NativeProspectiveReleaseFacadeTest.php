@@ -887,6 +887,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 			self::assertSame( 1, ProspectiveRepositoryProvider::$resolve_calls );
 			self::assertSame( 0, ProspectiveRepositoryProvider::$listing_calls );
 
+			// A slashed blank credential is anonymous to the resolver, so it waits too.
+			$facade->list_candidates( 'plugin', array( 'credential_id' => '\\' ) + $this->repository_request(), 'stable', 'valid-nonce' );
+			self::assertSame( 1, ProspectiveRepositoryProvider::$resolve_calls );
+
 			// A credentialed lookup still reaches the provider during the anonymous pause.
 			$facade->list_candidates( 'plugin', array( 'credential_id' => 'profile' ) + $this->repository_request(), 'stable', 'valid-nonce' );
 			self::assertSame( 2, ProspectiveRepositoryProvider::$resolve_calls );

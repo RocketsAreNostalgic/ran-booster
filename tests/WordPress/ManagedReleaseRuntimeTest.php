@@ -3022,6 +3022,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				if ( 'none' === $reason->value ) {
 					return new RepositoryReleaseCandidateList( array() );
 				}
+				if ( 'status_only' === $reason->value ) {
+					throw new RepositoryReleaseReadUnavailable( 'Fixture status failure.', 429 );
+				}
 
 				throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.', 0, null, new ProviderFailure( $reason->value, 'http_5xx' === $reason->value ? 502 : 429 ) );
 			},
@@ -3056,6 +3059,18 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$reason->value = 'rate_limited_secondary';
 		self::assertNull( $list() );
 		self::assertSame( 'gh', $facade->anonymous_rate_limit_provider() );
+		// A limit reported only by its HTTP status still names the provider, with no time.
+		$reason->value = 'status_only';
+		self::assertNull( $list() );
+		self::assertSame( 'gh', $facade->anonymous_rate_limit_provider() );
+		self::assertSame(
+			array(
+				'provider' => $providers->metadata()['gh']->label,
+				'retry_at' => null,
+			),
+			$facade->lookup_rate_limit()
+		);
+		$reason->value = 'rate_limited_secondary';
 
 		// An unrelated outage is not helped by a lookup credential.
 		$reason->value = 'http_5xx';

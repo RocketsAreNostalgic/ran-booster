@@ -223,6 +223,38 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 1, \RAN\wp_verify_nonce( $query['_ran_booster_notice_nonce'], 'ran-booster-package-retry|plugin|edit-rate-limited|gh|' . $retry_at . '|example/example.php' ) );
 	}
 
+	public function test_the_dashboard_names_the_provider_in_the_notice_after_a_rate_limited_stored_save(): void {
+		$providers = new \RAN\RepositoryProvider\ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'gh' ) ) );
+		$dashboard = $this->dashboard( new OperationCoordinator(), $this->plugin(), $providers );
+		$retry_at  = time() + 3540;
+		$redirect  = $dashboard->post_package_operation(
+			'edit-plugin',
+			$this->input(
+				'edit-plugin',
+				array(
+					'deployment_policy'           => DeploymentPolicy::DISABLED->value,
+					'repository_check_skipped'    => 'rate_limited',
+					'repository_check_rate_limit' => array(
+						'code'     => 'gh',
+						'retry_at' => $retry_at,
+					),
+				)
+			)
+		);
+		self::assertIsString( $redirect );
+
+		// The settings page that the redirect opens shows its notice through the Dashboard's own controller.
+		$_GET       = $this->redirect_query( $redirect );
+		$controller = ( new \ReflectionProperty( Dashboard::class, 'package_admin' ) )->getValue( $dashboard );
+		self::assertInstanceOf( PackageAdminController::class, $controller );
+		self::assertNotNull( $controller->add_success_notice( $dashboard, 'plugin' ) );
+		$messages = $dashboard->messages;
+		self::assertSame(
+			'Your settings were saved using the repository details Booster already had. <time datetime="' . gmdate( 'Y-m-d\\TH:i:s\\Z', $retry_at ) . '" data-ran-booster-rate-limit="Fixture provider">Fixture provider is limiting lookups from this site. Try again in about 59 minutes.</time>',
+			end( $messages )['message'] ?? null
+		);
+	}
+
 	/** @return array<string, array{string, string, string}> */
 	public static function unchecked_save_notices(): array {
 		return array(
@@ -2405,7 +2437,7 @@ final class PackageOperationServiceTest extends TestCase {
 		return new GitHubProviderSelection( $store, '/unused', $bundled );
 	}
 
-	private function dashboard( OperationCoordinator $coordinator, ?Plugin $plugin = null ): Dashboard {
+	private function dashboard( OperationCoordinator $coordinator, ?Plugin $plugin = null, ?\RAN\RepositoryProvider\ProviderRegistry $providers = null ): Dashboard {
 		$plugins = new OperationPluginRepository( $plugin ?? $this->plugin() );
 		$themes  = new OperationThemeRepository( new OperationTheme( 'example' ) );
 
@@ -2418,7 +2450,8 @@ final class PackageOperationServiceTest extends TestCase {
 			( new \ReflectionClass( TroubleshootingService::class ) )->newInstanceWithoutConstructor(),
 			null,
 			null,
-			$this->service( $plugins, $themes, $coordinator )
+			$this->service( $plugins, $themes, $coordinator ),
+			providers: $providers
 		);
 	}
 

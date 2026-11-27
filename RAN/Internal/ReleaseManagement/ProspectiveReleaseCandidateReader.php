@@ -51,8 +51,7 @@ final class ProspectiveReleaseCandidateReader {
 		$listing = $capabilities['listing'];
 		// With no credential or lookup profile, even the repository resolution reaches the provider
 		// anonymously, so an anonymous limit is waited out before the first provider call.
-		$blank     = static fn ( mixed $value ): bool => ! is_string( $value ) || '' === trim( $value );
-		$anonymous = $blank( $repository_request['credential_id'] ?? null ) && $blank( $repository_request['public_lookup_profile_id'] ?? null );
+		$anonymous = PackageRepositoryRequestResolver::anonymous_lookup( $repository_request );
 
 		try {
 			$cooling = $anonymous ? $this->cooldown_failure( $provider ) : null;

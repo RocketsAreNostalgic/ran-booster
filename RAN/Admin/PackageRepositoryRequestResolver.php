@@ -27,6 +27,21 @@ final readonly class PackageRepositoryRequestResolver {
 	}
 
 	/**
+	 * Whether resolve() would look the repository up with no credential or lookup profile, so the
+	 * provider sees an anonymous request.
+	 *
+	 * @param array<string, mixed> $request Package form request.
+	 */
+	public static function anonymous_lookup( array $request ): bool {
+		return '' === self::request_id( $request['credential_id'] ?? null ) && '' === self::request_id( $request['public_lookup_profile_id'] ?? null );
+	}
+
+	/** A credential or lookup-profile ID from a request, normalized as resolution reads it. */
+	private static function request_id( mixed $value ): string {
+		return is_string( $value ) ? trim( wp_unslash( $value ) ) : '';
+	}
+
+	/**
 	 * @param array<string, mixed> $request Package form request.
 	 * @return array<string, mixed>
 	 */
@@ -72,7 +87,7 @@ final readonly class PackageRepositoryRequestResolver {
 			throw new InvalidPackageSubdirectory( 'The package subdirectory must be a normalized relative path.' );
 		}
 		$credential_input = $request['credential_id'] ?? null;
-		$credential_id    = is_string( $credential_input ) ? trim( wp_unslash( $credential_input ) ) : '';
+		$credential_id    = self::request_id( $credential_input );
 		$public_lookup    = $request['public_lookup_profile_id'] ?? null;
 		$identity_source  = is_string( $request['provider_repository_identity_source'] ?? null ) ? sanitize_key( wp_unslash( $request['provider_repository_identity_source'] ) ) : '';
 		$expected_id      = $request['provider_repository_id'] ?? null;
@@ -165,7 +180,7 @@ final readonly class PackageRepositoryRequestResolver {
 		}
 
 		$credential_input = $request['credential_id'] ?? null;
-		$credential_id    = is_string( $credential_input ) ? trim( wp_unslash( $credential_input ) ) : '';
+		$credential_id    = self::request_id( $credential_input );
 		if ( '' !== $credential_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $credential_id ) ) {
 			throw new InvalidArgumentException( 'Choose a valid repository credential.' );
 		}
@@ -174,7 +189,7 @@ final readonly class PackageRepositoryRequestResolver {
 		if ( array_key_exists( 'public_lookup_profile_id', $request ) && ! is_string( $public_lookup_input ) ) {
 			throw new InvalidArgumentException( 'Choose a valid public repository lookup profile.' );
 		}
-		$public_lookup_id = is_string( $public_lookup_input ) ? trim( wp_unslash( $public_lookup_input ) ) : '';
+		$public_lookup_id = self::request_id( $public_lookup_input );
 		if ( '' !== $public_lookup_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $public_lookup_id ) ) {
 			throw new InvalidArgumentException( 'Choose a valid public repository lookup profile.' );
 		}

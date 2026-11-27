@@ -6,6 +6,7 @@ namespace RAN\Admin\ReleaseManagement;
 
 use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
+use RAN\RepositoryProvider\Admin\MetadataRules;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
 use Throwable;
 
@@ -67,10 +68,12 @@ final class ProspectiveReleaseOperations {
 			if ( 'unable_to_check' === $result->code() && is_string( $provider ) && 1 === preg_match( '/\A[a-z0-9][a-z0-9_-]{0,31}\z/D', $provider ) ) {
 				$facts['rate_limited_provider'] = $provider;
 			}
-			if ( 'unable_to_check' === $result->code() && is_array( $rate_limit ) && is_string( $rate_limit['provider'] ?? null ) && 1 === preg_match( '/\A[^\x00-\x1F\x7F<>]{0,64}\z/Du', $rate_limit['provider'] )
-				&& ( null === ( $rate_limit['retry_at'] ?? null ) || is_int( $rate_limit['retry_at'] ) ) ) {
+			if ( 'unable_to_check' === $result->code() && is_array( $rate_limit ) && ( null === ( $rate_limit['retry_at'] ?? null ) || is_int( $rate_limit['retry_at'] ) ) ) {
+				// A label outside the registry's metadata contract is dropped, not the retry time; the
+				// browser then names "the Git provider" and writes the sentence as text.
+				$label               = $rate_limit['provider'] ?? null;
 				$facts['rate_limit'] = array(
-					'provider' => $rate_limit['provider'],
+					'provider' => is_string( $label ) && strlen( $label ) <= MetadataRules::LABEL_LENGTH && 1 !== preg_match( '/[\x00-\x1F\x7F]/', $label ) ? $label : '',
 					'retry_at' => $rate_limit['retry_at'] ?? null,
 				);
 			}

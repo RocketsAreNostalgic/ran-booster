@@ -169,6 +169,47 @@ final class LookupCredentialHintTest extends TestCase {
 		}
 	}
 
+	public function test_the_add_releases_listing_keeps_the_retry_time_when_the_label_is_unusable(): void {
+		$label    = str_repeat( 'L', 160 );
+		$result   = ProspectiveReleaseResult::failure( 'unable_to_check' );
+		$controls = ReleaseManagementFixture::controls(
+			read_candidates: static function () use ( &$result ): ProspectiveReleaseResult {
+				return $result;
+			},
+			links: $this->links()
+		);
+
+		foreach (
+			array(
+				'a 65-character label'    => array( str_repeat( 'L', 65 ), str_repeat( 'L', 65 ) ),
+				'the contract maximum'    => array( $label, $label ),
+				'over the maximum'        => array( $label . 'L', '' ),
+				'a control character'     => array( "Git\nHub", '' ),
+				'markup, written as text' => array( 'Git <b>Hub</b>', 'Git <b>Hub</b>' ),
+				'no label'                => array( 7, '' ),
+			) as $name => [ $given, $kept ]
+		) {
+			$result  = ProspectiveReleaseResult::failure(
+				'unable_to_check',
+				array(
+					'rate_limit' => array(
+						'provider' => $given,
+						'retry_at' => 1_800_000_000,
+					),
+				)
+			);
+			$outcome = $controls->process_prospective_request( 'list_candidates', $this->prospective_request() );
+			self::assertSame(
+				array(
+					'provider' => $kept,
+					'retry_at' => 1_800_000_000,
+				),
+				$outcome['data']['rate_limit'] ?? null,
+				$name
+			);
+		}
+	}
+
 	/** @return array<string,string> */
 	private function managed_request(): array {
 		return array(

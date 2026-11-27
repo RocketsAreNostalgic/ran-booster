@@ -19,9 +19,6 @@ use RAN\WordPress\WordPressUpdaterLock;
  * selection/active-file/native-marker changes and use its exact mutation owner.
  */
 final class GitHubProviderSelection {
-	// Updater-lock owner tags: a set marker bit in the high half, and the low half's flag for a whole-seconds token.
-	private const TAG_MARKER         = 1 << 62;
-	private const WHOLE_SECONDS_FLAG = 1 << 62;
 	/** @var array<string, mixed>|null */
 	private ?array $state = null;
 	/** @var array<string, array{selection_generation:int,owner_tag:string,target_type:string,installed_identity:string,phase:string}> */
@@ -603,33 +600,38 @@ final class GitHubProviderSelection {
 	 */
 	public static function native_lock_token( array $marker ): ?string {
 		$tag = $marker['owner_tag'] ?? null;
-		if ( ! is_string( $tag ) || 1 !== preg_match( '/\A[4-7][0-9a-f]{15}[0-4][0-9a-f]{15}\z/D', $tag ) ) {
+		if ( ! is_string( $tag ) || 1 !== preg_match( '/\A([0-9a-f]{4})([0-9a-f]{4})([89a-f][0-9a-f]{7})([0-3][0-9a-f]{7})([0-3][0-9a-f]{7})\z/D', $tag, $matches ) ) {
 			return null;
 		}
-		$high    = (int) hexdec( substr( $tag, 0, 16 ) );
-		$low     = (int) hexdec( substr( $tag, 16 ) );
-		$seconds = ( $high >> 28 ) & 0x3FFFFFFFF;
-		$token   = self::WHOLE_SECONDS_FLAG === $low
-			? (string) $seconds
-			: sprintf( '%d.%09d%09d%09d', $seconds, ( ( $high & 0xFFFFFFF ) << 2 ) | ( $low >> 60 ), ( $low >> 30 ) & 0x3FFFFFFF, $low & 0x3FFFFFFF );
+		$groups = array();
+		foreach ( array( $matches[3], $matches[4], $matches[5] ) as $word ) {
+			$groups[] = ( ( (int) hexdec( $word[0] ) & 3 ) << 28 ) | (int) hexdec( substr( $word, 1 ) );
+		}
+		$seconds = sprintf( '%.0f', (float) hexdec( $matches[1] ) * 65536.0 + (float) hexdec( $matches[2] ) );
+		$token   = 4 === ( (int) hexdec( $matches[3][0] ) & 4 ) ? $seconds : sprintf( '%s.%09d%09d%09d', $seconds, ...$groups );
 		// Only the canonical encoding of a valid token decodes.
 		return self::native_lock_tag( $token ) === $tag ? $token : null;
 	}
 
 	/**
 	 * Losslessly pack an updater lock token into the 32-hex owner tag, so recovery gets back the exact lock value.
-	 * The high half carries a marker bit, 34 bits of seconds and the first fraction group's top 28 bits; the low
-	 * half carries the rest of the three 30-bit nine-digit groups, or only a flag for a whole-seconds token.
+	 * Four 32-bit words: the seconds (up to 2^32 - 1), then the three nine-digit fraction groups (30 bits each).
+	 * The first group's two spare top bits carry the tag marker and the whole-seconds flag. Every integer stays
+	 * below 2^31, so 32-bit PHP builds produce the same tags.
 	 */
 	private static function native_lock_tag( string $token ): ?string {
-		if ( 1 === preg_match( '/\A[1-9][0-9]{0,9}\z/D', $token ) ) {
-			return sprintf( '%016x%016x', self::TAG_MARKER | ( (int) $token << 28 ), self::WHOLE_SECONDS_FLAG );
-		}
-		if ( 1 !== preg_match( '/\A([1-9][0-9]{0,9})\.([0-9]{9})([0-9]{9})([0-9]{9})\z/D', $token, $matches ) ) {
+		if ( 1 !== preg_match( '/\A([1-9][0-9]{0,9})(?:\.([0-9]{9})([0-9]{9})([0-9]{9}))?\z/D', $token, $matches ) || (float) $matches[1] > 4294967295.0 ) {
 			return null;
 		}
-		$first = (int) $matches[2];
-		return sprintf( '%016x%016x', self::TAG_MARKER | ( (int) $matches[1] << 28 ) | ( $first >> 2 ), ( ( $first & 3 ) << 60 ) | ( (int) $matches[3] << 30 ) | (int) $matches[4] );
+		$seconds = (float) $matches[1];
+		$high    = (int) floor( $seconds / 65536.0 );
+		$tag     = sprintf( '%04x%04x', $high, (int) ( $seconds - $high * 65536.0 ) );
+		$flags   = isset( $matches[2] ) ? 8 : 12;
+		foreach ( array( $matches[2] ?? '0', $matches[3] ?? '0', $matches[4] ?? '0' ) as $group ) {
+			$tag  .= sprintf( '%x%07x', $flags | ( (int) $group >> 28 ), (int) $group & 0xFFFFFFF );
+			$flags = 0;
+		}
+		return $tag;
 	}
 
 	/** @return array<string,mixed> Internal recovery authority; never expose the native owner in public status. */

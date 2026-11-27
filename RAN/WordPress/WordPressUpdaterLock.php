@@ -125,7 +125,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		}
 
 		$stored = $this->read_lock_value( $options_table );
-		if ( ! self::valid_token( $stored ) || (int) $stored > $now - self::STALE_SECONDS ) {
+		if ( ! self::valid_token( $stored ) || self::live_token( $stored, $now ) ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
 			throw $this->contention_failure();
 		}
@@ -163,7 +163,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 		if ( null !== $stored && ! is_string( $stored ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
-		return self::valid_token( $stored ) && (int) $stored > $this->now() - self::STALE_SECONDS ? $stored : null;
+		return self::valid_token( $stored ) && self::live_token( $stored, $this->now() ) ? $stored : null;
 	}
 
 	/**
@@ -203,7 +203,7 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 				array( $options_table, self::OPTION_NAME ),
 				'var'
 			);
-			if ( ! self::valid_token( $stored ) || (int) $stored > $now - self::STALE_SECONDS ) {
+			if ( ! self::valid_token( $stored ) || self::live_token( $stored, $now ) ) {
 				return null;
 			}
 
@@ -260,6 +260,14 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	/** @phpstan-assert-if-true string $token */
 	private static function valid_token( mixed $token ): bool {
 		return is_string( $token ) && 1 === preg_match( self::TOKEN_PATTERN, $token );
+	}
+
+	/**
+	 * The Branch updater's own expiry test, so both agree on which rows are live: the numeric token is compared
+	 * with the cutoff as beta.20 compares it, never through an integer cast that drops the fraction.
+	 */
+	private static function live_token( string $token, int $now ): bool {
+		return $token > $now - self::STALE_SECONDS;
 	}
 
 	protected function contention_failure(): RuntimeException {

@@ -303,6 +303,54 @@ final class WordPressUpdaterLockTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\A[0-9]+\.[0-9]{27}\z/D', (string) $lock->current_token() );
 	}
 
+	public function test_core_and_the_branch_updater_agree_on_a_fractional_row_at_the_expiry_cutoff(): void {
+		$declaration = new GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$store       = new GitHubSelectionStore( $this->database, 'wp_options' );
+		$store->initialize_bundled( $declaration );
+		$selection = new GitHubProviderSelection( $store, '/unused', $declaration );
+		// The Branch updater reads time() itself: repeat until every check ran inside one second.
+		do {
+			$now     = time();
+			$lock    = new class( $now ) extends WordPressUpdaterLock {
+				public function __construct( private int $fixed_now ) {}
+
+				protected function now(): int {
+					return $this->fixed_now;
+				}
+			};
+			$cutoff  = $now - 3600;
+			$results = array();
+			foreach ( array( $cutoff . '.500000000000000000000000000', (string) $cutoff ) as $row ) {
+				$this->database->option_rows['auto_updater.lock'] = $row;
+				$upstream_live                                    = $row === $lock->current_token();
+				$core_live                                        = $row === $store->selection_transaction( fn ( callable $execute ): ?string => $lock->current_token_sql( $selection->uses_connection( ... ), $execute ) );
+				try {
+					$lock->acquire_replacing_owner( '1.000000000000000000000000000' );
+					$replaced = true;
+				} catch ( RuntimeException ) {
+					$replaced = false;
+				}
+				$replaced = $replaced && $row !== $this->database->option_rows['auto_updater.lock'];
+				$this->database->option_rows['auto_updater.lock'] = $row;
+				$reclaimed                                        = null !== $selection->without_native_mutation_hold( fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute ) );
+				$results[ $row ]                                  = array( $upstream_live, $core_live, $replaced, $reclaimed );
+			}
+		} while ( time() !== $now );
+		// A row one half-second past the cutoff is live for both; a row exactly at the cutoff is expired for both.
+		self::assertSame( array( true, true, false, false ), $results[ $cutoff . '.500000000000000000000000000' ] );
+		self::assertSame( array( false, false, true, true ), $results[ (string) $cutoff ] );
+	}
+
 	public function test_ordinary_release_override_failure_preserves_its_identity_during_stale_acquisition(): void {
 		$this->database->option_rows['auto_updater.lock'] = (string) ( time() - 7200 );
 		$failure = new RuntimeException( 'ordinary release callback' );

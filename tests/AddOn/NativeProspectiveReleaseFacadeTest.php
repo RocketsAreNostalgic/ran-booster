@@ -3402,7 +3402,7 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 		return ! $this->lock_held && ! $this->expired_lock_held && $this->acquire_calls > $this->release_calls ? '1700000004' : null;
 	}
 
-	public function try_acquire_without_reclaim(): ?string {
+	public function try_acquire_without_reclaim( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): ?string {
 		if ( $this->lock_held || $this->expired_lock_held ) {
 			++$this->acquire_calls;
 			return null;
@@ -3415,7 +3415,7 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 	 * @param callable(object, string): bool                                       $same_connection
 	 * @param callable(string, list<string>, 'affected'|'var'): (int|string|null) $execute
 	 */
-	public function acquire_or_reclaim_expired_sql( callable $same_connection, callable $execute ): ?string {
+	public function acquire_or_reclaim_expired_sql( callable $same_connection, callable $execute, string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): ?string {
 		unset( $same_connection, $execute );
 		++$this->acquire_calls;
 		if ( $this->throw_on_acquire ) {
@@ -3446,7 +3446,7 @@ final class ProspectiveUpdaterLock extends WordPressUpdaterLock {
 		}
 	}
 
-	public function acquire(): string {
+	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
 		++$this->acquire_calls;
 		if ( $this->throw_on_acquire || $this->lock_held ) {
 			throw new RuntimeException( 'The test lock could not be acquired.' );

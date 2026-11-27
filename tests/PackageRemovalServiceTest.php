@@ -1351,7 +1351,7 @@ final class RemovalUpdaterLock extends WordPressUpdaterLock {
 	/** @var list<string> */
 	public array $events = array();
 
-	public function acquire(): string {
+	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
 		$this->events[] = 'acquire';
 		if ( ! $this->available ) {
 			throw new \RuntimeException( 'Fixture lock unavailable.' );
@@ -1360,7 +1360,7 @@ final class RemovalUpdaterLock extends WordPressUpdaterLock {
 		return 'fixture-lock';
 	}
 
-	public function try_acquire_without_reclaim(): ?string {
+	public function try_acquire_without_reclaim( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): ?string {
 		$this->events[] = 'acquire';
 		return $this->available ? 'fixture-lock' : null;
 	}

@@ -731,7 +731,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			public ?string $token            = null;
 			public bool $occupied            = false;
 			public bool $acquire_unavailable = false;
-			public function try_acquire_without_reclaim(): ?string {
+			public function try_acquire_without_reclaim( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): ?string {
 				if ( $this->acquire_unavailable ) {
 					throw \RAN\Deployment\DeploymentStorageFailure::unavailable();
 				}
@@ -5945,7 +5945,7 @@ final class RuntimeUpdaterLock extends WordPressUpdaterLock {
 		return $this->token;
 	}
 
-	public function acquire(): string {
+	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
 		++$this->acquires;
 		if ( $this->acquire_fails ) {
 			throw new \RuntimeException( 'busy' );

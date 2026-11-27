@@ -25,6 +25,8 @@ use RuntimeException;
 require_once __DIR__ . '/../Deployment/AttemptRepositoryDatabase.php';
 
 final class WordPressUpdaterLockTest extends TestCase {
+	private const OWNER = 'ran_booster_updater_lock_owner';
+
 	private AttemptRepositoryDatabase $database;
 	private mixed $previous_database;
 
@@ -377,6 +379,124 @@ final class WordPressUpdaterLockTest extends TestCase {
 		// A row one half-second past the cutoff is live for both; a row exactly at the cutoff is expired for both.
 		self::assertSame( array( true, true, false, false ), $results[ $cutoff . '.500000000000000000000000000' ] );
 		self::assertSame( array( false, false, true, true ), $results[ (string) $cutoff ] );
+	}
+
+	public function test_every_booster_acquisition_records_its_owner_and_release_removes_it(): void {
+		$lock  = $this->lock_at( 1700000000 );
+		$token = $lock->acquire( 'branch_deployment' );
+		self::assertSame( $token . '|branch_deployment|1700000000', $this->database->option_rows[ self::OWNER ] );
+		self::assertSame(
+			array(
+				'token'      => $token,
+				'operation'  => 'branch_deployment',
+				'started_at' => 1700000000,
+			),
+			$lock->recorded_owner()
+		);
+		self::assertTrue( $lock->release( $token ) );
+		self::assertSame( array(), $this->database->option_rows );
+
+		// Callers that pass no operation, or an invalid code, record the generic one.
+		$token = (string) $lock->try_acquire_without_reclaim();
+		self::assertSame( WordPressUpdaterLock::DEFAULT_OPERATION, $lock->recorded_owner()['operation'] ?? null );
+		$replacement = $lock->acquire_replacing_owner( $token, 'Not A Code' );
+		self::assertSame( $replacement . '|package_operation|1700000000', $this->database->option_rows[ self::OWNER ] );
+		self::assertTrue( $lock->release( $replacement ) );
+		$seen = null;
+		$lock->run(
+			function () use ( $lock, &$seen ): void {
+				$seen = $lock->recorded_owner()['operation'] ?? null;
+			},
+			owner_operation: 'extension_install'
+		);
+		self::assertSame( 'extension_install', $seen );
+		self::assertSame( array(), $this->database->option_rows );
+	}
+
+	public function test_a_lock_the_record_does_not_name_is_never_shown_or_released(): void {
+		$lock   = new WordPressUpdaterLock();
+		$token  = $lock->acquire();
+		$record = $this->database->option_rows[ self::OWNER ];
+		// A different lock row (WordPress's own, or another owner) or a malformed record names no Booster owner.
+		foreach ( array(
+			(string) time() => $record,
+			$token          => $token . '|package_operation',
+		) as $row => $owner ) {
+			$this->database->option_rows['auto_updater.lock'] = (string) $row;
+			$this->database->option_rows[ self::OWNER ]       = $owner;
+			self::assertNull( $lock->recorded_owner() );
+			self::assertFalse( $lock->release_recorded_owner( $token ) );
+			self::assertSame( (string) $row, $this->database->option_rows['auto_updater.lock'] );
+		}
+		unset( $this->database->option_rows['auto_updater.lock'] );
+		self::assertNull( $lock->recorded_owner() );
+
+		$this->database->option_rows['auto_updater.lock'] = $token;
+		$this->database->option_rows[ self::OWNER ]       = $record;
+		self::assertFalse( $lock->release_recorded_owner( $token . '1' ) );
+		self::assertSame( $token, $this->database->option_rows['auto_updater.lock'] );
+		self::assertTrue( $lock->release_recorded_owner( $token ) );
+		self::assertSame( array(), $this->database->option_rows );
+	}
+
+	public function test_a_lost_owner_record_keeps_the_lock_and_shows_no_owner(): void {
+		$this->database->fail_query_contains = 'ON DUPLICATE KEY UPDATE';
+		$lock                                = new WordPressUpdaterLock();
+		$token                               = $lock->acquire();
+		// WordPress clears the failed write's error on its next query; this fake keeps it.
+		$this->database->last_error = '';
+		self::assertSame( $token, $this->database->option_rows['auto_updater.lock'] );
+		self::assertArrayNotHasKey( self::OWNER, $this->database->option_rows );
+		self::assertNull( $lock->recorded_owner() );
+		self::assertTrue( $lock->release( $token ) );
+	}
+
+	public function test_transactional_acquisition_records_its_owner_in_the_same_transaction(): void {
+		$now         = time();
+		$lock        = $this->lock_at( $now );
+		$declaration = new GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$store       = new GitHubSelectionStore( $this->database, 'wp_options' );
+		$store->initialize_bundled( $declaration );
+		$selection = new GitHubProviderSelection( $store, '/unused', $declaration );
+		$acquire   = fn (): ?string => $selection->without_native_mutation_hold( fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute, 'release_install' ) );
+		// A free lock, then an expired one reclaimed.
+		foreach ( array( null, ( $now - 3601 ) . '.000000000000000000000000000' ) as $held ) {
+			if ( null !== $held ) {
+				$this->database->option_rows['auto_updater.lock'] = $held;
+			}
+			$token = (string) $acquire();
+			self::assertSame( $token . '|release_install|' . $now, $this->database->option_rows[ self::OWNER ] );
+			self::assertSame( $token, $this->database->option_rows['auto_updater.lock'] );
+		}
+		// The record is part of the acquisition: when it cannot be written, the lock is not taken either.
+		unset( $this->database->option_rows['auto_updater.lock'], $this->database->option_rows[ self::OWNER ] );
+		$this->database->fail_query_contains = 'ON DUPLICATE KEY UPDATE';
+		try {
+			$acquire();
+			self::fail( 'A lost owner record must abort the transactional acquisition.' );
+		} catch ( DeploymentStorageFailure | DatabaseLifecycleFailure ) {
+			self::assertArrayNotHasKey( 'auto_updater.lock', $this->database->option_rows );
+		}
+	}
+
+	private function lock_at( int $now ): WordPressUpdaterLock {
+		return new class( $now ) extends WordPressUpdaterLock {
+			public function __construct( private int $fixed_now ) {}
+
+			protected function now(): int {
+				return $this->fixed_now;
+			}
+		};
 	}
 
 	public function test_ordinary_release_override_failure_preserves_its_identity_during_stale_acquisition(): void {

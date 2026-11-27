@@ -6502,7 +6502,7 @@ final class DashboardBranchCheckUpdaterLock extends WordPressUpdaterLock {
 	private bool $held                 = false;
 	private bool $provider_access_held = false;
 
-	public function acquire(): string {
+	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
 		if ( $this->acquire_fails ) {
 			throw new \RuntimeException( 'The package operation lock is busy.' );
 		}

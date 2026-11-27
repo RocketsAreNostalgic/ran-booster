@@ -173,7 +173,7 @@ final class ExtensionInstallerTest extends TestCase {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused in-process lock test double.
 final class FakeExtensionLock extends WordPressUpdaterLock {
 	public int $acquires = 0;
-	public function acquire(): string {
+	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
 		++$this->acquires;
 		return 'token'; }
 	public function release( string $token ): bool {

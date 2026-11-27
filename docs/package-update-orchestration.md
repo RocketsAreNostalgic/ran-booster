@@ -706,8 +706,9 @@ running attempt
   → provider archive and immutable ref
   → archive preflight
   → resolved-ref journal write
+  → last provider branch-head check
   → WordPress auto_updater.lock
-  → post-lock source/applicable-head/artifact rechecks
+  → post-lock target/downgrade/artifact/maintenance rechecks
   → mutation fence
   → Branch WordPressCorePackageExecutor
   → WordPress upgrader
@@ -769,8 +770,8 @@ optimization candidates; it is not a runtime profile.
   hook, and cleanup boundaries. Arbitrary plugin callbacks or other processes
   can run between those boundaries, and cleanup must not delete a replaced
   path.
-- Push-to-Deploy verifies the provider branch head immediately before mutation.
-  This additional provider lookup prevents a delayed authenticated delivery
+- Push-to-Deploy verifies the provider branch head once more just before it
+  takes the updater lock. This additional provider lookup prevents a delayed authenticated delivery
   from deploying a commit that is no longer current.
 - The branch worker processes one attempt per real WP-Cron run. This limits
   request duration and serializes filesystem mutation, but can increase bulk

@@ -225,6 +225,10 @@ namespace RAN\Tests\Deployment {
 				unset( $activity );
 				return 0;
 			}
+			if ( preg_match( "/^INSERT INTO `wp_options` .* VALUES \('(ran_booster_updater_lock_owner)', '([^']+)', 'off'\) ON DUPLICATE KEY UPDATE option_value = '\\2'$/", $query, $matches ) === 1 ) {
+				$this->option_rows[ $matches[1] ] = $matches[2];
+				return 1;
+			}
 			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('([^']+)', '([^']+)', 'off'\)$/", $query, $matches ) === 1 ) {
 				if ( isset( $this->option_rows[ stripslashes( $matches[1] ) ] ) ) {
 					return 0;

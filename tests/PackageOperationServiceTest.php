@@ -196,6 +196,33 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertArrayNotHasKey( 'ran_booster_repository_branch_check', $query );
 	}
 
+	public function test_a_rate_limited_stored_save_signs_the_provider_and_retry_time_into_its_redirect(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator(), $this->plugin() );
+		$retry_at  = time() + 3540;
+
+		$redirect = $dashboard->post_package_operation(
+			'edit-plugin',
+			$this->input(
+				'edit-plugin',
+				array(
+					'deployment_policy'           => DeploymentPolicy::DISABLED->value,
+					'repository_check_skipped'    => 'rate_limited',
+					'repository_check_rate_limit' => array(
+						'provider' => 'GitHub',
+						'retry_at' => $retry_at,
+					),
+				)
+			)
+		);
+
+		self::assertIsString( $redirect );
+		$query = $this->redirect_query( $redirect );
+		self::assertSame( 'edit-rate-limited', $query['ran_booster_result'] );
+		self::assertSame( 'GitHub', $query['ran_booster_retry_provider'] ?? null );
+		self::assertSame( (string) $retry_at, $query['ran_booster_retry_at'] ?? null );
+		self::assertSame( 1, \RAN\wp_verify_nonce( $query['_ran_booster_notice_nonce'], 'ran-booster-package-success|plugin|edit-rate-limited|example/example.php|GitHub|' . $retry_at ) );
+	}
+
 	/** @return array<string, array{string, string, string}> */
 	public static function unchecked_save_notices(): array {
 		return array(
@@ -1647,22 +1674,30 @@ final class PackageOperationServiceTest extends TestCase {
 		// A signed retry time prints the minutes inside <time>, so the shared script can show a local clock time.
 		$retry_at = time() + 3540;
 		$_GET     = array(
-			'ran_booster_result'        => 'edit-rate-limited',
-			'ran_booster_package'       => $identifier,
-			'ran_booster_retry_at'      => (string) $retry_at,
-			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|' . $type . '|edit-rate-limited|' . $identifier . '|' . $retry_at ),
+			'ran_booster_result'         => 'edit-rate-limited',
+			'ran_booster_package'        => $identifier,
+			'ran_booster_retry_provider' => 'GitHub',
+			'ran_booster_retry_at'       => (string) $retry_at,
+			'_ran_booster_notice_nonce'  => \RAN\wp_create_nonce( 'ran-booster-package-success|' . $type . '|edit-rate-limited|' . $identifier . '|GitHub|' . $retry_at ),
 		);
 		$timed    = $this->dashboard( new OperationCoordinator() );
 		self::assertNotNull( $this->invoke_package_success_notice( $timed, $type ) );
 		self::assertSame(
-			'Your settings were saved using the repository details Booster already had. <time datetime="' . gmdate( 'Y-m-d\\TH:i:s\\Z', $retry_at ) . '" data-ran-booster-rate-limit="">The Git provider is limiting lookups from this site. Try again in about 59 minutes.</time>',
+			'Your settings were saved using the repository details Booster already had. <time datetime="' . gmdate( 'Y-m-d\\TH:i:s\\Z', $retry_at ) . '" data-ran-booster-rate-limit="GitHub">GitHub is limiting lookups from this site. Try again in about 59 minutes.</time>',
 			$timed->messages[0]['message'] ?? null
 		);
-		// A changed time no longer matches the signed marker.
-		$_GET['ran_booster_retry_at'] = (string) ( $retry_at + 600 );
-		$tampered                     = $this->dashboard( new OperationCoordinator() );
-		self::assertNull( $this->invoke_package_success_notice( $tampered, $type ) );
-		self::assertSame( array(), $tampered->messages );
+		// A changed time or provider no longer matches the signed marker.
+		foreach ( array(
+			'ran_booster_retry_at'       => (string) ( $retry_at + 600 ),
+			'ran_booster_retry_provider' => 'Elsewhere',
+		) as $key => $value ) {
+			$original     = $_GET[ $key ];
+			$_GET[ $key ] = $value;
+			$tampered     = $this->dashboard( new OperationCoordinator() );
+			self::assertNull( $this->invoke_package_success_notice( $tampered, $type ) );
+			self::assertSame( array(), $tampered->messages );
+			$_GET[ $key ] = $original;
+		}
 	}
 
 	public function test_unsigned_unverified_edit_marker_cannot_create_a_notice(): void {

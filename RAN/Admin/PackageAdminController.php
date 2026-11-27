@@ -72,7 +72,7 @@ final class PackageAdminController {
 
 		check_admin_referer( $action );
 		// Only a skipped provider re-check set below may carry this marker; never the browser.
-		unset( $request['repository_check_skipped'], $request['repository_check_retry_at'] );
+		unset( $request['repository_check_skipped'], $request['repository_check_rate_limit'] );
 		$reinstall = in_array( $action, array( 'edit-plugin', 'edit-theme' ), true )
 			&& $this->enabled( $request, 'reinstall_after_save' );
 		if ( $reinstall ) {
@@ -342,9 +342,9 @@ final class PackageAdminController {
 			// A saved branch is checked on the settings page it returns to, unless the save skipped the provider.
 			$check_branch = 'edited' === $status && null === $check_skipped && PackageSource::BRANCH === $result['package']->get_source();
 
-			$retry_at = 'edit-rate-limited' === $check_skipped && is_int( $request['repository_check_retry_at'] ?? null ) ? $request['repository_check_retry_at'] : null;
+			$rate_limit = 'edit-rate-limited' === $check_skipped && is_array( $request['repository_check_rate_limit'] ?? null ) ? $request['repository_check_rate_limit'] : null;
 
-			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status, $check_skipped, $check_branch, $retry_at );
+			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status, $check_skipped, $check_branch, $rate_limit );
 		}
 		if ( in_array( $status, array( 'unlinked', 'deleted' ), true ) ) {
 
@@ -390,10 +390,10 @@ final class PackageAdminController {
 		$operation  = sanitize_key( wp_unslash( (string) $_GET['ran_booster_result'] ) );
 		$identifier = sanitize_text_field( wp_unslash( (string) $_GET['ran_booster_package'] ) );
 		$nonce      = wp_unslash( (string) $_GET['_ran_booster_notice_nonce'] );
-		// The retry time is part of the signed marker, so a changed or added time fails verification.
-		$retry_at = isset( $_GET['ran_booster_retry_at'] ) && is_string( $_GET['ran_booster_retry_at'] ) && 1 === preg_match( '/\A[1-9][0-9]{0,11}\z/D', $_GET['ran_booster_retry_at'] ) ? (int) $_GET['ran_booster_retry_at'] : null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified with the marker nonce below.
+		// The provider and retry time are part of the signed marker, so a changed or added value fails verification.
+		$rate_limit = self::requested_rate_limit();
 		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'edit-unverified', 'edit-rate-limited', 'edit-unchecked', 'unlink', 'unlink-absent', 'unlink-on-disk', 'unlink-and-delete', 'already-managed' ), true )
-			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier . ( null === $retry_at ? '' : '|' . $retry_at ) ) ) {
+			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier . self::rate_limit_marker( $rate_limit ) ) ) {
 			return null;
 		}
 		$rate_limited = 'edit-rate-limited' === $operation;
@@ -403,12 +403,7 @@ final class PackageAdminController {
 					'type'     => 'warning',
 					'feedback' => 'package_edit_unverified',
 					'message'  => $rate_limited
-						? esc_html__( 'Your settings were saved using the repository details Booster already had.', 'ran-booster' ) . ' ' . ProviderFailure::rate_limit_html(
-							array(
-								'provider' => $this->package_provider_label( $type, $identifier ),
-								'retry_at' => $retry_at,
-							)
-						)
+						? esc_html__( 'Your settings were saved using the repository details Booster already had.', 'ran-booster' ) . ' ' . ProviderFailure::rate_limit_html( $rate_limit )
 						: __( "Your settings were saved using the stored repository details. Booster couldn't recheck them with the Git provider.", 'ran-booster' ),
 				)
 			);
@@ -779,16 +774,33 @@ final class PackageAdminController {
 		return null;
 	}
 
-	/** The managed package's provider label, or an empty string when it is unavailable. */
-	private function package_provider_label( string $type, string $identifier ): string {
-		try {
-			$package = 'plugin' === $type ? $this->plugins?->booster_plugin_from_file( $identifier ) : $this->themes?->booster_theme_from_stylesheet( $identifier );
-			$code    = $package instanceof Package ? (string) $package->get_provider_code() : '';
+	/**
+	 * The signed suffix for a save that skipped a rate-limited check; empty for every other result.
+	 *
+	 * @param array{provider:string,retry_at:int|null}|null $rate_limit
+	 */
+	private static function rate_limit_marker( ?array $rate_limit ): string {
+		return null === $rate_limit ? '' : '|' . $rate_limit['provider'] . '|' . ( $rate_limit['retry_at'] ?? '' );
+	}
 
-			return $this->providers?->metadata()[ $code ]->label ?? '';
-		} catch ( Throwable ) {
-			return '';
+	/**
+	 * The rate-limit facts a result address carries, screened before its marker nonce is checked.
+	 *
+	 * @return array{provider:string,retry_at:int|null}|null
+	 */
+	private static function requested_rate_limit(): ?array {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- add_success_notice() verifies these values inside the marker nonce.
+		$provider = isset( $_GET['ran_booster_retry_provider'] ) && is_string( $_GET['ran_booster_retry_provider'] ) ? sanitize_text_field( wp_unslash( $_GET['ran_booster_retry_provider'] ) ) : null;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- add_success_notice() verifies these values inside the marker nonce.
+		$retry_at = isset( $_GET['ran_booster_retry_at'] ) && is_string( $_GET['ran_booster_retry_at'] ) ? sanitize_text_field( wp_unslash( $_GET['ran_booster_retry_at'] ) ) : '';
+		if ( null === $provider || 1 !== preg_match( '/\A[^\x00-\x1F\x7F<>|]{0,64}\z/Du', $provider ) || 1 !== preg_match( '/\A(?:[1-9][0-9]{0,11})?\z/D', $retry_at ) ) {
+			return null;
 		}
+
+		return array(
+			'provider' => $provider,
+			'retry_at' => '' === $retry_at ? null : (int) $retry_at,
+		);
 	}
 
 	/**
@@ -809,13 +821,15 @@ final class PackageAdminController {
 			return null;
 		}
 
-		$reason   = ProviderFailure::from_throwable( $failure )?->reason;
-		$marker   = in_array( $reason, array( 'rate_limited', 'rate_limited_secondary' ), true ) ? 'rate_limited' : '1';
-		$retry_at = ProviderFailure::carried( $failure )?->rate_limit( '', time() )['retry_at'] ?? null;
-		$stored   = $this->saved_from_stored( $request, $stored_package, 'http_' . $failure->getCode(), $marker );
-		if ( null !== $stored && null !== $retry_at ) {
-			// The retry time reaches the result notice through the signed redirect.
-			$stored['repository_check_retry_at'] = $retry_at;
+		$reason     = ProviderFailure::from_throwable( $failure )?->reason;
+		$marker     = in_array( $reason, array( 'rate_limited', 'rate_limited_secondary' ), true ) ? 'rate_limited' : '1';
+		$provider   = (string) $stored_package->get_provider_code();
+		$label      = $this->providers?->metadata()[ $provider ]->label ?? '';
+		$rate_limit = ProviderFailure::carried( $failure )?->rate_limit( 1 === preg_match( '/\A[^\x00-\x1F\x7F<>|]{0,64}\z/Du', $label ) ? $label : '', time() );
+		$stored     = $this->saved_from_stored( $request, $stored_package, 'http_' . $failure->getCode(), $marker );
+		if ( null !== $stored && null !== $rate_limit ) {
+			// The provider and retry time reach the result notice through the signed redirect.
+			$stored['repository_check_rate_limit'] = $rate_limit;
 		}
 
 		return $stored;
@@ -851,8 +865,11 @@ final class PackageAdminController {
 		return $stored;
 	}
 
-	/** @param array<string, string> $list_arguments */
-	private function success_redirect( PackageOperation $operation, Package|string $package, array $list_arguments, bool $install_another = false, bool $return_to_settings = false, ?string $result_operation = null, bool $check_branch = false, ?int $retry_at = null ): string {
+	/**
+	 * @param array<string, string>                   $list_arguments
+	 * @param array{provider:string,retry_at:int|null}|null $rate_limit Facts for a save that skipped a rate-limited check.
+	 */
+	private function success_redirect( PackageOperation $operation, Package|string $package, array $list_arguments, bool $install_another = false, bool $return_to_settings = false, ?string $result_operation = null, bool $check_branch = false, ?array $rate_limit = null ): string {
 		$identifier = $package instanceof Package ? $package->get_identifier() : $package;
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The deployed package identity is unavailable.' );
@@ -864,10 +881,11 @@ final class PackageAdminController {
 			'page'                      => $install_another ? 'ran-booster-' . $type . 's-create' : 'ran-booster-' . $type . 's',
 			'ran_booster_result'        => $result_operation,
 			'ran_booster_package'       => $identifier,
-			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $result_operation . '|' . $identifier . ( null === $retry_at ? '' : '|' . $retry_at ) ),
+			'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $result_operation . '|' . $identifier . self::rate_limit_marker( $rate_limit ) ),
 		);
-		if ( null !== $retry_at ) {
-			$args['ran_booster_retry_at'] = (string) $retry_at;
+		if ( null !== $rate_limit ) {
+			$args['ran_booster_retry_provider'] = $rate_limit['provider'];
+			$args['ran_booster_retry_at']       = (string) ( $rate_limit['retry_at'] ?? '' );
 		}
 		if ( $install_another ) {
 			$args['provider']    = (string) $operation->provider_code;

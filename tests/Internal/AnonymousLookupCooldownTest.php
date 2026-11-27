@@ -46,6 +46,10 @@ final class AnonymousLookupCooldownTest extends TestCase {
 		self::assertSame( self::NOW + 3540, AnonymousLookupCooldown::until( 'gh', self::NOW ) );
 		self::assertNull( AnonymousLookupCooldown::until( 'gh', self::NOW + 3540 ) );
 		self::assertNull( AnonymousLookupCooldown::until( 'bb', self::NOW ) );
+
+		// The options table, used without a persistent object cache, returns the integer as a string.
+		$GLOBALS['ran_booster_cooldown_transients']['ran_booster_anonymous_cooldown_gh'] = array( 'value' => (string) ( self::NOW + 3540 ) );
+		self::assertSame( self::NOW + 3540, AnonymousLookupCooldown::until( 'gh', self::NOW ) );
 	}
 
 	public function test_an_unknown_past_or_distant_deadline_is_never_stored(): void {
@@ -75,7 +79,7 @@ final class AnonymousLookupCooldownTest extends TestCase {
 		);
 		self::assertSame( array(), $GLOBALS['ran_booster_cooldown_transients'] );
 
-		foreach ( array( 'not-an-int', array( self::NOW + 60 ), self::NOW + 86401, false ) as $stored ) {
+		foreach ( array( 'not-an-int', '0123', '1800000060.5', array( self::NOW + 60 ), self::NOW + 86401, (string) ( self::NOW + 86401 ), false ) as $stored ) {
 			$GLOBALS['ran_booster_cooldown_transients']['ran_booster_anonymous_cooldown_gh'] = array( 'value' => $stored );
 			self::assertNull( AnonymousLookupCooldown::until( 'gh', self::NOW ) );
 		}

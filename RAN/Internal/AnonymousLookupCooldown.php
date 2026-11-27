@@ -32,6 +32,8 @@ final class AnonymousLookupCooldown {
 			return null;
 		}
 		$now ??= time();
+		// Without a persistent object cache the options table returns the stored integer as a string.
+		$retry_at = is_string( $retry_at ) && 1 === preg_match( '/\A[1-9][0-9]{0,11}\z/D', $retry_at ) ? (int) $retry_at : $retry_at;
 
 		return is_int( $retry_at ) && $retry_at > $now && $retry_at <= $now + 86400 ? $retry_at : null;
 	}

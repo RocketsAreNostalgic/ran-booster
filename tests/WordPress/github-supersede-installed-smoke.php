@@ -18,9 +18,12 @@ $ran_booster_assert = static function ( bool $condition, string $reason ): void 
 };
 
 $ran_booster_site = realpath( (string) getenv( 'RAN_BOOSTER_WORDPRESS_PATH' ) );
+if ( false === $ran_booster_site ) {
+	throw new RuntimeException( 'Installed GitHub supersede proof: requires the marked disposable CI site' );
+}
 $ran_booster_assert(
 	defined( 'WP_CLI' ) && WP_CLI && '1' === getenv( 'RAN_BOOSTER_GITHUB_SUPERSEDE_DISPOSABLE' )
-		&& false !== $ran_booster_site && rtrim( ABSPATH, '/' ) === $ran_booster_site
+		&& rtrim( ABSPATH, '/' ) === $ran_booster_site
 		&& WP_CONTENT_DIR === $ran_booster_site . '/wp-content' && WP_PLUGIN_DIR === $ran_booster_site . '/wp-content/plugins'
 		&& 'http://localhost' === get_option( 'siteurl' ) && 'http://localhost' === get_option( 'home' ),
 	'requires the marked disposable CI site'

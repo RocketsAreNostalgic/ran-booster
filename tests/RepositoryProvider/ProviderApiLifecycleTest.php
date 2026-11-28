@@ -76,16 +76,12 @@ final class ProviderApiLifecycleTest extends TestCase {
 
 		self::assertFalse( $registry->hasMethod( 'logging' ) );
 		self::assertCount( 7, $parameters );
-		foreach ( array(
-			6 => array( 'bundled_github_factory', 'callable', null ),
-		) as $index => $expected ) {
-			self::assertSame( $expected[0], $parameters[ $index ]->getName() );
-			self::assertTrue( $parameters[ $index ]->isOptional() );
-			self::assertSame( $expected[2], $parameters[ $index ]->getDefaultValue() );
-			self::assertInstanceOf( ReflectionNamedType::class, $parameters[ $index ]->getType() );
-			self::assertSame( $expected[1], $parameters[ $index ]->getType()->getName() );
-			self::assertSame( null === $expected[2], $parameters[ $index ]->allowsNull() );
-		}
+		self::assertSame( 'bundled_github_factory', $parameters[6]->getName() );
+		self::assertTrue( $parameters[6]->isOptional() );
+		self::assertNull( $parameters[6]->getDefaultValue() );
+		self::assertInstanceOf( ReflectionNamedType::class, $parameters[6]->getType() );
+		self::assertSame( 'callable', $parameters[6]->getType()->getName() );
+		self::assertTrue( $parameters[6]->allowsNull() );
 		self::assertSame( 'activity_reporter_factory', $parameters[5]->getName() );
 		self::assertTrue( $parameters[5]->isOptional() );
 		self::assertSame( 'registration_context', $parameters[4]->getName() );

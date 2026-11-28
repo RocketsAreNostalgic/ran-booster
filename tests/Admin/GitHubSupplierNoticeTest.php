@@ -55,10 +55,12 @@ final class GitHubSupplierNoticeTest extends TestCase {
 
 	public function test_nothing_is_shown_or_recorded_without_both_capabilities_or_outside_scope(): void {
 		$GLOBALS['ran_booster_supplier_caps'] = array( 'manage_options' );
-		self::assertSame( '', $this->render( 'alpha', array( 'alpha' ) ) );
+		$without_capability                   = $this->render( 'alpha', array( 'alpha' ) );
+		self::assertSame( '', $without_capability );
 		$GLOBALS['ran_booster_supplier_caps']   = array( 'manage_options', 'activate_plugins' );
 		$GLOBALS['ran_booster_supplier_screen'] = 'dashboard';
-		self::assertSame( '', $this->render( 'alpha', array( 'alpha' ) ) );
+		$outside_scope                          = $this->render( 'alpha', array( 'alpha' ) );
+		self::assertSame( '', $outside_scope );
 		self::assertSame( array(), $GLOBALS['ran_booster_supplier_options'] );
 	}
 

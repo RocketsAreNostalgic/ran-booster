@@ -86,8 +86,6 @@ if ( ! class_exists( \RAN\Dashboard::class, false ) ) {
 
 final class DashboardIndexRoutingTest extends TestCase {
 
-	private const LOCK_TOKEN = '1700000000';
-
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$_GET = array();
@@ -2070,30 +2068,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
 			$dashboard->provider_tab_url( 'gh' )
 		);
-	}
-
-	/** @param array<string, mixed> $extra */
-	private function redirect_for( Dashboard $dashboard, string $action, array $extra = array() ): string {
-		$dispatcher = new class() extends \RAN\Dispatcher {
-			public function __construct() {
-			}
-
-			protected function redirect_to( string $url ): never {
-				throw new RuntimeException( $url );
-			}
-		};
-		$profiles   = $this->createMock( \RAN\Admin\ProviderProfileAdminController::class );
-		( new \ReflectionProperty( \RAN\Dispatcher::class, 'dashboard' ) )->setValue( $dispatcher, $dashboard );
-		( new \ReflectionProperty( \RAN\Dispatcher::class, 'provider_profiles' ) )->setValue( $dispatcher, $profiles );
-		$_POST = array( 'ran_booster' => array( 'action' => $action ) + $extra );
-		try {
-			$dispatcher->dispatch_post_requests();
-		} catch ( RuntimeException $redirect ) {
-			return $redirect->getMessage();
-		} finally {
-			$_POST = array();
-		}
-		self::fail( 'The action did not redirect.' );
 	}
 
 	/** @param array<string, mixed> $data */

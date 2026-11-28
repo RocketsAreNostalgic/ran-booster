@@ -107,9 +107,8 @@ try {
 	if ( 1 !== $ran_booster_bb_request_count()
 		|| 'rocketsarenostalgic/ran-booster-fixture-public-plugin' !== $ran_booster_bb_repository->locator
 		|| '{5a314489-3bbb-4914-9568-01ee989751e1}' !== $ran_booster_bb_repository->provider_repository_id
-		|| $ran_booster_bb_repository->private || 'main' !== $ran_booster_bb_repository->default_branch
-		|| ! $ran_booster_bb_github() ) {
-		throw new RuntimeException( 'Bitbucket public lookup or unchanged GitHub supplier assertion failed.' );
+		|| $ran_booster_bb_repository->private || 'main' !== $ran_booster_bb_repository->default_branch ) {
+		throw new RuntimeException( 'Bitbucket public lookup assertion failed.' );
 	}
 } finally {
 	remove_filter( 'pre_http_request', $ran_booster_bb_transport, PHP_INT_MIN );

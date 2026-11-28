@@ -2517,11 +2517,17 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered provider callable signature while returning a controlled result.
 			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$references ): RepositoryReleaseCandidateList {
 				$references[] = $repository->credential_id;
+				if ( 'package-profile' === $repository->credential_id ) {
+					throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.' );
+				}
 				return new RepositoryReleaseCandidateList( array() );
 			},
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered provider callable signature while returning a controlled result.
 			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ) use ( &$references ): RepositoryReleaseInspection {
 				$references[] = $repository->credential_id;
+				if ( 'package-profile' === $repository->credential_id ) {
+					throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.' );
+				}
 				return new RepositoryReleaseInspection( $release_id, $tag, '2.0.0', str_repeat( 'a', 40 ), 'example', 'example.php', 'v1:' . str_repeat( 'b', 64 ) );
 			}
 		);
@@ -2542,12 +2548,17 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'activate_plugins' => false,
 		);
 		try {
-			foreach ( array( 'public', 'explicit' ) as $current ) {
-				$nonce = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
-				self::assertInstanceOf( RepositoryReleaseCandidateList::class, $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
-				$nonce = $facade->nonce_action( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
-				self::assertTrue( $facade->inspect_candidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce )?->ready() );
-			}
+			$nonce = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+			self::assertInstanceOf( RepositoryReleaseCandidateList::class, $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+			$nonce = $facade->nonce_action( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
+			self::assertTrue( $facade->inspect_candidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce )?->ready() );
+
+			// A failed read under the package's own credential never falls back to the default lookup profile.
+			$current = 'explicit';
+			$nonce   = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+			self::assertNull( $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+			$nonce = $facade->nonce_action( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
+			self::assertNull( $facade->inspect_candidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce ) );
 		} finally {
 			unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_capability_checks'] );
 		}

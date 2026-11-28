@@ -7,6 +7,8 @@ namespace RAN\Tests\RepositoryProvider;
 require_once __DIR__ . '/AuthenticatedPreparedArchiveWordPressFunctions.php';
 
 use Closure;
+use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\AuthenticatedPreparedArchive;
 use RuntimeException;
@@ -78,6 +80,53 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		} finally {
 			$public->cleanup();
 		}
+	}
+
+	public function test_redirect_hosts_default_to_none_and_keep_an_exact_provider_list(): void {
+		$none   = new AuthenticatedPreparedArchive( 'https://archives.example.test/none.zip', self::REF );
+		$listed = new AuthenticatedPreparedArchive( 'https://archives.example.test/listed.zip', self::REF, redirect_hosts: array( 'codeload.example.test', 'cdn-1.archives.example' ) );
+		try {
+			self::assertSame( array(), $none->redirect_hosts() );
+			self::assertSame( array( 'codeload.example.test', 'cdn-1.archives.example' ), $listed->redirect_hosts() );
+			$this->assert_no_hooks();
+		} finally {
+			$none->cleanup();
+			$listed->cleanup();
+		}
+	}
+
+	/** @return iterable<string, array{array<mixed>}> */
+	public static function invalid_redirect_hosts(): iterable {
+		yield 'keyed list' => array( array( 'host' => 'codeload.example.test' ) );
+		yield 'more than eight' => array( array_map( static fn ( int $index ): string => 'cdn' . $index . '.example.test', range( 1, 9 ) ) );
+		yield 'duplicate' => array( array( 'codeload.example.test', 'codeload.example.test' ) );
+		yield 'not a string' => array( array( 42 ) );
+		yield 'empty' => array( array( '' ) );
+		yield 'upper case' => array( array( 'Codeload.example.test' ) );
+		yield 'single label' => array( array( 'localhost' ) );
+		yield 'IPv4 literal' => array( array( '192.0.2.10' ) );
+		yield 'IPv6 literal' => array( array( '[2001:db8::1]' ) );
+		yield 'port' => array( array( 'codeload.example.test:443' ) );
+		yield 'wildcard' => array( array( '*.example.test' ) );
+		yield 'trailing dot' => array( array( 'codeload.example.test.' ) );
+		yield 'URL' => array( array( 'https://codeload.example.test/' ) );
+		yield 'label edge hyphen' => array( array( '-codeload.example.test' ) );
+		yield 'overlong label' => array( array( str_repeat( 'a', 64 ) . '.example.test' ) );
+	}
+
+	/** @param array<mixed> $hosts */
+	#[DataProvider( 'invalid_redirect_hosts' )]
+	public function test_invalid_redirect_hosts_refuse_with_a_fixed_code_before_reserving_anything( array $hosts ): void {
+		$url = 'https://archives.example.test/refused.zip';
+		try {
+			new AuthenticatedPreparedArchive( $url, self::REF, $this->authorizer( 'Bearer private-canary' ), redirect_hosts: $hosts );
+			self::fail( 'Invalid redirect hosts must be refused.' );
+		} catch ( InvalidArgumentException $failure ) {
+			self::assertSame( 'archive_redirect_hosts_invalid', $failure->getMessage() );
+		}
+		$this->assert_no_hooks();
+		$again = new AuthenticatedPreparedArchive( $url, self::REF );
+		$again->cleanup();
 	}
 
 	public function test_released_public_url_can_be_prepared_again(): void {

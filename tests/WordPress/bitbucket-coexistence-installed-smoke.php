@@ -1,27 +1,20 @@
 <?php
 
-// Read-only connected proof; the owning shell installs the immutable add-on and sets GH state.
+// Read-only connected proof; the owning shell installs the immutable add-on and sets the GitHub claim.
 
-use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
-use RAN_Booster_GitHubReplacementFixture\Fixture;
-
-if ( ! class_exists( Fixture::class, false ) ) {
-	require_once dirname( __DIR__ ) . '/fixtures/github-replacement/fixture.php';
-}
-Fixture::guard();
 
 $ran_booster_bb_site     = realpath( (string) getenv( 'RAN_BOOSTER_WORDPRESS_PATH' ) );
 $ran_booster_bb_expected = getenv( 'RAN_BOOSTER_BITBUCKET_EXPECT_GH' );
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI || ! current_user_can( 'manage_options' )
 	|| '1' !== getenv( 'RAN_BOOSTER_BITBUCKET_TEST_DISPOSABLE' )
-	|| ! in_array( $ran_booster_bb_expected, array( 'available', 'unavailable' ), true )
+	|| ! in_array( $ran_booster_bb_expected, array( ProviderRegistry::GITHUB_BUNDLED, 'ran-booster-github-provider-extension', ProviderRegistry::GITHUB_SUPERSEDE_FAILED ), true )
 	|| false === $ran_booster_bb_site || rtrim( ABSPATH, '/' ) !== $ran_booster_bb_site
 	|| WP_CONTENT_DIR !== $ran_booster_bb_site . '/wp-content'
 	|| WP_PLUGIN_DIR !== $ran_booster_bb_site . '/wp-content/plugins'
-	|| Fixture::expected_origin() !== get_option( 'siteurl' ) ) {
-	throw new RuntimeException( 'Bitbucket selection proof requires the marked disposable CI site and explicit GH availability.' );
+	|| 'http://localhost' !== get_option( 'siteurl' ) ) {
+	throw new RuntimeException( 'Bitbucket coexistence proof requires the marked disposable CI site and an explicit GitHub supplier.' );
 }
 $ran_booster_bb_marker = $ran_booster_bb_site . '/.ran-booster-disposable-test-site';
 if ( ! is_file( $ran_booster_bb_marker ) || is_link( $ran_booster_bb_marker ) ) {
@@ -65,7 +58,7 @@ $ran_booster_bb_transport     = static function ( mixed $response, array $argume
 		|| true !== ( $arguments['reject_unsafe_urls'] ?? null )
 		|| 'application/json' !== ( $arguments['headers']['Accept'] ?? null )
 		|| 'RAN-Booster' !== ( $arguments['headers']['User-Agent'] ?? null ) ) {
-		throw new RuntimeException( 'Unexpected or credential-bearing HTTP request during Bitbucket selection proof.' );
+		throw new RuntimeException( 'Unexpected or credential-bearing HTTP request during Bitbucket coexistence proof.' );
 	}
 	++$ran_booster_bb_requests->count;
 	return array(
@@ -89,12 +82,11 @@ $ran_booster_bb_transport     = static function ( mixed $response, array $argume
 add_filter( 'pre_http_request', $ran_booster_bb_transport, PHP_INT_MIN, 3 );
 try {
 	$ran_booster_bb_container = require __DIR__ . '/core-container-fixture.php';
-	$ran_booster_bb_selection = $ran_booster_bb_container->make( GitHubProviderSelection::class );
 	$ran_booster_bb_registry  = $ran_booster_bb_container->make( ProviderRegistry::class );
-	$ran_booster_bb_available = 'available' === $ran_booster_bb_expected;
-	if ( $ran_booster_bb_available !== $ran_booster_bb_selection->operation_allowed()
-		|| ! $ran_booster_bb_registry->is_sealed() ) {
-		throw new RuntimeException( 'Installed GH authority does not match the explicit proof phase.' );
+	$ran_booster_bb_github    = static fn (): bool => $ran_booster_bb_expected === $ran_booster_bb_registry->github_supplier()
+		&& ( ProviderRegistry::GITHUB_SUPERSEDE_FAILED !== $ran_booster_bb_expected ) === isset( $ran_booster_bb_registry->all()['gh'] );
+	if ( ! $ran_booster_bb_registry->is_sealed() || ! $ran_booster_bb_github() ) {
+		throw new RuntimeException( 'Installed GitHub supplier does not match the explicit proof phase.' );
 	}
 	$ran_booster_bb_provider   = $ran_booster_bb_registry->get( 'bb' );
 	$ran_booster_bb_reflection = new ReflectionClass( $ran_booster_bb_provider );
@@ -116,10 +108,10 @@ try {
 		|| 'rocketsarenostalgic/ran-booster-fixture-public-plugin' !== $ran_booster_bb_repository->locator
 		|| '{5a314489-3bbb-4914-9568-01ee989751e1}' !== $ran_booster_bb_repository->provider_repository_id
 		|| $ran_booster_bb_repository->private || 'main' !== $ran_booster_bb_repository->default_branch
-		|| $ran_booster_bb_available !== $ran_booster_bb_selection->operation_allowed() ) {
-		throw new RuntimeException( 'Bitbucket public lookup or unchanged GH authority assertion failed.' );
+		|| ! $ran_booster_bb_github() ) {
+		throw new RuntimeException( 'Bitbucket public lookup or unchanged GitHub supplier assertion failed.' );
 	}
 } finally {
 	remove_filter( 'pre_http_request', $ran_booster_bb_transport, PHP_INT_MIN );
 }
-echo 'Actual installed Bitbucket public lookup passed with the expected GH availability.' . PHP_EOL;
+echo 'Actual installed Bitbucket public lookup passed with the expected GitHub supplier.' . PHP_EOL;

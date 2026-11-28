@@ -327,9 +327,6 @@ if ( '15.0' !== Database::$booster_db_version ) {
 	throw new RuntimeException( 'The database smoke requires the schema 15.0 lifecycle.' );
 }
 
-$ran_booster_selection_proof = require __DIR__ . '/selection-install-lifecycle-proof.php';
-$ran_booster_selection_proof( $wpdb );
-
 $ran_booster_schema_seven_package = array(
 	'package'                => 'ran-booster-schema-seven-marker/ran-booster-schema-seven-marker.php',
 	'repository'             => 'example/schema-seven-marker',
@@ -763,11 +760,5 @@ if ( ! is_callable( $ran_booster_option_proof ) ) {
 	throw new RuntimeException( 'The option concurrency proof is unavailable.' );
 }
 $ran_booster_option_proof( $wpdb );
-
-$ran_booster_selection_proof = require __DIR__ . '/github-selection-storage-smoke.php';
-if ( ! is_callable( $ran_booster_selection_proof ) ) {
-	throw new RuntimeException( 'The GitHub selection SQL proof is unavailable.' );
-}
-$ran_booster_selection_proof( $wpdb );
 
 WP_CLI::success( 'RAN Booster database storage smoke passed on ' . $wpdb->db_server_info() . '.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# Requires github-replacement-installed-smoke.sh first and a real localhost HTTP
-# server serving the same disposable site. This is not browser/manual acceptance.
+# Requires a real localhost HTTP server serving the same disposable site. GitHub
+# is superseded by the offline provider fixture, so no request leaves the runner.
+# This is not browser/manual acceptance.
 wordpress="${RAN_BOOSTER_WORDPRESS_PATH:?Set the disposable WordPress path.}"
 php_bin="${PHP_BIN:?Set PHP.}"
 wp_cli="${WP_CLI_BIN:?Set WP-CLI.}"
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
-proof="$root/tests/WordPress/portability-selection-installed-smoke.php"
-replacement="$root/tests/WordPress/github-replacement-installed-smoke.php"
-run_phase() { "$php_bin" "$wp_cli" eval-file "$proof" "$@" --use-include --user=fixture-admin --path="$wordpress"; }
-switch_phase() { "$php_bin" "$wp_cli" eval-file "$replacement" "$@" --user=fixture-admin --path="$wordpress"; }
+proof="$root/tests/WordPress/portability-installed-smoke.php"
+provider="$wordpress/wp-content/plugins/ran-booster-github-offline-provider"
+marker="$wordpress/.ran-booster-disposable-test-site"
+run_phase() { "$php_bin" "$wp_cli" eval-file "$proof" "$@" --use-include --user=admin --path="$wordpress"; }
+# Install and activate the offline provider; it supersedes bundled GitHub from the next request.
+install_provider() {
+  [[ -f "$marker" && ! -L "$marker" && "$(<"$marker")" == 'RAN Booster disposable test site' ]] || { echo 'Exact disposable marker required.' >&2; exit 2; }
+  [[ ! -L "$wordpress/wp-content/plugins" && ! -e "$provider" && ! -L "$provider" ]] || { echo 'Fresh non-symlinked provider destination required.' >&2; exit 2; }
+  mkdir "$provider"
+  cp -R "$root/tests/fixtures/ran-booster-github-offline-provider/." "$provider/"
+  "$php_bin" "$wp_cli" plugin activate ran-booster-github-offline-provider --path="$wordpress"
+}
 # Explicit separate mode: never silently skip missing Migrator prerequisites.
 if [[ "${1:-core}" == migrator ]]; then
   migrator_source="${RAN_MIGRATOR_SOURCE_PATH:?Set exact source helper checkout.}"
@@ -20,9 +29,8 @@ if [[ "${1:-core}" == migrator ]]; then
   git -C "$migrator_source" diff --quiet HEAD -- tests/installed-candidate scripts
   export RAN_MIGRATOR_PROOF_DISPOSABLE=1
   export RAN_MIGRATOR_WORDPRESS_PATH="$wordpress"
-  RAN_MIGRATOR_EXPECTED_SITE_URL="$(switch_phase expected-origin)"
-  export RAN_MIGRATOR_EXPECTED_SITE_URL
-  export RAN_MIGRATOR_WP_USER=fixture-admin
+  export RAN_MIGRATOR_EXPECTED_SITE_URL=http://localhost
+  export RAN_MIGRATOR_WP_USER=admin
   helper="$migrator_source/tests/installed-candidate/current-source-fixture.sh"
   run_phase migrator-preflight
   umask 077
@@ -37,11 +45,10 @@ if [[ "${1:-core}" == migrator ]]; then
   printf '%s\n' '<?php' '/* Plugin Name: Migrator fixture' 'Version: 1.0.0' '*/' > "$wordpress/wp-content/plugins/ran-migrator-fixture/plugin.php"
   chmod 0644 "$wordpress/wp-content/plugins/ran-migrator-fixture/plugin.php"
   source_phase seed
-  switch_phase activate-b
-  switch_phase select
+  install_provider
   run_phase migrator-session
   run_phase migrator-review
-  switch_phase reset-counters
+  run_phase reset-counters
   run_phase migrator-apply
   source_phase readback
   run_phase migrator-complete
@@ -50,6 +57,7 @@ if [[ "${1:-core}" == migrator ]]; then
   exit 0
 fi
 [[ "${1:-core}" == core ]] || { echo 'Expected core or migrator proof mode.' >&2; exit 2; }
+install_provider
 # Fixture::guard validates exact marker, ABSPATH, content/plugins roots and URL
 # before creating this one previously absent inactive fixture target.
 run_phase setup
@@ -60,12 +68,10 @@ trap 'rm -f -- "$consumer_archive"' EXIT
 mkdir -m 0755 "$wordpress/wp-content/plugins/portability-consumer-proof"
 printf '%s\n' '<?php' '/* Plugin Name: Portability consumer proof' 'Version: 1.0.0' '*/' > "$wordpress/wp-content/plugins/portability-consumer-proof/plugin.php"
 chmod 0644 "$wordpress/wp-content/plugins/portability-consumer-proof/plugin.php"
-switch_phase activate-b
-switch_phase select
 run_phase seed-credential
 run_phase api-review
 run_phase dashboard-review
-switch_phase reset-counters
+run_phase reset-counters
 run_phase api-adopt
 run_phase adoption-readback
 # A distinct target keeps successful HTTP adoption independent of API adoption.
@@ -77,9 +83,9 @@ mkdir -m 0755 "$wordpress/wp-content/plugins/portability-dashboard-proof"
 printf '%s\n' '<?php' '/* Plugin Name: Portability dashboard proof' 'Version: 1.0.0' '*/' > "$wordpress/wp-content/plugins/portability-dashboard-proof/plugin.php"
 chmod 0644 "$wordpress/wp-content/plugins/portability-dashboard-proof/plugin.php"
 run_phase dashboard-success-review
-switch_phase reset-counters
+run_phase reset-counters
 run_phase dashboard-success-no-consent
-switch_phase reset-counters
+run_phase reset-counters
 run_phase dashboard-success-apply
 run_phase dashboard-success-readback
 echo 'Installed public API and HTTP dashboard consent and Disabled adoption proofs passed.'

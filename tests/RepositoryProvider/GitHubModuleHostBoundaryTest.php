@@ -28,17 +28,10 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/RepositoryProvider/GitHubArchiveHostIntegrationTest.php',
 		'tests/RepositoryProvider/GitHubCredentialPolicyHostIntegrationTest.php',
 		'tests/RepositoryProvider/GitHubExternalExtensionParityTest.php',
-		// Host composition retains the actual provider's bundled compatibility baseline.
 		// Proves the real readiness message keeps its delivery time through the display screen.
 		'tests/RepositoryProvider/GitHubWebhookReadinessMessageTest.php',
-		'tests/RepositoryProvider/HostSelectionDatabase.php',
 		'tests/RepositoryProvider/Support/ShippedSecretPolicyCatalog.php',
 		'tests/Runtime/ReleaseManagementCutoverBootstrapTest.php',
-		// Exercises Core's disclosure fence against the actual locked credential policy.
-		'tests/Secrets/GitHubAccessPolicySpy.php',
-		// Package persistence fixtures initialize the actual bundled selection contract.
-		'tests/Storage/PackagePersistenceFailureTest.php',
-		'tests/Storage/PackageProviderIdentityTest.php',
 		// Proves the installation report shows every value the shipped provider declares.
 		'tests/Webhook/SignedWebhookVerifierTest.php',
 		'tests/Webhook/WebhookProcessorTest.php',
@@ -46,13 +39,9 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		// The installed database proof verifies the real provider's isolated workflow storage.
 		'tests/WordPress/database-storage-smoke.php',
 		'tests/WordPress/github-provider-installed-readback.php',
-		// The installed return proof verifies that Core constructs the real bundled implementation.
-		'tests/WordPress/github-replacement-installed-smoke.php',
 		'tests/WordPress/native-lifecycle-installed-smoke.php',
-		// Fresh lifecycle proof binds the actual bundled package contract, without vendor operation calls.
-		'tests/WordPress/selection-install-lifecycle-proof.php',
-		// The replacement fixture exercises Core's credential boundary using the shipped GitHub policy.
-		'tests/fixtures/github-replacement/provider.php',
+		// The offline portability fixture supplies gh with the shipped GitHub credential policy.
+		'tests/fixtures/ran-booster-github-offline-provider/src/Provider.php',
 		'tests/fixtures/ran-booster-github-provider-extension/src/Plugin.php',
 	);
 

@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
+# The immutable released Bitbucket add-on keeps working in fresh requests while
+# GitHub is bundled, superseded by a plugin, or unavailable after a failed claim.
+# Requires github-supersede-installed-smoke.sh first: it leaves both claimant
+# plugins installed and inactive.
 set -euo pipefail
 unset UNZIP UNZIPOPT
-fail() { printf 'bitbucket-selection-installed: %s\n' "$*" >&2; exit 2; }
+fail() { printf 'bitbucket-coexistence-installed: %s\n' "$*" >&2; exit 2; }
 [[ "${RAN_BOOSTER_BITBUCKET_TEST_DISPOSABLE:-}" == 1 ]] || fail 'Explicit disposable-site consent is required.'
 wordpress=${RAN_BOOSTER_WORDPRESS_PATH:?Set the exact disposable site path.}
 archive=${RAN_BOOSTER_BITBUCKET_ARCHIVE:?Set the immutable beta17 ZIP path.}
@@ -10,35 +14,35 @@ wp_cli=${WP_CLI_BIN:?Set WP-CLI.}
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 # shellcheck source=scripts/verify-release.sh
 source "$root/scripts/verify-release.sh"
-phase="$root/tests/WordPress/github-replacement-installed-smoke.php"
-proof="$root/tests/WordPress/bitbucket-selection-installed-smoke.php"
-fixture="$wordpress/wp-content/plugins/github-replacement"
+proof="$root/tests/WordPress/bitbucket-coexistence-installed-smoke.php"
+extension="$wordpress/wp-content/plugins/ran-booster-github-provider-extension"
+claimant="$wordpress/wp-content/plugins/ran-booster-github-supersede-failing"
 target="$wordpress/wp-content/plugins/ran-booster-bitbucket"
 marker="$wordpress/.ran-booster-disposable-test-site"
-for directory in "$wordpress" "$wordpress/wp-content" "$wordpress/wp-content/plugins" "$fixture"; do
- [[ -d "$directory" && ! -L "$directory" && "$(cd "$directory" && pwd -P)" == "$directory" ]] || fail 'Exact non-symlinked site and installed fixture roots are required.'
+for directory in "$wordpress" "$wordpress/wp-content" "$wordpress/wp-content/plugins" "$extension" "$claimant"; do
+ [[ -d "$directory" && ! -L "$directory" && "$(cd "$directory" && pwd -P)" == "$directory" ]] || fail 'Exact non-symlinked site and installed claimant roots are required.'
 done
 [[ -f "$marker" && ! -L "$marker" && "$(<"$marker")" == 'RAN Booster disposable test site' ]] || fail 'Exact disposable-site marker required.'
-[[ -f "$phase" && -f "$proof" ]] || fail 'Shared replacement phases and Bitbucket proof are required.'
+[[ -f "$proof" ]] || fail 'Bitbucket proof is required.'
 [[ ! -e "$target" && ! -L "$target" ]] || fail 'Refusing an existing Bitbucket target.'
 [[ -f "$archive" && ! -L "$archive" ]] || fail 'Immutable archive must be a regular local file.'
 archive_hash=$(sha256_file "$archive")
 [[ "$archive_hash" == b7963f335c624cf08124040a24a9d51d80c26640faee46e75334783f0547bc5a ]] || fail 'Immutable Bitbucket beta17 ZIP digest mismatch.'
 unzip -tqq "$archive"
-diff -qr "$root/tests/fixtures/github-replacement" "$fixture"
-wp() { "$php_bin" "$wp_cli" "$@" --user=fixture-admin --path="$wordpress"; }
-run_phase() { wp eval-file "$phase" "$@"; }
-# This read executes the shared exact ABSPATH/content/siteurl/permission guard.
-assert_bundled() { run_phase status | jq -e '.available == true and .current.selected == "bundled" and .current.approval == "approved"' >/dev/null; }
-assert_bundled
+diff -qr --exclude=vendor "$root/tests/fixtures/ran-booster-github-provider-extension" "$extension"
+diff -qr "$root/tests/fixtures/ran-booster-github-supersede-failing" "$claimant"
+wp() { "$php_bin" "$wp_cli" "$@" --user=admin --path="$wordpress"; }
 baseline_active="$(wp option get active_plugins --format=json)"
-# The preceding historical proof must leave all shared fixture entries inactive.
-jq -e 'all(.[]; startswith("github-replacement/") | not)' <<< "$baseline_active" >/dev/null || fail 'Shared replacement entries must start inactive.'
-temporary="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/ran-bitbucket-selection.XXXXXXXX")"
+# The preceding supersede proof must leave both claimants inactive.
+jq -e 'all(.[]; (startswith("ran-booster-github-provider-extension/") or startswith("ran-booster-github-supersede-failing/")) | not)' <<< "$baseline_active" >/dev/null || fail 'GitHub claimants must start inactive.'
+temporary="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/ran-bitbucket-coexistence.XXXXXXXX")"
 owned_target=0
-selection_changed=0
-restore_selection() {
- run_phase missing && run_phase select && assert_bundled
+claim_changed=0
+restore_bundled() {
+ local plugin
+ for plugin in ran-booster-github-provider-extension ran-booster-github-supersede-failing; do
+  if wp plugin is-active "$plugin"; then wp plugin deactivate "$plugin" >/dev/null || return 1; fi
+ done
 }
 restore_active_plugins() {
  local current_active current_members baseline_members
@@ -62,7 +66,7 @@ cleanup() {
  local status=$?
  trap - EXIT INT TERM
  set +e
- if (( selection_changed )); then restore_selection || status=1; fi
+ if (( claim_changed )); then restore_bundled || status=1; fi
  if (( owned_target )); then
   wp plugin deactivate ran-booster-bitbucket >/dev/null || status=1
   if [[ -d "$target" && ! -L "$target" ]] && diff -qr "$temporary/ran-booster-bitbucket" "$target"; then
@@ -90,22 +94,15 @@ wp plugin activate ran-booster-bitbucket >/dev/null
 check_bitbucket() {
  RAN_BOOSTER_BITBUCKET_EXPECT_GH="$1" wp eval-file "$proof"
 }
-check_bitbucket available
-selection_changed=1
-run_phase activate-a
-check_bitbucket unavailable
-run_phase select
-check_bitbucket available
-run_phase activate-b
-check_bitbucket unavailable
-run_phase select
-check_bitbucket available
-run_phase conflict
-check_bitbucket unavailable
-run_phase missing
-check_bitbucket unavailable
-restore_selection
-selection_changed=0
-check_bitbucket available
-printf 'Immutable Bitbucket lookup passed in fresh requests across A/B, conflict, missing and bundled selection states.\n'
+check_bitbucket bundled
+claim_changed=1
+wp plugin activate ran-booster-github-provider-extension >/dev/null
+check_bitbucket ran-booster-github-provider-extension
+wp plugin deactivate ran-booster-github-provider-extension >/dev/null
+wp plugin activate ran-booster-github-supersede-failing >/dev/null
+check_bitbucket supersede_failed
+restore_bundled
+claim_changed=0
+check_bitbucket bundled
+printf 'Immutable Bitbucket lookup passed in fresh requests while GitHub was bundled, superseded and unavailable.\n'
 # Cleanup restores the original active list and removes only byte-identical owned files.

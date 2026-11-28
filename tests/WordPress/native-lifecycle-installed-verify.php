@@ -19,11 +19,6 @@ $ran_booster_items = get_option( 'ran_booster_c4_native_items', null );
 if ( ! is_string( $ran_booster_scale ) || ! in_array( $ran_booster_scale, array( '1', '5', '10', '20' ), true ) || ! is_array( $ran_booster_items ) || ! array_is_list( $ran_booster_items ) || count( $ran_booster_items ) !== (int) $ran_booster_scale ) {
 	throw new RuntimeException( 'Native verification inventory is invalid.' );
 }
-$ran_booster_container = require __DIR__ . '/core-container-fixture.php';
-$ran_booster_selection = $ran_booster_container->make( RAN\Storage\GitHubSelectionStore::class )->read();
-if ( isset( $ran_booster_selection['native_mutation'] ) ) {
-	throw new RuntimeException( 'Native shutdown left an unresolved mutation.' );
-}
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
 foreach ( $ran_booster_items as $ran_booster_item_index => $ran_booster_item ) {
 	$ran_booster_number   = $ran_booster_item_index + 1;

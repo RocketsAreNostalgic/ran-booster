@@ -133,7 +133,8 @@ final class CredentialUsageReader {
 			return false;
 		}
 
-		return is_dir( get_theme_root() . '/' . $identifier );
+		// A theme is installed when WordPress can read its stylesheet under the theme's own root.
+		return is_file( get_theme_root( $identifier ) . '/' . $identifier . '/style.css' );
 	}
 
 	private function assert_query_succeeded( object $database ): void {

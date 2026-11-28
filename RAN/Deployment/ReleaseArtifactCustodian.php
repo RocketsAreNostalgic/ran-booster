@@ -97,7 +97,7 @@ final class ReleaseArtifactCustodian {
 		string $artifact_sha256,
 		bool &$copy_cleanup_successful
 	): PreparedArtifact {
-		$directory     = sys_get_temp_dir() . '/ran-booster-release-' . bin2hex( random_bytes( 16 ) );
+		$directory     = trailingslashit( get_temp_dir() ) . 'ran-booster-release-' . bin2hex( random_bytes( 16 ) );
 		$path          = $directory . '/archive.zip';
 		$input         = false;
 		$output        = false;

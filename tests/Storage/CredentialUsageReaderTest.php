@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace RAN\Tests\Storage;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Storage\CredentialUsageReader;
 use RuntimeException;
@@ -214,5 +216,45 @@ final class CredentialUsageReaderTest extends TestCase {
 
 		self::assertSame( 4, $usage['total'] );
 		self::assertSame( array( false, false, false, false ), array_column( $usage['packages'], 'installed' ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_a_theme_is_installed_only_with_a_stylesheet_under_its_own_registered_root(): void {
+		require_once __DIR__ . '/CredentialUsageReaderWordPressFunctions.php';
+		$base = sys_get_temp_dir() . '/ran-booster-credential-usage-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable default and secondary theme roots.
+		mkdir( $base . '/secondary/registered', 0700, true );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable default and secondary theme roots.
+		mkdir( $base . '/themes/empty', 0700, true );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable theme stylesheet.
+		file_put_contents( $base . '/secondary/registered/style.css', '/* Theme Name: Registered */' );
+		$GLOBALS['ran_booster_credential_usage_theme_roots'] = array(
+			''           => $base . '/themes',
+			'registered' => $base . '/secondary',
+		);
+		$database        = new CredentialUsageDatabase();
+		$database->count = '2';
+		$database->rows  = array(
+			(object) array(
+				'type'    => '2',
+				'package' => 'empty',
+			),
+			(object) array(
+				'type'    => '2',
+				'package' => 'registered',
+			),
+		);
+		try {
+			$usage = ( new CredentialUsageReader( $database, 'wp_ran_booster_packages', $this->createStub( \RAN\Storage\Database::class ) ) )->read( 'gh', 'profile_one' );
+			self::assertSame( array( false, true ), array_column( $usage['packages'], 'installed' ) );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the disposable test-owned stylesheet.
+			unlink( $base . '/secondary/registered/style.css' );
+			foreach ( array( '/secondary/registered', '/secondary', '/themes/empty', '/themes', '' ) as $directory ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the disposable test-owned directories.
+				rmdir( $base . $directory );
+			}
+		}
 	}
 }

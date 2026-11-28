@@ -899,11 +899,18 @@ final class DashboardIndexRoutingTest extends TestCase {
 			),
 			$presenter->provider_restore_args( 'gh' )
 		);
-		$_GET = array(
+		$_GET         = array(
 			'tab'   => 'troubleshooting',
-			'panel' => 'diagnostics',
+			'panel' => 'installation',
 		);
-		self::assertSame( $sentence, $dashboard->get_index()['data']['troubleshooting']['github_supplier'] );
+		$installation = $dashboard->get_index()['data'];
+		self::assertSame( 'Included module failed to load', array_column( $installation['troubleshooting']['components'], null, 'Provider' )['gh']['Supplier'] ?? null );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $installation );
+		$core_self_update = $installation['troubleshooting']['core_self_update'];
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting-installation.php';
+		self::assertStringContainsString( esc_html( $sentence ), (string) ob_get_clean() );
 	}
 
 	public function test_an_add_on_supplier_is_named_once_on_the_github_page(): void {

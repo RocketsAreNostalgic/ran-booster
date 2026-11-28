@@ -222,7 +222,7 @@ final readonly class ProviderSettingsPresenter {
 			}
 		}
 		$supplier = $this->providers->github_supplier();
-		if ( null !== $supplier ) {
+		if ( null !== $supplier || $this->providers->bundled_github_failed() ) {
 			$facts['gh'] = array(
 				'admitted'    => isset( $metadata['gh'] ),
 				'message'     => isset( $metadata['gh'] ) ? null : ( $this->github_supplier?->sentence() ?? __( 'GitHub could not load.', 'ran-booster' ) ),

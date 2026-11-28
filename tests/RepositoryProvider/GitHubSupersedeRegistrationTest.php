@@ -49,6 +49,7 @@ final class GitHubSupersedeRegistrationTest extends TestCase {
 		self::assertSame( 'alpha', $registry->github_supplier() );
 		self::assertSame( array( 'alpha' ), $registry->github_claimants() );
 		self::assertSame( $provider, $registry->get( 'gh' ) );
+		self::assertFalse( $registry->bundled_github_failed() );
 	}
 
 	public function test_a_second_claim_is_a_conflict_and_neither_factory_runs(): void {
@@ -127,20 +128,16 @@ final class GitHubSupersedeRegistrationTest extends TestCase {
 		self::assertTrue( $registry->bundled_github_failed() );
 	}
 
-	public function test_a_registry_without_the_bundled_module_or_with_a_failed_claim_is_not_a_bundled_failure(): void {
+	public function test_a_registry_without_the_bundled_module_is_not_a_bundled_failure(): void {
 		$foreign = new ProviderRegistry();
 		$foreign->seal();
 		self::assertFalse( $foreign->bundled_github_failed() );
-		$claimed = $this->registry();
-		$claimed->supersede_github( require dirname( __DIR__ ) . '/fixtures/github-supersede/beta/factory.php' );
-		$claimed->supersede_github( self::alpha()['valid'] );
-		$claimed->seal();
-		self::assertFalse( $claimed->bundled_github_failed() );
 	}
 
 	private function assert_unavailable( ProviderRegistry $registry ): void {
 		self::assertSame( 0, $this->bundled_calls );
 		self::assertArrayNotHasKey( 'gh', $registry->metadata() );
+		self::assertFalse( $registry->bundled_github_failed() );
 	}
 
 	/** @return array{valid: \Closure, legacy: \Closure} */

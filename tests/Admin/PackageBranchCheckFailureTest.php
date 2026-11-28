@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
+require_once __DIR__ . '/../Support/InMemoryPublicRepositoryLookupProfileStore.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -59,6 +60,42 @@ final class PackageBranchCheckFailureTest extends TestCase {
 		$provider = $this->provider( 'bb' );
 		$provider->method( 'prepare_archive' )->willReturn( $archive );
 		self::assertSame( 'branch_unavailable', $this->check( $provider, 'bb' ) );
+	}
+
+	public function test_the_default_lookup_profile_checks_the_branch_only_with_secret_authority(): void {
+		$profiles           = new \RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore();
+		$profiles->profiles = array( 'gh' => 'public-profile' );
+		$presenter          = ( new ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
+		( new ReflectionProperty( ProviderSettingsPresenter::class, 'public_lookup_profiles' ) )->setValue( $presenter, $profiles );
+		$profile = new ReflectionMethod( ProviderSettingsPresenter::class, 'effective_branch_check_profile' );
+		$package = static function ( bool $is_private ): AbstractPackage {
+			$package = new class() extends AbstractPackage {
+				public function get_identifier(): mixed {
+					return 'example/example.php';
+				}
+
+				protected function runtime_slug(): string {
+					return 'example';
+				}
+			};
+			$package->set_repository( new ManagedRepository( 'gh', 'owner/repository', 'repo-42', 'main', $is_private, $is_private ? 'own-profile' : null ) );
+			return $package;
+		};
+		try {
+			foreach ( array(
+				true  => array( 'public-profile', 'own-profile' ),
+				false => array( null, 'own-profile' ),
+			) as $authority => $expected ) {
+				$GLOBALS['ran_booster_test_capabilities'] = array(
+					'manage_options'   => true,
+					'activate_plugins' => (bool) $authority,
+				);
+
+				self::assertSame( $expected, array( $profile->invoke( $presenter, $package( false ) ), $profile->invoke( $presenter, $package( true ) ) ) );
+			}
+		} finally {
+			unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_capability_checks'] );
+		}
 	}
 
 	/** @return RepositoryProvider&\PHPUnit\Framework\MockObject\MockObject */

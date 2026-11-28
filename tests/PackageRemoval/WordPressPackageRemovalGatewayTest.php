@@ -101,12 +101,13 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 				self::assertTrue( ( $gateway->deletion_postcondition( $type, $identifier, true ) )() );
 			}
 			foreach ( array( 'hello', 'folder/readme' ) as $unsafe ) {
+				$refusal = '';
 				try {
 					$gateway->deletion_postcondition( 'plugin', $unsafe, true );
-					self::fail( 'Plugin identifier without a PHP file accepted.' );
 				} catch ( RuntimeException $failure ) {
-					self::assertStringContainsString( 'unsafe', $failure->getMessage() );
+					$refusal = $failure->getMessage();
 				}
+				self::assertSame( 'The exact deletion target is unsafe.', $refusal, $unsafe );
 			}
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable test-owned directories.

@@ -10,6 +10,7 @@ use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\Storage\DeploymentWriteConnection;
+use RAN\UpdaterSupport\V1\FailureText;
 
 /**
  * Durable reporting; deployment writes join the journal's database transaction.
@@ -30,6 +31,8 @@ final class ActivityStore {
 	private string $table;
 	/** @var array<int, array{string, string}> Operation and correlation of each row begun here, so a refused write can be logged without SQL. */
 	private array $begun = array();
+	/** @var list<array{string, array<string, string>}> Correlated outcomes, and what each wrote, waiting for the caller's commit. */
+	private array $uncommitted = array();
 
 	public function __construct( private ?object $database = null, ?string $table = null ) {
 		if ( null === $this->database ) {
@@ -268,6 +271,17 @@ final class ActivityStore {
 				$correlation
 			)
 		);
+		// This stage is the stored outcome of a deployment, whose row stays incomplete.
+		if ( 1 === $result && 'deployment.needs_attention' === $code ) {
+			$this->uncommitted[] = array(
+				$correlation,
+				array(
+					'status' => 'incomplete',
+					'stage'  => $code,
+					'facts'  => $encoded,
+				),
+			);
+		}
 		return false === $result ? $this->unrecorded( 'progress', 'failed', correlation: $correlation ) : 1 === $result;
 	}
 
@@ -333,6 +347,17 @@ final class ActivityStore {
 			)
 		);
 		if ( 1 === $result ) {
+			$written = array(
+				'status' => $status,
+				'reason' => $reason,
+				'facts'  => $encoded,
+			);
+			// A correlation-addressed write is inside its caller's transaction; settle_transaction() announces it.
+			if ( null === $id ) {
+				$this->uncommitted[] = array( (string) $correlation, $written );
+			} else {
+				$this->announce( 'id = %d', $id, $written );
+			}
 			return true;
 		}
 		if ( 0 !== $result ) {
@@ -352,6 +377,82 @@ final class ActivityStore {
 		}
 		// The row is gone, unreadable or already finished with another outcome.
 		return $this->unrecorded( 'complete', 'refused', $id, $correlation );
+	}
+
+	/**
+	 * The owner of the transaction around correlation-addressed writes calls this when it ends: the outcomes they
+	 * stored are announced after a commit and dropped otherwise. The queue empties before any listener runs.
+	 */
+	public function settle_transaction( bool $committed ): void {
+		$stored            = $this->uncommitted;
+		$this->uncommitted = array();
+		if ( $committed ) {
+			foreach ( $stored as list( $correlation, $written ) ) {
+				$this->announce( 'correlation = %s', $correlation, $written );
+			}
+		}
+	}
+
+	/**
+	 * Fires the public action only when the stored row still holds what was written: a COMMIT acknowledged by a
+	 * reconnected session leaves the earlier row. A listener's exception propagates, as with any action.
+	 *
+	 * @param array<string, string> $written Column values the write stored.
+	 */
+	private function announce( string $where, int|string $value, array $written ): void {
+		if ( ! has_action( 'ran_booster_activity_recorded' ) && ! has_action( 'all' ) ) {
+			return;
+		}
+		$row = $this->rows( $this->prepare( "SELECT correlation,operation,provider,subject_type,subject_identity,status,stage,reason,actor,started_at,completed_at,facts,provenance FROM {$this->table} WHERE $where", $value ) )[0] ?? null;
+		if ( null === $row || null === $row['completed_at'] || array() !== array_diff_assoc( $written, $row ) ) {
+			BoosterLogger::log(
+				'An Activity action was not fired.',
+				array_filter(
+					array(
+						'step'           => 'activity.recorded',
+						'event'          => 'unconfirmed',
+						'correlation_id' => is_string( $value ) ? $value : ( $this->begun[ $value ][1] ?? null ),
+					)
+				)
+			);
+			return;
+		}
+		// Only a deployment needing attention is announced while its row is incomplete.
+		$attention = 'incomplete' === $row['status'];
+		$reason    = $attention ? ( json_decode( (string) $row['facts'], true )['deployment_outcome'] ?? '' ) : $row['reason'];
+		/**
+		 * Fires once when an Activity record's outcome is stored. See docs/deployment-activity-reporting.md.
+		 *
+		 * @param array{correlation:string,operation:string,provider:string,subject_type:string,subject_identity:string,status:string,reason:string,actor:int,started_at:string,completed_at:string} $record
+		 */
+		do_action(
+			'ran_booster_activity_recorded',
+			array(
+				'correlation'      => (string) $row['correlation'],
+				'operation'        => FailureText::identifier( (string) $row['operation'] ) ?? '',
+				'provider'         => (string) $row['provider'],
+				'subject_type'     => (string) $row['subject_type'],
+				'subject_identity' => $this->public_identity( (string) $row['subject_type'], (string) $row['subject_identity'], (string) $row['provenance'] ),
+				'status'           => $attention ? 'needs_attention' : (string) $row['status'],
+				'reason'           => FailureText::identifier( (string) $reason ) ?? '',
+				'actor'            => (int) $row['actor'],
+				'started_at'       => (string) $row['started_at'],
+				'completed_at'     => (string) $row['completed_at'],
+			)
+		);
+	}
+
+	/** The stored identity when it has its subject type's shape, otherwise empty. A shape check, not secret detection. */
+	private function public_identity( string $type, string $identity, string $provenance ): string {
+		$shape = match ( $type ) {
+			'plugin' => '[A-Za-z0-9_-][A-Za-z0-9._-]*(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*\.php)?',
+			'theme' => '[A-Za-z0-9_-][A-Za-z0-9._-]*(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*)?',
+			// A provider-reported repository identity is whatever text the provider passed.
+			'repository' => 'provider' === $provenance || 1 === preg_match( '#://|(?:\A|/)\.\.?(?:/|\z)|(?:\A|[/:])(?:(?i:gh[pousr]_|github_pat_)|AT(?:BB|CTT|ATT))#', $identity ) ? null : '[A-Za-z0-9._{}:~-]+(?:/[A-Za-z0-9._{}:~-]+)*',
+			'provider' => '[a-z0-9_-]{1,32}',
+			default => null,
+		};
+		return null !== $shape && 1 === preg_match( '#\A' . $shape . '\z#', $identity ) ? $identity : '';
 	}
 
 	/**

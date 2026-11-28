@@ -184,3 +184,92 @@ snapshot, failure email and support export do not include the code.
 
 Native release message replacement remains held pending a suitable producer
 boundary. Other branch reasons need separate work.
+
+## Public actions
+
+Site code and audit tools may use these WordPress actions. Each is per site: it
+fires in the site whose tables recorded the event and keeps no network-wide
+state. Booster still supports single-site WordPress only.
+
+### `ran_booster_activity_recorded`
+
+Fires once when an Activity record's outcome is stored, whatever the operation.
+Listeners filter on `operation`: `install` and `update` are deployments; the
+others include `release.check`, `branch.check`, `credential.validate`,
+`diagnostics.run`, `webhook.*` and `workflow.*`.
+
+The one argument is an array holding only these fields:
+
+| Field | Value |
+| --- | --- |
+| `correlation` | The record's 32-character reference. |
+| `operation` | The operation name, or empty. |
+| `provider` | The provider code. |
+| `subject_type` | `plugin`, `theme`, `repository` or `provider`. |
+| `subject_identity` | The package, repository or provider the record is about, at most 255 bytes, or empty. |
+| `status` | `succeeded`, `failed`, `rejected`, `skipped` or `needs_attention`. |
+| `reason` | A bounded reason code, or empty. |
+| `actor` | The WordPress user ID, or `0` when none is recorded. |
+| `started_at` | UTC, `Y-m-d H:i:s`. |
+| `completed_at` | UTC, `Y-m-d H:i:s`. |
+
+Messages, remediation text, facts, source context and adoption tokens are not
+passed.
+
+Values are screened when the action fires, so older records get the same
+treatment. `operation` and `reason` are empty unless they pass Booster's
+identifier screen. `subject_identity` is empty unless it has the shape of its
+subject type, with no whitespace, and is always empty for a repository identity
+that a provider reported. That is a shape check, not secret detection.
+
+A deployment's action fires after the journal transaction commits, so a
+rolled-back outcome is not announced. Other outcomes fire straight after their
+own write. When nothing listens on `ran_booster_activity_recorded` or `all`,
+Booster neither reads the row back nor fires the action. When a listener is
+attached, the action fires only if the stored record still holds that outcome;
+otherwise, for example when a database session is lost before its commit,
+Booster logs one code-only `activity.recorded` / `unconfirmed` line if
+WordPress debug logging or Booster's capture is on. A lagging read replica or an
+operator resolving a `needs_attention` attempt between `COMMIT` and that
+read-back can likewise suppress (never falsely fire) an announcement. Starts,
+progress, an operator's review and a repeated skip that Booster discards fire
+nothing.
+
+Providers must report completion only after their own transaction commits. A
+completion reported inside an open transaction may be announced before it is
+durable.
+
+Listeners run synchronously in the request or worker that recorded the outcome,
+so keep them quick and hand slow work off. A listener's exception propagates to
+the caller, as with any WordPress action. Any caught listener exception leaves
+the hook on WordPress's current-filter stack for the rest of the request. The
+outcome is already stored, but the caller's later work is skipped:
+
+- a deployment skips its finished log, background failure notification and next
+  worker wakeup, and manual package or recovery actions report the stored result
+  as failed;
+- when `DeploymentCoordinator::settle_after_throw()` settles an attempt, Booster
+  reports it as left running even though the outcome was stored;
+- credential validation skips saving the expiry observation and sidecar date and
+  shows an error for the stored result;
+- a branch check reports a stored `verified` or `branch_unavailable` result as
+  `unable_to_check`;
+- a release check aborts the updater loop so `CoreSelfUpdateCheck` records
+  `orchestration_failed`;
+- webhook Validate or Repair skips its chained `test` ping;
+- where an outer `catch` swallows the exception, such as webhook push and
+  delivery observations, it logs an Activity recording failure.
+
+Catch whatever your listener can throw. Delivery is not guaranteed, for example
+if the process stops after the write. Activity remains the record.
+
+```php
+add_action(
+	'ran_booster_activity_recorded',
+	static function ( array $record ): void {
+		if ( in_array( $record['operation'], array( 'install', 'update' ), true ) ) {
+			error_log( 'Deployment ' . $record['status'] . ': ' . $record['subject_identity'] );
+		}
+	}
+);
+```

@@ -48,6 +48,78 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 	}
 
+	/** @return iterable<string, array{string, bool, string}> */
+	public static function announced_deployment_outcomes(): iterable {
+		yield 'success' => array( 'deployed', false, 'succeeded' );
+		yield 'needs attention' => array( 'interrupted', false, 'needs_attention' );
+		yield 'rolled back' => array( 'deployed', true, 'succeeded' );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'announced_deployment_outcomes' )]
+	public function test_a_deployment_outcome_is_announced_only_after_its_commit( string $code, bool $fail_commit, string $status ): void {
+		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
+		$this->repository                        = new DeploymentAttemptRepository(
+			$this->database,
+			'wp_ran_booster_deployment_attempts',
+			clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-27 00:00:00 UTC' ),
+			database_lifecycle: $this->database_lifecycle,
+			activity: new ActivityStore( $this->activity_reading_connection(), 'wp_ran_booster_activity' )
+		);
+		$heard                                   = array();
+		$GLOBALS['ran_booster_activity_listeners']['ran_booster_activity_recorded'] = function ( array $record ) use ( &$heard ): void {
+			$heard[] = array( $record['subject_identity'], $record['status'], $record['reason'], $this->database->in_transaction() );
+		};
+		try {
+			$running                     = $this->manual( 'example' );
+			$this->database->fail_commit = $fail_commit;
+			try {
+				$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( $code ) );
+				self::assertFalse( $fail_commit );
+			} catch ( DeploymentStorageFailure ) {
+				self::assertTrue( $fail_commit );
+				self::assertSame( array(), $heard );
+				// Retrying after a failed commit must announce the outcome once, not replay the rolled-back write.
+				$this->database->fail_commit = false;
+				$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( $code ) );
+			}
+
+			self::assertSame( array( array( 'example', $status, $code, false ) ), $heard );
+		} finally {
+			unset( $GLOBALS['ran_booster_activity_listeners'] );
+		}
+	}
+
+	/** The shared fixture does not answer the announcement's read; this serves it from the fixture's rows. */
+	private function activity_reading_connection(): \RAN\Storage\DeploymentWriteConnection {
+		return new class( $this->database ) implements \RAN\Storage\DeploymentWriteConnection {
+			public function __construct( private AttemptRepositoryDatabase $database ) {}
+			public function prepare( string $query, mixed ...$arguments ): mixed {
+				return $this->database->prepare( $query, ...$arguments );
+			}
+			public function get_results( string $query ): mixed {
+				if ( 1 !== preg_match( "/^SELECT correlation,operation,.* WHERE correlation = '([a-f0-9]{32})'$/", $query, $match ) ) {
+					return $this->database->get_results( $query );
+				}
+				$rows = array_filter( $this->database->activity_rows, static fn ( array $row ): bool => $row['correlation'] === $match[1] );
+				return array_map(
+					// The fixture ignores the COALESCE() completion time and never sets unwritten columns.
+					static fn ( array $row ): object => (object) ( $row + array(
+						'stage'        => '',
+						'reason'       => '',
+						'completed_at' => '2026-11-27 00:00:00',
+					) ),
+					array_values( $rows )
+				);
+			}
+			public function query( string $query ): mixed {
+				return $this->database->query( $query );
+			}
+			public function insert( string $table, array $data ): mixed {
+				return $this->database->insert( $table, $data );
+			}
+		};
+	}
+
 	public function test_an_unmatched_push_is_recorded_once_per_repository_reason_and_hour(): void {
 		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
 		$connection                              = new \RAN\Tests\Activity\ActivityConnection();

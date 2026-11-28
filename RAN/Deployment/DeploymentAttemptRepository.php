@@ -1330,12 +1330,14 @@ final class DeploymentAttemptRepository {
 			if ( false === $this->write_connection()->query( 'COMMIT' ) ) {
 				throw DeploymentStorageFailure::transaction_commit_failed();
 			}
-
-			return $result;
 		} catch ( Throwable $exception ) {
+			$this->activity?->settle_transaction( false );
 			$this->write_connection()->query( 'ROLLBACK' );
 			throw $exception;
 		}
+		$this->activity?->settle_transaction( true );
+
+		return $result;
 	}
 
 	/** @param array<string, int|string|null> $expected */

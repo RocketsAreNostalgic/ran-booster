@@ -153,6 +153,294 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertStringContainsString( 'WHERE correlation = %s AND status = \'incomplete\'', $query );
 	}
 
+	/**
+	 * @param array<string, string|null> $overrides
+	 * @return array<string, string|null>
+	 */
+	private static function stored_row( array $overrides = array() ): array {
+		return $overrides + array(
+			'correlation'      => str_repeat( 'a', 32 ),
+			'operation'        => 'release.check',
+			'provider'         => 'gh',
+			'subject_type'     => 'plugin',
+			'subject_identity' => 'example/example.php',
+			'status'           => 'succeeded',
+			'stage'            => '',
+			'reason'           => 'no_candidates',
+			'actor'            => '7',
+			'started_at'       => '2026-11-27 10:00:00',
+			'completed_at'     => '2026-11-27 10:00:01',
+			'facts'            => '[]',
+			'provenance'       => 'core',
+			'message'          => 'Private free text.',
+			'adoption_token'   => 'private-token',
+		);
+	}
+
+	/** @return \ArrayObject<int, array<string, mixed>> */
+	private static function listen(): \ArrayObject {
+		$heard = new \ArrayObject();
+		$GLOBALS['ran_booster_activity_listeners']['ran_booster_activity_recorded'] = static function ( array $record ) use ( $heard ): void {
+			$heard->append( $record );
+		};
+		return $heard;
+	}
+
+	#[\PHPUnit\Framework\Attributes\After]
+	protected function forget_listeners(): void {
+		unset( $GLOBALS['ran_booster_activity_listeners'], $GLOBALS['ran_booster_activity_fired'] );
+	}
+
+	public function test_an_outcome_written_by_id_is_announced_once_with_only_the_public_fields(): void {
+		$heard                          = self::listen();
+		$this->connection->read_results = array( array( (object) self::stored_row() ) );
+
+		self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
+
+		self::assertSame(
+			array(
+				array(
+					'correlation'      => str_repeat( 'a', 32 ),
+					'operation'        => 'release.check',
+					'provider'         => 'gh',
+					'subject_type'     => 'plugin',
+					'subject_identity' => 'example/example.php',
+					'status'           => 'succeeded',
+					'reason'           => 'no_candidates',
+					'actor'            => 7,
+					'started_at'       => '2026-11-27 10:00:00',
+					'completed_at'     => '2026-11-27 10:00:01',
+				),
+			),
+			$heard->getArrayCopy()
+		);
+
+		// A repeat changes no row, so it only confirms the stored outcome.
+		$this->connection->query_results = array( 0 );
+		$this->connection->read_results  = array( array( (object) array_intersect_key( self::stored_row() + array( 'effect' => 'none' ), array_flip( array( 'status', 'reason', 'message', 'remediation', 'facts', 'effect' ) ) ) ) );
+		$this->store->complete( 1, 'succeeded', 'no_candidates' );
+		self::assertCount( 1, $heard );
+	}
+
+	public function test_correlated_outcomes_wait_for_the_transaction_and_a_rollback_drops_them(): void {
+		$heard       = self::listen();
+		$correlation = str_repeat( 'a', 32 );
+
+		self::assertTrue( $this->store->complete_by_correlation( $correlation, 'succeeded', 'deployed' ) );
+		$this->store->settle_transaction( false );
+		$this->store->settle_transaction( true );
+		self::assertTrue( $this->store->progress_by_correlation( $correlation, 'deployment.mutating' ) );
+		$this->store->settle_transaction( true );
+		self::assertCount( 0, $heard );
+
+		$facts = array(
+			'deployment_outcome' => 'interrupted',
+			'deployment_state'   => 'needs_attention',
+		);
+		$row   = self::stored_row(
+			array(
+				'status' => 'incomplete',
+				'stage'  => 'deployment.needs_attention',
+				'reason' => '',
+				'facts'  => (string) wp_json_encode( $facts ),
+			)
+		);
+		// The empty result answers the write's own storage check; the row answers the announcement.
+		$this->connection->read_results = array( array(), array( (object) $row ) );
+		self::assertTrue( $this->store->progress_by_correlation( $correlation, 'deployment.needs_attention', facts: $facts ) );
+		self::assertCount( 0, $heard );
+		$this->store->settle_transaction( true );
+		$this->store->settle_transaction( true );
+
+		self::assertCount( 1, $heard );
+		self::assertSame( array( 'needs_attention', 'interrupted' ), array( $heard[0]['status'] ?? null, $heard[0]['reason'] ?? null ) );
+	}
+
+	/** @return iterable<string, array{array<string, string|null>}> */
+	public static function rows_that_do_not_hold_the_write(): iterable {
+		yield 'still the earlier row' => array(
+			array(
+				'status'       => 'incomplete',
+				'reason'       => '',
+				'completed_at' => null,
+			),
+		);
+		yield 'another outcome' => array( array( 'status' => 'failed' ) );
+		yield 'another reason' => array( array( 'reason' => 'update_available' ) );
+		yield 'other facts' => array( array( 'facts' => '{}' ) );
+		yield 'no completion time' => array( array( 'completed_at' => null ) );
+	}
+
+	/** @param array<string, string|null> $overrides */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'rows_that_do_not_hold_the_write' )]
+	public function test_a_row_that_does_not_hold_the_write_fires_nothing_and_logs_codes_only( array $overrides ): void {
+		$heard                          = self::listen();
+		$this->connection->read_results = array( array( (object) self::stored_row( $overrides ) ) );
+		$this->start_log_capture();
+		try {
+			self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
+			$lines = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+
+		self::assertCount( 0, $heard );
+		self::assertSame( array( '[ran-booster] An Activity action was not fired. {"step":"activity.recorded","event":"unconfirmed"}' ), $lines );
+	}
+
+	/** @return iterable<string, array{array<string, string>, string, string, string}> */
+	public static function published_values(): iterable {
+		$plain = array(
+			'operation' => 'release.check',
+			'reason'    => 'no_candidates',
+		);
+		foreach ( array(
+			'installed plugin slug' => array( 'plugin', 'my-plugin', 'core' ),
+			'plugin slug with ghs-' => array( 'plugin', 'highs-scores', 'core' ),
+			'plugin path with ghs-' => array( 'plugin', 'laughs-plugin/laughs-plugin.php', 'core' ),
+			'single file plugin'    => array( 'plugin', 'hello.php', 'core' ),
+			'theme'                 => array( 'theme', 'twentytwentyfive', 'core' ),
+			'theme with ghs-'       => array( 'theme', 'highs-and-lows', 'core' ),
+			'repository name'       => array( 'repository', 'owner/example', 'core' ),
+			'repository with ghs-'  => array( 'repository', 'owner/highs-scores', 'core' ),
+			'repository with ghp-'  => array( 'repository', 'acme/ghp-pages', 'core' ),
+			'repository with CATBB' => array( 'repository', 'acme/CATBB', 'core' ),
+			'repository identity'   => array( 'repository', 'gh:123456', 'core' ),
+			'provider'              => array( 'provider', 'gh', 'provider' ),
+			'provider with ghs-'    => array( 'provider', 'highs-git', 'provider' ),
+		) as $name => list( $type, $identity, $provenance ) ) {
+			yield $name => array(
+				array(
+					'subject_type'     => $type,
+					'subject_identity' => $identity,
+					'provenance'       => $provenance,
+				) + $plain,
+				$identity,
+				'release.check',
+				'no_candidates',
+			);
+		}
+		yield 'a sentence as an identity' => array(
+			array(
+				'subject_type'     => 'repository',
+				'subject_identity' => 'please keep this private',
+			) + $plain,
+			'',
+			'release.check',
+			'no_candidates',
+		);
+		yield 'a provider-reported repository identity' => array(
+			array(
+				'subject_type'     => 'repository',
+				'subject_identity' => '123456',
+				'provenance'       => 'provider',
+			) + $plain,
+			'',
+			'release.check',
+			'no_candidates',
+		);
+		foreach ( array(
+			'a URL as a repository'              => array( 'repository', 'https://example.com/x' ),
+			'a short URL as a repository'        => array( 'repository', 'https://x/y' ),
+			'an absolute path as a repository'   => array( 'repository', '/abs/path' ),
+			'a short absolute repository path'   => array( 'repository', '/abs' ),
+			'an empty segment in a repository'   => array( 'repository', 'owner//repo' ),
+			'a dot repository'                   => array( 'repository', '.' ),
+			'a dot-dot repository'               => array( 'repository', '..' ),
+			'a leading dot repository'           => array( 'repository', './repo' ),
+			'a leading dot-dot repository'       => array( 'repository', '../repo' ),
+			'a trailing dot-dot repository'      => array( 'repository', 'owner/..' ),
+			'an embedded dot-dot repository'     => array( 'repository', 'owner/../repo' ),
+			'a ghp token as a repository'        => array( 'repository', 'ghp_example' ),
+			'a nested ghp token in a repository' => array( 'repository', 'owner/ghp_example' ),
+			'a gho token as a repository'        => array( 'repository', 'gho_example' ),
+			'a ghu token as a repository'        => array( 'repository', 'ghu_example' ),
+			'a ghs token as a repository'        => array( 'repository', 'ghs_example' ),
+			'a ghr token as a repository'        => array( 'repository', 'ghr_example' ),
+			'a fine-grained PAT as a repository' => array( 'repository', 'github_pat_example' ),
+			'an ATBB token as a repository'      => array( 'repository', 'ATBBexample' ),
+			'a colon ATBB token in a repository' => array( 'repository', 'gh:ATBBexample' ),
+			'an ATCTT token as a repository'     => array( 'repository', 'ATCTTexample' ),
+			'an ATATT token as a repository'     => array( 'repository', 'ATATTexample' ),
+			'a dot plugin'                       => array( 'plugin', '.' ),
+			'a leading dot plugin path'          => array( 'plugin', './hello.php' ),
+			'a dotfile plugin'                   => array( 'plugin', '.php' ),
+			'a dotfile in a plugin folder'       => array( 'plugin', 'folder/..php' ),
+			'a path outside the plugin shape'    => array( 'plugin', '/var/www/private.php' ),
+			'a plugin path without php'          => array( 'plugin', 'folder/readme.txt' ),
+			'a leading dot theme path'           => array( 'theme', './style' ),
+		) as $name => list( $rejected_type, $rejected_identity ) ) {
+			yield $name => array(
+				array(
+					'subject_type'     => $rejected_type,
+					'subject_identity' => $rejected_identity,
+				) + $plain,
+				'',
+				'release.check',
+				'no_candidates',
+			);
+		}
+		$token = 'ghp_abcdefghijklmnopqrstuvwxyz0123456789';
+		yield 'a token as the codes' => array(
+			array(
+				'operation' => $token,
+				'reason'    => $token,
+			),
+			'example/example.php',
+			'',
+			'',
+		);
+	}
+
+	/** @param array<string, string> $stored */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'published_values' )]
+	public function test_published_values_are_screened_when_the_action_fires( array $stored, string $identity, string $operation, string $reason ): void {
+		$heard                          = self::listen();
+		$row                            = self::stored_row( $stored );
+		$this->connection->read_results = array( array( (object) $row ) );
+
+		self::assertTrue( $this->store->complete( 1, 'succeeded', (string) $row['reason'] ) );
+
+		self::assertCount( 1, $heard );
+		self::assertSame( array( $identity, $operation, $reason ), array( $heard[0]['subject_identity'] ?? null, $heard[0]['operation'] ?? null, $heard[0]['reason'] ?? null ) );
+	}
+
+	public function test_without_a_listener_nothing_is_read_or_fired(): void {
+		self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
+
+		self::assertSame( array(), $GLOBALS['ran_booster_activity_fired'] ?? array() );
+		self::assertSame( array(), array_filter( $this->connection->queries, static fn ( string $sql ): bool => str_starts_with( $sql, 'SELECT' ) ) );
+	}
+
+	public function test_an_all_listener_receives_the_record(): void {
+		$GLOBALS['ran_booster_activity_listeners']['all'] = static function (): void {};
+		$this->connection->read_results                   = array( array( (object) self::stored_row() ) );
+
+		self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
+
+		self::assertSame( 'example/example.php', $GLOBALS['ran_booster_activity_fired'][0][1][0]['subject_identity'] );
+	}
+
+	public function test_a_listener_exception_propagates_and_leaves_nothing_queued(): void {
+		$calls = new \ArrayObject();
+		$GLOBALS['ran_booster_activity_listeners']['ran_booster_activity_recorded'] = static function () use ( $calls ): void {
+			$calls->append( true );
+			throw new \DomainException( 'Listener failure.' );
+		};
+		$this->connection->read_results = array( array(), array(), array( (object) self::stored_row() ) );
+		self::assertTrue( $this->store->complete_by_correlation( str_repeat( 'a', 32 ), 'succeeded', 'no_candidates' ) );
+		self::assertTrue( $this->store->complete_by_correlation( str_repeat( 'b', 32 ), 'succeeded', 'no_candidates' ) );
+
+		try {
+			$this->store->settle_transaction( true );
+			self::fail( 'The listener exception must reach the caller.' );
+		} catch ( \DomainException ) {
+			$this->store->settle_transaction( true );
+		}
+
+		self::assertCount( 1, $calls );
+	}
+
 	public function test_exact_correlation_lookup_is_bounded_and_validated(): void {
 		$correlation = str_repeat( 'a', 32 );
 		self::assertTrue( $this->store->activity_history( array( 'correlation' => $correlation ), limit: 2 )['available'] );

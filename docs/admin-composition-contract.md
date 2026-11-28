@@ -477,7 +477,7 @@ Hosts that stay mounted by `ran-booster-cards.js`:
 | Host | Why |
 | --- | --- |
 | Unsupported Multisite notice (`RAN/Runtime/UnsupportedMultisiteBootstrap.php`) | The safety bootstrap loads no Booster styles or scripts; it renders as a core notice |
-| Plugins failure rows (`RAN/Admin/ManagedPluginFailureRows.php`) | Their screen loads the Notice assets only while the failure notice is unacknowledged, and `native-update-warning.js` rewrites the row |
+| Plugins failure rows (`RAN/Admin/ManagedPluginFailureRows.php`) | Their screen loads the Notice assets only while the failure notice is unacknowledged, and `native-update-error.js` rewrites the row |
 
 A static notice whose intent a script changes in place (the Transporter export
 message and preview notice, the repository branch check, the credential
@@ -876,8 +876,8 @@ internal typed coordinators after resolving the selected provider's exact
 release facets. A plugin must not treat those internal coordinators as a public
 service-delivery API.
 
-Portability API 4 is an independently versioned adoption-only contract for a
-trusted source bridge. Its consumer checks exact Portability API 4, not Add-on
+Portability API 5 is an independently versioned adoption-only contract for a
+trusted source bridge. Its consumer checks exact Portability API 5, not Add-on
 API 17. The separate
 [Portability API contract](portability-api.md) documents its candidate, nonce,
 review, Apply, source-ownership, recovery, and cleanup boundaries.
@@ -981,8 +981,11 @@ one registered provider aggregate supplies the complete release capability set
 required by the operation. It does not publish a prospective-release marker or
 deliver the internal facade to another plugin.
 
-The internal `ProspectiveReleaseFacade::API_VERSION` is **10** for destination selection
-continuity and explicit initial installation intent; this is not a public plugin-delivery marker.
+The internal `ProspectiveReleaseFacade::API_VERSION` is **11** for explicit initial
+installation intent; this is not a public plugin-delivery marker. API 11 removed
+the API 10 provider-expectation argument: inspection no longer returns a
+`provider_expectation`, the install nonce no longer binds one, and installation
+no longer refuses with `provider_selection_changed`.
 
 The facade accepts exactly:
 
@@ -997,8 +1000,7 @@ $prospective->install(
 	$tag,
 	$expected_fingerprint,
 	$channel,
-	$nonce,
-	$provider_expectation
+	$nonce
 );
 ```
 
@@ -1635,52 +1637,6 @@ and an extra `chapter` field is ignored by existing article normalization, so
 otherwise compatible articles render flat. An extension must still honor the
 Core/Add-on API versions it declares; chapter support does not bypass admission
 or require a change to those existing markers.
-
-Prospective API9 carries the destination-local `provider_expectation` from exact
-inspection to installation. GitHub uses Core's provider code, selection generation
-and implementation fingerprint; unaffected providers carry null. Installation
-requires this argument and an install nonce bound to the same context. Core checks
-it before repository resolution or credential/provider work. Inspection rechecks
-its captured selection before returning evidence. Review transport never invents
-a current context or exports this destination authority.
-
-### Interrupted GitHub native installation
-
-While an uncertain GitHub native mutation keeps a site-wide hold, further
-GitHub-managed installation and provider selection switching remain blocked.
-Both recovery controls require `manage_options` and `activate_plugins`, a
-fresh review-bound nonce, and explicit confirmation matching the hold's state:
-
-- **Readable managed targets (`release-github-hold`).** Exposed on the held
-  package's own Booster page; the site-wide warning and GitHub provider page
-  link there. Requires confirming the package was checked, and when the hold's
-  `phase` is still `started`, confirming the interrupted process stopped. Keeps
-  the management record and settings byte-identical, invalidates the native
-  cache, and clears the exact reviewed hold in one store transaction.
-- **Unreadable or unmanaged targets (`recover-github-native`).** Retained on
-  the GitHub settings page only when the target is missing, damaged so it no
-  longer registers, or never became managed. Shows only the target identity
-  and requires confirming both that the interrupted process stopped and that
-  the whole target was removed; a missing plugin entry file alone is
-  insufficient. Verifies physical absence, disconnects only the reviewed
-  management record if present, and clears the exact reviewed hold. Core does
-  not delete files or certify a retained installation through either action.
-
-For an unfinished (`started`) hold after the stop confirmation, Core frees only
-an `auto_updater.lock` row carrying the hold's exact owner-tag lock token before
-acquiring `auto_updater.lock` normally. Automatic updates omit the lock token
-from `owner_tag` so release never frees WordPress's live multi-package
-auto-update lock. A live lock owned by another operation is never removed; any
-remaining non-matching row falls back to WordPress's inherited one-hour
-stale-lock reclaim. Ambiguous management or queued work within the affected plugin folder refuses recovery. Selection generation,
-implementation approval and credential material are preserved. Changed
-authority, uncertain storage outcomes, failed cache invalidation or lost lock
-ownership do not produce a success notice.
-
-Successful recovery does not verify cleanup of temporary files left by the
-interrupted process. Current provider availability and fresh installation review
-remain mandatory before another operation. Browser acceptance and installed
-qualification against the feature-bearing immutable dependencies are separate gates.
 
 ## Fixed Settings destination
 

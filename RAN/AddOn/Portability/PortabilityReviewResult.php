@@ -6,7 +6,6 @@ namespace RAN\AddOn\Portability;
 
 use InvalidArgumentException;
 use JsonException;
-use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Portability\TargetPackageReason;
 
 /** Immutable, display-safe result of one fresh Portability target review. */
@@ -17,23 +16,14 @@ final readonly class PortabilityReviewResult {
 	public const PROTECTED = 'protected';
 	public const BLOCKED   = 'blocked';
 
-	/** @var array{provider_code:string,selection_generation:int,implementation_fingerprint:string}|null */
-	public ?array $provider_expectation;
-
-	/** @param array<string,mixed>|null $provider_expectation */
 	public function __construct(
 		public PortabilityCandidate $candidate,
 		public string $action,
 		public string $reason,
 		public string $message,
-		public string $fingerprint,
-		?array $provider_expectation = null
+		public string $fingerprint
 	) {
-		if ( null !== $provider_expectation && 'gh' !== $candidate->provider_code ) {
-			throw new InvalidArgumentException( 'The provider expectation is not canonical.' );
-		}
-		$this->provider_expectation = null === $provider_expectation ? null : GitHubProviderSelection::normalize_expectation( $provider_expectation );
-		$reasons                    = array_merge(
+		$reasons = array_merge(
 			array_map( static fn ( TargetPackageReason $reason ): string => $reason->value, TargetPackageReason::cases() ),
 			array( 'forbidden', 'unexpected_failure', 'unsupported_runtime' )
 		);
@@ -54,15 +44,13 @@ final readonly class PortabilityReviewResult {
 		}
 	}
 
-	/** @param array<string,mixed>|null $provider_expectation */
 	public static function from_resolved(
 		PortabilityCandidate $candidate,
 		string $action,
 		string $reason,
 		string $message,
 		?string $provider_repository_id,
-		?bool $repository_private,
-		?array $provider_expectation = null
+		?bool $repository_private
 	): self {
 		if ( null !== $provider_repository_id
 			&& ( '' === $provider_repository_id
@@ -71,20 +59,17 @@ final readonly class PortabilityReviewResult {
 			throw new InvalidArgumentException( 'The resolved Portability repository identity is invalid.' );
 		}
 
-		$provider_expectation = null === $provider_expectation ? null : GitHubProviderSelection::normalize_expectation( $provider_expectation );
 		try {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Pure canonical contract with exceptions enabled.
 			$json = json_encode(
 				array(
 					'domain'                 => 'ran-booster-portability-review',
-					// API 4 binds destination-local selection context.
-					'version'                => 3,
+					'version'                => 4,
 					'candidate'              => $candidate->to_array(),
 					'provider_repository_id' => $provider_repository_id,
 					'private'                => $repository_private,
 					'action'                 => $action,
 					'reason'                 => $reason,
-					'provider_expectation'   => $provider_expectation,
 				),
 				JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
 			);
@@ -92,7 +77,7 @@ final readonly class PortabilityReviewResult {
 			throw new InvalidArgumentException( 'The Portability review could not be fingerprinted safely.' );
 		}
 
-		return new self( $candidate, $action, $reason, $message, 'v1:' . hash( 'sha256', $json ), $provider_expectation );
+		return new self( $candidate, $action, $reason, $message, 'v1:' . hash( 'sha256', $json ) );
 	}
 
 	private static function safe_message( string $message ): bool {

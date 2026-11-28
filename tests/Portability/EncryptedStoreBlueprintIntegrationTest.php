@@ -120,16 +120,11 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 		self::assertFileExists( $this->target_path . '.lock' );
 
 		$target_secrets->assert_managed_storage_ready();
-		$provider  = new TemporaryCredentialProvider( $target_secrets->credentials_for( 'gh' ), 0, 'repository-id', false, 'gh', 'GitHub', self::CLASSIC_TOKEN );
-		$catalog   = new ProviderSecretPolicyCatalog();
-		$registry  = new ProviderRegistry( array( $provider ), $catalog );
-		$selection = GitHubSelectionTestFixture::bind( $registry );
-		$verifier  = new BlueprintRepositoryVerifier(
-			$registry,
-			$target_secrets,
-			$selection
-		);
-		$preview   = $verifier->verify(
+		$provider = new TemporaryCredentialProvider( $target_secrets->credentials_for( 'gh' ), 0, 'repository-id', false, 'gh', 'GitHub', self::CLASSIC_TOKEN );
+		$catalog  = new ProviderSecretPolicyCatalog();
+		$registry = new ProviderRegistry( array( $provider ), $catalog );
+		$verifier = new BlueprintRepositoryVerifier( $registry, $target_secrets );
+		$preview  = $verifier->verify(
 			new BlueprintPlanItem( $imported->packages[0], TargetPackageAction::INSTALL, TargetPackageReason::NONE ),
 			$credential,
 			BlueprintCredentialAction::IMPORT
@@ -187,8 +182,7 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			null,
 			false,
 			false,
-			null,
-			$selection->expectation()
+			null
 		);
 		self::assertSame( 'credential_available', $managed['status'] );
 		self::assertSame( 'transferred_available', $managed['credential_state'] );
@@ -219,15 +213,14 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			null,
 			false,
 			false,
-			null,
-			$selection->expectation()
+			null
 		);
 		self::assertSame( 'credential_available', $recovered['status'] );
 		self::assertFileExists( $this->target_path );
 		self::assertNotNull( $target_key_store->load( false ) );
 
 		$result      = $apply_item->invoke( $application, $imported, $preview, $credential, 'import', null, false );
-		$second_item = new BlueprintPlanItem( $imported->packages[1], TargetPackageAction::INSTALL, TargetPackageReason::NONE, $selection->expectation() );
+		$second_item = new BlueprintPlanItem( $imported->packages[1], TargetPackageAction::INSTALL, TargetPackageReason::NONE );
 		$second      = $apply_item->invoke( $application, $imported, $second_item, $credential, 'import', null, false );
 		$retry       = $apply_item->invoke( $application, $imported, $preview, $credential, 'import', null, false );
 

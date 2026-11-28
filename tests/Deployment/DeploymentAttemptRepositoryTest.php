@@ -26,8 +26,6 @@ require_once __DIR__ . '/../Activity/ActivityConnection.php';
 require_once __DIR__ . '/../Logging/LoggingWordPressFunctions.php';
 
 final class DeploymentAttemptRepositoryTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
-
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $repository;
 	private Database $database_lifecycle;
@@ -46,8 +44,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
 			$this->database_lifecycle,
-			configured_max_attempt_rows: 200,
-			selection: $this->queued_selection( $this->database )
+			configured_max_attempt_rows: 200
 		);
 	}
 
@@ -167,8 +164,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
 			clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
-			database_lifecycle: $this->database_lifecycle,
-			selection: $this->queued_selection( $this->database )
+			database_lifecycle: $this->database_lifecycle
 		);
 
 		self::assertMatchesRegularExpression( '/^[a-f0-9]{32}$/D', $this->manual( 'example' )->get_correlation_id() );
@@ -182,8 +178,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
 			fn ( int $length ): string => str_repeat( chr( $this->random_byte++ ), $length ),
 			$this->database_lifecycle,
-			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ),
-			selection: $this->queued_selection( $this->database )
+			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' )
 		);
 		try {
 			$this->manual( 'example' );
@@ -1152,65 +1147,6 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertSame( 'deployed', $finished->get_outcome()?->get_code() );
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider( 'authority_read_boundaries' )]
-	public function test_one_shot_selection_abort_cannot_finish_outside_its_transaction( int $read ): void {
-		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
-		$this->repository                        = new DeploymentAttemptRepository(
-			$this->database,
-			'wp_ran_booster_deployment_attempts',
-			clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-17 00:00:00 UTC' ),
-			database_lifecycle: $this->database_lifecycle,
-			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ),
-			selection: $this->queued_selection( $this->database )
-		);
-		$this->webhook( 'example' );
-		$running = $this->repository->claim_next();
-		self::assertNotNull( $running );
-		$this->database->authority_reads      = 0;
-		$this->database->abort_authority_read = $read;
-		$this->database->queries              = array();
-		$directory                            = sys_get_temp_dir() . '/ran-889-abort-' . bin2hex( random_bytes( 8 ) );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Private logger boundary for this transaction proof.
-		self::assertTrue( mkdir( $directory, 0700 ) );
-		$capture = new \RAN\Logging\TemporaryDebugCapture( $directory . '/secrets.json' );
-		$capture->start();
-		\RAN\Logging\BoosterLogger::configure_capture( $capture );
-		$caught = false;
-		try {
-			try {
-				$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( 'policy_blocked' ), working_copy_observation: $running );
-			} catch ( DatabaseLifecycleFailure ) {
-				$caught = true;
-			}
-			$terminal_writes = count( array_filter( $this->database->queries, static fn ( string $sql ): bool => str_contains( $sql, "SET state = 'failed'" ) ) );
-			$activity_writes = count( array_filter( $this->database->queries, static fn ( string $sql ): bool => str_contains( $sql, "SET status = 'failed'" ) ) );
-			$logs            = implode( "\n", array_column( $capture->snapshot()['entries'], 'line' ) );
-			self::assertTrue( $caught, sprintf( 'state=%s; terminal writes=%d; Activity completions=%d; finished logs=%d; automatic rollbacks=%d', $this->database->rows[0]['state'], $terminal_writes, $activity_writes, substr_count( $logs, 'attempt finished' ), $this->database->automatic_rollbacks ) );
-			self::assertSame( 1, $this->database->automatic_rollbacks );
-			self::assertSame( 0, $terminal_writes );
-			self::assertSame( 0, $activity_writes );
-			self::assertSame( 'running', $this->repository->find_exact( $running->get_id() )?->get_state()->value );
-			self::assertStringNotContainsString( 'attempt finished', $logs );
-			self::assertNull( $this->repository->provider_refusal( $running ) );
-		} finally {
-			\RAN\Logging\BoosterLogger::configure_capture( null );
-			$files = glob( $directory . '/*' );
-			foreach ( false === $files ? array() : $files as $file ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Only this private capture's files.
-				unlink( $file );
-			}
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Only this private capture directory.
-			rmdir( $directory );
-		}
-	}
-
-	/** @return iterable<string,array{int}> */
-	public static function authority_read_boundaries(): iterable {
-		foreach ( array( 'initial selection', 'nested selection', 'active plugins', 'selection recheck', 'active plugins recheck' ) as $index => $name ) {
-			yield $name => array( $index + 1 );
-		}
-	}
-
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'working_copy_terminal_cases' )]
 	public function test_working_copy_fact_requires_the_same_running_snapshot_and_authority( string $change ): void {
 		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
@@ -1219,8 +1155,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			'wp_ran_booster_deployment_attempts',
 			clock: static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-17 00:00:00 UTC' ),
 			database_lifecycle: $this->database_lifecycle,
-			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ),
-			selection: $this->queued_selection( $this->database )
+			activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' )
 		);
 		$this->webhook( 'example' );
 		$running = $this->repository->claim_next();
@@ -1228,10 +1163,6 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$observation = $running;
 		if ( 'adoption' === $change ) {
 			$this->database->management_rows['example']['repository'] = 'org/changed';
-		} elseif ( 'selection' === $change ) {
-			$this->database->selection->active_bytes = 'a:0:{}';
-		} elseif ( 'generation' === $change ) {
-			$this->database->selection->selection->rows[0]->option_value = str_replace( '"selection_generation":0', '"selection_generation":1', $this->database->selection->selection->rows[0]->option_value );
 		} elseif ( 'correlation' === $change ) {
 			$this->database->rows[0]['correlation_id'] = str_repeat( 'f', 32 );
 		} elseif ( 'request' === $change ) {
@@ -1263,7 +1194,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 
 	/** @return iterable<string,array{string}> */
 	public static function working_copy_terminal_cases(): iterable {
-		foreach ( array( 'valid', 'adoption', 'selection', 'generation', 'correlation', 'request', 'fence', 'observation', 'owner', 'success', 'commit', 'activity', 'write', 'read' ) as $case ) {
+		foreach ( array( 'valid', 'adoption', 'correlation', 'request', 'fence', 'observation', 'owner', 'success', 'commit', 'activity', 'write', 'read' ) as $case ) {
 			yield $case => array( $case );
 		}
 	}
@@ -1274,7 +1205,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		$previous     = $GLOBALS['ran_booster_activity_options'] ?? null;
 		try {
 			$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
-			$this->repository                        = new DeploymentAttemptRepository( $this->database, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->database_lifecycle, activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ), selection: $this->queued_selection( $this->database ) );
+			$this->repository                        = new DeploymentAttemptRepository( $this->database, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->database_lifecycle, activity: new ActivityStore( $this->database, 'wp_ran_booster_activity' ) );
 			if ( 'install' === $scenario ) {
 				$running = $this->manual( 'example' );
 			} else {
@@ -1354,8 +1285,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-19 00:00:00 UTC' ),
 			fn ( int $length ): string => str_repeat( chr( $this->random_byte++ ), $length ),
 			$this->database_lifecycle,
-			activity: new ActivityStore( $activity_connection ),
-			selection: $this->queued_selection( $this->database )
+			activity: new ActivityStore( $activity_connection )
 		);
 		$running                                 = $this->manual( 'auto-before' );
 		$this->repository->reconcile_confirmed_stopped( $running->get_id(), runner_throw: true );
@@ -1553,7 +1483,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertTrue( $this->repository->has_unresolved_target_attempt( 'plugin', 'example' ) );
 	}
 
-	public function test_native_recovery_blocks_queued_directory_siblings_without_affecting_exact_unlink(): void {
+	public function test_directory_scope_blocks_queued_siblings_without_affecting_exact_unlink(): void {
 		$this->webhook( 'other' );
 		foreach ( array( 'target/other.php', 'target/nested/other.php', 'TARGET/other.php' ) as $identifier ) {
 			$request                         = json_decode( $this->database->rows[0]['request_json'], true, 512, JSON_THROW_ON_ERROR );
@@ -1591,8 +1521,7 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
 			$database_lifecycle ?? $this->database_lifecycle,
-			$maximum_rows,
-			selection: $this->queued_selection( $this->database )
+			$maximum_rows
 		);
 	}
 

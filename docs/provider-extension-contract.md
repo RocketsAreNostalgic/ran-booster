@@ -94,11 +94,12 @@ neither host policy nor native callbacks.
 
 `begin_native_mutation(type, identity)` rechecks the bound operation approval
 immediately before installed plugin/theme file mutation, then asks Core for its
-exact opaque update owner. Core still validates the staged target, selected
-implementation, package-mutation permission and native updater lock. Pass that
-owner unchanged to `complete_native_mutation(owner, type, identity, outcome)`.
-Completion deliberately remains callable after approval changes: it records
-exact-owner success or uncertainty without granting fresh permission. Host errors
+exact opaque update owner. Core still validates the staged target,
+package-mutation permission and native updater lock. Pass that owner unchanged
+to `complete_native_mutation(owner, type, identity, outcome)`. Completion
+deliberately remains callable after approval changes: it finishes the exact
+owner's success or uncertainty without granting fresh permission, and only a
+verified success commits a pending Branch-to-release switch. Host errors
 propagate; neither checkpoint makes a failed operation successful.
 
 Core currently supplies these native callbacks for its GitHub release update

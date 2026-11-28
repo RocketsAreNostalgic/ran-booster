@@ -51,62 +51,6 @@ final class RAN_Booster_UpdaterLockInstalledSmoke {
 			$this->check( $token === $this->row(), 'A failed DELETE must preserve its owner.' );
 			$this->check( $lock->release( $token ), 'The owner must remain releasable after the query filter is removed.' );
 
-			$expected_owner = (string) time();
-			$stale_base     = (string) ( time() - 3601 );
-			foreach (
-				array(
-					array( $expected_owner, $expected_owner . ' ' ),
-					array( $stale_base, $stale_base . ' ' ),
-					array( $expected_owner, $stale_base . ' ' ),
-				) as list( $candidate_owner, $padded_malformed )
-			) {
-				$this->insert_row( $padded_malformed );
-				try {
-					$this->prime_cache();
-					try {
-						$lock->acquire_replacing_owner( $candidate_owner );
-						throw new RuntimeException( 'Byte-exact lock handoff must refuse a trailing-space malformed row.' );
-					} catch ( RuntimeException $caught ) {
-						$this->check( 'The WordPress updater is already running.' === $caught->getMessage(), 'Trailing-space lock contention must keep the Core contention message.' );
-					}
-					$this->check( $padded_malformed === $this->row(), 'Byte-exact lock handoff must preserve a trailing-space malformed row without overwriting it.' );
-					$this->check_cache( true );
-				} finally {
-					$this->delete_exact_row( $padded_malformed );
-				}
-				$this->check( null === $this->row(), 'The disposable trailing-space lock fixture must be cleaned up.' );
-			}
-
-			$fixed_now            = time();
-			$own                  = (string) $fixed_now;
-			$this->owned_tokens[] = $own;
-			$fixed_lock           = new class( $fixed_now ) extends WordPressUpdaterLock {
-				public function __construct( private readonly int $fixed_now ) {}
-
-				protected function now(): int {
-					return $this->fixed_now;
-				}
-			};
-			$this->insert_row( $own );
-			$this->prime_cache();
-			$expected_recovery    = $fixed_lock->acquire_replacing_owner( $own );
-			$this->owned_tokens[] = $expected_recovery;
-			$this->check( 1 === preg_match( '/\A' . $fixed_now . '\.[0-9]{27}\z/D', $expected_recovery ) && $expected_recovery === $this->row() && $expected_recovery === $lock->current_token(), 'Same-second recovery handoff must replace the owner row with a distinct fractional live token.' );
-			$this->check_cache( false );
-			$this->prime_cache();
-			try {
-				$fixed_lock->acquire_replacing_owner( $own );
-				throw new RuntimeException( 'Concurrent same-second recovery against the replaced owner must be refused.' );
-			} catch ( RuntimeException $caught ) {
-				$this->check( 'The WordPress updater is already running.' === $caught->getMessage(), 'Concurrent same-second recovery must keep the Core contention message.' );
-			}
-			$this->check( $expected_recovery === $this->row(), 'Refused concurrent recovery must preserve the active recovery lock.' );
-			$this->check_cache( true );
-			$this->check( $lock->release( $expected_recovery ), 'The active recovery token must release cleanly.' );
-			$this->check( null === $this->row(), 'Releasing the recovery token must leave auto_updater.lock absent.' );
-
-			$this->expect_storage_failure( 'UPDATE', static fn () => $lock->acquire_replacing_owner( $expected_owner ) );
-
 			$callback_failure = new RuntimeException( 'Disposable lock callback failure.' );
 			$propagated       = false;
 			try {
@@ -190,29 +134,6 @@ final class RAN_Booster_UpdaterLockInstalledSmoke {
 		$value = $this->database->get_var( $this->database->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $this->database->options, self::NAME ) );
 		$this->check( '' === $this->database->last_error, 'The installed native lock fixture row must remain readable.' );
 		return is_string( $value ) ? $value : null;
-	}
-
-	private function insert_row( string $value ): void {
-		$prepared = $this->database->prepare(
-			'INSERT INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)',
-			$this->database->options,
-			self::NAME,
-			$value,
-			'no'
-		);
-		$this->check( is_string( $prepared ) && 1 === $this->database->query( $prepared ), 'The disposable native lock fixture row must be created.' );
-	}
-
-	private function delete_exact_row( string $value ): void {
-		$prepared = $this->database->prepare(
-			'DELETE FROM %i WHERE option_name = %s AND CAST(option_value AS BINARY) = CAST(%s AS BINARY)',
-			$this->database->options,
-			self::NAME,
-			$value
-		);
-		if ( is_string( $prepared ) ) {
-			$this->database->query( $prepared );
-		}
 	}
 
 	private function prime_cache(): void {

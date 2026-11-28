@@ -7,13 +7,11 @@ namespace RAN\Portability;
 use InvalidArgumentException;
 
 final readonly class BlueprintPlanItem {
-	/** @param array<string,mixed>|null $provider_expectation
-	 *  @param array{release_id:string,tag:string,version:string,channel:string,fingerprint:string,package_root:string,main_file:string}|null $release_review */
+	/** @param array{release_id:string,tag:string,version:string,channel:string,fingerprint:string,package_root:string,main_file:string}|null $release_review */
 	public function __construct(
 		public BlueprintPackage $package,
 		public TargetPackageAction $action,
 		public TargetPackageReason $reason,
-		public ?array $provider_expectation = null,
 		public ?array $release_review = null
 	) {
 		$valid_reasons = match ( $action ) {
@@ -36,7 +34,6 @@ final readonly class BlueprintPlanItem {
 				TargetPackageReason::DESTINATION_CONFLICT,
 				TargetPackageReason::PACKAGE_FOLDER_MISMATCH,
 				TargetPackageReason::PROVIDER_UNAVAILABLE,
-				TargetPackageReason::PROVIDER_SELECTION_CHANGED,
 				TargetPackageReason::PROVIDER_TEMPORARILY_UNAVAILABLE,
 				TargetPackageReason::RELEASE_UNAVAILABLE,
 				TargetPackageReason::RELEASE_REVIEW_CHANGED,

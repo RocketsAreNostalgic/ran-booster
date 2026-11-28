@@ -14,7 +14,6 @@ use RAN\Deployment\PackageSourceGate;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
-use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\ProviderFailure;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
@@ -112,8 +111,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		?callable $public_lookup_profile = null,
 		?RepositorySourceGuard $source_guard = null,
 		?callable $check_without_offer = null,
-		?callable $switch_install = null,
-		private ?GitHubProviderSelection $github_selection = null
+		?callable $switch_install = null
 	) {
 		$this->switch_install = null === $switch_install ? \Closure::fromCallable( array( ManagedReleaseTargetRegistrar::class, 'install_release' ) ) : \Closure::fromCallable( $switch_install );
 
@@ -701,11 +699,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 			return ReleaseTrackingResult::failed( 'policy_disabled', 'Updates are disabled for this package.' );
 		}
-		if ( $this->github_hold_blocks_package( $package ) ) {
-			$this->schedule_native_recheck( $type );
-
-			return ReleaseTrackingResult::failed( 'native_hold', 'GitHub installs are currently on hold.' );
-		}
 		try {
 			$availability = $this->release_source_available( $type, $package );
 			if ( false === $availability ) {
@@ -869,8 +862,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			$incompatible = false;
 			$changed      = $this->mutate_with_updater_lock(
-				$type,
-				$identifier,
 				function () use ( $type, $identifier, $expected_source_revision, $channel, $package, &$incompatible ): bool {
 					$token   = \RAN\AdoptionIdentity::of( $package );
 					$current = $this->package( $type, $identifier );
@@ -1069,8 +1060,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
 			}
 			$changed = $this->mutate_with_updater_lock(
-				$type,
-				$identifier,
 				function () use ( $type, $identifier, $expected_source_revision, $package ): bool {
 					$token = \RAN\AdoptionIdentity::of( $package );
 					if ( null === $token || \RAN\AdoptionIdentity::of( $this->package( $type, $identifier ) ) !== $token ) {
@@ -1088,14 +1077,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 					);
 				}
 			);
-			if ( DeploymentOutcome::CODE_LOCK_UNAVAILABLE === $changed
-				&& $this->github_selection?->native_mutation_blocks_target( $type, $identifier ) ) {
-				$changed = 'branch_switch_held';
-			}
 			if ( ! is_bool( $changed ) ) {
 				return match ( $changed ) {
 					DeploymentOutcome::CODE_LOCK_UNAVAILABLE => ReleaseTrackingResult::failed( $changed, 'The WordPress package updater lock is occupied.' ),
-					'branch_switch_held' => ReleaseTrackingResult::failed( $changed, 'A GitHub install hold blocks the switch to Branch.' ),
 					default => ReleaseTrackingResult::failed( 'branch_switch_unavailable', 'Booster could not verify the switch to Branch.' ),
 				};
 			}
@@ -1125,19 +1109,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 	/**
 	 * @param callable(): bool $mutation
-	 * @return bool|ManagedReleaseSubdirectoryNotSupported|'lock_unavailable'|'branch_switch_held'|null
+	 * @return bool|ManagedReleaseSubdirectoryNotSupported|'lock_unavailable'|null
 	 */
-	private function mutate_with_updater_lock( string $type, string $identifier, callable $mutation ): bool|ManagedReleaseSubdirectoryNotSupported|string|null {
-		if ( null === $this->github_selection ) {
-			try {
-				return $this->updater_lock->run( $mutation );
-			} catch ( ManagedReleaseSubdirectoryNotSupported $failure ) {
-				return $failure;
-			} catch ( Throwable ) {
-				return null;
-			}
-		}
-
+	private function mutate_with_updater_lock( callable $mutation ): bool|ManagedReleaseSubdirectoryNotSupported|string|null {
 		try {
 			$token = $this->updater_lock->try_acquire_without_reclaim();
 		} catch ( Throwable ) {
@@ -1148,12 +1122,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 
 		try {
-			if ( $this->updater_lock->current_token() !== $token ) {
-				return null;
-			}
-			if ( $this->github_selection->native_mutation_blocks_target( $type, $identifier ) ) {
-				return 'branch_switch_held';
-			}
 			if ( $this->updater_lock->current_token() !== $token ) {
 				return null;
 			}
@@ -1340,23 +1308,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			: '';
 
 		return $update_uri;
-	}
-
-	private function github_hold_blocks_package( Package $package ): bool {
-		if ( null === $this->github_selection ) {
-			return false;
-		}
-		$status = $this->github_selection->status();
-		if ( 'recovery_required' !== ( $status['state'] ?? null ) ) {
-			return false;
-		}
-		$expectation = $this->github_selection->expectation();
-		$provider    = is_array( $expectation ) ? ( $expectation['provider_code'] ?? null ) : null;
-		if ( ! is_string( $provider ) || '' === $provider ) {
-			return true;
-		}
-
-		return $package->get_provider_code() === $provider;
 	}
 
 	private function header_file( string $type, string $identifier ): string {

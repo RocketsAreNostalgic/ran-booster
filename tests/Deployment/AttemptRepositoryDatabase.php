@@ -76,23 +76,24 @@ namespace RAN\Tests\Deployment {
 		/** @var array<string, string> */
 		public array $option_rows = array();
 		/** @var list<string> */
-		public array $queries                = array();
-		public ?string $fail_query_contains  = null;
-		public ?\Throwable $query_failure    = null;
-		public ?string $zero_query_contains  = null;
-		public bool $fail_insert             = false;
-		public ?int $fail_insert_number      = null;
-		public bool $fail_reads              = false;
-		public ?int $abort_authority_read    = null;
-		public int $authority_reads          = 0;
-		public int $automatic_rollbacks      = 0;
-		public bool $fail_commit             = false;
-		public bool $fail_rollback           = false;
-		public bool $throw_rollback          = false;
-		public ?string $tamper_insert_column = null;
-		public mixed $tamper_insert_value    = null;
-		public ?string $tamper_update_column = null;
-		public mixed $tamper_update_value    = null;
+		public array $queries                      = array();
+		public ?string $fail_query_contains        = null;
+		public ?\Throwable $query_failure          = null;
+		public ?string $zero_query_contains        = null;
+		public bool $fail_insert                   = false;
+		public ?int $fail_insert_number            = null;
+		public bool $fail_reads                    = false;
+		public ?int $abort_authority_read          = null;
+		public int $authority_reads                = 0;
+		public bool $deadlock_next_management_lock = false;
+		public int $automatic_rollbacks            = 0;
+		public bool $fail_commit                   = false;
+		public bool $fail_rollback                 = false;
+		public bool $throw_rollback                = false;
+		public ?string $tamper_insert_column       = null;
+		public mixed $tamper_insert_value          = null;
+		public ?string $tamper_update_column       = null;
+		public mixed $tamper_update_value          = null;
 		/** @var array{rows: array<int, array<string, mixed>>, options: array<string, string>, activity: list<array<string,mixed>>}|null */
 		private ?array $snapshot      = null;
 		private int $insert_calls     = 0;
@@ -441,6 +442,13 @@ namespace RAN\Tests\Deployment {
 			}
 			if ( ( str_starts_with( $query, 'SELECT package, adoption_token' ) || str_starts_with( $query, 'SELECT *' ) ) && preg_match( "/BINARY package = BINARY '([^']+)'/", $query, $match ) === 1 ) {
 				$identifier = stripslashes( $match[1] );
+				if ( $this->deadlock_next_management_lock && str_ends_with( $query, ' FOR UPDATE' ) ) {
+					$this->deadlock_next_management_lock = false;
+					$this->rollback_snapshot(); // InnoDB deadlock victims lose the whole transaction.
+					++$this->automatic_rollbacks;
+					$this->last_error = 'Deadlock found when trying to get lock; try restarting transaction';
+					return null;
+				}
 				if ( null !== $this->on_management_read ) {
 					( $this->on_management_read )();
 				}

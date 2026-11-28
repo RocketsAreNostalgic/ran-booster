@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\WordPress;
 
 use JsonException;
+use RAN\UpdaterSupport\V1\TargetWorkingCopy;
 
 /**
  * Resolves whether Booster may participate in WordPress-native update discovery.
@@ -96,9 +97,7 @@ final class CoreSelfUpdatePolicy {
 	}
 
 	public static function has_source_tree_indicator( string $plugin_root ): bool {
-		return is_dir( $plugin_root . '/.git' )
-			|| is_file( $plugin_root . '/.git' )
-			|| is_link( $plugin_root . '/.git' )
+		return TargetWorkingCopy::is_working_copy( $plugin_root )
 			|| is_file( $plugin_root . '/composer.json' );
 	}
 

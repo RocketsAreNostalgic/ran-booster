@@ -230,7 +230,6 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertSame( 'Selected Example', $presenter->overview_provider_facts()['gh']['source_name'] );
 		self::assertNull( $selection['review'] );
 		self::assertNull( $selection['package_counts'] );
-		self::assertNull( $selection['recovery'] );
 	}
 
 	public function test_missing_selected_replacement_without_candidates_keeps_return_review_visible(): void {

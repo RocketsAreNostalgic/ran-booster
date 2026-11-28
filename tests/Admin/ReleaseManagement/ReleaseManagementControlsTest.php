@@ -181,7 +181,6 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'choose Releases, review Release readiness, then choose Use releases', $html );
 		self::assertStringContainsString( 'Booster checks and installs the release in one step; viewing settings changes nothing.', $html );
 		self::assertStringContainsString( 'Updates set to Disabled can&#039;t switch to releases', $html );
-		self::assertStringContainsString( 'release the hold', $html );
 		self::assertStringContainsString( 'Use Check releases on the managed Plugins or Themes screen', $html );
 		self::assertStringNotContainsString( 'Release Deployments', $html );
 		self::assertStringNotContainsString( 'ran-booster-release-deployments', $html );

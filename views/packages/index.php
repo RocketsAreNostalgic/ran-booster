@@ -46,6 +46,7 @@ $package_list_state           = isset( $package_list_state ) && is_array( $packa
 	);
 $package_attention_enabled    = true === ( $package_attention_enabled ?? false );
 $package_paused               = isset( $package_paused ) && is_array( $package_paused ) ? $package_paused : array();
+$package_working_copies       = isset( $package_working_copies ) && is_array( $package_working_copies ) ? $package_working_copies : array();
 $package_settings_linked      = current_user_can( 'manage_options' );
 $status_link_tags             = static fn ( string $url ): array => $package_settings_linked ? array( '<a href="' . esc_url( $url ) . '">', '</a>' ) : array( '', '' );
 $package_list_total           = isset( $package_list_total ) && is_int( $package_list_total )
@@ -642,6 +643,9 @@ $can_manage_unavailable   = current_user_can( 'update_' . $package_view->get_typ
 						<?php \RAN\Admin\Component\StatusBadge::print_intent( $automation_state_label, $automation_state_intent ); ?>
 						<?php if ( $package_is_paused ) { ?>
 							<?php \RAN\Admin\Component\StatusBadge::print_tone( __( 'Paused', 'ran-booster' ), 'warning' ); ?>
+						<?php } ?>
+						<?php if ( in_array( $package->get_identifier(), $package_working_copies, true ) ) { ?>
+							<?php \RAN\Admin\Component\StatusBadge::print_tone( __( 'Working copy', 'ran-booster' ), 'warning' ); ?>
 						<?php } ?>
 					</p>
 				</div>

@@ -1136,12 +1136,6 @@
 			const selectedIndexes = rows.map((row) =>
 				row.getAttribute('data-portability-row')
 			);
-			const providerExpectations = new Map(
-				rows.map((row) => [
-					row,
-					row.getAttribute('data-portability-provider-expectation'),
-				])
-			);
 			const releaseReviews = new Map(
 				rows.map((row) => [
 					row,
@@ -1176,10 +1170,6 @@
 					selectedIndexes.forEach((index) =>
 						data.append('selected_rows[]', index)
 					);
-					const providerExpectation = providerExpectations.get(row);
-					if (providerExpectation !== null) {
-						data.set('provider_expectation', providerExpectation);
-					}
 					const [releaseReview, releaseReviewNonce] =
 						releaseReviews.get(row) || [];
 					if (releaseReview !== null && releaseReviewNonce !== null) {

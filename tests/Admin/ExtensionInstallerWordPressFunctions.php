@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunctions.php';
+
+function wp_tempnam( string $filename = '', string $dir = '' ): string {
+	unset( $filename, $dir );
+	return (string) tempnam( sys_get_temp_dir(), 'ran-extension-' );
+}
+
 /** @param array{filename: string, limit_response_size: int} $args
  * @return array{response: array{code: int}}
  */

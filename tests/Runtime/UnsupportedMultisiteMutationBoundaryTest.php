@@ -63,8 +63,7 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			$this->blank( ThemeRepository::class ),
 			$this->blank( ManagedReleaseStore::class ),
 			$this->blank( WordPressUpdaterLock::class ),
-			$this->blank( \RAN\RepositoryProvider\ProviderRegistry::class ),
-			$this->blank( \RAN\RepositoryProvider\GitHubProviderSelection::class )
+			$this->blank( \RAN\RepositoryProvider\ProviderRegistry::class )
 		);
 
 		$registrar->register();
@@ -102,14 +101,13 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 			$this->blank( ThemeRepository::class ),
 			$this->blank( WordPressUpdaterLock::class ),
 			$this->blank( \RAN\RepositoryProvider\ProviderRegistry::class ),
-			$this->blank( \RAN\RepositoryProvider\GitHubProviderSelection::class ),
 			static fn (): never => throw new \RuntimeException( 'Capabilities must not be checked.' ),
 			static fn (): never => throw new \RuntimeException( 'Nonces must not be checked.' )
 		);
 		$results = array(
 			$facade->list_candidates( 'plugin', array(), 'stable', 'nonce' ),
 			$facade->inspect( 'plugin', array(), '1', 'v1.0.0', 'stable', 'nonce' ),
-			$facade->install( 'plugin', array(), '1', 'v1.0.0', str_repeat( 'a', 64 ), 'stable', 'nonce', null ),
+			$facade->install( 'plugin', array(), '1', 'v1.0.0', str_repeat( 'a', 64 ), 'stable', 'nonce' ),
 		);
 
 		foreach ( $results as $result ) {

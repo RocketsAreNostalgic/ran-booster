@@ -11,10 +11,9 @@ use RAN\Deployment\DeploymentPolicy;
  */
 interface ProspectiveReleaseFacade {
 
-	public const API_VERSION = 10;
+	public const API_VERSION = 11;
 
-	/** @param array<string,mixed>|null $provider_expectation */
-	public function nonce_action( string $operation, string $type, ?array $provider_expectation, ?string $expected_identifier = null, DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL ): string;
+	public function nonce_action( string $operation, string $type, ?string $expected_identifier = null, DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL ): string;
 
 	/**
 	 * Return the bounded provider codes supporting the complete prospective workflow.
@@ -51,9 +50,9 @@ interface ProspectiveReleaseFacade {
 		string $nonce
 	): ProspectiveReleaseResult;
 
-	/** @param array<string,mixed> $repository_request
+	/**
+	 * @param array<string, mixed>  $repository_request
 	 * @param 'stable'|'prerelease' $channel
-	 * @param array<string,mixed>|null $provider_expectation
 	 */
 	public function install(
 		string $type,
@@ -63,7 +62,6 @@ interface ProspectiveReleaseFacade {
 		string $expected_fingerprint,
 		string $channel,
 		string $nonce,
-		?array $provider_expectation,
 		?string $expected_identifier = null,
 		DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL
 	): ProspectiveReleaseResult;

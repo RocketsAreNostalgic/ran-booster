@@ -31,14 +31,33 @@ final class DeploymentRequestTest extends TestCase {
 		new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, expected_identifier: 'example/' . str_repeat( 'a', 180 ) . '.php' );
 	}
 
-	public function test_initial_identity_round_trip_preserves_generation_and_historical_selection(): void {
-		$request  = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::DISABLED, 1, provider_selection_generation: 7, selected_commit: str_repeat( 'a', 40 ), expected_identifier: 'example/Main.php' );
+	public function test_initial_identity_round_trip_preserves_historical_selection(): void {
+		$request  = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::DISABLED, 1, selected_commit: str_repeat( 'a', 40 ), expected_identifier: 'example/Main.php' );
 		$restored = DeploymentRequest::from_json( $request->to_json() );
 		self::assertSame( 'example/Main.php', $restored->expected_identifier );
-		self::assertSame( 7, $restored->provider_selection_generation );
 		self::assertSame( str_repeat( 'a', 40 ), $restored->selected_commit );
 		self::assertNull( $restored->installed_identifier );
 		self::assertNull( $restored->adoption_token );
+	}
+
+	public function test_row_stored_before_1253_drops_the_retired_selection_generation(): void {
+		$request = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, installed_identifier: 'example/example.php', adoption_token: 'gh:42:11111111-1111-4111-8111-111111111111', selected_commit: str_repeat( 'a', 40 ) );
+		$stored  = str_replace( ',"selected_commit":', ',"provider_selection_generation":7,"selected_commit":', $request->to_json() );
+		self::assertStringContainsString( '"provider_selection_generation":7', $stored );
+
+		$restored = DeploymentRequest::from_json( $stored );
+
+		self::assertSame( $request->to_json(), $restored->to_json() );
+		self::assertArrayNotHasKey( 'provider_selection_generation', $restored->to_array() );
+
+		foreach ( array( '-1', '"7"', 'null', '7.0', '7 ' ) as $malformed ) {
+			try {
+				DeploymentRequest::from_json( str_replace( '"provider_selection_generation":7', '"provider_selection_generation":' . $malformed, $stored ) );
+				self::fail( 'A malformed retired selection generation decoded.' );
+			} catch ( InvalidArgumentException $failure ) {
+				self::assertSame( 'The stored deployment request is invalid.', $failure->getMessage() );
+			}
+		}
 	}
 
 	public function test_initial_identity_rejects_noncanonical_or_wrong_slug(): void {

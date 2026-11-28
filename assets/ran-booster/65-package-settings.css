@@ -4,17 +4,8 @@
 
 .ran-booster-admin
 	.ran-booster-package-settings__heading
-	+ [data-ran-booster-native-hold],
-.ran-booster-admin
-	.ran-booster-package-settings__heading
 	+ .ran-booster-package-settings {
 	margin-block-start: var(--ran-booster-card-gap);
-}
-
-.ran-booster-admin
-	.ran-booster-package-settings__heading
-	+ .notice.ran-booster-native-hold {
-	margin-block-end: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-package-recovery {

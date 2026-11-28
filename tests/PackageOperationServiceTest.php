@@ -444,6 +444,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertFalse( $dashboard->post_package_operation( 'edit-plugin', $input ) );
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertSame( 'ran_booster_package_edit_conflict', $dashboard->messages[0]['code'] );
+		self::assertSame( 'package_edit_failed', $dashboard->messages[0]['feedback'] );
 		self::assertSame( 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.', $dashboard->messages[0]['message'] );
 
 		unset( $GLOBALS['ran_booster_test_status_header'] );
@@ -467,6 +468,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'info', $dashboard->messages[0]['type'] );
 		self::assertStringContainsString( 'settings were saved', $dashboard->messages[0]['message'] );
 		self::assertSame( 'error', $dashboard->messages[1]['type'] );
+		self::assertSame( 'package_update_failed', $dashboard->messages[1]['feedback'] );
 	}
 
 	#[DataProvider( 'conflicting_branch_operations' )]
@@ -749,7 +751,7 @@ final class PackageOperationServiceTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__ ) . '/views/notices.php';
 			$html = (string) ob_get_clean();
-			self::assertStringContainsString( '<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error"', $html, $case );
+			self::assertStringContainsString( '<div data-feedback-key="package_edit_failed" role="alert" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error"', $html, $case );
 			self::assertStringContainsString( '<p>To use a different Git provider or repository, stop managing this package and adopt it again.</p>', $html, $case );
 		}
 	}
@@ -1258,6 +1260,7 @@ final class PackageOperationServiceTest extends TestCase {
 			self::assertSame( 400, $GLOBALS['ran_booster_test_status_header'], $type );
 			self::assertCount( 1, $dashboard->messages, $type );
 			self::assertSame( $sentence, $dashboard->messages[0]['message'], $type );
+			self::assertSame( 'package_install_failed', $dashboard->messages[0]['feedback'], $type );
 			unset( $GLOBALS['ran_booster_test_status_header'] );
 		}
 	}
@@ -1872,6 +1875,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'info', $dashboard->messages[0]['type'] );
 		self::assertSame( 'ran_booster_deployment_active', $dashboard->messages[0]['code'] );
+		self::assertArrayNotHasKey( 'feedback', $dashboard->messages[0], 'A running deployment is not a failure.' );
 		self::assertStringContainsString( 'plugin example in state running', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'attempt=42', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'reference=' . str_repeat( 'd', 32 ), $dashboard->messages[0]['message'] );
@@ -1896,6 +1900,7 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
 		self::assertSame( 'ran_booster_deployment_left_running', $dashboard->messages[0]['code'] );
+		self::assertSame( 'package_update_failed', $dashboard->messages[0]['feedback'] );
 		self::assertStringContainsString( 'Deployment attempt left running.', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'Reference: <code>' . str_repeat( 'f', 32 ) . '</code>', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'attempt=44', $dashboard->messages[0]['message'] );
@@ -1911,6 +1916,7 @@ final class PackageOperationServiceTest extends TestCase {
 
 		self::assertFalse( $dashboard->post_package_operation( 'update-plugin', $this->input( 'update-plugin' ) ) );
 		self::assertSame( 'ran_booster_manual_action_failed', $dashboard->messages[0]['code'] );
+		self::assertSame( 'package_update_failed', $dashboard->messages[0]['feedback'] );
 		self::assertStringNotContainsString( 'left running', $dashboard->messages[0]['message'] );
 		self::assertStringNotContainsString( 'token', $dashboard->messages[0]['message'] );
 		self::assertStringNotContainsString( '/var/www', $dashboard->messages[0]['message'] );
@@ -1934,10 +1940,70 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
 		self::assertSame( 'ran_booster_deployment_active', $dashboard->messages[0]['code'] );
+		self::assertSame( 'package_update_failed', $dashboard->messages[0]['feedback'] );
 		self::assertStringContainsString( 'could not confirm how an earlier deployment of the plugin example ended', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'No deployment is currently running', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'Check the package and allow another attempt', $dashboard->messages[0]['message'] );
 		unset( $GLOBALS['ran_booster_test_status_header'] );
+	}
+
+	/** @return array<string, array{\Closure(): \Throwable, string, string}> */
+	public static function coded_perform_failures(): array {
+		return array(
+			'package storage'          => array( static fn (): \Throwable => \RAN\Storage\PackageStorageFailure::write_failed(), 'update-plugin', 'package_update_failed' ),
+			'credential-shaped ref'    => array( static fn (): \Throwable => new \RAN\Deployment\CredentialShapedRef(), 'update-theme', 'package_update_failed' ),
+			'refused before admission' => array( static fn (): \Throwable => new \RAN\Deployment\DeploymentCheckFailure( 'source_paused', 'Paused.' ), 'install-plugin', 'package_install_failed' ),
+		);
+	}
+
+	/** @param \Closure(): \Throwable $failure */
+	#[DataProvider( 'coded_perform_failures' )]
+	public function test_each_failure_caught_by_perform_carries_its_feedback_key( \Closure $failure, string $action, string $feedback ): void {
+		$coordinator          = new OperationCoordinator();
+		$coordinator->failure = $failure();
+		$dashboard            = $this->dashboard( $coordinator );
+
+		self::assertFalse( $dashboard->post_package_operation( $action, $this->input( $action ) ) );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( $feedback, $dashboard->messages[0]['feedback'] );
+		if ( $coordinator->failure instanceof \RAN\Storage\PackageStorageFailure ) {
+			self::assertArrayHasKey( 'recovery_required', $dashboard->messages[0]['data'] );
+		}
+		unset( $GLOBALS['ran_booster_test_status_header'] );
+	}
+
+	public function test_a_saved_package_that_cannot_be_reinstalled_is_an_update_failure(): void {
+		$plugins = new OperationPluginRepository( $this->plugin() );
+		$themes  = new OperationThemeRepository( new OperationTheme( 'example' ) );
+		// The saved package reads back under another adoption, so Save and reinstall cannot reinstall it.
+		$plugins->fresh_after_mutation = $this->plugin( 'example/example.php', 'R_other' );
+		$dashboard                     = new Dashboard(
+			new Database(),
+			$plugins,
+			new Booster(),
+			$themes,
+			( new \ReflectionClass( ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor(),
+			( new \ReflectionClass( TroubleshootingService::class ) )->newInstanceWithoutConstructor(),
+			null,
+			null,
+			$this->service( $plugins, $themes, new OperationCoordinator() )
+		);
+
+		self::assertFalse( $dashboard->post_package_operation( 'edit-plugin', $this->input( 'edit-plugin', array( 'reinstall_after_save' => '1' ) ) ) );
+		self::assertSame( 'ran_booster_manual_action_failed', $dashboard->messages[1]['code'] );
+		self::assertSame( 'package_update_failed', $dashboard->messages[1]['feedback'] );
+		unset( $GLOBALS['ran_booster_test_status_header'] );
+	}
+
+	public function test_an_unlink_and_delete_removal_failure_carries_its_feedback_key(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator() );
+		$input     = $this->input( 'unlink-delete-plugin', array( 'expected_adoption_token' => 'gh:R_example:22222222-2222-4222-8222-222222222222' ) );
+
+		self::assertFalse( $dashboard->post_package_operation( 'unlink-delete-plugin', $input ) );
+		unset( $GLOBALS['ran_booster_test_status_header'] );
+
+		self::assertSame( 'ran_booster_package_removal_stale', $dashboard->messages[0]['code'] );
+		self::assertSame( 'package_unlink_delete_failed', $dashboard->messages[0]['feedback'] );
 	}
 
 	/** @return list<array{string, string, string}> */

@@ -239,9 +239,11 @@ function build(options = {}) {
 			const marks = new Set();
 			const node = {
 				isConnected: connected,
+				text,
 				hasAttribute: (name) =>
 					name === 'data-ran-booster-ui-notice' || marks.has(name),
 				setAttribute: (name) => marks.add(name),
+				removeAttribute: (name) => marks.delete(name),
 				getAttribute: (name) =>
 					({
 						'data-feedback-key': key,
@@ -249,7 +251,7 @@ function build(options = {}) {
 					})[name] ?? null,
 				querySelector: (selector) => {
 					if (selector.includes('notice-content')) {
-						return { textContent: text };
+						return { textContent: node.text };
 					}
 					return link &&
 						selector === 'a.ran-booster-feedback__activity'
@@ -972,6 +974,74 @@ test('a queue summary notice stays in the page while the host shows its sentence
 	// A later pass does not show it again.
 	assert.equal(env.feedback.consume(), 0);
 	assert.equal(env.notices.length, 1);
+});
+
+test('a pointer to a coded notice goes once the notice is hidden or released, and stays while it keeps its result', () => {
+	const env = boot();
+	const released = env.notice({
+		key: 'package_edit_failed',
+		intent: 'error',
+		text: 'The package changed.',
+	});
+	const hidden = env.notice({
+		key: 'refresh_check_failed',
+		intent: 'error',
+		text: 'The release check failed.',
+	});
+	const queue = env.notice({
+		key: 'bulk_update_queue',
+		intent: 'warning',
+		text: 'Queued 2 plugins. Skipped: 1.',
+	});
+	const delivery = env.target('delivery', { hidden: false });
+	assert.equal(env.feedback.consume(), 3);
+	assert.equal(
+		env.feedback.show('Delivered.', {
+			intent: 'warning',
+			target: delivery,
+		}),
+		false
+	);
+	// A live progress rewrite keeps the queue result, so its pointer stays.
+	queue.text = 'Queued 2 plugins. 1 running. Skipped: 1.';
+	// Clearing the taken mark releases a notice for a new result.
+	released.removeAttribute('data-ran-booster-feedback-taken');
+	hidden.hidden = true;
+	assert.equal(env.feedback.consume(), 1);
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Queued 2 plugins. Skipped: 1.', 'The package changed.']
+	);
+	// A target the host did not take from a notice is left to the caller.
+	delivery.hidden = true;
+	assert.equal(
+		env.feedback.show('Delivered.', {
+			intent: 'warning',
+			target: delivery,
+		}),
+		true
+	);
+	assert.equal(env.feedback.show('Saved.'), false);
+	assert.equal(env.notices.length, 3);
+});
+
+test('a hidden coded notice gets no pointer until it is shown', () => {
+	const env = boot();
+	const notice = env.notice({
+		key: 'package_edit_failed',
+		intent: 'error',
+		text: 'The package changed.',
+	});
+	notice.hidden = true;
+	assert.equal(env.feedback.consume(), 0);
+	assert.equal(env.notices.length, 0);
+	assert.equal(notice.hasAttribute('data-ran-booster-feedback-taken'), false);
+	notice.hidden = false;
+	assert.equal(env.feedback.consume(), 1);
+	assert.deepEqual(
+		env.notices.map((item) => item.content),
+		['The package changed.']
+	);
 });
 
 test('a coded notice that is no longer in the page is never shown, so a failure is never snackbar-only', () => {

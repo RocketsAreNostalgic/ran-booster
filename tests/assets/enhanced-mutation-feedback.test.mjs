@@ -25,6 +25,10 @@ const css = fs.readFileSync(
 	),
 	'utf8'
 );
+const feedbackSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-feedback.js', import.meta.url),
+	'utf8'
+);
 const buttonCss = fs.readFileSync(
 	new URL('../../assets/ran-booster/10-buttons.css', import.meta.url),
 	'utf8'
@@ -2455,6 +2459,270 @@ test('a refused settings save shows the lock owner beside its error until a fail
 			detail: { elt, target, xhr: { status, addEventListener() {} } },
 		});
 		assert.deepEqual(page, [], eventName);
+	}
+});
+
+// Boot the real feedback host on a fixture's window. It shows its snackbars
+// through a recorded SnackbarList and scans only the shared error region.
+function bootFeedbackHost(state) {
+	const roots = [];
+	const node = () => {
+		const marks = new Map();
+		const created = {
+			className: '',
+			style: {},
+			isConnected: true,
+			append() {},
+			remove() {
+				created.isConnected = false;
+			},
+			addEventListener() {},
+			setAttribute: (name, value) => marks.set(name, value),
+			hasAttribute: (name) => marks.has(name),
+			contains: () => false,
+			querySelector: () => (created.rendered ? {} : null),
+		};
+		return created;
+	};
+	const hosts = [];
+	const document = {
+		readyState: 'complete',
+		activeElement: null,
+		body: node(),
+		addEventListener() {},
+		getElementById: () => null,
+		querySelector: () => null,
+		querySelectorAll: (selector) =>
+			selector === '[data-ran-booster-ui-notice][data-feedback-key]' &&
+			state.error.hasAttribute('data-feedback-key')
+				? [state.error]
+				: [],
+		createElement() {
+			const created = node();
+			created.ownerDocument = document;
+			hosts.push(created);
+			return created;
+		},
+	};
+	Object.assign(state.window, {
+		innerHeight: 800,
+		setTimeout: () => 0,
+		getComputedStyle: () => ({
+			paddingLeft: '20px',
+			backgroundColor: 'rgba(0, 0, 0, 0.85)',
+		}),
+	});
+	Object.assign(state.window.wp, {
+		i18n: { __: (text) => text },
+		components: { SnackbarList() {} },
+		element: {
+			createElement: (component, props) => ({ component, props }),
+			flushSync: (callback) => callback(),
+			createRoot(host) {
+				const root = {
+					notices: [],
+					unmounted: false,
+					render(tree) {
+						root.notices = tree.props.notices;
+						root.onRemove = tree.props.onRemove;
+						host.rendered = root.notices.length > 0;
+					},
+					unmount() {
+						root.unmounted = true;
+					},
+				};
+				roots.push(root);
+				return root;
+			},
+		},
+	});
+	// The shared region: a coded notice whose primary paragraph holds the shown sentence.
+	const paragraph = {
+		get textContent() {
+			return state.error.textContent;
+		},
+		set textContent(value) {
+			state.error.textContent = String(value);
+		},
+	};
+	Object.assign(state.error, {
+		id: 'ran-booster-package-mutation-error',
+		isConnected: true,
+		textContent: '',
+		querySelector: (selector) =>
+			[
+				'p',
+				'[data-ran-booster-ui-notice-primary]',
+				'[data-ran-booster-ui-notice-content] > p',
+			].includes(selector)
+				? paragraph
+				: null,
+		querySelectorAll: () => [],
+	});
+	state.error.setAttribute('data-ran-booster-admin-mutation-error', '');
+	state.error.setAttribute('data-ran-booster-ui-notice', '');
+	state.error.setAttribute('data-ran-booster-ui-notice-intent', 'error');
+	Function(
+		'window',
+		'document',
+		'Date',
+		'URL',
+		feedbackSource
+	)(state.window, document, { now: () => 0 }, URL);
+	const live = () => {
+		const root = roots.at(-1);
+		return root && !root.unmounted ? root.notices : [];
+	};
+	return {
+		get pointers() {
+			return live().map((notice) => notice.content);
+		},
+		get silent() {
+			return live().every((notice) => notice.spokenMessage === '');
+		},
+		dismiss() {
+			roots.at(-1).onRemove(live()[0].id);
+		},
+	};
+}
+
+test('each enhanced save failure replaces the real host pointer, and one without a key or a transport error clears it', () => {
+	const state = fixture();
+	const save = state.button;
+	save.dataset = {
+		ranBoosterErrorTarget: '#ran-booster-package-mutation-error',
+	};
+	save.isConnected = true;
+	save.matches = (selector) =>
+		[
+			'[data-ran-booster-enhanced-mutation]',
+			'[data-ran-booster-package-settings-save]',
+			'a, button',
+		].includes(selector);
+	save.hasAttribute = () => false;
+	save.addEventListener = () => {};
+	save.removeEventListener = () => {};
+	save.form = {
+		elements: packageEditControls(
+			'plugin',
+			'edit-plugin',
+			'example/example.php'
+		),
+	};
+	const target = {
+		id: 'ran-booster-package-edit-region',
+		isConnected: true,
+		contains: () => true,
+	};
+	state.document.getElementById = (id) =>
+		id === 'ran-booster-package-mutation-error' ? state.error : null;
+	const host = bootFeedbackHost(state);
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	const fail = (key, message) => {
+		const notice = {
+			textContent: message,
+			closest: () => true,
+			hasAttribute: () => false,
+			getAttribute: (name) => (name === 'data-feedback-key' ? key : null),
+			querySelector: () => null,
+		};
+		const region = {
+			querySelector(selector) {
+				return selector === '#ran-booster-package-edit-form'
+					? {
+							hasAttribute: (name) =>
+								name === 'data-ran-booster-attempted',
+							elements: packageEditControls(
+								'plugin',
+								'edit-plugin',
+								'example/example.php'
+							),
+						}
+					: null;
+			},
+			querySelectorAll: (selector) =>
+				selector.includes('.notice-error') ? [notice] : [],
+		};
+		state.window.DOMParser = class {
+			parseFromString() {
+				return { getElementById: () => region };
+			}
+		};
+		const detail = {
+			elt: save,
+			target,
+			xhr: {
+				status: 400,
+				addEventListener() {},
+				getResponseHeader: () => null,
+			},
+		};
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		state.listeners.get('htmx:beforeSwap')({ detail });
+		assert.equal(detail.shouldSwap, false);
+		state.listeners.get('htmx:afterRequest')({ detail });
+		assert.equal(state.error.hidden, false);
+		assert.equal(state.error.textContent, message);
+	};
+	const key = () => state.error.getAttribute('data-feedback-key');
+
+	fail('package_edit_failed', 'The package changed.');
+	assert.equal(key(), 'package_edit_failed');
+	assert.deepEqual(host.pointers, ['The package changed.']);
+	// The same failure again is still one silent pointer.
+	fail('package_edit_failed', 'The package changed.');
+	assert.deepEqual(host.pointers, ['The package changed.']);
+	assert.equal(host.silent, true);
+	// A dismissed pointer comes back with the next identical failure.
+	host.dismiss();
+	assert.deepEqual(host.pointers, []);
+	fail('package_edit_failed', 'The package changed.');
+	assert.deepEqual(host.pointers, ['The package changed.']);
+	// Each later failure, the same key with new copy included, replaces the
+	// pointer, so a fourth still gets one.
+	for (const [code, message] of [
+		['package_update_failed', 'The reinstall failed.'],
+		['package_edit_failed', 'The folder does not match.'],
+		['package_unlink_failed', 'The package could not be unlinked.'],
+	]) {
+		fail(code, message);
+		assert.equal(key(), code);
+		assert.deepEqual(host.pointers, [message], message);
+	}
+	// A failure without a closed key leaves the region without a key or pointer.
+	for (const uncoded of ['Package <b>failed</b>', null]) {
+		fail('package_edit_failed', 'The package changed.');
+		fail(uncoded, 'Nothing was saved.');
+		assert.equal(state.error.hasAttribute('data-feedback-key'), false);
+		assert.deepEqual(host.pointers, []);
+	}
+	// So does a transport failure, which shows the generic sentence there.
+	const reinstall = {
+		...save,
+		matches: (selector) =>
+			['[data-ran-booster-enhanced-mutation]', 'a, button'].includes(
+				selector
+			),
+	};
+	for (const [eventName, elt, status] of [
+		['htmx:timeout', save, 0],
+		['htmx:responseError', reinstall, 503],
+	]) {
+		fail('package_edit_failed', 'The package changed.');
+		assert.deepEqual(host.pointers, ['The package changed.']);
+		state.listeners.get(eventName)({
+			detail: { elt, target, xhr: { status, addEventListener() {} } },
+		});
+		assert.equal(
+			state.error.textContent,
+			'We could not complete that request. Please try again.',
+			eventName
+		);
+		assert.equal(state.error.hasAttribute('data-feedback-key'), false);
+		assert.deepEqual(host.pointers, [], eventName);
 	}
 });
 

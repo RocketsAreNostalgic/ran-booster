@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.0.0-beta.51](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.50...v1.0.0-beta.51) (2026-11-28)
+
+
+### Features
+
+* **packages:** show working-copy badge on package heading ([#1366](https://github.com/RocketsAreNostalgic/ran-booster/issues/1366)) ([9524340](https://github.com/RocketsAreNostalgic/ran-booster/commit/95243408c31005ce1a962c886f4c9f48586bd769))
+* **packages:** show working-copy badge on package rows ([#1341](https://github.com/RocketsAreNostalgic/ran-booster/issues/1341)) ([4d0d46b](https://github.com/RocketsAreNostalgic/ran-booster/commit/4d0d46b5519ef0d735b645e04657f3c21057bbf4))
+* **provider:** let a plugin supersede bundled GitHub ([#1347](https://github.com/RocketsAreNostalgic/ran-booster/issues/1347)) ([032535d](https://github.com/RocketsAreNostalgic/ran-booster/commit/032535da9a539acecf756833bd6aaf9d945ca973))
+* **releases:** name the rate-limited provider and when to retry ([#1315](https://github.com/RocketsAreNostalgic/ran-booster/issues/1315)) ([b72f419](https://github.com/RocketsAreNostalgic/ran-booster/commit/b72f419b138e8097e74076445ea33e5cf173a743))
+* **releases:** review and install a chosen package release ([#1305](https://github.com/RocketsAreNostalgic/ran-booster/issues/1305)) ([27c2964](https://github.com/RocketsAreNostalgic/ran-booster/commit/27c2964013317ba71af0394561e42e64e84c34c3))
+
+
+### Bug Fixes
+
+* **admin-ui:** give every disabled button one pale-grey look ([#1320](https://github.com/RocketsAreNostalgic/ran-booster/issues/1320)) ([4e622dd](https://github.com/RocketsAreNostalgic/ran-booster/commit/4e622dd2868b9477b39248e8eda6040556a57b4e))
+* **admin-ui:** keep shell layout steady under the sticky header ([#1317](https://github.com/RocketsAreNostalgic/ran-booster/issues/1317)) ([b3fb684](https://github.com/RocketsAreNostalgic/ran-booster/commit/b3fb68417dcb9b5281782fef58e916ec49d30f54))
+* **blueprint:** seal credential Blueprints with libsodium ([#1332](https://github.com/RocketsAreNostalgic/ran-booster/issues/1332)) ([6b04591](https://github.com/RocketsAreNostalgic/ran-booster/commit/6b0459151979118ac5b97425c498d47f7d92aaba))
+* **credentials:** align secret capability and file-change gates ([#1322](https://github.com/RocketsAreNostalgic/ran-booster/issues/1322)) ([6a51327](https://github.com/RocketsAreNostalgic/ran-booster/commit/6a51327b4f82c4cef87bce4d88c5711e4737faef))
+* **credentials:** bind validation expiry to the checked secret ([#1334](https://github.com/RocketsAreNostalgic/ran-booster/issues/1334)) ([689839b](https://github.com/RocketsAreNostalgic/ran-booster/commit/689839b1ee1f3f4d352503c43435f7d40c9cd691))
+* **credentials:** gate the default lookup profile on authority ([#1362](https://github.com/RocketsAreNostalgic/ran-booster/issues/1362)) ([240bf53](https://github.com/RocketsAreNostalgic/ran-booster/commit/240bf5313d3c08e2aa3d5b5e900ef4b87f08cb62))
+* **credentials:** require authority to pick a package credential ([#1351](https://github.com/RocketsAreNostalgic/ran-booster/issues/1351)) ([1962227](https://github.com/RocketsAreNostalgic/ran-booster/commit/19622270f857843f305d19fd6327d1803acba230))
+* **credentials:** require authority to use a saved credential ([#1355](https://github.com/RocketsAreNostalgic/ran-booster/issues/1355)) ([bc84461](https://github.com/RocketsAreNostalgic/ran-booster/commit/bc84461f37b3e4fe96d97d620c95a56bfd2b57d5))
+* **extensions:** guard installs and share archive checks ([#1339](https://github.com/RocketsAreNostalgic/ran-booster/issues/1339)) ([9eef3f3](https://github.com/RocketsAreNostalgic/ran-booster/commit/9eef3f3a253d89a17ab9650e7448ac60be537a11))
+* **extensions:** honor managed offers and archive limits ([#1312](https://github.com/RocketsAreNostalgic/ran-booster/issues/1312)) ([620d012](https://github.com/RocketsAreNostalgic/ran-booster/commit/620d012f58149febc8ec7890f81dea4b7a7eb05f))
+* **packages:** adopt branch updater beta.20 and its lock tokens ([#1324](https://github.com/RocketsAreNostalgic/ran-booster/issues/1324)) ([8609613](https://github.com/RocketsAreNostalgic/ran-booster/commit/8609613604ed68ac627f20e6739440a00ce2602f))
+* **packages:** authenticate bounded branch archive retries ([#1313](https://github.com/RocketsAreNostalgic/ran-booster/issues/1313)) ([e3a09ad](https://github.com/RocketsAreNostalgic/ran-booster/commit/e3a09ad968104cde50d6342f44c1f8bf4f257d8d))
+* **packages:** give package operation failures feedback codes ([#1346](https://github.com/RocketsAreNostalgic/ran-booster/issues/1346)) ([6746b14](https://github.com/RocketsAreNostalgic/ran-booster/commit/6746b14c7895738d4bdf9e30ba46c591fc821fc7))
+* **packages:** hide credential choices users cannot save ([#1358](https://github.com/RocketsAreNostalgic/ran-booster/issues/1358)) ([eb88c4f](https://github.com/RocketsAreNostalgic/ran-booster/commit/eb88c4f69608b987df8d818d8b097958bb672fed))
+* **packages:** honour theme roots and exact branch package identity ([b8a3b18](https://github.com/RocketsAreNostalgic/ran-booster/commit/b8a3b1851a1271738a4f3fb47524d916b09b069f)), closes [#1188](https://github.com/RocketsAreNostalgic/ran-booster/issues/1188) [#1258](https://github.com/RocketsAreNostalgic/ran-booster/issues/1258)
+* **packages:** honour theme roots and exact package identity ([#1343](https://github.com/RocketsAreNostalgic/ran-booster/issues/1343)) ([2f62771](https://github.com/RocketsAreNostalgic/ran-booster/commit/2f627715b94c56d095db0a84ce371f7a709edf6c))
+* **packages:** name and release a stale Booster updater lock ([#1331](https://github.com/RocketsAreNostalgic/ran-booster/issues/1331)) ([505d5d5](https://github.com/RocketsAreNostalgic/ran-booster/commit/505d5d556446288d61a6c84bde5b075c67373a94))
+* **packages:** read the exact target after a shared-folder update ([451fd76](https://github.com/RocketsAreNostalgic/ran-booster/commit/451fd76a215a9944330664c5e1cd434e67957558)), closes [#1188](https://github.com/RocketsAreNostalgic/ran-booster/issues/1188) [#1258](https://github.com/RocketsAreNostalgic/ran-booster/issues/1258)
+* **packages:** show the lock owner after a refused in-page save ([#1340](https://github.com/RocketsAreNostalgic/ran-booster/issues/1340)) ([fb50366](https://github.com/RocketsAreNostalgic/ran-booster/commit/fb50366746f42bf10f898dd80681cd83d4cf07f8))
+* **provider:** show when the bundled GitHub module cannot load ([#1354](https://github.com/RocketsAreNostalgic/ran-booster/issues/1354)) ([1f77875](https://github.com/RocketsAreNostalgic/ran-booster/commit/1f7787500ed963cdfff16550bccaaa18a8060ff1))
+* **releases:** read release theme files under their own root ([#1353](https://github.com/RocketsAreNostalgic/ran-booster/issues/1353)) ([fb1b45e](https://github.com/RocketsAreNostalgic/ran-booster/commit/fb1b45eb8b325bc4c45bfe37b88208e7e267a634))
+
 ## [1.0.0-beta.50](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.49...v1.0.0-beta.50) (2026-11-27)
 
 

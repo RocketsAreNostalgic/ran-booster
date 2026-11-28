@@ -374,22 +374,36 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 		) as $type => $identifier ) {
 			$name   = 'plugin' === $type ? 'update_plugins' : 'update_themes';
 			$before = (object) array(
-				'response'     => array(
+				'response'                               => array(
 					$identifier => (object) array( 'version' => '2' ),
 					'other'     => (object) array( 'version' => '3' ),
 				),
-				'no_update'    => array(
+				'no_update'                              => array(
 					$identifier => 'old',
 					'other'     => 'keep',
 				),
-				'last_checked' => 123,
+				'ran_wp_release_updater_metadata_offers' => array(
+					$identifier => array( 'checked' => '1' ),
+					'other'     => array( 'checked' => '1' ),
+				),
+				'last_checked'                           => 123,
 			);
 			$GLOBALS['ran_booster_package_removal_transients'][ $name ] = $before;
 			( new WordPressPackageRemovalGateway() )->invalidate_native_target( $type, $identifier );
 			$expected = clone $before;
-			unset( $expected->response[ $identifier ], $expected->no_update[ $identifier ] );
+			unset( $expected->response[ $identifier ], $expected->no_update[ $identifier ], $expected->ran_wp_release_updater_metadata_offers[ $identifier ] );
 			self::assertEquals( $expected, $GLOBALS['ran_booster_package_removal_transients'][ $name ] );
 		}
+	}
+
+	public function test_native_cleanup_names_the_vendored_updater_metadata_offer_cache(): void {
+		// The updater only prunes targets it still declares, so a departed target's metadata offer is removed here.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads a vendored local source file, not a remote URL.
+		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/src/WordPress/NativePackageUpdater.php' );
+		if ( 1 !== preg_match( "/const METADATA_CACHE\\s*=\\s*'([a-z_]+)';/", $source, $match ) ) {
+			self::fail( 'The vendored updater no longer declares its metadata offer cache.' );
+		}
+		self::assertSame( $match[1], ( new \ReflectionClassConstant( WordPressPackageRemovalGateway::class, 'UPDATER_METADATA_OFFERS' ) )->getValue() );
 	}
 
 	public function test_native_cleanup_detects_failed_persistence(): void {

@@ -11,6 +11,9 @@ use RAN\UpdaterSupport\V1\PluginFileIdentifier;
  * Delegates package removal to WordPress so uninstall and deactivation hooks run.
  */
 final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
+	/** The release updater keeps unprojected metadata offers keyed by identity inside the update transient. */
+	private const UPDATER_METADATA_OFFERS = 'ran_wp_release_updater_metadata_offers';
+
 
 	public function installed_targets( string $type ): array {
 		if ( 'plugin' === $type ) {
@@ -139,14 +142,14 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 		if ( ! is_object( $value ) ) {
 			return;
 		}
-		foreach ( array( 'response', 'no_update' ) as $channel ) {
+		foreach ( array( 'response', 'no_update', self::UPDATER_METADATA_OFFERS ) as $channel ) {
 			if ( isset( $value->{$channel} ) && is_array( $value->{$channel} ) ) {
 				unset( $value->{$channel}[ $identifier ] );
 			}
 		}
 		set_site_transient( $name, $value );
 		$stored = get_site_transient( $name );
-		foreach ( array( 'response', 'no_update' ) as $channel ) {
+		foreach ( array( 'response', 'no_update', self::UPDATER_METADATA_OFFERS ) as $channel ) {
 			if ( is_object( $stored ) && isset( $stored->{$channel} ) && is_array( $stored->{$channel} )
 				&& array_key_exists( $identifier, $stored->{$channel} ) ) {
 				throw new \RuntimeException( 'The departed native target cache could not be invalidated.' );

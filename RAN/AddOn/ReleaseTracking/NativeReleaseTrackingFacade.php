@@ -60,8 +60,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/** @var \Closure(string, string): bool */
 	private \Closure $verify_nonce;
 
-	/** @var \Closure(string): void */
-	private \Closure $refresh_native;
+	/** @var \Closure(string, string): mixed */
+	private \Closure $refresh_target;
 
 	/** @var \Closure(): bool */
 	private \Closure $metadata_eligible;
@@ -90,7 +90,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 	/**
 	 * @param callable(string): bool|null         $can_manage
 	 * @param callable(string, string): bool|null $verify_nonce
-	 * @param callable(string): void|null         $refresh_native
+	 * @param callable(string, string): mixed|null $refresh_target
 	 * @param callable(): bool|null $metadata_eligible
 	 * @param callable(string): void|null         $invalidate_native
 	 * @param callable(string): ?string|null      $public_lookup_profile
@@ -106,7 +106,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		private ProviderRegistry $providers,
 		?callable $can_manage = null,
 		?callable $verify_nonce = null,
-		?callable $refresh_native = null,
+		?callable $refresh_target = null,
 		?callable $metadata_eligible = null,
 		?callable $invalidate_native = null,
 		?callable $public_lookup_profile = null,
@@ -148,16 +148,12 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 			: \Closure::fromCallable( $verify_nonce );
 
-		$this->refresh_native = null === $refresh_native
-			? static function ( string $type ): void {
-				if ( 'plugin' === $type ) {
-					wp_update_plugins();
-				} else {
-					wp_update_themes();
-				}
-			}
+		// Checks one target and updates only its cached offer; the rest of WordPress's update check stays (#1267).
+		$this->refresh_target = null === $refresh_target
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- The shared release updater owns this documented scoped refresh filter.
+			? static fn ( string $type, string $identifier ): mixed => apply_filters( 'ran_wp_release_updater_refresh_target_v1', null, $type, $identifier )
 
-			: \Closure::fromCallable( $refresh_native );
+			: \Closure::fromCallable( $refresh_target );
 
 		$this->metadata_eligible = null === $metadata_eligible
 			? static fn (): bool => true
@@ -943,25 +939,36 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				|| null === $configuration ) {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
 			}
-			$target = $this->registrar->target( $type, $identifier );
-			if ( null === $target ) {
+			if ( null === $this->registrar->target( $type, $identifier ) ) {
 				return ReleaseTrackingResult::failed( 'source_changed', self::SOURCE_CHANGED_MESSAGE );
 			}
 			$this->registrar->forget_check_outcome( $type, $identifier );
 			$this->registrar->mark_manual_check( $type, $identifier );
-			// Answered before the target refresh: that refresh clears WordPress's whole cached update check.
+			// Updates are off: the scoped refresh would only skip as disabled, so the read-only check answers first.
 			if ( DeploymentPolicy::DISABLED === $package->get_deployment_policy() ) {
 				$answer = $this->answer_without_offer( $type, $identifier );
 				if ( null !== $answer ) {
 					return $answer;
 				}
 			}
-			if ( ! $target->refresh() ) {
+			$report = ( $this->refresh_target )( $type, $identifier );
+			$status = is_array( $report ) ? ( $report['status'] ?? null ) : null;
+			$reason = is_array( $report ) ? ( $report['reason'] ?? null ) : null;
+			if ( ! is_string( $status ) || ! is_string( $reason ) ) {
+				// Null is an updater that did not answer; there is no type-wide fallback.
+				BoosterLogger::log( 'scoped release refresh unanswered', array( 'event' => 'release_refresh_unanswered' ) );
+
 				return ReleaseTrackingResult::failed( 'refresh_failed', 'Published release information could not be refreshed.' );
 			}
-			( $this->refresh_native )( $type );
-			$check = $this->registrar->check_outcome( $type, $identifier );
-			if ( null !== $check && 'succeeded' !== $check['status'] ) {
+			// A failure always wins: the observation qualifies it (rate limits), and the report covers a busy or displaced runtime.
+			$observed = $this->registrar->check_outcome( $type, $identifier );
+			$check    = null !== $observed && ( 'succeeded' !== $observed['status'] || 'succeeded' === $status )
+				? $observed
+				: array(
+					'status' => $status,
+					'reason' => $reason,
+				);
+			if ( 'succeeded' !== $check['status'] ) {
 				return ReleaseTrackingResult::failed(
 					match ( $check['reason'] ) {
 						'policy_disabled' => 'refresh_skipped_disabled',

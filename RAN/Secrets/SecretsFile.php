@@ -1870,7 +1870,7 @@ class SecretsFile {
 	private function assert_writable_id( mixed $id ): void {
 		if ( ! is_string( $id )
 			|| self::CONSTANT_PROFILE === $id
-			|| 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $id )
+			|| 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $id )
 		) {
 			throw new RuntimeException( 'Credential ID is invalid or immutable.' );
 		}

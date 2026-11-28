@@ -172,4 +172,19 @@ final class InstallationRecordTest extends TestCase {
 			'2026-07-23T16:00:00Z'
 		);
 	}
+
+	public function test_it_rejects_a_trailing_newline_on_anchored_fields(): void {
+		$fields = array( 'gh', '1234', 'owner/repository', '99', 'credential_1', 'profile_1', 'owner', 1, 'reused', 'https://example.test/wp-json/ran-booster/webhook', 'configured', '2026-07-23T16:00:00Z', '2026-07-23T16:00:00Z' );
+		foreach ( array( 0, 4, 11, 12 ) as $index ) {
+			$candidate           = $fields;
+			$candidate[ $index ] = $candidate[ $index ] . "\n";
+			$refused             = false;
+			try {
+				new InstallationRecord( ...$candidate );
+			} catch ( \InvalidArgumentException ) {
+				$refused = true;
+			}
+			self::assertTrue( $refused, 'Field ' . $index . ' accepted a trailing newline.' );
+		}
+	}
 }

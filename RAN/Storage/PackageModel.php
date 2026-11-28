@@ -83,7 +83,7 @@ class PackageModel {
 
 			if ( 'credential_id' === $key ) {
 				$value = is_scalar( $value ) ? trim( (string) $value ) : '';
-				if ( '' !== $value && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $value ) ) {
+				if ( '' !== $value && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $value ) ) {
 					throw new \InvalidArgumentException( 'The repository credential identity is invalid.' );
 				}
 				$this->$key = '' === $value ? null : $value;

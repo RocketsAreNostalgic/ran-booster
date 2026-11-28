@@ -183,6 +183,62 @@ a configuration notice, never operation authority. This placement is
 not a capability enumerator, generic form schema, callback registry or provider
 HTML seam.
 
+#### Stateless webhook lifecycle (`repository-webhook-management/4`)
+
+`RepositoryWebhookLifecycle` is the successor contract. Core does not call it
+yet; it replaces the two interfaces above when Core switches over (#1254). A
+provider implements either the version 3 pair or version 4, never both: their
+`OPERATION` and `VERSION` constants and their `check()` signatures conflict.
+The bundled GitHub provider moves to version 4 together with Core's
+switch-over. Each action takes the stable repository ID, the repository, Core's
+callback URL and one saved credential ID:
+
+- `upsert` creates the hook when none matches, or updates the single matching
+  hook to Core's settings and signing secret. It is the only action that
+  receives the secret. It succeeds only after a readback confirms the settings,
+  with delivery `configured_pending_delivery` and code
+  `configured_pending_delivery` for a created hook or
+  `repaired_pending_delivery` for an updated one. It never requests a ping
+  itself; Core calls `ping` when it wants one.
+- `check` is Validate's read-only readback. One matching hook succeeds only when
+  every configuration value is `matched` or `mismatched`; any `unknown` value
+  fails. No matching hook succeeds with delivery `absent`.
+- `ping` asks the provider to ping the single matching hook. Success means the
+  request was accepted, not that a delivery arrived. No matching hook fails with
+  delivery `absent`. A provider with no remote ping endpoint fails at once with
+  its own code and remediation, without contacting the remote.
+- `delete` removes the single matching hook. Success requires delivery `absent`,
+  proven by a readable hook list without a match, so a hook that was already
+  gone is a success.
+
+Before it lists or changes any hook, every action that contacts the provider
+confirms remotely that the repository still resolves to the stable repository
+ID. It fails with `repository_identity_mismatch` on a mismatch, or with a
+provider-owned code when the repository cannot be read; either way no hook is
+read or changed and no secret is sent. The provider then reads the
+repository's complete hook list, and an unreadable, invalid or incomplete list
+fails.
+
+There is no hook ID in the contract. A hook matches only when its configured
+delivery URL is byte-for-byte identical to the callback URL Core supplies;
+providers must not normalize case, trailing slashes, default ports, query order
+or encoding. A plain-permalink `?rest_route=` route or an explicit non-default
+port therefore matches only in exactly the form Core sends. More than one
+matching hook fails with code `matching_hooks_ambiguous`. A hook ID in a result
+is informational; Core never stores it or passes it back.
+
+Every refusal before a remote change has state `failed`, never `ambiguous` or
+`partial`, because Core releases a signing secret it created for the attempt
+only after a `failed` result. Once a remote change is attempted, an unconfirmed
+outcome is `partial` or `ambiguous` unless the provider proves that no remote
+change remains or that it was undone.
+Results reuse `RepositoryWebhookOperationResult` with its existing bounds. No
+action reports `verified`: only an authenticated inbound delivery verifies the
+signing secret. There are no read-only assessment methods; a credential that
+lacks webhook permission fails the action itself with the provider's bounded
+remediation. Interface attributes are not inherited, so implementations must
+repeat `#[\SensitiveParameter]` on the signing secret.
+
 ### Failure text screening
 
 Core screens provider-authored text with one shared screener,

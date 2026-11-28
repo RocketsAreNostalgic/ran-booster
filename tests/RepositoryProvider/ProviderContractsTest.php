@@ -32,7 +32,9 @@ use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
+use RAN\RepositoryProvider\RepositoryWebhookLifecycle;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
+use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 
 final class ProviderContractsTest extends TestCase {
 	public function test_release_native_targets_are_one_exact_typed_capability(): void {
@@ -734,6 +736,42 @@ final class ProviderContractsTest extends TestCase {
 				'Exact endpoint ownership requires the Core-derived callback URL.'
 			);
 		}
+	}
+
+	public function test_repository_webhook_lifecycle_has_only_four_callback_matched_actions(): void {
+		$lifecycle = new \ReflectionClass( RepositoryWebhookLifecycle::class );
+		$methods   = get_class_methods( RepositoryWebhookLifecycle::class );
+		sort( $methods );
+
+		self::assertSame( array( 'check', 'delete', 'ping', 'upsert' ), $methods );
+		self::assertSame( array( \RAN\Provider\ProviderCapability::class ), $lifecycle->getInterfaceNames() );
+		self::assertSame( 'repository-webhook-management', RepositoryWebhookLifecycle::OPERATION );
+		self::assertSame( 4, RepositoryWebhookLifecycle::VERSION );
+
+		// No hook ID crosses the contract, and every parameter is required, typed and passed by value.
+		$lookup    = array(
+			'repository_id'         => 'string',
+			'repository'            => 'string',
+			'callback_url'          => 'string',
+			'credential_profile_id' => '?string',
+		);
+		$signature = static function ( \ReflectionMethod $method ): array {
+			$parameters = array();
+			foreach ( $method->getParameters() as $parameter ) {
+				self::assertFalse( $parameter->isOptional() || $parameter->isVariadic() || $parameter->isPassedByReference(), $method->name . ' $' . $parameter->name );
+				$parameters[ $parameter->name ] = (string) $parameter->getType();
+			}
+
+			return $parameters;
+		};
+		self::assertSame( $lookup + array( 'signing_secret' => 'string' ), $signature( $lifecycle->getMethod( 'upsert' ) ) );
+		foreach ( array( 'check', 'ping', 'delete' ) as $method ) {
+			self::assertSame( $lookup, $signature( $lifecycle->getMethod( $method ) ) );
+		}
+		foreach ( $methods as $method ) {
+			self::assertSame( RepositoryWebhookOperationResult::class, (string) $lifecycle->getMethod( $method )->getReturnType() );
+		}
+		self::assertCount( 1, $lifecycle->getMethod( 'upsert' )->getParameters()[4]->getAttributes( \SensitiveParameter::class ) );
 	}
 
 	public function test_manual_capability_fixture_resolves_readonly_lookup_values(): void {

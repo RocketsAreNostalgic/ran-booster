@@ -976,7 +976,7 @@ class Dashboard {
 					$repository_branch_check_evidence              = $this->provider_settings->package_repository_branch_evidence( $type, $package );
 					$edit_data                                     = $package_view->edit(
 						$package,
-						$this->provider_settings->build_existing_package_form( (string) ( $package->get_provider_code() ?? '' ) ),
+						CredentialAuthority::package_choices( $this->provider_settings->build_existing_package_form( (string) ( $package->get_provider_code() ?? '' ) ), (string) ( $package->get_provider_code() ?? '' ), $package->get_credential_id() ),
 						$this->provider_settings->build_package_branch_readiness( $package ),
 						$this->requested_package_source_view(),
 						$this->requested_advanced_settings_open() || null !== $save_check_sentences
@@ -1304,7 +1304,7 @@ class Dashboard {
 			array_merge(
 				array( 'recovery_identifier' => $relink ),
 				$package_view->create(
-					$this->provider_settings->build_package_form( $this->requested_provider() ),
+					CredentialAuthority::package_choices( $this->provider_settings->build_package_form( $this->requested_provider() ) ),
 					$this->has_requested_provider(),
 					$this->requested_open_picker(),
 					$this->requested_package_source_view(),
@@ -1506,7 +1506,7 @@ class Dashboard {
 		return $this->render(
 			'packages/create',
 			$package_view->unavailable_create(
-				$this->provider_settings->build_package_form( $this->requested_provider() ),
+				CredentialAuthority::package_choices( $this->provider_settings->build_package_form( $this->requested_provider() ) ),
 				$this->has_requested_provider()
 			)
 		);

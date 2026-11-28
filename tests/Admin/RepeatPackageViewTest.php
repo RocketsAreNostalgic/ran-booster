@@ -12,6 +12,7 @@ use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
+use RAN\Admin\CredentialAuthority;
 use RAN\Admin\PackagePagePresenter;
 use RAN\ManagedRepository;
 use RAN\PackageSource;
@@ -899,6 +900,69 @@ final class RepeatPackageViewTest extends TestCase {
 				: 'Active, parent and depended-on themes are protected.',
 			$danger_zone
 		);
+	}
+
+	public function test_edit_renders_only_the_saveable_credential_choices_without_a_default_preselect(): void {
+		$cases = array(
+			'authority, no own'     => array( true, null, array( '', 'credential_1', 'credential_2' ), 'credential_1' ),
+			'package-only, no own'  => array( false, null, array( '' ), '' ),
+			'package-only, own'     => array( false, 'credential_2', array( '', 'credential_2' ), 'credential_2' ),
+			'package-only, own gap' => array( false, 'credential_2 ', array( '' ), '' ),
+		);
+		foreach ( $cases as $label => list( $authority, $own, $options, $selected ) ) {
+			$GLOBALS['ran_booster_test_capabilities'] = array(
+				'manage_options'   => true,
+				'activate_plugins' => $authority,
+			);
+			$package_view                             = PackagePagePresenter::plugin();
+			$package                                  = $this->package( $package_view );
+			$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'provider-id', 'main', true, $own ) );
+			$package_provider_settings = CredentialAuthority::package_choices(
+				array(
+					'default_provider' => 'gh',
+					'providers'        => array(
+						array(
+							'code'                       => 'gh',
+							'label'                      => 'GitHub',
+							'owner_label'                => 'Owner',
+							'repository_url_base'        => 'https://github.com/',
+							'credentials_url'            => 'admin.php?page=ran-booster&tab=gh&view=credentials',
+							'available'                  => true,
+							'browse'                     => true,
+							'credentialed_public_browse' => true,
+							'provider_default_public_lookup_profile' => false,
+							'deploy'                     => true,
+							'webhooks'                   => true,
+							'default_credential_id'      => 'credential_1',
+							'credential_profiles'        => array( $this->credential_profile( 'credential_1' ), $this->credential_profile( 'credential_2' ) ),
+							'public_lookup'              => null,
+						),
+					),
+				),
+				'gh',
+				(string) $own
+			);
+
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+			$html     = (string) ob_get_clean();
+			$document = new \DOMDocument();
+			$previous = libxml_use_internal_errors( true );
+			$document->loadHTML( $html );
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous );
+			$xpath  = new \DOMXPath( $document );
+			$values = array();
+			$found  = $xpath->query( '//select[@id="ran-booster-credential-id"]/option' );
+			foreach ( false === $found ? array() : $found as $option ) {
+				$values[] = $option instanceof \DOMElement ? $option->getAttribute( 'value' ) : null;
+			}
+			$chosen = $xpath->query( '//select[@id="ran-booster-credential-id"]/option[@selected]' );
+
+			self::assertSame( $options, $values, $label );
+			self::assertSame( $selected, $chosen && $chosen->item( 0 ) instanceof \DOMElement ? $chosen->item( 0 )->getAttribute( 'value' ) : '', $label );
+		}
+		unset( $GLOBALS['ran_booster_test_capabilities'] );
 	}
 
 	public function test_source_warnings_keep_their_static_warning_envelopes(): void {
@@ -2073,6 +2137,19 @@ final class RepeatPackageViewTest extends TestCase {
 					'credential_profiles'   => array(),
 				),
 			),
+		);
+	}
+
+	/** @return array{id: string, label: string, kind: string, kind_label: string, detail: string, source: string, configured: bool} */
+	private function credential_profile( string $id ): array {
+		return array(
+			'id'         => $id,
+			'label'      => $id,
+			'kind'       => 'pat',
+			'kind_label' => 'Token',
+			'detail'     => '',
+			'source'     => 'sidecar',
+			'configured' => true,
 		);
 	}
 

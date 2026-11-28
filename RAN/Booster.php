@@ -1005,7 +1005,8 @@ class Booster {
 		}
 
 		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
-			$package_settings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->build_package_form();
+			// The picker offers only choices the current user can save (#1350).
+			$package_settings = \RAN\Admin\CredentialAuthority::package_choices( $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->build_package_form() );
 			if ( array() === $package_settings['providers'] ) {
 				BoosterLogger::log(
 					'package page loaded without a Git provider',

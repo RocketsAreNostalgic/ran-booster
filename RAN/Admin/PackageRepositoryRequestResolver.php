@@ -36,6 +36,27 @@ final readonly class PackageRepositoryRequestResolver {
 		return '' === self::request_id( $request['credential_id'] ?? null ) && '' === self::request_id( $request['public_lookup_profile_id'] ?? null );
 	}
 
+	/**
+	 * Whether the request chooses a saved credential the package does not already use: a saved lookup
+	 * profile, or any credential other than its own for its own repository. Its own counts only with
+	 * the provider, repository and expected credential it holds, so the locked save still finds that
+	 * credential and no other repository is looked up with it. Going anonymous chooses none.
+	 *
+	 * @param array<string, mixed> $request Package form request.
+	 */
+	public static function chooses_credential( array $request, ?Package $own ): bool {
+		$credential_id = self::request_id( $request['credential_id'] ?? null );
+		if ( '' !== self::request_id( $request['public_lookup_profile_id'] ?? null ) ) {
+			return true;
+		}
+
+		return '' !== $credential_id && ( ! $own instanceof Package
+			|| trim( $own->get_credential_id() ) !== $credential_id
+			|| ! is_string( $request['provider'] ?? null ) || wp_unslash( $request['provider'] ) !== $own->get_provider_code()
+			|| ! is_string( $request['repository'] ?? null ) || wp_unslash( $request['repository'] ) !== (string) $own->get_repository()
+			|| ! is_scalar( $request['expected_credential_id'] ?? null ) || trim( (string) $request['expected_credential_id'] ) !== $credential_id );
+	}
+
 	/** A credential or lookup-profile ID from a request, normalized as resolution reads it. */
 	private static function request_id( mixed $value ): string {
 		return is_string( $value ) ? trim( wp_unslash( $value ) ) : '';

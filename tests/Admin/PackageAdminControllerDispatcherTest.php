@@ -1192,6 +1192,162 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertArrayNotHasKey( 'feedback', $dashboard->messages[1] );
 	}
 
+	/** @return array<string, array{string, ?string, array<string, string>, bool}> */
+	public static function package_credential_choices(): array {
+		$own = array(
+			'credential_id'          => ' deployment-profile ',
+			'expected_credential_id' => 'deployment-profile',
+		);
+		return array(
+			'install with a credential'             => array( 'install-plugin', null, array( 'credential_id' => 'deployment-profile' ), true ),
+			'install a theme with a credential'     => array( 'install-theme', null, array( 'credential_id' => 'deployment-profile' ), true ),
+			'install with a saved lookup profile'   => array(
+				'install-plugin',
+				null,
+				array(
+					'public_lookup_profile_id'            => 'lookup-profile',
+					'provider_repository_identity_source' => 'picker',
+				),
+				true,
+			),
+			'install anonymously'                   => array( 'install-plugin', null, array(), false ),
+			'edit to another credential'            => array( 'edit-plugin', 'deployment-profile', array( 'credential_id' => 'other-profile' ), true ),
+			'edit a theme to another credential'    => array( 'edit-theme', 'deployment-profile', array( 'credential_id' => 'other-profile' ), true ),
+			'edit a package without one to add one' => array( 'edit-plugin', null, array( 'credential_id' => 'deployment-profile' ), true ),
+			'edit with a saved lookup profile'      => array(
+				'edit-plugin',
+				'deployment-profile',
+				array(
+					'public_lookup_profile_id'            => 'lookup-profile',
+					'provider_repository_identity_source' => 'picker',
+				),
+				true,
+			),
+			'edit keeping its own credential'       => array( 'edit-plugin', 'deployment-profile', $own, false ),
+			'save and reinstall keeping its own'    => array( 'edit-plugin', 'deployment-profile', $own + array( 'reinstall_after_save' => '1' ), false ),
+			'edit clearing its credential'          => array( 'edit-plugin', 'deployment-profile', array(), false ),
+		);
+	}
+
+	/** @param array<string, string> $choice */
+	#[DataProvider( 'package_credential_choices' )]
+	public function test_choosing_a_package_credential_needs_secret_authority( string $action, ?string $own, array $choice, bool $chooses ): void {
+		$_POST['_ran_booster_reinstall_nonce'] = 'test-nonce'; // The reinstall form carries its own nonce field.
+		foreach ( array( 'manage_options', 'activate_plugins', null ) as $missing ) {
+			$GLOBALS['ran_booster_test_capabilities'] = null === $missing ? array() : array( $missing => false );
+			$case                                     = ( $missing ?? 'authorized' ) . ': ' . $action;
+			[ $result, $lookups, $messages ]          = $this->manage_package_credential( $action, $own, $choice );
+			$refused                                  = $chooses && null !== $missing;
+
+			self::assertSame( $refused ? false : 'https://example.test/redirect', $result, $case );
+			self::assertSame( $refused ? 0 : 1, $lookups, $case );
+			$this->assert_credential_refusal( $refused, $action, $messages, $case );
+		}
+	}
+
+	/** @return array<string, array{array<string, mixed>}> */
+	public static function borrowed_own_credentials(): array {
+		$own = array(
+			'credential_id'          => 'deployment-profile',
+			'expected_credential_id' => 'deployment-profile',
+		);
+		return array(
+			'another provider'                => array( array( 'provider' => 'bb' ) + $own ),
+			'another repository'              => array( array( 'repository' => 'owner/other-private' ) + $own ),
+			'a cleared expected credential'   => array( array( 'expected_credential_id' => '' ) + $own ),
+			'another expected credential'     => array( array( 'expected_credential_id' => 'other-profile' ) + $own ),
+			'no expected credential'          => array( array( 'credential_id' => 'deployment-profile' ) ),
+			'an expected credential not text' => array( array( 'expected_credential_id' => array( 'deployment-profile' ) ) + $own ),
+		);
+	}
+
+	/**
+	 * Its own credential is its own only for its own repository, and only while the locked save will
+	 * still find it there.
+	 *
+	 * @param array<string, mixed> $borrowed
+	 */
+	#[DataProvider( 'borrowed_own_credentials' )]
+	public function test_its_own_credential_is_never_borrowed_for_another_repository_or_a_changed_record( array $borrowed ): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'activate_plugins' => false );
+		[ $result, $lookups, $messages ]          = $this->manage_package_credential( 'edit-plugin', 'deployment-profile', $borrowed );
+
+		self::assertFalse( $result );
+		self::assertSame( 0, $lookups );
+		$this->assert_credential_refusal( true, 'edit-plugin', $messages, 'borrowed' );
+	}
+
+	/**
+	 * @param array<string, mixed> $choice
+	 * @return array{string|bool, int, list<mixed>}
+	 */
+	private function manage_package_credential( string $action, ?string $own, array $choice ): array {
+		$request   = array(
+			'action'            => $action,
+			'file'              => 'fixture/fixture.php',
+			'stylesheet'        => 'fixture',
+			'provider'          => 'gh',
+			// An edit keeps its repository; a new install names one.
+			'repository'        => str_starts_with( $action, 'edit-' ) ? 'owner/original' : 'owner/new',
+			'credential_id'     => '',
+			'branch'            => 'main',
+			'deployment_policy' => 'manual',
+		);
+		$package   = EditBoundaryPackage::make( 'edit-theme' === $action ? 'fixture' : 'fixture/fixture.php', 'gh', false, $own );
+		$provider  = new CapturingPublicLookupProvider();
+		$providers = new ProviderRegistry( array( $provider ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$messages  = array();
+		$dashboard->method( 'add_message' )->willReturnCallback(
+			static function ( mixed $message ) use ( &$messages ): void {
+				$messages[] = $message;
+			}
+		);
+		$dashboard->method( 'post_package_operation' )->willReturn( 'https://example.test/redirect' );
+
+		$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, $action, array_merge( $request, $choice ), true );
+
+		return array( $result, count( $provider->requests ), $messages );
+	}
+
+	/** @param list<mixed> $messages */
+	private function assert_credential_refusal( bool $refused, string $action, array $messages, string $label ): void {
+		self::assertCount( $refused ? 1 : 0, $messages, $label );
+		if ( $refused ) {
+			self::assertInstanceOf( WP_Error::class, $messages[0] );
+			self::assertSame( 'ran_booster_credential_authority_missing', $messages[0]->get_error_code() );
+			self::assertSame( array( 'feedback' => str_starts_with( $action, 'install-' ) ? 'package_install_failed' : 'package_edit_failed' ), $messages[0]->get_error_data() );
+		}
+	}
+
+	public function test_a_credential_authority_refusal_logs_only_its_code(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'activate_plugins' => false );
+		$providers                                = new ProviderRegistry( array( new CapturingPublicLookupProvider() ) );
+		$dashboard                                = $this->message_dashboard();
+		$request                                  = array(
+			'action'                              => 'install-plugin',
+			'provider'                            => 'gh',
+			'repository'                          => 'owner/secret-canary',
+			'credential_id'                       => 'canary-profile',
+			'public_lookup_profile_id'            => 'canary-lookup',
+			'provider_repository_identity_source' => 'picker',
+			'branch'                              => 'canary-branch',
+			'deployment_policy'                   => 'manual',
+		);
+
+		$this->start_log_capture();
+		try {
+			$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), providers: $providers ) )->manage( $dashboard, 'install-plugin', $request, true );
+			$lines  = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+
+		self::assertFalse( $result );
+		self::assertSame( 'package_install_failed', $dashboard->messages[0]['feedback'] );
+		self::assertSame( array( '[ran-booster] admin error notice emitted {"diagnostic_id":"ran_booster_credential_authority_missing","event":"admin_notice","source":"admin"}' ), $lines );
+	}
+
 	private function message_dashboard(): Dashboard {
 		return new class() extends Dashboard {
 			public function __construct() {}

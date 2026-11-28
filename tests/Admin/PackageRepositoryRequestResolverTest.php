@@ -36,6 +36,61 @@ use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 final class PackageRepositoryRequestResolverTest extends TestCase {
 
+	/** @return array<string, array{array<string, mixed>, ?string, bool}> */
+	public static function credential_choices(): array {
+		$own = array(
+			'provider'               => 'gh',
+			'repository'             => 'owner/example',
+			'credential_id'          => 'own-profile',
+			'expected_credential_id' => 'own-profile',
+		);
+		return array(
+			'another credential'              => array( array( 'credential_id' => 'other-profile' ) + $own, 'own-profile', true ),
+			'a first credential'              => array( $own, '', true ),
+			'any credential on install'       => array( $own, null, true ),
+			'a lookup profile beside its own' => array( array( 'public_lookup_profile_id' => 'lookup-profile' ) + $own, 'own-profile', true ),
+			'its own, as read'                => array(
+				array(
+					'credential_id'          => " own-profile\n",
+					'expected_credential_id' => ' own-profile ',
+				) + $own,
+				" own-profile\t",
+				false,
+			),
+			'its own, without a provider'     => array( array( 'provider' => null ) + $own, 'own-profile', true ),
+			'its own, slashed as posted'      => array( array( 'repository' => 'owner\\/example' ) + $own, 'own-profile', false ),
+			'anonymous'                       => array(
+				array(
+					'credential_id'            => '  ',
+					'public_lookup_profile_id' => '',
+				) + $own,
+				'own-profile',
+				false,
+			),
+			'no credential fields'            => array( array(), '', false ),
+			'values that are not text'        => array(
+				array(
+					'credential_id'            => array( 'other-profile' ),
+					'public_lookup_profile_id' => 7,
+				),
+				'',
+				false,
+			),
+		);
+	}
+
+	/** @param array<string, mixed> $request */
+	#[DataProvider( 'credential_choices' )]
+	public function test_a_request_chooses_a_credential_only_when_it_names_one_the_package_does_not_use( array $request, ?string $own, bool $chooses ): void {
+		$package = null;
+		if ( null !== $own ) {
+			$package = new Plugin();
+			$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main', true, $own ) );
+		}
+
+		self::assertSame( $chooses, PackageRepositoryRequestResolver::chooses_credential( $request, $package ) );
+	}
+
 	/** @return list<array{string,bool,?string}> */
 	public static function save_branch_targets(): array {
 		return array( array( '', false, null ), array( 'feature/é', false, null ), array( 'feature/private', true, 'deployment-profile' ) );

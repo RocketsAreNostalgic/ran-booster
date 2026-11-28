@@ -2882,6 +2882,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			array_keys( $result['data'] )
 		);
 		self::assertSame( $package, $result['data']['package'] );
+		self::assertFalse( $result['data']['package_working_copy'] );
 		self::assertMatchesRegularExpression( '/^[a-f0-9]{16}$/D', $result['data']['repository_branch_check_args']['ran_booster_repository_branch_check'] ?? '' );
 		self::assertNotFalse( \RAN\wp_verify_nonce( $result['data']['repository_branch_check_args']['_ran_booster_repository_branch_nonce'] ?? '', \RAN\Admin\PackageAdminController::repository_branch_check_action( $package, $type ) ) );
 		self::assertSame( $type, $result['data']['package_view']->get_type() );
@@ -3307,6 +3308,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame( 'packages/edit', $result['view'] );
 		self::assertSame( $package, $result['data']['package'] );
+		self::assertFalse( $result['data']['package_working_copy'] );
 		self::assertSame( 'temporarily-offline', $result['data']['package_provider_settings']['default_provider'] );
 		self::assertFalse( $result['data']['package_provider_settings']['providers'][0]['available'] );
 		self::assertSame( array(), $dashboard->messages );

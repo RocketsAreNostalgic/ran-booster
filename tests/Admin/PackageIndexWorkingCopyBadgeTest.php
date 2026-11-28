@@ -97,11 +97,12 @@ final class PackageIndexWorkingCopyBadgeTest extends TestCase {
 			libxml_use_internal_errors( $previous );
 			$xpath = new \DOMXPath( $document );
 
-			$heading = '//h2[contains(@class, "ran-booster-package-settings__heading") and contains(@class, "ran-booster-page-heading__title")]';
-			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $heading . ')' ) );
+			$heading = '//div[contains(@class, "ran-booster-package-settings__heading")]/h2[contains(@class, "ran-booster-page-heading__title")]';
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $heading . '[normalize-space()="Edit Working Plugin"])' ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $heading . '[contains(normalize-space(), "Working copy")])' ) );
 			self::assertSame(
 				$package_working_copy ? 1.0 : 0.0,
-				$xpath->evaluate( 'count(' . $heading . '/*[contains(@class, "ran-wp-ui-badge") and contains(@class, "is-medium-intent") and normalize-space()="Working copy"])' )
+				$xpath->evaluate( 'count(' . $heading . '/following-sibling::*[contains(@class, "ran-wp-ui-badge") and contains(@class, "is-medium-intent") and normalize-space()="Working copy"])' )
 			);
 			self::assertSame( $package_working_copy ? 1 : 0, substr_count( $html, 'Working copy' ) );
 		}

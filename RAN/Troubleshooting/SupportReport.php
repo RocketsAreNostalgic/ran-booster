@@ -196,7 +196,7 @@ final class SupportReport {
 				$row['availability'] = self::choice( $component['Availability'], array( 'Available locally; remote access not checked', 'Unavailable' ) );
 			}
 			if ( isset( $component['Supplier'] ) ) {
-				$row['supplier'] = self::choice( $component['Supplier'], array( 'Included with Booster', 'Add-on', 'Add-on failed to load', 'More than one add-on' ) );
+				$row['supplier'] = self::choice( $component['Supplier'], array( 'Included with Booster', 'Included module failed to load', 'Add-on', 'Add-on failed to load', 'More than one add-on' ) );
 			}
 			if ( isset( $component['Provider'] ) ) {
 				$row['provider'] = $this->provider( $component['Provider'] );

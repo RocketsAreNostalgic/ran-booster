@@ -67,8 +67,16 @@ final class GitHubSupplierNoticeTest extends TestCase {
 
 	public function test_a_failed_bundled_module_neither_announces_a_return_nor_clears_the_record(): void {
 		$GLOBALS['ran_booster_supplier_options'][ GitHubSupplierNotice::OPTION ] = 'alpha';
-		self::assertSame( '', $this->render( null ) );
+		$notice = new GitHubSupplierNotice( self::failed_bundled_registry() );
+		ob_start();
+		$notice->render();
+		self::assertSame( '', (string) ob_get_clean() );
 		self::assertSame( 'alpha', $GLOBALS['ran_booster_supplier_options'][ GitHubSupplierNotice::OPTION ] );
+		self::assertSame( "GitHub is unavailable because Booster's GitHub module could not load.", $notice->sentence() );
+	}
+
+	public function test_a_registry_that_does_not_own_github_has_no_sentence(): void {
+		self::assertNull( ( new GitHubSupplierNotice( new ProviderRegistry() ) )->sentence() );
 	}
 
 	public function test_nothing_is_shown_or_recorded_without_both_capabilities_or_outside_scope(): void {
@@ -80,6 +88,14 @@ final class GitHubSupplierNoticeTest extends TestCase {
 		$outside_scope                          = $this->render( 'alpha', array( 'alpha' ) );
 		self::assertSame( '', $outside_scope );
 		self::assertSame( array(), $GLOBALS['ran_booster_supplier_options'] );
+	}
+
+	/** A sealed registry whose bundled GitHub module failed to build. */
+	private static function failed_bundled_registry(): ProviderRegistry {
+		$registry = new ProviderRegistry();
+		( new \ReflectionProperty( ProviderRegistry::class, 'bundled_github_factory' ) )->setValue( $registry, static fn (): null => null );
+		( new \ReflectionProperty( ProviderRegistry::class, 'sealed' ) )->setValue( $registry, true );
+		return $registry;
 	}
 
 	/** @param list<string> $claimants */

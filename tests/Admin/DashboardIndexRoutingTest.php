@@ -868,6 +868,51 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayNotHasKey( 'github_supplier', $diagnostics );
 	}
 
+	public function test_a_failed_bundled_github_module_keeps_its_page_and_says_so(): void {
+		$registry = new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) );
+		( new \ReflectionProperty( ProviderRegistry::class, 'bundled_github_factory' ) )->setValue( $registry, static fn (): null => null );
+		$registry->seal();
+		$sentence    = "GitHub is unavailable because Booster's GitHub module could not load.";
+		$notice      = new \RAN\Admin\GitHubSupplierNotice( $registry );
+		$dashboard   = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $registry, github_supplier: $notice );
+		$_GET['tab'] = 'gh';
+		$data        = $dashboard->get_index()['data'];
+		self::assertSame( 'gh', $data['selected_provider'] );
+		self::assertSame( 'provider.php', $data['tab_view'] );
+		self::assertSame(
+			array(
+				'message'   => $sentence,
+				'available' => false,
+			),
+			$data['github_supplier']
+		);
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		self::assertStringContainsString( '<p>' . esc_html( $sentence ) . '</p>', (string) ob_get_clean() );
+		$presenter = new ProviderSettingsPresenter( $registry, $this->throwing_secrets(), new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_packages' ), github_supplier: $notice );
+		self::assertSame(
+			array(
+				'page' => 'ran-booster',
+				'tab'  => 'gh',
+			),
+			$presenter->provider_restore_args( 'gh' )
+		);
+		$_GET         = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'installation',
+		);
+		$installation = $dashboard->get_index()['data'];
+		self::assertSame( 'Included module failed to load', array_column( $installation['troubleshooting']['components'], null, 'Provider' )['gh']['Supplier'] ?? null );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $installation );
+		$core_self_update = $installation['troubleshooting']['core_self_update'];
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting-installation.php';
+		self::assertStringContainsString( esc_html( $sentence ), (string) ob_get_clean() );
+	}
+
 	public function test_an_add_on_supplier_is_named_once_on_the_github_page(): void {
 		$registry = GitHubSupplierState::apply( $this->providers( true ), 'supplier-fixture-a', array( 'supplier-fixture-a' ) );
 		$registry->seal();

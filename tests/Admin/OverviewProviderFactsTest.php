@@ -97,6 +97,18 @@ final class OverviewProviderFactsTest extends TestCase {
 		);
 		// Without the notice service the reason is still stated, generically.
 		self::assertSame( 'GitHub could not load.', $facts( GitHubSupplierState::apply( $bb_only(), ProviderRegistry::GITHUB_SUPERSEDE_FAILED ), false )['gh']['message'] );
+		$bundled_failed = $bb_only();
+		( new \ReflectionProperty( ProviderRegistry::class, 'bundled_github_factory' ) )->setValue( $bundled_failed, static fn (): null => null );
+		( new \ReflectionProperty( ProviderRegistry::class, 'sealed' ) )->setValue( $bundled_failed, true );
+		self::assertSame(
+			array(
+				'admitted'    => false,
+				'message'     => "GitHub is unavailable because Booster's GitHub module could not load.",
+				'source_kind' => null,
+				'source_name' => null,
+			),
+			$facts( $bundled_failed )['gh']
+		);
 		// A registry that does not own GitHub reports only what is registered.
 		self::assertSame( array( 'bb' ), array_keys( $facts( $bb_only() ) ) );
 		self::assertNull( $facts( $both() )['gh']['source_kind'] );

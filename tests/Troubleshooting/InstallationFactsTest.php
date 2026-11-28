@@ -126,6 +126,21 @@ final class InstallationFactsTest extends TestCase {
 		// A registry that does not own GitHub adds no supplier.
 		self::assertArrayNotHasKey( 'Supplier', (array) $row( null, true ) );
 		self::assertNull( $row( null, false ) );
+		// A bundled module that failed to build keeps the row, with its own fixed label.
+		$bundled_failed = new ProviderRegistry( array( new SupportReportProvider( 'bb', 'Bitbucket' ) ) );
+		( new \ReflectionProperty( ProviderRegistry::class, 'bundled_github_factory' ) )->setValue( $bundled_failed, static fn (): null => null );
+		( new \ReflectionProperty( ProviderRegistry::class, 'sealed' ) )->setValue( $bundled_failed, true );
+		self::assertSame(
+			array(
+				'Name'         => 'GitHub',
+				'Provider'     => 'gh',
+				'Admission'    => 'Not admitted',
+				'Selection'    => 'Not applicable',
+				'Availability' => 'Unavailable',
+				'Supplier'     => 'Included module failed to load',
+			),
+			array_column( ( new InstallationFacts( $bundled_failed ) )->components(), null, 'Provider' )['gh'] ?? null
+		);
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]

@@ -44,6 +44,7 @@ Activity before starting new work after a switch.
 | --- | --- |
 | **GitHub is unavailable because more than one plugin provides it** | Deactivate every GitHub plugin except the one you want. Booster does not choose between them. |
 | **GitHub is unavailable because … could not load** | The plugin is active, but Booster could not create its provider, for example because it was built for a different Booster release. Install a version built for this release, or deactivate it to return to the bundled provider. |
+| **GitHub is unavailable because Booster's GitHub module could not load** | No GitHub plugin is active and Booster could not create its bundled provider. Reinstall the Booster release, then check **Troubleshooting → Installation**. |
 
 Booster never falls back to the bundled provider while a GitHub plugin is
 active. GitHub packages show the same cause and cannot be deployed until GitHub

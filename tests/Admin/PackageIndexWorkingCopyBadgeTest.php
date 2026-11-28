@@ -62,6 +62,52 @@ final class PackageIndexWorkingCopyBadgeTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, 'Working copy' ) );
 	}
 
+	public function test_working_copy_badge_renders_on_package_edit_heading_only_for_a_working_copy(): void {
+		$package                   = $this->plugin( 'working/working.php', 'Working Plugin' );
+		$package_view              = PackagePagePresenter::plugin();
+		$package_provider_settings = array(
+			'default_provider' => 'gh',
+			'providers'        => array(
+				array(
+					'code'                  => 'gh',
+					'label'                 => 'GitHub',
+					'owner_label'           => 'Owner',
+					'repository_url_base'   => 'https://github.com/',
+					'credentials_url'       => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=credentials',
+					'available'             => true,
+					'browse'                => true,
+					'deploy'                => true,
+					'webhooks'              => true,
+					'default_credential_id' => '',
+					'credential_profiles'   => array(),
+				),
+			),
+		);
+		$package_source            = $package_view->get_source_choice_defaults( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=working/working.php' );
+
+		foreach ( array( true, false ) as $package_working_copy ) {
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+			$html = (string) ob_get_clean();
+
+			$document = new \DOMDocument();
+			$previous = libxml_use_internal_errors( true );
+			$document->loadHTML( $html );
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous );
+			$xpath = new \DOMXPath( $document );
+
+			$heading = '//div[contains(@class, "ran-booster-package-settings__heading")]/h2[contains(@class, "ran-booster-page-heading__title")]';
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $heading . '[normalize-space()="Edit Working Plugin"])' ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $heading . '[contains(normalize-space(), "Working copy")])' ) );
+			self::assertSame(
+				$package_working_copy ? 1.0 : 0.0,
+				$xpath->evaluate( 'count(' . $heading . '/following-sibling::*[contains(@class, "ran-wp-ui-badge") and contains(@class, "is-medium-intent") and normalize-space()="Working copy"])' )
+			);
+			self::assertSame( $package_working_copy ? 1 : 0, substr_count( $html, 'Working copy' ) );
+		}
+	}
+
 	private function plugin( string $identifier, string $name ): Plugin {
 		$plugin = Plugin::from_wp_array(
 			$identifier,

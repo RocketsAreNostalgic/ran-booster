@@ -134,7 +134,8 @@ final class PackagePagePresenter {
 	 * @param array<string, mixed>|null $package_branch_readiness
 	 * @return array{
 	 *   package_provider_settings: TProviderSettings, package_branch_readiness: array<string, mixed>|null,
-	 *   package: Package, package_view: self, package_extension_panels: list<string>, package_source: array<string, mixed>
+	 *   package: Package, package_view: self, package_extension_panels: list<string>, package_source: array<string, mixed>,
+	 *   package_paused: bool, package_working_copy: bool
 	 * }
 	 */
 	public function edit(
@@ -152,6 +153,7 @@ final class PackagePagePresenter {
 			'package_extension_panels'  => $this->extension_panels( $package ),
 			'package_source'            => $this->source_composition( 'edit', $requested_source_view, $package, $open_advanced ),
 			'package_paused'            => PackageSourceGate::pauses_package( $package, $this->type ),
+			'package_working_copy'      => $this->is_working_copy( $package ),
 		);
 	}
 

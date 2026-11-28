@@ -231,12 +231,17 @@ final class PackagePagePresenterTest extends TestCase {
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_index_lists_working_copy_packages_from_the_updater_target_folders(): void {
-		$plugin_root = sys_get_temp_dir() . '/ran-working-copy-presenter-' . bin2hex( random_bytes( 6 ) );
+		$base          = sys_get_temp_dir() . '/ran-working-copy-presenter-' . bin2hex( random_bytes( 6 ) );
+		$plugin_root   = $base . '/plugins';
+		$theme_root    = $base . '/themes';
+		$alt_theme_dir = $base . '/alt-themes';
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Emulate the WordPress-owned path in a separate process.
 		define( 'WP_PLUGIN_DIR', $plugin_root );
-		require_once dirname( __DIR__ ) . '/Deployment/DeploymentCoordinatorWordPressFunctions.php';
-		$theme_root = get_theme_root();
-		foreach ( array( $plugin_root . '/git-plugin/.git', $plugin_root . '/svn-plugin/.svn', $plugin_root . '/clean-plugin', $theme_root . '/hg-theme/.hg', $theme_root . '/bzr-theme/.bzr', $theme_root . '/clean-theme' ) as $dir ) {
+		$GLOBALS['ran_booster_presenter_theme_roots'] = array(
+			''          => $theme_root,
+			'bzr-theme' => $alt_theme_dir,
+		);
+		foreach ( array( $plugin_root . '/git-plugin/.git', $plugin_root . '/svn-plugin/.svn', $plugin_root . '/clean-plugin', $theme_root . '/hg-theme/.hg', $alt_theme_dir . '/bzr-theme/.bzr', $theme_root . '/clean-theme' ) as $dir ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable test directory tree.
 			mkdir( $dir, 0700, true );
 		}
@@ -260,12 +265,16 @@ final class PackagePagePresenterTest extends TestCase {
 		);
 		$view   = new \RAN\Admin\DeploymentAdminPresenter();
 		try {
-			$plugins = PackagePagePresenter::plugin()->index( array( $plugin( 'git-plugin' ), $plugin( 'svn-plugin' ), $plugin( 'clean-plugin' ) ), array(), $state, $view );
-			$themes  = PackagePagePresenter::theme()->index( array( $theme( 'hg-theme' ), $theme( 'bzr-theme' ), $theme( 'clean-theme' ) ), array(), $state, $view );
+			$plugin_items = array( $plugin( 'git-plugin' ), $plugin( 'svn-plugin' ), $plugin( 'clean-plugin' ) );
+			$plugins      = PackagePagePresenter::plugin()->index( $plugin_items, array(), $state, $view );
+			$filtered     = PackagePagePresenter::plugin()->index( $plugin_items, array(), array( 'search' => 'git' ) + $state, $view );
+			$themes       = PackagePagePresenter::theme()->index( array( $theme( 'hg-theme' ), $theme( 'bzr-theme' ), $theme( 'clean-theme' ) ), array(), $state, $view );
 			self::assertSame( array( 'git-plugin/git-plugin.php', 'svn-plugin/svn-plugin.php' ), $plugins['package_working_copies'] );
+			self::assertSame( array( 'git-plugin/git-plugin.php' ), $filtered['package_working_copies'] );
 			self::assertSame( array( 'hg-theme', 'bzr-theme' ), $themes['package_working_copies'] );
 		} finally {
-			foreach ( array( $plugin_root . '/git-plugin/.git', $plugin_root . '/git-plugin', $plugin_root . '/svn-plugin/.svn', $plugin_root . '/svn-plugin', $plugin_root . '/clean-plugin', $plugin_root, $theme_root . '/hg-theme/.hg', $theme_root . '/hg-theme', $theme_root . '/bzr-theme/.bzr', $theme_root . '/bzr-theme', $theme_root . '/clean-theme', $theme_root ) as $dir ) {
+			unset( $GLOBALS['ran_booster_presenter_theme_roots'] );
+			foreach ( array( $plugin_root . '/git-plugin/.git', $plugin_root . '/git-plugin', $plugin_root . '/svn-plugin/.svn', $plugin_root . '/svn-plugin', $plugin_root . '/clean-plugin', $plugin_root, $theme_root . '/hg-theme/.hg', $theme_root . '/hg-theme', $theme_root . '/clean-theme', $theme_root, $alt_theme_dir . '/bzr-theme/.bzr', $alt_theme_dir . '/bzr-theme', $alt_theme_dir, $base ) as $dir ) {
 				if ( is_dir( $dir ) ) {
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable test directory cleanup.
 					rmdir( $dir );
@@ -273,4 +282,12 @@ final class PackagePagePresenterTest extends TestCase {
 			}
 		}
 	}
+}
+
+// phpcs:ignore Universal.Namespaces.OneDeclarationPerFile.MultipleFound -- The presenter's WordPress function double stays with its target-folder tests.
+namespace RAN\Admin;
+
+// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- This bounded WordPress double supplies per-stylesheet theme roots for the presenter.
+function get_theme_root( string $stylesheet = '' ): string {
+	return $GLOBALS['ran_booster_presenter_theme_roots'][ $stylesheet ] ?? ( $GLOBALS['ran_booster_presenter_theme_roots'][''] ?? '' );
 }

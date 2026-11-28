@@ -241,20 +241,27 @@ durable.
 
 Listeners run synchronously in the request or worker that recorded the outcome,
 so keep them quick and hand slow work off. A listener's exception propagates to
-the caller, as with any WordPress action. The outcome is already stored, but the
-caller's later work is skipped: a deployment skips its finished log, background
-failure notification and next worker wakeup, and manual package or recovery
-actions report the stored result as failed; credential validation skips saving
-the expiry observation and sidecar date and shows an error for the stored
-result; a branch check reports a stored `verified` or `branch_unavailable`
-result as `unable_to_check`; the priority-1 release-check listener aborts the
-updater loop so `CoreSelfUpdateCheck` records `orchestration_failed`; webhook
-Validate or Repair skips its chained `test` ping; and where an outer `catch`
-swallows the exception (such as webhook push and delivery observations), it logs
-an Activity recording failure and leaves the hook on WordPress's current-filter
-stack for the rest of the request. Catch whatever your listener can throw.
-Delivery is not guaranteed, for example if the process stops after the write.
-Activity remains the record.
+the caller, as with any WordPress action. Any caught listener exception leaves
+the hook on WordPress's current-filter stack for the rest of the request. The
+outcome is already stored, but the caller's later work is skipped:
+
+- a deployment skips its finished log, background failure notification and next
+  worker wakeup, and manual package or recovery actions report the stored result
+  as failed;
+- when `DeploymentCoordinator::settle_after_throw()` settles an attempt, Booster
+  reports it as left running even though the outcome was stored;
+- credential validation skips saving the expiry observation and sidecar date and
+  shows an error for the stored result;
+- a branch check reports a stored `verified` or `branch_unavailable` result as
+  `unable_to_check`;
+- a release check aborts the updater loop so `CoreSelfUpdateCheck` records
+  `orchestration_failed`;
+- webhook Validate or Repair skips its chained `test` ping;
+- where an outer `catch` swallows the exception, such as webhook push and
+  delivery observations, it logs an Activity recording failure.
+
+Catch whatever your listener can throw. Delivery is not guaranteed, for example
+if the process stops after the write. Activity remains the record.
 
 ```php
 add_action(

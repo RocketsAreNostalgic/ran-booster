@@ -445,14 +445,14 @@ final class ActivityStore {
 	/** The stored identity when it has its subject type's shape, otherwise empty. A shape check, not secret detection. */
 	private function public_identity( string $type, string $identity, string $provenance ): string {
 		$shape = match ( $type ) {
-			'plugin' => '[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+\.php)?',
-			'theme' => '[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)?',
+			'plugin' => '[A-Za-z0-9_-][A-Za-z0-9._-]*(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*\.php)?',
+			'theme' => '[A-Za-z0-9_-][A-Za-z0-9._-]*(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*)?',
 			// A provider-reported repository identity is whatever text the provider passed.
-			'repository' => 'provider' === $provenance ? null : '[A-Za-z0-9._{}:~-][A-Za-z0-9._{}:~/-]*',
+			'repository' => 'provider' === $provenance || 1 === preg_match( '#://|(?:\A|/)\.\.?(?:/|\z)|(?:\A|[/:])(?:(?i:gh[pousr]_|github_pat_)|AT(?:BB|CTT|ATT))#', $identity ) ? null : '[A-Za-z0-9._{}:~-]+(?:/[A-Za-z0-9._{}:~-]+)*',
 			'provider' => '[a-z0-9_-]{1,32}',
 			default => null,
 		};
-		return null !== $shape && 1 === preg_match( '#\A(?!.*(?:://|(?:\A|/)\.\.(?:/|\z)|(?i:gh[pousr][_-]|github_pat_)|AT(?:BB|CTT|ATT)))' . $shape . '\z#', $identity ) ? $identity : '';
+		return null !== $shape && 1 === preg_match( '#\A' . $shape . '\z#', $identity ) ? $identity : '';
 	}
 
 	/**

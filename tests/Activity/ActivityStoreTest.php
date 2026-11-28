@@ -296,11 +296,18 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		);
 		foreach ( array(
 			'installed plugin slug' => array( 'plugin', 'my-plugin', 'core' ),
+			'plugin slug with ghs-' => array( 'plugin', 'highs-scores', 'core' ),
+			'plugin path with ghs-' => array( 'plugin', 'laughs-plugin/laughs-plugin.php', 'core' ),
 			'single file plugin'    => array( 'plugin', 'hello.php', 'core' ),
 			'theme'                 => array( 'theme', 'twentytwentyfive', 'core' ),
+			'theme with ghs-'       => array( 'theme', 'highs-and-lows', 'core' ),
 			'repository name'       => array( 'repository', 'owner/example', 'core' ),
+			'repository with ghs-'  => array( 'repository', 'owner/highs-scores', 'core' ),
+			'repository with ghp-'  => array( 'repository', 'acme/ghp-pages', 'core' ),
+			'repository with CATBB' => array( 'repository', 'acme/CATBB', 'core' ),
 			'repository identity'   => array( 'repository', 'gh:123456', 'core' ),
 			'provider'              => array( 'provider', 'gh', 'provider' ),
+			'provider with ghs-'    => array( 'provider', 'highs-git', 'provider' ),
 		) as $name => list( $type, $identity, $provenance ) ) {
 			yield $name => array(
 				array(
@@ -333,33 +340,46 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 			'no_candidates',
 		);
 		foreach ( array(
-			'a URL as a repository'              => 'https://example.com/x',
-			'an absolute path as a repository'   => '/abs/path',
-			'a dot-dot repository'               => '..',
-			'a leading dot-dot repository'       => '../repo',
-			'a trailing dot-dot repository'      => 'owner/..',
-			'an embedded dot-dot repository'     => 'owner/../repo',
-			'a ghp token as a repository'        => 'ghp_example',
-			'a gho token as a repository'        => 'gho_example',
-			'a ghu token as a repository'        => 'ghu_example',
-			'a ghs token as a repository'        => 'ghs_example',
-			'a ghr token as a repository'        => 'ghr_example',
-			'a fine-grained PAT as a repository' => 'github_pat_example',
-			'an ATBB token as a repository'      => 'ATBBexample',
-			'an ATCTT token as a repository'     => 'ATCTTexample',
-		) as $name => $rejected_repository ) {
+			'a URL as a repository'              => array( 'repository', 'https://example.com/x' ),
+			'a short URL as a repository'        => array( 'repository', 'https://x/y' ),
+			'an absolute path as a repository'   => array( 'repository', '/abs/path' ),
+			'a short absolute repository path'   => array( 'repository', '/abs' ),
+			'an empty segment in a repository'   => array( 'repository', 'owner//repo' ),
+			'a dot repository'                   => array( 'repository', '.' ),
+			'a dot-dot repository'               => array( 'repository', '..' ),
+			'a leading dot repository'           => array( 'repository', './repo' ),
+			'a leading dot-dot repository'       => array( 'repository', '../repo' ),
+			'a trailing dot-dot repository'      => array( 'repository', 'owner/..' ),
+			'an embedded dot-dot repository'     => array( 'repository', 'owner/../repo' ),
+			'a ghp token as a repository'        => array( 'repository', 'ghp_example' ),
+			'a nested ghp token in a repository' => array( 'repository', 'owner/ghp_example' ),
+			'a gho token as a repository'        => array( 'repository', 'gho_example' ),
+			'a ghu token as a repository'        => array( 'repository', 'ghu_example' ),
+			'a ghs token as a repository'        => array( 'repository', 'ghs_example' ),
+			'a ghr token as a repository'        => array( 'repository', 'ghr_example' ),
+			'a fine-grained PAT as a repository' => array( 'repository', 'github_pat_example' ),
+			'an ATBB token as a repository'      => array( 'repository', 'ATBBexample' ),
+			'a colon ATBB token in a repository' => array( 'repository', 'gh:ATBBexample' ),
+			'an ATCTT token as a repository'     => array( 'repository', 'ATCTTexample' ),
+			'an ATATT token as a repository'     => array( 'repository', 'ATATTexample' ),
+			'a dot plugin'                       => array( 'plugin', '.' ),
+			'a leading dot plugin path'          => array( 'plugin', './hello.php' ),
+			'a dotfile plugin'                   => array( 'plugin', '.php' ),
+			'a dotfile in a plugin folder'       => array( 'plugin', 'folder/..php' ),
+			'a path outside the plugin shape'    => array( 'plugin', '/var/www/private.php' ),
+			'a plugin path without php'          => array( 'plugin', 'folder/readme.txt' ),
+			'a leading dot theme path'           => array( 'theme', './style' ),
+		) as $name => list( $rejected_type, $rejected_identity ) ) {
 			yield $name => array(
 				array(
-					'subject_type'     => 'repository',
-					'subject_identity' => $rejected_repository,
+					'subject_type'     => $rejected_type,
+					'subject_identity' => $rejected_identity,
 				) + $plain,
 				'',
 				'release.check',
 				'no_candidates',
 			);
 		}
-		yield 'a path outside the plugin shape' => array( array( 'subject_identity' => '/var/www/private.php' ) + $plain, '', 'release.check', 'no_candidates' );
-		yield 'a plugin path without php' => array( array( 'subject_identity' => 'folder/readme.txt' ) + $plain, '', 'release.check', 'no_candidates' );
 		$token = 'ghp_abcdefghijklmnopqrstuvwxyz0123456789';
 		yield 'a token as the codes' => array(
 			array(

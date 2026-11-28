@@ -37,6 +37,7 @@ class ProviderProfileAdminController {
 	) {
 
 		$this->branch_check_evidence = $branch_check_evidence ?? new RepositoryBranchCheckEvidenceStore();
+		$this->expiry_observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 	}
 	/** @param array<string,mixed> $request Untrusted form data. */
 	public function adopt_github( array $request ): void {
@@ -228,7 +229,13 @@ class ProviderProfileAdminController {
 				throw new CredentialRequestException( __( 'Credential validation is unavailable for this Git provider.', 'ran-booster' ) );
 			}
 			$activity_id = $this->begin_credential_activity( $provider, $id );
-			$result      = $validator->validate_credential( $id );
+			// A result is recorded only for the material that was checked; the tag is read before the provider call.
+			try {
+				$material_tag = $this->secrets->credential_material_tag( $provider, $id );
+			} catch ( \Throwable ) {
+				$material_tag = null;
+			}
+			$result = $validator->validate_credential( $id );
 			$this->complete_credential_activity( $activity_id, $result );
 			if ( null !== $result->failure ) {
 				BoosterLogger::log_failure(
@@ -242,19 +249,33 @@ class ProviderProfileAdminController {
 			}
 			if ( $result->is_valid() ) {
 				if ( null !== $result->expiry ) {
-
-					$this->expiry_observations->record_provider_expiry(
-						$provider->value,
-						$id,
-						$result->expiry,
-						gmdate( 'Y-m-d\\TH:i:s\\Z' )
-					);
-					// A configured constant is read-only, and validation never writes the sidecar while file changes are disallowed.
-					if ( SecretsFile::CONSTANT_PROFILE !== $id && $result->expiry->is_known() && is_string( $result->expiry->expires_at ) && ! PackageMutationGuard::file_mods_disabled() ) {
-						$this->secrets->record_credential_provider_expiry(
-							$provider,
+					$skipped = 'material_tag_unavailable';
+					if ( null !== $material_tag ) {
+						$current = $this->expiry_observations->record_provider_expiry(
+							$provider->value,
 							$id,
-							substr( $result->expiry->expires_at, 0, 10 )
+							$result->expiry,
+							gmdate( 'Y-m-d\\TH:i:s\\Z' ),
+							$material_tag
+						);
+						// A configured constant is read-only, and validation never writes the sidecar while file changes are disallowed.
+						if ( SecretsFile::CONSTANT_PROFILE !== $id && $result->expiry->is_known() && is_string( $result->expiry->expires_at ) && ! PackageMutationGuard::file_mods_disabled() ) {
+							$current = $this->secrets->record_credential_provider_expiry(
+								$provider,
+								$id,
+								substr( $result->expiry->expires_at, 0, 10 ),
+								$material_tag
+							) && $current;
+						}
+						$skipped = $current ? null : 'material_tag_changed';
+					}
+					if ( null !== $skipped ) {
+						BoosterLogger::log(
+							'Credential validation result not recorded.',
+							array(
+								'operation'    => 'credential_validation',
+								'outcome_code' => $skipped,
+							)
 						);
 					}
 				}

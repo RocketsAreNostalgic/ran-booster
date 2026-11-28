@@ -584,13 +584,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function test_known_provider_expiry_rejects_alater_submitted_date_before_saving(): void {
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->getMockBuilder( Dashboard::class )->disableOriginalConstructor()->onlyMethods( array( 'add_message' ) )->getMock();
-		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
-		$expiry_observations->record_provider_expiry(
-			'fixture',
-			'credential_existing',
-			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
-		);
+		$expiry_observations = $this->observed_expiry();
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
@@ -628,13 +622,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function test_unchanged_provider_fallback_does_not_become_amanual_expiry(): void {
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->createMock( Dashboard::class );
-		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
-		$expiry_observations->record_provider_expiry(
-			'fixture',
-			'credential_existing',
-			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
-		);
+		$expiry_observations = $this->observed_expiry();
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
@@ -671,13 +659,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function test_replacement_does_not_inherit_the_previous_tokens_provider_expiry(): void {
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->createMock( Dashboard::class );
-		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
-		$expiry_observations->record_provider_expiry(
-			'fixture',
-			'credential_existing',
-			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
-		);
+		$expiry_observations = $this->observed_expiry();
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
@@ -1032,14 +1014,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			);
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->getMockBuilder( Dashboard::class )->disableOriginalConstructor()->onlyMethods( array( 'add_message' ) )->getMock();
-		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
+		$expiry_observations = $this->observed_expiry();
 		$expiry_observations->set_manual_expiry( 'fixture', 'credential_existing', '2026-09-01' );
-		$expiry_observations->record_provider_expiry(
-			'fixture',
-			'credential_existing',
-			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
-		);
 		$observation_before   = $expiry_observations->document;
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
@@ -1247,6 +1223,15 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertSame( 'ran_booster_credentials_error', $message['code'] );
 		self::assertIsString( $message['message'] );
 		return $message['message'];
+	}
+
+	/** A store bound to the fixture secrets, holding a provider observation of the existing credential. */
+	private function observed_expiry(): InMemoryCredentialExpiryObservationStore {
+		$store = new InMemoryCredentialExpiryObservationStore();
+		$store->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
+		$store->record_provider_expiry( 'fixture', 'credential_existing', CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ), '2026-08-08T12:00:00Z', $this->secrets->credential_material_tag( 'fixture', 'credential_existing' ) ?? '' );
+
+		return $store;
 	}
 
 	private function seed_stored_profiles(): void {

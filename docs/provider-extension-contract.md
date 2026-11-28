@@ -846,6 +846,28 @@ takes precedence over Booster's optional manual profile date. A provider that
 does not report expiry remains fully compatible and receives the same manual
 fallback, row status, and administrator notice behavior.
 
+Core records a result only for the credential that was checked. Before the
+provider call it reads the credential's material tag: a random value kept in
+the encrypted record and replaced with every new secret, or, for the read-only
+constant, an HMAC of the configured value under a key derived from the site's
+salts. The automatic-removal deadline is a compare-and-set under the secrets
+file lock, so it changes only while the record still carries that tag, and a
+provider-reported date can only bring it earlier. The advisory observation is
+checked against the tag before each write attempt, but a replacement can still
+land between that check and the option write; an observation is therefore
+stored under its tag and shown only while that tag is the credential's current
+one, so a stale one stays hidden. A stored credential keeps one observation.
+The constant keeps observations for up to two tags and drops the least recently
+written one when a third arrives, so a request that still holds a rotated value
+writes beside the new one rather than over it. If three different values are in
+flight at once, the current one can be dropped and stays hidden until the next
+validation. Replacement and purge cleanup keep only the observation of the
+current material, and a purged credential's tag can never be current again. The
+manual date is not tagged, and the purger runs without the updater lock, so
+purge cleanup also clears a manual date entered on a reused identifier before
+that cleanup runs. A result that is not recorded logs a coded line. A record
+saved before tags existed records nothing until it is next saved.
+
 A provider that implements `RepositoryBrowser` receives one public-owner or
 one selected-credential `RepositoryBrowseRequest`. It must claim every remote
 call from that request, apply its response-size limit and return a

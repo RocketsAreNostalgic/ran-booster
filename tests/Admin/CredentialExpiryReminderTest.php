@@ -39,6 +39,8 @@ use RAN\Tests\Support\NoticePreferenceLockDatabase;
 
 final class CredentialExpiryReminderTest extends TestCase {
 
+	private const UNSAVED_TAG = 'fedcba9876543210fedcba9876543210';
+
 	private mixed $previous_wpdb;
 	private NoticePreferenceLockDatabase $lock_database;
 	private string $directory;
@@ -68,6 +70,8 @@ final class CredentialExpiryReminderTest extends TestCase {
 		$policies        = new ProviderSecretPolicyCatalog();
 		$this->secrets   = SecretsFileTestFactory::create( $this->path, array(), $policies );
 		$this->providers = new ProviderRegistry( array( new ExpiryReminderProvider() ), $policies );
+		// Some cases observe credentials that only a mocked secrets file lists; they share one fixture tag.
+		$this->observations->read_material_tags_with( fn ( string $provider, string $id ): string => $this->secrets->credential_material_tag( $provider, $id ) ?? self::UNSAVED_TAG );
 
 		$GLOBALS['ran_booster_repository_admin_allowed']               = true;
 		$GLOBALS['ran_booster_repository_admin_nonce_valid']           = true;
@@ -821,7 +825,8 @@ final class CredentialExpiryReminderTest extends TestCase {
 			provider: 'gh',
 			profile_id: $id,
 			report: CredentialExpiryReport::known( $expiry->format( 'Y-m-d\TH:i:s\Z' ) ),
-			checked_at: $this->now->format( 'Y-m-d\TH:i:s\Z' )
+			checked_at: $this->now->format( 'Y-m-d\TH:i:s\Z' ),
+			material_tag: $this->secrets->credential_material_tag( 'gh', $id ) ?? self::UNSAVED_TAG
 		);
 	}
 

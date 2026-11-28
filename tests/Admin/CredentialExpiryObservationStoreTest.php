@@ -35,9 +35,10 @@ final class CredentialExpiryObservationStoreTest extends TestCase {
 	}
 
 	public function test_concurrent_provider_observation_survives_manual_expiry_patch(): void {
-		$store               = new InMemoryCredentialExpiryObservationStore();
+		$store = new InMemoryCredentialExpiryObservationStore();
+		$store->read_material_tags_with( static fn (): string => str_repeat( 'a', 32 ) );
 		$store->before_write = static function () use ( $store ): void {
-			$store->record_provider_expiry( 'gh', 'public-profile', \RAN\RepositoryProvider\CredentialExpiryReport::unknown(), '2026-10-13T00:00:00Z' );
+			$store->record_provider_expiry( 'gh', 'public-profile', \RAN\RepositoryProvider\CredentialExpiryReport::unknown(), '2026-10-13T00:00:00Z', str_repeat( 'a', 32 ) );
 		};
 		$store->set_manual_expiry( 'gh', 'public-profile', '2027-01-01' );
 		self::assertSame(

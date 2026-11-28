@@ -245,7 +245,10 @@ final class EncryptedStoreBlueprintIntegrationTest extends TestCase {
 			self::CLASSIC_TOKEN,
 			$material['secret']
 		);
+		$tag = $target_secrets->credential_material_tag( 'gh', $target_id );
+		self::assertMatchesRegularExpression( '/\A[0-9a-f]{32}\z/', (string) $tag );
 		self::assertSame( $target_id, $target_secrets->import_credentials_if_absent( $imported, $credential )[0] );
+		self::assertSame( $tag, $target_secrets->credential_material_tag( 'gh', $target_id ), 'A re-import reuses the record and its material tag.' );
 		self::assertSame( array( $target_id ), array_keys( $target_secrets->credential_profiles( 'gh' ) ) );
 
 		$source_key = $source_key_store->load();

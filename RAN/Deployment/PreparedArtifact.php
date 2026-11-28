@@ -6,12 +6,13 @@ namespace RAN\Deployment;
 
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\RepositoryReleaseArtifactCustody;
+use RAN\WPBranchUpdater\V1\Contract\PreparedPackageArtifact;
 use RuntimeException;
 
 /**
  * One locally downloaded archive whose identity is frozen for mutation.
  */
-final class PreparedArtifact implements RepositoryReleaseArtifactCustody {
+final class PreparedArtifact implements RepositoryReleaseArtifactCustody, PreparedPackageArtifact {
 
 	private bool $cleaned = false;
 

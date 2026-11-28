@@ -14,7 +14,7 @@ use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\UpdaterSupport\V1\PluginFileIdentifier;
 use RAN\UpdaterSupport\V1\TemporaryArchive;
 use RAN\UpdaterSupport\V1\WordPressHeaders;
-use RAN\WordPress\CorePackageExecutor;
+use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
 use Throwable;
@@ -28,7 +28,7 @@ final class ExtensionInstaller {
 	/** @param callable(): list<array<string, mixed>> $catalogue */
 	public function __construct(
 		private WordPressUpdaterLock $lock,
-		private CorePackageExecutor $executor,
+		private WordPressCorePackageExecutor $executor,
 		callable $catalogue
 	) {
 		$this->catalogue = Closure::fromCallable( $catalogue );

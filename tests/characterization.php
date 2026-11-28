@@ -29,10 +29,10 @@ $ran_booster_assert = static function ( bool $ran_booster_condition, string $ran
 
 $ran_booster_assert( class_exists( RAN\Booster::class ), 'The plugin runtime must autoload.' );
 $ran_booster_assert( class_exists( RAN\Deployment\DeploymentCoordinator::class ), 'The deployment coordinator must autoload.' );
-$ran_booster_assert( class_exists( RAN\WordPress\CorePackageExecutor::class ), 'The WordPress core adapter must autoload.' );
 $ran_booster_assert( class_exists( RAN\PackageOperation::class ), 'The explicit package operation must autoload.' );
 $ran_booster_assert( class_exists( RAN\PackageOperationService::class ), 'The package operation service must autoload.' );
 $ran_booster_assert( ! class_exists( 'RAN\\Commands\\InstallPlugin' ), 'The inherited command bus must stay removed.' );
+$ran_booster_assert( ! class_exists( 'RAN\\WordPress\\CorePackageExecutor' ), 'The forked WordPress core executor must stay removed.' );
 $ran_booster_assert( ! class_exists( 'RAN\\Handlers\\InstallPlugin' ), 'The inherited handler bus must stay removed.' );
 $ran_booster_assert( ! class_exists( 'RAN\\Actions\\PluginWasInstalled' ), 'The inherited action bus must stay removed.' );
 $ran_booster_assert( ! class_exists( 'RAN\\Deployment\\DeploymentIntent' ), 'The legacy execution graph must stay removed.' );

@@ -221,7 +221,7 @@ function ran_booster_phase44_worker(): void {
 	require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 	require_once ABSPATH . 'wp-admin/includes/class-wp-automatic-updater.php';
 	$origin = WP_PLUGIN_DIR . '/ran-booster';
-	foreach ( array( RAN\Booster::class, RAN\WordPress\CorePackageExecutor::class, RAN\Deployment\PreparedArtifact::class, RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade::class, RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget::class ) as $class ) {
+	foreach ( array( RAN\Booster::class, RAN\Deployment\PreparedArtifact::class, RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade::class, RAN\BoosterGitHubProvider\V1\GitHubReleaseNativeTarget::class ) as $class ) {
 		$file = ( new ReflectionClass( $class ) )->getFileName();
 		if ( ! is_string( $file ) || ! str_starts_with( $file, $origin . '/' ) ) {
 			throw new RuntimeException( 'A Core class did not originate in the installed release.' );

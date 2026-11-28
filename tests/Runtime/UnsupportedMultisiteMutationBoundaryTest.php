@@ -17,7 +17,6 @@ use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Deployment\DeploymentWorker;
-use RAN\Deployment\PreparedArtifact;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
@@ -35,8 +34,7 @@ use RAN\Storage\ThemeRepository;
 use RAN\Webhook\SignedWebhookVerifier;
 use RAN\Webhook\WebhookController;
 use RAN\Webhook\WebhookProcessor;
-use RAN\WordPress\CorePackageExecutionFailure;
-use RAN\WordPress\CorePackageExecutor;
+use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
@@ -72,31 +70,41 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		self::assertSame( '', $registrar->failure_code( 'plugin', 'example/example.php' ) );
 	}
 
-	public function test_core_executor_rejects_before_artifact_or_word_press_access(): void {
-		$core_calls = 0;
-		$executor   = new CorePackageExecutor(
-			static function () use ( &$core_calls ): never {
-				++$core_calls;
-				throw new \RuntimeException( 'WordPress Core must stay inert.' );
+	public function test_extension_installer_refuses_before_download_lock_or_executor(): void {
+		// The installer's WordPress doubles load their own is_multisite(); keep it reporting Multisite.
+		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = true;
+		require_once dirname( __DIR__ ) . '/Admin/ExtensionInstallerWordPressFunctions.php';
+		self::assertFalse( RuntimeSupport::current()->allows_managed_operations() );
+		$catalogue_reads = 0;
+		$installer       = new \RAN\Admin\ExtensionInstaller(
+			$this->blank( WordPressUpdaterLock::class ),
+			$this->blank( WordPressCorePackageExecutor::class ),
+			static function () use ( &$catalogue_reads ): array {
+				++$catalogue_reads;
+				return array(
+					array(
+						'id'              => 'example',
+						'plugin'          => 'example/example.php',
+						'release_version' => '1.0.0',
+						'asset_url'       => 'https://example.test/example.zip',
+						'asset_sha256'    => str_repeat( 'a', 64 ),
+						'compatible'      => true,
+						'state'           => 'Not installed',
+					),
+				);
 			}
 		);
-		$artifact   = $this->blank( PreparedArtifact::class );
-		$results    = array(
-			$executor->install_plugin( $artifact, 'example', null ),
-			$executor->install_theme( $artifact, 'example', null ),
-		);
 
-		foreach ( $results as $result ) {
-			self::assertFalse( $result->is_successful() );
-			self::assertSame( CorePackageExecutionFailure::RUNTIME_UNSUPPORTED, $result->get_failure() );
-		}
-		self::assertSame( 0, $core_calls );
+		self::assertSame( 'failed', $installer->install( 'example' ) );
+		self::assertSame( 1, $catalogue_reads );
+		// The download runs before the lock and the executor, so neither was reached.
+		self::assertArrayNotHasKey( 'ran_booster_extension_test_url', $GLOBALS );
 	}
 
 	public function test_prospective_facade_rejects_listing_inspection_and_installation_before_authorization(): void {
 		$facade  = new NativeProspectiveReleaseFacade(
 			$this->blank( PackageRepositoryRequestResolver::class ),
-			$this->blank( CorePackageExecutor::class ),
+			$this->blank( WordPressCorePackageExecutor::class ),
 			$this->blank( PluginRepository::class ),
 			$this->blank( ThemeRepository::class ),
 			$this->blank( WordPressUpdaterLock::class ),

@@ -58,9 +58,10 @@ use RAN\Storage\Database;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 	use RAN\Storage\ThemeRepository;
-	use RAN\WordPress\CorePackageExecutionResult;
-	use RAN\WordPress\CorePackageExecutionFailure;
-	use RAN\WordPress\CorePackageExecutor;
+	use RAN\WPBranchUpdater\V1\Contract\PreparedPackageArtifact;
+	use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult;
+	use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure;
+	use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 	use RAN\WordPress\ManagedReleaseConfiguration;
 	use RAN\WordPress\WordPressUpdaterLock;
 	use RAN_Booster_ReleaseCapabilityFixture\PartialProvider as ReleaseFixturePartialProvider;
@@ -1813,7 +1814,7 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		$plugins                  = new ProspectivePluginRepository();
 		$executor                 = new ProspectiveExecutor();
 		$executor->mark_installed = false;
-		$executor->result         = CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_FAILED );
+		$executor->result         = CorePackageExecutionResult::failed( CorePackageExecutionFailure::WORDPRESS_FAILED, 'incompatible_archive' );
 		$facade                   = $this->facade( $plugins, $executor );
 		$this->set_ready_release();
 
@@ -1830,6 +1831,9 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertFalse( $result->successful() );
 		self::assertSame( 'wordpress_failed', $result->code() );
 		self::assertSame( 0, $plugins->adoption_calls );
+		$lines = $this->captured_log_lines();
+		self::assertCount( 1, $lines );
+		self::assertStringContainsString( '"step":"prospective_release_install","operation":"plugin","outcome_code":"wordpress_failed","event":"incompatible_archive"', $lines[0] );
 	}
 
 	public function test_absent_target_ignores_unrelated_activation_side_effect(): void {
@@ -1857,6 +1861,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'wordpress_failed', $result->code() );
 		self::assertSame( array(), $result->data() );
 		self::assertSame( 0, $plugins->adoption_calls );
+		$lines = $this->captured_log_lines();
+		self::assertCount( 1, $lines );
+		self::assertStringContainsString( '"outcome_code":"wordpress_failed"', $lines[0] );
+		self::assertStringNotContainsString( '"event"', $lines[0] );
 	}
 
 	public function test_unreadable_installed_target_reports_bounded_uncertainty(): void {
@@ -2761,12 +2769,12 @@ final class ProspectiveRepositoryReleaseArtifact implements RepositoryReleaseArt
 }
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the contract it exercises.
-final class ProspectiveExecutor extends CorePackageExecutor {
+final class ProspectiveExecutor extends WordPressCorePackageExecutor {
 
-	public int $install_calls          = 0;
-	public string $package_slug        = '';
-	public ?string $subdirectory       = null;
-	public ?PreparedArtifact $artifact = null;
+	public int $install_calls                 = 0;
+	public string $package_slug               = '';
+	public ?string $subdirectory              = null;
+	public ?PreparedPackageArtifact $artifact = null;
 	public CorePackageExecutionResult $result;
 	public ?\Closure $on_install                 = null;
 	public ?ProspectivePluginRepository $plugins = null;
@@ -2777,7 +2785,7 @@ final class ProspectiveExecutor extends CorePackageExecutor {
 	}
 
 	public function install_plugin(
-		PreparedArtifact $artifact,
+		PreparedPackageArtifact $artifact,
 		string $package_slug,
 		?string $subdirectory
 	): CorePackageExecutionResult {
@@ -2794,7 +2802,7 @@ final class ProspectiveExecutor extends CorePackageExecutor {
 
 		return $this->result;
 	}
-	public function install_theme( PreparedArtifact $artifact, string $package_slug, ?string $subdirectory ): CorePackageExecutionResult {
+	public function install_theme( PreparedPackageArtifact $artifact, string $package_slug, ?string $subdirectory ): CorePackageExecutionResult {
 		return $this->install_plugin( $artifact, $package_slug, $subdirectory );
 	}
 }

@@ -277,16 +277,6 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 	<?php } ?>
 
 
-	<?php
-	$native_hold_active = isset( $github_selection ) && is_array( $github_selection ) && 'recovery_required' === ( $github_selection['status']['state'] ?? null );
-	if ( ! $native_hold_active ) {
-		$native_hold_result         = $native_hold_result ?? null;
-		$native_hold_result_surface = 'provider-notice';
-		$native_hold_reload_url     = '';
-		$native_hold_status_folder  = '';
-		require __DIR__ . '/native-hold-result.php';
-	}
-	?>
 	<?php if ( isset( $github_selection ) && is_array( $github_selection ) ) { ?>
 		<?php
 		$selection_status            = $github_selection['status'];
@@ -304,17 +294,10 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 				<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 				<p><?php esc_html_e( 'To change the GitHub provider integration, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
 			<?php } else { ?>
-				<?php
-				$native_recovery = $github_selection['recovery'] ?? null;
-				$adoption_review = $github_selection['review'];
-				?>
+				<?php $adoption_review = $github_selection['review']; ?>
 				<?php if ( 'decision_required' !== $selection_status['state'] ) { ?>
-					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning<?php echo 'recovery_required' === $selection_status['state'] ? ' ran-booster-native-hold' : ''; ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
-						<?php if ( 'recovery_required' === $selection_status['state'] ) { ?>
-						<h3 class="ran-wp-ui-text is-heading-md ran-wp-ui-notice__title"><?php esc_html_e( 'GitHub installs are on a site-wide hold', 'ran-booster' ); ?></h3>
-						<?php } ?>
+					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
 						<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
-						<?php if ( 'recovery_required' !== $selection_status['state'] ) { ?>
 						<h3>
 							<?php
 							echo esc_html(
@@ -343,58 +326,6 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 							);
 							?>
 						</p>
-						<?php } ?>
-						<?php if ( 'recovery_required' === $selection_status['state'] && is_array( $native_recovery ) ) { ?>
-							<?php
-							$native_hold_capable = current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
-							$native_hold_name    = $native_hold_capable ? '<a href="' . esc_url( $native_recovery['url'] ) . '">' . esc_html( $native_recovery['name'] ) . '</a>' : esc_html( $native_recovery['name'] );
-							$native_hold_folder  = '<code>' . esc_html( $native_recovery['folder'] ) . '</code>';
-							?>
-						<p>
-							<?php
-							/* translators: %s: the held package's name, linked to the page that releases the hold. */
-							echo wp_kses( sprintf( __( 'Provider changes are on hold: the last install of %s couldn\'t complete.', 'ran-booster' ), $native_hold_name ), array( 'a' => array( 'href' => true ) ) );
-							if ( ! $native_hold_capable ) {
-								echo ' ' . esc_html__( 'Contact a site administrator.', 'ran-booster' );
-							}
-							?>
-						</p>
-							<?php if ( $native_hold_capable && ! $native_recovery['readable'] ) { ?>
-						<div id="ran-booster-native-hold" data-ran-booster-native-hold>
-						<p>
-								<?php
-								/* translators: %s: the held package's folder name. */
-								echo wp_kses( sprintf( __( 'The last install of %s couldn\'t complete, and Booster can\'t read its files. Delete its folder if it\'s still there, then confirm.', 'ran-booster' ), $native_hold_folder ), array( 'code' => array() ) );
-								?>
-						</p>
-						<form method="post" action="<?php echo esc_url( is_multisite() ? network_admin_url( 'admin.php?page=ran-booster&tab=gh' ) : admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" class="ran-booster-native-hold__form" data-hx-boost="false">
-								<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
-							<input type="hidden" name="ran_booster[action]" value="recover-github-native">
-							<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $native_recovery['digest'] ); ?>">
-							<input type="hidden" name="ran_booster[hold_folder]" value="<?php echo esc_attr( $native_recovery['folder'] ); ?>">
-							<input type="hidden" name="ran_booster[package_type]" value="<?php echo esc_attr( $native_recovery['type'] ); ?>">
-							<div class="ran-booster-native-hold__checks">
-							<label class="ran-booster-native-hold__check"><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required><span><?php esc_html_e( 'I\'m sure the install is no longer running.', 'ran-booster' ); ?></span></label>
-							<label class="ran-booster-native-hold__check"><input type="checkbox" name="ran_booster[confirmed_removal]" value="1" required><span>
-								<?php
-								/* translators: %s: the held package's folder name. */
-								echo wp_kses( sprintf( __( 'The folder %s is deleted.', 'ran-booster' ), $native_hold_folder ), array( 'code' => array() ) );
-								?>
-							</span></label>
-							</div>
-							<div class="ran-booster-native-hold__actions">
-							<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Clear hold and stop managing', 'ran-booster' ); ?></button>
-								<?php
-								$native_hold_result_surface = 'provider-status';
-								$native_hold_reload_url     = $native_recovery['url'];
-								$native_hold_status_folder  = $native_recovery['folder'];
-								require __DIR__ . '/native-hold-result.php';
-								?>
-							</div>
-						</form>
-						</div>
-							<?php } ?>
-						<?php } ?>
 						<?php if ( 'missing' === $selection_status['state'] && is_array( $current_implementation ) ) { ?>
 							<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Missing provider: %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
 						<?php } ?>

@@ -33,7 +33,6 @@ use RAN\Deployment\DeploymentRequest;
 use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\PackageSource;
-use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderFailure;
@@ -65,7 +64,6 @@ use RAN\WordPress\WordPressUpdaterLock;
 use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
 
 final class ManagedReleaseRuntimeTest extends TestCase {
-	use \RAN\Tests\Support\GitHubSelectionFixture;
 	use \RAN\Tests\Support\CapturesBoosterLog;
 
 
@@ -553,7 +551,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$this->release_metadata_registry(
 				target_factory: static fn ( mixed ...$options ): object => new RuntimeUpdaterFacade( $options )
 			),
-			$this->github_selection(),
 			new RepositorySourceGuard( $database, $this->createStub( Database::class ) )
 		);
 
@@ -684,123 +681,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 		self::assertSame( 1, $lock->token_reads );
-		self::assertSame( 2, $lock->sql_token_reads );
 		$registrar->complete_native_mutation( $upgrader, self::NATIVE_EXTRA );
 
 		self::assertSame( array(), $lock->releases );
-		self::assertNotNull( $this->native_selection_store );
-		self::assertArrayHasKey( 'native_mutation', $this->native_selection_store->read() );
 		$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'verified_success' );
-		self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
 		self::assertSame( array( '1700000002' ), $lock->releases );
-	}
-
-	public function test_active_github_native_mutation_hold_blocks_change_channel_and_return_to_branch(): void {
-		$package = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL );
-		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'all_booster_plugins' )->willReturn( array( self::NATIVE_PLUGIN => $package ) );
-		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
-		$themes = $this->createStub( ThemeRepository::class );
-		$themes->method( 'all_booster_themes' )->willReturn( array() );
-
-		$store = new class() extends ManagedReleaseStore {
-			public int $channel_changes = 0;
-			public int $transitions     = 0;
-
-			public function __construct() {}
-
-			public function configuration( string $type, string $identifier ): ManagedReleaseConfiguration {
-				unset( $type, $identifier );
-				return new ManagedReleaseConfiguration( 'example', 'example/example.php', 'stable' );
-			}
-
-			public function change_channel( string $type, string $identifier, int $expected_revision, string $channel, int $user_id, string $expected_adoption_token ): bool {
-				unset( $type, $identifier, $expected_revision, $channel, $user_id, $expected_adoption_token );
-				++$this->channel_changes;
-				return true;
-			}
-
-			public function transition( string $type, string $identifier, PackageSource $expected_source, int $expected_revision, PackageSource $new_source, ?ManagedReleaseConfiguration $configuration, int $user_id, string $expected_adoption_token, ?callable $native_complete = null ): bool {
-				unset( $type, $identifier, $expected_source, $expected_revision, $new_source, $configuration, $user_id, $expected_adoption_token, $native_complete );
-				++$this->transitions;
-				return true;
-			}
-		};
-
-		$lock      = new class() extends WordPressUpdaterLock {
-			public ?string $token            = null;
-			public bool $occupied            = false;
-			public bool $acquire_unavailable = false;
-			public function try_acquire_without_reclaim( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): ?string {
-				unset( $owner_operation );
-				if ( $this->acquire_unavailable ) {
-					throw \RAN\Deployment\DeploymentStorageFailure::unavailable();
-				}
-				if ( $this->occupied ) {
-					return null;
-				}
-				$this->token = 'hold-test-lock';
-				return $this->token;
-			}
-			public function current_token(): ?string {
-				return $this->token;
-			}
-			public function release( string $token ): bool {
-				if ( $this->token === $token ) {
-					$this->token = null;
-					return true;
-				}
-				return false;
-			}
-		};
-		$selection = $this->github_selection();
-		self::assertNotNull( $this->native_selection_store );
-		$state                   = $this->native_selection_store->read( true );
-		$next                    = $state;
-		$next['native_mutation'] = array(
-			'selection_generation' => $state['selection_generation'],
-			'owner_tag'            => str_repeat( '0', 16 ) . str_repeat( 'b', 16 ),
-			'target_type'          => 'plugin',
-			'installed_identity'   => self::NATIVE_PLUGIN,
-			'phase'                => 'started',
-		);
-		self::assertTrue( $this->native_selection_store->compare_and_swap( $state, $next ) );
-
-		$registry  = $this->release_metadata_registry();
-		$registrar = $this->registrar( $plugins, $themes, $store, $lock, $registry );
-		$facade    = $this->facade(
-			$plugins,
-			$themes,
-			$store,
-			$registrar,
-			$lock,
-			$registry,
-			static fn (): bool => true,
-			static fn (): bool => true,
-			github_selection: $selection
-		);
-
-		$channel = $facade->change_channel( 'plugin', self::NATIVE_PLUGIN, 1, 'prerelease', 'valid' );
-		self::assertFalse( $channel->successful() );
-		self::assertSame( 'release_unavailable', $channel->code() );
-
-		$return = $facade->return_to_branch( 'plugin', self::NATIVE_PLUGIN, 1, 'valid' );
-		self::assertFalse( $return->successful() );
-		self::assertSame( 'branch_switch_held', $return->code() );
-
-		$lock->occupied = true;
-		$lock->token    = 'foreign-holder';
-		self::assertSame( 'branch_switch_held', $facade->return_to_branch( 'plugin', self::NATIVE_PLUGIN, 1, 'valid' )->code() );
-		self::assertSame( 'release_unavailable', $facade->change_channel( 'plugin', self::NATIVE_PLUGIN, 1, 'prerelease', 'valid' )->code() );
-
-		self::assertSame( 0, $store->channel_changes );
-		$lock->acquire_unavailable = true;
-		self::assertSame( 'branch_switch_unavailable', $facade->return_to_branch( 'plugin', self::NATIVE_PLUGIN, 1, 'valid' )->code() );
-		self::assertSame( 'release_unavailable', $facade->change_channel( 'plugin', self::NATIVE_PLUGIN, 1, 'prerelease', 'valid' )->code() );
-
-		self::assertSame( 0, $store->transitions );
-		self::assertSame( 'foreign-holder', $lock->token );
-		self::assertSame( $next, $this->native_selection_store->read() );
 	}
 
 	#[RunInSeparateProcess]
@@ -830,43 +715,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array(), $lock->releases );
 		// Only Release's private finalization after restoration may complete ownership.
 		$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'uncertain' );
-		self::assertNotNull( $this->native_selection_store );
-		self::assertSame( 'finished', $this->native_selection_store->read()['native_mutation']['phase'] ?? null );
 		self::assertSame( array( '1700000002' ), $lock->releases );
-	}
-
-	public function test_retained_uncertain_native_marker_rejects_later_begin_and_public_completion_releases_later_lock(): void {
-		[ $registrar, $lock ] = $this->native_plugin_registrar(
-			$this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL )
-		);
-		$first_upgrader       = new \stdClass();
-		$second_upgrader      = new \stdClass();
-
-		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $first_upgrader, self::NATIVE_EXTRA ) );
-		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
-		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
-		$registrar->complete_native_mutation( $first_upgrader, self::NATIVE_EXTRA );
-		$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'uncertain' );
-
-		self::assertSame( array( '1700000002' ), $lock->releases );
-		self::assertNotNull( $this->native_selection_store );
-		$selection = $this->native_selection_store->read();
-		self::assertArrayHasKey( 'native_mutation', $selection );
-
-		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $second_upgrader, self::NATIVE_EXTRA ) );
-		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
-		self::assertSame( 2, $lock->acquires );
-		try {
-			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
-			self::fail( 'Retained uncertain native marker admitted a later mutation.' );
-		} catch ( \RuntimeException ) {
-			self::addToAssertionCount( 1 );
-		}
-
-		$registrar->complete_native_mutation( $second_upgrader, self::NATIVE_EXTRA );
-
-		self::assertSame( array( '1700000002', '1700000002' ), $lock->releases );
-		self::assertSame( $selection, $this->native_selection_store->read() );
 	}
 
 	public function test_native_completion_rejects_wrong_owner_and_releases_the_lock_only_after_completion(): void {
@@ -886,179 +735,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			self::fail( 'Failed exact release was not reported.' );
 		} catch ( \RuntimeException $failure ) {
 			self::assertSame( 'GitHub native lock release failed.', $failure->getMessage() );
-			// The hold ended before the lock was released, so no hold is left owning a lock it released.
-			self::assertNotNull( $this->native_selection_store );
-			self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
-		}
-	}
-
-	public function test_failed_native_completion_keeps_the_lock_for_the_hold(): void {
-		[ $registrar, $lock ] = $this->native_plugin_registrar( $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL ) );
-		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
-		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
-		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
-		self::assertNotNull( $this->native_selection_store );
-		$held   = $this->native_selection_store->read();
-		$marker = $held['native_mutation'];
-		self::assertIsArray( $marker );
-		self::assertSame( '1700000002', GitHubProviderSelection::native_lock_token( $marker ) );
-		// Another writer changes the hold, so this request's completion cannot be recorded.
-		$changed                    = $held;
-		$changed['native_mutation'] = array_replace( $marker, array( 'phase' => 'finished' ) );
-		self::assertTrue( $this->native_selection_store->compare_and_swap( $held, $changed ) );
-		try {
-			$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'uncertain' );
-			self::fail( 'A changed hold was completed.' );
-		} catch ( \RuntimeException ) {
-			self::assertSame( array(), $lock->releases );
-		}
-	}
-
-	private function reset_native_selection_fixture(): void {
-		$this->native_selection       = null;
-		$this->native_selection_store = null;
-		$this->native_selection_db    = null;
-		$this->repository_rows        = array();
-	}
-
-	#[RunInSeparateProcess]
-	#[PreserveGlobalState( false )]
-	public function test_provider_native_begin_uses_pinned_sql_and_finishes_committed_hold_on_abort(): void {
-		foreach ( array( 'one_shot', 'persistent', 'complete_commit_fails', 'automatic' ) as $case ) {
-			$this->reset_native_selection_fixture();
-			$automatic            = 'automatic' === $case;
-			[ $registrar, $lock ] = $this->native_plugin_registrar(
-				$this->package( 'plugin', self::NATIVE_PLUGIN, 'example', $automatic ? DeploymentPolicy::AUTOMATIC : DeploymentPolicy::MANUAL )
-			);
-			$upgrader             = $automatic ? (object) array( 'skin' => new \Automatic_Upgrader_Skin() ) : new \stdClass();
-			if ( $automatic ) {
-				$GLOBALS['ran_booster_runtime_action'] = 'wp_maybe_auto_update';
-			}
-
-			try {
-				self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $upgrader, self::NATIVE_EXTRA ), $case );
-				self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ), $case );
-
-				$before_begin_reads = $lock->token_reads;
-				$phase_at_release   = null;
-				$store              = $this->native_selection_store;
-				self::assertNotNull( $store );
-				self::assertNotNull( $this->native_selection_db );
-				$lock->on_release = static function () use ( $store, &$phase_at_release ): void {
-					$state            = $store->read( true );
-					$phase_at_release = is_array( $state['native_mutation'] ?? null ) ? $state['native_mutation']['phase'] : null;
-				};
-
-				$cache_throw_count                              = 0;
-				$selection_db                                   = $this->native_selection_db->selection;
-				$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function ( int|string $key, string $group ) use ( $case, $selection_db, &$cache_throw_count ): void {
-					if ( \RAN\Storage\GitHubSelectionStore::OPTION !== $key || 'options' !== $group ) {
-						return;
-					}
-					++$cache_throw_count;
-					if ( 1 === $cache_throw_count && 'complete_commit_fails' === $case ) {
-						$selection_db->fail_commit = true;
-					}
-					if ( 'persistent' === $case || 1 === $cache_throw_count ) {
-						throw new \RuntimeException( 'Selection cache invalidation failed after hold COMMIT.' );
-					}
-				};
-
-				$caught = null;
-				try {
-					$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
-				} catch ( \RuntimeException $failure ) {
-					$caught = $failure;
-				} finally {
-					unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
-					$selection_db->fail_commit = false;
-				}
-
-				self::assertInstanceOf( \RuntimeException::class, $caught, $case );
-				self::assertSame( 2, $lock->sql_token_reads, $case );
-				self::assertSame( $before_begin_reads + 1, $lock->token_reads, $case );
-
-				if ( 'complete_commit_fails' === $case ) {
-					self::assertSame( 'started', $store->read( true )['native_mutation']['phase'] ?? null, $case );
-					self::assertNull( $phase_at_release, $case );
-					self::assertSame( array(), $lock->releases, $case );
-				} elseif ( $automatic ) {
-					self::assertSame( 'finished', $store->read( true )['native_mutation']['phase'] ?? null, $case );
-					self::assertNull( $phase_at_release, $case );
-					self::assertSame( array(), $lock->releases, $case );
-					self::assertSame( '1700000001', $lock->token, $case );
-				} else {
-					self::assertSame( 'finished', $store->read( true )['native_mutation']['phase'] ?? null, $case );
-					self::assertSame( 'finished', $phase_at_release, $case );
-					self::assertSame( array( '1700000002' ), $lock->releases, $case );
-				}
-				$lock->releases = array();
-				$registrar->complete_native_mutation( new \stdClass(), self::NATIVE_EXTRA );
-				self::assertSame( array(), $lock->releases, $case );
-			} finally {
-				unset( $GLOBALS['ran_booster_runtime_action'] );
-			}
-		}
-	}
-
-	#[RunInSeparateProcess]
-	#[PreserveGlobalState( false )]
-	public function test_provider_native_begin_preserves_manual_lock_when_commit_or_rollback_fails(): void {
-		foreach ( array( 'fail_commit', 'throw_commit' ) as $commit_mode ) {
-			foreach ( array( 'rollback_ok', 'fail_rollback', 'throw_rollback' ) as $rollback_mode ) {
-				$this->reset_native_selection_fixture();
-				[ $registrar, $lock ] = $this->native_plugin_registrar(
-					$this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL )
-				);
-
-				self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
-				self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
-				self::assertNotNull( $this->native_selection );
-				self::assertNotNull( $this->native_selection_db );
-				$selection_db                                   = $this->native_selection_db->selection;
-				$selection_db->queries                          = array();
-				$cache_deletes_after_tx                         = 0;
-				$GLOBALS['ran_booster_attempt_on_cache_delete'] = static function () use ( $selection_db, &$cache_deletes_after_tx ): void {
-					if ( in_array( 'START TRANSACTION', $selection_db->queries, true ) ) {
-						++$cache_deletes_after_tx;
-					}
-				};
-				$selection_db->fail_commit                      = 'fail_commit' === $commit_mode;
-				$selection_db->throw_commit                     = 'throw_commit' === $commit_mode;
-				$selection_db->fail_rollback                    = 'fail_rollback' === $rollback_mode;
-				$selection_db->throw_rollback                   = 'throw_rollback' === $rollback_mode;
-
-				$caught = null;
-				try {
-					$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
-				} catch ( \Throwable $failure ) {
-					$caught = $failure;
-				} finally {
-					unset( $GLOBALS['ran_booster_attempt_on_cache_delete'] );
-					$selection_db->fail_commit    = false;
-					$selection_db->throw_commit   = false;
-					$selection_db->fail_rollback  = false;
-					$selection_db->throw_rollback = false;
-				}
-
-				$case = "$commit_mode/$rollback_mode";
-				self::assertInstanceOf( \Throwable::class, $caught, $case );
-				self::assertSame( 2, $lock->sql_token_reads, $case );
-				self::assertSame( 1, $lock->token_reads, $case );
-				self::assertSame( array(), $lock->releases, $case );
-				self::assertTrue( $this->native_selection->has_uncertain_commit(), $case );
-				$registrar->complete_native_mutation( new \stdClass(), self::NATIVE_EXTRA );
-				self::assertSame( array(), $lock->releases, $case );
-
-				if ( 'fail_rollback' === $rollback_mode || 'throw_rollback' === $rollback_mode ) {
-					self::assertTrue( $this->native_selection->has_unclosed_transaction(), $case );
-					self::assertNotNull( $selection_db->transaction_rows, $case );
-					self::assertSame( 0, $cache_deletes_after_tx, $case );
-					self::assertTrue( $selection_db->query( 'ROLLBACK' ), $case );
-				} else {
-					self::assertFalse( $this->native_selection->has_unclosed_transaction(), $case );
-				}
-			}
 		}
 	}
 
@@ -1089,12 +765,11 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 	}
 
 	public function test_branch_attempt_blocks_switch_registration_and_native_custody(): void {
-		$this->github_selection();
-		self::assertNotNull( $this->native_selection_db );
-		$database               = $this->native_selection_db;
-		$attempts               = new DeploymentAttemptRepository( $database, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->createStub( Database::class ) );
-		$package                = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH );
-		$request                = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 7, installed_identifier: 'example/other.php', adoption_token: (string) \RAN\AdoptionIdentity::of( $package ) );
+		$GLOBALS['ran_booster_storage_test_options'] = array();
+		$database                                    = new \RAN\Tests\RepositoryProvider\SelectionContextDatabase();
+		$attempts                                    = new DeploymentAttemptRepository( $database, 'wp_ran_booster_deployment_attempts', database_lifecycle: $this->createStub( Database::class ) );
+		$package                                     = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH );
+		$request                                     = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 7, installed_identifier: 'example/other.php', adoption_token: (string) \RAN\AdoptionIdentity::of( $package ) );
 		$row                    = (object) array(
 			'id'                      => 1,
 			'correlation_id'          => str_repeat( 'a', 32 ),
@@ -1127,10 +802,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 			self::fail( 'A Branch attempt queued before custody must prevent the filesystem mutation.' );
 		} catch ( \RuntimeException $failure ) {
-			self::assertSame( 'GitHub native mutation is unavailable.', $failure->getMessage() );
+			self::assertSame( 'A deployment attempt still owns the switched package.', $failure->getMessage() );
 		}
-		self::assertNotNull( $this->native_selection_store );
-		self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
 		$registrar->complete_native_mutation( $upgrader, self::NATIVE_EXTRA );
 		self::assertSame( array( '1700000002' ), $lock->releases );
 	}
@@ -1213,7 +886,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$configuration = new ManagedReleaseConfiguration( 'example', 'example.php', 'prerelease' );
 		foreach ( array( 'verified_success', 'uncertain' ) as $outcome ) {
 			$branch                         = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::AUTOMATIC, source: PackageSource::BRANCH, source_revision: 3 );
-			$this->native_selection         = null;
 			[ $registrar, $lock, , $store ] = $this->native_plugin_registrar( $branch );
 			self::assertTrue( $registrar->admit_switch( 'plugin', $branch, $configuration, 7 ) );
 			self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
@@ -1221,14 +893,12 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 			self::assertSame( array(), $store->transitions );
 			$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, $outcome );
-			self::assertNotNull( $this->native_selection_store );
 			self::assertSame( array( '1700000002' ), $lock->releases );
 			if ( 'uncertain' === $outcome ) {
 				self::assertSame( array(), $store->transitions );
-				self::assertArrayHasKey( 'native_mutation', $this->native_selection_store->read() );
+				$this->assert_native_authority_error( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
 				continue;
 			}
-			self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
 			self::assertSame(
 				array(
 					array(
@@ -1249,33 +919,28 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		}
 	}
 
-	public function test_switch_completion_preserves_hold_and_manual_lock_when_pinned_commit_fails(): void {
-		$configuration        = new ManagedReleaseConfiguration( 'example', 'example.php', 'prerelease' );
-		$branch               = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH, source_revision: 3 );
-		[ $registrar, $lock ] = $this->native_plugin_registrar( $branch );
+	public function test_switch_completion_releases_manual_lock_and_keeps_branch_source_when_commit_fails(): void {
+		$configuration                  = new ManagedReleaseConfiguration( 'example', 'example.php', 'prerelease' );
+		$branch                         = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH, source_revision: 3 );
+		[ $registrar, $lock, , $store ] = $this->native_plugin_registrar( $branch );
 		self::assertTrue( $registrar->admit_switch( 'plugin', $branch, $configuration, 7 ) );
 		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
 		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
 		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
-		self::assertNotNull( $this->native_selection_db );
-		self::assertNotNull( $this->native_selection_store );
-		self::assertNotNull( $this->native_selection );
 
-		$this->native_selection_db->selection->fail_commit = true;
+		$store->transition_failure = new \RuntimeException( 'Source commit failed.' );
+		$lock->release_succeeds    = false;
 		try {
 			$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'verified_success' );
-			self::fail( 'Failed source-switch COMMIT must throw.' );
-		} catch ( \RAN\Storage\DatabaseLifecycleFailure $failure ) {
-			self::assertSame( 'selection_commit_uncertain', $failure->reason() );
-		} finally {
-			$this->native_selection_db->selection->fail_commit = false;
+			self::fail( 'A failed source commit must throw.' );
+		} catch ( \RuntimeException $failure ) {
+			// The commit failure is reported, not the failed lock release behind it.
+			self::assertSame( 'Source commit failed.', $failure->getMessage() );
 		}
 
-		self::assertSame( array(), $lock->releases );
-		self::assertTrue( $this->native_selection->has_uncertain_commit() );
-		self::assertSame( 'started', $this->native_selection_store->read()['native_mutation']['phase'] ?? null );
-		$registrar->complete_native_mutation( new \stdClass(), self::NATIVE_EXTRA );
-		self::assertSame( array(), $lock->releases );
+		self::assertSame( array(), $store->transitions );
+		self::assertSame( array( '1700000002' ), $lock->releases );
+		$this->assert_native_authority_error( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
 	}
 
 	public function test_staging_authority_or_policy_change_refuses_native_begin(): void {
@@ -1296,8 +961,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 				self::fail( 'Staging changed captured authority.' );
 			} catch ( \RuntimeException ) {
-				self::assertNotNull( $this->native_selection_store );
-				self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
 				self::assertSame( array(), $lock->releases );
 			}
 		}
@@ -1312,8 +975,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 			self::fail( 'Revoked mutation permission admitted.' );
 		} catch ( \RuntimeException ) {
-			self::assertNotNull( $this->native_selection_store );
-			self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
 			self::assertSame( array(), $lock->releases );
 		}
 	}
@@ -1327,8 +988,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 			self::fail( 'Unavailable target admitted.' );
 		} catch ( \RuntimeException ) {
-			self::assertNotNull( $this->native_selection_store );
-			self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
 			self::assertSame( array(), $lock->releases );
 		}
 	}
@@ -1356,8 +1015,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 			self::fail( 'Foreign authority read replaced the lock.' );
 		} catch ( \RuntimeException ) {
-			self::assertNotNull( $this->native_selection_store );
-			self::assertArrayNotHasKey( 'native_mutation', $this->native_selection_store->read() );
 			self::assertSame( array(), $lock->releases );
 		}
 	}
@@ -1953,7 +1610,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $lock->acquires );
 	}
 
-	public function test_automatic_native_update_omits_wordpress_lock_token_from_its_hold(): void {
+	public function test_automatic_native_update_never_releases_the_wordpress_lock(): void {
 		$package                               = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::AUTOMATIC );
 		[ $registrar, $lock ]                  = $this->native_plugin_registrar( $package );
 		$upgrader                              = (object) array( 'skin' => new \Automatic_Upgrader_Skin() );
@@ -1962,16 +1619,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $upgrader, self::NATIVE_EXTRA ) );
 		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
 		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
-		self::assertNotNull( $this->native_selection_store );
-		$marker = $this->native_selection_store->read()['native_mutation'] ?? null;
-		self::assertIsArray( $marker );
-		self::assertNull( GitHubProviderSelection::native_lock_token( $marker ) );
 
 		$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'uncertain' );
-		$finished = $this->native_selection_store->read()['native_mutation'] ?? null;
-		self::assertIsArray( $finished );
-		self::assertSame( 'finished', $finished['phase'] );
-		self::assertNull( GitHubProviderSelection::native_lock_token( $finished ) );
 		self::assertSame( array(), $lock->releases );
 		self::assertSame( '1700000001', $lock->token );
 	}
@@ -2122,8 +1771,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array(), $lock->releases );
 		// Only Release's private finalization after restoration may complete ownership.
 		$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'uncertain' );
-		self::assertNotNull( $this->native_selection_store );
-		self::assertArrayHasKey( 'native_mutation', $this->native_selection_store->read() );
 		self::assertSame( array( '1700000002' ), $lock->releases );
 	}
 
@@ -3212,7 +2859,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			$plugins,
 			$themes,
 			$store,
-			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $providers, $this->github_selection() ),
+			new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $providers ),
 			$lock,
 			$providers,
 			static fn (): bool => true,
@@ -5077,8 +4724,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			'stable',
 			'valid'
 		);
-		self::assertFalse( $release_failed->successful() );
-		self::assertSame( 'release_unavailable', $release_failed->code() );
+		// The committed change stands; a failed lock release is logged, not reported as a failed change.
+		self::assertTrue( $release_failed->successful() );
 		self::assertCount( 2, $store->channel_changes );
 		self::assertSame( 5, $lock->acquires );
 		self::assertSame( array( '1700000002', '1700000002', '1700000002', '1700000002', '1700000002' ), $lock->releases );
@@ -5659,7 +5306,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			attempts: $attempts
 		);
 		$registrar->register();
-		$store->native_connection = $this->native_selection_db;
 
 		return array( $registrar, $lock, $facade, $store );
 	}
@@ -5673,10 +5319,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		return new ManagedReleaseTargetRegistrar(
 			...array_merge(
 				$arguments,
-				array(
-					'github_selection' => $this->github_selection(),
-					'source_guard'     => $this->repository_guard(),
-				)
+				array( 'source_guard' => $this->repository_guard() )
 			)
 		);
 	}
@@ -5799,7 +5442,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_enable_refuses_disabled_policy_and_active_github_native_hold_before_install(): void {
+	public function test_enable_refuses_disabled_policy_before_install(): void {
 		$installs      = 0;
 		$invalidated   = array();
 		$disabled      = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::DISABLED, source: PackageSource::BRANCH );
@@ -5836,55 +5479,6 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertCount( 1, $disabled_rechecks );
 		( $disabled_rechecks[0]['callback'] )();
 		self::assertSame( array( 'plugin' ), $invalidated );
-		$GLOBALS['ran_booster_runtime_actions'] = array();
-		$invalidated                            = array();
-
-		$manual      = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, source: PackageSource::BRANCH );
-		$manual_repo = $this->createStub( PluginRepository::class );
-		$manual_repo->method( 'booster_plugin_from_file' )->willReturn( $manual );
-		$manual_repo->method( 'all_deployment_plugins' )->willReturn( array() );
-		$selection = $this->github_selection();
-		self::assertNotNull( $this->native_selection_store );
-		$state                     = $this->native_selection_store->read( true );
-		$marked                    = $state;
-		$marked['native_mutation'] = array(
-			'selection_generation' => 0,
-			'owner_tag'            => str_repeat( '0', 16 ) . str_repeat( 'a', 16 ),
-			'target_type'          => 'plugin',
-			'installed_identity'   => 'other/other.php',
-			'phase'                => 'started',
-		);
-		self::assertTrue( $this->native_selection_store->compare_and_swap( $state, $marked ) );
-
-		$held_registrar = $this->registrar( $manual_repo, $themes, $store, new RuntimeUpdaterLock(), $providers );
-		$held_facade    = $this->facade(
-			$manual_repo,
-			$themes,
-			$store,
-			$held_registrar,
-			new RuntimeUpdaterLock(),
-			$providers,
-			static fn (): bool => true,
-			static fn ( string $nonce ): bool => 'valid' === $nonce,
-			metadata_eligible: static fn (): bool => true,
-			invalidate_native: static function ( string $type ) use ( &$invalidated ): void {
-				$invalidated[] = $type;
-			},
-			switch_install: static function () use ( &$installs ): string {
-				++$installs;
-				return 'installed';
-			},
-			github_selection: $selection
-		);
-		$held_result    = $held_facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
-		self::assertFalse( $held_result->successful() );
-		self::assertSame( 'native_hold', $held_result->code() );
-		self::assertSame( 0, $installs );
-		$held_rechecks = $this->shutdown_rechecks();
-		self::assertCount( 1, $held_rechecks );
-		( $held_rechecks[0]['callback'] )();
-		self::assertSame( array( 'plugin' ), $invalidated );
-		$GLOBALS['ran_booster_runtime_actions'] = array();
 	}
 
 	#[RunInSeparateProcess]
@@ -5919,7 +5513,6 @@ final class RuntimeUpdaterLock extends WordPressUpdaterLock {
 
 	public int $acquires          = 0;
 	public int $token_reads       = 0;
-	public int $sql_token_reads   = 0;
 	public bool $acquire_fails    = false;
 	public bool $release_succeeds = true;
 	public ?\Closure $on_release  = null;
@@ -5935,17 +5528,6 @@ final class RuntimeUpdaterLock extends WordPressUpdaterLock {
 		return $this->token;
 	}
 
-	/**
-	 * @param callable(object, string): bool                                                                   $same_connection
-	 * @param callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null) $execute
-	 */
-	public function current_token_sql( callable $same_connection, callable $execute ): ?string {
-		unset( $same_connection, $execute );
-		++$this->sql_token_reads;
-
-		return $this->token;
-	}
-
 	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
 		unset( $owner_operation );
 		++$this->acquires;
@@ -5955,6 +5537,10 @@ final class RuntimeUpdaterLock extends WordPressUpdaterLock {
 
 		$this->token = '1700000002';
 		return '1700000002';
+	}
+
+	public function try_acquire_without_reclaim( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
+		return $this->acquire( $owner_operation );
 	}
 
 	public function release( string $token ): bool {

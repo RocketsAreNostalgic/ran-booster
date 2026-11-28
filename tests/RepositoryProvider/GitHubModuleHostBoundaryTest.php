@@ -119,11 +119,9 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 			self::assertIsString( $source );
 			self::assertStringNotContainsString( 'RAN\\BoosterGitHubProvider\\V1', $source, $path );
 			self::assertDoesNotMatchRegularExpression( '/\\bGitHubProvider\\b/', $source, $path );
-			// These two Core owners enforce the approved GitHub selection/native authority;
-			// vendor implementation imports and generic dispatch remain prohibited above/below.
-			if ( in_array( $path, array( $root . '/RAN/WordPress/ManagedReleaseTargetRegistrar.php', $root . '/RAN/AddOn/ReleaseTracking/NativeProspectiveReleaseFacade.php' ), true ) ) {
-				self::assertStringContainsString( 'RAN\\RepositoryProvider\\GitHubProviderSelection', $source, $path );
-			} else {
+			// Only the registrar owns the GitHub native update checkpoints; vendor implementation
+			// imports and generic dispatch remain prohibited above/below.
+			if ( $root . '/RAN/WordPress/ManagedReleaseTargetRegistrar.php' !== $path ) {
 				self::assertDoesNotMatchRegularExpression( "/(?:===|!==)\\s*['\"]gh['\"]|['\"]gh['\"]\\s*(?:===|!==)/", $source, $path );
 			}
 			self::assertStringNotContainsString( 'dispatchCapability', $source, $path );

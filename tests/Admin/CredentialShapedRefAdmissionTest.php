@@ -287,8 +287,7 @@ final class CredentialShapedRefAdmissionTest extends TestCase {
 			'wp_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-17 00:00:00 UTC' ),
 			database_lifecycle: $this->createStub( Database::class ),
-			activity: $guard_activity ? new ActivityStore( $activity_db, 'wp_activity' ) : null,
-			selection: $this->selection
+			activity: $guard_activity ? new ActivityStore( $activity_db, 'wp_activity' ) : null
 		);
 		$lock            = $this->createMock( WordPressUpdaterLock::class );
 		$lock->method( 'acquire' )->willThrowException( new \RuntimeException( 'Isolated execution is intentionally unavailable.' ) );

@@ -34,7 +34,7 @@ add_action(
 						'main'
 					);
 					$review    = $portability->review( $candidate, 'fixture-review-nonce' );
-					$apply     = $portability->apply( $candidate, $review->fingerprint, 'fixture-apply-nonce', null );
+					$apply     = $portability->apply( $candidate, $review->fingerprint, 'fixture-apply-nonce' );
 
 					$GLOBALS['ran_booster_fixture_portability_results'] = array( $review, $apply );
 				}

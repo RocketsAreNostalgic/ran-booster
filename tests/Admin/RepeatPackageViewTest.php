@@ -1809,16 +1809,14 @@ final class RepeatPackageViewTest extends TestCase {
 
 		$recovery_state        = 'blocked';
 		$recovery_confirmation = null;
-		$recovery_blocker      = 'A GitHub install hold is active for this package.';
-		$recovery_action_url   = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#ran-booster-native-hold';
-		$recovery_action_label = 'Open GitHub hold recovery';
+		$recovery_blocker      = 'A deployment attempt is active for this package.';
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/recovery.php';
 		$blocked_html = (string) ob_get_clean();
 
 		self::assertStringNotContainsString( '<form', $blocked_html );
-		self::assertStringContainsString( 'Open GitHub hold recovery', $blocked_html );
-		self::assertStringContainsString( 'tab=gh#ran-booster-native-hold', $blocked_html );
+		self::assertStringContainsString( 'A deployment attempt is active for this package.', $blocked_html );
+		self::assertStringContainsString( 'Open Troubleshooting', $blocked_html );
 	}
 
 	#[DataProvider( 'managed_package_context_matrix' )]

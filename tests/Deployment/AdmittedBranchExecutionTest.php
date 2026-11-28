@@ -47,8 +47,6 @@ use RuntimeException;
 use RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 final class AdmittedBranchExecutionTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
-
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
 	private BoundaryPluginRepository $plugins;
@@ -67,8 +65,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
-			$this->createStub( \RAN\Storage\Database::class ),
-			selection: $this->queued_selection( $this->database )
+			$this->createStub( \RAN\Storage\Database::class )
 		);
 		$this->plugins          = new BoundaryPluginRepository();
 		$this->themes           = new BoundaryThemeRepository();
@@ -239,7 +236,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			$this->adapter( $legacy, new ProviderRegistry() )->declaration();
 			self::fail( 'Legacy update authority must not be reconstructed.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_PROVIDER_SELECTION_CHANGED, $failure->outcome_code );
+			self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, $failure->outcome_code );
 		}
 	}
 

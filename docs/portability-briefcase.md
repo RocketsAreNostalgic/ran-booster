@@ -39,7 +39,7 @@ compatible published Migrator release. The current delivery boundary below
 separates implemented operations from unfinished work.
 
 Blueprint V2 is the exported ZIP contract; valid canonical V1 archives are normalized at the input boundary. It is distinct from the
-request-local [Portability API 4](portability-api.md), which lets a trusted
+request-local [Portability API 5](portability-api.md), which lets a trusted
 source bridge review and adopt one already-installed package without an archive
 or credential transfer.
 
@@ -451,7 +451,7 @@ Use the following mapping when a Transporter operation fails:
 
 ## What to read next
 
-- [Portability API 4](portability-api.md)
+- [Portability API 5](portability-api.md)
 - [Deployment execution](deployment-execution.md)
 - [Provider extension contract](provider-extension-contract.md)
 - [Custom git vendor setup](custom-git-vendors.md)

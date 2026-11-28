@@ -7,14 +7,10 @@
  * @var string $recovery_reason
  * @var string|null $recovery_blocker
  * @var array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string,installed_digest?:string,folder_absent?:bool}|null $recovery_confirmation
- * @var string|null $recovery_action_url
- * @var string|null $recovery_action_label
  */
 defined( 'WPINC' ) || die;
-$recovery_action_url   = isset( $recovery_action_url ) && is_string( $recovery_action_url ) && '' !== $recovery_action_url ? $recovery_action_url : null;
-$recovery_action_label = isset( $recovery_action_label ) && is_string( $recovery_action_label ) && '' !== $recovery_action_label ? $recovery_action_label : null;
-$recovery_type         = $package_view->get_type();
-$recovery_url          = add_query_arg(
+$recovery_type        = $package_view->get_type();
+$recovery_url         = add_query_arg(
 	array(
 		'page'            => $package_view->get_page_slug(),
 		'recovery'        => '1',
@@ -22,9 +18,9 @@ $recovery_url          = add_query_arg(
 	),
 	$package_view->get_admin_url()
 );
-$package_list_url      = add_query_arg( 'page', $package_view->get_page_slug(), $package_view->get_admin_url() );
-$package_settings_url  = add_query_arg( 'package', $recovery_identifier, $package_list_url );
-$troubleshooting_url   = add_query_arg(
+$package_list_url     = add_query_arg( 'page', $package_view->get_page_slug(), $package_view->get_admin_url() );
+$package_settings_url = add_query_arg( 'package', $recovery_identifier, $package_list_url );
+$troubleshooting_url  = add_query_arg(
 	array(
 		'page' => 'ran-booster',
 		'tab'  => 'troubleshooting',
@@ -101,9 +97,6 @@ $troubleshooting_url   = add_query_arg(
 				<p><?php echo esc_html( $recovery_blocker ); ?></p>
 			<?php } ?>
 			<p><?php esc_html_e( 'No management changes have been made. Booster will not disconnect a package whose management identity or operation state cannot be verified.', 'ran-booster' ); ?></p>
-			<?php if ( null !== $recovery_action_url && null !== $recovery_action_label ) { ?>
-				<p><a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" href="<?php echo esc_url( $recovery_action_url ); ?>"><?php echo esc_html( $recovery_action_label ); ?></a></p>
-			<?php } ?>
 			<p><a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $troubleshooting_url ); ?>"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a></p>
 		<?php } ?>
 	</section>

@@ -14,8 +14,6 @@ use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
 
 class Booster {
-	private const NATIVE_UPDATE_WARNING_HEARTBEAT_KEY = 'ran_booster_native_update_warning';
-
 	private CoreContainer $container;
 
 	private const ADMIN_PAGE_HOOKS = array(
@@ -129,7 +127,7 @@ class Booster {
 		add_action(
 			'admin_enqueue_scripts',
 			function ( $hook ): void {
-				$this->load_native_update_warning_script( $hook );
+				$this->load_native_update_error_script( $hook );
 			}
 		);
 		$expiry_renderer = $this->service_callback( \RAN\Admin\CredentialExpiryNotice::class, 'render' );
@@ -156,19 +154,6 @@ class Booster {
 		};
 		add_action( 'admin_notices', $database_notice );
 		add_action( 'network_admin_notices', $database_notice );
-		$native_update_warning = function (): void {
-			\RAN\Admin\BoosterNoticeScope::render( fn () => $this->render_native_update_warning() );
-		};
-		add_action( 'admin_notices', $native_update_warning );
-		add_action( 'network_admin_notices', $native_update_warning );
-		add_filter(
-			'heartbeat_received',
-			function ( $response, $data ) {
-				return $this->native_update_warning_heartbeat( $response, $data );
-			},
-			10,
-			2
-		);
 		add_action( 'load-plugins.php', $this->service_callback( \RAN\Admin\ManagedPluginFailureRows::class, 'register' ) );
 	}
 
@@ -805,7 +790,7 @@ class Booster {
 		}
 
 		if ( ! in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) ) {
-			$this->load_global_notice_assets( $hook );
+			$this->load_global_notice_assets();
 			return;
 		}
 
@@ -1081,9 +1066,8 @@ class Booster {
 	}
 
 	/** Load only the existing Notice profile and runtime for an eligible owned host. */
-	private function load_global_notice_assets( string $hook ): void {
-		if ( ! ( $this->native_update_warning_scope( $hook ) && $this->can_check_native_update_warning() )
-			&& ! $this->service( \RAN\Admin\CredentialExpiryNotice::class )->should_render()
+	private function load_global_notice_assets(): void {
+		if ( ! $this->service( \RAN\Admin\CredentialExpiryNotice::class )->should_render()
 			&& ! $this->service( \RAN\Admin\DeploymentAdminPresenter::class )->should_render()
 			&& ! $this->service( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class )->should_render()
 			&& ! $this->service( \RAN\Admin\DatabaseCompatibilityNotice::class )->should_render()
@@ -1327,117 +1311,24 @@ class Booster {
 	}
 
 	/**
-	 * Load the native-update warning listener only on the screens that can show it.
+	 * Keep WordPress's Plugins-table update queue going after a failed native update.
 	 *
-	 * @param mixed $hook Unused screen identifier supplied by WordPress.
+	 * @param mixed $hook Screen identifier supplied by WordPress.
 	 */
-	private function load_native_update_warning_script( $hook ): void {
-		if ( ! $this->native_update_warning_scope( $hook ) || ! $this->can_check_native_update_warning() ) {
+	private function load_native_update_error_script( $hook ): void {
+		if ( 'plugins.php' !== $hook || ! current_user_can( 'update_plugins' ) ) {
 			return;
 		}
 
-		$script_path    = trailingslashit( $this->booster_path ?? '' ) . 'assets/native-update-warning.js';
-		$script_version = $this->asset_version( $script_path );
+		$script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/native-update-error.js';
 		wp_enqueue_script(
-			'ran-booster-native-update-warning',
-			trailingslashit( $this->booster_url ?? '' ) . 'assets/native-update-warning.js',
-			array( 'jquery', 'heartbeat' ),
-			$script_version,
+			'ran-booster-native-update-error',
+			trailingslashit( $this->booster_url ?? '' ) . 'assets/native-update-error.js',
+			array( 'jquery', 'updates', 'wp-i18n', 'wp-a11y' ),
+			$this->asset_version( $script_path ),
 			true
 		);
-		wp_set_script_translations( 'ran-booster-native-update-warning', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
-	}
-
-	private function render_native_update_warning(): void {
-		if ( ! $this->native_update_warning_scope( null ) || ! $this->can_check_native_update_warning() ) {
-			return;
-		}
-
-		$warning    = $this->native_update_warning_state();
-		$can_manage = current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
-		?>
-		<div class="notice notice-warning<?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-native-update-warning<?php echo true === $warning ? '' : ' hidden'; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
-			<?php
-			$hold = true === $warning ? $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->native_hold() : null;
-			if ( is_array( $hold ) ) {
-				$name = $can_manage ? '<a href="' . esc_url( $hold['url'] ) . '">' . esc_html( $hold['name'] ) . '</a>' : esc_html( $hold['name'] );
-				/* translators: %s: the held package's name, linked to the page that releases the hold. */
-				echo wp_kses( sprintf( __( 'GitHub installs are on hold: the last install of %s couldn\'t complete.', 'ran-booster' ), $name ), array( 'a' => array( 'href' => true ) ) );
-			} else {
-				// Shown later by the heartbeat, before this page knows which package is held.
-				esc_html_e( 'GitHub installs are on hold: the last install couldn\'t complete.', 'ran-booster' );
-				if ( $can_manage ) {
-					echo ' <a href="' . esc_url( $this->service( \RAN\Admin\ProviderTabLinks::class )->url( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ), 'gh' ) ) . '">' . esc_html__( 'Review GitHub management.', 'ran-booster' ) . '</a>';
-				}
-			}
-			if ( ! $can_manage ) {
-				echo ' ' . esc_html__( 'Contact a site administrator.', 'ran-booster' );
-			}
-			?>
-		</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
-		<?php
-	}
-
-	/**
-	 * Adds a bounded boolean status to an authenticated WordPress heartbeat response.
-	 *
-	 * @param mixed $response Heartbeat response assembled by WordPress and other plugins.
-	 * @param mixed $data Heartbeat request payload.
-	 * @return mixed
-	 */
-	private function native_update_warning_heartbeat( $response, $data ) {
-		if ( ! is_array( $response ) || ! is_array( $data ) || ! array_key_exists( self::NATIVE_UPDATE_WARNING_HEARTBEAT_KEY, $data ) ) {
-			return $response;
-		}
-		if ( ! $this->can_check_native_update_warning() ) {
-			return $response;
-		}
-
-		$warning = $this->native_update_warning_state();
-		if ( is_bool( $warning ) ) {
-			$response[ self::NATIVE_UPDATE_WARNING_HEARTBEAT_KEY ] = $warning;
-		}
-
-		return $response;
-	}
-
-	/** @return bool|null True only for a retained native mutation; false only for an exact available selection. */
-	private function native_update_warning_state(): ?bool {
-		try {
-			$status = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->github_selection_diagnostics();
-		} catch ( \Throwable ) {
-			return null;
-		}
-		if ( ! is_array( $status ) || ! isset( $status['state'] ) || ! is_string( $status['state'] ) ) {
-			return null;
-		}
-		if ( 'recovery_required' === $status['state'] ) {
-			return true;
-		}
-
-		return 'available' === $status['state'] && true === ( $status['available'] ?? null ) ? false : null;
-	}
-
-	private function can_check_native_update_warning(): bool {
-		return current_user_can( 'update_plugins' ) || current_user_can( 'update_themes' );
-	}
-
-	/** Keep this warning local: shared notice scope deliberately excludes Updates screens. */
-	private function native_update_warning_scope( mixed $hook ): bool {
-		$screen     = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		$id         = is_object( $screen ) && is_string( $screen->id ) ? $screen->id : '';
-		$booster_id = str_ends_with( $id, '-network' ) ? substr( $id, 0, -8 ) : $id;
-
-		if ( ( 'toplevel_page_ran-booster' === $booster_id || 'toplevel_page_ran-booster' === $hook )
-			&& Dashboard::is_valid_provider_request( 'gh' )
-			&& $this->service( \RAN\Admin\ProviderTabLinks::class )->available( 'gh' )
-			&& true === $this->native_update_warning_state() ) {
-			return false;
-		}
-
-		return in_array( $id, array( 'plugins', 'plugins-network', 'themes', 'themes-network', 'update-core', 'update-core-network' ), true )
-			|| in_array( $booster_id, self::ADMIN_PAGE_HOOKS, true )
-			|| ( is_string( $hook ) && in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) );
+		wp_set_script_translations( 'ran-booster-native-update-error', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 	}
 
 	/** Preserve WordPress's false/null fallbacks while supplying string cache tokens. */

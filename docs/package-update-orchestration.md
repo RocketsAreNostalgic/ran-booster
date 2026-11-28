@@ -182,8 +182,7 @@ callout whenever such unregistered managed rows exist (covering both Branch and
 Releases across all providers), and direct `?package=<id>` visits route to the
 same recovery screen. Stopping management requires explicit checkbox confirmation
 bound to the record's adoption token and digest, holds `auto_updater.lock`, and
-refuses while an active deployment attempt or GitHub native install hold exists
-(directing to the GitHub provider page hold recovery when a hold is active).
+refuses while an active deployment attempt exists.
 Booster never silently prunes management records on page load and never deletes
 unregistered directories; after stopping management, distinct feedback reports
 whether the folder is already absent or must be removed from disk before
@@ -831,15 +830,9 @@ WordPress filesystem WP-CLI resolved.
 - A prospective install failure is synchronous and bounded. If files were
   installed but adoption or cleanup is uncertain, Core reports that state and
   does not claim the package is managed.
-- Retrying **Check releases** repeats discovery after cache invalidation. An
-  uncertain or interrupted GitHub native install or update retains the
-  site-wide GitHub install hold (`started` if the request never recorded its
-  end, or `finished` if it ended normally with an uncertain outcome), pausing
-  further GitHub-managed installs and provider changes until released in place
-  on the held package's page (when readable) or cleared via removal verification
-  on the GitHub page (when unreadable). Once no hold blocks the target, a failed
-  or released native Update can be retried through a new WordPress update
-  operation.
+- Retrying **Check releases** repeats discovery after cache invalidation. A
+  failed or uncertain native Update can be retried through a new WordPress
+  update operation.
 
 ### Tracked branches
 

@@ -105,7 +105,6 @@ final class DeploymentAttemptRepository {
 
 		return $this->transaction(
 			function () use ( $operation, $package_type, $provider, $provider_repository_id, $request, $requested_ref, $package_source, $package_source_revision ): DeploymentAttempt {
-				$request = $this->bind_selection( $provider, $package_type, $request );
 				$this->lock_adoption( $operation, $package_type, $provider, $provider_repository_id, $request, $package_source, $package_source_revision, true );
 				$active = $this->active_package_attempt( $package_type, $request->package_slug );
 				if ( null !== $active ) {
@@ -179,10 +178,6 @@ final class DeploymentAttemptRepository {
 
 		$result = $this->transaction(
 			function () use ( $normalized ): array {
-				foreach ( $normalized as &$target ) {
-					$target['request'] = $this->bind_selection( $target['provider'], $target['package_type'], $target['request'] );
-				}
-				unset( $target );
 				foreach ( $normalized as $target ) {
 					$this->lock_adoption( 'update', $target['package_type'], $target['provider'], $target['provider_repository_id'], $target['request'], $target['package_source'], $target['package_source_revision'] );
 				}
@@ -279,13 +274,6 @@ final class DeploymentAttemptRepository {
 
 		return $this->transaction(
 			function () use ( $provider, $delivery_id, $delivery_digest, $normalized ): array {
-				if ( 'gh' === $provider && array() === $normalized ) {
-					$this->selection_generation();
-				}
-				foreach ( $normalized as &$target ) {
-					$target['request'] = $this->bind_selection( $provider, $target['package_type'], $target['request'] );
-				}
-				unset( $target );
 				foreach ( $normalized as $target ) {
 					$this->lock_adoption( $target['operation'], $target['package_type'], $provider, $target['provider_repository_id'], $target['request'], $target['package_source'], $target['package_source_revision'] );
 				}
@@ -358,9 +346,6 @@ final class DeploymentAttemptRepository {
 			$queued  = DeploymentAttempt::from_database( $hint );
 			$claimed = $this->transaction(
 				function () use ( $queued ): ?DeploymentAttempt {
-					if ( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE === $this->provider_refusal( $queued ) ) {
-						return null;
-					}
 					$data = $queued->safe_data();
 					try {
 						$this->lock_adoption( (string) $data['operation'], (string) $data['package_type'], (string) $data['provider'], (string) $data['provider_repository_id'], $queued->get_request(), (string) $data['package_source'], (int) $data['package_source_revision'] );
@@ -388,39 +373,12 @@ final class DeploymentAttemptRepository {
 		return null;
 	}
 
-	/** Current guard also establishes selection-before-adoption-before-attempt lock order. */
-	public function provider_refusal( DeploymentAttempt $attempt, bool $strict_storage = false ): ?string {
-		$data = $attempt->safe_data();
-		if ( 'gh' !== $data['provider'] ) {
+	/** Until #1253 retires GitHub selection, a GitHub attempt still needs an approved selected implementation. */
+	public function provider_refusal( DeploymentAttempt $attempt ): ?string {
+		if ( 'gh' !== $attempt->safe_data()['provider'] || null === $this->selection || $this->selection->operation_allowed() ) {
 			return null;
 		}
-		if ( null === $this->selection || null === $this->database || ! $this->selection->uses_connection( $this->database ) ) {
-			return DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE;
-		}
-		$request = $attempt->get_request();
-		return $this->selection->deployment_refusal( $request->provider_selection_generation, (string) $data['package_type'], $request->installed_identifier ?? $request->package_slug, strict_storage: $strict_storage );
-	}
-
-	private function selection_generation(): int {
-		if ( null === $this->selection || null === $this->database || ! $this->selection->uses_connection( $this->database ) ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		$expectation = $this->selection->expectation();
-		if ( null === $expectation ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		return $expectation['selection_generation'];
-	}
-
-	private function bind_selection( string $provider, string $type, DeploymentRequest $request ): DeploymentRequest {
-		if ( 'gh' !== $provider ) {
-			return $request;
-		}
-		$generation = $this->selection_generation();
-		if ( null === $this->selection || null !== $this->selection->deployment_refusal( $generation, $type, $request->installed_identifier ?? $request->package_slug ) ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		return new DeploymentRequest( $request->repository, $request->credential_id, $request->is_private, $request->configured_branch, $request->package_slug, $request->subdirectory, $request->deployment_policy, $request->initiating_user_id, $request->maximum_artifact_bytes, $request->installed_identifier, $request->adoption_token, $generation, $request->selected_commit, $request->expected_identifier );
+		return DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE;
 	}
 	public function record_resolved_ref( int $attempt_id, string $resolved_ref ): DeploymentAttempt {
 		RuntimeSupport::assert_managed_operations_allowed();
@@ -433,17 +391,9 @@ final class DeploymentAttemptRepository {
 		return $this->transaction(
 			function () use ( $attempt_id, $at, $owns_lock ): DeploymentAttempt|DeploymentOutcome {
 				$attempt = $this->require_exact( $attempt_id );
-				$refusal = $this->provider_refusal( $attempt );
-				if ( null !== $refusal ) {
-					return DeploymentOutcome::from_code( $refusal );
-				}
-				$data = $attempt->safe_data();
+				$data    = $attempt->safe_data();
 				$this->lock_adoption( (string) $data['operation'], (string) $data['package_type'], (string) $data['provider'], (string) $data['provider_repository_id'], $attempt->get_request(), (string) $data['package_source'], (int) $data['package_source_revision'] );
-				$locked  = DeploymentAttempt::from_database( $this->locked_attempt_row( $attempt_id ) );
-				$refusal = $this->provider_refusal( $locked );
-				if ( null !== $refusal ) {
-					return DeploymentOutcome::from_code( $refusal );
-				}
+				$locked = DeploymentAttempt::from_database( $this->locked_attempt_row( $attempt_id ) );
 				if ( $locked->get_request()->to_json() !== $attempt->get_request()->to_json() || DeploymentState::RUNNING !== $locked->get_state() ) {
 					throw DeploymentStorageFailure::inconsistent();
 				}
@@ -473,7 +423,6 @@ final class DeploymentAttemptRepository {
 					$observed     = $working_copy_observation->safe_data();
 					$working_copy = 'running' === $observed['state'] && null === $observed['mutation_started_at']
 						&& 'branch' === $observed['package_source'] && in_array( $observed['operation'], array( 'install', 'update' ), true )
-						&& null === $this->provider_refusal( $working_copy_observation, strict_storage: true )
 						&& $this->adoption_matches( $observed['operation'], $observed['package_type'], $observed['provider'], $observed['provider_repository_id'], $working_copy_observation->get_request(), $observed['package_source'], $observed['package_source_revision'] );
 					$locked       = DeploymentAttempt::from_database( $this->locked_attempt_row( $id ) );
 					$working_copy = $working_copy && $locked->safe_data() === $observed

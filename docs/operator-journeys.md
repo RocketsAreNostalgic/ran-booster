@@ -174,7 +174,7 @@ Published release Blueprint only for an already-installed, unmanaged plugin or
 theme after fresh native release readiness succeeds during Apply. It preserves files and activation,
 records deployment as **Disabled**, and does not prove installed-code equality.
 Absent Release targets remain refused until Stage 2. Selected Release rows,
-managed targets, and failed readiness remain unsupported. The Portability API 4
+managed targets, and failed readiness remain unsupported. The Portability API
 surface is unchanged. A valid record may therefore
 show **This Blueprint record is valid, but its source or exact selection is not
 supported for application yet.** Do not remove its selection to bypass refusal.
@@ -218,8 +218,7 @@ the blueprint again.**, a timeout, or a lost response:
    **Allow retry** action (which may also return to plugin/theme settings).
    Neither control reruns the deployment. Follow
    [deployment recovery](package-update-orchestration.md#state-failure-and-retry-rules).
-   Never delete updater locks or markers to make a retry proceed. A protected
-   native installation has its own [removal-verification procedure](github-provider-replacement.md#recover-an-interrupted-native-installation).
+   Never delete updater locks or markers to make a retry proceed.
 3. Resolve a definite failure, then build a fresh preview and deliberately select
    only eligible remaining actions. There is no general idempotence or automatic
    deployment retry promise. If management settings are damaged, follow

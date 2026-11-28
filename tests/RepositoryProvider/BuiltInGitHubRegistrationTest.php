@@ -77,30 +77,20 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 			self::assertInstanceOf( \Closure::class, $guard );
 			self::assertSame( $selection, ( new \ReflectionFunction( $guard ) )->getClosureThis() );
 		}
-		foreach ( array( \RAN\Deployment\DeploymentAttemptRepository::class, \RAN\Webhook\WebhookProcessor::class ) as $consumer_type ) {
-			$consumer = $container->make( $consumer_type );
-			self::assertSame( $selection, ( new \ReflectionProperty( $consumer, 'selection' ) )->getValue( $consumer ) );
-		}
+		$webhooks = $container->make( \RAN\Webhook\WebhookProcessor::class );
+		self::assertSame( $selection, ( new \ReflectionProperty( $webhooks, 'selection' ) )->getValue( $webhooks ) );
 		$container->bind( \RAN\Dashboard::class, $this->createStub( \RAN\Dashboard::class ) );
 		foreach ( array( \RAN\Admin\ProviderSettingsPresenter::class, \RAN\Admin\ProviderProfileAdminController::class ) as $type ) {
 			$consumer = $container->make( $type );
 			self::assertSame( $selection, ( new \ReflectionProperty( $consumer, 'github_selection' ) )->getValue( $consumer ) );
 			self::assertSame( $secrets, ( new \ReflectionProperty( $consumer, 'secrets' ) )->getValue( $consumer ) );
-			$recovery = ( new \ReflectionProperty( $consumer, 'package_removal' ) )->getValue( $consumer );
-			self::assertInstanceOf( \RAN\PackageRemoval\PackageRemovalService::class, $recovery );
-			self::assertSame( $selection, ( new \ReflectionProperty( $recovery, 'github_selection' ) )->getValue( $recovery ) );
-			self::assertSame( $container->make( \RAN\WordPress\WordPressUpdaterLock::class ), ( new \ReflectionProperty( $recovery, 'updater_lock' ) )->getValue( $recovery ) );
 		}
 		$profiles          = $container->make( \RAN\Admin\ProviderProfileAdminController::class );
 		$adoption_attempts = ( new \ReflectionProperty( $profiles, 'deployment_attempts' ) )->getValue( $profiles );
 		self::assertInstanceOf( \RAN\Deployment\DeploymentAttemptRepository::class, $adoption_attempts );
-		self::assertSame( $selection, ( new \ReflectionProperty( $adoption_attempts, 'selection' ) )->getValue( $adoption_attempts ) );
 		self::assertSame( $container->make( \RAN\WordPress\WordPressUpdaterLock::class ), ( new \ReflectionProperty( $profiles, 'updater_lock' ) )->getValue( $profiles ) );
 		self::assertTrue( $container->make( \RAN\Admin\AdminTabRegistry::class )->resolve( 'gh' )->is_provider() );
-		$verifier           = $container->make( \RAN\Portability\BlueprintRepositoryVerifier::class );
-		$selection_property = new \ReflectionProperty( $verifier, 'selection' );
-		self::assertSame( $selection, $selection_property->getValue( $verifier ) );
-		self::assertSame( $selection, $selection_property->getValue( $verifier->for_preview() ) );
+		$verifier = $container->make( \RAN\Portability\BlueprintRepositoryVerifier::class );
 		self::assertSame( $secrets, ( new \ReflectionProperty( $verifier, 'secrets' ) )->getValue( $verifier ) );
 		self::assertSame( $registry, ( new \ReflectionProperty( $verifier, 'providers' ) )->getValue( $verifier ) );
 		$controller  = $container->make( \RAN\Admin\PortabilityController::class );
@@ -108,7 +98,6 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		self::assertInstanceOf( \RAN\Portability\PortabilityApplicationService::class, $application );
 		$consumer_verifier = ( new \ReflectionProperty( $application, 'verifier' ) )->getValue( $application );
 		self::assertInstanceOf( \RAN\Portability\BlueprintRepositoryVerifier::class, $consumer_verifier );
-		self::assertSame( $selection, $selection_property->getValue( $consumer_verifier ) );
 
 		$purger = $container->make( \RAN\Admin\CredentialSelfDestructPurger::class );
 		self::assertInstanceOf( \RAN\Admin\CredentialSelfDestructPurger::class, $purger );

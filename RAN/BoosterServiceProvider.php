@@ -333,8 +333,7 @@ final class BoosterServiceProvider {
 				$container->make( PackageRemovalGateway::class ),
 				$container->make( DeploymentAttemptRepository::class ),
 				$container->make( WordPressUpdaterLock::class ),
-				$container->make( RepositoryBranchCheckEvidenceStore::class ),
-				$container->make( GitHubProviderSelection::class )
+				$container->make( RepositoryBranchCheckEvidenceStore::class )
 			)
 		);
 		$container->bind(
@@ -344,8 +343,7 @@ final class BoosterServiceProvider {
 				$container->make( ThemeRepository::class ),
 				$container->make( DeploymentCoordinator::class ),
 				$container->make( PackageRemovalService::class ),
-				$container->make( WordPressUpdaterLock::class ),
-				github_selection: $container->make( GitHubProviderSelection::class )
+				$container->make( WordPressUpdaterLock::class )
 			)
 		);
 		$container->bind( \RAN\Troubleshooting\DiagnosticRunStore::class, new \RAN\Troubleshooting\DiagnosticRunStore() );
@@ -395,7 +393,6 @@ final class BoosterServiceProvider {
 			$release_store,
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
-			$github_selection,
 			bulk_forbidden_plugin_identifier: $self_plugin_identifier,
 			activity: $activity,
 			attempts: $container->make( DeploymentAttemptRepository::class )
@@ -409,8 +406,7 @@ final class BoosterServiceProvider {
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
 			public_lookup_profile: static fn ( string $provider ): ?string => $container->make( PublicRepositoryLookupProfileStore::class )->get( $provider ),
-			source_guard: new \RAN\Storage\RepositorySourceGuard( null, $database ),
-			github_selection: $github_selection
+			source_guard: new \RAN\Storage\RepositorySourceGuard( null, $database )
 		);
 		$container->bind( NativeReleaseTrackingFacade::class, $release_facade );
 		$container->bind( ReleaseTrackingFacade::class, $release_facade );
@@ -421,7 +417,6 @@ final class BoosterServiceProvider {
 			$container->make( ThemeRepository::class ),
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
-			$github_selection,
 			source_guard: new \RAN\Storage\RepositorySourceGuard( null, $database )
 		);
 		$container->bind( NativeProspectiveReleaseFacade::class, $prospective_facade );
@@ -440,14 +435,6 @@ final class BoosterServiceProvider {
 				),
 				new \RAN\Admin\ReleaseManagement\NativeManagedReleaseBrowser( $container->make( NativeReleaseTrackingFacade::class ) ),
 				links: $container->make( \RAN\Admin\ProviderTabLinks::class ),
-				native_hold: static function () use ( $container, $selection_store ): ?array {
-					if ( ! isset( $selection_store->read()['native_mutation'] ) ) {
-						return null;
-					}
-
-					return $container->make( \RAN\Admin\ProviderSettingsPresenter::class )->native_hold()
-						?? throw new \RuntimeException( 'Native hold details are unavailable.' );
-				},
 				confirmed_enable: $container->make( NativeReleaseTrackingFacade::class )->enable( ... )
 			)
 		);

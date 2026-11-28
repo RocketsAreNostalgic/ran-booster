@@ -16,7 +16,6 @@ final class ReleaseManagementFixture {
 		?callable $read_candidates = null,
 		?\RAN\Storage\RepositorySourceGuard $source_guard = null,
 		?\RAN\Admin\ProviderTabLinks $links = null,
-		?callable $native_hold = null,
 		?callable $updates_forced_off = null
 	): ReleaseManagementControls {
 		$prospective ??= new ProspectiveReleaseFacadeDouble();
@@ -33,7 +32,6 @@ final class ReleaseManagementFixture {
 			$tracking,
 			$source_guard,
 			$links,
-			$native_hold,
 			$updates_forced_off,
 			array( $tracking, 'enable' )
 		);

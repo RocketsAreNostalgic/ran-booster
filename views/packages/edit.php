@@ -114,6 +114,11 @@ if ( null === $selected_provider_option ) {
 	);
 }
 
+// A lookup profile the user cannot choose is not carried over from a refused save (#1350).
+if ( null === ( $selected_provider_option['public_lookup'] ?? null ) ) {
+	$public_lookup_profile_id = '';
+}
+
 $provider_unavailable       = false === $selected_provider_option['available'];
 $release_managed            = \RAN\PackageSource::RELEASE_ASSET === $package->get_source();
 $package_mutation_available = ! $provider_unavailable && true === $selected_provider_option['deploy'];

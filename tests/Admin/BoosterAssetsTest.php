@@ -19,6 +19,7 @@ use RAN\RepositoryProvider\ProviderRegistry;
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
 require_once __DIR__ . '/BoosterAssetsWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
 
 final class BoosterAssetsTest extends TestCase {
 
@@ -526,6 +527,41 @@ final class BoosterAssetsTest extends TestCase {
 		$picker = $GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-repository-picker']['ranBoosterRepoPicker'];
 		self::assertSame( '', $picker['defaultProvider'] );
 		self::assertSame( array(), $picker['providers'] );
+	}
+
+	public function test_the_picker_offers_a_package_only_user_no_saved_credential_or_lookup_profile(): void {
+		$provider                                 = array(
+			'code'                  => 'gh',
+			'credentials_url'       => 'https://example.test/credentials',
+			'default_credential_id' => 'credential_1',
+			'public_lookup'         => array(
+				'supports_default' => true,
+				'configured_id'    => 'credential_1',
+				'configured_label' => 'Lookup',
+				'stale'            => false,
+			),
+			'credential_profiles'   => array( array( 'id' => 'credential_1' ) ),
+		);
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'manage_options'   => true,
+			'activate_plugins' => false,
+		);
+		try {
+			$this->booster( package_providers: array( 'gh' => $provider ) )->load_scripts( 'ran-booster_page_ran-booster-plugins-create' );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_capabilities'] );
+		}
+
+		self::assertSame(
+			array(
+				'code'                  => 'gh',
+				'credentials_url'       => '',
+				'default_credential_id' => '',
+				'public_lookup'         => null,
+				'credential_profiles'   => array(),
+			),
+			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-repository-picker']['ranBoosterRepoPicker']['providers']['gh']
+		);
 	}
 
 	#[DataProvider( 'package_admin_hook_provider' )]

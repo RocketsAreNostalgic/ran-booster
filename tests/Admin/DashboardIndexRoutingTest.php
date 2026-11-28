@@ -3615,6 +3615,71 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
+	public function test_create_and_edit_pages_receive_only_the_credential_choices_the_user_can_save(): void {
+		$package = $this->managed_package( 'example/example.php', 'Example Package', 'example-repository', credential_id: 'saved' );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$incompatible = new class() {
+			public string $last_error = '';
+
+			public function db_server_info(): string {
+				return 'PostgreSQL 17.5';
+			}
+		};
+		$secrets      = $this->createStub( SecretsFile::class );
+		$secrets->method( 'credential_profiles' )->willReturn(
+			array(
+				'saved' => array(
+					'id'            => 'saved',
+					'label'         => 'Saved credential',
+					'kind'          => 'api-key',
+					'configuration' => array(),
+					'source'        => 'file',
+					'configured'    => true,
+				),
+				'other' => array(
+					'id'            => 'other',
+					'label'         => 'Other credential',
+					'kind'          => 'api-key',
+					'configuration' => array(),
+					'source'        => 'file',
+					'configured'    => true,
+				),
+			)
+		);
+		$secrets->method( 'webhook_profiles' )->willReturn( array() );
+		foreach ( array( true, false ) as $authority ) {
+			$GLOBALS['ran_booster_test_capabilities'] = array(
+				'manage_options'   => true,
+				'activate_plugins' => $authority,
+			);
+			try {
+				$dashboard = $this->dashboard( $secrets, plugins: $plugins, database: new ReadyDashboardDatabase(), provider_credentials: true );
+				$_GET      = array();
+				$create    = $dashboard->get_plugins_create()['data'];
+				$_GET      = array( 'package' => 'example/example.php' );
+				$edit      = $dashboard->get_plugins()['data'];
+				$_GET      = array();
+				$disabled  = $this->dashboard( $secrets, database: new Database( $incompatible ), provider_credentials: true )->get_plugins_create()['data'];
+			} finally {
+				unset( $GLOBALS['ran_booster_test_capabilities'] );
+			}
+
+			foreach ( array(
+				'create'   => $create,
+				'edit'     => $edit,
+				'disabled' => $disabled,
+			) as $page => $data ) {
+				$urls = array_column( $data['package_provider_settings']['providers'], 'credentials_url' );
+				self::assertNotSame( array(), $urls, $page );
+				self::assertSame( ! $authority, array( '' ) === array_unique( $urls ), $page . ( $authority ? ' with authority' : ' package-only' ) );
+			}
+			$profile_ids = static fn ( array $data ): array => array_map( static fn ( array $provider ): array => array_column( $provider['credential_profiles'], 'id' ), $data['package_provider_settings']['providers'] );
+			self::assertSame( $authority ? array( array( 'saved', 'other' ), array( 'saved', 'other' ) ) : array( array(), array() ), $profile_ids( $create ) );
+			self::assertSame( $authority ? array( array( 'saved', 'other' ), array( 'saved', 'other' ) ) : array( array( 'saved' ), array() ), $profile_ids( $edit ) );
+		}
+	}
+
 	#[DataProvider( 'package_type_provider' )]
 	public function test_incompatible_database_renders_adisabled_create_screen( string $type ): void {
 		$connection = new class() {

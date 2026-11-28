@@ -32,7 +32,9 @@ use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 use RAN\RepositoryProvider\RepositoryLookupRequest;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
+use RAN\RepositoryProvider\RepositoryWebhookLifecycle;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
+use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
 
 final class ProviderContractsTest extends TestCase {
 	public function test_release_native_targets_are_one_exact_typed_capability(): void {
@@ -734,6 +736,30 @@ final class ProviderContractsTest extends TestCase {
 				'Exact endpoint ownership requires the Core-derived callback URL.'
 			);
 		}
+	}
+
+	public function test_repository_webhook_lifecycle_has_only_four_callback_matched_actions(): void {
+		$lifecycle = new \ReflectionClass( RepositoryWebhookLifecycle::class );
+		$methods   = get_class_methods( RepositoryWebhookLifecycle::class );
+		sort( $methods );
+
+		self::assertSame( array( 'check', 'delete', 'ping', 'upsert' ), $methods );
+		self::assertSame( array( \RAN\Provider\ProviderCapability::class ), $lifecycle->getInterfaceNames() );
+		self::assertSame( RepositoryWebhookManagement::OPERATION, RepositoryWebhookLifecycle::OPERATION );
+		self::assertSame( 4, RepositoryWebhookLifecycle::VERSION );
+
+		$names = static fn ( string $method ): array => array_map(
+			static fn ( \ReflectionParameter $parameter ): string => $parameter->name,
+			$lifecycle->getMethod( $method )->getParameters()
+		);
+		self::assertSame( array( 'repository_id', 'repository', 'callback_url', 'credential_profile_id', 'signing_secret' ), $names( 'upsert' ) );
+		foreach ( array( 'check', 'ping', 'delete' ) as $method ) {
+			self::assertSame( array( 'repository_id', 'repository', 'callback_url', 'credential_profile_id' ), $names( $method ), 'No hook ID crosses the contract.' );
+		}
+		foreach ( $methods as $method ) {
+			self::assertSame( RepositoryWebhookOperationResult::class, (string) $lifecycle->getMethod( $method )->getReturnType() );
+		}
+		self::assertCount( 1, $lifecycle->getMethod( 'upsert' )->getParameters()[4]->getAttributes( \SensitiveParameter::class ) );
 	}
 
 	public function test_manual_capability_fixture_resolves_readonly_lookup_values(): void {

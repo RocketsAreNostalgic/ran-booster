@@ -283,6 +283,36 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 	}
 
+	public function test_a_refused_save_does_not_carry_over_a_lookup_profile_the_user_cannot_choose(): void {
+		$package_view = PackagePagePresenter::plugin();
+		foreach ( array( 'create', 'edit' ) as $operation ) {
+			foreach ( array(
+				'cleared' => null,
+				'offered' => array(
+					'supports_default' => true,
+					'configured_id'    => 'lookup_1',
+					'configured_label' => 'Lookup',
+					'stale'            => false,
+				),
+			) as $label => $public_lookup ) {
+				$package                   = $this->package( $package_view );
+				$package_provider_settings = $this->provider_settings( true );
+				$package_provider_settings['providers'][0]['public_lookup'] = $public_lookup;
+				$explicit_provider      = false;
+				$open_repository_picker = false;
+				$_POST['ran_booster']   = array(
+					'action'                   => $package_view->get_action( 'create' === $operation ? 'install' : 'edit' ),
+					'public_lookup_profile_id' => 'lookup_1',
+				);
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/packages/' . $operation . '.php';
+				$html = (string) ob_get_clean();
+
+				self::assertStringContainsString( 'name="ran_booster[public_lookup_profile_id]" class="ran-booster-public-lookup-profile-input" value="' . ( null === $public_lookup ? '' : 'lookup_1' ) . '"', $html, $operation . ':' . $label );
+			}
+		}
+	}
+
 	public function test_incomplete_advanced_summary_projection_uses_plain_summary(): void {
 		foreach ( array( null, false, 17, array() ) as $heading ) {
 			$package_advanced_summary = 'Branch fallback';

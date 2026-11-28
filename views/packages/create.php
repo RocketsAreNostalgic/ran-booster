@@ -104,6 +104,10 @@ if ( null === $selected_provider_option ) {
 	$selected_provider_option = $provider_options[0];
 	$provider_code            = $selected_provider_option['code'];
 }
+// A lookup profile the user cannot choose is not carried over from a refused save (#1350).
+if ( null === ( $selected_provider_option['public_lookup'] ?? null ) ) {
+	$public_lookup_profile_id = '';
+}
 $provider_browse_available  = $selected_provider_option['browse'];
 $provider_webhook_available = $selected_provider_option['webhooks'];
 $package_mutation_available = isset( $package_mutation_available ) ? true === $package_mutation_available : true;

@@ -69,12 +69,20 @@ final class AdminTabRegistryTest extends TestCase {
 	}
 
 	public function test_github_tab_stays_reachable_while_a_failed_or_conflicting_claim_leaves_it_unregistered(): void {
-		foreach ( array( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT ) as $supplier ) {
-			$registry = new AdminTabRegistry( GitHubSupplierState::apply( new ProviderRegistry( array( $this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ) ) ), $supplier, array( 'alpha', 'beta' ) ) );
+		$bundled_failed = new ProviderRegistry( array( $this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ) ) );
+		( new \ReflectionProperty( ProviderRegistry::class, 'bundled_github_factory' ) )->setValue( $bundled_failed, static fn (): null => null );
+		( new \ReflectionProperty( ProviderRegistry::class, 'sealed' ) )->setValue( $bundled_failed, true );
+		$states = array(
+			ProviderRegistry::GITHUB_SUPERSEDE_FAILED   => GitHubSupplierState::apply( new ProviderRegistry( array( $this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ) ) ), ProviderRegistry::GITHUB_SUPERSEDE_FAILED, array( 'alpha', 'beta' ) ),
+			ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT => GitHubSupplierState::apply( new ProviderRegistry( array( $this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ) ) ), ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT, array( 'alpha', 'beta' ) ),
+			'bundled_failed'                            => $bundled_failed,
+		);
+		foreach ( $states as $state => $providers ) {
+			$registry = new AdminTabRegistry( $providers );
 			self::assertSame(
 				array( 'overview', 'gh', 'bb', 'portability', 'documentation', 'troubleshooting' ),
 				array_map( static fn ( AdminTab $tab ): string => $tab->get_key(), $registry->all() ),
-				$supplier
+				$state
 			);
 			self::assertSame( 'GitHub', $registry->resolve( 'gh' )->get_label() );
 			self::assertTrue( $registry->resolve( 'gh' )->is_provider() );

@@ -26,6 +26,7 @@ use RAN\Tests\Portability\TemporaryCredentialProvider;
 
 require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/../Runtime/RuntimeSupportWordPressFunctions.php';
+require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 
 final class NativePortabilityFacadeTest extends TestCase {
 
@@ -42,7 +43,7 @@ final class NativePortabilityFacadeTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
-		unset( $GLOBALS['ran_booster_package_mutation_guard_multisite'] );
+		unset( $GLOBALS['ran_booster_package_mutation_guard_multisite'], $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_capability_checks'] );
 	}
 
 	public function test_core_publishes_the_exact_facade_after_provider_sealing_and_before_dashboard_binding(): void {
@@ -94,6 +95,22 @@ final class NativePortabilityFacadeTest extends TestCase {
 		self::assertSame( PortabilityReviewResult::BLOCKED, $result->action );
 		self::assertSame( 'forbidden', $result->reason );
 		self::assertSame( array(), $this->provider?->credential_ids );
+	}
+
+	public function test_a_saved_credential_needs_secret_authority_before_review_or_apply(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'manage_options'   => true,
+			'activate_plugins' => false,
+		);
+		$saved                                    = $this->candidate( array( 'credential_id' => 'target' ) );
+		$review                                   = $this->facade( true )->review( $saved, 'valid-nonce' );
+		self::assertSame( 'forbidden', $review->reason );
+		self::assertSame( array(), $this->provider?->credential_ids );
+		self::assertSame( 'forbidden', $this->facade( true )->apply( $saved, 'fingerprint', 'valid-nonce' )->reason );
+		self::assertSame( PortabilityReviewResult::ADOPT, $this->facade( true )->review( $this->candidate(), 'valid-nonce' )->action );
+
+		$GLOBALS['ran_booster_test_capabilities']['activate_plugins'] = true;
+		self::assertNotSame( 'forbidden', $this->facade( true )->review( $saved, 'valid-nonce' )->reason );
 	}
 
 	public function test_apply_treats_only_an_exact_disabled_managed_target_as_verified(): void {

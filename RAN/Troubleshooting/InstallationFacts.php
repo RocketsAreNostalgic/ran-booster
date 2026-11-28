@@ -239,7 +239,7 @@ final class InstallationFacts {
 			}
 		}
 		$supplier = $this->providers->github_supplier();
-		if ( null !== $supplier && ( isset( $rows['provider:gh'] ) || count( $rows ) < 33 ) ) {
+		if ( ( null !== $supplier || $this->providers->bundled_github_failed() ) && ( isset( $rows['provider:gh'] ) || count( $rows ) < 33 ) ) {
 			$rows['provider:gh'] = ( $rows['provider:gh'] ?? array(
 				'Name'         => 'GitHub',
 				'Provider'     => 'gh',
@@ -248,6 +248,7 @@ final class InstallationFacts {
 				'Availability' => 'Unavailable',
 			) ) + array(
 				'Supplier' => match ( $supplier ) {
+					null => 'Included module failed to load',
 					ProviderRegistry::GITHUB_BUNDLED => 'Included with Booster',
 					ProviderRegistry::GITHUB_SUPERSEDE_FAILED => 'Add-on failed to load',
 					ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT => 'More than one add-on',

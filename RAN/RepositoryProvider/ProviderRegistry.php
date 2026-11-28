@@ -280,6 +280,11 @@ final class ProviderRegistry {
 		return $this->github_supplier;
 	}
 
+	/** @internal Whether Core's bundled GitHub module failed to build this request. */
+	public function bundled_github_failed(): bool {
+		return $this->sealed && null !== $this->bundled_github_factory && null === $this->github_supplier;
+	}
+
 	/** @return list<string> Directory names of the plugins that claimed `gh`; an unidentified claim is omitted. */
 	public function github_claimants(): array {
 		return array_values( array_unique( array_filter( array_column( $this->github_claims, 'plugin' ), 'is_string' ) ) );

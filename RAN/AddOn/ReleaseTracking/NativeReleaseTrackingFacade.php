@@ -1295,10 +1295,11 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 		$root = 'plugin' === $type
 			? ( defined( 'WP_PLUGIN_DIR' ) ? WP_PLUGIN_DIR : '' )
-			: ( function_exists( 'get_theme_root' ) ? get_theme_root() : '' );
+			// A theme in a secondary registered directory lives under its own root.
+			: ( function_exists( 'get_theme_root' ) ? get_theme_root( $identifier ) : '' );
 		$file = 'plugin' === $type
-			? rtrim( $root, '/\\' ) . '/' . $identifier
-			: rtrim( $root, '/\\' ) . '/' . $identifier . '/style.css';
+			? trailingslashit( $root ) . $identifier
+			: trailingslashit( $root ) . $identifier . '/style.css';
 		if ( '' === $root || ! is_file( $file ) ) {
 			return '';
 		}

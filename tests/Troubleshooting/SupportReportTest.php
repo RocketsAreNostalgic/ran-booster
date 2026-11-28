@@ -528,6 +528,12 @@ final class SupportReportTest extends TestCase {
 			$export( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, false )
 		);
 		self::assertSame( 'More than one add-on', $export( ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT, false )['supplier'] ?? null );
+		$bundled_failed = new ProviderRegistry();
+		( new \ReflectionProperty( ProviderRegistry::class, 'bundled_github_factory' ) )->setValue( $bundled_failed, static fn (): null => null );
+		( new \ReflectionProperty( ProviderRegistry::class, 'sealed' ) )->setValue( $bundled_failed, true );
+		$text = ( new SupportReport( new InstallationFacts( $bundled_failed ) ) )->generate( array() )['text'];
+		$rows = array_column( json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['components'], null, 'provider' );
+		self::assertSame( 'Included module failed to load', $rows['GitHub']['supplier'] ?? null );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]

@@ -33,7 +33,8 @@ final class GitHubSupplierNotice {
 		$claimants = $this->providers->github_claimants();
 		$names     = implode( ', ', array_map( self::plugin_name( ... ), $claimants ) );
 		return match ( $this->providers->github_supplier() ) {
-			null, ProviderRegistry::GITHUB_BUNDLED => null,
+			null => $this->providers->bundled_github_failed() ? __( "GitHub is unavailable because Booster's GitHub module could not load.", 'ran-booster' ) : null,
+			ProviderRegistry::GITHUB_BUNDLED => null,
 			ProviderRegistry::GITHUB_SUPERSEDE_FAILED => '' === $names
 				? __( 'GitHub is unavailable because the plugin that provides it could not load.', 'ran-booster' )
 				/* translators: %s: plugin name. */

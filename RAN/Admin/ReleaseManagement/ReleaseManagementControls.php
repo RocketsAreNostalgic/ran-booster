@@ -9,7 +9,9 @@ use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\Admin\CredentialAuthority;
 use RAN\Admin\Feedback\FeedbackFlash;
+use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Admin\ProviderTabLinks;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\Deployment\PackageSourceGate;
@@ -1041,6 +1043,10 @@ final class ReleaseManagementControls {
 		$tag         = is_string( $request['release_tag'] ?? null ) ? wp_unslash( $request['release_tag'] ) : '';
 		$fingerprint = is_string( $request['release_fingerprint'] ?? null ) ? wp_unslash( $request['release_fingerprint'] ) : '';
 		$channel     = array_key_exists( 'release_channel', $request ) ? $this->release_channel_from( $request ) : 'stable';
+		// Any saved credential or lookup profile needs secret authority before a provider call (#1329).
+		if ( PackageRepositoryRequestResolver::chooses_credential( $repository, null ) && ! CredentialAuthority::held() ) {
+			return $this->prospective_outcome( $type, 'forbidden' );
+		}
 
 		$outcome         = $this->request_boundary(
 			fn (): array => 'list_candidates' === $operation ? $this->prospective_operations->list_candidates( $type, $repository, $channel ) : $this->prospective_operations->execute( $operation, $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce ),

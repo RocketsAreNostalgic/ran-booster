@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\AddOn\ReleaseTracking;
 
 use InvalidArgumentException;
+use RAN\Admin\CredentialAuthority;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
@@ -136,7 +137,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 			return ProspectiveReleaseResult::failure( UnsupportedRuntimeException::ERROR_CODE );
 		}
 		if ( ! $this->valid_channel( $channel )
-			|| ! $this->authorized( 'list_candidates', $type, $nonce ) ) {
+			|| ! $this->authorized( 'list_candidates', $type, $repository_request, $nonce ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
 		}
 		try {
@@ -160,7 +161,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		}
 
 		if ( ! $this->valid_channel( $channel )
-			|| ! $this->authorized( 'inspect', $type, $nonce )
+			|| ! $this->authorized( 'inspect', $type, $repository_request, $nonce )
 
 			|| ! $this->valid_exact_release( $release_id, $tag ) ) {
 			return ProspectiveReleaseResult::failure( 'forbidden' );
@@ -251,7 +252,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		}
 
 		if ( ! $this->valid_channel( $channel )
-			|| ! $this->authorized( 'install', $type, $nonce, $expected_identifier, $initial_policy )
+			|| ! $this->authorized( 'install', $type, $repository_request, $nonce, $expected_identifier, $initial_policy )
 
 			|| ! $this->valid_exact_release( $release_id, $tag )
 
@@ -671,9 +672,12 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 		return false;
 	}
 
-	private function authorized( string $operation, string $type, string $nonce, ?string $expected_identifier = null, DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL ): bool {
+	/** @param array<string, mixed> $repository_request */
+	private function authorized( string $operation, string $type, array $repository_request, string $nonce, ?string $expected_identifier = null, DeploymentPolicy $initial_policy = DeploymentPolicy::MANUAL ): bool {
+		// Any saved credential or lookup profile needs secret authority before resolution (#1329).
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true )
-			|| ! ( $this->can_manage )( $type ) ) {
+			|| ! ( $this->can_manage )( $type )
+			|| ( PackageRepositoryRequestResolver::chooses_credential( $repository_request, null ) && ! CredentialAuthority::held() ) ) {
 			return false;
 		}
 

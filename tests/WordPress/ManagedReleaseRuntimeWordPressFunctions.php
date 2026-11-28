@@ -13,6 +13,13 @@ if ( ! function_exists( 'get_theme_root' ) ) {
 	}
 }
 
+if ( ! function_exists( 'trailingslashit' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
+	function trailingslashit( string $value ): string {
+		return rtrim( $value, '/\\' ) . '/';
+	}
+}
+
 if ( ! function_exists( 'ran_booster_table_name' ) ) {
 	function ran_booster_table_name(): string {
 		return 'wp_ran_booster_packages';

@@ -58,7 +58,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
-		unset( $GLOBALS['ran_booster_webhook_display_test_capabilities'], $GLOBALS['ran_booster_webhook_display_test_multisite'] );
+		unset( $GLOBALS['ran_booster_webhook_display_test_capabilities'], $GLOBALS['ran_booster_webhook_display_test_multisite'], $GLOBALS['ran_booster_test_capabilities'] );
 	}
 
 	public function test_missing_package_authority_is_rejected_at_the_controls_constructor(): void {
@@ -161,10 +161,17 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		);
 		$GLOBALS['ran_booster_repository_webhook_management_json'] = array();
 
+		// The secret authority is Core's one credential rule, read through the shared capability fixture.
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'manage_options'   => false,
+			'activate_plugins' => false,
+		);
 		$controls->handle_delivery_status();
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$GLOBALS['ran_booster_test_capabilities']['manage_options']                          = true;
 		$controls->handle_delivery_status();
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['activate_plugins'] = true;
+		$GLOBALS['ran_booster_test_capabilities']['activate_plugins']                          = true;
 		// No stored record, so no delivery is confirmed.
 		$controls->handle_delivery_status();
 		$_GET['repository_id'] = '5678';
@@ -248,11 +255,16 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 
 		// The controls compose the controller with its default authority check: manage_options alone is not enough.
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities'] = array( 'manage_options' => true );
+		$GLOBALS['ran_booster_test_capabilities']                          = array(
+			'manage_options'   => true,
+			'activate_plugins' => false,
+		);
 		$operate_all();
 		self::assertSame( array(), $calls );
 
 		// With authority, operations that can create or delete a stored signing secret stop before the provider while file changes are disallowed.
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['activate_plugins'] = true;
+		$GLOBALS['ran_booster_test_capabilities']['activate_plugins']                          = true;
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods']                               = false;
 		$this->start_log_capture();
 		try {

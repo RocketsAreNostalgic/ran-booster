@@ -2,6 +2,7 @@
 
 namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
+use RAN\Admin\CredentialAuthority;
 use LogicException;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminRoutes;
@@ -346,7 +347,7 @@ class Dashboard {
 		} elseif ( null !== $selected_tab && 'troubleshooting' === $selected_tab->get_key() ) {
 			$data['troubleshooting_panel'] = $panel;
 			if ( 'installation' === $panel ) {
-				if ( 'GET' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) {
+				if ( 'GET' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && CredentialAuthority::held() ) {
 					$this->storage_status( false );
 				}
 				$data['troubleshooting'] = $this->troubleshooting->installation_payload( $this->provider_settings->github_supplier_diagnostics(), $this->storage_installation_projection() );
@@ -862,7 +863,7 @@ class Dashboard {
 				$projection['url'] = admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' );
 			}
 		}
-		if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) {
+		if ( CredentialAuthority::held() ) {
 			foreach ( array( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) as $constant ) {
 				if ( defined( $constant ) ) {
 					$projection['details'] = array( 'configuration' => $constant );

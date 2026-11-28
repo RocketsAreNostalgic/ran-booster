@@ -483,6 +483,8 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		$this->plugins->method( 'all_deployment_plugins' )->willReturn( 'plugin' === $type ? array( $package ) : array() );
 		$this->themes->method( 'all_deployment_themes' )->willReturn( 'theme' === $type ? array( $package ) : array() );
 		( 'plugin' === $type ? $this->plugins : $this->themes )->method( 'plugin' === $type ? 'booster_plugin_from_file' : 'booster_theme_from_stylesheet' )->willReturn( $existing ?? $package );
+		// An update re-reads only its exact installed target, so the folder must still hold it.
+		( 'plugin' === $type ? $this->plugins : $this->themes )->method( 'plugin' === $type ? 'installed_plugin_from_file' : 'installed_theme_from_stylesheet' )->with( (string) $package->get_identifier() )->willReturn( $package );
 	}
 
 	private function package( string $type, string $slug, string $subdirectory ): Plugin|Theme {

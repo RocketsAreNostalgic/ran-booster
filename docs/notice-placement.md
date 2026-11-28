@@ -149,9 +149,15 @@ summary and a dismiss control. An info snackbar stands alone.
   link, so the host shows the queue sentence as a snackbar (success) or a
   pointer (warning). Its first paragraph is a live region, so it takes no extra
   `role`. Webhook results and add-on outcomes use the signed outcome flow (P4).
-  Release workflow results still carry text in the URL (R16). Package operation
-  failures reach the page through region swaps that rebuild the notice, so they
-  keep the inline record without a pointer until a coded notice survives the swap.
+  Release workflow results still carry text in the URL (R16).
+- **Package operation failures.** Each failure notice carries a closed
+  `package_<operation>_failed` key (`install`, `edit`, `update`, `unlink`,
+  `unlink_delete`, `recover`). On a full page load the notice renders with the
+  key. An enhanced settings save does not swap its failure in: it copies the
+  message into the shared package error region, so it also copies a valid key
+  (`[a-z0-9_]{1,64}`) onto that region, clears an earlier taken mark and asks
+  the host to consume it. The region is then the pointer's target. An info
+  result, such as a deployment that is already running, carries no failure key.
 - **Result addresses.** A signed address authenticates the earlier action, not
   the present condition. On a full page load the host strips the result
   arguments on first render whenever it takes any result (success item, coded

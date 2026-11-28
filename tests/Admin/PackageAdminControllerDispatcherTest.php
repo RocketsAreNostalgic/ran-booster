@@ -301,6 +301,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 
 		self::assertInstanceOf( \WP_Error::class, $captured[0] );
 		self::assertSame( 'Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>. No files were changed.', $captured[0]->get_error_message() );
+		self::assertSame( array( 'feedback' => 'package_update_failed' ), $captured[0]->get_error_data() );
 		self::assertSame(
 			array(
 				'operation'    => 'update-plugin',
@@ -765,6 +766,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 				self::callback(
 					static fn ( mixed $message ): bool => $message instanceof WP_Error
 						&& 'ran_booster_unavailable_package_provider' === $message->get_error_code()
+						&& array( 'feedback' => 'package_edit_failed' ) === $message->get_error_data()
 				)
 			);
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );
@@ -1132,7 +1134,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 	}
 
-	/** @return iterable<string, array{string, string, bool}> */
+	/** @return iterable<string, array{string, string, string}> */
 	public static function coded_package_failures(): iterable {
 		foreach ( array(
 			'install-plugin'       => 'package_install_failed',
@@ -1140,17 +1142,21 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			'update-plugin'        => 'package_update_failed',
 			'unlink-theme'         => 'package_unlink_failed',
 			'unlink-delete-plugin' => 'package_unlink_delete_failed',
-			'recover-plugin'       => 'package_operation_failed',
 		) as $action => $feedback ) {
-			yield $action => array( $action, $feedback, false );
+			yield $action => array( $action, $feedback, 'manual' );
 		}
-		yield 'edit-plugin repository lookup' => array( 'edit-plugin', 'package_edit_failed', true );
+		yield 'edit-plugin repository lookup' => array( 'edit-plugin', 'package_edit_failed', 'lookup' );
+		yield 'install-theme mutation guard' => array( 'install-theme', 'package_install_failed', 'guard' );
+		yield 'recover-plugin confirmation' => array( 'recover-plugin', 'package_recover_failed', 'recover' );
 	}
 
 	#[DataProvider( 'coded_package_failures' )]
-	public function test_each_package_operation_failure_notice_carries_its_closed_feedback_key( string $action, string $feedback, bool $save_lookup ): void {
+	public function test_each_package_operation_failure_notice_carries_its_closed_feedback_key( string $action, string $feedback, string $path ): void {
 		$dashboard = $this->message_dashboard();
-		if ( $save_lookup ) {
+		if ( 'manual' === $path ) {
+			// Unconfigured operations fail every operation through the manual failure path.
+			( new PackageAdminController() )->perform( $dashboard, $action, array(), array(), static fn ( \WP_Error|array $message ) => $dashboard->add_message( $message ) );
+		} elseif ( 'lookup' === $path ) {
 			$providers = new ProviderRegistry( array( new FailingLookupProvider( 404 ) ) );
 			( new PackageAdminController(
 				repositories: new PackageRepositoryRequestResolver( $providers ),
@@ -1158,12 +1164,22 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 				providers: $providers
 			) )->manage( $dashboard, $action, $this->unchanged_edit_request(), true );
 		} else {
-			// Unconfigured operations fail every action through the manual failure path.
-			( new PackageAdminController() )->perform( $dashboard, $action, array(), array(), static fn ( \WP_Error|array $message ) => $dashboard->add_message( $message ) );
+			// Multisite refuses every package mutation; an incomplete recovery confirmation fails before its nonce.
+			$GLOBALS['ran_booster_package_mutation_guard_multisite'] = 'guard' === $path;
+			( new PackageAdminController() )->manage( $dashboard, $action, array( 'action' => $action ), true );
 		}
 
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
+		self::assertSame(
+			match ( $path ) {
+				'manual' => 'ran_booster_manual_action_failed',
+				'lookup' => 'ran_booster_repository_error',
+				'guard' => 'ran_booster_unsupported_package_operation',
+				default => 'ran_booster_recovery_failed',
+			},
+			$dashboard->messages[0]['code']
+		);
 		self::assertSame( $feedback, $dashboard->messages[0]['feedback'] );
 	}
 

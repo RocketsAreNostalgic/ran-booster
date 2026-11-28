@@ -165,7 +165,7 @@ final class PackageAdminController {
 				is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
 			);
 		} catch ( Throwable $failure ) {
-			$dashboard->add_failure_message( new WP_Error( 'ran_booster_recovery_failed', __( 'Booster could not confirm safe management removal. Refresh this page and review the current management and operation state before trying again.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery' ) );
+			$dashboard->add_failure_message( new WP_Error( 'ran_booster_recovery_failed', __( 'Booster could not confirm safe management removal. Refresh this page and review the current management and operation state before trying again.', 'ran-booster' ), self::failure_feedback( $action ) ), $failure, array( 'step' => 'package_recovery' ) );
 		}
 		return false;
 	}
@@ -269,8 +269,9 @@ final class PackageAdminController {
 						'message' => __( 'Package settings were saved before the reinstall.', 'ran-booster' ),
 					)
 				);
-				$operation = PackageOperation::update_from_saved_package( $operation, $result['package'] );
+				// The reinstall owns any failure from here, including a saved package it cannot reinstall.
 				$action    = 'update-' . $operation->package_type;
+				$operation = PackageOperation::update_from_saved_package( $operation, $result['package'] );
 				$result    = $this->operations->execute( $operation );
 			}
 		} catch ( PackageStorageFailure $failure ) {
@@ -1008,7 +1009,7 @@ final class PackageAdminController {
 		if ( null === $notice ) {
 			return $this->manual_failure( $dashboard, static function (): void {}, $failure, $action );
 		}
-		$dashboard->add_failure_message( $notice['message'] + self::failure_feedback( $action ), $failure, $notice['context'] );
+		$dashboard->add_failure_message( self::coded_notice( $notice['message'], $action ), $failure, $notice['context'] );
 		return false;
 	}
 
@@ -1018,7 +1019,7 @@ final class PackageAdminController {
 		if ( null === $notice ) {
 			return $this->manual_failure( $dashboard, $add_context_message, null, $action );
 		}
-		$add_context_message( $notice['message'] + self::failure_feedback( $action ), $notice['context'] );
+		$add_context_message( self::coded_notice( $notice['message'], $action ), $notice['context'] );
 		return false;
 	}
 
@@ -1169,6 +1170,16 @@ final class PackageAdminController {
 	}
 
 	/**
+	 * A deployment presenter notice with its failure key; an info notice, such as a running deployment, is not a failure and keeps none.
+	 *
+	 * @param array<string, string> $notice
+	 * @return array<string, string>
+	 */
+	private static function coded_notice( array $notice, string $action ): array {
+		return 'error' === ( $notice['type'] ?? null ) ? $notice + self::failure_feedback( $action ) : $notice;
+	}
+
+	/**
 	 * The closed feedback key a package operation failure carries, so its inline notice gets a pointer (#755 R4).
 	 *
 	 * @return array{feedback: string}
@@ -1177,6 +1188,7 @@ final class PackageAdminController {
 		return array(
 			'feedback' => match ( preg_replace( '/-(?:plugin|theme)\z/D', '', $action ) ) {
 				'install' => 'package_install_failed',
+				'recover' => 'package_recover_failed',
 				'edit' => 'package_edit_failed',
 				'update' => 'package_update_failed',
 				'unlink' => 'package_unlink_failed',

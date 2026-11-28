@@ -2458,6 +2458,112 @@ test('a refused settings save shows the lock owner beside its error until a fail
 	}
 });
 
+test('a coded settings save failure keeps its key on the shown error so the host points at it', () => {
+	const state = fixture();
+	const save = state.button;
+	save.dataset = {
+		ranBoosterErrorTarget: '#ran-booster-package-mutation-error',
+	};
+	save.isConnected = true;
+	save.matches = (selector) =>
+		[
+			'[data-ran-booster-enhanced-mutation]',
+			'[data-ran-booster-package-settings-save]',
+			'a, button',
+		].includes(selector);
+	save.hasAttribute = () => false;
+	save.addEventListener = () => {};
+	save.removeEventListener = () => {};
+	save.form = {
+		elements: packageEditControls(
+			'plugin',
+			'edit-plugin',
+			'example/example.php'
+		),
+	};
+	const target = {
+		id: 'ran-booster-package-edit-region',
+		isConnected: true,
+		contains: () => true,
+	};
+	state.error.id = 'ran-booster-package-mutation-error';
+	state.document.getElementById = (id) =>
+		id === state.error.id ? state.error : null;
+	const consumed = [];
+	state.window.ranBoosterFeedback = {
+		consume: () =>
+			consumed.push(state.error.getAttribute('data-feedback-key')),
+	};
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	const fail = (key) => {
+		const notice = {
+			textContent: 'Nothing was saved.',
+			closest: () => true,
+			hasAttribute: () => false,
+			getAttribute: (name) => (name === 'data-feedback-key' ? key : null),
+			querySelector: () => null,
+		};
+		const region = {
+			querySelector(selector) {
+				return selector === '#ran-booster-package-edit-form'
+					? {
+							hasAttribute: (name) =>
+								name === 'data-ran-booster-attempted',
+							elements: packageEditControls(
+								'plugin',
+								'edit-plugin',
+								'example/example.php'
+							),
+						}
+					: null;
+			},
+			querySelectorAll: (selector) =>
+				selector.includes('.notice-error') ? [notice] : [],
+		};
+		state.window.DOMParser = class {
+			parseFromString() {
+				return { getElementById: () => region };
+			}
+		};
+		const detail = {
+			elt: save,
+			target,
+			xhr: {
+				status: 400,
+				addEventListener() {},
+				getResponseHeader: () => null,
+			},
+		};
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		state.listeners.get('htmx:beforeSwap')({ detail });
+		assert.equal(detail.shouldSwap, false);
+		state.listeners.get('htmx:afterRequest')({ detail });
+	};
+
+	// An earlier failure's taken mark is cleared, so the host takes the reused region again.
+	state.error.setAttribute('data-ran-booster-feedback-taken', '');
+	fail('package_edit_failed');
+	assert.equal(state.error.hidden, false);
+	assert.equal(
+		state.error.getAttribute('data-feedback-key'),
+		'package_edit_failed'
+	);
+	assert.equal(
+		state.error.hasAttribute('data-ran-booster-feedback-taken'),
+		false
+	);
+	assert.deepEqual(consumed, ['package_edit_failed']);
+	// A key that is not a closed code, or no key, leaves the error without a pointer.
+	for (const key of ['Package <b>failed</b>', null]) {
+		fail(key);
+		assert.equal(state.error.hasAttribute('data-feedback-key'), false);
+		assert.deepEqual(consumed, ['package_edit_failed']);
+	}
+});
+
 test('retained completed results do not focus an unrelated static provider failure', () => {
 	const state = fixture();
 	const notice = { textContent: 'Plugin was successfully updated.' };

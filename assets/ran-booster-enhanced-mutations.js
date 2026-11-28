@@ -925,6 +925,22 @@
 				});
 		}
 
+		// The shown error keeps a coded failure's closed key, so the feedback host points at it (#755 R4).
+		function pointToFailure(region, notice) {
+			if (!region) {
+				return;
+			}
+			const key = notice?.getAttribute?.('data-feedback-key') || '';
+			// The region is reused: an earlier failure's mark must not hide this one.
+			region.removeAttribute('data-ran-booster-feedback-taken');
+			if (region.hidden || !/^[a-z0-9_]{1,64}$/.test(key)) {
+				region.removeAttribute('data-feedback-key');
+				return;
+			}
+			region.setAttribute('data-feedback-key', key);
+			window.ranBoosterFeedback?.consume?.();
+		}
+
 		function renderedFailureMessage(notice) {
 			if (!notice) {
 				return '';
@@ -1183,6 +1199,7 @@
 								'ran-booster'
 							)
 					);
+					pointToFailure(errorRegion(save.form), notice);
 					// A lock refusal names its Booster owner beside the error; any other failure clears it.
 					clearLockOwner();
 					const owner =

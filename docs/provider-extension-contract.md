@@ -183,6 +183,44 @@ a configuration notice, never operation authority. This placement is
 not a capability enumerator, generic form schema, callback registry or provider
 HTML seam.
 
+#### Stateless webhook lifecycle (`repository-webhook-management/4`)
+
+`RepositoryWebhookLifecycle` is the successor contract. Core does not call it
+yet: it replaces the two interfaces above when Core switches over (#1254), and
+until then a provider may implement both. It has four actions, each taking the
+stable repository ID, the repository, Core's callback URL and one saved
+credential ID:
+
+- `upsert` creates the hook when none matches, or updates the single matching
+  hook to Core's settings and signing secret. It is the only action that
+  receives the secret, and it succeeds only after a readback confirms the
+  settings, with delivery `configured_pending_delivery`.
+- `check` is Validate's read-only readback. One matching hook succeeds with its
+  configuration compared to Core's settings; no matching hook succeeds with
+  delivery `absent`.
+- `ping` asks the provider to ping the single matching hook. Success means the
+  request was accepted, not that a delivery arrived. A provider with no remote
+  ping endpoint fails with its own code and remediation.
+- `delete` removes the single matching hook. Success requires delivery `absent`,
+  proven by a readable hook list without a match, so a hook that was already
+  gone is a success.
+
+There is no hook ID in the contract. A hook matches only when its configured
+delivery URL is byte-for-byte identical to the callback URL Core supplies;
+providers must not normalize case, trailing slashes, default ports, query order
+or encoding. A plain-permalink `?rest_route=` route or an explicit non-default
+port therefore matches only in exactly the form Core sends. Before acting, the
+provider reads the repository's complete hook list. An unreadable, invalid or
+incomplete list, or more than one matching hook, fails closed with no remote
+change. A hook ID in a result is informational; Core never stores it or passes
+it back.
+
+Results reuse `RepositoryWebhookOperationResult` with its existing bounds. No
+action reports `verified`: only an authenticated inbound delivery verifies the
+signing secret. There are no read-only assessment methods; a credential that
+lacks webhook permission fails the action itself with the provider's bounded
+remediation.
+
 ### Failure text screening
 
 Core screens provider-authored text with one shared screener,

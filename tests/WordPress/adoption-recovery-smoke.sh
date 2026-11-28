@@ -45,7 +45,7 @@ for winner in recovery admission; do
 		done
 		exit 1
 	}
-	# Bootstrap the peer before the owner acquires the selection row. Its actual
+	# Bootstrap the peer before the owner acquires the management row. Its actual
 	# transaction still starts only after the owner reaches the existing lock barrier.
 	"$php_bin" "$wp_cli" eval-file "$race" "$loser-peer" "$run_id" "$temp_dir" --path="$wordpress" >"$temp_dir/peer-log" 2>&1 &
 	peer_pid=$!

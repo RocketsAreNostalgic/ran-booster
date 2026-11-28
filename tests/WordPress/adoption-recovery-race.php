@@ -76,7 +76,7 @@ $ran_booster_wait_for_peer_contention = static function ( string $dir, WP_Filesy
 				throw new RuntimeException( 'Race peer exited before lock contention.' );
 			}
 			$waiting_result = $control->query(
-				'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = ' . $peer_id . " AND COMMAND = 'Query' AND INFO LIKE '" . $escaped_like . "'"
+				'SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID = ' . $peer_id . " AND COMMAND = 'Query' AND INFO LIKE '" . $escaped_like . "' AND INFO LIKE '%FOR UPDATE%'"
 			);
 			// phpcs:ignore WordPress.DB.RestrictedClasses.mysql__mysqli -- Read single-scalar PROCESSLIST contention count from mysqli_result.
 			if ( ! $waiting_result instanceof \mysqli_result ) {
@@ -91,13 +91,13 @@ $ran_booster_wait_for_peer_contention = static function ( string $dir, WP_Filesy
 			usleep( 10000 );
 		}
 		if ( ! $contending || is_file( $dir . '/peer-result' ) ) {
-			throw new RuntimeException( 'Race peer did not block on selection lock.' );
+			throw new RuntimeException( 'Race peer did not block on the management-row lock.' );
 		}
 	} finally {
 		$control->close();
 	}
 };
-// Complete real bootstrap before the owner can hold selection authority. Otherwise
+// Complete real bootstrap before the owner can hold the management row. Otherwise
 // the peer blocks before this fixture can observe its intended transaction boundary.
 if ( str_ends_with( $ran_booster_race_action, '-peer' ) ) {
 	if ( ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_dir . '/bootstrapped', 'ready', 0600 ) ) {
@@ -179,7 +179,7 @@ $ran_booster_race_filter = static function ( string $query ) use ( &$ran_booster
 				}
 				usleep( 20000 );
 			}
-			$ran_booster_wait_for_peer_contention( $ran_booster_race_dir, $ran_booster_race_filesystem, \RAN\Storage\GitHubSelectionStore::OPTION );
+			$ran_booster_wait_for_peer_contention( $ran_booster_race_dir, $ran_booster_race_filesystem, ran_booster_table_name() );
 		}
 	}
 	return $query;

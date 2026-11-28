@@ -85,13 +85,17 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 	public function test_redirect_hosts_default_to_none_and_keep_an_exact_provider_list(): void {
 		$none   = new AuthenticatedPreparedArchive( 'https://archives.example.test/none.zip', self::REF );
 		$listed = new AuthenticatedPreparedArchive( 'https://archives.example.test/listed.zip', self::REF, redirect_hosts: array( 'codeload.example.test', 'cdn-1.archives.example' ) );
+		$eight  = array_map( static fn ( int $index ): string => 'cdn' . $index . '.example.test', range( 1, 8 ) );
+		$full   = new AuthenticatedPreparedArchive( 'https://archives.example.test/full.zip', self::REF, redirect_hosts: $eight );
 		try {
 			self::assertSame( array(), $none->redirect_hosts() );
 			self::assertSame( array( 'codeload.example.test', 'cdn-1.archives.example' ), $listed->redirect_hosts() );
+			self::assertSame( $eight, $full->redirect_hosts() );
 			$this->assert_no_hooks();
 		} finally {
 			$none->cleanup();
 			$listed->cleanup();
+			$full->cleanup();
 		}
 	}
 
@@ -112,6 +116,10 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		yield 'URL' => array( array( 'https://codeload.example.test/' ) );
 		yield 'label edge hyphen' => array( array( '-codeload.example.test' ) );
 		yield 'overlong label' => array( array( str_repeat( 'a', 64 ) . '.example.test' ) );
+		yield 'label trailing hyphen' => array( array( 'codeload-.example.test' ) );
+		yield 'bare IPv6 literal' => array( array( '::1' ) );
+		yield 'numeric top-level label' => array( array( 'example.123' ) );
+		yield 'overlong host of valid labels' => array( array( str_repeat( 'a', 63 ) . '.' . str_repeat( 'b', 63 ) . '.' . str_repeat( 'c', 63 ) . '.' . str_repeat( 'd', 62 ) ) );
 	}
 
 	/** @param array<mixed> $hosts */
@@ -119,7 +127,7 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 	public function test_invalid_redirect_hosts_refuse_with_a_fixed_code_before_reserving_anything( array $hosts ): void {
 		$url = 'https://archives.example.test/refused.zip';
 		try {
-			new AuthenticatedPreparedArchive( $url, self::REF, $this->authorizer( 'Bearer private-canary' ), redirect_hosts: $hosts );
+			new AuthenticatedPreparedArchive( $url, self::REF, $this->authorizer( 'Bearer private-canary' ), operation_guard: static fn (): bool => true, redirect_hosts: $hosts );
 			self::fail( 'Invalid redirect hosts must be refused.' );
 		} catch ( InvalidArgumentException $failure ) {
 			self::assertSame( 'archive_redirect_hosts_invalid', $failure->getMessage() );

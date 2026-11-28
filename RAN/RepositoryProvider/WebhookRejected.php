@@ -11,7 +11,6 @@ final class WebhookRejected extends RuntimeException {
 	/** Core-owned observations; separate from the frozen ProviderFailure vocabulary. */
 	public const REASONS = array(
 		'provider_not_found',
-		'selection_unavailable',
 		'event_fanout_exceeded',
 		'delivery_conflict',
 		'database_unsupported',

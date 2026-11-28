@@ -516,3 +516,28 @@ record, and that the Branch case from 2026-11-21 uses the same record.
   token, so nothing ties whoever holds the lock now to a stopped attempt.
 - Persistent-state cost: one option row per site, not autoloaded, removed on
   uninstall.
+
+## 2026-11-28 GitHub provider selection retired (#1253)
+
+### PU-040: no GitHub selection record holds native-mutation state
+
+#1342 and #1253 retire the GitHub provider selection. A plugin now
+supersedes the bundled GitHub module for the request through
+`ProviderRegistry::supersede_github()`, with no stored choice, approval or
+generation (see `docs/provider-registration-and-coexistence.md`).
+
+This supersedes the 2026-10-15 bounded provider-selection mutation authority,
+and the parts of PU-038 and PU-039 that keep a hold in the GitHub selection
+record. There is no selection marker, in-place hold, hold release or selection
+transition to guard, and a queued GitHub attempt no longer asks the selection
+whether it may run. Their rationale stays above as history. PU-039's lock-owner
+record and its Release are unchanged; the GitHub adoption flow it names no
+longer exists.
+
+**Ruled out:** keeping the hold or its recovery as separate per-site state, and
+any compatibility path for the retired selection row, which Booster leaves
+unread (pre-release).
+
+**Reconsider if:** Booster again stores which implementation supplies GitHub
+across requests, or an uncertain native install needs a hold that outlives the
+request that started it.

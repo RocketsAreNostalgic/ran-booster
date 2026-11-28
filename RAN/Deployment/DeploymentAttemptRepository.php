@@ -12,7 +12,6 @@ use RAN\AdoptionIdentity;
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
 use RAN\RepositoryProvider\ProviderCode;
-use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Storage\Database;
 use RAN\Storage\SqlReadConnection;
@@ -54,8 +53,7 @@ final class DeploymentAttemptRepository {
 		?callable $random_bytes = null,
 		?Database $database_lifecycle = null,
 		private mixed $configured_max_attempt_rows = null,
-		private ?ActivityStore $activity = null,
-		private ?GitHubProviderSelection $selection = null
+		private ?ActivityStore $activity = null
 	) {
 		if ( null === $this->database ) {
 			global $wpdb;
@@ -65,23 +63,6 @@ final class DeploymentAttemptRepository {
 		$this->clock              = $clock ?? static fn (): DateTimeImmutable => new DateTimeImmutable( 'now', wp_timezone() );
 		$this->random_bytes       = $random_bytes ?? random_bytes( ... );
 		$this->database_lifecycle = $database_lifecycle ?? new Database( $this->database );
-	}
-	/**
-	 * Caller already owns the same selection row transaction, before attempt locks.
-	 *
-	 * @param (callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null))|null $execute
-	 */
-	public function assert_selection_transition_idle( GitHubProviderSelection $selection, ?callable $execute = null ): void {
-		if ( null === $this->database || ! $selection->uses_connection( $this->database ) ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		$query = "SELECT id FROM %i WHERE provider = 'gh' AND (state = 'running' OR (state = 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL))) LIMIT 1 FOR UPDATE";
-		$rows  = null !== $execute
-			? $this->read_rows_with_executor( $execute, $query, array( $this->table_name ) )
-			: $this->read_rows( $this->prepare( $query, $this->table_name ) );
-		if ( array() !== $rows ) {
-			throw new \RuntimeException( 'GitHub deployment recovery or completion is required before switching.' );
-		}
 	}
 
 	public function admit_and_claim_manual(
@@ -373,13 +354,6 @@ final class DeploymentAttemptRepository {
 		return null;
 	}
 
-	/** Until #1253 retires GitHub selection, a GitHub attempt still needs an approved selected implementation. */
-	public function provider_refusal( DeploymentAttempt $attempt ): ?string {
-		if ( 'gh' !== $attempt->safe_data()['provider'] || null === $this->selection || $this->selection->operation_allowed() ) {
-			return null;
-		}
-		return DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE;
-	}
 	public function record_resolved_ref( int $attempt_id, string $resolved_ref ): DeploymentAttempt {
 		RuntimeSupport::assert_managed_operations_allowed();
 		$this->assert_safe_text( $resolved_ref, 191 );

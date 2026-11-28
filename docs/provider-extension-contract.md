@@ -396,17 +396,16 @@ Normalizers may carry `payload_invalid`, `ignored_type`, `ignored_ref`,
 `probe_verified` describes successful probe verification. These Core webhook
 codes are separate from the frozen `ProviderFailure` vocabulary.
 
-Only the processor's final response boundary emits the diagnostic, after current
-selection checks. Revocation suppresses any pending verification/normalization
-cause. HTTP status/body, signing, scope and admission authority are unchanged,
-except that `secret_store_unavailable` answers 503 `Webhook processing is
-temporarily unavailable.` so the host retries.
-Core also observes `provider_not_found`, `selection_unavailable`,
-`event_fanout_exceeded`, `delivery_conflict`, `database_unsupported`,
-`capacity_exhausted`, `storage_failure`, `configured_ref_refused`,
-`invalid_request` and `processing_failure` at that boundary. Storage reasons
-come only from the corresponding typed failure and predicates; other exceptions
-remain generic. A revoked selection takes precedence over a pending cause.
+Only the processor's final response boundary emits the diagnostic. Revocation
+suppresses any pending verification/normalization cause. HTTP status/body,
+signing, scope and admission authority are unchanged, except that
+`secret_store_unavailable` answers 503 `Webhook processing is temporarily
+unavailable.` so the host retries.
+Core also observes `provider_not_found`, `event_fanout_exceeded`,
+`delivery_conflict`, `database_unsupported`, `capacity_exhausted`,
+`storage_failure`, `configured_ref_refused`, `invalid_request` and
+`processing_failure` at that boundary. Storage reasons come only from the
+corresponding typed failure and predicates; other exceptions remain generic.
 Configured refs and other request details never enter the observation.
 
 Observations require an already active temporary capture and are sampled at

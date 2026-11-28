@@ -8,7 +8,6 @@ use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ArchiveRequest;
-use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
@@ -45,7 +44,7 @@ use Throwable;
  *   credentials_url: string, available: bool, browse: bool, credentialed_public_browse: bool,
  *   provider_default_public_lookup_profile: bool, deploy: bool, webhooks: bool,
  *   default_credential_id: string, credential_kind_labels?: array<string, string>,
- *   unavailable_reason?: 'replacement_load_failed',
+ *   unavailable_message?: string,
  *   credential_profiles: list<PackageCredential>,
  *   public_lookup: array{supports_default: bool, configured_id: string, configured_label: string, stale: bool}|null
  * }
@@ -72,7 +71,7 @@ final readonly class ProviderSettingsPresenter {
 		private ?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
 		?WordPressUpdaterLock $branch_check_lock = null,
-		private ?GitHubProviderSelection $github_selection = null
+		private ?GitHubSupplierNotice $github_supplier = null
 	) {
 
 		$this->public_lookup_profiles = $public_lookup_profiles ?? new PublicRepositoryLookupProfileStore();
@@ -96,11 +95,7 @@ final readonly class ProviderSettingsPresenter {
 
 	public function build( ?string $selected_provider = null ): array {
 		$available = $this->admin_providers();
-		$selection = null === $selected_provider || 'gh' === $selected_provider ? $this->github_selection_review() : null;
-		if ( null !== $selection && ! $selection['available'] ) {
-			unset( $available['gh'] );
-		}
-		if ( null !== $selection && ( 'gh' === $selected_provider || ( null === $selected_provider && array() === $available ) ) && ! isset( $available['gh'] ) ) {
+		if ( null !== $this->providers->github_supplier() && ( 'gh' === $selected_provider || ( null === $selected_provider && array() === $available ) ) && ! isset( $available['gh'] ) ) {
 			return array(
 				'selected_provider'            => 'gh',
 				'providers'                    => $this->tabs( $available, 'gh' ),
@@ -120,7 +115,10 @@ final readonly class ProviderSettingsPresenter {
 				'public_lookup_profile'        => null,
 				'secrets_storage_unavailable'  => false,
 				'webhook_assistance_readiness' => null,
-				'github_selection'             => $selection,
+				'github_supplier'              => array(
+					'message'   => $this->github_supplier?->sentence() ?? __( 'GitHub could not load.', 'ran-booster' ),
+					'available' => false,
+				),
 			);
 		}
 		if ( array() === $available ) {
@@ -178,7 +176,10 @@ final readonly class ProviderSettingsPresenter {
 
 		return array(
 
-			'github_selection'             => 'gh' === $selected_provider ? $selection : null,
+			'github_supplier'              => 'gh' === $selected_provider && null !== $this->github_supplier?->sentence() ? array(
+				'message'   => (string) $this->github_supplier->sentence(),
+				'available' => true,
+			) : null,
 			'selected_provider'            => $selected_provider,
 
 			'providers'                    => $this->tabs( $available, $selected_provider ),
@@ -197,18 +198,17 @@ final readonly class ProviderSettingsPresenter {
 	 * Local admission and passive selected implementation.
 	 *
 	 * @phpstan-impure
-	 * @return array<string, array{admitted:bool,selection:?string,source_kind:?string,source_name:?string,replacement_detected:bool}>
+	 * @return array<string, array{admitted:bool,message:?string,source_kind:?string,source_name:?string}>
 	 */
 	public function overview_provider_facts(): array {
 		$metadata = $this->providers->metadata();
 		$facts    = array();
 		foreach ( $metadata as $code => $provider ) {
 			$facts[ $code ] = array(
-				'admitted'             => true,
-				'selection'            => null,
-				'source_kind'          => null,
-				'source_name'          => null,
-				'replacement_detected' => false,
+				'admitted'    => true,
+				'message'     => null,
+				'source_kind' => null,
+				'source_name' => null,
 			);
 		}
 		foreach ( \RAN\Booster::extension_declarations() as $extension ) {
@@ -221,31 +221,26 @@ final readonly class ProviderSettingsPresenter {
 				$facts[ $code ]['source_name'] = $extension['name'];
 			}
 		}
-		$selection = $this->github_selection_diagnostics();
-		if ( null !== $selection ) {
-			$current     = is_array( $selection['current'] ?? null ) ? $selection['current'] : array();
-			$selected    = isset( $metadata['gh'] ) && true === ( $selection['available'] ?? false ) ? ( $current['selected'] ?? null ) : null;
-			$name        = $current['declaration']['display_name'] ?? null;
+		$supplier = $this->providers->github_supplier();
+		if ( null !== $supplier ) {
 			$facts['gh'] = array(
-				'admitted'             => isset( $metadata['gh'] ),
-				'selection'            => is_string( $selection['state'] ?? null ) ? $selection['state'] : null,
-				'source_kind'          => in_array( $selected, array( 'bundled', 'replacement' ), true ) ? $selected : null,
-				'source_name'          => 'replacement' === $selected && is_string( $name ) && '' !== trim( $name ) ? $name : null,
-				// A compatible replacement is active and awaiting approval, not missing, conflicting or incompatible.
-				'replacement_detected' => 'decision_required' === ( $selection['state'] ?? null ) && array() !== ( $selection['candidates'] ?? array() ) && ! in_array( null, $selection['candidates'], true ),
+				'admitted'    => isset( $metadata['gh'] ),
+				'message'     => isset( $metadata['gh'] ) ? null : ( $this->github_supplier?->sentence() ?? __( 'GitHub could not load.', 'ran-booster' ) ),
+				'source_kind' => isset( $metadata['gh'] ) ? ( ProviderRegistry::GITHUB_BUNDLED === $supplier ? 'bundled' : 'replacement' ) : null,
+				'source_name' => isset( $metadata['gh'] ) && ProviderRegistry::GITHUB_BUNDLED !== $supplier ? $this->github_supplier?->supplier_name() : null,
 			);
 		}
 		return $facts;
 	}
 
 	/**
-	 * Where an operator restores a Git provider that is not registered: the GitHub provider page while its
-	 * selection needs a decision or review, otherwise Extensions, which lists the providers to install or activate.
+	 * Where an operator restores a Git provider that is not registered: the GitHub provider page while a
+	 * plugin's claim on GitHub failed or conflicts, otherwise Extensions, which lists the providers to install or activate.
 	 *
 	 * @return array{page: string, tab?: string}
 	 */
 	public function provider_restore_args( string $provider_code ): array {
-		return 'gh' === $provider_code && 'available' !== ( $this->github_selection_diagnostics()['state'] ?? 'available' )
+		return 'gh' === $provider_code && in_array( $this->providers->github_supplier(), array( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT ), true )
 			? array(
 				'page' => 'ran-booster',
 				'tab'  => 'gh',
@@ -253,65 +248,13 @@ final readonly class ProviderSettingsPresenter {
 			: array( 'page' => 'ran-booster-extensions' );
 	}
 
-	/** @return array<string,mixed>|null Passive local claims; never credential material. */
-	public function github_selection_diagnostics(): ?array {
-		return $this->github_selection?->status();
-	}
-
-	/** @return array<string,mixed>|null */
-	private function github_selection_review(): ?array {
-		if ( null === $this->github_selection ) {
-			return null;
-		}
-		$status = $this->github_selection->status();
-		if ( 'available' === $status['state'] && $status['available'] ) {
-			if ( 'bundled' === ( $status['current']['selected'] ?? null ) && array() === $status['candidates'] ) {
-				return null;
-			}
-			return array(
-				'status'         => $status,
-				'available'      => true,
-				'review'         => null,
-				'error'          => '',
-				'package_counts' => null,
-			);
-		}
-		$review = null;
-		$error  = '';
-		if ( ! in_array( $status['state'], array( 'replacement_load_failed', 'recovery_required' ), true ) ) {
-			// Approving again re-runs the same failing factory, so no approval is offered for a replacement that cannot load.
-			// A native mutation marker stored before #1253 blocks any switch, so no approval is offered for it either.
-			try {
-				$review = $this->github_selection->adoption_review( $this->secrets );
-			} catch ( SecretsStorageUnavailable ) {
-				$error = __( 'Set up secure credential storage from Settings before approving a GitHub provider.', 'ran-booster' );
-			} catch ( Throwable ) {
-				$error = __( 'GitHub provider approval is unavailable. Review the provider status and resolve any unfinished operation or recovery before trying again.', 'ran-booster' );
-			}
-		}
-		$package_counts = null;
-		try {
-			if ( null !== $this->plugins && null !== $this->themes ) {
-				$package_counts = array(
-					'branch'        => 0,
-					'release_asset' => 0,
-				);
-				foreach ( array_merge( array_values( $this->plugins->all_deployment_plugins() ), array_values( $this->themes->all_deployment_themes() ) ) as $package ) {
-					if ( 'gh' === $package->get_provider_code() ) {
-						++$package_counts[ $package->get_source()->value ];
-					}
-				}
-			}
-		} catch ( Throwable ) {
-			$package_counts = null;
-		}
-		return array(
-			'package_counts' => $package_counts,
-			'review'         => $review,
-			'error'          => $error,
-			'available'      => $status['available'],
-			'status'         => $status,
-		);
+	/**
+	 * Who supplies GitHub, for Troubleshooting.
+	 *
+	 * @return array{message:?string}
+	 */
+	public function github_supplier_diagnostics(): array {
+		return array( 'message' => $this->github_supplier?->sentence() );
 	}
 
 	/** @return array<string, mixed>|null */
@@ -388,8 +331,8 @@ final readonly class ProviderSettingsPresenter {
 				'credential_profiles'                    => array(),
 				'public_lookup'                          => null,
 			);
-			if ( 'gh' === $stored_provider && $this->providers->github_replacement_load_failed() ) {
-				$unavailable['unavailable_reason'] = 'replacement_load_failed';
+			if ( 'gh' === $stored_provider && null !== $this->github_supplier?->sentence() ) {
+				$unavailable['unavailable_message'] = (string) $this->github_supplier->sentence();
 			}
 			$providers[] = $unavailable;
 		}

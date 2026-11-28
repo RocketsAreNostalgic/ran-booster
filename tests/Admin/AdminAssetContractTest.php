@@ -765,15 +765,12 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header,[^{]*> summary \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);/', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
 	}
 
-	public function test_installation_headings_and_warning_use_the_shared_divider_and_status_tokens(): void {
+	public function test_installation_headings_use_the_shared_divider(): void {
 		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		$activity   = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 		// The ruled heading reuses the Settings group divider colour, thickness and 8px gap.
 		self::assertMatchesRegularExpression( '/\.ran-booster-section__title--ruled \{\s*display: flex;\s*align-items: center;\s*gap: var\(--ran-booster-space-8\);\s*\}/', $primitives );
 		self::assertMatchesRegularExpression( '/\.ran-booster-section__title--ruled::after \{[^}]*flex: 1 1 auto;[^}]*border-block-start: 1px solid var\(--ran-booster-divider\);/', $primitives );
-		// The header warning uses the existing warning status colour and no new colour.
-		self::assertMatchesRegularExpression( '/__entry-warning \{[^}]*color: var\(--ran-booster-status-warning\);/', $activity );
-		self::assertDoesNotMatchRegularExpression( '/__entry-warning \{[^}]*#[0-9a-f]{3,6}/i', $activity );
 		// The static h3 or h4 title resets the WordPress heading margin and size.
 		self::assertMatchesRegularExpression( '/:is\(h3, h4\)\.ran-booster-troubleshooting__entry-title \{[^}]*margin: 0;[^}]*font: inherit;/', $activity );
 		// The spacing above and below the Providers heading is unchanged.
@@ -781,19 +778,11 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'margin-block-start: var(--ran-booster-card-heading-gap);', $activity );
 	}
 
-	public function test_installation_header_padding_is_constant_and_the_divider_sits_below_the_warning_row(): void {
+	public function test_installation_header_padding_is_constant(): void {
 		$activity = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 		// The toggle row and the native summary keep 16px vertical padding closed and open, scoped to Installation sections.
 		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="installation-section"\],\s*\[data-ran-booster-ui-disclosure="settings-card"\]\s*\)\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*> \[role="button"\],[^{]*> summary \{\s*padding-block: 16px;\s*\}/', $activity );
-		// The warning row carries 16px bottom padding and sits outside the toggle.
-		self::assertMatchesRegularExpression( '/__entry-warning \{[^}]*display: block;[^}]*padding: 0 var\(--ran-booster-header-inset-inline\) 16px;/', $activity );
-		// With a warning the open header drops its shadow and the warning row carries the divider; no border adds height.
-		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure-warned\]\s*\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header \{\s*box-shadow: none;\s*\}/', $activity );
-		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*\.ran-booster-troubleshooting__entry-warning \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);\s*\}/', $activity );
-		self::assertDoesNotMatchRegularExpression( '/__entry-warning \{[^}]*border/', $activity );
-		// The closed state has no divider rule: every divider selector is gated on the open state.
-		self::assertSame( 0, preg_match( '/__entry-warning[^{]*\{[^}]*box-shadow/', (string) preg_replace( '/\[data-open\][^{]*\{[^}]*\}/', '', $activity ) ) );
-		// Entries without a warning keep the shared divider on the header or summary.
+		// The open header or summary carries the shared divider.
 		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header,[^{]*> summary \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);/', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
 	}
 
@@ -1164,7 +1153,7 @@ final class AdminAssetContractTest extends TestCase {
 		// The native chevron takes the mounted chevron's column, so nothing moves on mount.
 		self::assertMatchesRegularExpression( '/> :last-child,[^{]*> summary::after \{\s*grid-row: 1;\s*grid-column: 3;/', $narrow );
 		// The native summary outranks the shared fallback summary flex rule.
-		self::assertStringContainsString( "__installation-entry[data-ran-booster-ui-disclosure]:not(\n\t\t\t[data-ran-booster-ui-disclosure-warned]\n\t\t)\n\t\t> details[data-ran-booster-ui-disclosure-fallback]\n\t\t> summary,", $narrow );
+		self::assertStringContainsString( "__installation-entry[data-ran-booster-ui-disclosure]\n\t\t> details[data-ran-booster-ui-disclosure-fallback]\n\t\t> summary,", $narrow );
 		// The strapline spans every column on its own row under the title, badge and chevron.
 		self::assertMatchesRegularExpression( '/__entry-description \{\s*grid-row: 2;\s*grid-column: 1 \/ -1;/', $narrow );
 		// The padding belongs to the header rules (16px Installation, 24px Settings), never to the narrow rule.

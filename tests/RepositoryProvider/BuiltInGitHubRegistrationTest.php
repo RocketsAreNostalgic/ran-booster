@@ -51,6 +51,8 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
 		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 		( new BoosterServiceProvider() )->register( $container, $runtime, ( require dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/bootstrap.php' ), $GLOBALS['wpdb']->basename );
+		// Production seals the registry at plugins_loaded, before any consumer resolves.
+		$container->make( ProviderRegistry::class )->seal();
 
 		foreach ( array(
 			\RAN\Admin\CredentialSelfDestructPurger::class,
@@ -69,30 +71,16 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 			self::assertNotSame( $first, $container->make( $type ), $type );
 		}
 
-		$selection = $container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class );
-		$registry  = $container->make( ProviderRegistry::class );
-		$secrets   = $container->make( SecretsFile::class );
-		foreach ( array( array( $registry, 'github_selection_guard' ), array( $secrets, 'github_credential_access' ), array( $secrets, 'github_webhook_access' ) ) as $binding ) {
-			$guard = ( new \ReflectionProperty( $binding[0], $binding[1] ) )->getValue( $binding[0] );
-			self::assertInstanceOf( \Closure::class, $guard );
-			self::assertSame( $selection, ( new \ReflectionFunction( $guard ) )->getClosureThis() );
-		}
-		// provider_refusal() allows an attempt when no selection is injected, so the wiring is pinned here.
-		foreach ( array( \RAN\Deployment\DeploymentAttemptRepository::class, \RAN\Webhook\WebhookProcessor::class ) as $consumer_type ) {
-			$consumer = $container->make( $consumer_type );
-			self::assertSame( $selection, ( new \ReflectionProperty( $consumer, 'selection' ) )->getValue( $consumer ) );
-		}
+		$registry = $container->make( ProviderRegistry::class );
+		$secrets  = $container->make( SecretsFile::class );
 		$container->bind( \RAN\Dashboard::class, $this->createStub( \RAN\Dashboard::class ) );
-		foreach ( array( \RAN\Admin\ProviderSettingsPresenter::class, \RAN\Admin\ProviderProfileAdminController::class ) as $type ) {
-			$consumer = $container->make( $type );
-			self::assertSame( $selection, ( new \ReflectionProperty( $consumer, 'github_selection' ) )->getValue( $consumer ) );
+		$presenter = $container->make( \RAN\Admin\ProviderSettingsPresenter::class );
+		$notice    = ( new \ReflectionProperty( $presenter, 'github_supplier' ) )->getValue( $presenter );
+		self::assertInstanceOf( \RAN\Admin\GitHubSupplierNotice::class, $notice );
+		self::assertSame( $registry, ( new \ReflectionProperty( $notice, 'providers' ) )->getValue( $notice ) );
+		foreach ( array( $presenter, $container->make( \RAN\Admin\ProviderProfileAdminController::class ) ) as $consumer ) {
 			self::assertSame( $secrets, ( new \ReflectionProperty( $consumer, 'secrets' ) )->getValue( $consumer ) );
 		}
-		$profiles          = $container->make( \RAN\Admin\ProviderProfileAdminController::class );
-		$adoption_attempts = ( new \ReflectionProperty( $profiles, 'deployment_attempts' ) )->getValue( $profiles );
-		self::assertInstanceOf( \RAN\Deployment\DeploymentAttemptRepository::class, $adoption_attempts );
-		self::assertSame( $selection, ( new \ReflectionProperty( $adoption_attempts, 'selection' ) )->getValue( $adoption_attempts ) );
-		self::assertSame( $container->make( \RAN\WordPress\WordPressUpdaterLock::class ), ( new \ReflectionProperty( $profiles, 'updater_lock' ) )->getValue( $profiles ) );
 		self::assertTrue( $container->make( \RAN\Admin\AdminTabRegistry::class )->resolve( 'gh' )->is_provider() );
 		$verifier = $container->make( \RAN\Portability\BlueprintRepositoryVerifier::class );
 		self::assertSame( $secrets, ( new \ReflectionProperty( $verifier, 'secrets' ) )->getValue( $verifier ) );
@@ -145,7 +133,6 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
 		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 		( new BoosterServiceProvider() )->register( $container, $runtime, ( require dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/bootstrap.php' ), $GLOBALS['wpdb']->basename );
-		$container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
 		$container->make( ProviderRegistry::class )->seal();
 		$reporter = $container->make( ProviderRegistry::class )->activity_reporter( 'gh' );
 		$capture  = ( new \ReflectionProperty( \RAN\Activity\BoundActivityReporter::class, 'capture' ) )->getValue( $reporter );
@@ -192,8 +179,8 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 
 		( new BoosterServiceProvider(
-			static function ( ProviderSecretPolicyCatalog $policies, callable $guard, callable $webhook_guard ) use ( &$secrets ): RegistrationTrackingSecretsFile {
-				$secrets = new RegistrationTrackingSecretsFile( $policies, $guard, $webhook_guard );
+			static function ( ProviderSecretPolicyCatalog $policies ) use ( &$secrets ): RegistrationTrackingSecretsFile {
+				$secrets = new RegistrationTrackingSecretsFile( $policies );
 
 				return $secrets;
 			}
@@ -203,9 +190,8 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		self::assertSame( array(), $container->make( ProviderRegistry::class )->all() );
 		self::assertSame( 0, $secrets->credential_stores_issued );
 		self::assertSame( 0, $secrets->credential_store->reads );
-		self::assertNull( $container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->expectation() );
-		$container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
 		$container->make( ProviderRegistry::class )->seal();
+		self::assertSame( ProviderRegistry::GITHUB_BUNDLED, $container->make( ProviderRegistry::class )->github_supplier() );
 		$provider = $container->make( ProviderRegistry::class )->get( 'gh' );
 		$metadata = $provider->get_metadata();
 
@@ -255,7 +241,6 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 
 		( new BoosterServiceProvider() )->register( $container, $runtime, ( require dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/bootstrap.php' ), $GLOBALS['wpdb']->basename );
 
-		$container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
 		$container->make( ProviderRegistry::class )->seal();
 		$provider                = $container->make( ProviderRegistry::class )->get( 'gh' );
 		$artifact_limit_supplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
@@ -276,7 +261,6 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 
 		( new BoosterServiceProvider() )->register( $container, $runtime, ( require dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/bootstrap.php' ), $GLOBALS['wpdb']->basename );
 
-		$container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
 		$container->make( ProviderRegistry::class )->seal();
 		$provider                = $container->make( ProviderRegistry::class )->get( 'gh' );
 		$artifact_limit_supplier = ( new \ReflectionProperty( GitHubProvider::class, 'maximum_artifact_bytes' ) )->getValue( $provider );
@@ -294,8 +278,8 @@ final class RegistrationTrackingSecretsFile extends SecretsFile {
 	public int $credential_stores_issued = 0;
 	public RegistrationTrackingCredentialStore $credential_store;
 
-	public function __construct( ProviderSecretPolicyCatalog $policies, callable $guard, callable $webhook_guard ) {
-		parent::__construct( '/unused/github-registration-secrets.php', array(), $policies, github_credential_access: $guard, github_webhook_access: $webhook_guard );
+	public function __construct( ProviderSecretPolicyCatalog $policies ) {
+		parent::__construct( '/unused/github-registration-secrets.php', array(), $policies );
 		$this->credential_store = new RegistrationTrackingCredentialStore();
 	}
 

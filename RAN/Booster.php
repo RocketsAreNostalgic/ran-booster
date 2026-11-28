@@ -154,6 +154,12 @@ class Booster {
 		};
 		add_action( 'admin_notices', $database_notice );
 		add_action( 'network_admin_notices', $database_notice );
+		$supplier_renderer = $this->service_callback( \RAN\Admin\GitHubSupplierNotice::class, 'render' );
+		$supplier_notice   = static function () use ( $supplier_renderer ): void {
+			\RAN\Admin\BoosterNoticeScope::render( $supplier_renderer );
+		};
+		// Per-site option, so not on network screens.
+		add_action( 'admin_notices', $supplier_notice );
 		add_action( 'load-plugins.php', $this->service_callback( \RAN\Admin\ManagedPluginFailureRows::class, 'register' ) );
 	}
 

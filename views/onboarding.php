@@ -14,43 +14,23 @@ if ( ! defined( 'WPINC' ) ) {
 $overview_view = ( $onboarding['view'] ?? 'onboarding' ) === 'dashboard' ? 'dashboard' : 'onboarding';
 $overview_url  = $onboarding['overview_url'] ?? admin_url( 'admin.php?page=ran-booster&tab=overview' );
 
-$provider_summaries        = $onboarding['provider_summaries'] ?? array_map(
+$provider_summaries = $onboarding['provider_summaries'] ?? array_map(
 	static fn( array $link ): array => array(
-		'code'      => '',
-		'label'     => $link['label'],
-		'url'       => $link['url'],
-		'admitted'  => null,
-		'selection' => null,
+		'code'     => '',
+		'label'    => $link['label'],
+		'url'      => $link['url'],
+		'admitted' => null,
+		'message'  => null,
 	),
 	$onboarding['provider_links']
 );
-$provider_selection_labels = array(
-	'available'               => __( 'Selection available', 'ran-booster' ),
-	'conflict'                => __( 'Provider selection conflict', 'ran-booster' ),
-	'incompatible'            => __( 'Provider selection is incompatible', 'ran-booster' ),
-	'missing'                 => __( 'Selected provider is missing', 'ran-booster' ),
-	'recovery_required'       => __( 'Provider selection needs recovery', 'ran-booster' ),
-	'decision_required'       => __( 'Provider selection needs a decision', 'ran-booster' ),
-	'replacement_load_failed' => __( 'Selected provider could not load', 'ran-booster' ),
-	'storage_unavailable'     => __( 'Provider selection storage is unavailable', 'ran-booster' ),
-);
-// A detected replacement awaiting approval names the remaining step; every other
-// selection problem keeps its own wording, and only an unexplained refusal is
-// reported as not admitted.
-$provider_attention_message = static function ( array $provider ) use ( $provider_selection_labels ): string {
-	$selection = $provider['selection'];
-	if ( 'decision_required' === $selection && true === ( $provider['replacement_detected'] ?? false ) ) {
-		return __( 'A custom GitHub provider was detected. Review and approve it to enable GitHub operations.', 'ran-booster' );
-	}
-	if ( is_string( $selection ) && 'available' !== $selection && isset( $provider_selection_labels[ $selection ] ) ) {
-		return $provider_selection_labels[ $selection ];
-	}
-	return __( 'Provider is not admitted.', 'ran-booster' );
+// A provider that is not admitted names its own reason when Core knows it.
+$provider_attention_message = static function ( array $provider ): string {
+	return is_string( $provider['message'] ?? null ) && '' !== $provider['message'] ? $provider['message'] : __( 'Provider is not admitted.', 'ran-booster' );
 };
 $provider_attention         = array_filter(
 	$provider_summaries,
 	static fn( array $provider ): bool => false === $provider['admitted']
-		|| ( 'gh' === $provider['code'] && in_array( $provider['selection'], array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'replacement_load_failed', 'storage_unavailable' ), true ) )
 );
 
 ?>

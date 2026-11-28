@@ -12,6 +12,7 @@ use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use RAN\Tests\Admin\Support\GitHubSupplierState;
 use RAN\Tests\Activity\ActivityConnection;
 use RAN\Troubleshooting\InstallationFacts;
 use RAN\Troubleshooting\SupportReport;
@@ -189,7 +190,7 @@ final class SupportReportTest extends TestCase {
 		$text                                    = $captured['text'];
 		self::assertSame( 'ran-booster-support-19700101-001820.json', $captured['filename'] );
 		$data = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( 1, $data['schema_version'] );
+		self::assertSame( 2, $data['schema_version'] );
 		self::assertSame( '1970-01-01T00:18:20+00:00', $data['capture_started_at'] );
 		self::assertSame( '1970-01-01T00:18:20+00:00', $data['capture_ended_at'] );
 		foreach ( array( 'environment', 'installation', 'storage', 'managed_packages', 'diagnostics', 'activity', 'logging' ) as $section ) {
@@ -349,7 +350,7 @@ final class SupportReportTest extends TestCase {
 		}
 	}
 
-	public function test_report_distinguishes_attention_review_and_missing_selected_provider(): void {
+	public function test_report_distinguishes_attention_and_review_activity_stages(): void {
 		$this->environment();
 		$connection                              = new ActivityConnection();
 		$connection->read_results                = array(
@@ -372,26 +373,10 @@ final class SupportReportTest extends TestCase {
 			),
 		);
 		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
-		$facts                                   = new InstallationFacts(
-			new ProviderRegistry(),
-			github_observation: static fn(): array => array(
-				'state'                  => 'replacement_load_failed',
-				'admitted'               => false,
-				'selected'               => 'external',
-				'version'                => '2.3.4',
-				'provider_api'           => 15,
-				'compatibility_revision' => 'private-revision-canary',
-				'identity'               => null,
-			)
-		);
+		$facts                                   = new InstallationFacts( new ProviderRegistry() );
 		$text                                    = ( new SupportReport( $facts, activity: new ActivityStore( $connection ) ) )->generate( array() )['text'];
 		$data                                    = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
-		$selection                               = $data['sections']['installation']['data']['github_selection'];
-		self::assertSame( 'replacement_load_failed', $selection['state'] );
-		self::assertFalse( $selection['admitted'] );
-		self::assertSame( 'external', $selection['selected'] );
-		self::assertSame( '2.3.4', $selection['version'] );
-		self::assertSame( 15, $selection['provider_api'] );
+		self::assertArrayNotHasKey( 'github_selection', $data['sections']['installation']['data'] );
 		$records = $data['sections']['activity']['data']['records'];
 		self::assertSame( array( 'deployment.needs_attention', 'deployment.operator_reviewed', 'Unknown' ), array_column( $records, 'stage' ) );
 		self::assertSame( array( 'incomplete', 'incomplete', 'incomplete' ), array_column( $records, 'status' ) );
@@ -511,6 +496,38 @@ final class SupportReportTest extends TestCase {
 		self::assertSame( 'Admitted', $data['data']['components'][31]['admission'] );
 		self::assertSame( 'Unknown', $data['data']['components'][31]['version'] );
 		self::assertStringNotContainsString( 'Private Addon', $text );
+	}
+
+	public function test_the_github_component_exports_its_supplier_without_naming_the_plugin(): void {
+		$this->environment();
+		$export = static function ( string $supplier, bool $registered ): array {
+			$providers = $registered ? array( new SupportReportProvider( 'gh', 'GitHub' ) ) : array();
+			$registry  = GitHubSupplierState::apply( new ProviderRegistry( $providers ), $supplier, array( 'private-supplier-canary' ) );
+			foreach ( $providers as $provider ) {
+				$provider->registered = true;
+			}
+			$text = ( new SupportReport( new InstallationFacts( $registry ) ) )->generate( array() )['text'];
+			self::assertStringNotContainsString( 'private-supplier-canary', $text );
+			$rows = array_column( json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['components'], null, 'provider' );
+			return $rows['GitHub'] ?? array();
+		};
+		self::assertSame( 'Included with Booster', $export( ProviderRegistry::GITHUB_BUNDLED, true )['supplier'] ?? null );
+		$add_on = $export( 'private-supplier-canary', true );
+		self::assertSame( 'Add-on', $add_on['supplier'] ?? null );
+		self::assertSame( 'Admitted', $add_on['admission'] ?? null );
+		self::assertArrayHasKey( 'implementation', $add_on );
+		self::assertSame(
+			array(
+				'name'         => 'GitHub',
+				'admission'    => 'Not admitted',
+				'selection'    => 'Not applicable',
+				'availability' => 'Unavailable',
+				'supplier'     => 'Add-on failed to load',
+				'provider'     => 'GitHub',
+			),
+			$export( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, false )
+		);
+		self::assertSame( 'More than one add-on', $export( ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT, false )['supplier'] ?? null );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
@@ -655,7 +672,7 @@ final class SupportReportTest extends TestCase {
 		self::assertIsString( $text );
 		self::assertLessThanOrEqual( SupportReport::MAX_BYTES, strlen( $text ) );
 		$data = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( 1, $data['schema_version'] );
+		self::assertSame( 2, $data['schema_version'] );
 		self::assertSame( 'Partial', $data['coverage'] );
 		self::assertSame( 'Truncated', $data['sections']['environment']['state'] );
 		self::assertSame( 'output_byte_limit_exhausted', $data['sections']['environment']['data']['reason'] );

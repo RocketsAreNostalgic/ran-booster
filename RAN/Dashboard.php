@@ -349,8 +349,7 @@ class Dashboard {
 				if ( 'GET' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) {
 					$this->storage_status( false );
 				}
-				$data['troubleshooting']            = $this->troubleshooting->installation_payload( $this->provider_settings->github_selection_diagnostics(), $this->storage_installation_projection() );
-				$data['selection_provider_tab_url'] = $this->provider_tab_url( 'gh' );
+				$data['troubleshooting'] = $this->troubleshooting->installation_payload( $this->provider_settings->github_supplier_diagnostics(), $this->storage_installation_projection() );
 			} elseif ( 'support-report' === $panel ) {
 				$data['troubleshooting'] = array(
 					'report'           => $this->support_report_payload['text'] ?? '',
@@ -516,14 +515,9 @@ class Dashboard {
 		return (string) ob_get_clean();
 	}
 
-	/** @return array{troubleshooting:array<string,mixed>,github_selection_diagnostics:array<string,mixed>|null,selection_provider_tab_url:string} */
+	/** @return array{troubleshooting:array<string,mixed>} */
 	private function troubleshooting_view_data(): array {
-		$selection = $this->provider_settings->github_selection_diagnostics();
-		return array(
-			'troubleshooting'              => $this->troubleshooting->with_installation_context( $this->troubleshooting_payload ?? $this->troubleshooting->form_payload(), $selection ),
-			'github_selection_diagnostics' => $selection,
-			'selection_provider_tab_url'   => $this->provider_tab_url( 'gh' ),
-		);
+		return array( 'troubleshooting' => $this->troubleshooting->with_installation_context( $this->troubleshooting_payload ?? $this->troubleshooting->form_payload(), $this->provider_settings->github_supplier_diagnostics() ) );
 	}
 
 	/** Whether the most recent diagnostics result completed without a warning or failure. */
@@ -657,7 +651,7 @@ class Dashboard {
 		$visibility = array(
 			'hidden'   => false,
 			'eligible' => false,
-			'reason'   => 'github_selection_unknown',
+			'reason'   => 'provider_registry_unknown',
 		);
 		try {
 			$visibility = $this->github_visibility?->projection() ?? $visibility;

@@ -162,8 +162,6 @@ namespace RAN\Tests\Storage {
 		public string $prefix                            = 'wp_';
 		public string $base_prefix                       = 'wp_';
 		public string $options                           = 'wp_options';
-		public ?string $selection_value                  = null;
-		public string $selection_autoload                = 'off';
 		public ?string $general_settings_value           = null;
 		public bool $fail_general_settings_write         = false;
 		public string $last_error                        = '';
@@ -353,14 +351,6 @@ namespace RAN\Tests\Storage {
 					return 0;
 				}
 				$this->general_settings_value = stripslashes( substr( $query, $new_start, $new_end - $new_start ) );
-				return 1;
-			}
-			if ( preg_match( '/^INSERT IGNORE INTO `[^`]+` .* VALUES \(\'ran_booster_github_selection\', \'(.*)\', \'(no|off)\'\)$/', $query, $selection ) ) {
-				if ( null !== $this->selection_value ) {
-					return 0;
-				}
-				$this->selection_value    = stripslashes( $selection[1] );
-				$this->selection_autoload = $selection[2];
 				return 1;
 			}
 			if ( 1 === preg_match( '/^DROP TABLE IF EXISTS `([^`]+)`$/', $query, $matches ) ) {
@@ -726,17 +716,6 @@ namespace RAN\Tests\Storage {
 				return $this->forced_results;
 			}
 
-			if ( 1 === preg_match( '/^SELECT option_name, option_value, autoload FROM `([^`]+)`/', $query, $options_match )
-				&& ( $options_match[1] === $this->options || ( 0 !== $this->lower_case_table_names && 0 === strcasecmp( $options_match[1], $this->options ) ) )
-			) {
-				return null === $this->selection_value ? array() : array(
-					(object) array(
-						'option_name'  => 'ran_booster_github_selection',
-						'option_value' => $this->selection_value,
-						'autoload'     => $this->selection_autoload,
-					),
-				);
-			}
 			if ( 1 === preg_match( '/^SHOW COLUMNS FROM (?:`[^`]+`\.)?`([^`]+)`$/', $query, $matches ) ) {
 				if ( $matches[1] === $this->options || ( 0 !== $this->lower_case_table_names && 0 === strcasecmp( $matches[1], $this->options ) ) ) {
 					return array_map(

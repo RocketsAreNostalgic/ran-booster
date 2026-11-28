@@ -565,16 +565,6 @@ test('no page re-compensates the shared header inset', () => {
 		packageSettings,
 		/--ran-booster-settings-card-inset: var\(--ran-booster-header-inset-inline\)/
 	);
-	const warning = parse(troubleshooting).find(
-		(r) =>
-			r.selector.endsWith(
-				'.ran-booster-troubleshooting__entry-warning'
-			) && r.body.includes('padding:')
-	);
-	assert.match(
-		warning.body,
-		/padding: 0 var\(--ran-booster-header-inset-inline\) 16px/
-	);
 });
 
 test('Installation and Settings headers keep 16px block padding and take only the shared inset', () => {

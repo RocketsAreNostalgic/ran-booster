@@ -171,28 +171,19 @@ final class SupportReport {
 
 	/** @return array{string,array<string,mixed>} */
 	private function installation(): array {
-		$core      = $this->facts->core();
-		$selection = $this->facts->github_selection();
-		$data      = array(
-			'version'          => InstallationFacts::version( $core['installed_version'] ?? null ),
-			'configuration'    => $this->facts->core_configuration(),
-			'github_selection' => array(
-				'state'                  => self::choice( $selection['state'], array( 'storage_unavailable', 'recovery_required', 'conflict', 'incompatible', 'missing', 'admitted', 'decision_required', 'replacement_load_failed' ) ),
-				'admitted'               => $selection['admitted'],
-				'selected'               => self::choice( $selection['selected'], array( 'bundled', 'external', 'unknown' ) ),
-				'version'                => InstallationFacts::version( $selection['version'] ),
-				'provider_api'           => $selection['provider_api'] > 0 && $selection['provider_api'] < 1000 ? $selection['provider_api'] : null,
-				'compatibility_revision' => InstallationFacts::version( $selection['compatibility_revision'] ),
-			),
-			'update'           => self::core_update_lines( $core ),
-			'components'       => array(),
+		$core = $this->facts->core();
+		$data = array(
+			'version'       => InstallationFacts::version( $core['installed_version'] ?? null ),
+			'configuration' => $this->facts->core_configuration(),
+			'update'        => self::core_update_lines( $core ),
+			'components'    => array(),
 		);
 		foreach ( $this->facts->components() as $component ) {
 			$name = $component['Name'] ?? '';
 			$row  = array( 'name' => in_array( $name, array( 'GitHub', 'Bitbucket Cloud', 'WP Pusher Migrator' ), true ) ? $name : $this->identity( 'Component', $name ) );
 			foreach ( array( 'Installed', 'Active', 'Admission' ) as $key ) {
 				if ( isset( $component[ $key ] ) ) {
-					$row[ strtolower( $key ) ] = self::choice( $component[ $key ], array( 'Yes', 'No', 'Admitted' ) );
+					$row[ strtolower( $key ) ] = self::choice( $component[ $key ], array( 'Yes', 'No', 'Admitted', 'Not admitted' ) );
 				}
 			}
 			if ( isset( $component['Version'] ) ) {
@@ -202,11 +193,16 @@ final class SupportReport {
 				$row['selection'] = self::choice( $component['Selection'], array( 'Selected locally', 'Not applicable' ) );
 			}
 			if ( isset( $component['Availability'] ) ) {
-				$row['availability'] = self::choice( $component['Availability'], array( 'Available locally; remote access not checked' ) );
+				$row['availability'] = self::choice( $component['Availability'], array( 'Available locally; remote access not checked', 'Unavailable' ) );
+			}
+			if ( isset( $component['Supplier'] ) ) {
+				$row['supplier'] = self::choice( $component['Supplier'], array( 'Included with Booster', 'Add-on', 'Add-on failed to load', 'More than one add-on' ) );
 			}
 			if ( isset( $component['Provider'] ) ) {
-				$row['provider']       = $this->provider( $component['Provider'] );
-				$row['implementation'] = $this->identity( 'Implementation', $component['Implementation'] ?? '' );
+				$row['provider'] = $this->provider( $component['Provider'] );
+			}
+			if ( isset( $component['Implementation'] ) ) {
+				$row['implementation'] = $this->identity( 'Implementation', $component['Implementation'] );
 				$row['archive_api']    = self::choice( $component['Archive API'] ?? null, array( '1', '2' ) );
 			}
 			$data['components'][] = $row;
@@ -539,7 +535,7 @@ final class SupportReport {
 	/** @param array<string,array{state:string,observed_at:string,data:array<mixed>}> $sections */
 	private static function serialize( array $sections, float $started, float $ended ): string {
 		$report = array(
-			'schema_version'     => 1,
+			'schema_version'     => 2,
 			'capture_started_at' => gmdate( 'c', (int) $started ),
 			'capture_ended_at'   => gmdate( 'c', (int) $ended ),
 			'coverage'           => 'Included',

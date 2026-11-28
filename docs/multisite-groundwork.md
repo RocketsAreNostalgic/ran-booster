@@ -38,7 +38,7 @@ implementation; the right column defines obligations, not a selected SQL schema.
 | Managed package/source policy | `ran_booster_table_name()` selects the base prefix on multisite | One authoritative package/source record for each shared installed target; no competing per-blog policies |
 | Attempts, deduplication and recovery | `Database::attempt_table_name()` uses the current blog prefix; repositories capture the table | Same management owner as the shared target; one unresolved-work and recovery history |
 | Activity | `ActivityStore` captures the current-prefix table; schema readiness reads a blog option | Reporting belongs to the operation's management owner; unavailable/partial history stays explicit |
-| Provider selection and approval | `GitHubSelectionStore` binds the current options table and locks `active_plugins` | Network-management authority with an authoritative activation/selection snapshot, approval identity and defined lock order |
+| GitHub supplier | Resolved per request from the plugins active on the current site; the last supplier notice shown is a nonautoloaded current-site option | The supplier follows the plugins active for the management owner; a network-activated GitHub plugin supplies every site |
 | Credentials and encryption key | `SiteKeyStore` reads blog options; `SecretsFile` selects one configured sidecar | File, key, configuration, credential access, backup/restore and cleanup share one management owner |
 | Webhook installations and endpoint | Blog option/CAS records; default endpoint uses current `rest_url()` | Canonical receiver, signing profile, record, deduplication and queue have the same fixed owner |
 | Worker wakeup | One args-free event in current-blog cron | One explicitly chosen execution/schedule context for the management owner's queue |
@@ -52,7 +52,7 @@ The relevant implementations are [bootstrap package naming](../ran-booster.php),
 [database lifecycle](../RAN/Storage/Database.php),
 [attempt repository](../RAN/Deployment/DeploymentAttemptRepository.php),
 [Activity](../RAN/Activity/ActivityStore.php),
-[selection storage](../RAN/Storage/GitHubSelectionStore.php),
+[GitHub supply](../RAN/RepositoryProvider/ProviderRegistry.php),
 [key storage](../RAN/Secrets/SiteKeyStore.php),
 [secrets custody](../RAN/Secrets/SecretsFile.php),
 [webhook installation storage](../RAN/Admin/WebhookManagement/Installation/WordPressInstallationStore.php),

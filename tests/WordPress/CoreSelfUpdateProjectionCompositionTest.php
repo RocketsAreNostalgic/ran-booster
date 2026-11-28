@@ -184,7 +184,7 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 		);
 
 		return array(
-			$service->installation_payload( null, array( 'state' => 'unknown' ) ),
+			$service->installation_payload( array( 'message' => null ), array( 'state' => 'unknown' ) ),
 			$service->generate_support_report( array( 'state' => 'unknown' ) )['text'],
 		);
 	}

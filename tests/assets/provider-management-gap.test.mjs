@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import test from 'node:test';
 
 /*
- * The provider management block (paused notice and review disclosure) is a
- * stacked item on the provider overview. It takes the documented Card gap
+ * The GitHub provider source block (who supplies GitHub, or why it is
+ * unavailable) is a stacked item on the provider overview. It takes the documented Card gap
  * below it, like the Cards, so the disclosure never touches the Card below.
  */
 
@@ -43,7 +43,7 @@ test('the management block takes the Card gap through the shared stack rule', ()
 test('the management section carries the hook the rule targets', () => {
 	assert.match(
 		view,
-		/<section class="ran-booster-provider__management" aria-label="<\?php esc_attr_e\( 'GitHub provider management'/
+		/<section class="ran-booster-provider__management" aria-label="<\?php esc_attr_e\( 'GitHub provider source'/
 	);
 });
 

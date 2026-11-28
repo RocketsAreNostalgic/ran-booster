@@ -45,9 +45,6 @@ use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
-use RAN\RepositoryProvider\GitHubProviderSelection;
-use RAN\RepositoryProvider\GitHubReplacementDeclaration;
-use RAN\Storage\GitHubSelectionStore;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
@@ -76,7 +73,7 @@ use RAN\WordPress\WordPressUpdaterLock;
 final class BoosterServiceProvider {
 	private readonly ?\Closure $secrets_factory;
 
-	/** @param callable(ProviderSecretPolicyCatalog, callable, callable): SecretsFile|null $secrets_factory */
+	/** @param callable(ProviderSecretPolicyCatalog): SecretsFile|null $secrets_factory */
 	public function __construct( ?callable $secrets_factory = null ) {
 		$this->secrets_factory = null === $secrets_factory ? null : \Closure::fromCallable( $secrets_factory );
 	}
@@ -85,17 +82,12 @@ final class BoosterServiceProvider {
 	public function register( CoreContainer $container, Booster $runtime, object $release_updater, string $self_plugin_identifier ): void {
 		global $wpdb;
 		$container->bind( NoticePreference::class, new NoticePreference() );
-		$bundled          = new GitHubReplacementDeclaration( array_merge( array( 'plugin_basename' => $self_plugin_identifier ), GitHubProvider::compatibility_contract() ) );
-		$database         = new Database( null, $bundled );
-		$selection_store  = new GitHubSelectionStore( $wpdb, $wpdb->options );
-		$github_selection = new GitHubProviderSelection( $selection_store, WP_PLUGIN_DIR, $bundled );
-		$container->bind( GitHubProviderSelection::class, $github_selection );
-		$container->bind( GitHubSelectionStore::class, $selection_store );
+		$database        = new Database();
 		$secrets_runtime = new SecretsRuntimeAvailability();
 		$secret_policies = new ProviderSecretPolicyCatalog();
 		$secrets         = null === $this->secrets_factory
-			? new SecretsFile( provider_policies: $secret_policies, availability: $secrets_runtime, github_credential_access: $github_selection->credential_access_allowed( ... ), github_webhook_access: $github_selection->webhook_access_allowed( ... ) )
-			: ( $this->secrets_factory )( $secret_policies, $github_selection->credential_access_allowed( ... ), $github_selection->webhook_access_allowed( ... ) );
+			? new SecretsFile( provider_policies: $secret_policies, availability: $secrets_runtime )
+			: ( $this->secrets_factory )( $secret_policies );
 		if ( ! $secrets instanceof SecretsFile ) {
 			throw new \LogicException( 'The Booster secrets factory must return a SecretsFile.' );
 		}
@@ -195,8 +187,7 @@ final class BoosterServiceProvider {
 					null,
 					null,
 					$container->make( Database::class ),
-					activity: $container->make( \RAN\Activity\ActivityStore::class ),
-					selection: $container->make( GitHubProviderSelection::class )
+					activity: $container->make( \RAN\Activity\ActivityStore::class )
 				);
 			}
 		);
@@ -223,8 +214,6 @@ final class BoosterServiceProvider {
 				(string) $code,
 				static fn ( \RAN\Activity\ActivityRequest $request ): ?array => self::capture_activity_context( $container, $code, $request )
 			),
-			github_selection_guard: $github_selection->registry_selection( ... ),
-			github_candidates: $github_selection->candidates(),
 			bundled_github_factory: static fn (
 				ProviderCredentialStore $credentials,
 				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
@@ -239,11 +228,10 @@ final class BoosterServiceProvider {
 				$registration_context->complete_native_mutation( ... )
 			)
 		);
-		$github_selection->bind_registry( $providers );
 		$container->bind( ProviderRegistry::class, $providers );
 		$preferences = new \RAN\Settings\GeneralPreferenceStore();
 		$container->bind( \RAN\Settings\GeneralPreferenceStore::class, $preferences );
-		$container->bind( \RAN\Admin\GitHubVisibility::class, new \RAN\Admin\GitHubVisibility( $preferences, $providers, $github_selection, $wpdb ) );
+		$container->bind( \RAN\Admin\GitHubVisibility::class, new \RAN\Admin\GitHubVisibility( $preferences, $providers, $wpdb ) );
 		$container->bind(
 			ReleaseWorkflowControls::class,
 			static fn ( CoreContainer $container ): ReleaseWorkflowControls => new ReleaseWorkflowControls(
@@ -352,7 +340,6 @@ final class BoosterServiceProvider {
 			static fn ( CoreContainer $container ): \RAN\Troubleshooting\InstallationFacts => new \RAN\Troubleshooting\InstallationFacts(
 				$container->make( ProviderRegistry::class ),
 				$container->make( \RAN\Troubleshooting\CoreSelfUpdateStatus::class ),
-				$container->make( GitHubProviderSelection::class )->support_observation( ... ),
 				$container->make( AdminAddOnRegistry::class )
 			)
 		);

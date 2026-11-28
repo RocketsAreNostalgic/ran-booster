@@ -28,7 +28,6 @@ use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
 final class WebhookV1ExecutionBoundaryTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private string $directory;
 	private TemporaryDebugCapture $capture;
@@ -116,7 +115,6 @@ final class WebhookV1ExecutionBoundaryTest extends TestCase {
 		$container = new CoreContainer();
 		$container->bind( Database::class, new WebhookV1BoundaryDatabase( $this->operations ) );
 		$container->bind( ProviderRegistry::class, $registry );
-		$container->bind( \RAN\RepositoryProvider\GitHubProviderSelection::class, $this->queued_selection( new AttemptRepositoryDatabase(), $registry ) );
 		$container->bind( DeploymentCoordinator::class, new WebhookV1BoundaryCoordinator( $this->operations ) );
 		$container->bind(
 			SignedWebhookVerifier::class,

@@ -31,7 +31,6 @@ use Throwable;
 require_once __DIR__ . '/../Logging/LoggingWordPressFunctions.php';
 
 final class WebhookProcessorTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	public const WEBHOOK_SECRET = 'processor-test-webhook-secret-0001';
 
@@ -62,62 +61,20 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator()
 		);
 
-		self::assertSame( 503, $processor->handle( 'gh', $request )->get_status() );
+		self::assertSame( 404, $processor->handle( 'gh', $request )->get_status() );
 		self::assertSame( 0, $request_calls );
 	}
 
-	public function test_lost_selection_refuses_before_request_or_signing_material_access(): void {
-		$registry  = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
-		$db        = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-		$selection = $this->queued_selection( $db, $registry );
-		$secrets   = $this->createMock( SecretsFile::class );
-		$secrets->expects( self::never() )->method( 'webhook_materials' );
-		$processor                   = new WebhookProcessor( $registry, new WebhookProcessorCoordinator(), new SignedWebhookVerifier( $secrets ), $selection );
-		$db->selection->active_bytes = 'a:0:{}';
-		$response                    = $processor->handle(
-			'gh',
-			static function (): array {
-				self::fail( 'Paused ingress must not read the request.' );
-			}
-		);
-		self::assertSame( 503, $response->get_status() );
-	}
-
-	public function test_request_callback_revocation_refuses_before_signing_material_access(): void {
-		$registry  = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
-		$db        = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-		$selection = $this->queued_selection( $db, $registry );
-		$secrets   = $this->createMock( SecretsFile::class );
-		$secrets->expects( self::never() )->method( 'webhook_materials' );
-		$processor = new WebhookProcessor( $registry, new WebhookProcessorCoordinator(), new SignedWebhookVerifier( $secrets ), $selection );
-		$response  = $processor->handle(
-			'gh',
-			static function () use ( $db ): array {
-				$db->selection->active_bytes = 'a:0:{}';
-				return array(
-					'body'    => '{}',
-					'headers' => array(),
-				);
-			}
-		);
-		self::assertSame( 503, $response->get_status() );
-	}
-
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'callback_failure_provider' )]
-	public function test_callback_failure_reports_current_availability( Throwable $failure, bool $revoke, int $expected ): void {
-		$registry  = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
-		$db        = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-		$selection = $this->queued_selection( $db, $registry );
-		$secrets   = $this->createMock( SecretsFile::class );
+	public function test_callback_failure_reports_current_availability( Throwable $failure, int $expected ): void {
+		$registry = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
+		$secrets  = $this->createMock( SecretsFile::class );
 		$secrets->expects( self::never() )->method( 'webhook_materials' );
 		$spy       = new WebhookProcessorCoordinatorSpy();
-		$processor = new WebhookProcessor( $registry, new WebhookProcessorCoordinator( null, $spy ), new SignedWebhookVerifier( $secrets ), $selection );
+		$processor = new WebhookProcessor( $registry, new WebhookProcessorCoordinator( null, $spy ), new SignedWebhookVerifier( $secrets ) );
 		$response  = $processor->handle(
 			'gh',
-			static function () use ( $db, $failure, $revoke ): array {
-				if ( $revoke ) {
-					$db->selection->active_bytes = 'a:0:{}';
-				}
+			static function () use ( $failure ): array {
 				throw $failure;
 			}
 		);
@@ -125,46 +82,11 @@ final class WebhookProcessorTest extends TestCase {
 		self::assertSame( 0, $spy->calls );
 	}
 
-	/** @return iterable<string,array{Throwable,bool,int}> */
+	/** @return iterable<string,array{Throwable,int}> */
 	public static function callback_failure_provider(): iterable {
-		foreach ( array( false, true ) as $revoke ) {
-			$label = $revoke ? 'revoked' : 'available';
-			yield $label . '-invalid-input' => array( new \InvalidArgumentException( 'test' ), $revoke, $revoke ? 503 : 400 );
-			yield $label . '-unknown-provider' => array( \RAN\RepositoryProvider\UnknownProvider::for_code(), $revoke, $revoke ? 503 : 404 );
-			yield $label . '-unsupported-capability' => array( \RAN\RepositoryProvider\UnsupportedProviderCapability::for_provider(), $revoke, $revoke ? 503 : 404 );
-		}
-	}
-
-	public function test_authorization_callback_revocation_refuses_before_admission(): void {
-		$db     = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-		$policy = $this->createMock( ProviderWebhookPolicy::class );
-		$policy->method( 'get_provider' )->willReturn( ProviderCode::parse( 'gh' ) );
-		$policy->method( 'get_retained_headers' )->willReturn( array( 'x-hub-signature-256' ) );
-		$policy->method( 'get_signature_header' )->willReturn( 'X-Hub-Signature-256' );
-		$policy->method( 'authorize_webhook' )->willReturnCallback(
-			static function () use ( $db ): bool {
-				$db->selection->active_bytes = 'a:0:{}';
-				return true;
-			}
-		);
-		$event     = new PushEvent( ProviderCode::parse( 'gh' ), 'owner/example', '4001', 'main', str_repeat( 'a', 40 ), 'delivery-one' );
-		$registry  = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ), $policy ) ) );
-		$selection = $this->queued_selection( $db, $registry );
-		$secrets   = $this->createMock( SecretsFile::class );
-		$secrets->expects( self::once() )->method( 'webhook_materials' )->willReturn(
-			array(
-				'profile' => array(
-					'scope'  => 'owner',
-					'target' => 'owner',
-					'secret' => self::WEBHOOK_SECRET,
-				),
-			)
-		);
-		$spy       = new WebhookProcessorCoordinatorSpy();
-		$processor = new WebhookProcessor( $registry, new WebhookProcessorCoordinator( null, $spy ), new SignedWebhookVerifier( $secrets ), $selection );
-		$response  = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
-		self::assertSame( 503, $response->get_status() );
-		self::assertSame( 0, $spy->calls );
+		yield 'invalid-input' => array( new \InvalidArgumentException( 'test' ), 400 );
+		yield 'unknown-provider' => array( \RAN\RepositoryProvider\UnknownProvider::for_code(), 404 );
+		yield 'unsupported-capability' => array( \RAN\RepositoryProvider\UnsupportedProviderCapability::for_provider(), 404 );
 	}
 
 	public function test_provider_exceptions_never_reach_the_response(): void {
@@ -278,11 +200,11 @@ final class WebhookProcessorTest extends TestCase {
 	}
 
 	public function test_rejection_boundaries_keep_fixed_responses_and_safe_logs(): void {
-		$body                        = 'synthetic-profile-text https://fake-user:fake-password@example.invalid/';
-		$digest                      = hash( 'sha256', $body );
-		$details                     = self::WEBHOOK_SECRET . ' ' . $body . ' ' . $digest;
-		$registry                    = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
-		$processor                   = $this->processor(
+		$body                          = 'synthetic-profile-text https://fake-user:fake-password@example.invalid/';
+		$digest                        = hash( 'sha256', $body );
+		$details                       = self::WEBHOOK_SECRET . ' ' . $body . ' ' . $digest;
+		$registry                      = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
+		$processor                     = $this->processor(
 			$registry,
 			new WebhookProcessorCoordinator(),
 			array(
@@ -294,14 +216,8 @@ final class WebhookProcessorTest extends TestCase {
 				),
 			)
 		);
-		$request                     = $this->request( $body, $this->signed_headers( $body ) );
-		$db                          = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-		$paused_registry             = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
-		$selection                   = $this->queued_selection( $db, $paused_registry );
-		$paused                      = new WebhookProcessor( $paused_registry, new WebhookProcessorCoordinator(), new SignedWebhookVerifier( $this->createStub( SecretsFile::class ) ), $selection );
-		$db->selection->active_bytes = 'a:0:{}';
-		$cases                       = array(
-			'paused provider'   => array( static fn () => $paused->handle( 'gh', $request ), 503, 'Webhook processing is temporarily unavailable.' ),
+		$request                       = $this->request( $body, $this->signed_headers( $body ) );
+		$cases                         = array(
 			'unknown provider'  => array( static fn () => $processor->handle( 'bb', $request ), 404, 'Webhook provider not found.' ),
 			'invalid provider'  => array( static fn () => $processor->handle( 'INVALID!', $request ), 404, 'Webhook provider not found.' ),
 			'invalid input'     => array(
@@ -338,23 +254,6 @@ final class WebhookProcessorTest extends TestCase {
 			'oversized body'    => array( fn () => $processor->handle( 'gh', $this->request( $body . str_repeat( 'x', 262145 ), array() ) ), 413, 'Webhook request is too large.' ),
 			'ambiguous headers' => array( fn () => $processor->handle( 'gh', $this->request( $body, array( 'X-GitHub-Event' => array( 'push', 'ping' ) ) ) ), 400, 'Invalid webhook request.' ),
 		);
-		foreach ( array( new WebhookRejected( 401, $details ), DeploymentStorageFailure::delivery_conflict(), new \RAN\Deployment\CredentialShapedRef(), new \InvalidArgumentException( $details ), new RuntimeException( $details ), \RAN\RepositoryProvider\UnknownProvider::for_code(), \RAN\RepositoryProvider\UnsupportedProviderCapability::for_provider() ) as $index => $failure ) {
-			$revoked_db                   = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-			$revoked_registry             = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
-			$revoked_selection            = $this->queued_selection( $revoked_db, $revoked_registry );
-			$revoked                      = new WebhookProcessor( $revoked_registry, new WebhookProcessorCoordinator(), new SignedWebhookVerifier( $this->createStub( SecretsFile::class ) ), $revoked_selection );
-			$cases[ 'revoked ' . $index ] = array(
-				static fn () => $revoked->handle(
-					'gh',
-					static function () use ( $revoked_db, $failure ): array {
-					$revoked_db->selection->active_bytes = 'a:0:{}';
-					throw $failure;
-					}
-				),
-				503,
-				'Webhook processing is temporarily unavailable.',
-			);
-		}
 		$event                         = new PushEvent( ProviderCode::parse( 'gh' ), 'other/repository', 'other-id', 'main', str_repeat( 'a', 40 ), 'delivery-one' );
 		$denied                        = $this->processor( new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ) ) ) ), new WebhookProcessorCoordinator() );
 		$cases['authorization denied'] = array( static fn () => $denied->handle( 'gh', $request ), 401, 'Webhook authentication failed.' );
@@ -386,66 +285,6 @@ final class WebhookProcessorTest extends TestCase {
 		) as $reason => $materials ) {
 			$invalid          = $this->processor( new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) ), new WebhookProcessorCoordinator(), $materials );
 			$cases[ $reason ] = array( static fn () => $invalid->handle( 'gh', $request ), 401, 'Webhook authentication failed.' );
-		}
-
-		foreach ( array( 'verification', 'normalization', 'admission' ) as $stage ) {
-			$revoked_db = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-			$revoke     = static function () use ( $revoked_db ): void {
-				$revoked_db->selection->active_bytes = 'a:0:{}';
-				throw new WebhookRejected( 401, 'hostile private material', 'signature_mismatch' );
-			};
-			$policy     = $this->createMock( ProviderWebhookPolicy::class );
-			$policy->method( 'get_provider' )->willReturn( ProviderCode::parse( 'gh' ) );
-			$policy->method( 'get_retained_headers' )->willReturn( array( 'x-hub-signature-256' ) );
-			$policy->method( 'get_signature_header' )->willReturn( 'X-Hub-Signature-256' );
-			$policy->method( 'authorize_webhook' )->willReturnCallback(
-				static function () use ( $stage, $revoke ): bool {
-					if ( 'admission' === $stage ) {
-						$revoke();
-					}
-					return true;
-				}
-			);
-			$revoked_registry  = new ProviderRegistry(
-				array(
-					new WebhookProcessorProvider(
-						static function () use ( $stage, $revoke, $event ): WebhookEnvelope {
-							if ( 'normalization' === $stage ) {
-								$revoke();
-							}
-							return WebhookEnvelope::events( $event );
-						},
-						$policy
-					),
-				)
-			);
-			$revoked_selection = $this->queued_selection( $revoked_db, $revoked_registry );
-			$secrets           = $this->createMock( SecretsFile::class );
-			$secrets->method( 'webhook_materials' )->willReturnCallback(
-				static function () use ( $stage, $revoke ): array {
-					if ( 'verification' === $stage ) {
-						$revoke();
-					}
-					return array(
-						'profile' => array(
-							'scope'  => 'owner',
-							'target' => 'owner',
-							'secret' => self::WEBHOOK_SECRET,
-						),
-					);
-				}
-			);
-			$spy                                 = new WebhookProcessorCoordinatorSpy();
-			$revoked                             = new WebhookProcessor( $revoked_registry, new WebhookProcessorCoordinator( null, $spy ), new SignedWebhookVerifier( $secrets ), $revoked_selection );
-			$cases[ 'revoked during ' . $stage ] = array(
-				static function () use ( $revoked, $request, $spy ) {
-									$response = $revoked->handle( 'gh', $request );
-									self::assertSame( 0, $spy->calls );
-									return $response;
-				},
-				503,
-				'Webhook processing is temporarily unavailable.',
-			);
 		}
 
 		foreach ( array_merge( array( null, 'unknown', "ignored_ref\n" ), WebhookRejected::REASONS ) as $reason ) {
@@ -504,33 +343,22 @@ final class WebhookProcessorTest extends TestCase {
 				self::assertSame( $status, $response->get_status(), $label );
 				self::assertSame( array( 'message' => $message ), $response->get_data(), $label );
 				$reason = array(
-					'bad signature'                => 'signature_mismatch',
-					'oversized body'               => 'request_too_large',
-					'authorization denied'         => 'scope_mismatch',
-					'excess fan-out'               => 'event_fanout_exceeded',
-					'paused provider'              => 'selection_unavailable',
-					'unknown provider'             => 'provider_not_found',
-					'invalid provider'             => 'provider_not_found',
-					'invalid input'                => 'invalid_request',
-					'configured ref'               => 'configured_ref_refused',
-					'ambiguous headers'            => 'invalid_request',
-					'provider failure'             => 'processing_failure',
-					'storage 0'                    => 'delivery_conflict',
-					'storage 1'                    => 'database_unsupported',
-					'storage 2'                    => 'capacity_exhausted',
-					'storage 3'                    => 'storage_failure',
-					'storage 4'                    => 'processing_failure',
-					'revoked 0'                    => 'selection_unavailable',
-					'revoked 1'                    => 'selection_unavailable',
-					'revoked 2'                    => 'selection_unavailable',
-					'revoked 3'                    => 'selection_unavailable',
-					'revoked 4'                    => 'selection_unavailable',
-					'revoked 5'                    => 'selection_unavailable',
-					'revoked 6'                    => 'selection_unavailable',
-					'revoked during verification'  => 'selection_unavailable',
-					'revoked during normalization' => 'selection_unavailable',
-					'revoked during admission'     => 'selection_unavailable',
-					'verified probe'               => 'probe_verified',
+					'bad signature'        => 'signature_mismatch',
+					'oversized body'       => 'request_too_large',
+					'authorization denied' => 'scope_mismatch',
+					'excess fan-out'       => 'event_fanout_exceeded',
+					'unknown provider'     => 'provider_not_found',
+					'invalid provider'     => 'provider_not_found',
+					'invalid input'        => 'invalid_request',
+					'configured ref'       => 'configured_ref_refused',
+					'ambiguous headers'    => 'invalid_request',
+					'provider failure'     => 'processing_failure',
+					'storage 0'            => 'delivery_conflict',
+					'storage 1'            => 'database_unsupported',
+					'storage 2'            => 'capacity_exhausted',
+					'storage 3'            => 'storage_failure',
+					'storage 4'            => 'processing_failure',
+					'verified probe'       => 'probe_verified',
 				)[ $label ] ?? null;
 				if ( in_array( $label, WebhookRejected::REASONS, true ) ) {
 					$reason = $label;
@@ -931,7 +759,7 @@ final class WebhookProcessorTest extends TestCase {
 			if ( null === $materials ) {
 				$secrets = $this->createStub( SecretsFile::class );
 				$secrets->method( 'webhook_materials' )->willThrowException( new RuntimeException( 'secret-canary' ) );
-				$processor = new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ), $this->queued_selection( new \RAN\Tests\Deployment\AttemptRepositoryDatabase(), $registry ) );
+				$processor = new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ) );
 			} else {
 				$processor = $this->processor( $registry, $coordinator, $materials );
 			}
@@ -1205,7 +1033,7 @@ final class WebhookProcessorTest extends TestCase {
 			}
 		};
 
-		return new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ), $this->queued_selection( new \RAN\Tests\Deployment\AttemptRepositoryDatabase(), $registry ), $installations );
+		return new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ), $installations );
 	}
 
 	private function installation( string $status, string $profile_id = 'test-profile' ): InstallationRecord {

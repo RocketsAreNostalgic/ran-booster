@@ -197,12 +197,12 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( '<a ', $html );
 	}
 
-	public function test_edit_view_explains_a_replacement_provider_that_cannot_load(): void {
+	public function test_edit_view_explains_why_github_is_unavailable(): void {
 		$package                   = $this->package();
 		$package_view              = PackagePagePresenter::plugin();
 		$package_provider_settings = array(
 			'default_provider' => 'temporarily-offline',
-			'providers'        => array( array( 'unavailable_reason' => 'replacement_load_failed' ) + $this->provider_option( 'temporarily-offline', false ) ),
+			'providers'        => array( array( 'unavailable_message' => 'GitHub is unavailable because <alpha> could not load.' ) + $this->provider_option( 'temporarily-offline', false ) ),
 		);
 
 		ob_start();
@@ -210,7 +210,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertSame( 1, substr_count( $html, '<strong>Git provider unavailable.</strong>' ) );
-		self::assertStringContainsString( 'The selected replacement GitHub provider could not load. This package remains linked but cannot be edited or deployed until it does.', $html );
+		self::assertStringContainsString( 'GitHub is unavailable because &lt;alpha&gt; could not load.', $html );
+		self::assertStringNotContainsString( '<alpha>', $html );
 		self::assertStringNotContainsString( 'until its Git provider is registered again', $html );
 		self::assertStringNotContainsString( 'tab=temporarily-offline', $html );
 	}

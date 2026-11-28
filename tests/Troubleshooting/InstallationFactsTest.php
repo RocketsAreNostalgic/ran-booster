@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminAddOnTab;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\Tests\Admin\Support\GitHubSupplierState;
 use RAN\Troubleshooting\InstallationFacts;
 
 require_once __DIR__ . '/SupportReportWordPressFunctions.php';
@@ -91,6 +92,40 @@ final class InstallationFactsTest extends TestCase {
 		$GLOBALS['ran_booster_support_version'] = '1.0.0+private-version-canary';
 		self::assertSame( 'Unknown', $facts->core()['installed_version'] );
 		$GLOBALS['ran_booster_support_version'] = '1.0.0-beta.41';
+	}
+
+	public function test_the_github_row_names_its_supplier_and_stays_listed_while_a_claim_keeps_it_unregistered(): void {
+		$row     = static function ( ?string $supplier, bool $registered ): ?array {
+			$providers = $registered ? array( new SupportReportProvider( 'gh', 'GitHub' ), new SupportReportProvider( 'bb', 'Bitbucket' ) ) : array( new SupportReportProvider( 'bb', 'Bitbucket' ) );
+			$registry  = new ProviderRegistry( $providers );
+			if ( null !== $supplier ) {
+				GitHubSupplierState::apply( $registry, $supplier, array( 'alpha' ) );
+			}
+			foreach ( $providers as $provider ) {
+				$provider->registered = true;
+			}
+			$rows = array_column( ( new InstallationFacts( $registry ) )->components(), null, 'Provider' );
+			return $rows['gh'] ?? null;
+		};
+		$bundled = $row( ProviderRegistry::GITHUB_BUNDLED, true );
+		self::assertSame( 'Included with Booster', $bundled['Supplier'] ?? null );
+		self::assertSame( 'Admitted', $bundled['Admission'] ?? null );
+		self::assertSame( 'Add-on', $row( 'alpha', true )['Supplier'] ?? null );
+		self::assertSame(
+			array(
+				'Name'         => 'GitHub',
+				'Provider'     => 'gh',
+				'Admission'    => 'Not admitted',
+				'Selection'    => 'Not applicable',
+				'Availability' => 'Unavailable',
+				'Supplier'     => 'Add-on failed to load',
+			),
+			$row( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, false )
+		);
+		self::assertSame( 'More than one add-on', $row( ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT, false )['Supplier'] ?? null );
+		// A registry that does not own GitHub adds no supplier.
+		self::assertArrayNotHasKey( 'Supplier', (array) $row( null, true ) );
+		self::assertNull( $row( null, false ) );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
@@ -179,36 +214,6 @@ final class InstallationFactsTest extends TestCase {
 		$rows     = ( new InstallationFacts( new ProviderRegistry( array( $provider ) ) ) )->components();
 		self::assertSame( 'GitLab', $rows[0]['Name'] );
 		self::assertStringContainsString( 'CredentialValidator', $rows[0]['Capabilities'] );
-	}
-
-	public function test_github_attribution_is_one_captured_bootstrap_observation(): void {
-		$registry   = new ProviderRegistry( array( new SupportReportProvider( 'gh', 'GitHub' ) ) );
-		$generation = 1;
-		$reads      = 0;
-		$observe    = static function () use ( &$generation, &$reads ): array {
-			++$reads;
-			return array(
-				'state'                  => 'missing',
-				'admitted'               => false,
-				'selected'               => 'external',
-				'version'                => '2.3.4',
-				'provider_api'           => 15,
-				'compatibility_revision' => '1',
-				'identity'               => array(
-					'provider_code'              => 'gh',
-					'selection_generation'       => $generation,
-					'implementation_fingerprint' => str_repeat( 'a', 64 ),
-				),
-			);
-		};
-		$facts      = new InstallationFacts( $registry, github_observation: $observe );
-		$first      = $facts->implementation( 'gh' );
-		self::assertSame( 'missing', $facts->github_selection()['state'] );
-		$generation = 2;
-		self::assertSame( $first, $facts->implementation( 'gh' ) );
-		self::assertSame( 1, $reads );
-		self::assertNotSame( $first, ( new InstallationFacts( $registry, github_observation: $observe ) )->implementation( 'gh' ) );
-		self::assertSame( 2, $reads );
 	}
 
 	public function test_registered_addons_share_provider_bound_without_running_renderers(): void {

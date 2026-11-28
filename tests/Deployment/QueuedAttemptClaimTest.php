@@ -17,11 +17,9 @@ use RAN\Storage\Database;
 require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/DeploymentWorkerPhpFunctions.php';
 require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
-require_once __DIR__ . '/../Support/QueuedSelectionFixture.php';
 
 /** Claimed queued attempts that must finish before any package mutation. */
 final class QueuedAttemptClaimTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
@@ -78,30 +76,6 @@ final class QueuedAttemptClaimTest extends TestCase {
 		$finished = $this->attempts->find_exact( $claimed->get_id() );
 		self::assertSame( DeploymentState::FAILED, $finished?->get_state() );
 		self::assertNull( $finished->safe_data()['mutation_started_at'] );
-	}
-
-	public function test_github_attempt_needs_an_approved_selected_implementation_until_selection_retires(): void {
-		$claimed = $this->claimed_with_selection( null );
-		self::assertNull( $claimed[0]->provider_refusal( $claimed[1] ) );
-		$claimed = $this->claimed_with_selection( new \RAN\RepositoryProvider\ProviderRegistry( array() ) );
-		self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $claimed[0]->provider_refusal( $claimed[1] ) );
-	}
-
-	/** @return array{0:DeploymentAttemptRepository,1:DeploymentAttempt} */
-	private function claimed_with_selection( ?\RAN\RepositoryProvider\ProviderRegistry $registry ): array {
-		$this->database = new AttemptRepositoryDatabase();
-		$this->attempts = new DeploymentAttemptRepository(
-			$this->database,
-			'wp_ran_booster_deployment_attempts',
-			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-10-15 12:00:00 UTC' ),
-			fn ( int $length ): string => str_repeat( chr( $this->entropy++ ), $length ),
-			$this->createStub( Database::class ),
-			selection: $this->queued_selection( $this->database, $registry )
-		);
-		$this->queue( 'first' );
-		$claimed = $this->attempts->claim_next();
-		self::assertNotNull( $claimed );
-		return array( $this->attempts, $claimed );
 	}
 
 	private function queued_update(): DeploymentAttempt {

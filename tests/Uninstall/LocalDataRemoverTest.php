@@ -26,7 +26,6 @@ use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\Secrets\SiteKeyStore;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 use RAN\Storage\Database;
-use RAN\Storage\GitHubSelectionStore;
 use RAN\Uninstall\LocalDataRemover;
 use RAN\Settings\GeneralPreferenceStore;
 use RAN\WordPress\CoreSelfUpdateCheck;
@@ -67,7 +66,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$GLOBALS['ran_booster_uninstall_options']                           = array(
 			OnboardingPresenter::PRESENTATION_OPTION      => 'onboarding',
 			Database::VERSION_OPTION                      => '5.0',
-			GitHubSelectionStore::OPTION                  => $this->selection_json(),
+			\RAN\Admin\GitHubSupplierNotice::OPTION       => 'alpha',
 			\RAN\Activity\ActivityStore::VERSION_OPTION   => '1',
 			CredentialExpiryObservationStore::OPTION_NAME => array( 'profiles' => array() ),
 			PublicRepositoryLookupProfileStore::OPTION_NAME => array( 'profiles' => array() ),
@@ -227,33 +226,20 @@ final class LocalDataRemoverTest extends TestCase {
 			),
 		);
 		$this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
-		self::assertArrayNotHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
-	}
-
-	#[RunInSeparateProcess]
-	#[PreserveGlobalState( false )]
-	public function test_native_marker_and_malformed_selection_refuse_before_cleanup(): void {
-		foreach ( array( $this->selection_json( true ), '{malformed' ) as $selection ) {
-			$this->setUp();
-			$GLOBALS['ran_booster_uninstall_options'][ GitHubSelectionStore::OPTION ] = $selection;
-			$this->assert_preflight_refuses_without_mutation();
-		}
+		self::assertArrayNotHasKey( \RAN\Admin\GitHubSupplierNotice::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_read_errors_and_unexpected_missing_journal_refuse_before_cleanup(): void {
-		foreach ( array( 'SELECT option_name FROM', 'SELECT option_name, option_value, autoload', 'SELECT @@lower_case_table_names', 'information_schema.TABLES', 'SELECT id FROM' ) as $failure ) {
+		foreach ( array( 'SELECT option_name FROM', 'SELECT @@lower_case_table_names', 'information_schema.TABLES', 'SELECT id FROM' ) as $failure ) {
 			$this->setUp();
 			$this->database->read_failure_contains = $failure;
 			$this->assert_preflight_refuses_without_mutation();
 		}
-		foreach ( array( 'version', 'selection' ) as $remaining ) {
-			$this->setUp();
-			$this->database->tables = array_values( array_diff( $this->database->tables, array( 'wp_ran_booster_deployment_attempts' ) ) );
-			unset( $GLOBALS['ran_booster_uninstall_options'][ 'version' === $remaining ? GitHubSelectionStore::OPTION : Database::VERSION_OPTION ] );
-			$this->assert_preflight_refuses_without_mutation();
-		}
+		$this->setUp();
+		$this->database->tables = array_values( array_diff( $this->database->tables, array( 'wp_ran_booster_deployment_attempts' ) ) );
+		$this->assert_preflight_refuses_without_mutation();
 	}
 
 	#[RunInSeparateProcess]
@@ -277,7 +263,7 @@ final class LocalDataRemoverTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_absent_journal_and_authorities_allow_repeat_cleanup(): void {
 		$this->setUp();
-		unset( $GLOBALS['ran_booster_uninstall_options'][ GitHubSelectionStore::OPTION ], $GLOBALS['ran_booster_uninstall_options'][ Database::VERSION_OPTION ] );
+		unset( $GLOBALS['ran_booster_uninstall_options'][ Database::VERSION_OPTION ] );
 		$this->database->tables = array_values( array_diff( $this->database->tables, array( 'wp_ran_booster_deployment_attempts' ) ) );
 		$remover                = $this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) );
 		$remover->remove();
@@ -355,7 +341,7 @@ final class LocalDataRemoverTest extends TestCase {
 	public function test_partial_cleanup_refuses_unverified_casing_before_checking_the_surviving_journal(): void {
 		foreach ( array( null, '3', '01' ) as $mode ) {
 			$this->setUp();
-			unset( $GLOBALS['ran_booster_uninstall_options'][ Database::VERSION_OPTION ], $GLOBALS['ran_booster_uninstall_options'][ GitHubSelectionStore::OPTION ] );
+			unset( $GLOBALS['ran_booster_uninstall_options'][ Database::VERSION_OPTION ] );
 			$this->database->lower_case_table_names = $mode;
 			$this->database->attempts               = array(
 				array(
@@ -389,7 +375,7 @@ final class LocalDataRemoverTest extends TestCase {
 
 	/** @return iterable<string, array{string}> */
 	public static function late_option_delete_targets(): iterable {
-		yield 'selection' => array( 'selection' );
+		yield 'option' => array( 'option' );
 		yield 'updater' => array( 'updater' );
 	}
 
@@ -398,7 +384,7 @@ final class LocalDataRemoverTest extends TestCase {
 	#[DataProvider( 'late_option_delete_targets' )]
 	public function test_failed_option_deletes_cannot_be_hidden_by_wordpress_negative_cache( string $target ): void {
 		$this->setUp();
-		$option = 'selection' === $target ? GitHubSelectionStore::OPTION : $this->updater_authority_option();
+		$option = 'option' === $target ? \RAN\Admin\GitHubSupplierNotice::OPTION : $this->updater_authority_option();
 		$GLOBALS['ran_booster_uninstall_undeletable_option']      = $option;
 		$GLOBALS['ran_booster_uninstall_simulate_negative_cache'] = true;
 		$caught = null;
@@ -408,7 +394,7 @@ final class LocalDataRemoverTest extends TestCase {
 			$caught = $failure;
 		}
 		self::assertInstanceOf( RuntimeException::class, $caught );
-		self::assertSame( 'selection' === $target ? 'Booster options could not be removed.' : 'Booster updater state could not be removed.', $caught->getMessage() );
+		self::assertSame( 'option' === $target ? 'Booster options could not be removed.' : 'Booster updater state could not be removed.', $caught->getMessage() );
 		self::assertArrayHasKey( $option, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
 	}
@@ -418,7 +404,7 @@ final class LocalDataRemoverTest extends TestCase {
 	#[DataProvider( 'late_option_delete_targets' )]
 	public function test_authoritative_option_read_error_stops_cleanup_and_allows_retry( string $target ): void {
 		$this->setUp();
-		$option                                = 'selection' === $target ? GitHubSelectionStore::OPTION : $this->updater_authority_option();
+		$option                                = 'option' === $target ? \RAN\Admin\GitHubSupplierNotice::OPTION : $this->updater_authority_option();
 		$this->database->read_failure_contains = "BINARY '" . $option . "' LIMIT 1";
 		$remover                               = $this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) );
 		$caught                                = null;
@@ -428,7 +414,7 @@ final class LocalDataRemoverTest extends TestCase {
 			$caught = $failure;
 		}
 		self::assertInstanceOf( RuntimeException::class, $caught );
-		self::assertSame( 'selection' === $target ? 'Booster options could not be removed.' : 'Booster updater state could not be removed.', $caught->getMessage() );
+		self::assertSame( 'option' === $target ? 'Booster options could not be removed.' : 'Booster updater state could not be removed.', $caught->getMessage() );
 		self::assertArrayNotHasKey( $option, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
 		$this->database->read_failure_contains = null;
@@ -439,23 +425,23 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_undeletable_selection_fails_after_earlier_cleanup_without_losing_unrelated_options(): void {
+	public function test_undeletable_option_fails_after_earlier_cleanup_without_losing_unrelated_options(): void {
 		$this->setUp();
-		$GLOBALS['ran_booster_uninstall_undeletable_option'] = GitHubSelectionStore::OPTION;
+		$GLOBALS['ran_booster_uninstall_undeletable_option'] = \RAN\Admin\GitHubSupplierNotice::OPTION;
 		$remover = $this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) );
 		try {
 			$remover->remove();
-			self::fail( 'The selection must be verifiably removed.' );
+			self::fail( 'The option must be verifiably removed.' );
 		} catch ( RuntimeException $failure ) {
 			self::assertSame( 'Booster options could not be removed.', $failure->getMessage() );
 		}
-		self::assertArrayHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayHasKey( \RAN\Admin\GitHubSupplierNotice::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertArrayNotHasKey( Database::VERSION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
 		$GLOBALS['ran_booster_uninstall_undeletable_option'] = null;
 		$remover->remove();
 		self::assertNotContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
-		self::assertArrayNotHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayNotHasKey( \RAN\Admin\GitHubSupplierNotice::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertSame( 'preserved', $GLOBALS['ran_booster_uninstall_options']['unrelated_option'] );
 	}
 
@@ -475,41 +461,6 @@ final class LocalDataRemoverTest extends TestCase {
 		self::assertSame( $tables, $this->database->tables );
 		self::assertSame( array(), $GLOBALS['ran_booster_uninstall_deleted_options'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_uninstall_cron_calls'] );
-	}
-
-	private function selection_json( bool $native = false ): string {
-		$declaration = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'ran-booster/ran-booster.php',
-				'implementation_id'      => 'fixture',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
-		$manifest    = get_object_vars( $declaration );
-		unset( $manifest['implementation_fingerprint'] );
-		$state = array(
-			'schema'               => 1,
-			'selection_generation' => 0,
-			'selected'             => 'bundled',
-			'declaration'          => $manifest,
-			'approval'             => 'approved',
-			'approved_api_formats' => array(),
-		);
-		if ( $native ) {
-			$state['native_mutation'] = array(
-				'selection_generation' => 0,
-				'owner_tag'            => str_repeat( 'a', 32 ),
-				'target_type'          => 'plugin',
-				'installed_identity'   => 'fixture/fixture.php',
-				'phase'                => 'started',
-			);
-		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The selection store requires canonical throwing JSON encoding.
-		return json_encode( $state, JSON_THROW_ON_ERROR );
 	}
 
 	#[RunInSeparateProcess]
@@ -670,7 +621,7 @@ final class LocalDataRemoverTest extends TestCase {
 		self::assertContains( $failed_table, $this->database->tables );
 		self::assertSame( 'wp_ran_booster_deployment_attempts' === $failed_table, in_array( 'wp_ran_booster_deployment_attempts', $this->database->tables, true ) );
 		self::assertArrayNotHasKey( Database::VERSION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
-		self::assertArrayNotHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayNotHasKey( \RAN\Admin\GitHubSupplierNotice::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 
 		$this->database->failure_contains = null;
 		$remover->remove();

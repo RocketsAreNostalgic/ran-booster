@@ -190,12 +190,8 @@ foreach ( array( 'RAN\\WPReleaseUpdater\\V1\\WordPress\\NativePackageUpdater', '
 	}
 }
 $ran_booster_container = require __DIR__ . '/core-container-fixture.php';
-$ran_booster_selection = $ran_booster_container->make( RAN\Storage\GitHubSelectionStore::class )->read();
-if ( isset( $ran_booster_selection['native_mutation'] ) ) {
-	throw new RuntimeException( 'The preceding native request did not finalize its mutation.' );
-}
-$ran_booster_registry = $ran_booster_container->make( ProviderRegistry::class );
-$ran_booster_provider = $ran_booster_registry->require_capability( 'gh', RepositoryReleaseNativeTargets::class );
+$ran_booster_registry  = $ran_booster_container->make( ProviderRegistry::class );
+$ran_booster_provider  = $ran_booster_registry->require_capability( 'gh', RepositoryReleaseNativeTargets::class );
 if ( ! $ran_booster_provider instanceof GitHubProvider ) {
 	throw new RuntimeException( 'The installed Core did not select its built-in GitHub provider.' );
 }

@@ -155,7 +155,7 @@ final class SettingsPageTest extends TestCase {
 		unset( $GLOBALS['wpdb'] ); // No database: the save fails at its transaction.
 		$store     = new GeneralPreferenceStore();
 		$dashboard = $this->settings_dashboard( new SettingsPageStorageProvisioner( null ) );
-		( new ReflectionProperty( Dashboard::class, 'github_visibility' ) )->setValue( $dashboard, new \RAN\Admin\GitHubVisibility( $store, null, null, new \stdClass() ) );
+		( new ReflectionProperty( Dashboard::class, 'github_visibility' ) )->setValue( $dashboard, new \RAN\Admin\GitHubVisibility( $store, null, new \stdClass() ) );
 
 		self::assertFalse(
 			$dashboard->post_save_general_settings(

@@ -28,12 +28,10 @@ use RAN\Webhook\SignedWebhookVerifier;
 use RAN\Webhook\WebhookProcessor;
 use ReflectionClass;
 
-require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/../Logging/LoggingWordPressFunctions.php';
 
 /** Which signed pushes match a package, and the reason recorded when none does. */
 final class UnmatchedPushTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private const SECRET = 'unmatched-push-test-webhook-secret-01';
 
@@ -125,7 +123,7 @@ final class UnmatchedPushTest extends TestCase {
 				'runner_status'    => 'not_required',
 			)
 		);
-		$processor = new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ), $this->queued_selection( new AttemptRepositoryDatabase(), $registry ) );
+		$processor = new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ) );
 		$push      = static fn ( string $ref, bool $deleted = false ): string => (string) wp_json_encode(
 			array(
 				'ref'        => $ref,

@@ -118,7 +118,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			$this->stage( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
 		}
 		if ( null === $this->attempt->safe_data()['mutation_started_at'] ) {
-			$this->assert_provider_current();
 			// The site may have paused branch sources after admission, possibly from another request.
 			if ( PackageSourceGate::pauses( PackageSource::BRANCH, fresh: true ) ) {
 				$this->stage( DeploymentOutcome::CODE_SOURCE_PAUSED );
@@ -227,7 +226,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- AdmittedArchiveSource requires the baseline parameter; this host prepares from its already-admitted deployment attempt.
 	public function prepare( BranchDeploymentDeclaration $deployment, ?array $baseline ): AdmittedBranchArtifact {
 		$this->assert_declaration( $deployment );
-		$this->assert_provider_current();
 		if ( null !== $this->provider_archive ) {
 			throw new RuntimeException( 'The admitted archive source is already consumed.' );
 		}
@@ -259,7 +257,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 
 		$provider_archive = $this->provider_archive;
 		try {
-			$this->assert_provider_current();
 			$resolved_ref = $provider_archive->get_resolved_ref();
 			if ( '' === $resolved_ref || trim( $resolved_ref ) !== $resolved_ref || strlen( $resolved_ref ) > 191 || preg_match( '/[[:cntrl:]]/', $resolved_ref ) === 1 ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
@@ -306,7 +303,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 				$maximum_artifact_bytes
 			);
 			$this->assert_artifact_capacity( $artifact, $deployment );
-			$this->assert_provider_current();
 			return $artifact;
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			$this->cleanup_provider_archive( $provider_archive );
@@ -342,7 +338,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 	}
 
 	public function assert_mutation_allowed(): void {
-		$this->assert_provider_current();
 		PackageMutationGuard::assert_filesystem_mutation_allowed();
 	}
 
@@ -524,13 +519,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 		}
 	}
 
-	private function assert_provider_current(): void {
-		$refusal = $this->attempts->provider_refusal( $this->attempt );
-		if ( null !== $refusal ) {
-			$this->stage( $refusal );
-		}
-	}
-
 	/** Return null if the effective authorization cannot be determined safely. */
 	private static function archive_authorization( #[\SensitiveParameter] mixed $headers ): ?bool {
 		$raw = is_string( $headers );
@@ -580,13 +568,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			$this->assert_safe_https_url( $url );
 			for ( $attempt = 1; $attempt <= self::DOWNLOAD_ATTEMPTS; ++$attempt ) {
 				for ( $redirect = 0; 3 >= $redirect; ++$redirect ) {
-					$this->assert_provider_current();
 					$authenticated = false;
 					$guard         = function ( mixed $preempt, #[\SensitiveParameter] array $arguments, string $request_url ) use ( $url, $owns_call, $stream_matches, &$authenticated, $retry_outcome, $initial_hop, $authorize_retry ): mixed {
 						if ( ! $owns_call() ) {
 							return $preempt;
 						}
-						$this->assert_provider_current();
 						if ( $request_url !== $url || ! $stream_matches( $arguments ) ) {
 							$this->stage( $retry_outcome ?? DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );
 						}
@@ -622,13 +608,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 						if ( null === $retry_outcome ) {
 							throw $failure;
 						}
-						$this->assert_provider_current();
 						$this->stage( $retry_outcome );
 					} finally {
 						remove_filter( 'pre_http_request', $guard, PHP_INT_MAX );
 						unset( $guard );
 					}
-					$this->assert_provider_current();
 					$status = (int) wp_remote_retrieve_response_code( $response );
 					if ( ! in_array( $status, array( 301, 302, 303, 307, 308 ), true ) ) {
 						break;
@@ -683,9 +667,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 
 	private function verify_provider_head( ProviderPreparedArchive $archive ): void {
 		try {
-			$this->assert_provider_current();
 			$archive->verify_current_head();
-			$this->assert_provider_current();
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			throw $failure;
 		} catch ( StaleDeployment ) {

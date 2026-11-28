@@ -201,7 +201,7 @@ implementation that ran, including after provider replacement.
 
 ## JSON format
 
-The version 1 root has `schema_version`, `capture_started_at`, `capture_ended_at`,
+The version 2 root has `schema_version`, `capture_started_at`, `capture_ended_at`,
 `coverage`, `observation`, and `sections`. Each section has `state`, `observed_at`,
 and `data`. Sections are `environment`, `installation`, `storage`,
 `managed_packages`, `diagnostics`, `activity`, and `logging`; their named fields
@@ -213,8 +213,9 @@ Private identities are aliases shared across sections in capture order. When the
 encoded byte ceiling is reached, whole section data is replaced by an explicit
 `output_byte_limit_exhausted` reason and the section is marked Truncated; the
 metadata, original section state, and JSON syntax remain intact. Consumers should tolerate additional
-fields within version 1 and check coverage before interpreting absence. Incompatible
-format changes require a new schema version.
+fields within version 2 and check coverage before interpreting absence. Incompatible
+format changes require a new schema version. Version 2 removed the installation
+section's `github_selection` block.
 
 ## Frozen outputs and housekeeping
 
@@ -234,27 +235,14 @@ If Booster/admin cannot load, use the established WordPress recovery and hosting
 support routes, sharing only independently reviewed evidence. The report cannot
 collect evidence through an unavailable bootstrap or recover pre-capture events.
 
-## Pre-edit review correction: captured GitHub declarations
+## GitHub supplier
 
-Independent source review identified that an injected `expectation()` reader
-would repeat GitHub active-manifest discovery (up to 1,024 active plugin entries)
-merely to fill a passive component summary. Reject that extra scan. Add one
-internal `GitHubProviderSelection::support_observation()` method, projected 45
-production lines, returning only constructor-captured selection/admission state,
-selected kind, declared API/compatibility metadata, safe version from at most one
-8 KiB selected-plugin header, and internal generation/fingerprint attribution.
-No authority reload, candidate re-discovery, provider call, health test or recovery
-scan. Facts reuses that one request-local observation for report fields and
-retained diagnostic attribution. It is explicitly an earlier bootstrap
-observation, not fresh remote access evidence or verified continuity.
-
-Actual source growth exceeded the initial 1,100-line estimate: before this
-correction it was 1,400 additions / 114 removals. The separately counted 120-line
-passive-reader boundary and 269-line CAS/expiry owner are substantive costs rather
-than hidden existing behavior. This correction adds one internal owner method and
-one private projection dependency, no concrete type, public extension API or
-persistent state. Final exact production/test/documentation deltas are recorded
-with delivery evidence.
+Installation and the support report no longer project GitHub replacement
+selection state, declarations or candidates; #1253 retired them. The GitHub
+component row carries one `supplier` choice instead: `Included with Booster`,
+`Add-on`, `Add-on failed to load` or `More than one add-on`. When a claim fails
+or conflicts, the row stays with admission `Not admitted` and availability
+`Unavailable`. Installation names the supplying plugin; the report does not.
 
 ## Verification and custody
 
@@ -262,7 +250,9 @@ The diagnostic store also captures the initiating administrator/site scope befor
 provider work and conditions retention on that same scope afterward. A provider
 that changes the current WordPress user cannot reassign evidence; immediate
 results remain visible when retention is refused. Implementation attribution is
-captured before provider work from the same bootstrap declaration observation.
+captured before provider work from the registered provider's class and the file
+it was loaded from, so a GitHub add-on and the bundled module never share an
+alias.
 
 The maintained `tests/WordPress/support-snapshot-smoke.php` runs after the existing
 CI database smoke. It checks actual SQL/CAS behavior, the combined row budget,

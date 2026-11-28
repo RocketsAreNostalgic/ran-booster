@@ -53,7 +53,6 @@ use ZipArchive;
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
 final class InstalledPackageSlugRoutesTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
@@ -64,7 +63,6 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 	private ProviderRegistry $providers;
 	/** @var RepositoryProvider&WebhookNormalizer&\PHPUnit\Framework\MockObject\MockObject */
 	private RepositoryProvider $provider;
-	private \RAN\RepositoryProvider\GitHubProviderSelection $selection;
 	private RepositorySourceGuard $source_guard;
 	private string $directory;
 
@@ -104,7 +102,6 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		$provider->method( 'normalize_webhook' )->willReturn( \RAN\RepositoryProvider\WebhookEnvelope::events( new PushEvent( ProviderCode::parse( 'gh' ), 'owner/example', 'R_example', 'main', str_repeat( 'a', 40 ), 'installed-slug-delivery' ) ) );
 		$this->providers    = new ProviderRegistry( array( $provider ) );
 		$this->provider     = $provider;
-		$this->selection    = $this->queued_selection( $this->database, $this->providers );
 		$this->attempts     = new DeploymentAttemptRepository(
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
@@ -246,7 +243,7 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 						),
 					)
 				);
-				$processor = new \RAN\Webhook\WebhookProcessor( $this->providers, $coordinator, new \RAN\Webhook\SignedWebhookVerifier( $secrets ), $this->selection );
+				$processor = new \RAN\Webhook\WebhookProcessor( $this->providers, $coordinator, new \RAN\Webhook\SignedWebhookVerifier( $secrets ) );
 				$response  = $processor->handle(
 					'gh',
 					static fn (): array => array(

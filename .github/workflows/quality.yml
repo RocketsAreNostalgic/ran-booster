@@ -818,26 +818,20 @@ jobs:
                     throw new RuntimeException( "Explicit storage verification failed: " . $result->code() );
                   }
                   $secrets->assert_managed_storage_ready();
-                  $secrets->with_github_adoption_inventory( static function ( array $inventory ): void {
-                    if ( array() !== $inventory ) {
-                      throw new RuntimeException( "Expected an empty disposable credential inventory." );
-                    }
-                  } );
                 ' --path="$wordpress"
 
-          - name: Prove installed GitHub replacement and historical selection
+          - name: Prove a plugin can supersede bundled GitHub
             if: ${{ matrix.suite == 'critical' }}
             env:
-                RAN_BOOSTER_GITHUB_HISTORICAL_DISPOSABLE: '1'
+                RAN_BOOSTER_GITHUB_SUPERSEDE_DISPOSABLE: '1'
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
             run: |
                 printf '%s\n' 'RAN Booster disposable test site' > build/wordpress/.ran-booster-disposable-test-site
-                wp user create fixture-admin fixture-admin@example.invalid --role=administrator --porcelain --path="$RAN_BOOSTER_WORDPRESS_PATH"
                 export PHP_BIN="$(command -v php)"
                 export WP_CLI_BIN="$(command -v wp)"
-                bash tests/WordPress/github-historical-installed-smoke.sh
+                bash tests/WordPress/github-supersede-installed-smoke.sh
 
-          - name: Prove immutable Bitbucket remains operational during GitHub switching
+          - name: Prove immutable Bitbucket remains operational while GitHub is superseded
             if: ${{ matrix.suite == 'critical' }}
             env:
                 RAN_BOOSTER_BITBUCKET_TEST_DISPOSABLE: '1'
@@ -849,7 +843,7 @@ jobs:
                     --output "$RAN_BOOSTER_BITBUCKET_ARCHIVE"
                 export PHP_BIN="$(command -v php)"
                 export WP_CLI_BIN="$(command -v wp)"
-                bash tests/WordPress/bitbucket-selection-installed-smoke.sh
+                bash tests/WordPress/bitbucket-coexistence-installed-smoke.sh
 
           - name: Prove native updater-lock election
             if: ${{ matrix.suite == 'critical' }}
@@ -960,7 +954,7 @@ jobs:
                     exit 1
                 fi
 
-          - name: Prove installed HTTP and public API selection refusal
+          - name: Prove installed HTTP recovery and portability adoption
             if: ${{ matrix.suite == 'critical' }}
             env:
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
@@ -1014,7 +1008,7 @@ jobs:
                 RAN_BOOSTER_RECOVERY_HTTP=1 \
                     "$PHP_BIN" "$WP_CLI_BIN" eval-file tests/WordPress/adoption-recovery-smoke.php \
                     --path="$RAN_BOOSTER_WORDPRESS_PATH"
-                bash tests/WordPress/portability-selection-installed-smoke.sh
+                bash tests/WordPress/portability-installed-smoke.sh
 
           - name: Upload Plugin Check results
             if: ${{ always() && matrix.plugin_check }}

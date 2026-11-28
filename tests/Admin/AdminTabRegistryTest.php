@@ -15,6 +15,7 @@ use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\Tests\Admin\Support\GitHubSupplierState;
 
 final class AdminTabRegistryTest extends TestCase {
 
@@ -65,6 +66,21 @@ final class AdminTabRegistryTest extends TestCase {
 			array( 'overview', 'gh', 'bb', 'fixture', 'portability', 'documentation', 'troubleshooting' ),
 			array_map( static fn ( AdminTab $tab ): string => $tab->get_key(), $registry->all() )
 		);
+	}
+
+	public function test_github_tab_stays_reachable_while_a_failed_or_conflicting_claim_leaves_it_unregistered(): void {
+		foreach ( array( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT ) as $supplier ) {
+			$registry = new AdminTabRegistry( GitHubSupplierState::apply( new ProviderRegistry( array( $this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ) ) ), $supplier, array( 'alpha', 'beta' ) ) );
+			self::assertSame(
+				array( 'overview', 'gh', 'bb', 'portability', 'documentation', 'troubleshooting' ),
+				array_map( static fn ( AdminTab $tab ): string => $tab->get_key(), $registry->all() ),
+				$supplier
+			);
+			self::assertSame( 'GitHub', $registry->resolve( 'gh' )->get_label() );
+			self::assertTrue( $registry->resolve( 'gh' )->is_provider() );
+		}
+		// A registry that does not own GitHub adds no tab for it.
+		self::assertNull( ( new AdminTabRegistry( new ProviderRegistry( array( $this->provider( ProviderCode::parse( 'bb' ), 'Bitbucket' ) ) ) ) )->find( 'gh' ) );
 	}
 
 	/** @return list<array{mixed}> */

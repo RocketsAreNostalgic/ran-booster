@@ -966,14 +966,13 @@ test('Settings Card heading slot names its tag, the footer rides in the body and
 	assert.equal(closed.body.firstChild, closed.form);
 });
 
-test('Disclosure warning row mounts between header and content, outside the heading, and restores in place', () => {
-	const build = (withHeading, withWarning) => {
+test('Installation section disclosure mounts its heading and content and restores in place', () => {
+	const build = (withHeading) => {
 		const f = fixture({ disclosureRuntime: true });
 		const host = new f.Node('div'),
 			details = new f.Node('details'),
 			summary = new f.Node('summary'),
 			heading = new f.Node('span'),
-			warning = new f.Node('div'),
 			body = new f.Node('div');
 		host.setAttribute(
 			'data-ran-booster-ui-disclosure',
@@ -982,15 +981,10 @@ test('Disclosure warning row mounts between header and content, outside the head
 		details.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
 		summary.setAttribute('aria-label', 'GitHub');
 		heading.setAttribute('data-ran-booster-ui-disclosure-heading', '');
-		warning.setAttribute('data-ran-booster-ui-disclosure-warning', '');
-		warning.textContent = 'Review provider settings.';
 		body.setAttribute('data-ran-booster-ui-disclosure-content', '');
 		body.appendChild(new f.Node('a'));
 		if (withHeading) {
 			summary.appendChild(heading);
-			if (withWarning) {
-				summary.appendChild(warning);
-			}
 		} else {
 			summary.textContent = 'GitHub';
 		}
@@ -1000,28 +994,21 @@ test('Disclosure warning row mounts between header and content, outside the head
 		f.doc.body.appendChild(host);
 		f.run();
 		f.flush();
-		return { f, host, details, summary, heading, warning, body };
+		return { f, host, details, summary, heading, body };
 	};
-	const warned = build(true, true);
-	assert.equal(warned.host.getAttribute('data-ran-booster-ui-mounted'), '');
-	const [header, row, content] = warned.f.tree().children;
+	const mounted = build(true);
+	assert.equal(mounted.host.getAttribute('data-ran-booster-ui-mounted'), '');
+	const [header, content] = mounted.f.tree().children;
+	assert.equal(mounted.f.tree().children.length, 2);
 	assert.equal(header.props.render.type, 'h4');
-	// The warning is plain flow text: no description wiring and not inside the header or aria-hidden title.
 	assert.equal(header.props['aria-describedby'], undefined);
-	assert.equal(row.type, 'div');
-	assert.equal(row.props['aria-hidden'], undefined);
 	assert.equal(content.props.keepMounted, true);
 	assert.deepEqual(header.children[1].children, ['GitHub']);
-	const target = new warned.f.Node('div');
-	row.props.ref(target);
-	assert.equal(target.childNodes[0], warned.warning);
-	// Restoring returns the warning to the native summary after the heading.
-	warned.f.emit('htmx:beforeHistorySave');
-	assert.equal(warned.host.firstChild, warned.details);
-	assert.deepEqual(warned.summary.children, [warned.heading, warned.warning]);
-	const healthy = build(true, false);
-	assert.equal(healthy.f.tree().children[1], null);
-	const plain = build(false, false);
+	// Restoring returns the heading to the native summary.
+	mounted.f.emit('htmx:beforeHistorySave');
+	assert.equal(mounted.host.firstChild, mounted.details);
+	assert.deepEqual(mounted.summary.children, [mounted.heading]);
+	const plain = build(false);
 	assert.deepEqual(Object.keys(plain.f.tree().children[0].props), [
 		'className',
 	]);

@@ -46,30 +46,11 @@ final class TroubleshootingServiceTest extends TestCase {
 			'next_check'     => 1,
 			'marker_version' => '1.0.0-beta.1',
 		);
-		$selection                 = array(
-			'state'      => 'available',
-			'available'  => true,
-			'current'    => array(
-				'selected'    => 'bundled',
-				'declaration' => array(
-					'display_name'           => 'Shipped GitHub module',
-					'display_version'        => '1.2.3',
-					'implementation_id'      => 'ran/github',
-					'provider_api_version'   => 15,
-					'compatibility_revision' => '1',
-					'facets'                 => array( 'RAN\\RepositoryProvider\\RepositoryBrowser' ),
-					'api_credential_formats' => array( 'github-classic-pat-v1' ),
-					'webhook_signing_format' => 'github-hmac-sha256-v1',
-				),
-			),
-			'candidates' => array(),
-		);
-		$payload                   = $service->with_installation_context( $form, $selection );
+		$payload                   = $service->with_installation_context( $form );
 		self::assertSame( 0, $provider->runs );
 		self::assertFalse( $payload['ran'] );
 		self::assertSame( $form['core_self_update'], $payload['core_self_update'] );
-		self::assertSame( 'Bundled with Booster', $payload['installation_details']['GitHub provider']['Source'] );
-		self::assertSame( '15', $payload['installation_details']['GitHub provider']['Provider API'] );
+		self::assertArrayNotHasKey( 'GitHub provider', $payload['installation_details'] );
 		self::assertSame( '1970-01-01T00:00:00+00:00', $payload['installation_details']['Core updates']['Last check (UTC)'] );
 		foreach ( $payload['installation_details'] as $heading => $rows ) {
 			self::assertStringContainsString( "\n" . $heading . "\n", $payload['report'] );
@@ -79,59 +60,15 @@ final class TroubleshootingServiceTest extends TestCase {
 		}
 		self::assertStringContainsString( 'Local declarations only;', $payload['report'] );
 		self::assertStringContainsString( "Diagnostic checks\nNot run", $payload['report'] );
-		self::assertSame( $payload, $service->with_installation_context( $payload, $selection ) );
+		self::assertSame( $payload, $service->with_installation_context( $payload ) );
 		$form['ran']            = true;
 		$form['results']        = array( $this->diagnostic_result( 'local.snapshot' )->to_array() );
 		$form['partial']        = true;
 		$form['partial_reason'] = 'provider_unavailable';
-		$ran                    = $service->with_installation_context( $form, $selection );
+		$ran                    = $service->with_installation_context( $form );
 		self::assertStringContainsString( 'Partial: yes', $ran['report'] );
 		self::assertStringContainsString( '[pass] local.snapshot | The check completed safely.', $ran['report'] );
 		self::assertSame( $payload['installation_details'], $ran['installation_details'] );
-	}
-
-	public function test_every_value_the_shipped_github_provider_declares_is_shown_in_the_installation_report(): void {
-		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
-		$contract    = \RAN\BoosterGitHubProvider\V1\GitHubProvider::compatibility_contract();
-		$declaration = array(
-			'display_name'    => 'RAN Booster GitHub Provider',
-			'display_version' => '1.0.0-beta.21',
-		) + $contract;
-		foreach ( array(
-			$declaration,
-			array(
-				'display_name'    => 'ran/booster-github-provider',
-				'display_version' => 'Unknown',
-			) + $contract,
-		) as $declared ) {
-			$service = $this->service();
-			$payload = $service->with_installation_context(
-				$service->form_payload(),
-				array(
-					'state'      => 'available',
-					'available'  => true,
-					'current'    => array(
-						'selected'    => 'bundled',
-						'declaration' => $declared,
-					),
-					'candidates' => array(),
-				)
-			);
-			$rows    = $payload['installation_details']['GitHub provider'];
-			self::assertSame( $declared['display_name'], $rows['Name'] );
-			self::assertSame( $declared['display_version'], $rows['Version'] );
-			self::assertSame( 'ran/booster-github-provider', $rows['Implementation'] );
-			self::assertSame( '15', $rows['Provider API'] );
-			self::assertSame( '2', $rows['Compatibility revision'] );
-			self::assertSame( 'github-hmac-sha256-v1', $rows['Webhook signing format'] );
-			self::assertSame( 'github-classic-pat-v1', $rows['API credential format 1'] );
-			self::assertSame( 'github-fine-grained-pat-v1', $rows['API credential format 2'] );
-			foreach ( $contract['facets'] as $index => $facet ) {
-				self::assertSame( $facet, $rows[ 'Capability ' . ( $index + 1 ) ] );
-			}
-			self::assertCount( 15, $contract['facets'] );
-			self::assertSame( 'available', $rows['Selection state'] );
-		}
 	}
 
 	public function test_the_real_bitbucket_and_github_provider_identities_and_core_update_values_are_shown(): void {
@@ -153,7 +90,7 @@ final class TroubleshootingServiceTest extends TestCase {
 				'marker_version'    => '1.0.0-beta.45+build.7',
 				'marker_commit'     => str_repeat( 'ab', 20 ),
 			);
-			$rows                      = $service->with_installation_context( $form, null )['installation_details'];
+			$rows                      = $service->with_installation_context( $form )['installation_details'];
 			self::assertSame( $identity[1], $rows['Diagnostic Git provider']['Git provider'] );
 			self::assertSame( $identity[0], $rows['Diagnostic Git provider']['Git provider code'] );
 			self::assertSame( '1.0.0-beta.45', $rows['Core updates']['Installed version'] );
@@ -172,7 +109,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		}
 	}
 
-	public function test_composer_dev_versions_and_41_character_class_runs_follow_their_grammars(): void {
+	public function test_composer_dev_versions_follow_the_version_grammar(): void {
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 		$service = $this->service();
 		foreach ( array(
@@ -185,24 +122,8 @@ final class TroubleshootingServiceTest extends TestCase {
 		) as $version => $shown ) {
 			$form                     = $service->form_payload();
 			$form['core_self_update'] = array( 'installed_version' => $version );
-			$rows                     = $service->with_installation_context( $form, null )['installation_details']['Core updates'];
+			$rows                     = $service->with_installation_context( $form )['installation_details']['Core updates'];
 			self::assertSame( $shown ? $version : 'Unavailable', $rows['Installed version'], (string) $version );
-		}
-		foreach ( array(
-			'RAN\\' . str_repeat( 'a', 40 ) => true,
-			'RAN\\' . str_repeat( 'a', 41 ) => false,
-		) as $class => $shown ) {
-			$selection = array(
-				'state'      => 'available',
-				'available'  => true,
-				'current'    => array(
-					'selected'    => 'external',
-					'declaration' => array( 'facets' => array( $class ) ),
-				),
-				'candidates' => array(),
-			);
-			$rows      = $service->with_installation_context( $service->form_payload(), $selection )['installation_details']['GitHub provider'];
-			self::assertSame( $shown ? $class : 'Unavailable', $rows['Capability 1'], (string) $class );
 		}
 	}
 
@@ -229,34 +150,15 @@ final class TroubleshootingServiceTest extends TestCase {
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'hostile_declared_values' )]
 	public function test_hostile_declared_values_are_unavailable_in_every_installation_field( string $hostile ): void {
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
-		$service                  = $this->service();
-		$form                     = $service->form_payload();
-		$form['core_self_update'] = array_fill_keys( array( 'installed_version', 'requested_mode', 'effective_mode', 'reason', 'updater_state', 'updater_code', 'offered_version', 'marker_version', 'marker_commit' ), $hostile );
-		$declaration              = array(
-			'display_name'           => $hostile,
-			'display_version'        => $hostile,
-			'implementation_id'      => $hostile,
-			'provider_api_version'   => 15,
-			'compatibility_revision' => $hostile,
-			'webhook_signing_format' => $hostile,
-			'facets'                 => array( $hostile ),
-			'api_credential_formats' => array( $hostile ),
-		);
-		$payload                  = $service->with_installation_context(
-			$form,
-			array(
-				'state'      => $hostile,
-				'available'  => true,
-				'current'    => array(
-					'selected'    => 'external',
-					'declaration' => $declaration,
-				),
-				'candidates' => array(),
-			)
-		);
-		$details                  = $payload['installation_details'];
-		foreach ( array( 'Name', 'Version', 'Implementation', 'Compatibility revision', 'Webhook signing format', 'Capability 1', 'API credential format 1', 'Selection state' ) as $label ) {
-			self::assertSame( 'Unavailable', $details['GitHub provider'][ $label ], $label );
+		$service                   = $this->service();
+		$form                      = $service->form_payload();
+		$form['core_self_update']  = array_fill_keys( array( 'installed_version', 'requested_mode', 'effective_mode', 'reason', 'updater_state', 'updater_code', 'offered_version', 'marker_version', 'marker_commit' ), $hostile );
+		$form['selected_provider'] = $hostile;
+		$form['providers']         = array( $hostile => $hostile );
+		$payload                   = $service->with_installation_context( $form );
+		$details                   = $payload['installation_details'];
+		foreach ( array( 'Git provider', 'Git provider code' ) as $label ) {
+			self::assertSame( 'Unavailable', $details['Diagnostic Git provider'][ $label ], $label );
 		}
 		foreach ( array( 'Installed version', 'Requested mode', 'Effective mode', 'Policy reason', 'Updater state', 'Updater code', 'Offered version', 'Marker version', 'Marker commit' ) as $label ) {
 			self::assertSame( 'Unavailable', $details['Core updates'][ $label ], $label );
@@ -275,7 +177,7 @@ final class TroubleshootingServiceTest extends TestCase {
 			'check_cooldown_until'  => 1700000300,
 			'next_check'            => 1700001000,
 		);
-		$rows                     = $service->with_installation_context( $form, null )['installation_details']['Core updates'];
+		$rows                     = $service->with_installation_context( $form )['installation_details']['Core updates'];
 		self::assertSame( gmdate( 'c', 1699999000 ), $rows['Last successful operator check (UTC)'] );
 		self::assertSame( 'failed', $rows['Last operator check outcome'] );
 		self::assertSame( 'check_failed', $rows['Last operator check code'] );
@@ -283,7 +185,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertSame( gmdate( 'c', 1700001000 ), $rows['Next check (UTC)'] );
 		foreach ( array( 'success', 'skipped', 'unknown', 'rejected' ) as $outcome ) {
 			$form['core_self_update']['last_check_outcome'] = $outcome;
-			self::assertSame( $outcome, $service->with_installation_context( $form, null )['installation_details']['Core updates']['Last operator check outcome'] );
+			self::assertSame( $outcome, $service->with_installation_context( $form )['installation_details']['Core updates']['Last operator check outcome'] );
 		}
 		$form['core_self_update'] = array(
 			'last_successful_check' => 0,
@@ -291,7 +193,7 @@ final class TroubleshootingServiceTest extends TestCase {
 			'last_check_outcome'    => 'injected',
 			'last_check_code'       => '/private/path',
 		);
-		$payload                  = $service->with_installation_context( $form, null );
+		$payload                  = $service->with_installation_context( $form );
 		foreach ( array( 'Last successful operator check (UTC)', 'Operator check cooldown until (UTC)', 'Last operator check outcome', 'Last operator check code' ) as $label ) {
 			self::assertSame( 'Unavailable', $payload['installation_details']['Core updates'][ $label ] );
 		}
@@ -307,75 +209,28 @@ final class TroubleshootingServiceTest extends TestCase {
 		$form['repository']    = 'private-owner/private-repository';
 		$unsafe_values         = array( '/srv/private-path-canary/config.php', 'C:\\private-path-canary\\config.php', 'Authorization: Bearer Canary12345678', 'Cookie: private=canary', 'Bearer Private12token34canary', 'github_pat_privatecanary', '<b>html-canary</b>', "line\ncontrol-canary", str_repeat( 'oversize-canary', 40 ), new \stdClass(), array( 'raw-secret-canary' ) );
 		foreach ( $unsafe_values as $unsafe ) {
-			$form['core_self_update'] = array(
+			$form['core_self_update']  = array(
 				'reason'     => $unsafe,
 				'last_check' => '123456',
 				'next_check' => -1,
 				'secret'     => 'core-secret-canary',
 			);
-			$form['providers']['gh']  = 'Authorization: Bearer Canary12345678';
-			$declaration              = array(
-				'display_name'           => $unsafe,
-				'display_version'        => $unsafe,
-				'implementation_id'      => $unsafe,
-				'provider_api_version'   => '15',
-				'compatibility_revision' => $unsafe,
-				'plugin_basename'        => 'private-path-canary/private.php',
-				'secret'                 => 'declaration-secret-canary',
-				'facets'                 => array( $unsafe ),
-				'api_credential_formats' => array( $unsafe ),
-			);
-			$selection                = array(
-				'state'      => $unsafe,
-				'available'  => 'true',
-				'current'    => array(
-					'selected'    => 'external',
-					'declaration' => $declaration,
-					'approval'    => 'approval-private-canary',
-				),
-				'candidates' => array( '/srv/candidate-private-canary' => $declaration ),
-				'secret'     => 'selection-private-canary',
-			);
-			$payload                  = $service->with_installation_context( $form, $selection );
-			self::assertSame( 'Unavailable', $payload['installation_details']['GitHub provider']['Name'] );
-			self::assertSame( 'Unavailable', $payload['installation_details']['GitHub provider']['Provider API'] );
-			self::assertSame( 'Unknown', $payload['installation_details']['GitHub provider']['Operational availability'] );
+			$form['providers']['gh']   = 'Authorization: Bearer Canary12345678';
+			$form['selected_provider'] = 'gh';
+			$payload                   = $service->with_installation_context( $form );
+			self::assertSame( 'Unavailable', $payload['installation_details']['Diagnostic Git provider']['Git provider'] );
 			self::assertSame( 'Unavailable', $payload['installation_details']['Core updates']['Policy reason'] );
 			self::assertStringNotContainsString( 'canary', $payload['report'] );
 			self::assertStringNotContainsString( 'private-owner/private-repository', $payload['report'] );
-			self::assertSame( $payload['report'], $service->with_installation_context( $payload, $selection )['report'] );
+			self::assertSame( $payload['report'], $service->with_installation_context( $payload )['report'] );
 		}
 	}
 
-	public function test_missing_provider_and_candidate_bounds_remain_explicit_in_context(): void {
+	public function test_missing_provider_remains_explicit_in_context(): void {
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 		$service = new TroubleshootingService( new TroubleshootingLocalFixture( array() ), new ProviderRegistry() );
-		$payload = $service->with_installation_context( $service->form_payload(), null );
-		self::assertSame( 'Unknown', $payload['installation_details']['GitHub provider']['Source'] );
+		$payload = $service->with_installation_context( $service->form_payload() );
 		self::assertSame( 'Unavailable', $payload['installation_details']['Diagnostic Git provider']['Git provider'] );
-		$selection = array(
-			'state'      => 'missing',
-			'available'  => false,
-			'current'    => array(
-				'selected'    => 'external',
-				'declaration' => array( 'display_name' => 'Absent replacement' ),
-			),
-			'candidates' => array_fill(
-				0,
-				8,
-				array(
-					'display_name' => 'Enabled replacement',
-					'facets'       => array_fill( 0, 33, 'excess-facet-canary' ),
-				)
-			),
-		);
-		$payload   = $service->with_installation_context( $payload, $selection );
-		self::assertSame( 'External replacement', $payload['installation_details']['GitHub provider']['Source'] );
-		self::assertSame( 'missing', $payload['installation_details']['GitHub provider']['Selection state'] );
-		self::assertSame( '8', $payload['installation_details']['GitHub provider']['Enabled candidates'] );
-		self::assertArrayHasKey( 'GitHub candidate 4', $payload['installation_details'] );
-		self::assertArrayNotHasKey( 'GitHub candidate 5', $payload['installation_details'] );
-		self::assertStringNotContainsString( 'excess-facet-canary', $payload['report'] );
 		self::assertFalse( $payload['ran'] );
 	}
 
@@ -957,7 +812,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$local                     = new TroubleshootingLocalFixture( $this->local_results() );
 		$secrets                   = new TroubleshootingSecretsFixture( array() );
 		$service                   = new TroubleshootingService( $local, $registry, secrets: $secrets );
-		$facts                     = $service->installation_payload( null, array( 'status' => 'not_checked' ) );
+		$facts                     = $service->installation_payload( array( 'message' => null ), array( 'status' => 'not_checked' ) );
 		self::assertSame( array(), $facts['credentials'] );
 		self::assertSame( array( 'status' => 'not_checked' ), $facts['storage'] );
 		self::assertArrayHasKey( 'PHP', $facts['environment'] );
@@ -966,6 +821,8 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertSame( 0, $provider->runs );
 		self::assertSame( 0, $secrets->profile_reads );
 		self::assertSame( 0, $secrets->maintenance_reads );
+		self::assertNull( $facts['github_supplier'] );
+		self::assertSame( 'GitHub is provided by Alpha.', $service->installation_payload( array( 'message' => 'GitHub is provided by Alpha.' ), array() )['github_supplier'] );
 	}
 
 	public function test_diagnostics_preserve_immediate_results_if_the_initiating_scope_changes(): void {
@@ -1016,7 +873,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$service  = new TroubleshootingService( $local, new ProviderRegistry( array( $provider ) ) );
 		$report   = $service->generate_support_report( array() );
 		$data     = json_decode( $report['text'], true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( 1, $data['schema_version'] );
+		self::assertSame( 2, $data['schema_version'] );
 		self::assertSame( 'Unavailable', $data['coverage'] );
 		self::assertSame( array(), $data['sections'] );
 		self::assertMatchesRegularExpression( '/^ran-booster-support-\d{8}-\d{6}\.json$/', $report['filename'] );

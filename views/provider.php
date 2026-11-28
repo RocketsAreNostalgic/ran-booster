@@ -4,7 +4,7 @@
  * Provider page inputs assembled by Dashboard::get_index(), ProviderSettingsPresenter
  * and ProviderRepositoryRowsNormalizer.
  *
- * @var array<string,mixed>|null $github_selection
+ * @var array{message:string,available:bool}|null $github_supplier
  * @var string $activity_url
  * @var string $credential_management_description
  * @var string $add_credential_url
@@ -277,124 +277,15 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 	<?php } ?>
 
 
-	<?php if ( isset( $github_selection ) && is_array( $github_selection ) ) { ?>
-		<?php
-		$selection_status            = $github_selection['status'];
-		$current_implementation      = $selection_status['current']['declaration'] ?? null;
-		$healthy_replacement         = 'available' === $selection_status['state'] && $github_selection['available'];
-		$github_provider_details_url = is_multisite()
-			? network_admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' )
-			: admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' );
-		?>
-		<section class="ran-booster-provider__management" aria-label="<?php esc_attr_e( 'GitHub provider management', 'ran-booster' ); ?>">
-			<?php if ( $healthy_replacement && is_array( $current_implementation ) ) { ?>
-				<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
-				<div data-ran-booster-ui-disclosure="provider-manage" data-ran-booster-ui-disclosure-density="compact">
-				<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure"><summary><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></summary>
-				<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
-				<p><?php esc_html_e( 'To change the GitHub provider integration, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
-			<?php } else { ?>
-				<?php $adoption_review = $github_selection['review']; ?>
-				<?php if ( 'decision_required' !== $selection_status['state'] ) { ?>
-					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
-						<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
-						<h3>
-							<?php
-							echo esc_html(
-								match ( $selection_status['state'] ) {
-								'conflict' => __( 'Multiple GitHub providers are active', 'ran-booster' ),
-								'incompatible' => __( 'A GitHub provider is incompatible', 'ran-booster' ),
-								'missing' => __( 'The selected GitHub provider is missing', 'ran-booster' ),
-								'replacement_load_failed' => __( 'The selected GitHub provider could not load', 'ran-booster' ),
-								'storage_unavailable' => __( 'GitHub provider selection is unavailable', 'ran-booster' ),
-								default => __( 'GitHub provider unavailable', 'ran-booster' ),
-								}
-							);
-							?>
-						</h3>
-						<p>
-							<?php
-							echo esc_html(
-								match ( $selection_status['state'] ) {
-								'conflict' => __( 'Deactivate the extra provider plugins, then return here to review your selection.', 'ran-booster' ),
-								'incompatible' => __( 'Deactivate the incompatible provider plugin, then return here to review your selection.', 'ran-booster' ),
-								'missing' => __( 'Restore the selected plugin or deactivate all replacement plugins, then review a return to bundled GitHub.', 'ran-booster' ),
-								'replacement_load_failed' => __( 'Install a version built for this Booster release, or deactivate the replacement plugin and review a return to bundled GitHub.', 'ran-booster' ),
-								'storage_unavailable' => __( 'Booster could not verify its saved GitHub provider choice. Review GitHub provider details before continuing.', 'ran-booster' ),
-								default => '',
-								}
-							);
-							?>
-						</p>
-						<?php if ( 'missing' === $selection_status['state'] && is_array( $current_implementation ) ) { ?>
-							<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Missing provider: %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
-						<?php } ?>
-						<?php if ( in_array( $selection_status['state'], array( 'conflict', 'incompatible' ), true ) ) { ?>
-							<ul><?php foreach ( $selection_status['candidates'] as $basename => $candidate ) { ?>
-								<li><?php echo esc_html( is_array( $candidate ) ? $candidate['display_name'] : $basename ); ?></li>
-							<?php } ?></ul>
-						<?php } ?>
-						<?php if ( ! $github_selection['available'] ) { ?>
-							<p><?php esc_html_e( 'GitHub operations are paused. Local records remain available. This does not pause other Git providers.', 'ran-booster' ); ?></p>
-						<?php } ?>
-						<?php if ( ! is_array( $adoption_review ) ) { ?>
-							<p><a href="<?php echo esc_url( $github_provider_details_url ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
-						<?php } ?>
-					</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
-				<?php } elseif ( ! $github_selection['available'] ) { ?>
-					<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-provider-paused-notice><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'GitHub operations are paused. Local records remain available. This does not pause other Git providers.', 'ran-booster' ); ?></p><?php echo is_array( $adoption_review ) ? '' : '<p><a href="' . esc_url( $github_provider_details_url ) . '">' . esc_html__( 'GitHub provider details', 'ran-booster' ) . '</a></p>'; ?></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
-				<?php } ?>
-				<?php if ( '' !== $github_selection['error'] && ! in_array( $selection_status['state'], array( 'conflict', 'incompatible', 'storage_unavailable' ), true ) ) { ?>
-					<p role="status"><?php echo esc_html( $github_selection['error'] ); ?></p>
-				<?php } ?>
-				<?php if ( is_array( $adoption_review ) ) { ?>
-					<div data-ran-booster-ui-disclosure="provider-adoption-review" data-ran-booster-ui-disclosure-density="compact">
-					<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure"><summary><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Review return to bundled GitHub', 'ran-booster' ) : __( 'Review and approve GitHub provider', 'ran-booster' ) ); ?></summary>
-					<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
-					<?php
-					$review_target = $selection_status['candidates'][ $adoption_review['target']['plugin_basename'] ] ?? null;
-					$review_name   = 'bundled' === $adoption_review['selected']
-						? __( 'Bundled GitHub', 'ran-booster' )
-						: ( is_array( $review_target ) ? $review_target['display_name'] : $adoption_review['target']['implementation_id'] );
-					?>
-					<h4><?php esc_html_e( 'Selected provider', 'ran-booster' ); ?></h4>
-					<p><?php echo esc_html( sprintf( /* translators: %s: the implementation being reviewed for approval. */ __( 'Reviewing GitHub provider: %s', 'ran-booster' ), $review_name ) ); ?></p>
-					<p><?php esc_html_e( 'Plugin names and compatibility claims do not verify publisher identity. Approve only a plugin you trust.', 'ran-booster' ); ?></p>
-					<p><?php echo esc_html( is_array( $github_selection['package_counts'] ) ? sprintf( /* translators: 1: managed Branch packages, 2: managed release packages. */ __( 'Affected GitHub packages: %1$d Branch, %2$d Published release.', 'ran-booster' ), $github_selection['package_counts']['branch'], $github_selection['package_counts']['release_asset'] ) : __( 'Affected package inventory could not be checked.', 'ran-booster' ) ); ?></p>
-					<h4><?php esc_html_e( 'Saved credentials this provider may use', 'ran-booster' ); ?></h4>
-					<p><?php echo esc_html( sprintf( /* translators: 1: compatible profile count, 2: incompatible profile count. */ __( 'Saved GitHub access credentials: %1$d compatible, %2$d incompatible. Counts include credentials configured in wp-config.php.', 'ran-booster' ), $adoption_review['compatible_count'], $adoption_review['incompatible_count'] ) ); ?></p>
-					<h4><?php esc_html_e( 'Paused operations', 'ran-booster' ); ?></h4>
-					<p><?php esc_html_e( 'Credentials this provider cannot use remain unchanged and unavailable. Packages using them stay paused; Booster will not substitute another credential. Operations this provider does not support remain unavailable.', 'ran-booster' ); ?></p>
-					<h4><?php esc_html_e( 'Approval', 'ran-booster' ); ?></h4>
-					<?php if ( ! $github_selection['available'] && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
-						<form method="post" action="<?php echo esc_url( is_multisite() ? network_admin_url( 'admin.php?page=ran-booster&tab=gh' ) : admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
-							<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-adopt-github-' . $adoption_review['digest'] ); ?>
-							<input type="hidden" name="ran_booster[action]" value="adopt-github">
-							<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $adoption_review['digest'] ); ?>">
-							<p><label><input type="checkbox" name="ran_booster[confirmed]" value="1" required> <?php esc_html_e( 'I approve this provider and future setup of credentials it supports.', 'ran-booster' ); ?></label></p>
-							<p><?php echo esc_html( $adoption_review['signing_reuse'] ? __( 'This approval also permits reuse of compatible existing webhook signing secrets.', 'ran-booster' ) : __( 'Existing webhook signing secrets remain stored but webhook verification is unavailable with this provider.', 'ran-booster' ) ); ?></p>
-							<?php if ( $adoption_review['compatible_count'] > 0 ) { ?>
-								<p><label><input type="checkbox" name="ran_booster[reuse_existing]" value="1" required> <?php esc_html_e( 'Allow this provider to read and use all compatible existing GitHub access credentials, including those configured in wp-config.php.', 'ran-booster' ); ?></label></p>
-								<p><?php esc_html_e( 'Declining reuse cancels this adoption. GitHub remains paused until you complete an approved selection or restore the previously approved provider.', 'ran-booster' ); ?></p>
-							<?php } elseif ( $adoption_review['has_material'] ) { ?>
-								<p><label><input type="checkbox" name="ran_booster[acknowledge_incompatible]" value="1" required> <?php esc_html_e( 'I understand that none of the existing GitHub access credentials can be reused. Compatible access credentials must be configured afterward.', 'ran-booster' ); ?></label></p>
-							<?php } ?>
-							<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Return to bundled GitHub', 'ran-booster' ) : __( 'Approve GitHub provider', 'ran-booster' ) ); ?></button>
-						</form>
-					<?php } ?>
-					<p><a href="<?php echo esc_url( $github_provider_details_url ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
-					</div>
-					</details></div>
-				<?php } elseif ( 'decision_required' === $selection_status['state'] && $github_selection['available'] ) { ?>
-				<p><a href="<?php echo esc_url( $github_provider_details_url ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
-				<?php } ?>
-			<?php } ?>
-			<?php
-			if ( $healthy_replacement ) {
-				?>
-				<p><a href="<?php echo esc_url( $github_provider_details_url ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
-				</div>
-				</details></div><?php } ?>
+	<?php if ( isset( $github_supplier ) && is_array( $github_supplier ) && ! $is_repository_detail ) { ?>
+		<section class="ran-booster-provider__management" aria-label="<?php esc_attr_e( 'GitHub provider source', 'ran-booster' ); ?>">
+		<?php if ( $github_supplier['available'] ) { ?>
+			<p class="ran-booster-provider__supplier"><?php echo esc_html( $github_supplier['message'] ); ?></p>
+		<?php } else { ?>
+			<div class="notice notice-warning inline ran-booster-provider__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+				<p><?php echo esc_html( $github_supplier['message'] ); ?></p>
+			</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
+		<?php } ?>
 		</section>
 	<?php } ?>
 

@@ -26,3 +26,12 @@ if ( ! function_exists( 'WP_Filesystem' ) ) {
 		return true;
 	}
 }
+
+if ( ! function_exists( 'plugin_basename' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- The registry attributes a GitHub claim through this WordPress API; the temporary directory stands in for WP_PLUGIN_DIR.
+	function plugin_basename( string $file ): string {
+		$root = rtrim( str_replace( '\\', '/', sys_get_temp_dir() ), '/' ) . '/';
+		$file = str_replace( '\\', '/', $file );
+		return str_starts_with( $file, $root ) ? substr( $file, strlen( $root ) ) : trim( $file, '/' );
+	}
+}

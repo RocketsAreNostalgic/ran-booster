@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Troubleshooting;
 
-use Closure;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Booster;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -13,44 +12,14 @@ use RAN\Settings\GeneralPreferenceStore;
 
 /** Fixed local observations, shared by Installation and the support capture. */
 final class InstallationFacts {
-	/** @var array{state:string,admitted:bool,selected:string,version:string,provider_api:int,compatibility_revision:string,identity:?array{provider_code:string,selection_generation:int,implementation_fingerprint:string}}|null */
-	private ?array $github_observed = null;
-
 	/** @var list<array<string,string>>|null */
 	private ?array $component_observed = null;
 
-	/**
-	 * @param Closure(): array{state:string,admitted:bool,selected:string,version:string,provider_api:int,compatibility_revision:string,identity:?array{provider_code:string,selection_generation:int,implementation_fingerprint:string}}|null $github_observation
-	 */
 	public function __construct(
 		private readonly ProviderRegistry $providers,
 		private readonly ?CoreSelfUpdateStatus $updates = null,
-		private readonly ?Closure $github_observation = null,
 		private readonly ?AdminAddOnRegistry $add_ons = null
 	) {
-	}
-
-	/** @return array{state:string,admitted:bool,selected:string,version:string,provider_api:int,compatibility_revision:string,identity:?array{provider_code:string,selection_generation:int,implementation_fingerprint:string}} */
-	public function github_selection(): array {
-		if ( null === $this->github_observed ) {
-			$this->github_observed = array(
-				'state'                  => 'storage_unavailable',
-				'admitted'               => false,
-				'selected'               => 'unknown',
-				'version'                => 'Unknown',
-				'provider_api'           => 0,
-				'compatibility_revision' => 'Unknown',
-				'identity'               => null,
-			);
-			if ( null !== $this->github_observation ) {
-				try {
-					$this->github_observed = ( $this->github_observation )();
-				} catch ( \Throwable ) {
-					$this->github_observed['state'] = 'storage_unavailable';
-				}
-			}
-		}
-		return $this->github_observed;
 	}
 
 	/** @return array<string,string> */
@@ -245,12 +214,6 @@ final class InstallationFacts {
 			return $this->component_observed;
 		}
 		$rows = array();
-		if ( null !== $this->github_observation && ! isset( $this->providers->metadata()['gh'] ) ) {
-			$rows['provider:gh'] = array(
-				'Name'     => 'GitHub',
-				'Provider' => 'gh',
-			);
-		}
 		foreach ( $this->providers->metadata() as $code => $metadata ) {
 			if ( count( $rows ) >= 33 ) {
 				break;
@@ -274,6 +237,23 @@ final class InstallationFacts {
 			if ( array() !== $capabilities ) {
 				$rows[ 'provider:' . $code ]['Capabilities'] = implode( ', ', $capabilities );
 			}
+		}
+		$supplier = $this->providers->github_supplier();
+		if ( null !== $supplier && ( isset( $rows['provider:gh'] ) || count( $rows ) < 33 ) ) {
+			$rows['provider:gh'] = ( $rows['provider:gh'] ?? array(
+				'Name'         => 'GitHub',
+				'Provider'     => 'gh',
+				'Admission'    => 'Not admitted',
+				'Selection'    => 'Not applicable',
+				'Availability' => 'Unavailable',
+			) ) + array(
+				'Supplier' => match ( $supplier ) {
+					ProviderRegistry::GITHUB_BUNDLED => 'Included with Booster',
+					ProviderRegistry::GITHUB_SUPERSEDE_FAILED => 'Add-on failed to load',
+					ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT => 'More than one add-on',
+					default => 'Add-on',
+				},
+			);
 		}
 		$catalogue = defined( 'WP_PLUGIN_DIR' ) ? Booster::extension_declarations() : array();
 		$joins     = array();
@@ -338,13 +318,6 @@ final class InstallationFacts {
 	public function implementation( string $code ): string {
 		$provider = $this->providers->all()[ $code ] ?? null;
 		$parts    = array( null === $provider ? 'unavailable' : $provider::class );
-		if ( 'gh' === $code ) {
-			$selection = $this->github_selection()['identity'];
-			if ( null !== $selection ) {
-				$parts[] = (string) $selection['selection_generation'];
-				$parts[] = $selection['implementation_fingerprint'];
-			}
-		}
 		if ( null !== $provider ) {
 			$file = ( new \ReflectionClass( $provider ) )->getFileName();
 			if ( is_string( $file ) && is_file( $file ) ) {

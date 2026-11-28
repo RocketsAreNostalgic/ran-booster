@@ -19,10 +19,11 @@ use RAN\Storage\Database;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
-use RAN_Booster_GitHubReplacementFixture\Fixture;
+use RAN\RepositoryProvider\ProviderRegistry;
+use RAN_Booster_GitHubOfflineProviderFixture\Fixture;
 
 if ( ! class_exists( Fixture::class, false ) ) {
-	require_once dirname( __DIR__ ) . '/fixtures/github-replacement/fixture.php';
+	require_once dirname( __DIR__ ) . '/fixtures/ran-booster-github-offline-provider/src/Fixture.php';
 }
 Fixture::guard();
 if ( ! defined( 'LOGGED_IN_COOKIE' ) || ! defined( 'AUTH_COOKIE' ) || ! defined( 'WP_CLI' ) || ! WP_CLI || ! current_user_can( 'manage_options' ) || ! current_user_can( 'install_plugins' ) ) {
@@ -76,8 +77,8 @@ $ran_booster_snapshot  = static function () use ( $ran_booster_secrets, $ran_boo
 };
 $ran_booster_no_calls  = static function () use ( $ran_booster_assert ): void {
 	foreach ( Fixture::counters() as $key => $count ) {
-		// Fresh bootstrap may construct the approved provider, but must not call it.
-		if ( ! str_ends_with( $key, '.factory_calls' ) ) {
+		// Fresh bootstrap may construct the superseding provider, but must not call it.
+		if ( 'factory_calls' !== $key ) {
 			$ran_booster_assert( 0 === $count, 'unconsented consumer disclosed credentials or called provider' );
 		}
 	}
@@ -87,7 +88,7 @@ $ran_booster_no_calls  = static function () use ( $ran_booster_assert ): void {
 // A new session is used only for this request and destroyed afterwards.
 $ran_booster_dashboard = static function ( bool $apply, string $credential_action = 'import', bool $adopt = true ) use ( $ran_booster_identity, $ran_booster_repository, $ran_booster_assert ): array {
 	$blueprint = new PackageBlueprint(
-		array( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'replacement-fixture:' . $ran_booster_repository, $ran_booster_repository, 'main', null ) ),
+		array( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'offline-fixture:' . $ran_booster_repository, $ran_booster_repository, 'main', null ) ),
 		array(
 			new BlueprintCredential(
 				'gh',
@@ -272,7 +273,7 @@ if ( $ran_booster_migrator ) {
 			$ran_booster_assert( 200 === $ran_booster_response['status'] && str_contains( $ran_booster_response['body'], 'data-ran-booster-wp-pusher-migration-complete="true"' ), 'fresh Migrator completes verified adoption and cleanup' );
 			wp_cache_delete( Fixture::COUNTERS, 'options' );
 			$ran_booster_counts = Fixture::counters();
-			$ran_booster_assert( $ran_booster_counts['b.provider_calls'] > 0 && 0 === $ran_booster_counts['a.provider_calls'], 'fresh Migrator Apply checks the selected provider' );
+			$ran_booster_assert( $ran_booster_counts['provider_calls'] > 0, 'fresh Migrator Apply checks the superseding provider' );
 			$ran_booster_after = $ran_booster_snapshot();
 			$ran_booster_assert( $ran_booster_before['target'] === $ran_booster_after['target'] && $ran_booster_before['ciphertext'] === $ran_booster_after['ciphertext'], 'Migrator does not replace package bytes or credentials' );
 			break;
@@ -280,7 +281,7 @@ if ( $ran_booster_migrator ) {
 			$ran_booster_assert( false === $ran_booster_readback['present'] && null === $ran_booster_readback['source_fingerprint'], 'successful Apply removes exact source row' );
 			$ran_booster_package = $ran_booster_plugins->booster_plugin_from_file( $ran_booster_identity );
 			$ran_booster_assert( DeploymentPolicy::DISABLED === $ran_booster_package->get_deployment_policy(), 'Migrator adoption persists Disabled' );
-			$ran_booster_comparison = $ran_booster_container->make( PortabilityApplicationService::class )->compare_local( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Migrator fixture', 'gh', 'replacement-fixture:fixtures/ran-migrator-fixture', 'fixtures/ran-migrator-fixture', 'main', null ) );
+			$ran_booster_comparison = $ran_booster_container->make( PortabilityApplicationService::class )->compare_local( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Migrator fixture', 'gh', 'offline-fixture:fixtures/ran-migrator-fixture', 'fixtures/ran-migrator-fixture', 'main', null ) );
 			$ran_booster_assert( 'matching' === $ran_booster_comparison['state'] && 'unknown' === $ran_booster_comparison['installed_equality'], 'Migrator adoption is configuration equality only' );
 			$ran_booster_sessions->destroy( $ran_booster_state['token'] );
 			$ran_booster_state = array();
@@ -296,8 +297,12 @@ if ( $ran_booster_migrator ) {
 }
 
 switch ( $ran_booster_phase ) {
+	case 'reset-counters':
+		delete_option( Fixture::COUNTERS );
+		break;
 	case 'setup':
 	case 'dashboard-success-setup':
+		$ran_booster_assert( Fixture::DIRECTORY === $ran_booster_container->make( ProviderRegistry::class )->github_supplier(), 'the offline provider fixture supplies gh' );
 		$ran_booster_assert( ! file_exists( dirname( $ran_booster_path ) ), 'fresh target required' );
 		$ran_booster_assert( null !== $ran_booster_secrets->path(), 'configured encrypted credential storage required' );
 		break;
@@ -328,7 +333,7 @@ switch ( $ran_booster_phase ) {
 		$ran_booster_result = $ran_booster_facade->apply( $ran_booster_candidate, $ran_booster_saved, wp_create_nonce( $ran_booster_facade->nonce_action( 'apply', $ran_booster_candidate, $ran_booster_saved ) ) );
 		$ran_booster_assert( 'adopted' === $ran_booster_result->status && $ran_booster_result->target_verified, 'fresh public adoption must succeed' );
 		$ran_booster_counts = Fixture::counters();
-		$ran_booster_assert( $ran_booster_counts['b.provider_calls'] > 0 && $ran_booster_counts['b.credential_material_returns'] > 0, 'fresh Apply must recheck current provider and credential' );
+		$ran_booster_assert( $ran_booster_counts['provider_calls'] > 0 && $ran_booster_counts['credential_material_returns'] > 0, 'fresh Apply must recheck current provider and credential' );
 		$ran_booster_after = $ran_booster_snapshot();
 		$ran_booster_assert( $ran_booster_before['target'] === $ran_booster_after['target'] && $ran_booster_before['ciphertext'] === $ran_booster_after['ciphertext'], 'adoption must not replace installed bytes or credential' );
 		break;
@@ -336,7 +341,7 @@ switch ( $ran_booster_phase ) {
 	case 'dashboard-success-readback':
 		$ran_booster_package = $ran_booster_plugins->booster_plugin_from_file( $ran_booster_identity );
 		$ran_booster_assert( DeploymentPolicy::DISABLED === $ran_booster_package->get_deployment_policy(), 'fresh request must observe Disabled adoption' );
-		$ran_booster_comparison = $ran_booster_container->make( PortabilityApplicationService::class )->compare_local( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'replacement-fixture:' . $ran_booster_repository, $ran_booster_repository, 'main', null ) );
+		$ran_booster_comparison = $ran_booster_container->make( PortabilityApplicationService::class )->compare_local( new BlueprintPackage( 'plugin', $ran_booster_identity, 'Consumer proof', 'gh', 'offline-fixture:' . $ran_booster_repository, $ran_booster_repository, 'main', null ) );
 		$ran_booster_assert( 'matching' === $ran_booster_comparison['state'] && 'unknown' === $ran_booster_comparison['installed_equality'], 'matching configuration is not verified installed equality' );
 		if ( $ran_booster_dashboard_success ) {
 			$ran_booster_imported = get_option( 'ran_booster_consumer_dashboard_import' );
@@ -367,7 +372,7 @@ switch ( $ran_booster_phase ) {
 		update_option( 'ran_booster_consumer_dashboard_review', 'reviewed', false );
 		wp_cache_delete( Fixture::COUNTERS, 'options' );
 		$ran_booster_counts_after = Fixture::counters();
-		$ran_booster_assert( $ran_booster_counts_after['a.credential_material_returns'] + $ran_booster_counts_after['b.credential_material_returns'] > $ran_booster_counts_before['a.credential_material_returns'] + $ran_booster_counts_before['b.credential_material_returns'], 'dashboard preview really used the temporary imported credential' );
+		$ran_booster_assert( $ran_booster_counts_after['credential_material_returns'] > $ran_booster_counts_before['credential_material_returns'], 'dashboard preview really used the temporary imported credential' );
 		break;
 	case 'dashboard-success-no-consent':
 	case 'dashboard-success-apply':
@@ -399,7 +404,7 @@ switch ( $ran_booster_phase ) {
 		update_option( 'ran_booster_consumer_dashboard_import', $ran_booster_package->get_credential_id(), false );
 		wp_cache_delete( Fixture::COUNTERS, 'options' );
 		$ran_booster_counts = Fixture::counters();
-		$ran_booster_assert( $ran_booster_counts['b.provider_calls'] > 0 && $ran_booster_counts['b.credential_material_returns'] > 0 && 0 === $ran_booster_counts['a.provider_calls'], 'dashboard Apply freshly verifies through B with the imported material' );
+		$ran_booster_assert( $ran_booster_counts['provider_calls'] > 0 && $ran_booster_counts['credential_material_returns'] > 0, 'dashboard Apply freshly verifies through the superseding provider with the imported material' );
 		break;
 	default:
 		throw new RuntimeException( 'Unknown consumer proof phase.' );

@@ -15,7 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/src/ReleaseUpdaterRegistrar.php';
 require __DIR__ . '/src/Plugin.php';
 

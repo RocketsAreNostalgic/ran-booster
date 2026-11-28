@@ -117,15 +117,13 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		parent::tearDown();
 	}
 
-	public function test_actual_classic_form_saves_and_edits_with_canonical_format_guard(): void {
+	public function test_actual_classic_form_saves_and_edits(): void {
 		$policies        = new ProviderSecretPolicyCatalog();
 		$secrets         = new SecretsFile(
 			$this->path,
 			array(),
 			$policies,
-			new InMemorySiteKeyStore( $this->path ),
-			github_credential_access: static fn ( ?array $metadata ): bool => null === $metadata
-				|| 'github-classic-pat-v1' === \RAN\RepositoryProvider\GitHubProviderSelection::credential_format( $metadata )
+			new InMemorySiteKeyStore( $this->path )
 		);
 		$provider        = \RAN\BoosterGitHubProvider\V1\GitHubProvider::create(
 			$secrets->credentials_for( 'gh' ),

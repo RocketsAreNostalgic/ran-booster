@@ -149,11 +149,6 @@ class Dispatcher {
 				return;
 			}
 
-			if ( 'adopt-github' === $action ) {
-				$this->provider_profiles->adopt_github( $request );
-				$this->redirect_to( $this->dashboard->provider_tab_url( 'gh' ) );
-			}
-
 			if ( 'save-public-lookup-profile' === $action ) {
 				$this->provider_profiles->manage_public_lookup_profile( $request, $this->is_htmx_request() );
 

@@ -67,7 +67,7 @@ final readonly class OnboardingPresenter {
 	/**
 	 * @param list<array{key: string, label: string, url: string, active: bool, provider: bool}> $tabs Allowlisted admin navigation.
 	 * @param array<string, mixed>|null $storage_summary Previously inspected storage state.
-	 * @param array<string, array{admitted:bool,selection:?string,source_kind?:?string,source_name?:?string,replacement_detected?:bool}> $provider_facts Local admission and selection facts.
+	 * @param array<string, array{admitted:bool,message?:?string,source_kind?:?string,source_name?:?string}> $provider_facts Local admission and selection facts.
 	 * @param array{status:string,total:?int,items:list<array{provider_label:string,label:string,badge_label:string,stage:string,url:string}>}|null $credential_expiry This request's captured expiry reminders.
 	 * @param array<string,array{plugin:int,theme:int}> $paused_counts Managed packages each source setting pauses.
 	 * @return array<string, mixed>
@@ -143,14 +143,13 @@ final readonly class OnboardingPresenter {
 			}
 			$fact                             = $provider_facts[ $tab['key'] ] ?? null;
 			$overview['provider_summaries'][] = array(
-				'code'                 => $tab['key'],
-				'label'                => $tab['label'],
-				'url'                  => $tab['url'],
-				'admitted'             => $fact['admitted'] ?? null,
-				'selection'            => $fact['selection'] ?? null,
-				'source_kind'          => $fact['source_kind'] ?? null,
-				'source_name'          => $fact['source_name'] ?? null,
-				'replacement_detected' => $fact['replacement_detected'] ?? false,
+				'code'        => $tab['key'],
+				'label'       => $tab['label'],
+				'url'         => $tab['url'],
+				'admitted'    => $fact['admitted'] ?? null,
+				'message'     => $fact['message'] ?? null,
+				'source_kind' => $fact['source_kind'] ?? null,
+				'source_name' => $fact['source_name'] ?? null,
 			);
 		}
 		$overview['storage_summary']   = $storage_summary;

@@ -132,7 +132,7 @@ final class ManagedReleaseTargetRegistrar {
 	}
 
 	public function reserve_core_self_update_target( string $installed_identifier ): void {
-		$identity = self::plugin_target_identity( $installed_identifier );
+		$identity = self::target_identity( 'plugin', $installed_identifier );
 		if ( '' !== $identity ) {
 			$this->core_self_update_plugin_identifier = $identity;
 		}
@@ -141,7 +141,7 @@ final class ManagedReleaseTargetRegistrar {
 	public function has_reserved_core_self_update_target( string $package_type, string $installed_identifier ): bool {
 		return 'plugin' === $package_type
 			&& null !== $this->core_self_update_plugin_identifier
-			&& hash_equals( $this->core_self_update_plugin_identifier, self::plugin_target_identity( $installed_identifier ) );
+			&& hash_equals( $this->core_self_update_plugin_identifier, self::target_identity( 'plugin', $installed_identifier ) );
 	}
 
 	/**
@@ -1127,9 +1127,12 @@ final class ManagedReleaseTargetRegistrar {
 			: trailingslashit( $root ) . $installed_identity . '/' . $configuration->metadata_file();
 	}
 
-	private static function plugin_target_identity( string $identifier ): string {
-		// A full plugin identifier keeps its separator handling, then folds whole: the documented collision_key() exception.
-		return ltrim( PackageDirectory::collision_key( str_replace( '\\', '/', $identifier ) ), '/' );
+	/** @internal Shared with the release-tracking facade; not an extension point. */
+	public static function target_identity( string $type, string $identifier ): string {
+		// A full identifier keeps its separator handling, then folds whole: the documented collision_key() exception.
+		$identity = PackageDirectory::collision_key( str_replace( '\\', '/', $identifier ) );
+
+		return 'plugin' === $type ? ltrim( $identity, '/' ) : $identity;
 	}
 
 	private static function key( string $type, string $identifier ): string {

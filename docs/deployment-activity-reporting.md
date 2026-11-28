@@ -224,11 +224,16 @@ that a provider reported. That is a shape check, not secret detection.
 
 A deployment's action fires after the journal transaction commits, so a
 rolled-back outcome is not announced. Other outcomes fire straight after their
-own write. Either way the action fires only when the stored record holds that
-outcome; otherwise, for example when a database session is lost before its
-commit, Booster writes one code-only line if WordPress debug logging or
-Booster's capture is on. Starts, progress, an operator's review and a repeated
-skip that Booster discards fire nothing.
+own write. When nothing listens on `ran_booster_activity_recorded` or `all`,
+Booster neither reads the row back nor fires the action. When a listener is
+attached, the action fires only if the stored record still holds that outcome;
+otherwise, for example when a database session is lost before its commit,
+Booster logs one code-only `activity.recorded` / `unconfirmed` line if
+WordPress debug logging or Booster's capture is on. A lagging read replica or an
+operator resolving a `needs_attention` attempt between `COMMIT` and that
+read-back can likewise suppress (never falsely fire) an announcement. Starts,
+progress, an operator's review and a repeated skip that Booster discards fire
+nothing.
 
 Providers must report completion only after their own transaction commits. A
 completion reported inside an open transaction may be announced before it is
@@ -237,10 +242,19 @@ durable.
 Listeners run synchronously in the request or worker that recorded the outcome,
 so keep them quick and hand slow work off. A listener's exception propagates to
 the caller, as with any WordPress action. The outcome is already stored, but the
-caller's later work can be skipped: for a deployment that includes the finished
-log and the background failure notification, and the request or worker can fail.
-Catch whatever your listener can throw. Delivery is not guaranteed, for example
-if the process stops after the write. Activity remains the record.
+caller's later work is skipped: a deployment skips its finished log, background
+failure notification and next worker wakeup, and manual package or recovery
+actions report the stored result as failed; credential validation skips saving
+the expiry observation and sidecar date and shows an error for the stored
+result; a branch check reports a stored `verified` or `branch_unavailable`
+result as `unable_to_check`; the priority-1 release-check listener aborts the
+updater loop so `CoreSelfUpdateCheck` records `orchestration_failed`; webhook
+Validate or Repair skips its chained `test` ping; and where an outer `catch`
+swallows the exception (such as webhook push and delivery observations), it logs
+an Activity recording failure and leaves the hook on WordPress's current-filter
+stack for the rest of the request. Catch whatever your listener can throw.
+Delivery is not guaranteed, for example if the process stops after the write.
+Activity remains the record.
 
 ```php
 add_action(

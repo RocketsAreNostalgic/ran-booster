@@ -295,11 +295,12 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 			'reason'    => 'no_candidates',
 		);
 		foreach ( array(
-			'single file plugin'  => array( 'plugin', 'hello.php', 'core' ),
-			'theme'               => array( 'theme', 'twentytwentyfive', 'core' ),
-			'repository name'     => array( 'repository', 'owner/example', 'core' ),
-			'repository identity' => array( 'repository', 'gh:123456', 'core' ),
-			'provider'            => array( 'provider', 'gh', 'provider' ),
+			'installed plugin slug' => array( 'plugin', 'my-plugin', 'core' ),
+			'single file plugin'    => array( 'plugin', 'hello.php', 'core' ),
+			'theme'                 => array( 'theme', 'twentytwentyfive', 'core' ),
+			'repository name'       => array( 'repository', 'owner/example', 'core' ),
+			'repository identity'   => array( 'repository', 'gh:123456', 'core' ),
+			'provider'              => array( 'provider', 'gh', 'provider' ),
 		) as $name => list( $type, $identity, $provenance ) ) {
 			yield $name => array(
 				array(
@@ -331,7 +332,34 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 			'release.check',
 			'no_candidates',
 		);
+		foreach ( array(
+			'a URL as a repository'              => 'https://example.com/x',
+			'an absolute path as a repository'   => '/abs/path',
+			'a dot-dot repository'               => '..',
+			'a leading dot-dot repository'       => '../repo',
+			'a trailing dot-dot repository'      => 'owner/..',
+			'an embedded dot-dot repository'     => 'owner/../repo',
+			'a ghp token as a repository'        => 'ghp_example',
+			'a gho token as a repository'        => 'gho_example',
+			'a ghu token as a repository'        => 'ghu_example',
+			'a ghs token as a repository'        => 'ghs_example',
+			'a ghr token as a repository'        => 'ghr_example',
+			'a fine-grained PAT as a repository' => 'github_pat_example',
+			'an ATBB token as a repository'      => 'ATBBexample',
+			'an ATCTT token as a repository'     => 'ATCTTexample',
+		) as $name => $rejected_repository ) {
+			yield $name => array(
+				array(
+					'subject_type'     => 'repository',
+					'subject_identity' => $rejected_repository,
+				) + $plain,
+				'',
+				'release.check',
+				'no_candidates',
+			);
+		}
 		yield 'a path outside the plugin shape' => array( array( 'subject_identity' => '/var/www/private.php' ) + $plain, '', 'release.check', 'no_candidates' );
+		yield 'a plugin path without php' => array( array( 'subject_identity' => 'folder/readme.txt' ) + $plain, '', 'release.check', 'no_candidates' );
 		$token = 'ghp_abcdefghijklmnopqrstuvwxyz0123456789';
 		yield 'a token as the codes' => array(
 			array(
@@ -357,10 +385,10 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertSame( array( $identity, $operation, $reason ), array( $heard[0]['subject_identity'] ?? null, $heard[0]['operation'] ?? null, $heard[0]['reason'] ?? null ) );
 	}
 
-	public function test_without_a_listener_the_action_is_counted_and_no_row_is_read(): void {
+	public function test_without_a_listener_nothing_is_read_or_fired(): void {
 		self::assertTrue( $this->store->complete( 1, 'succeeded', 'no_candidates' ) );
 
-		self::assertSame( array( array( 'ran_booster_activity_recorded', array() ) ), $GLOBALS['ran_booster_activity_fired'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_activity_fired'] ?? array() );
 		self::assertSame( array(), array_filter( $this->connection->queries, static fn ( string $sql ): bool => str_starts_with( $sql, 'SELECT' ) ) );
 	}
 

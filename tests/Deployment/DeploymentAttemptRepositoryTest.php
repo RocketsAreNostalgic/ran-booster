@@ -48,16 +48,15 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 	}
 
-	/** @return iterable<string, array{string, bool, list<array{string, string}>}> */
+	/** @return iterable<string, array{string, bool, string}> */
 	public static function announced_deployment_outcomes(): iterable {
-		yield 'success' => array( 'deployed', false, array( array( 'succeeded', 'deployed' ) ) );
-		yield 'needs attention' => array( 'interrupted', false, array( array( 'needs_attention', 'interrupted' ) ) );
-		yield 'rolled back' => array( 'deployed', true, array() );
+		yield 'success' => array( 'deployed', false, 'succeeded' );
+		yield 'needs attention' => array( 'interrupted', false, 'needs_attention' );
+		yield 'rolled back' => array( 'deployed', true, 'succeeded' );
 	}
 
-	/** @param list<array{string, string}> $expected */
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'announced_deployment_outcomes' )]
-	public function test_a_deployment_outcome_is_announced_only_after_its_commit( string $code, bool $fail_commit, array $expected ): void {
+	public function test_a_deployment_outcome_is_announced_only_after_its_commit( string $code, bool $fail_commit, string $status ): void {
 		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
 		$this->repository                        = new DeploymentAttemptRepository(
 			$this->database,
@@ -68,24 +67,23 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		);
 		$heard                                   = array();
 		$GLOBALS['ran_booster_activity_listeners']['ran_booster_activity_recorded'] = function ( array $record ) use ( &$heard ): void {
-			$heard[] = array( $record['status'], $record['reason'], $this->database->in_transaction() );
+			$heard[] = array( $record['subject_identity'], $record['status'], $record['reason'], $this->database->in_transaction() );
 		};
 		try {
-			$this->webhook( 'example' );
-			$running = $this->repository->claim_next();
-			self::assertNotNull( $running );
+			$running                     = $this->manual( 'example' );
 			$this->database->fail_commit = $fail_commit;
 			try {
 				$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( $code ) );
 				self::assertFalse( $fail_commit );
 			} catch ( DeploymentStorageFailure ) {
 				self::assertTrue( $fail_commit );
+				self::assertSame( array(), $heard );
+				// Retrying after a failed commit must announce the outcome once, not replay the rolled-back write.
+				$this->database->fail_commit = false;
+				$this->repository->finish( $running->get_id(), DeploymentOutcome::from_code( $code ) );
 			}
-			// A later transaction must not announce what an earlier one dropped.
-			$this->database->fail_commit = false;
-			$this->webhook( 'other' );
 
-			self::assertSame( array_map( static fn ( array $outcome ): array => array( $outcome[0], $outcome[1], false ), $expected ), $heard );
+			self::assertSame( array( array( 'example', $status, $code, false ) ), $heard );
 		} finally {
 			unset( $GLOBALS['ran_booster_activity_listeners'] );
 		}

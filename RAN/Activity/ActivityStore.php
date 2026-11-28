@@ -401,7 +401,6 @@ final class ActivityStore {
 	 */
 	private function announce( string $where, int|string $value, array $written ): void {
 		if ( ! has_action( 'ran_booster_activity_recorded' ) && ! has_action( 'all' ) ) {
-			do_action( 'ran_booster_activity_recorded' ); // Counts the firing for did_action() without reading a payload.
 			return;
 		}
 		$row = $this->rows( $this->prepare( "SELECT correlation,operation,provider,subject_type,subject_identity,status,stage,reason,actor,started_at,completed_at,facts,provenance FROM {$this->table} WHERE $where", $value ) )[0] ?? null;
@@ -446,14 +445,14 @@ final class ActivityStore {
 	/** The stored identity when it has its subject type's shape, otherwise empty. A shape check, not secret detection. */
 	private function public_identity( string $type, string $identity, string $provenance ): string {
 		$shape = match ( $type ) {
-			'plugin' => '(?:[A-Za-z0-9._-]+/)?[A-Za-z0-9._-]+\.php',
+			'plugin' => '[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+\.php)?',
 			'theme' => '[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)?',
 			// A provider-reported repository identity is whatever text the provider passed.
-			'repository' => 'provider' === $provenance ? null : '[A-Za-z0-9._{}:~/-]+',
+			'repository' => 'provider' === $provenance ? null : '[A-Za-z0-9._{}:~-][A-Za-z0-9._{}:~/-]*',
 			'provider' => '[a-z0-9_-]{1,32}',
 			default => null,
 		};
-		return null !== $shape && 1 === preg_match( '#\A' . $shape . '\z#', $identity ) ? $identity : '';
+		return null !== $shape && 1 === preg_match( '#\A(?!.*(?:://|(?:\A|/)\.\.(?:/|\z)|(?i:gh[pousr][_-]|github_pat_)|AT(?:BB|CTT|ATT)))' . $shape . '\z#', $identity ) ? $identity : '';
 	}
 
 	/**

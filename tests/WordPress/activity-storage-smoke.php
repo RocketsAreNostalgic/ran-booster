@@ -575,7 +575,7 @@ return static function ( wpdb $database ): void {
 		// The public action (#1049): a COMMIT acknowledged by a replacement session announces nothing.
 		$heard   = new ArrayObject();
 		$listen  = static function ( array $record ) use ( $heard ): void {
-			$heard->append( array( $record['correlation'], $record['status'] ) );
+			$heard->append( array( $record['correlation'], $record['status'], $record['subject_identity'] ) );
 		};
 		$lost    = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
 		$dropped = false;
@@ -599,7 +599,7 @@ return static function ( wpdb $database ): void {
 			$expect( $dropped && DeploymentState::RUNNING === $journal->find_exact( $interrupted->get_id() )?->get_state(), 'the lost transaction rolled back' );
 			$expect( 0 === $heard->count(), 'a rolled-back outcome fires nothing' );
 			$journal->finish( $interrupted->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_DEPLOYED ) );
-			$expect( array( array( $interrupted->get_correlation_id(), 'succeeded' ) ) === $heard->getArrayCopy(), 'a committed outcome fires once' );
+			$expect( array( array( $interrupted->get_correlation_id(), 'succeeded', 'activity-proof' ) ) === $heard->getArrayCopy(), 'a committed outcome fires once' );
 
 			// A listener's exception reaches the caller, after the outcome is stored and the queue is empty.
 			$throw  = static function (): void {

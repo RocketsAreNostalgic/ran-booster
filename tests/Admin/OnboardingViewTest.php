@@ -1079,7 +1079,8 @@ final class OnboardingViewTest extends TestCase {
 		}
 	}
 
-	public function test_provider_admission_and_selection_remediation_use_shared_facts(): void {
+	public function test_provider_admission_remediation_uses_the_shared_message(): void {
+		$sentence = 'GitHub is unavailable because <alpha> could not load.';
 		foreach ( array( 'onboarding', 'dashboard' ) as $view ) {
 			$extra = array(
 				'view'               => $view,
@@ -1088,90 +1089,47 @@ final class OnboardingViewTest extends TestCase {
 				'activity_url'       => '/activity',
 				'provider_summaries' => array(
 					array(
-						'code'      => 'gh',
-						'label'     => '<GitHub>',
-						'url'       => '/github',
-						'admitted'  => false,
-						'selection' => 'conflict',
+						'code'     => 'gh',
+						'label'    => '<GitHub>',
+						'url'      => '/github',
+						'admitted' => false,
+						'message'  => $sentence,
 					),
 					array(
-						'code'      => 'bb',
-						'label'     => 'Bitbucket',
-						'url'       => '/bitbucket',
-						'admitted'  => true,
-						'selection' => null,
+						'code'     => 'bb',
+						'label'    => 'Bitbucket',
+						'url'      => '/bitbucket',
+						'admitted' => true,
+						'message'  => null,
 					),
 					array(
-						'code'      => 'other',
-						'label'     => 'Other',
-						'url'       => '/other',
-						'admitted'  => null,
-						'selection' => null,
+						'code'     => 'other',
+						'label'    => 'Other',
+						'url'      => '/other',
+						'admitted' => null,
+						'message'  => null,
 					),
 				),
 			);
 			$html  = $this->render_view( null, null, $extra );
-			// A conflict is reported as a conflict, not as a refused admission.
-			self::assertStringContainsString( '&lt;GitHub&gt;</a>: Provider selection conflict', $html );
+			// A known reason is reported as itself, not as a refused admission.
+			self::assertStringContainsString( '&lt;GitHub&gt;</a>: GitHub is unavailable because &lt;alpha&gt; could not load.', $html );
 			self::assertStringNotContainsString( 'Provider is not admitted.', $html );
 			self::assertStringNotContainsString( '<GitHub>', $html );
-			$extra['provider_summaries'][0]['selection'] = null;
-			self::assertStringContainsString( '&lt;GitHub&gt;</a>: Provider is not admitted.', $this->render_view( null, null, $extra ) );
-			$extra['provider_summaries'][0]['selection'] = 'conflict';
+			self::assertStringNotContainsString( '<alpha>', $html );
 			if ( 'dashboard' === $view ) {
 				self::assertStringContainsString( 'Provider source unknown', $html );
 				self::assertStringNotContainsString( 'data-ran-booster-badge-intent="stable">Admitted</span>', $html );
 				self::assertStringNotContainsString( 'Repository access has not been checked here.', $html );
 			}
+			$extra['provider_summaries'][0]['message'] = null;
+			self::assertStringContainsString( '&lt;GitHub&gt;</a>: Provider is not admitted.', $this->render_view( null, null, $extra ) );
 			$extra['provider_summaries'][0]['admitted'] = true;
+			$extra['provider_summaries'][0]['message']  = $sentence;
 			$html                                       = $this->render_view( null, null, $extra );
-			self::assertStringContainsString( '&lt;GitHub&gt;</a>: Provider selection conflict', $html );
-			$extra['provider_summaries'][0]['selection'] = null;
-			$html                                        = $this->render_view( null, null, $extra );
 			self::assertStringNotContainsString( '&lt;GitHub&gt;</a>:', $html );
 			if ( 'dashboard' === $view ) {
 				self::assertStringContainsString( 'Provider source unknown', $html );
-			}
-		}
-	}
-
-	public function test_detected_replacement_awaiting_approval_names_the_remaining_step(): void {
-		$detected = 'A custom GitHub provider was detected. Review and approve it to enable GitHub operations.';
-		foreach ( array( 'onboarding', 'dashboard' ) as $view ) {
-			$extra = array(
-				'view'               => $view,
-				'plugins_url'        => '/plugins',
-				'themes_url'         => '/themes',
-				'activity_url'       => '/activity',
-				'provider_summaries' => array(
-					array(
-						'code'                 => 'gh',
-						'label'                => 'GitHub',
-						'url'                  => '/github',
-						'admitted'             => false,
-						'selection'            => 'decision_required',
-						'replacement_detected' => true,
-					),
-				),
-			);
-			$html  = $this->render_view( null, null, $extra );
-			self::assertStringContainsString( '<a href="/github">GitHub</a>: ' . $detected, $html );
-			self::assertStringNotContainsString( 'Provider is not admitted.', $html );
-			// Without a detected compatible replacement the state keeps its generic wording.
-			foreach ( array(
-				array( 'decision_required', false, 'Provider selection needs a decision' ),
-				array( 'incompatible', true, 'Provider selection is incompatible' ),
-				array( 'missing', true, 'Selected provider is missing' ),
-				array( 'conflict', true, 'Provider selection conflict' ),
-				array( 'storage_unavailable', true, 'Provider selection storage is unavailable' ),
-				array( 'recovery_required', true, 'Provider selection needs recovery' ),
-				array( 'replacement_load_failed', true, 'Selected provider could not load' ),
-			) as list( $selection, $detected_flag, $label ) ) {
-				$extra['provider_summaries'][0]['selection']            = $selection;
-				$extra['provider_summaries'][0]['replacement_detected'] = $detected_flag && 'decision_required' === $selection;
-				$html = $this->render_view( null, null, $extra );
-				self::assertStringContainsString( '<a href="/github">GitHub</a>: ' . $label, $html, $selection );
-				self::assertStringNotContainsString( $detected, $html, $selection );
 			}
 		}
 	}
@@ -1188,7 +1146,7 @@ final class OnboardingViewTest extends TestCase {
 					'label'       => 'GitHub',
 					'url'         => '/github',
 					'admitted'    => true,
-					'selection'   => 'available',
+					'message'     => null,
 					'source_kind' => 'bundled',
 					'source_name' => null,
 				),
@@ -1197,7 +1155,7 @@ final class OnboardingViewTest extends TestCase {
 					'label'       => 'Bitbucket',
 					'url'         => '/bitbucket',
 					'admitted'    => true,
-					'selection'   => null,
+					'message'     => null,
 					'source_kind' => 'extension',
 					'source_name' => 'Bitbucket Cloud',
 				),

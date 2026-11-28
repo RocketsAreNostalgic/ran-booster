@@ -64,6 +64,7 @@ use RAN\Troubleshooting\TroubleshootingService;
 use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
 use RAN\Tests\RepositoryProvider\Support\ShippedSecretPolicyCatalog;
+use RAN\Tests\Admin\Support\GitHubSupplierState;
 use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 use RAN\Tests\Support\CredentialUsageDatabase;
 use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
@@ -84,7 +85,6 @@ if ( ! class_exists( \RAN\Dashboard::class, false ) ) {
 }
 
 final class DashboardIndexRoutingTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private const LOCK_TOKEN = '1700000000';
 
@@ -807,145 +807,52 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 	}
 
-	public function test_paused_github_route_renders_passive_status_without_provider_and_preserves_bitbucket(): void {
-		$bundled   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
-		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' ), '/unused/plugins', $bundled );
-		$providers = new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) );
-		$directory = sys_get_temp_dir() . '/adoption-route-' . bin2hex( random_bytes( 8 ) );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable private sidecar fixture.
-		mkdir( $directory, 0700 );
-		$dashboard   = $this->dashboard( new SecretsFile( $directory . '/secrets', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection );
+	/** @return iterable<string,array{string,list<string>,string}> */
+	public static function unavailable_github_suppliers(): iterable {
+		yield 'failed claim' => array( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, array( 'supplier-fixture-a' ), 'GitHub is unavailable because supplier-fixture-a could not load.' );
+		yield 'conflicting claims' => array( ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT, array( 'supplier-fixture-a', 'supplier-fixture-b' ), 'GitHub is unavailable because more than one plugin provides it: supplier-fixture-a, supplier-fixture-b.' );
+	}
+
+	/** @param list<string> $claimants */
+	#[DataProvider( 'unavailable_github_suppliers' )]
+	public function test_an_unavailable_github_renders_its_supplier_warning_and_preserves_bitbucket( string $supplier, array $claimants, string $sentence ): void {
+		$registry = GitHubSupplierState::apply( new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) ), $supplier, $claimants );
+		$registry->seal();
+		$notice      = new \RAN\Admin\GitHubSupplierNotice( $registry );
+		$dashboard   = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $registry, github_supplier: $notice );
 		$_GET['tab'] = 'gh';
 		$data        = $dashboard->get_index()['data'];
 		self::assertSame( 'gh', $data['selected_provider'] );
 		self::assertSame( 'provider.php', $data['tab_view'] );
-		self::assertFalse( $data['github_selection']['available'] );
+		self::assertSame(
+			array(
+				'message'   => $sentence,
+				'available' => false,
+			),
+			$data['github_supplier']
+		);
 		self::assertSame( array(), $data['credential_profiles'] );
-		self::assertArrayNotHasKey( 'gh', $providers->all() );
+		self::assertArrayNotHasKey( 'gh', $registry->all() );
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
 		extract( $data );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'GitHub operations are paused.', $html );
-		self::assertStringContainsString( 'GitHub provider selection is unavailable', $html );
-		self::assertStringContainsString( 'Booster could not verify its saved GitHub provider choice. Review GitHub provider details before continuing.', $html );
-		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
+		self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline ran-booster-provider__notice [^"]*"[^>]*><div [^>]*data-ran-booster-ui-notice-content>\s*<p>' . preg_quote( $sentence, '/' ) . '<\/p>/', $html );
+		self::assertStringNotContainsString( 'ran-booster-provider__supplier', $html );
 		$_GET['tab'] = 'bb';
 		self::assertSame( 'bb', $dashboard->get_index()['data']['selected_provider'] );
-		$_GET        = array(
-			'tab'   => 'troubleshooting',
-			'panel' => 'diagnostics',
+		$presenter = new ProviderSettingsPresenter( $registry, $this->throwing_secrets(), new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_packages' ), github_supplier: $notice );
+		self::assertSame(
+			array(
+				'admitted'    => false,
+				'message'     => $sentence,
+				'source_kind' => null,
+				'source_name' => null,
+			),
+			$presenter->overview_provider_facts()['gh']
 		);
-		$diagnostics = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry(), github_selection: $selection )->get_index()['data'];
-		self::assertSame( $selection->status(), $diagnostics['github_selection_diagnostics'] );
-		self::assertArrayNotHasKey( 'github_selection', $diagnostics );
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture lock.
-		unlink( $directory . '/secrets.lock' );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable private sidecar fixture.
-		rmdir( $directory );
-	}
-
-	public function test_replacement_that_cannot_load_renders_its_notice_without_the_futile_approval(): void {
-		$root = sys_get_temp_dir() . '/replacement-load-' . bin2hex( random_bytes( 8 ) );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable fixture directory.
-		mkdir( $root, 0700 );
-		$manifest = array(
-			'plugin_basename'        => 'replacement.php',
-			'implementation_id'      => 'replacement.php',
-			'compatibility_revision' => '1',
-			'provider_api_version'   => 15,
-			'api_credential_formats' => array( 'github-classic-pat-v1' ),
-			'webhook_signing_format' => null,
-			'facets'                 => array(),
-		);
-		$declare  = static fn ( string $basename ): \RAN\RepositoryProvider\GitHubReplacementDeclaration => new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
-			array_replace(
-				$manifest,
-				array(
-					'plugin_basename'   => $basename,
-					'implementation_id' => $basename,
-				)
-			)
-		);
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable passive fixture.
-		file_put_contents( $root . '/booster.php', '<?php // bundled host' );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable passive fixture.
-		file_put_contents( $root . '/replacement.php', "<?php\n/*\nPlugin Name: Example Replacement\nVersion: 1.0\nRAN Booster GitHub Replacement: 1\n*/" );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents,WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Disposable passive fixture with exact manifest bytes.
-		file_put_contents( $root . '/replacement.gh-replacement.json', json_encode( $manifest, JSON_THROW_ON_ERROR ) );
-		$database = new \RAN\Tests\RepositoryProvider\SelectionContextDatabase();
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact WordPress option bytes.
-		$database->active_bytes = serialize( array( 'booster.php', 'replacement.php' ) );
-		$store                  = new \RAN\Storage\GitHubSelectionStore( $database, 'wp_options' );
-		$bundled                = $declare( 'booster.php' );
-		$store->initialize_bundled( $bundled );
-		$old                          = $store->read();
-		$next                         = $old;
-		$next['selection_generation'] = (int) $old['selection_generation'] + 1;
-		$next['selected']             = 'replacement';
-		$next['declaration']          = get_object_vars( $declare( 'replacement.php' ) );
-		unset( $next['declaration']['implementation_fingerprint'] );
-		$next['approved_api_formats'] = array( 'github-classic-pat-v1' );
-		self::assertTrue( $store->compare_and_swap( $old, $next ) );
-
-		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( $store, $root, $bundled );
-		$factory   = static function ( \RAN\RepositoryProvider\ProviderCredentialStore $credentials, \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $evidence, \RAN\RepositoryProvider\ProviderRegistrationContext $context ): \RAN\RepositoryProvider\RepositoryProvider {
-			unset( $credentials, $evidence, $context );
-			throw new \RuntimeException( 'private-exception-text' );
-		};
-		$registry  = new ProviderRegistry(
-			array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ),
-			credential_store_factory: fn (): \RAN\RepositoryProvider\ProviderCredentialStore => $this->createMock( \RAN\RepositoryProvider\ProviderCredentialStore::class ),
-			delivery_evidence_reader_factory: fn (): \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader => $this->createMock( \RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader::class ),
-			github_selection_guard: array( $selection, 'registry_selection' ),
-			github_candidates: $selection->candidates(),
-			bundled_github_factory: $factory
-		);
-		$selection->bind_registry( $registry );
-		$registry->declare_github_replacement( $declare( 'replacement.php' ), $factory );
-		$selection->complete_collection();
-		$registry->seal();
-
-		$_GET['tab'] = 'gh';
-		$data        = $this->dashboard( new SecretsFile( $root . '/secrets', array(), ShippedSecretPolicyCatalog::create() ), providers: $registry, github_selection: $selection )->get_index()['data'];
-		self::assertNull( $data['github_selection']['review'] );
-		self::assertSame( 'replacement_load_failed', $data['github_selection']['status']['state'] );
-		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
-		extract( $data );
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/provider.php';
-		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'The selected GitHub provider could not load', $html );
-		self::assertStringContainsString( 'Install a version built for this Booster release, or deactivate the replacement plugin and review a return to bundled GitHub.', $html );
-		self::assertStringNotContainsString( 'Review and approve GitHub provider', $html );
-		self::assertStringNotContainsString( 'value="adopt-github"', $html );
-		self::assertStringNotContainsString( 'private-exception-text', $html );
-		$_GET['tab'] = 'bb';
-		self::assertSame( 'bb', $this->dashboard( new SecretsFile( $root . '/secrets', array(), ShippedSecretPolicyCatalog::create() ), providers: $registry, github_selection: $selection )->get_index()['data']['selected_provider'] );
-
-		// Deactivating the replacement reaches the existing return-to-bundled review.
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact WordPress option bytes.
-		$database->active_bytes = serialize( array( 'booster.php' ) );
-		$returned               = new \RAN\RepositoryProvider\GitHubProviderSelection( $store, $root, $bundled );
-		$secrets                = $this->createMock( SecretsFile::class );
-		$secrets->expects( self::once() )->method( 'with_github_adoption_inventory' )->willReturnCallback( static fn ( callable $operation ): mixed => $operation( array() ) );
-		$presenter = new ProviderSettingsPresenter( new ProviderRegistry(), $secrets, new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_packages' ), github_selection: $returned );
-		$review    = $presenter->build( 'gh' )['github_selection'];
-		self::assertSame( 'missing', $review['status']['state'] );
-		self::assertSame( 'bundled', $review['review']['selected'] );
-		// A GitHub selection that needs review is restored on the GitHub provider page; any other provider from Extensions.
+		// GitHub is restored on its own page, where the warning explains why; any other provider from Extensions.
 		self::assertSame(
 			array(
 				'page' => 'ran-booster',
@@ -954,82 +861,28 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$presenter->provider_restore_args( 'gh' )
 		);
 		self::assertSame( array( 'page' => 'ran-booster-extensions' ), $presenter->provider_restore_args( 'bb' ) );
-		foreach ( array( 'booster.php', 'replacement.php', 'replacement.gh-replacement.json' ) as $file ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture file.
-			unlink( $root . '/' . $file );
-		}
-		if ( is_file( $root . '/secrets.lock' ) ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture lock.
-			unlink( $root . '/secrets.lock' );
-		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable fixture directory.
-		rmdir( $root );
+		$_GET        = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'diagnostics',
+		);
+		$diagnostics = $dashboard->get_index()['data'];
+		self::assertSame( array( 'message' => $sentence ), $diagnostics['github_selection_diagnostics'] );
+		self::assertArrayNotHasKey( 'github_supplier', $diagnostics );
 	}
 
-	/** @return iterable<string,array{string,bool,bool,bool}> */
-	public static function replacement_presentations(): iterable {
-		foreach ( array( 'available', 'decision_required', 'missing', 'conflict', 'incompatible', 'replacement_load_failed', 'storage_unavailable' ) as $state ) {
-			yield $state => array( $state, false, true, true );
-		}
-		yield 'missing A with B enabled' => array( 'missing', true, true, true );
-		yield 'without plugin activation permission' => array( 'decision_required', false, true, false );
-		yield 'without settings permission' => array( 'decision_required', false, false, true );
-	}
-
-	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
-	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
-	#[DataProvider( 'replacement_presentations' )]
-	public function test_provider_replacement_presentation_keeps_decisions_and_diagnostics_separate( string $state, bool $switch_replacement, bool $manage_options, bool $activate_plugins ): void {
-		$GLOBALS['ran_booster_test_capabilities'] = array(
-			'manage_options'   => $manage_options,
-			'activate_plugins' => $activate_plugins,
-		);
-		$_GET['tab']                              = 'bb';
-		$data                                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
-		$declaration                              = array(
-			'plugin_basename'        => 'private-path/replacement.php',
-			'implementation_id'      => 'vendor/internal-implementation',
-			'display_name'           => '<Replacement>',
-			'display_version'        => '1.0',
-			'provider_api_version'   => 15,
-			'compatibility_revision' => 'internal-revision',
-			'api_credential_formats' => array( 'internal-credential-format' ),
-			'webhook_signing_format' => null,
-			'facets'                 => array(),
-		);
-		$current_declaration                      = $switch_replacement ? array_replace(
-			$declaration,
+	public function test_an_add_on_supplier_is_named_once_on_the_github_page(): void {
+		$registry = GitHubSupplierState::apply( $this->providers( true ), 'supplier-fixture-a', array( 'supplier-fixture-a' ) );
+		$registry->seal();
+		$notice      = new \RAN\Admin\GitHubSupplierNotice( $registry );
+		$secrets     = new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() );
+		$_GET['tab'] = 'gh';
+		$data        = $this->dashboard( $secrets, providers: $registry, github_supplier: $notice )->get_index()['data'];
+		self::assertSame(
 			array(
-				'display_name'    => 'Previous provider A',
-				'plugin_basename' => 'previous/a.php',
-			)
-		) : $declaration;
-		$review                                   = in_array( $state, array( 'decision_required', 'missing' ), true ) ? array(
-			'target'             => $declaration,
-			'selected'           => 'missing' === $state && ! $switch_replacement ? 'bundled' : 'replacement',
-			'compatible_count'   => 2,
-			'incompatible_count' => 1,
-			'signing_reuse'      => false,
-			'has_material'       => true,
-			'digest'             => str_repeat( 'c', 64 ),
-		) : null;
-		$data['github_selection']                 = array(
-			'available'      => 'available' === $state,
-			'status'         => array(
-				'state'      => $state,
-				'current'    => array(
-					'selected'    => 'replacement',
-					'declaration' => $current_declaration,
-				),
-				'candidates' => 'missing' === $state && ! $switch_replacement ? array() : array( 'private-path/replacement.php' => $declaration ) + ( 'incompatible' === $state ? array( '<unsafe>/plugin.php' => null ) : array() ),
+				'message'   => 'GitHub is provided by supplier-fixture-a.',
+				'available' => true,
 			),
-			'review'         => $review,
-			'error'          => 'Generic adoption error',
-			'recovery'       => null,
-			'package_counts' => array(
-				'branch'        => 2,
-				'release_asset' => 1,
-			),
+			$data['github_supplier']
 		);
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
 		extract( $data );
@@ -1039,85 +892,29 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$html = (string) ob_get_contents();
 		} finally {
 			ob_end_clean();
-			unset( $GLOBALS['ran_booster_test_capabilities'] );
 		}
-		self::assertStringContainsString( 'GitHub provider details', $html );
-		self::assertStringContainsString( 'panel=installation#ran-booster-github-provider-diagnostics', $html );
-		self::assertSame( 1, substr_count( $html, 'GitHub provider details</a>' ) );
+		self::assertSame( 1, substr_count( $html, '<p class="ran-booster-provider__supplier">GitHub is provided by supplier-fixture-a.</p>' ) );
+		self::assertStringNotContainsString( 'ran-booster-provider__notice', $html );
 		$this->assert_provider_markup_is_balanced( $html );
-		foreach ( array( 'private-path', 'vendor/internal-implementation', 'internal-revision', 'internal-credential-format', '<Replacement>' ) as $private_detail ) {
-			self::assertStringNotContainsString( $private_detail, $html );
-		}
-		if ( 'available' === $state ) {
-			self::assertStringContainsString( 'Provider extension: &lt;Replacement&gt;', $html );
-			self::assertStringContainsString( '<summary>Manage GitHub provider</summary>', $html );
-			self::assertStringNotContainsString( 'Affected GitHub packages:', $html );
-			self::assertStringNotContainsString( 'GitHub operations are paused.', $html );
-		} else {
-			self::assertStringContainsString( 'GitHub operations are paused. Local records remain available. This does not pause other Git providers.', $html );
-			self::assertStringNotContainsString( 'Bitbucket is unaffected', $html );
-		}
-		if ( 'decision_required' === $state ) {
-			// The paused explanation is the shared informational Notice, not plain text.
-			self::assertMatchesRegularExpression( '/<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-provider-paused-notice><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>GitHub operations are paused\. [^<]+<\/p><\/div><svg /', $html );
-		}
-		$headings = array(
-			'conflict'                => 'Multiple GitHub providers are active',
-			'incompatible'            => 'A GitHub provider is incompatible',
-			'missing'                 => 'The selected GitHub provider is missing',
-			'replacement_load_failed' => 'The selected GitHub provider could not load',
-			'storage_unavailable'     => 'GitHub provider selection is unavailable',
+		$presenter = new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_packages' ), github_supplier: $notice );
+		self::assertSame(
+			array(
+				'admitted'    => true,
+				'message'     => null,
+				'source_kind' => 'replacement',
+				'source_name' => 'supplier-fixture-a',
+			),
+			$presenter->overview_provider_facts()['gh']
 		);
-		if ( isset( $headings[ $state ] ) ) {
-			self::assertMatchesRegularExpression( '/<h3>\s*' . preg_quote( $headings[ $state ], '/' ) . '\s*<\/h3>/', $html );
-		}
-		if ( in_array( $state, array( 'conflict', 'incompatible' ), true ) ) {
-			self::assertStringContainsString( '&lt;Replacement&gt;', $html );
-		}
-		if ( 'storage_unavailable' === $state ) {
-			self::assertStringContainsString( 'Booster could not verify its saved GitHub provider choice.', $html );
-		}
-		if ( 'incompatible' === $state ) {
-			self::assertStringContainsString( '&lt;unsafe&gt;/plugin.php', $html );
-			self::assertStringNotContainsString( '<unsafe>/plugin.php', $html );
-		}
-		if ( in_array( $state, array( 'conflict', 'incompatible', 'storage_unavailable' ), true ) ) {
-			self::assertStringNotContainsString( 'Generic adoption error', $html );
-		} elseif ( 'available' !== $state ) {
-			self::assertStringContainsString( 'Generic adoption error', $html );
-		}
-		if ( null === $review ) {
-			if ( 'available' !== $state ) {
-				self::assertMatchesRegularExpression( '/<div class="notice notice-warning [^"]*"[^>]*>.*?data-ran-booster-ui-notice-content>.*?GitHub provider details<\/a><\/p>\s*<\/div><svg /s', $html );
-			}
-			self::assertStringNotContainsString( 'value="adopt-github"', $html );
-			return;
-		}
-		if ( $switch_replacement ) {
-			self::assertStringContainsString( 'Missing provider: Previous provider A', $html );
-			self::assertStringContainsString( 'Reviewing GitHub provider: &lt;Replacement&gt;', $html );
-		}
-		self::assertStringContainsString( 'Affected GitHub packages: 2 Branch, 1 Published release.', $html );
-		self::assertStringContainsString( 'Saved GitHub access credentials: 2 compatible, 1 incompatible.', $html );
-		self::assertStringContainsString( 'Booster will not substitute another credential.', $html );
-		self::assertStringContainsString( 'Approve only a plugin you trust.', $html );
-		if ( ! $manage_options || ! $activate_plugins ) {
-			self::assertStringNotContainsString( 'value="adopt-github"', $html );
-			self::assertStringNotContainsString( 'name="ran_booster[review_digest]"', $html );
-			return;
-		}
-		self::assertStringContainsString( 'name="ran_booster[review_digest]" value="' . str_repeat( 'c', 64 ) . '"', $html );
-		self::assertStringContainsString( 'name="ran_booster[confirmed]" value="1" required', $html );
-		self::assertStringContainsString( 'name="ran_booster[reuse_existing]" value="1" required', $html );
-		self::assertStringContainsString( 'ran-booster-adopt-github-' . str_repeat( 'c', 64 ), $html );
-		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? '<summary>Review return to bundled GitHub</summary>' : '<summary>Review and approve GitHub provider</summary>', $html );
-		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub provider: &lt;Replacement&gt;', $html );
-		// The details link is enclosed by the review disclosure and still leads to the Installation diagnostics.
-		if ( 1 === preg_match( '/<details [^>]*>\s*<summary>[^<]+<\/summary>(.*?)<\/details>/s', $html, $disclosure ) ) {
-			self::assertSame( 1, substr_count( $disclosure[1], '<a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=installation#ran-booster-github-provider-diagnostics">GitHub provider details</a>' ) );
-		} else {
-			self::fail( 'The review disclosure was not rendered.' );
-		}
+		self::assertSame( array( 'page' => 'ran-booster-extensions' ), $presenter->provider_restore_args( 'gh' ) );
+		$_GET['tab'] = 'bb';
+		self::assertNull( $this->dashboard( $secrets, providers: $registry, github_supplier: $notice )->get_index()['data']['github_supplier'] );
+
+		$bundled = GitHubSupplierState::apply( $this->providers( true ), ProviderRegistry::GITHUB_BUNDLED );
+		$bundled->seal();
+		$_GET['tab'] = 'gh';
+		self::assertNull( $this->dashboard( $secrets, providers: $bundled, github_supplier: new \RAN\Admin\GitHubSupplierNotice( $bundled ) )->get_index()['data']['github_supplier'] );
+		self::assertSame( 'bundled', ( new ProviderSettingsPresenter( $bundled, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_packages' ) ) )->overview_provider_facts()['gh']['source_kind'] );
 	}
 
 	/** Every element the provider view opens is closed inside it, so the shell footer stays outside the page content. */
@@ -1132,55 +929,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 		}
 		self::assertSame( 0, $depth, 'The provider view leaves a container open.' );
-	}
-
-	public function test_provider_view_github_details_link_tracks_network_admin_on_multisite(): void {
-		$_GET['tab']              = 'bb';
-		$data                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
-		$data['github_selection'] = array(
-			'available'      => false,
-			'status'         => array(
-				'state'      => 'recovery_required',
-				'candidates' => array(),
-				'current'    => null,
-			),
-			'error'          => '',
-			'package_counts' => null,
-			'review'         => null,
-		);
-		$render                   = static function ( array $payload ): string {
-			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
-			extract( $payload );
-			ob_start();
-			try {
-				require dirname( __DIR__, 2 ) . '/views/provider.php';
-				return (string) ob_get_contents();
-			} finally {
-				ob_end_clean();
-			}
-		};
-
-		try {
-			$this->set_multisite( false );
-			$single_site_html = $render( $data );
-			self::assertStringContainsString(
-				'<p><a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=installation#ran-booster-github-provider-diagnostics">GitHub provider details</a></p>',
-				$single_site_html
-			);
-
-			$this->set_multisite( true );
-			$multisite_html = $render( $data );
-			self::assertStringContainsString(
-				'<p><a href="https://example.test/wp-admin/network/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=installation#ran-booster-github-provider-diagnostics">GitHub provider details</a></p>',
-				$multisite_html
-			);
-			self::assertStringNotContainsString(
-				'https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=installation#ran-booster-github-provider-diagnostics',
-				$multisite_html
-			);
-		} finally {
-			$this->set_multisite( false );
-		}
 	}
 
 	public function test_provider_tab_builds_only_the_selected_provider_settings(): void {
@@ -2137,13 +1885,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 	public function test_a_hidden_provider_tab_remains_accessible(): void {
 		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', true );
 		require_once __DIR__ . '/GitHubVisibilityConnection.php';
-		$providers  = $this->providers( true );
-		$selection  = $this->queued_selection( new AttemptRepositoryDatabase(), $providers );
-		$visibility = new \RAN\Admin\GitHubVisibility( new \RAN\Settings\GeneralPreferenceStore(), $providers, $selection, new GitHubVisibilityConnection() );
+		$providers  = GitHubSupplierState::apply( $this->providers( true ), ProviderRegistry::GITHUB_BUNDLED );
+		$visibility = new \RAN\Admin\GitHubVisibility( new \RAN\Settings\GeneralPreferenceStore(), $providers, new GitHubVisibilityConnection() );
 		$providers->seal();
 		self::assertSame( 'gh', $visibility->hidden_navigation_key() );
-		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->provider_tab_url( 'gh' ), 'Post-action redirects target the provider.' );
-		$links = new \RAN\Admin\ProviderTabLinks( static fn (): AdminTabRegistry => new AdminTabRegistry( $providers, $selection ) );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->dashboard( $this->throwing_secrets(), providers: $providers, github_visibility: $visibility )->provider_tab_url( 'gh' ), 'Post-action redirects target the provider.' );
+		$links = new \RAN\Admin\ProviderTabLinks( static fn (): AdminTabRegistry => new AdminTabRegistry( $providers ) );
 		$base  = 'https://example.test/wp-admin/admin.php';
 		self::assertSame( $base . '?page=ran-booster&tab=gh&view=credentials', $links->url( $base, 'gh', '&view=credentials' ) );
 		self::assertSame( $base . '?page=ran-booster&tab=overview', $links->url( $base, 'ghost', '&view=credentials' ) );
@@ -2160,14 +1907,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&view=credentials&replace_credential=saved', $credential_url->invoke( $instance, $failure ), $emitter );
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=bb&view=credentials&replace_credential=saved', $credential_url->invoke( $instance, array( 'provider' => 'bb' ) + $failure ), $emitter );
 		}
-		$hidden_dashboard = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility );
+		$hidden_dashboard = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_visibility: $visibility );
 		$_GET             = array(
 			'tab'   => 'troubleshooting',
 			'panel' => 'installation',
 		);
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $hidden_dashboard->get_index()['data']['selection_provider_tab_url'] );
 		$_GET = array( 'tab' => 'gh' );
-		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->redirect_for( $hidden_dashboard, 'adopt-github' ) );
 
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->method( 'credential_profiles' )->willReturn(
@@ -2185,7 +1931,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$secrets->method( 'webhook_profiles' )->willReturn( array() );
 		foreach ( array( 'gh', ' GH ' ) as $tab ) {
 			$_GET['tab'] = $tab;
-			$data        = $this->dashboard( $secrets, providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
+			$data        = $this->dashboard( $secrets, providers: $providers, github_visibility: $visibility )->get_index()['data'];
 
 			self::assertSame( 'gh', $data['selected_provider'] );
 			self::assertSame( 'provider.php', $data['tab_view'] );
@@ -2195,81 +1941,36 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	/**
-	 * The internal tab=gh adoption form exists only while the GitHub selection
-	 * is not in the plain available state, which is exactly when
-	 * GitHubVisibility refuses to hide the GitHub tab. The post-action
-	 * redirect uses the same decision.
+	 * While a plugin's claim on GitHub failed or conflicts, GitHubVisibility refuses
+	 * to hide the GitHub tab, so the page that explains why stays reachable.
+	 *
+	 * @param list<string> $claimants
 	 */
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
-	public function test_github_recovery_state_is_never_hidden_so_its_links_resolve(): void {
+	#[DataProvider( 'unavailable_github_suppliers' )]
+	public function test_an_unavailable_github_is_never_hidden_so_its_page_resolves( string $supplier, array $claimants ): void {
 		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', true );
 		require_once __DIR__ . '/GitHubVisibilityConnection.php';
-		$providers = $this->providers( true );
-		$selection = $this->queued_selection( new AttemptRepositoryDatabase(), $providers );
-		$make      = static fn (): \RAN\Admin\GitHubVisibility => new \RAN\Admin\GitHubVisibility( new \RAN\Settings\GeneralPreferenceStore(), $providers, $selection, new GitHubVisibilityConnection() );
-
-		self::assertSame( 'gh', $make()->hidden_navigation_key(), 'Control: an available selection is hidden.' );
-
-		$selection->begin_native_mutation( 'plugin', 'target/main.php', static fn (): bool => true, self::LOCK_TOKEN );
-		self::assertSame( 'recovery_required', $selection->status()['state'] );
-		$visibility = $make();
+		$providers = GitHubSupplierState::apply( new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) ), $supplier, $claimants );
+		$providers->seal();
+		$visibility = new \RAN\Admin\GitHubVisibility( new \RAN\Settings\GeneralPreferenceStore(), $providers, new GitHubVisibilityConnection() );
 		self::assertNull( $visibility->hidden_navigation_key() );
-		self::assertSame( 'github_selection_unknown', $visibility->projection()['reason'] );
+		self::assertSame( 'active_github_replacement', $visibility->projection()['reason'] );
 
-		$_GET['tab'] = 'gh';
-		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->dashboard( $this->throwing_secrets(), providers: $providers, github_selection: $selection, github_visibility: $visibility )->provider_tab_url( 'gh' ) );
-		$visible_dashboard = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility );
-		$_GET              = array(
+		$dashboard = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_supplier: new \RAN\Admin\GitHubSupplierNotice( $providers ), github_visibility: $visibility );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $dashboard->provider_tab_url( 'gh' ) );
+		$_GET = array(
 			'tab'   => 'troubleshooting',
 			'panel' => 'installation',
 		);
-		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $visible_dashboard->get_index()['data']['selection_provider_tab_url'] );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $dashboard->get_index()['data']['selection_provider_tab_url'] );
 		$_GET = array( 'tab' => 'gh' );
-		self::assertStringStartsWith( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $this->redirect_for( $visible_dashboard, 'adopt-github' ) );
-		$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
+		$data = $dashboard->get_index()['data'];
 		self::assertArrayNotHasKey( 'route_not_found', $data );
 		self::assertSame( 'provider.php', $data['tab_view'] );
+		self::assertSame( 'gh', $data['selected_provider'] );
 		self::assertContains( 'gh', array_column( $data['tabs'], 'key' ) );
-	}
-
-	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
-	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
-	public function test_github_adoption_state_is_never_hidden_so_its_form_resolves(): void {
-		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', true );
-		require_once __DIR__ . '/GitHubVisibilityConnection.php';
-		$bundled   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
-		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' ), '/unused/plugins', $bundled );
-		$providers = new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) );
-		$providers->seal();
-		self::assertFalse( $selection->status()['available'] );
-		$visibility = new \RAN\Admin\GitHubVisibility( new \RAN\Settings\GeneralPreferenceStore(), $providers, $selection, new GitHubVisibilityConnection() );
-		self::assertNull( $visibility->hidden_navigation_key() );
-
-		$directory = sys_get_temp_dir() . '/adoption-visible-' . bin2hex( random_bytes( 8 ) );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable private sidecar fixture.
-		mkdir( $directory, 0700 );
-		$_GET['tab'] = 'gh';
-		$data        = $this->dashboard( new SecretsFile( $directory . '/secrets', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection, github_visibility: $visibility )->get_index()['data'];
-		self::assertArrayNotHasKey( 'route_not_found', $data );
-		self::assertSame( 'provider.php', $data['tab_view'] );
-		self::assertContains( 'gh', array_column( $data['tabs'], 'key' ) );
-		if ( is_file( $directory . '/secrets.lock' ) ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture lock.
-			unlink( $directory . '/secrets.lock' );
-		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable private sidecar fixture.
-		rmdir( $directory );
 	}
 
 	public function test_a_registered_add_on_tab_and_every_built_in_tab_still_resolve(): void {
@@ -2304,21 +2005,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$registry->seal();
 
 		$providers = $this->providers( true );
-		$db        = new AttemptRepositoryDatabase();
-		$store     = new \RAN\Storage\GitHubSelectionStore( $db, 'wp_options' );
-		$bundled   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
-		$store->initialize_bundled( $bundled );
-		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( $store, '/unused', $bundled );
 		$directory = sys_get_temp_dir() . '/ran-booster-gh-collision-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable private sidecar fixture.
 		mkdir( $directory, 0700 );
@@ -2328,8 +2014,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$secrets,
 			admin_add_ons: $registry,
 			provider_credentials: true,
-			providers: $providers,
-			github_selection: $selection
+			providers: $providers
 		);
 		try {
 			foreach ( array( 'gh', ' GH ' ) as $tab ) {
@@ -2384,10 +2069,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame(
 			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
 			$dashboard->provider_tab_url( 'gh' )
-		);
-		self::assertSame(
-			'https://example.test/wp-admin/network/admin.php?page=ran-booster&tab=gh',
-			$this->redirect_for( $dashboard, 'adopt-github' )
 		);
 	}
 
@@ -2881,7 +2562,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	/** @return iterable<string,array{string}> */
 	public static function diagnostics_selection_states(): iterable {
-		foreach ( array( 'available', 'unavailable', 'unknown' ) as $state ) {
+		foreach ( array( 'bundled', 'add-on', 'unknown' ) as $state ) {
 			yield $state => array( $state );
 		}
 	}
@@ -2894,27 +2575,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		$secrets   = new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() );
 		$providers = $this->providers();
-		$selection = null;
-		if ( 'unknown' !== $state ) {
-			$selection = $this->queued_selection( new AttemptRepositoryDatabase(), $providers );
-			if ( 'unavailable' === $state ) {
-				$selection = new \RAN\RepositoryProvider\GitHubProviderSelection(
-					new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' ),
-					'/unused/plugins',
-					new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
-						array(
-							'plugin_basename'        => 'index.php',
-							'implementation_id'      => 'queued-test',
-							'compatibility_revision' => '1',
-							'provider_api_version'   => 15,
-							'api_credential_formats' => array(),
-							'webhook_signing_format' => null,
-							'facets'                 => array(),
-						)
-					)
-				);
-			}
-		}
+		$supplier  = 'unknown' === $state ? null : new \RAN\Admin\GitHubSupplierNotice( GitHubSupplierState::apply( $providers, 'bundled' === $state ? ProviderRegistry::GITHUB_BUNDLED : 'supplier-fixture-a', 'bundled' === $state ? array() : array( 'supplier-fixture-a' ) ) );
+		$providers->seal();
 		$local   = new class( $secrets ) extends LocalTroubleshootingService {
 			public int $runs = 0;
 			public function diagnose(): array {
@@ -2926,12 +2588,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 			}
 		};
 		$service = new TroubleshootingService( $local, $providers );
-		$initial = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection )->get_index()['data'];
+		$initial = $this->dashboard( $secrets, $service, providers: $providers, github_supplier: $supplier )->get_index()['data'];
 		$page    = $this->diagnostics_document( $this->render_diagnostics_page( $initial ) );
 		$this->assert_diagnostics_snapshot( $page, null );
 
 		for ( $submission = 1; $submission <= 3; ++$submission ) {
-			$dashboard = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection );
+			$dashboard = $this->dashboard( $secrets, $service, providers: $providers, github_supplier: $supplier );
 			$dashboard->post_run_troubleshooting( array( 'provider' => 'gh' ) );
 			unset( $_GET['panel'] );
 			$data = $dashboard->get_index()['data'];
@@ -2941,7 +2603,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 
 		for ( $submission = 4; $submission <= 6; ++$submission ) {
-			$dashboard = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection );
+			$dashboard = $this->dashboard( $secrets, $service, providers: $providers, github_supplier: $supplier );
 			$dashboard->post_run_troubleshooting( array( 'provider' => 'gh' ) );
 			$response = $this->diagnostics_document( $dashboard->render_troubleshooting_diagnostics_region() );
 			$target   = $this->diagnostics_nodes( new \DOMXPath( $page ), '//*[@id="ran-booster-troubleshooting-diagnostics-region"]' )->item( 0 );
@@ -3759,20 +3421,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'source'         => 'release_asset',
 			'digest'         => str_repeat( 'a', 64 ),
 		);
-		$store      = new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' );
-		$bundled    = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
-		$store->initialize_bundled( $bundled );
-		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( $store, '/unused', $bundled );
 
 		// 1. Package index projects unavailable_packages alongside strictly healthy rows.
 		$_GET    = array();
@@ -3821,7 +3469,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				$gateway->method( 'deletion_postcondition' )->with( $type, $identifier, true )->willReturn( static fn (): bool => $folder_absent );
 				$attempts  = new DeploymentAttemptRepository( new AttemptRepositoryDatabase(), 'wp_ran_booster_attempts', database_lifecycle: $this->createStub( Database::class ) );
 				$removals  = new PackageRemovalService( $plugins, $themes, $gateway, $attempts, $this->createStub( WordPressUpdaterLock::class ) );
-				$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes, removals: $removals, github_selection: $selection );
+				$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes, removals: $removals );
 				$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
 
 				self::assertSame( 'packages/recovery', $result['view'] );
@@ -5016,7 +4664,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
 		?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
 		?WordPressUpdaterLock $branch_check_lock = null,
-		?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null,
+		?\RAN\Admin\GitHubSupplierNotice $github_supplier = null,
 		?PackageRemovalService $removals = null,
 		?\RAN\Admin\CredentialExpiryNotice $credential_expiry_notice = null,
 		?\RAN\Secrets\SecretsStorageProvisioner $secrets_storage = null,
@@ -5069,9 +4717,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$plugin_repository,
 			new Booster(),
 			$theme_repository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles ?? new InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(), null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence ?? new DashboardBranchCheckEvidenceStore(), $branch_check_lock, $github_selection ),
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles ?? new InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(), null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence ?? new DashboardBranchCheckEvidenceStore(), $branch_check_lock, $github_supplier ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
-			new AdminTabRegistry( $providers, $github_selection ),
+			new AdminTabRegistry( $providers ),
 			new ProviderDocumentationPresenter( $providers ),
 			$package_operations,
 			$deployment_attempts,

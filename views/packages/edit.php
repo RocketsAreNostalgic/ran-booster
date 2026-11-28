@@ -8,7 +8,7 @@
  *   default_provider: string,
  *   providers: list<array{
  *     code: string, label: string, owner_label: string, repository_url_base: string,
- *     unavailable_reason?: 'replacement_load_failed',
+ *     unavailable_message?: string,
  *     credentials_url: string, available: bool, browse: bool, credentialed_public_browse: bool,
  *     provider_default_public_lookup_profile: bool, deploy: bool, webhooks: bool,
  *     default_credential_id: string, credential_kind_labels?: array<string, string>,
@@ -258,8 +258,8 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 		<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 		<p><strong><?php esc_html_e( 'Git provider unavailable.', 'ran-booster' ); ?></strong>
 			<?php
-			if ( 'replacement_load_failed' === ( $selected_provider_option['unavailable_reason'] ?? null ) ) {
-				esc_html_e( 'The selected replacement GitHub provider could not load. This package remains linked but cannot be edited or deployed until it does.', 'ran-booster' );
+			if ( isset( $selected_provider_option['unavailable_message'] ) ) {
+				echo esc_html( $selected_provider_option['unavailable_message'] );
 			} else {
 				echo wp_kses_post(
 					sprintf(

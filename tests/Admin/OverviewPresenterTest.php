@@ -106,7 +106,7 @@ final class OverviewPresenterTest extends TestCase {
 				'provider' => in_array( $key, array( 'gh', 'bb', 'unknown' ), true ),
 			);
 		}
-		foreach ( array( 'conflict', 'missing', 'recovery_required', 'storage_unavailable', 'available' ) as $state ) {
+		foreach ( array( 'GitHub is unavailable because Alpha could not load.', null ) as $message ) {
 			$result = ( new OnboardingPresenter() )->build_overview(
 				$tabs,
 				'/install',
@@ -117,50 +117,47 @@ final class OverviewPresenterTest extends TestCase {
 				null,
 				array(
 					'gh'     => array(
-						'admitted'  => false,
-						'selection' => $state,
+						'admitted' => false,
+						'message'  => $message,
 					),
 					'bb'     => array(
-						'admitted'  => true,
-						'selection' => null,
+						'admitted' => true,
+						'message'  => null,
 					),
 					'hidden' => array(
-						'admitted'  => true,
-						'selection' => null,
+						'admitted' => true,
+						'message'  => null,
 					),
 				)
 			);
 			self::assertSame(
 				array(
 					array(
-						'code'                 => 'gh',
-						'label'                => 'GH',
-						'url'                  => '/gh',
-						'admitted'             => false,
-						'selection'            => $state,
-						'source_kind'          => null,
-						'source_name'          => null,
-						'replacement_detected' => false,
+						'code'        => 'gh',
+						'label'       => 'GH',
+						'url'         => '/gh',
+						'admitted'    => false,
+						'message'     => $message,
+						'source_kind' => null,
+						'source_name' => null,
 					),
 					array(
-						'code'                 => 'bb',
-						'label'                => 'BB',
-						'url'                  => '/bb',
-						'admitted'             => true,
-						'selection'            => null,
-						'source_kind'          => null,
-						'source_name'          => null,
-						'replacement_detected' => false,
+						'code'        => 'bb',
+						'label'       => 'BB',
+						'url'         => '/bb',
+						'admitted'    => true,
+						'message'     => null,
+						'source_kind' => null,
+						'source_name' => null,
 					),
 					array(
-						'code'                 => 'unknown',
-						'label'                => 'UNKNOWN',
-						'url'                  => '/unknown',
-						'admitted'             => null,
-						'selection'            => null,
-						'source_kind'          => null,
-						'source_name'          => null,
-						'replacement_detected' => false,
+						'code'        => 'unknown',
+						'label'       => 'UNKNOWN',
+						'url'         => '/unknown',
+						'admitted'    => null,
+						'message'     => null,
+						'source_kind' => null,
+						'source_name' => null,
 					),
 				),
 				$result['provider_summaries']

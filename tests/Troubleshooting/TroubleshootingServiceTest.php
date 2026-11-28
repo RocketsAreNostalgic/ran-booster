@@ -812,7 +812,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$local                     = new TroubleshootingLocalFixture( $this->local_results() );
 		$secrets                   = new TroubleshootingSecretsFixture( array() );
 		$service                   = new TroubleshootingService( $local, $registry, secrets: $secrets );
-		$facts                     = $service->installation_payload( array( 'status' => 'not_checked' ) );
+		$facts                     = $service->installation_payload( array( 'message' => null ), array( 'status' => 'not_checked' ) );
 		self::assertSame( array(), $facts['credentials'] );
 		self::assertSame( array( 'status' => 'not_checked' ), $facts['storage'] );
 		self::assertArrayHasKey( 'PHP', $facts['environment'] );
@@ -821,6 +821,8 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertSame( 0, $provider->runs );
 		self::assertSame( 0, $secrets->profile_reads );
 		self::assertSame( 0, $secrets->maintenance_reads );
+		self::assertNull( $facts['github_supplier'] );
+		self::assertSame( 'GitHub is provided by Alpha.', $service->installation_payload( array( 'message' => 'GitHub is provided by Alpha.' ), array() )['github_supplier'] );
 	}
 
 	public function test_diagnostics_preserve_immediate_results_if_the_initiating_scope_changes(): void {

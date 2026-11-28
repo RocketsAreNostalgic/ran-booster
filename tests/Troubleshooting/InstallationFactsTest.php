@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\Admin\AdminAddOnTab;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\Tests\Admin\Support\GitHubSupplierState;
 use RAN\Troubleshooting\InstallationFacts;
 
 require_once __DIR__ . '/SupportReportWordPressFunctions.php';
@@ -91,6 +92,40 @@ final class InstallationFactsTest extends TestCase {
 		$GLOBALS['ran_booster_support_version'] = '1.0.0+private-version-canary';
 		self::assertSame( 'Unknown', $facts->core()['installed_version'] );
 		$GLOBALS['ran_booster_support_version'] = '1.0.0-beta.41';
+	}
+
+	public function test_the_github_row_names_its_supplier_and_stays_listed_while_a_claim_keeps_it_unregistered(): void {
+		$row     = static function ( ?string $supplier, bool $registered ): ?array {
+			$providers = $registered ? array( new SupportReportProvider( 'gh', 'GitHub' ), new SupportReportProvider( 'bb', 'Bitbucket' ) ) : array( new SupportReportProvider( 'bb', 'Bitbucket' ) );
+			$registry  = new ProviderRegistry( $providers );
+			if ( null !== $supplier ) {
+				GitHubSupplierState::apply( $registry, $supplier, array( 'alpha' ) );
+			}
+			foreach ( $providers as $provider ) {
+				$provider->registered = true;
+			}
+			$rows = array_column( ( new InstallationFacts( $registry ) )->components(), null, 'Provider' );
+			return $rows['gh'] ?? null;
+		};
+		$bundled = $row( ProviderRegistry::GITHUB_BUNDLED, true );
+		self::assertSame( 'Included with Booster', $bundled['Supplier'] ?? null );
+		self::assertSame( 'Admitted', $bundled['Admission'] ?? null );
+		self::assertSame( 'Add-on', $row( 'alpha', true )['Supplier'] ?? null );
+		self::assertSame(
+			array(
+				'Name'         => 'GitHub',
+				'Provider'     => 'gh',
+				'Admission'    => 'Not admitted',
+				'Selection'    => 'Not applicable',
+				'Availability' => 'Unavailable',
+				'Supplier'     => 'Add-on failed to load',
+			),
+			$row( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, false )
+		);
+		self::assertSame( 'More than one add-on', $row( ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT, false )['Supplier'] ?? null );
+		// A registry that does not own GitHub adds no supplier.
+		self::assertArrayNotHasKey( 'Supplier', (array) $row( null, true ) );
+		self::assertNull( $row( null, false ) );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]

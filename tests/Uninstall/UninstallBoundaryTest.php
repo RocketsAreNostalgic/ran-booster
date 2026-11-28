@@ -36,7 +36,6 @@ final class UninstallBoundaryTest extends TestCase {
 	/** @return list<array{string, string, string}> */
 	public static function diagnostics(): array {
 		return array(
-			array( 'Booster has an unfinished native mutation that must be resolved before cleanup.', 'uninstall_native_unfinished', 'open the Booster GitHub page, and release the install hold' ),
 			array( 'Booster has unfinished work that must be resolved before cleanup.', 'uninstall_deployments_unfinished', 'unfinished deployments' ),
 			array( 'Booster could not verify recorded work before cleanup.', 'uninstall_custody_unverified', 'Troubleshooting' ),
 			array( 'secret-path-sensitive-value', 'uninstall_failed', 'Resolve the reported problem' ),

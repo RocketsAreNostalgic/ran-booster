@@ -23,7 +23,6 @@ use RAN\Settings\GeneralPreferenceStore;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 use RAN\Storage\Database;
-use RAN\Storage\GitHubSelectionStore;
 use RAN\Storage\SchemaConnection;
 use RuntimeException;
 
@@ -43,8 +42,8 @@ class LocalDataRemover {
 		GeneralPreferenceStore::OPTION_NAME,
 		\RAN\Troubleshooting\DiagnosticRunStore::OPTION_NAME,
 		\RAN\WordPress\CoreSelfUpdateCheck::OPTION_NAME,
-		GitHubSelectionStore::OPTION,
 		\RAN\WordPress\WordPressUpdaterLock::OWNER_OPTION,
+		\RAN\Admin\GitHubSupplierNotice::OPTION,
 	);
 
 	private const USER_META_KEYS = array(
@@ -122,29 +121,18 @@ class LocalDataRemover {
 			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
 		}
 		$options = $database->prepare(
-			'SELECT option_name FROM %i WHERE BINARY option_name IN (BINARY %s, BINARY %s)',
+			'SELECT option_name FROM %i WHERE BINARY option_name = BINARY %s',
 			$database->options,
-			Database::VERSION_OPTION,
-			GitHubSelectionStore::OPTION
+			Database::VERSION_OPTION
 		);
 		$rows    = $this->custody_rows( $database, $options );
 		$present = array();
 		foreach ( $rows as $row ) {
 			$name = $row->option_name ?? null;
-			if ( ! is_string( $name ) || ! in_array( $name, array( Database::VERSION_OPTION, GitHubSelectionStore::OPTION ), true ) || isset( $present[ $name ] ) ) {
+			if ( Database::VERSION_OPTION !== $name || isset( $present[ $name ] ) ) {
 				throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
 			}
 			$present[ $name ] = true;
-		}
-		if ( isset( $present[ GitHubSelectionStore::OPTION ] ) ) {
-			try {
-				$selection = ( new GitHubSelectionStore( $database, $database->options ) )->read();
-			} catch ( \Throwable ) {
-				throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
-			}
-			if ( isset( $selection['native_mutation'] ) ) {
-				throw new RuntimeException( 'Booster has an unfinished native mutation that must be resolved before cleanup.' );
-			}
 		}
 		$suppress_errors      = method_exists( $database, 'suppress_errors' ) ? $database->suppress_errors( ... ) : null;
 		$previous_suppression = $suppress_errors?->__invoke( true );

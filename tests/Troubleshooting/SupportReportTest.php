@@ -12,6 +12,7 @@ use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use RAN\Tests\Admin\Support\GitHubSupplierState;
 use RAN\Tests\Activity\ActivityConnection;
 use RAN\Troubleshooting\InstallationFacts;
 use RAN\Troubleshooting\SupportReport;
@@ -495,6 +496,38 @@ final class SupportReportTest extends TestCase {
 		self::assertSame( 'Admitted', $data['data']['components'][31]['admission'] );
 		self::assertSame( 'Unknown', $data['data']['components'][31]['version'] );
 		self::assertStringNotContainsString( 'Private Addon', $text );
+	}
+
+	public function test_the_github_component_exports_its_supplier_without_naming_the_plugin(): void {
+		$this->environment();
+		$export = static function ( string $supplier, bool $registered ): array {
+			$providers = $registered ? array( new SupportReportProvider( 'gh', 'GitHub' ) ) : array();
+			$registry  = GitHubSupplierState::apply( new ProviderRegistry( $providers ), $supplier, array( 'private-supplier-canary' ) );
+			foreach ( $providers as $provider ) {
+				$provider->registered = true;
+			}
+			$text = ( new SupportReport( new InstallationFacts( $registry ) ) )->generate( array() )['text'];
+			self::assertStringNotContainsString( 'private-supplier-canary', $text );
+			$rows = array_column( json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['components'], null, 'provider' );
+			return $rows['GitHub'] ?? array();
+		};
+		self::assertSame( 'Included with Booster', $export( ProviderRegistry::GITHUB_BUNDLED, true )['supplier'] ?? null );
+		$add_on = $export( 'private-supplier-canary', true );
+		self::assertSame( 'Add-on', $add_on['supplier'] ?? null );
+		self::assertSame( 'Admitted', $add_on['admission'] ?? null );
+		self::assertArrayHasKey( 'implementation', $add_on );
+		self::assertSame(
+			array(
+				'name'         => 'GitHub',
+				'admission'    => 'Not admitted',
+				'selection'    => 'Not applicable',
+				'availability' => 'Unavailable',
+				'supplier'     => 'Add-on failed to load',
+				'provider'     => 'GitHub',
+			),
+			$export( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, false )
+		);
+		self::assertSame( 'More than one add-on', $export( ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT, false )['supplier'] ?? null );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]

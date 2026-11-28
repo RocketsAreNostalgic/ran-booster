@@ -81,6 +81,7 @@ final class NativeUpdateErrorScriptTest extends TestCase {
 			'RAN\\Admin\\DeploymentAdminPresenter',
 			'RAN\\Admin\\SecretsRuntimeAvailabilityNotice',
 			'RAN\\Admin\\DatabaseCompatibilityNotice',
+			'RAN\\Admin\\GitHubSupplierNotice',
 			'RAN\\Admin\\ManagedPluginFailureRows',
 		) as $service ) {
 			$container->bind(

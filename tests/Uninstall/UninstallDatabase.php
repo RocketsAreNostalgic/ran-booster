@@ -107,18 +107,7 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 			return array_key_exists( $name, $options ) ? array( (object) array( 'option_name' => $name ) ) : array();
 		}
 		if ( str_starts_with( $query, 'SELECT option_name FROM ' ) ) {
-			$names = array( \RAN\Storage\Database::VERSION_OPTION, \RAN\Storage\GitHubSelectionStore::OPTION );
-			return array_map( static fn ( string $name ): object => (object) array( 'option_name' => $name ), array_values( array_filter( $names, static fn ( string $name ): bool => array_key_exists( $name, $options ) ) ) );
-		}
-		if ( str_starts_with( $query, 'SELECT option_name, option_value, autoload' ) ) {
-			$name = \RAN\Storage\GitHubSelectionStore::OPTION;
-			return isset( $options[ $name ] ) ? array(
-				(object) array(
-					'option_name'  => $name,
-					'option_value' => $options[ $name ],
-					'autoload'     => 'no',
-				),
-			) : array();
+			return array_key_exists( \RAN\Storage\Database::VERSION_OPTION, $options ) ? array( (object) array( 'option_name' => \RAN\Storage\Database::VERSION_OPTION ) ) : array();
 		}
 		if ( 'SELECT @@lower_case_table_names AS lower_case_table_names' === $query ) {
 			return array(

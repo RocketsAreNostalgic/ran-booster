@@ -1,10 +1,42 @@
 # Provider registration and coexistence: released baseline
 
-For operator instructions for published
-[Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37), use
-[Choose GitHub support](github-provider-replacement.md). The remainder of this
-document preserves the historical beta.36 baseline; its uses of “currently” and
-“today” refer to that release, not beta.37's replacement controls.
+For operator instructions, use [Choose GitHub support](github-provider-replacement.md).
+The section below describes how a plugin supplies GitHub from Core
+v1.0.0-beta.51. The remainder of this document preserves the historical beta.36
+baseline; its uses of “currently” and “today” refer to that release.
+
+## Supply GitHub from a plugin
+
+From beta.51, a plugin supplies `gh` by calling `supersede_github()` with a
+Provider API 15 factory from its `ran_booster_register_providers` callback:
+
+```php
+if ( method_exists( $registry, 'supersede_github' ) ) {
+	$registry->supersede_github( $factory );
+}
+```
+
+Core registers `gh` itself when the registry seals, after every callback has
+run. With no claim it registers the bundled module; with one claim it calls that
+factory instead and never builds the bundled module. Registering `gh` directly
+through `register_with_credential_store()` is refused. The Provider API version
+stays 15.
+
+- **Attribution.** The supplier is the plugin directory that defines the
+  factory, read from the factory's source file. A factory defined outside the
+  plugin directories cannot be attributed, and its claim fails.
+- **Admission.** The factory's aggregate must report code `gh` and repository
+  base `https://github.com/`, and pass the same registration checks as any
+  provider. A factory without the API 15 signature, one that throws, or one that
+  returns anything else fails the claim.
+- **Failure and conflict.** A failed claim, or a second claim in the same
+  request, leaves `gh` unavailable for that request. Core does not fall back to
+  the bundled module, and logs a closed outcome code.
+- **Deactivation.** Claims are made per request, so deactivating the plugin
+  returns `gh` to the bundled module on the next request.
+- **Notice.** Core tells administrators once when the supplier changes, and
+  stores only the last supplier shown, per site, in
+  `ran_booster_github_supplier_shown`. The option carries no approval.
 
 **Status:** Released-baseline characterization for Provider API 15, checked against
 Core beta.36 on 15 October 2026. The replacement work in issues #406–409 is

@@ -415,8 +415,8 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		);
 
 		( new BoosterServiceProvider(
-			static function ( ProviderSecretPolicyCatalog $policies, callable $guard ) use ( &$secrets ): TrackingSecretsFile {
-				$secrets = new TrackingSecretsFile( $policies, $guard );
+			static function ( ProviderSecretPolicyCatalog $policies ) use ( &$secrets ): TrackingSecretsFile {
+				$secrets = new TrackingSecretsFile( $policies );
 
 				return $secrets;
 			}
@@ -473,8 +473,8 @@ final class TrackingSecretsFile extends SecretsFile {
 	public int $purges                     = 0;
 	public ?\Throwable $validation_failure = null;
 
-	public function __construct( ProviderSecretPolicyCatalog $policies, callable $guard ) {
-		parent::__construct( '/unused/troubleshooting-get-secrets.php', array(), $policies, github_credential_access: $guard );
+	public function __construct( ProviderSecretPolicyCatalog $policies ) {
+		parent::__construct( '/unused/troubleshooting-get-secrets.php', array(), $policies );
 	}
 
 	public function verify_and_secure(): bool {

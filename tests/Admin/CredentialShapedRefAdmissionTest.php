@@ -50,13 +50,10 @@ use WP_Error;
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
 final class CredentialShapedRefAdmissionTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
-
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
 	private DeploymentCoordinator $coordinator;
 	private ProviderRegistry $registry;
-	private \RAN\RepositoryProvider\GitHubProviderSelection $selection;
 	private PluginRepository&MockObject $plugins;
 	private ThemeRepository&MockObject $themes;
 	private Plugin $package;
@@ -281,15 +278,15 @@ final class CredentialShapedRefAdmissionTest extends TestCase {
 		$activity_db->expects( self::never() )->method( 'query' );
 		$activity_db->expects( self::never() )->method( 'insert' );
 		$activity_db->expects( self::never() )->method( 'get_results' );
-		$this->selection = $this->queued_selection( $this->database, $this->registry );
-		$this->attempts  = new DeploymentAttemptRepository(
+		$this->registry->seal();
+		$this->attempts = new DeploymentAttemptRepository(
 			$this->database,
 			'wp_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-11-17 00:00:00 UTC' ),
 			database_lifecycle: $this->createStub( Database::class ),
 			activity: $guard_activity ? new ActivityStore( $activity_db, 'wp_activity' ) : null
 		);
-		$lock            = $this->createMock( WordPressUpdaterLock::class );
+		$lock           = $this->createMock( WordPressUpdaterLock::class );
 		$lock->method( 'acquire' )->willThrowException( new \RuntimeException( 'Isolated execution is intentionally unavailable.' ) );
 		$this->coordinator = new DeploymentCoordinator(
 			$this->attempts,
@@ -345,7 +342,7 @@ final class CredentialShapedRefAdmissionTest extends TestCase {
 				),
 			)
 		);
-		$processor = new WebhookProcessor( $this->registry, $this->coordinator, new SignedWebhookVerifier( $secrets ), $this->selection );
+		$processor = new WebhookProcessor( $this->registry, $this->coordinator, new SignedWebhookVerifier( $secrets ) );
 		return $processor->handle(
 			'gh',
 			static fn (): array => array(

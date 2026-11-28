@@ -1,99 +1,54 @@
 # Choose GitHub support
 
-**Release status:** This guide describes the replacement controls published in
-[Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).
-Core beta.36's older bundled-only behavior is preserved in the
-[historical released-baseline reference](provider-registration-and-coexistence.md).
-Check your installed release before following these steps. No production
-replacement plugin is supplied by this guide.
+**Release status:** This guide describes GitHub supply from Core
+v1.0.0-beta.51. Earlier betas used a review-and-approve selection that this
+release removes. Check your installed release before following these steps. No
+production replacement plugin is supplied by this guide.
 
-## Before changing provider
+Booster includes a GitHub provider. A plugin built for Booster's GitHub
+contract can provide GitHub in its place. Booster uses one GitHub provider at a
+time; it does not combine their features.
 
-Use a trusted replacement plugin that explicitly supports Booster's GitHub.com
-replacement contract and the Core version you are running. An ordinary GitHub
-plugin, a provider registered under another code, or a development test fixture
-is not an eligible production replacement. Booster accepts one implementation
-for the exact GitHub provider code; it does not combine their capabilities.
+## Before activating a GitHub plugin
 
-You need administrator access to manage Booster and activate plugins. Back up
-the site, including the matching credential sidecar and database key. Check the
-replacement's supported credential formats and features, particularly branch
-archives, published releases and webhooks. Missing features stay unavailable.
-Plugin names and compatibility declarations do not verify the publisher.
+Use a trusted plugin that states support for the Core version you run. Plugin
+names do not verify the publisher, and Booster does not isolate secrets from
+other active PHP plugins: an active GitHub plugin can use the GitHub
+credentials and webhook secrets stored on the site.
 
-## Review and adopt
+Check which credential formats and features the plugin supports, particularly
+branch archives, published releases and webhooks. Missing features stay
+unavailable. Back up the site, including the matching credential sidecar and
+database key.
 
-1. In WordPress **Plugins**, activate only the replacement you intend to use.
-   Enabling a candidate makes it discoverable; it does not approve selection or
-   grant supported access to retained credentials. GitHub operations pause while
-   the choice needs approval. Local records remain available; Bitbucket is
-   independent.
-2. Open Booster's **GitHub** page and expand **Review GitHub provider**. Review
-   the plugin attribution, affected Branch and Published release package counts,
-   compatible/incompatible API credential counts, and webhook signing notice.
-3. Confirm **I approve this provider and future setup of credentials it
-   supports.** Where compatible existing API credentials exist, also confirm
-   **Allow this provider to read and use all compatible existing GitHub access
-   credentials, including those configured in wp-config.php.** This is all
-   compatible retained material, not a per-profile picker.
-   Declining reuse cancels adoption. If retained API material exists but none
-   can be reused, acknowledge that compatible credentials must be configured
-   afterward. With no retained API material, no reuse acknowledgement is needed.
-4. Choose **Approve GitHub provider**. On the refreshed page, confirm
-   **Provider extension: …** identifies the intended plugin. **Manage GitHub provider**
-   contains switching guidance; **GitHub provider details** links to the
-   current installation details.
+## Activate, deactivate or switch
 
-Adoption leaves incompatible profiles stored and unchanged but unavailable.
-Packages using them remain paused; Booster does not substitute another
-credential. Configure a supported credential through **Add credential**, select
-it for the affected package, deliberately change a site-configured constant
-where applicable, or return to a compatible implementation. Switching does not
-convert credential formats or move provider-side webhooks. The review explicitly
-states whether approval permits reuse of compatible existing webhook signing
-secrets; otherwise those secrets stay stored and verification is unavailable.
-Review repository webhook setup separately.
+Activating the plugin in WordPress **Plugins** takes effect on the next page
+load. There is no approval step. Booster shows a one-time notice on the Plugins
+and Booster screens naming the plugin that now provides GitHub, and the
+Overview and **GitHub** pages show it as the source.
 
-This approval concerns replacement access to retained GitHub material. It is
-separate from the [Transporter credential import choice](operator-journeys.md#open-review-and-apply-on-the-destination).
-Neither choice authenticates a third-party publisher or isolates secrets from
-other active PHP plugins.
+Deactivating the plugin returns GitHub to the bundled provider on the next page
+load, with a one-time notice. To switch plugins, deactivate the current one
+before activating the next.
 
-## Read the paused states
+Managed packages, credentials and webhook records stay as they are when the
+supplier changes. Booster does not convert credential formats or move
+provider-side webhooks; a credential the new provider does not support stays
+stored but unusable until you add a supported one. Check package state and
+Activity before starting new work after a switch.
 
-| Message or state | What to do |
+## When GitHub is unavailable
+
+| Message | What to do |
 | --- | --- |
-| **Multiple GitHub providers are active** | Deactivate extras, leaving only the intended candidate, then review again. Booster does not elect a winner. |
-| **A GitHub provider is incompatible** | Use a compatible version or deactivate it before reviewing another choice. |
-| **The selected GitHub provider is missing** | Restore the approved compatible plugin, or deactivate every replacement and explicitly review a return to bundled GitHub. |
-| **The selected GitHub provider could not load** | The approved replacement is active but Booster could not create it, for example because its bundled libraries differ from this Booster release. No approval is offered, because approving again runs the same load. Install a version built for this Booster release, or deactivate the replacement and review a return to bundled GitHub. Packages show the same cause. |
-| **Review GitHub provider** | Read the current review and make the consent choices above. |
-| **GitHub provider selection is unavailable** | Restore storage before continuing; do not edit selection records to force a choice. |
+| **GitHub is unavailable because more than one plugin provides it** | Deactivate every GitHub plugin except the one you want. Booster does not choose between them. |
+| **GitHub is unavailable because … could not load** | The plugin is active, but Booster could not create its provider, for example because it was built for a different Booster release. Install a version built for this release, or deactivate it to return to the bundled provider. |
 
-A refusal that the adoption review or credential reuse consent changed means
-the old form is stale. Reload the GitHub page, inspect the current review and
-approve that review only. Do not repeatedly submit an old tab. Active plugins,
-compatibility declarations, credentials and selection state can change between
-review and confirmation. An occupied updater or unresolved work may also prevent
-switching; resolve the actual operation first.
+Booster never falls back to the bundled provider while a GitHub plugin is
+active. GitHub packages show the same cause and cannot be deployed until GitHub
+loads.
 
-## Switch implementation or return to bundled GitHub
-
-Deactivate the current replacement and activate only the intended replacement.
-Return to **GitHub**, review its current consequences and explicitly adopt it.
-To return to bundled GitHub, deactivate **all** replacement candidates, expand
-**Review return to bundled GitHub**, complete the displayed approvals and choose
-**Return to bundled GitHub**. A healthy bundled selection with no candidates
-has no adoption panel.
-
-There is no silent bundled fallback when a selected replacement disappears.
-Existing managed package records remain; switching is not reinstallation or
-automatic re-adoption. Old queued work and native update offers cannot be
-assumed valid for the new selection. Check current package state and Activity,
-then make fresh checks/reviews before deliberately starting new work. Do not
-expect automatic queue replay or an old Blueprint/Migrator review to remain
-authorized after a switch.
-
-Provider authors and reviewers can consult the
-[provider extension contract](provider-extension-contract.md#github-replacement-presentation)
+Provider authors can consult
+[provider registration](provider-registration-and-coexistence.md#supply-github-from-a-plugin)
 for the technical boundary.

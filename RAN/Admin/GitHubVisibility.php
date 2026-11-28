@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
-use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Settings\GeneralPreferenceStore;
 use RuntimeException;
@@ -22,7 +21,6 @@ final class GitHubVisibility {
 	public function __construct(
 		private readonly GeneralPreferenceStore $preferences,
 		private readonly ?ProviderRegistry $providers = null,
-		private readonly ?GitHubProviderSelection $github_selection = null,
 		?object $connection = null
 	) {
 		global $wpdb;
@@ -128,16 +126,7 @@ final class GitHubVisibility {
 		if ( ! $other_provider ) {
 			return 'no_other_provider';
 		}
-		if ( null === $this->github_selection ) {
-			return 'github_selection_unknown';
-		}
-		$status     = $this->github_selection->status();
-		$state      = $status['state'] ?? null;
-		$candidates = $status['candidates'] ?? null;
-		if ( ! is_array( $candidates ) || 'available' !== $state ) {
-			return 'github_selection_unknown';
-		}
-		if ( array() !== $candidates ) {
+		if ( ProviderRegistry::GITHUB_BUNDLED !== $this->providers->github_supplier() ) {
 			return 'active_github_replacement';
 		}
 		$empty = $this->github_management_is_empty();

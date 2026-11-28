@@ -183,7 +183,7 @@ final class SupportReport {
 			$row  = array( 'name' => in_array( $name, array( 'GitHub', 'Bitbucket Cloud', 'WP Pusher Migrator' ), true ) ? $name : $this->identity( 'Component', $name ) );
 			foreach ( array( 'Installed', 'Active', 'Admission' ) as $key ) {
 				if ( isset( $component[ $key ] ) ) {
-					$row[ strtolower( $key ) ] = self::choice( $component[ $key ], array( 'Yes', 'No', 'Admitted' ) );
+					$row[ strtolower( $key ) ] = self::choice( $component[ $key ], array( 'Yes', 'No', 'Admitted', 'Not admitted' ) );
 				}
 			}
 			if ( isset( $component['Version'] ) ) {
@@ -193,11 +193,16 @@ final class SupportReport {
 				$row['selection'] = self::choice( $component['Selection'], array( 'Selected locally', 'Not applicable' ) );
 			}
 			if ( isset( $component['Availability'] ) ) {
-				$row['availability'] = self::choice( $component['Availability'], array( 'Available locally; remote access not checked' ) );
+				$row['availability'] = self::choice( $component['Availability'], array( 'Available locally; remote access not checked', 'Unavailable' ) );
+			}
+			if ( isset( $component['Supplier'] ) ) {
+				$row['supplier'] = self::choice( $component['Supplier'], array( 'Included with Booster', 'Add-on', 'Add-on failed to load', 'More than one add-on' ) );
 			}
 			if ( isset( $component['Provider'] ) ) {
-				$row['provider']       = $this->provider( $component['Provider'] );
-				$row['implementation'] = $this->identity( 'Implementation', $component['Implementation'] ?? '' );
+				$row['provider'] = $this->provider( $component['Provider'] );
+			}
+			if ( isset( $component['Implementation'] ) ) {
+				$row['implementation'] = $this->identity( 'Implementation', $component['Implementation'] );
 				$row['archive_api']    = self::choice( $component['Archive API'] ?? null, array( '1', '2' ) );
 			}
 			$data['components'][] = $row;

@@ -8,7 +8,10 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\GitHubVisibility;
+use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Settings\GeneralPreferenceStore;
+use RAN\Tests\Admin\Support\GitHubSupplierState;
+use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
 use RuntimeException;
 
 #[RunTestsInSeparateProcesses]
@@ -32,6 +35,34 @@ final class GitHubVisibilityTest extends TestCase {
 			),
 			$visibility->projection()
 		);
+	}
+
+	public function test_only_the_bundled_supplier_can_be_hidden(): void {
+		$visibility = static function ( string $supplier ): GitHubVisibility {
+			$providers = GitHubSupplierState::apply( new ProviderRegistry( array( new ExternalFixtureProvider( 'gh' ), new ExternalFixtureProvider( 'bb' ) ) ), $supplier, array( 'alpha' ) );
+			$providers->seal();
+			return new GitHubVisibility( new GeneralPreferenceStore(), $providers, new GitHubVisibilityConnection() );
+		};
+
+		self::assertSame(
+			array(
+				'hidden'   => false,
+				'eligible' => true,
+				'reason'   => 'not_requested',
+			),
+			$visibility( ProviderRegistry::GITHUB_BUNDLED )->projection()
+		);
+		foreach ( array( 'alpha', ProviderRegistry::GITHUB_SUPERSEDE_FAILED, ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT ) as $supplier ) {
+			self::assertSame(
+				array(
+					'hidden'   => false,
+					'eligible' => false,
+					'reason'   => 'active_github_replacement',
+				),
+				$visibility( $supplier )->projection(),
+				$supplier
+			);
+		}
 	}
 
 	public function test_management_admission_locks_the_exact_github_provider_range_before_save_work(): void {

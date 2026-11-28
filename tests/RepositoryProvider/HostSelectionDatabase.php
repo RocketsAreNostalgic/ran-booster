@@ -8,7 +8,7 @@ use RAN\Storage\SchemaConnection;
 
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 
-/** Actual host composition uses canonical selection SQL fixtures and a passive bundled main file. */
+/** Actual host composition uses canonical options SQL fixtures and a passive bundled main file. */
 final class HostSelectionDatabase extends SchemaConnection {
 	public string $prefix  = 'wp_';
 	public string $options = 'wp_options';
@@ -31,8 +31,6 @@ final class HostSelectionDatabase extends SchemaConnection {
 		file_put_contents( $this->main_file, '<?php /* Host composition fixture */' );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Exact WordPress active-plugin wire fixture.
 		$this->authority->active_bytes = serialize( array( $this->basename ) );
-		$declaration                   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration( array_merge( array( 'plugin_basename' => $this->basename ), \RAN\BoosterGitHubProvider\V1\GitHubProvider::compatibility_contract() ) );
-		( new \RAN\Storage\GitHubSelectionStore( $this, $this->options ) )->initialize_bundled( $declaration );
 	}
 	public function __destruct() {
 		if ( is_file( $this->main_file ) ) {

@@ -235,11 +235,14 @@ If Booster/admin cannot load, use the established WordPress recovery and hosting
 support routes, sharing only independently reviewed evidence. The report cannot
 collect evidence through an unavailable bootstrap or recover pre-capture events.
 
-## Retired: captured GitHub declarations
+## GitHub supplier
 
 Installation and the support report no longer project GitHub replacement
-selection state, declarations or candidates. #1253 retires external GitHub
-replacement arbitration, so GitHub is reported like any other admitted provider.
+selection state, declarations or candidates; #1253 retired them. The GitHub
+component row carries one `supplier` choice instead: `Included with Booster`,
+`Add-on`, `Add-on failed to load` or `More than one add-on`. When a claim fails
+or conflicts, the row stays with admission `Not admitted` and availability
+`Unavailable`. Installation names the supplying plugin; the report does not.
 
 ## Verification and custody
 

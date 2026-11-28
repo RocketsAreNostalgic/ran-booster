@@ -502,6 +502,52 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Rockets Are Nostalgic', $html );
 	}
 
+	public function test_installation_describes_github_by_its_supplier(): void {
+		$troubleshooting_panel = 'installation';
+		$render                = static function ( array $component, string $supplier ) use ( $troubleshooting_panel ): \DOMXPath {
+			$troubleshooting = array(
+				'components'      => array( $component ),
+				'github_supplier' => $supplier,
+			);
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( '<alpha>', $html );
+			$document = new \DOMDocument();
+			$document->loadHTML( '<!doctype html><html><body>' . $html . '</body></html>', LIBXML_NOERROR | LIBXML_NOWARNING );
+			return new \DOMXPath( $document );
+		};
+		$entry                 = '//*[@id="ran-booster-github-provider-diagnostics"]';
+
+		$xpath = $render(
+			array(
+				'Name'         => 'GitHub',
+				'Provider'     => 'gh',
+				'Admission'    => 'Not admitted',
+				'Selection'    => 'Not applicable',
+				'Availability' => 'Unavailable',
+				'Supplier'     => 'Add-on failed to load',
+			),
+			'GitHub is unavailable because <alpha> could not load.'
+		);
+		self::assertSame( 'GitHub is unavailable because <alpha> could not load.', $xpath->evaluate( 'string(' . $entry . '//span[contains(@class, "ran-booster-troubleshooting__entry-description")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $entry . '//span[@data-ran-booster-badge and @data-ran-booster-badge-intent="none" and text()="Unavailable"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $entry . '//dt[text()="Supplier"])' ) );
+
+		$xpath = $render(
+			array(
+				'Name'           => 'GitHub',
+				'Provider'       => 'gh',
+				'Admission'      => 'Admitted',
+				'Implementation' => 'runtime-fingerprint',
+				'Supplier'       => 'Add-on',
+			),
+			'GitHub is provided by <alpha>.'
+		);
+		self::assertSame( 'GitHub is provided by <alpha>.', $xpath->evaluate( 'string(' . $entry . '//span[contains(@class, "ran-booster-troubleshooting__entry-description")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $entry . '//span[@data-ran-booster-badge and @data-ran-booster-badge-intent="stable" and text()="Active"])' ) );
+	}
+
 	public function test_installation_sections_are_expandable_cards_with_header_summary_and_badge(): void {
 		$troubleshooting_panel = 'installation';
 		$troubleshooting       = array(

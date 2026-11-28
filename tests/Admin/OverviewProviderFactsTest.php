@@ -5,18 +5,15 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\GitHubSupplierNotice;
 use RAN\Admin\ProviderSettingsPresenter;
-use RAN\RepositoryProvider\GitHubProviderSelection;
-use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\CredentialUsageReader;
-use RAN\Storage\GitHubSelectionStore;
-use RAN\Tests\RepositoryProvider\SelectionContextDatabase;
+use RAN\Tests\Admin\Support\GitHubSupplierState;
 use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
-require_once __DIR__ . '/../Deployment/AttemptRepositoryDatabase.php';
 
 final class OverviewProviderFactsTest extends TestCase {
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
@@ -52,97 +49,56 @@ final class OverviewProviderFactsTest extends TestCase {
 		}
 	}
 
-	public function test_passive_facts_report_admission_and_real_selection_without_reading_secrets(): void {
-		$database               = new SelectionContextDatabase();
-		$database->active_bytes = 'a:1:{i:0;s:9:"index.php";}';
-		$declaration            = new GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'index.php',
-				'implementation_id'      => 'overview-test',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
-		$store                  = new GitHubSelectionStore( $database, 'wp_options' );
-		$store->initialize_bundled( $declaration );
-		$selection = new GitHubProviderSelection( $store, dirname( __DIR__ ) . '/WordPress/fixtures/ran-booster-managed-active', $declaration );
-		$registry  = new ProviderRegistry( array( new ExternalFixtureProvider( 'gh' ), new ExternalFixtureProvider( 'bb' ) ) );
-		$selection->bind_registry( $registry );
-		$selection->complete_collection();
-		$registry->seal();
+	public function test_passive_facts_report_admission_and_the_github_supplier_without_reading_secrets(): void {
 		$secrets = $this->createMock( SecretsFile::class );
-		$secrets->expects( self::never() )->method( 'with_github_adoption_inventory' )->willThrowException( new \RuntimeException( 'Unexpected secrets access.' ) );
-		$secrets->expects( self::never() )->method( 'credentials_for' )->willThrowException( new \RuntimeException( 'Unexpected secrets access.' ) );
-		$secrets->expects( self::never() )->method( 'credential_profiles' )->willThrowException( new \RuntimeException( 'Unexpected secrets access.' ) );
-		$secrets->expects( self::never() )->method( 'credential_material' )->willThrowException( new \RuntimeException( 'Unexpected secrets access.' ) );
-		$presenter = new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader(), github_selection: $selection );
+		foreach ( array( 'credentials_for', 'credential_profiles', 'credential_material' ) as $method ) {
+			$secrets->expects( self::never() )->method( $method );
+		}
+		$facts = static fn ( ProviderRegistry $registry, bool $notice = true ): array => ( new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader(), github_supplier: $notice ? new GitHubSupplierNotice( $registry ) : null ) )->overview_provider_facts();
+		$both  = static fn (): ProviderRegistry => new ProviderRegistry( array( new ExternalFixtureProvider( 'gh' ), new ExternalFixtureProvider( 'bb' ) ) );
+
+		$bundled = $facts( GitHubSupplierState::apply( $both(), ProviderRegistry::GITHUB_BUNDLED ) );
 		self::assertSame(
 			array(
-				'admitted'             => true,
-				'selection'            => 'available',
-				'source_kind'          => 'bundled',
-				'source_name'          => null,
-				'replacement_detected' => false,
+				'admitted'    => true,
+				'message'     => null,
+				'source_kind' => 'bundled',
+				'source_name' => null,
 			),
-			$presenter->overview_provider_facts()['gh']
+			$bundled['gh']
 		);
 		self::assertSame(
 			array(
-				'admitted'             => true,
-				'selection'            => null,
-				'source_kind'          => null,
-				'source_name'          => null,
-				'replacement_detected' => false,
+				'admitted'    => true,
+				'message'     => null,
+				'source_kind' => null,
+				'source_name' => null,
 			),
-			$presenter->overview_provider_facts()['bb']
+			$bundled['bb']
 		);
-		$database->active_bytes = 'a:3:{i:0;s:9:"index.php";i:1;s:11:"missing.php";i:2;s:12:"missing2.php";}';
-		self::assertSame( 'conflict', $presenter->overview_provider_facts()['gh']['selection'] );
-		self::assertNull( $presenter->overview_provider_facts()['gh']['source_kind'] );
-		$database->active_bytes   = 'a:1:{i:0;s:9:"index.php";}';
-		$state                    = $store->read();
-		$state['native_mutation'] = array(
-			'selection_generation' => 0,
-			'owner_tag'            => str_repeat( 'a', 32 ),
-			'target_type'          => 'plugin',
-			'installed_identity'   => 'target/main.php',
-			'phase'                => 'started',
-		);
-		self::assertTrue( $store->compare_and_swap( $store->read(), $state ) );
-		self::assertSame( 'recovery_required', $presenter->overview_provider_facts()['gh']['selection'] );
-		unset( $state['native_mutation'] );
-		self::assertTrue( $store->compare_and_swap( $store->read(), $state ) );
-		$database->active_bytes = 'a:0:{}';
-		self::assertSame( 'missing', $presenter->overview_provider_facts()['gh']['selection'] );
-		self::assertNull( $presenter->overview_provider_facts()['gh']['source_kind'] );
-		$database->fail_active = true;
-		self::assertSame( 'storage_unavailable', $presenter->overview_provider_facts()['gh']['selection'] );
-		$unadmitted = new ProviderSettingsPresenter( new ProviderRegistry(), $secrets, new CredentialUsageReader(), github_selection: $selection );
 		self::assertSame(
 			array(
-				'admitted'             => false,
-				'selection'            => 'storage_unavailable',
-				'source_kind'          => null,
-				'source_name'          => null,
-				'replacement_detected' => false,
+				'admitted'    => true,
+				'message'     => null,
+				'source_kind' => 'replacement',
+				'source_name' => 'supplier-fixture-a',
 			),
-			$unadmitted->overview_provider_facts()['gh']
+			$facts( GitHubSupplierState::apply( $both(), 'supplier-fixture-a', array( 'supplier-fixture-a' ) ) )['gh']
 		);
-		$no_selection = new ProviderSettingsPresenter( new ProviderRegistry(), $secrets, new CredentialUsageReader() );
-		self::assertSame( array(), $no_selection->overview_provider_facts() );
-		$no_selection_admitted = new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader() );
+		$bb_only = static fn (): ProviderRegistry => new ProviderRegistry( array( new ExternalFixtureProvider( 'bb' ) ) );
 		self::assertSame(
 			array(
-				'admitted'             => true,
-				'selection'            => null,
-				'source_kind'          => null,
-				'source_name'          => null,
-				'replacement_detected' => false,
+				'admitted'    => false,
+				'message'     => 'GitHub is unavailable because more than one plugin provides it: supplier-fixture-a, supplier-fixture-b.',
+				'source_kind' => null,
+				'source_name' => null,
 			),
-			$no_selection_admitted->overview_provider_facts()['gh']
+			$facts( GitHubSupplierState::apply( $bb_only(), ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT, array( 'supplier-fixture-a', 'supplier-fixture-b' ) ) )['gh']
 		);
+		// Without the notice service the reason is still stated, generically.
+		self::assertSame( 'GitHub could not load.', $facts( GitHubSupplierState::apply( $bb_only(), ProviderRegistry::GITHUB_SUPERSEDE_FAILED ), false )['gh']['message'] );
+		// A registry that does not own GitHub reports only what is registered.
+		self::assertSame( array( 'bb' ), array_keys( $facts( $bb_only() ) ) );
+		self::assertNull( $facts( $both() )['gh']['source_kind'] );
 	}
 }

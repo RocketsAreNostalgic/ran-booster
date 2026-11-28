@@ -3,8 +3,7 @@
  * Dashboard sections share the Overview payload and storage flow.
  *
  * @var array<string, mixed> $onboarding
- * @var list<array{code: string, label: string, url: string, admitted: ?bool, selection: ?string, source_kind?: ?string, source_name?: ?string}> $provider_summaries
- * @var array<string, string> $provider_selection_labels
+ * @var list<array{code: string, label: string, url: string, admitted: ?bool, message: ?string, source_kind?: ?string, source_name?: ?string}> $provider_summaries
  * @var array{status: string, total: ?int, items: list<array{provider: string, provider_label: string, label: string, badge_label: string, stage: string, effective_expires_at: string, source: string, observed_at: ?string, url: string}>} $credential_expiry
  */
 if ( ! defined( 'WPINC' ) ) {

@@ -198,6 +198,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			}
 			$registry->seal();
 
+			self::assertSame( basename( $extension ), $registry->github_supplier() );
 			self::assertSame( array( 'fixture-provider', 'gh' ), array_keys( $registry->all() ) );
 			$provider = $registry->get( 'gh' );
 			self::assertInstanceOf( GitHubProvider::class, $provider );
@@ -252,10 +253,9 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 
 		( new BoosterServiceProvider(
-			static fn ( ProviderSecretPolicyCatalog $policies, callable $guard ): SecretsFile => new Phase5SecretsFile( $policies, $guard )
+			static fn ( ProviderSecretPolicyCatalog $policies ): SecretsFile => new Phase5SecretsFile( $policies )
 		) )->register( $container, $runtime, $updater, $GLOBALS['wpdb']->basename );
 
-		$container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
 		$container->make( ProviderRegistry::class )->seal();
 		$provider = $container->make( ProviderRegistry::class )->get( 'gh' );
 		try {
@@ -293,9 +293,10 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		self::assertIsString( $entrypoint );
 		self::assertIsString( $plugin );
 		self::assertStringContainsString( 'Requires Plugins: ran-booster', $entrypoint );
-		self::assertStringContainsString( "require __DIR__ . '/vendor/autoload.php';", $entrypoint );
+		self::assertStringNotContainsString( 'vendor/autoload.php', $entrypoint );
+		self::assertStringContainsString( "require_once dirname( __DIR__ ) . '/vendor/autoload.php';", $plugin );
 		self::assertStringContainsString( 'vendor/ran/wp-release-updater/bootstrap.php', $plugin );
-		self::assertStringContainsString( "register_with_credential_store( 'gh', \$factory )", $plugin );
+		self::assertStringContainsString( 'supersede_github( $factory )', $plugin );
 		self::assertStringNotContainsString( 'class_exists( ProviderRegistrationContext::class )', $plugin );
 		self::assertStringContainsString( 'ProviderRegistrationContext $registration_context', $plugin );
 		self::assertMatchesRegularExpression(
@@ -466,7 +467,8 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 			static fn ( ProviderCode $code ): ProviderCredentialStore => $credentials,
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
 			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => $delivery,
-			new ProviderRegistrationContext( static fn (): int => $artifact_limit )
+			new ProviderRegistrationContext( static fn (): int => $artifact_limit ),
+			bundled_github_factory: static fn (): never => throw new \LogicException( 'A claimed gh must never build the bundled module.' )
 		);
 	}
 
@@ -631,8 +633,8 @@ final class Phase5BundledReleaseUpdater {
 final class Phase5SecretsFile extends SecretsFile {
 	private Phase5CredentialStore $credentials;
 
-	public function __construct( ProviderSecretPolicyCatalog $policies, callable $guard ) {
-		parent::__construct( '/unused/phase5-github-extension-secrets.php', array(), $policies, github_credential_access: $guard );
+	public function __construct( ProviderSecretPolicyCatalog $policies ) {
+		parent::__construct( '/unused/phase5-github-extension-secrets.php', array(), $policies );
 		$this->credentials = new Phase5CredentialStore();
 	}
 

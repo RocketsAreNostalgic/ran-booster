@@ -47,10 +47,11 @@ final class TroubleshootingService {
 
 	/**
 	 * Standing facts never enumerate credential documents or execute checks.
+	 * @param array{message:?string} $github Who supplies GitHub, when not Booster.
 	 * @param array<string,mixed> $storage
 	 * @return array<string,mixed>
 	 */
-	public function installation_payload( array $storage ): array {
+	public function installation_payload( array $github, array $storage ): array {
 		$facts   = $this->installation_facts ?? new InstallationFacts( $this->providers, $this->core_self_update );
 		$payload = array(
 			'providers'              => array(),
@@ -66,7 +67,7 @@ final class TroubleshootingService {
 			'report'                 => '',
 			'core_self_update'       => $facts->core(),
 		);
-		$payload = $this->with_installation_context( $payload );
+		$payload = $this->with_installation_context( $payload, $github );
 		unset( $payload['installation_details'][ __( 'Diagnostic Git provider', 'ran-booster' ) ] );
 		$payload['environment']          = $facts->environment();
 		$payload['storage']              = $storage;
@@ -84,7 +85,7 @@ final class TroubleshootingService {
 			return array(
 				'text'     => json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Fixed local fallback must remain valid JSON.
 					array(
-						'schema_version'     => 1,
+						'schema_version'     => 2,
 						'capture_started_at' => gmdate( 'c' ),
 						'capture_ended_at'   => gmdate( 'c' ),
 						'coverage'           => 'Unavailable',
@@ -221,9 +222,10 @@ final class TroubleshootingService {
 	 * Add one captured, passive installation snapshot to both display and support report.
 	 *
 	 * @param array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>,retention_available?:bool} $payload
-	 * @return array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>,installation_details:array<string,array<string,string>>}
+	 * @param array{message:?string}|null $github Who supplies GitHub, when not Booster.
+	 * @return array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>,installation_details:array<string,array<string,string>>,github_supplier:?string}
 	 */
-	public function with_installation_context( array $payload ): array {
+	public function with_installation_context( array $payload, ?array $github = null ): array {
 		$selected    = $payload['selected_provider'];
 		$sections    = array(
 			__( 'Diagnostic Git provider', 'ran-booster' ) => array(
@@ -265,6 +267,7 @@ final class TroubleshootingService {
 		$sections[ __( 'Core updates', 'ran-booster' ) ][ __( 'Last operator check outcome', 'ran-booster' ) ] = is_string( $outcome ) && in_array( $outcome, array( 'success', 'failed', 'unknown', 'rejected', 'skipped' ), true ) ? $outcome : __( 'Unavailable', 'ran-booster' );
 		$sections[ __( 'Core updates', 'ran-booster' ) ][ __( 'Last operator check code', 'ran-booster' ) ]    = is_string( $code ) && strlen( $code ) <= 64 && preg_match( '/\A[a-z]+(?:_[a-z]+)*\z/', $code ) === 1 ? $code : __( 'Unavailable', 'ran-booster' );
 		$payload['installation_details'] = $sections;
+		$payload['github_supplier']      = $github['message'] ?? null;
 		$lines                           = array( 'RAN Booster installation context', __( 'Local declarations only; these claims do not verify publisher identity or remote access.', 'ran-booster' ) );
 		foreach ( $sections as $heading => $rows ) {
 			$lines[] = '';

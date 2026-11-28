@@ -238,6 +238,23 @@ final class InstallationFacts {
 				$rows[ 'provider:' . $code ]['Capabilities'] = implode( ', ', $capabilities );
 			}
 		}
+		$supplier = $this->providers->github_supplier();
+		if ( null !== $supplier && ( isset( $rows['provider:gh'] ) || count( $rows ) < 33 ) ) {
+			$rows['provider:gh'] = ( $rows['provider:gh'] ?? array(
+				'Name'         => 'GitHub',
+				'Provider'     => 'gh',
+				'Admission'    => 'Not admitted',
+				'Selection'    => 'Not applicable',
+				'Availability' => 'Unavailable',
+			) ) + array(
+				'Supplier' => match ( $supplier ) {
+					ProviderRegistry::GITHUB_BUNDLED => 'Included with Booster',
+					ProviderRegistry::GITHUB_SUPERSEDE_FAILED => 'Add-on failed to load',
+					ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT => 'More than one add-on',
+					default => 'Add-on',
+				},
+			);
+		}
 		$catalogue = defined( 'WP_PLUGIN_DIR' ) ? Booster::extension_declarations() : array();
 		$joins     = array();
 		foreach ( $catalogue as $extension ) {

@@ -24,6 +24,9 @@ final class Plugin {
 			return;
 		}
 
+		// Loaded here rather than at plugin load: Booster's autoloader is prepended when Booster
+		// loads, after this plugin, so registering now puts this plugin's GitHub package first.
+		require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 		$inner_registrar = require dirname( __DIR__ ) . '/vendor/ran/wp-release-updater/bootstrap.php';
 		$registrar       = new ReleaseUpdaterRegistrar( $inner_registrar );
 
@@ -40,7 +43,7 @@ final class Plugin {
 			);
 		};
 
-		$registry->register_with_credential_store( 'gh', $factory );
+		$registry->supersede_github( $factory );
 	}
 
 	private static function has_compatible_core(): bool {

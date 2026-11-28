@@ -156,18 +156,20 @@ if ( array() === $components ) {
 <p><?php esc_html_e( 'Provider and extension information is unavailable.', 'ran-booster' ); ?></p>
 	<?php
 }
-$basic_labels = array( 'Installed', 'Active', 'Version', 'Admission', 'Selection', 'Availability' );
+$basic_labels = array( 'Installed', 'Active', 'Version', 'Admission', 'Selection', 'Availability', 'Supplier' );
 foreach ( $components as $component ) {
 	$component_name   = $component['Name'] ?? __( 'Unknown', 'ran-booster' );
 	$technical_fields = array_diff_key( $component, array_flip( array_merge( $basic_labels, array( 'Name', 'Capabilities' ) ) ) );
 	$has_capabilities = is_string( $component['Capabilities'] ?? null ) && '' !== $component['Capabilities'];
 	$is_github        = ( $component['Provider'] ?? '' ) === 'gh';
 	$active           = $component['Active'] ?? null;
-	$component_status = 'No' === $active ? __( 'Inactive', 'ran-booster' ) : ( 'Yes' === $active || ( isset( $component['Provider'] ) && 'Admitted' === ( $component['Admission'] ?? null ) ) ? __( 'Active', 'ran-booster' ) : __( 'Unknown', 'ran-booster' ) );
+	$component_status = 'Unavailable' === ( $component['Availability'] ?? null ) ? __( 'Unavailable', 'ran-booster' ) : ( 'No' === $active ? __( 'Inactive', 'ran-booster' ) : ( 'Yes' === $active || ( isset( $component['Provider'] ) && 'Admitted' === ( $component['Admission'] ?? null ) ) ? __( 'Active', 'ran-booster' ) : __( 'Unknown', 'ran-booster' ) ) );
 	$tone             = __( 'Active', 'ran-booster' ) === $component_status ? 'ok' : 'neutral';
 	$version          = $component['Version'] ?? null;
 	$source           = null;
-	if ( ! isset( $component['Provider'] ) && 'Yes' === ( $component['Installed'] ?? null ) ) {
+	if ( $is_github && is_string( $troubleshooting['github_supplier'] ?? null ) ) {
+		$source = $troubleshooting['github_supplier'];
+	} elseif ( ! isset( $component['Provider'] ) && 'Yes' === ( $component['Installed'] ?? null ) ) {
 		$source = __( 'Installed extension', 'ran-booster' );
 	} elseif ( isset( $component['Provider'] ) && 'Yes' === $active && isset( $component['Name'] ) ) {
 		$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $component['Name'] );

@@ -11,6 +11,9 @@ use RAN\Provider\ProviderCapability as ProviderCapabilityContract;
 use RAN\RepositoryProvider\Admin\ProviderNavigationOrderer;
 
 final class ProviderRegistry {
+	public const GITHUB_BUNDLED            = 'bundled';
+	public const GITHUB_SUPERSEDE_FAILED   = 'supersede_failed';
+	public const GITHUB_SUPERSEDE_CONFLICT = 'supersede_conflict';
 
 	/**
 	 * @var array<string, RepositoryProvider>
@@ -29,23 +32,15 @@ final class ProviderRegistry {
 	private ProviderRegistrationContext $registration_context;
 	/** @var \Closure(ProviderCode): \RAN\Activity\ActivityReporter|null */
 	private ?\Closure $activity_reporter_factory;
-	/** @var \Closure(): ?array{provider_code: string, selection_generation: int, implementation_fingerprint: string, plugin_basename: ?string}|null */
-	private ?\Closure $github_selection_guard;
-	/** @var array<string, GitHubReplacementDeclaration|null> */
-	private array $github_candidates;
-	/** @var array<string, \Closure> */
-	private array $github_factories = array();
 	private ?\Closure $bundled_github_factory;
-	private bool $github_collection_invalid                         = false;
-	private bool $github_finalizing                                 = false;
-	private bool $github_replacement_load_failed                    = false;
-	private ?GitHubReplacementDeclaration $github_final_declaration = null;
+	private bool $github_registering = false;
+	private ?string $github_supplier = null;
+	/** @var list<array{plugin: ?string, factory: ?\Closure}> */
+	private array $github_claims = array();
 
 	/**
 	 * @param iterable<RepositoryProvider> $providers Initial providers.
 	 * @param callable(ProviderCode): \RAN\Activity\ActivityReporter|null $activity_reporter_factory Bound optional reporting service.
-	 * @param callable(): ?array{provider_code: string, selection_generation: int, implementation_fingerprint: string, plugin_basename: ?string}|null $github_selection_guard Host-only fresh selection and passive-evidence check; must return null until collection successfully completes.
-	 * @param array<string, GitHubReplacementDeclaration|null> $github_candidates Passive active candidates, including invalid candidates as null.
 	 * @param callable|null $bundled_github_factory Deferred host factory; never supplied through the public action.
 	 */
 	public function __construct(
@@ -55,12 +50,8 @@ final class ProviderRegistry {
 		?callable $delivery_evidence_reader_factory = null,
 		?ProviderRegistrationContext $registration_context = null,
 		?callable $activity_reporter_factory = null,
-		?callable $github_selection_guard = null,
-		array $github_candidates = array(),
 		?callable $bundled_github_factory = null
 	) {
-		$this->github_selection_guard           = null === $github_selection_guard ? null : \Closure::fromCallable( $github_selection_guard );
-		$this->github_candidates                = $github_candidates;
 		$this->bundled_github_factory           = null === $bundled_github_factory ? null : \Closure::fromCallable( $bundled_github_factory );
 		$this->activity_reporter_factory        = null === $activity_reporter_factory ? null : \Closure::fromCallable( $activity_reporter_factory );
 		$this->secret_policies                  = $secret_policies ?? new ProviderSecretPolicyCatalog();
@@ -141,9 +132,6 @@ final class ProviderRegistry {
 				throw InvalidProviderPolicy::invalid_delivery_evidence_reader_factory();
 			}
 
-			if ( $this->github_finalizing && ! $this->registration_context->operation_allowed() ) {
-				throw new LogicException( 'GitHub selection changed before factory construction.' );
-			}
 			try {
 				$provider = $factory( $credentials, $delivery_evidence, $this->registration_context );
 			} catch ( \Throwable $exception ) {
@@ -151,29 +139,17 @@ final class ProviderRegistry {
 				throw InvalidProviderPolicy::invalid_provider_factory( true );
 			}
 
-			if ( $this->github_finalizing && ! $this->registration_context->operation_allowed() ) {
-				throw new LogicException( 'GitHub selection changed during factory construction.' );
-			}
 			if ( ! $provider instanceof RepositoryProvider ) {
 				throw InvalidProviderPolicy::invalid_provider_factory();
 			}
 
 			$metadata = $this->read_metadata( $provider );
 
-			if ( $code->value !== $metadata->code->value ) {
+			if ( $code->value !== $metadata->code->value
+				|| ( $this->github_registering && self::GITHUB_BUNDLED !== $this->github_supplier && 'https://github.com/' !== $metadata->repository_url_base ) ) {
 				throw InvalidProviderPolicy::mismatched_factory_provider();
 			}
 
-			if ( $this->github_finalizing && null !== $this->github_final_declaration ) {
-				if ( 'https://github.com/' !== $metadata->repository_url_base ) {
-					throw new LogicException( 'GitHub replacement authority does not match.' );
-				}
-				foreach ( GitHubReplacementDeclaration::FACETS as $facet ) {
-					if ( ( $provider instanceof $facet ) !== in_array( $facet, $this->github_final_declaration->facets, true ) ) {
-						throw new LogicException( 'GitHub replacement facets do not match.' );
-					}
-				}
-			}
 			$this->register_provider( $provider, $metadata );
 		} finally {
 			$this->registration_in_progress = false;
@@ -235,12 +211,7 @@ final class ProviderRegistry {
 		$this->secret_policies->register(
 			$code,
 			$credential_policy,
-			$webhook_policy,
-			$this->github_finalizing ? function (): void {
-				if ( ! $this->registration_context->operation_allowed() ) {
-					throw new LogicException( 'GitHub selection changed during provider validation.' );
-				}
-			} : null
+			$webhook_policy
 		);
 
 		$this->providers[ $code->value ]         = $provider;
@@ -253,89 +224,91 @@ final class ProviderRegistry {
 			return;
 		}
 		try {
-			$this->finalize_github_registration();
+			$this->register_github();
 		} finally {
 			$this->sealed = true;
 		}
 	}
 
-	/** Collect a declaration without constructing an aggregate or disclosing credentials. */
-	public function declare_github_replacement( GitHubReplacementDeclaration $declaration, callable $factory ): void {
+	/**
+	 * Claim the `gh` code for this request with a Provider API 15 factory, from a
+	 * `ran_booster_register_providers` callback. Core registers it at seal(), in
+	 * place of the bundled module. A claim is never replaced by the bundled module:
+	 * if its factory fails, or a second plugin also claims `gh`, GitHub is
+	 * unavailable for the request. The supplier is the plugin that defines the factory.
+	 */
+	public function supersede_github( callable $factory ): void {
 		$this->assert_not_registering();
 		$this->assert_not_sealed();
+		$factory = \Closure::fromCallable( $factory );
+		$plugin  = self::claimant( $factory );
 		try {
-			$basename = $declaration->plugin_basename;
-			$passive  = $this->github_candidates[ $basename ] ?? null;
-			if ( null === $this->github_selection_guard || null === $passive
-				|| $passive->implementation_fingerprint !== $declaration->implementation_fingerprint
-				|| isset( $this->github_factories[ $basename ] ) ) {
-				throw new LogicException( 'GitHub replacement declaration does not match passive discovery.' );
-			}
 			$this->assert_provider_factory_signature( $factory );
-			$this->github_factories[ $basename ] = \Closure::fromCallable( $factory );
-		} catch ( \Throwable ) {
-			$this->github_collection_invalid = true;
+		} catch ( InvalidProviderPolicy ) {
+			$factory = null;
 		}
+		$this->github_claims[] = array(
+			'plugin'  => $plugin,
+			'factory' => $factory,
+		);
 	}
 
-	private function finalize_github_registration(): void {
-		if ( null === $this->github_selection_guard || $this->github_collection_invalid || count( $this->github_candidates ) > 1 ) {
+	/** The directory name of the plugin that defines the factory, or null outside the plugin directories. */
+	private static function claimant( \Closure $factory ): ?string {
+		$file = ( new \ReflectionFunction( $factory ) )->getFileName();
+		if ( ! is_string( $file ) || ! function_exists( 'plugin_basename' ) ) {
+			return null;
+		}
+		// Outside the plugin directories, plugin_basename() only trims the slashes.
+		$relative = plugin_basename( $file );
+		$plugin   = strstr( $relative, '/', true );
+		if ( trim( str_replace( '\\', '/', $file ), '/' ) === $relative || false === $plugin
+			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z/D', $plugin )
+			|| in_array( $plugin, array( self::GITHUB_BUNDLED, self::GITHUB_SUPERSEDE_FAILED, self::GITHUB_SUPERSEDE_CONFLICT ), true ) ) {
+			return null;
+		}
+		return $plugin;
+	}
+
+	/**
+	 * Who supplies `gh`: the bundled module, a claiming plugin's directory name, or
+	 * a supersede failure or conflict. Null when this registry does not own `gh`.
+	 */
+	public function github_supplier(): ?string {
+		return $this->github_supplier;
+	}
+
+	/** @return list<string> Directory names of the plugins that claimed `gh`; an unidentified claim is omitted. */
+	public function github_claimants(): array {
+		return array_values( array_filter( array_column( $this->github_claims, 'plugin' ), 'is_string' ) );
+	}
+
+	/** Core registers `gh` itself, after every plugin's registration callback has run. */
+	private function register_github(): void {
+		if ( null === $this->bundled_github_factory ) {
 			return;
 		}
-		$guard = $this->github_selection_guard;
-		try {
-			$selected = $guard();
-		} catch ( \Throwable ) {
+		$claim                 = $this->github_claims[0] ?? null;
+		$this->github_supplier = match ( true ) {
+			null === $claim => self::GITHUB_BUNDLED,
+			count( $this->github_claims ) > 1 => self::GITHUB_SUPERSEDE_CONFLICT,
+			null === $claim['plugin'] || null === $claim['factory'] => self::GITHUB_SUPERSEDE_FAILED,
+			default => $claim['plugin'],
+		};
+		$factory = null === $claim ? $this->bundled_github_factory : $claim['factory'];
+		if ( null === $factory || in_array( $this->github_supplier, array( self::GITHUB_SUPERSEDE_CONFLICT, self::GITHUB_SUPERSEDE_FAILED ), true ) ) {
+			BoosterLogger::log( 'GitHub provider claim refused.', array( 'outcome_code' => $this->github_supplier ) );
 			return;
 		}
-		if ( null === $selected || 'gh' !== $selected['provider_code'] || $selected['selection_generation'] < 0 ) {
-			return;
-		}
-		$basename = $selected['plugin_basename'];
-		$factory  = $this->bundled_github_factory;
-		if ( null === $basename ) {
-			if ( array() !== $this->github_candidates ) {
-				return;
-			}
-		} else {
-			$declaration = $this->github_candidates[ $basename ] ?? null;
-			$factory     = $this->github_factories[ $basename ] ?? null;
-			if ( null === $declaration || $declaration->implementation_fingerprint !== $selected['implementation_fingerprint'] ) {
-				return;
-			}
-			$this->github_final_declaration = $declaration;
-		}
-		if ( null === $factory ) {
-			return;
-		}
-		$context = $this->registration_context;
-		$bound   = new ProviderRegistrationContext(
-			static fn (): int => $context->maximum_artifact_bytes(),
-			static fn (): bool => $selected === $guard(),
-			$context->begin_native_mutation( ... ),
-			$context->complete_native_mutation( ... )
-		);
-		if ( ! $bound->operation_allowed() ) {
-			return;
-		}
-		$this->registration_context = $bound;
-		$this->github_finalizing    = true;
+		$this->github_registering = true;
 		try {
 			$this->register_with_credential_store( 'gh', $factory );
-		} catch ( \Throwable $failure ) {
-			$this->github_collection_invalid = true;
-			// Only a selected replacement whose own factory threw could not load; bundled stays a generic failure.
-			$this->github_replacement_load_failed = null !== $basename && $failure instanceof InvalidProviderPolicy && InvalidProviderPolicy::FACTORY_THREW === $failure->getCode();
+		} catch ( \Throwable ) {
+			$this->github_supplier = null === $claim ? self::GITHUB_BUNDLED : self::GITHUB_SUPERSEDE_FAILED;
+			BoosterLogger::log( 'GitHub provider registration failed.', array( 'outcome_code' => null === $claim ? 'bundled_failed' : self::GITHUB_SUPERSEDE_FAILED ) );
 		} finally {
-			$this->registration_context = $context;
-			$this->github_finalizing    = false;
+			$this->github_registering = false;
 		}
-	}
-
-
-	/** True when the selected GitHub replacement's factory threw during registration; the exception is only logged. */
-	public function github_replacement_load_failed(): bool {
-		return $this->github_replacement_load_failed;
 	}
 
 	public function is_sealed(): bool {
@@ -457,8 +430,8 @@ final class ProviderRegistry {
 
 	private function assert_can_register_code( ProviderCode $code ): void {
 		$this->assert_not_sealed();
-		if ( 'gh' === $code->value && null !== $this->github_selection_guard && ! $this->github_finalizing ) {
-			throw new LogicException( 'GitHub is reserved for host selection.' );
+		if ( 'gh' === $code->value && null !== $this->bundled_github_factory && ! $this->github_registering ) {
+			throw new LogicException( 'GitHub is registered by Core.' );
 		}
 
 		if ( isset( $this->providers[ $code->value ] ) ) {

@@ -9,16 +9,30 @@ use RAN\Provider\ProviderCapability;
 /**
  * Stateless webhook lifecycle for repository-webhook-management/4.
  *
- * Every action finds the remote hook by this site's callback URL; there is no
- * hook ID in the contract. A hook matches only when its configured delivery URL
- * is byte-for-byte identical to the `$callback_url` Core supplies. Providers
- * must not normalize either side (case, trailing slash, default port, query
- * order or encoding), so a `?rest_route=` route or an explicit non-default port
- * matches only in exactly the form Core sends.
+ * A provider implements either this interface or the version 3 pair
+ * (RepositoryWebhookFitness and RepositoryWebhookManagement), never both: their
+ * OPERATION and VERSION constants and their check() signatures conflict.
  *
- * Before acting, the provider reads the repository's complete hook list. An
- * unreadable, invalid or incomplete list, or more than one matching hook, fails
- * closed with no remote change. A hook ID a result reports is informational;
+ * Every action follows the same order before it lists or changes any hook:
+ *
+ * 1. Confirm remotely that `$repository` still resolves to the stable
+ *    `$repository_id`. A mismatch, or a repository that cannot be read, fails
+ *    with code `repository_identity_mismatch` or a provider-owned code, and no
+ *    hook is read or changed and no secret is sent.
+ * 2. Read the repository's complete hook list. An unreadable, invalid or
+ *    incomplete list fails with a provider-owned code.
+ * 3. Find the hook by this site's callback URL. A hook matches only when its
+ *    configured delivery URL is byte-for-byte identical to the `$callback_url`
+ *    Core supplies. Providers must not normalize either side (case, trailing
+ *    slash, default port, query order or encoding), so a `?rest_route=` route
+ *    or an explicit non-default port matches only in exactly the form Core
+ *    sends. More than one matching hook fails with code
+ *    `matching_hooks_ambiguous`.
+ *
+ * Every refusal before a remote change has state `failed`, never `ambiguous`
+ * or `partial`. After a remote change, an unconfirmed outcome is `partial` or
+ * `ambiguous` unless the provider proves the change was undone. There is no
+ * hook ID in the contract; a hook ID a result reports is informational, and
  * Core never stores it or passes it back.
  *
  * Results use RepositoryWebhookOperationResult. A succeeded result whose
@@ -30,10 +44,15 @@ interface RepositoryWebhookLifecycle extends ProviderCapability {
 	public const VERSION   = 4;
 
 	/**
-	 * Set up or repair: create the hook when none matches, or update the single
-	 * matching hook to Core's settings and signing secret. Either path succeeds
-	 * only after a readback confirms the settings, with delivery
-	 * `configured_pending_delivery`.
+	 * Set up or repair. With no matching hook, create one; with one, update it
+	 * to Core's settings and signing secret. Success requires a readback that
+	 * confirms the settings, with delivery `configured_pending_delivery` and code
+	 * `configured_pending_delivery` for a created hook or
+	 * `repaired_pending_delivery` for an updated one. upsert() never requests a
+	 * ping itself; Core calls ping() when it wants one.
+	 *
+	 * Interface attributes are not inherited, so implementations must repeat
+	 * #[\SensitiveParameter] on `$signing_secret`.
 	 */
 	public function upsert(
 		string $repository_id,
@@ -44,9 +63,9 @@ interface RepositoryWebhookLifecycle extends ProviderCapability {
 	): RepositoryWebhookOperationResult;
 
 	/**
-	 * Validate readback, with no remote change. One matching hook succeeds with
-	 * its configuration compared to Core's settings; no matching hook succeeds
-	 * with delivery `absent`.
+	 * Validate readback, with no remote change. One matching hook succeeds only
+	 * when every configuration value is `matched` or `mismatched`; any `unknown`
+	 * value fails. No matching hook succeeds with delivery `absent`.
 	 */
 	public function check(
 		string $repository_id,
@@ -57,8 +76,9 @@ interface RepositoryWebhookLifecycle extends ProviderCapability {
 
 	/**
 	 * Ask the provider to send a ping to the single matching hook. Success means
-	 * the provider accepted the request, not that a delivery arrived. A provider
-	 * with no remote ping endpoint fails with its own code and remediation.
+	 * the provider accepted the request, not that a delivery arrived. No
+	 * matching hook fails with delivery `absent`. A provider with no remote ping
+	 * endpoint fails with its own code and remediation.
 	 */
 	public function ping(
 		string $repository_id,

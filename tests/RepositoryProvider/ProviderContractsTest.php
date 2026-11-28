@@ -745,16 +745,28 @@ final class ProviderContractsTest extends TestCase {
 
 		self::assertSame( array( 'check', 'delete', 'ping', 'upsert' ), $methods );
 		self::assertSame( array( \RAN\Provider\ProviderCapability::class ), $lifecycle->getInterfaceNames() );
-		self::assertSame( RepositoryWebhookManagement::OPERATION, RepositoryWebhookLifecycle::OPERATION );
+		self::assertSame( 'repository-webhook-management', RepositoryWebhookLifecycle::OPERATION );
 		self::assertSame( 4, RepositoryWebhookLifecycle::VERSION );
 
-		$names = static fn ( string $method ): array => array_map(
-			static fn ( \ReflectionParameter $parameter ): string => $parameter->name,
-			$lifecycle->getMethod( $method )->getParameters()
+		// No hook ID crosses the contract, and every parameter is required, typed and passed by value.
+		$lookup    = array(
+			'repository_id'         => 'string',
+			'repository'            => 'string',
+			'callback_url'          => 'string',
+			'credential_profile_id' => '?string',
 		);
-		self::assertSame( array( 'repository_id', 'repository', 'callback_url', 'credential_profile_id', 'signing_secret' ), $names( 'upsert' ) );
+		$signature = static function ( \ReflectionMethod $method ): array {
+			$parameters = array();
+			foreach ( $method->getParameters() as $parameter ) {
+				self::assertFalse( $parameter->isOptional() || $parameter->isVariadic() || $parameter->isPassedByReference(), $method->name . ' $' . $parameter->name );
+				$parameters[ $parameter->name ] = (string) $parameter->getType();
+			}
+
+			return $parameters;
+		};
+		self::assertSame( $lookup + array( 'signing_secret' => 'string' ), $signature( $lifecycle->getMethod( 'upsert' ) ) );
 		foreach ( array( 'check', 'ping', 'delete' ) as $method ) {
-			self::assertSame( array( 'repository_id', 'repository', 'callback_url', 'credential_profile_id' ), $names( $method ), 'No hook ID crosses the contract.' );
+			self::assertSame( $lookup, $signature( $lifecycle->getMethod( $method ) ) );
 		}
 		foreach ( $methods as $method ) {
 			self::assertSame( RepositoryWebhookOperationResult::class, (string) $lifecycle->getMethod( $method )->getReturnType() );

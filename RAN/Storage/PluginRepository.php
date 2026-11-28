@@ -5,6 +5,7 @@ namespace RAN\Storage;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\Plugin;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\WordPress\ManagedReleaseConfiguration;
 
 /** @extends AbstractPackageRepository<Plugin> */
@@ -62,10 +63,8 @@ class PluginRepository extends AbstractPackageRepository {
 		$plugins = get_plugins();
 
 		foreach ( $plugins as $file => $plugin_info ) {
-			$tmp          = explode( '/', $file );
-			$current_slug = $tmp[0];
-
-			if ( $current_slug === $slug ) {
+			// A slug names a plugin folder; a root single-file plugin has none.
+			if ( '.' !== dirname( $file ) && PackageDirectory::installed_slug( 'plugin', $file ) === $slug ) {
 				return Plugin::from_wp_array( $file, $plugin_info );
 			}
 		}

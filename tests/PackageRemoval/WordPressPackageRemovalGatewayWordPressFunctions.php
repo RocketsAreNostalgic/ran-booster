@@ -73,3 +73,22 @@ function delete_theme( string $stylesheet ): mixed {
 	}
 	return $result;
 }
+
+/**
+ * WordPress validate_file() for path-only checks: 0 valid, 1 traversal, 2 drive path.
+ *
+ * @param array<int, string> $allowed_files
+ */
+function validate_file( mixed $file, array $allowed_files = array() ): int {
+	if ( ! is_scalar( $file ) || '' === $file ) {
+		return 0;
+	}
+	$file = str_replace( '\\', '/', (string) $file );
+	if ( '../' === $file || substr_count( $file, '../' ) > 1 || ( str_contains( $file, '../' ) && '../' !== substr( $file, -3 ) ) ) {
+		return 1;
+	}
+	if ( array() !== $allowed_files && ! in_array( $file, $allowed_files, true ) ) {
+		return 3;
+	}
+	return ':' === substr( $file, 1, 1 ) ? 2 : 0;
+}

@@ -247,7 +247,8 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 
 	private function bounded_installed_path( string $root, string $relative ): bool {
 		clearstatcache( true, $root );
-		if ( is_link( $root ) ) {
+		// WordPress's own path rule first, so this check is never looser than Core's.
+		if ( 0 !== validate_file( $relative ) || is_link( $root ) ) {
 			return false;
 		}
 		$root = realpath( $root );
@@ -260,7 +261,8 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 		}
 		$resolved = realpath( $path );
 
-		return false !== $resolved
-			&& str_starts_with( $resolved . DIRECTORY_SEPARATOR, $root . DIRECTORY_SEPARATOR );
+		// Strict child: the root itself is never an installed package path.
+		return false !== $resolved && $resolved !== $root
+			&& str_starts_with( $resolved, $root . DIRECTORY_SEPARATOR );
 	}
 }

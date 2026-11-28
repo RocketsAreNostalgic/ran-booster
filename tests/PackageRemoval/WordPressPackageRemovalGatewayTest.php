@@ -222,6 +222,28 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 		}
 	}
 
+	public function test_installed_paths_are_strict_children_that_pass_word_press_path_rules(): void {
+		$root = sys_get_temp_dir() . '/ran-booster-strict-child-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable installed root with one real package directory.
+		mkdir( $root . '/example', 0700, true );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Exercise the WordPress-owned installed root in this isolated process.
+		define( 'WP_PLUGIN_DIR', $root );
+		$gateway = new WordPressPackageRemovalGateway();
+		try {
+			self::assertTrue( $gateway->theme_path_is_safe( 'example' ) );
+			self::assertTrue( $gateway->plugin_path_is_safe( 'example/example.php' ) );
+			foreach ( array( '', '.', 'example/..', 'example/../../' . basename( $root ) . '/example', 'C:example' ) as $unsafe ) {
+				self::assertFalse( $gateway->theme_path_is_safe( $unsafe ), 'Refused: ' . $unsafe );
+			}
+			self::assertFalse( $gateway->plugin_path_is_safe( './example.php' ) );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the disposable test-owned directories.
+			rmdir( $root . '/example' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the disposable test-owned directories.
+			rmdir( $root );
+		}
+	}
+
 	/** @return array<string,array{string,string}> */
 	public static function installed_links(): array {
 		$cases = array();

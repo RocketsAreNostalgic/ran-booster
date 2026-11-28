@@ -50,6 +50,22 @@ final class PluginRepositoryTest extends TestCase {
 		( new PluginRepository() )->from_slug( 'Example' );
 	}
 
+	public function test_a_root_single_file_plugin_has_no_folder_slug(): void {
+		$headers = $GLOBALS['ran_booster_plugin_repository_test_plugins']['example/example.php'];
+		$GLOBALS['ran_booster_plugin_repository_test_plugins'] = array( 'hello.php' => $headers ) + $GLOBALS['ran_booster_plugin_repository_test_plugins'];
+		$repository = new PluginRepository();
+
+		self::assertSame( 'example/example.php', $repository->from_slug( 'example' )->get_identifier() );
+		foreach ( array( 'hello.php', 'hello' ) as $slug ) {
+			try {
+				$repository->from_slug( $slug );
+				self::fail( 'A root single-file plugin is not found by folder slug: ' . $slug );
+			} catch ( PluginNotFound ) {
+				self::addToAssertionCount( 1 );
+			}
+		}
+	}
+
 	public function test_missing_slug_throws_instead_of_creating_an_empty_plugin_identity(): void {
 		$repository = new PluginRepository();
 

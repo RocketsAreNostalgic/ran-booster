@@ -77,6 +77,7 @@ final class GitHubSupersedeRegistrationTest extends TestCase {
 		$registry = $this->registry();
 		$registry->supersede_github(
 			match ( $claim ) {
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The unattributed claim keeps the Provider API 15 factory signature so only attribution can fail; it must never run.
 				'outside' => static fn ( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $evidence, ProviderRegistrationContext $context ): never => throw new \LogicException( 'An unattributed claim must never run.' ),
 				'legacy' => self::alpha()['legacy'],
 				default => self::alpha()['valid'],

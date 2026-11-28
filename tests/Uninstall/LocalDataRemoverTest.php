@@ -66,7 +66,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$GLOBALS['ran_booster_uninstall_options']                           = array(
 			OnboardingPresenter::PRESENTATION_OPTION      => 'onboarding',
 			Database::VERSION_OPTION                      => '5.0',
-			\RAN\Admin\GitHubSupplierNotice::OPTION      => 'alpha',
+			\RAN\Admin\GitHubSupplierNotice::OPTION       => 'alpha',
 			\RAN\Activity\ActivityStore::VERSION_OPTION   => '1',
 			CredentialExpiryObservationStore::OPTION_NAME => array( 'profiles' => array() ),
 			PublicRepositoryLookupProfileStore::OPTION_NAME => array( 'profiles' => array() ),

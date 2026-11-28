@@ -11,6 +11,7 @@ use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\Deployment\PackageSourceGate;
+use RAN\Admin\CredentialAuthority;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
@@ -644,7 +645,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 
 			return null === $repository->credential_id ? array() : array( $repository );
 		}
-		$profile_id = ( $this->public_lookup_profile )( (string) $package->get_provider_code() );
+		// The default lookup profile is a saved credential: without secret authority, reads stay anonymous (#1329).
+		$profile_id = CredentialAuthority::held() ? ( $this->public_lookup_profile )( (string) $package->get_provider_code() ) : null;
 
 		if ( null !== $repository->credential_id ) {
 

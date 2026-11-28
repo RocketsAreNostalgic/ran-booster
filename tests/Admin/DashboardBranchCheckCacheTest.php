@@ -7,6 +7,7 @@ namespace RAN\Tests\Admin;
 require_once dirname( __DIR__ ) . '/Support/ProviderCredentialDispatcherWordPressFunctions.php';
 require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
+require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\After;
 use PHPUnit\Framework\Attributes\Before;
@@ -49,6 +50,7 @@ final class DashboardBranchCheckCacheTest extends TestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the database boundary replaced above.
 		$GLOBALS['wpdb'] = $this->previous_database;
 		unset( $GLOBALS['ran_booster_dashboard_test_transient_write_failure'], $GLOBALS['ran_booster_dashboard_test_transients'] );
+		unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_capability_checks'] );
 	}
 
 	/** @return list<array{bool, string}> */

@@ -16,6 +16,7 @@ require_once __DIR__ . '/RuntimeReleaseProvider.php';
 require_once __DIR__ . '/../Support/WPError.php';
 require_once __DIR__ . '/../Support/WordPressUpgraderSkins.php';
 require_once __DIR__ . '/../Support/InMemoryPublicRepositoryLookupProfileStore.php';
+require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/../Portability/WpPusherCoexistenceWordPressFunctions.php';
 
 use InvalidArgumentException;
@@ -2494,6 +2495,75 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 
 		$this->assert_native_authority_error( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+	}
+
+	public function test_managed_release_reads_without_secret_authority_skip_the_default_lookup_profile(): void {
+		$packages = array(
+			'public'   => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL ),
+			'explicit' => $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::MANUAL, credential_id: 'package-profile' ),
+		);
+		$current  = 'public';
+		$plugins  = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturnCallback(
+			static function () use ( &$packages, &$current ): Package {
+				return $packages[ $current ];
+			}
+		);
+		$themes     = $this->createStub( ThemeRepository::class );
+		$store      = new RuntimeReleaseStore( array( "plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
+		$lock       = new RuntimeUpdaterLock();
+		$references = array();
+		$providers  = $this->release_metadata_registry(
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered provider callable signature while returning a controlled result.
+			list_releases: static function ( string $type, RepositoryReference $repository, string $channel ) use ( &$references ): RepositoryReleaseCandidateList {
+				$references[] = $repository->credential_id;
+				if ( 'package-profile' === $repository->credential_id ) {
+					throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.' );
+				}
+				return new RepositoryReleaseCandidateList( array() );
+			},
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed,Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- The release-runtime fixture callback retains the registered provider callable signature while returning a controlled result.
+			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ) use ( &$references ): RepositoryReleaseInspection {
+				$references[] = $repository->credential_id;
+				if ( 'package-profile' === $repository->credential_id ) {
+					throw new RepositoryReleaseReadUnavailable( 'Fixture access failure.' );
+				}
+				return new RepositoryReleaseInspection( $release_id, $tag, '2.0.0', str_repeat( 'a', 40 ), 'example', 'example.php', 'v1:' . str_repeat( 'b', 64 ) );
+			}
+		);
+		$facade                                   = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn ( string $nonce, string $action ): bool => hash_equals( $action, $nonce ),
+			metadata_eligible: static fn (): bool => true,
+			public_lookup_profile: static fn (): string => 'public-profile'
+		);
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'manage_options'   => true,
+			'activate_plugins' => false,
+		);
+		try {
+			$nonce = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+			self::assertInstanceOf( RepositoryReleaseCandidateList::class, $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+			$nonce = $facade->nonce_action( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
+			self::assertTrue( $facade->inspect_candidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce )?->ready() );
+
+			// A failed read under the package's own credential never falls back to the default lookup profile.
+			$current = 'explicit';
+			$nonce   = $facade->nonce_action( 'list_candidates', 'plugin', 'example/example.php', 1, 'stable' );
+			self::assertNull( $facade->list_candidates( 'plugin', 'example/example.php', 1, 'stable', $nonce ) );
+			$nonce = $facade->nonce_action( 'inspect_candidate', 'plugin', 'example/example.php', 1, 'stable' );
+			self::assertNull( $facade->inspect_candidate( 'plugin', 'example/example.php', 1, '101', 'v2.0.0', 'stable', $nonce ) );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_capability_checks'] );
+		}
+
+		self::assertSame( array( null, null, 'package-profile', 'package-profile' ), $references );
 	}
 
 	public function test_managed_release_reads_use_the_configured_public_lookup_profile_without_replacing_package_credentials(): void {

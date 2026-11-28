@@ -103,11 +103,10 @@ verified success commits a pending Branch-to-release switch. Host errors
 propagate; neither checkpoint makes a failed operation successful.
 
 Core currently supplies these native callbacks for its GitHub release update
-path, including approved replacement GitHub implementations. This does not
+path, including a GitHub implementation supplied by a plugin. This does not
 certify arbitrary vendors' native-update integration. Providers must not reach
 Core private services or use no-op callbacks to claim native parity. Returning
-a release-native aggregate requires its actual safeguards, and native update
-receipts never replace replacement approval or credential consent.
+a release-native aggregate requires its actual safeguards.
 
 Core binds the two provider-specific values and the host registration context
 before invoking the factory, so retaining either provider-bound value
@@ -1469,18 +1468,18 @@ safe facts. The existing operational stores and debug capture remain separate.
 ## GitHub supplier presentation
 
 Core owns how the GitHub supplier is presented, independently of
-provider-supplied administration metadata. While the bundled module supplies
-GitHub, nothing extra is shown. While a plugin supplies it through
-`ProviderRegistry::supersede_github()`, the GitHub page and Overview name that
-plugin, and administrators see a one-time notice when the supplier changes. A
-failed or conflicting claim leaves GitHub unavailable, with a fixed sentence
-that names the claiming plugins and never exception text. Booster does not fall
-back to the bundled module while a claim is active; see
-[provider registration](provider-registration-and-coexistence.md#supply-github-from-a-plugin).
+provider-supplied administration metadata. While a plugin supplies GitHub
+through `ProviderRegistry::supersede_github()`, the GitHub page and Overview
+name that plugin; while the bundled module supplies it, they name none.
+Administrators see a one-time notice whenever the supplier changes, including a
+return to the bundled module. A failed or conflicting claim leaves GitHub unavailable, with a fixed sentence
+that names the claiming plugins Booster could identify and never exception
+text. Booster does not fall back to the bundled module while a claim is active;
+see [provider registration](provider-registration-and-coexistence.md#supply-github-from-a-plugin).
 
-Troubleshooting → Installation and the Diagnostic report carry the supplier
-only as a closed label (`Included with Booster`, `Add-on`, `Add-on failed to
-load` or `More than one add-on`), with no credential values or private paths.
-Provider configuration links to these details while retaining operational
-actions in Core. This presentation does not depend on the separate unused-GitHub
-hiding preference.
+Troubleshooting → Installation shows the same sentence for the GitHub row, or
+`Included with Booster` while the bundled module supplies it. The Diagnostic
+report carries the supplier only as a closed label (`Included with Booster`,
+`Add-on`, `Add-on failed to load` or `More than one add-on`), with no plugin
+names, credential values or private paths. This presentation does not depend on
+the separate unused-GitHub hiding preference.

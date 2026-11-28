@@ -2334,7 +2334,9 @@ test('package save feedback requires the matching authoritative edit response', 
 test('a refused settings save shows the lock owner beside its error until a failure names none', () => {
 	const state = fixture();
 	const save = state.button;
-	save.dataset = { ranBoosterErrorTarget: '#ran-booster-local-error' };
+	save.dataset = {
+		ranBoosterErrorTarget: '#ran-booster-package-mutation-error',
+	};
 	save.isConnected = true;
 	save.matches = (selector) =>
 		[
@@ -2359,8 +2361,9 @@ test('a refused settings save shows the lock owner beside its error until a fail
 	};
 	const page = [];
 	state.error.after = (node) => page.push(node);
+	state.error.id = 'ran-booster-package-mutation-error';
 	state.document.getElementById = (id) =>
-		id === 'ran-booster-local-error'
+		id === state.error.id
 			? state.error
 			: (page.find((node) => node.id === id) ?? null);
 	loadFunction('initEnhancedMutationFeedback', {
@@ -2374,13 +2377,13 @@ test('a refused settings save shows the lock owner beside its error until a fail
 			page.splice(page.indexOf(this), 1);
 		},
 	});
-	const refuse = (owner) => {
+	const refuse = (owner, attempted = true) => {
 		const region = {
 			querySelector(selector) {
 				if (selector === '#ran-booster-package-edit-form') {
 					return {
 						hasAttribute: (name) =>
-							name === 'data-ran-booster-attempted',
+							attempted && name === 'data-ran-booster-attempted',
 						elements: packageEditControls(
 							'plugin',
 							'edit-plugin',
@@ -2429,6 +2432,30 @@ test('a refused settings save shows the lock owner beside its error until a fail
 	);
 	refuse(null);
 	assert.deepEqual(page, []);
+	// Only the authoritative attempted edit response may supply the notice.
+	refuse(ownerNotice('unattempted'), false);
+	assert.deepEqual(page, []);
+	// Failures that never reach the response check also clear an earlier notice,
+	// including Save and reinstall on a status the edit response does not own.
+	const reinstall = {
+		...save,
+		matches: (selector) =>
+			['[data-ran-booster-enhanced-mutation]', 'a, button'].includes(
+				selector
+			),
+	};
+	for (const [eventName, elt, status] of [
+		['htmx:sendError', save, 0],
+		['htmx:timeout', save, 0],
+		['htmx:responseError', reinstall, 503],
+	]) {
+		refuse(ownerNotice('refused'));
+		assert.equal(page.length, 1);
+		state.listeners.get(eventName)({
+			detail: { elt, target, xhr: { status, addEventListener() {} } },
+		});
+		assert.deepEqual(page, [], eventName);
+	}
 });
 
 test('retained completed results do not focus an unrelated static provider failure', () => {

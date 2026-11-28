@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\RepositoryProvider;
 
 use Closure;
+use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 use WeakReference;
@@ -13,6 +14,8 @@ use WeakReference;
 final class AuthenticatedPreparedArchive implements PreparedArchive {
 
 	public const REDIRECT_HOOK = 'requests-requests.before_redirect';
+
+	private const REDIRECT_HOST_LIMIT = 8;
 
 	/** @var array<string, WeakReference<self>> */
 	private static array $reserved_urls = array();
@@ -26,15 +29,35 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	private ?Closure $download_stream = null;
 	/** @var WeakReference<object>|null */
 	private ?WeakReference $redirect_hooks = null;
+	/** @var list<string> */
+	private readonly array $redirect_hosts;
 
-	/** Optional operation guard is independent of authentication; only literal true grants access. */
+	/**
+	 * Optional operation guard is independent of authentication; only literal true grants access.
+	 *
+	 * @param array<mixed> $redirect_hosts Exact lowercase DNS hosts the archive download may be redirected to.
+	 */
 	public function __construct(
 		private readonly string $url,
 		private readonly string $resolved_ref,
 		?Closure $authorizer = null,
 		private readonly ?Closure $head_verifier = null,
-		private readonly ?Closure $operation_guard = null
+		private readonly ?Closure $operation_guard = null,
+		array $redirect_hosts = array()
 	) {
+		// Checked before the URL is reserved, so a refused value leaves no reservation or hook behind.
+		if ( ! array_is_list( $redirect_hosts ) || count( $redirect_hosts ) > self::REDIRECT_HOST_LIMIT ) {
+			throw new InvalidArgumentException( 'archive_redirect_hosts_invalid' );
+		}
+		$hosts = array();
+		foreach ( $redirect_hosts as $host ) {
+			// A lowercase host name with a letter-led top-level label: no IP literal, port, wildcard or trailing dot.
+			if ( ! is_string( $host ) || strlen( $host ) > 253 || in_array( $host, $hosts, true ) || 1 !== preg_match( '/\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?\z/D', $host ) ) {
+				throw new InvalidArgumentException( 'archive_redirect_hosts_invalid' );
+			}
+			$hosts[] = $host;
+		}
+		$this->redirect_hosts = $hosts;
 		if ( isset( self::$reserved_urls[ $url ] ) && null !== self::$reserved_urls[ $url ]->get() ) {
 			throw new RuntimeException( 'The provider archive URL is already prepared for this request.' );
 		}
@@ -61,6 +84,17 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	public function get_url(): string {
 		$this->assert_operation_allowed();
 		return $this->url;
+	}
+
+
+	/**
+	 * Hosts the provider approves as archive redirect destinations.
+	 *
+	 * @internal Branch download transport only.
+	 * @return list<string>
+	 */
+	public function redirect_hosts(): array {
+		return $this->redirect_hosts;
 	}
 
 

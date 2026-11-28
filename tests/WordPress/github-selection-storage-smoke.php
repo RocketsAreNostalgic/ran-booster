@@ -10,8 +10,6 @@ use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\ProviderRegistrationContext;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\Deployment\DeploymentStorageFailure;
-use RAN\PackageSource;
-use RAN\Storage\Database;
 use RAN\Storage\DatabaseLifecycleFailure;
 use RAN\Storage\GitHubSelectionStore;
 use RAN\WordPress\WordPressUpdaterLock;

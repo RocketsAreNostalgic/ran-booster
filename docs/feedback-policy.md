@@ -61,7 +61,7 @@ Each rule is written to be implemented and tested.
 | R7 Pending state | While the action runs the initiating control is busy (`aria-busy`, duplicate submit blocked) and one polite announcement says it is working. The pending state ends in exactly one of: success snackbar, or inline failure. | Test: busy set on submit, cleared on both outcomes, one announcement. |
 | R8 Queued or accepted | A queued or accepted result (for example bulk "Queued N updates") is a success snackbar that includes one action linking to Activity. There is no separate message history or recent-messages list. | Test: the action is present and its URL is Core-built. |
 | R9 Stay local | Copy-to-clipboard confirmations and migration or Blueprint apply results stay where they are. Progress that has its own region (package update progress, Transporter) keeps its in-progress display local; its final success still goes to the snackbar (R1). | Allowlist test: these in-progress displays never call the host; the final success does. |
-| R10 Stay notices | Background or system conditions never use the snackbar: credential expiry, background deployment failure, secrets-runtime and database blockers, native update warning, unsupported multisite, extension update warning, Core self-update guidance, Needs attention. | Allowlist test: no `admin_notices` callback calls the host. |
+| R10 Stay notices | Background or system conditions never use the snackbar: credential expiry, background deployment failure, secrets-runtime and database blockers, unsupported multisite, extension update warning, Core self-update guidance, Needs attention. | Allowlist test: no `admin_notices` callback calls the host. |
 | R11 Dialogs | Destructive or irreversible confirmations stay in dialogs (#782). The snackbar shows only the result afterwards. | Not applicable; routed by #782. |
 | R12 Qualified success | Owner decision: a warning suppresses the success snackbar. A result that carries a warning or partial outcome (saved-before-reinstall, repository check skipped) is therefore not reduced to a success snackbar; it gets a warning pointer and stays durable and inline. An `info` item does not qualify a success. | Producer test: a result with a warning produces no success snackbar. |
 | R13 One copy source | The snackbar text comes from the same Core copy source as the inline text for that outcome. It is never a second string. Provider and add-on text reaches the snackbar only through the existing bounded-message screener. | Test: the snackbar message equals the string from the shared source for the same code. |
@@ -124,9 +124,9 @@ uses. Their failures keep the signed inline result. Use releases confirms via a
 pre-switch dialog (or inline no-JS confirmation step) and replies before its
 source change commits at the end of that request, so its result always travels
 as the signed result. The top of the package settings page it lands on reads
-both the stored source and any GitHub native hold back and settles it into
+the stored source back and settles it into
 `release_enabled` (`"Switched to releases. Version ... is installed."`),
-`switch_failed_unchanged`, `switch_held`, `switch_other_held`, or
+`switch_failed_unchanged`, or
 `switch_not_confirmed` (`"Booster hasn't confirmed the switch yet..."`). Only
 a confirmed switch shows the installed version and update policy in a success
 snackbar. The same message is visible on the page without JavaScript.

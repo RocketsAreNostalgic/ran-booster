@@ -874,7 +874,6 @@ final class ReleaseManagementDisplay {
 			<input type="hidden" name="release_id" value="">
 			<input type="hidden" name="release_tag" value="">
 			<input type="hidden" name="release_fingerprint" value="">
-			<input type="hidden" name="provider_expectation" value="">
 			<input type="hidden" name="release_channel" value="stable">
 			<?php
 			$this->render_release_track(
@@ -1117,7 +1116,6 @@ final class ReleaseManagementDisplay {
 		<?php
 	}
 
-	/** @param array<string, mixed>|null $native_hold */
 	public function render_operation_notice(
 		string $code,
 		bool $successful,
@@ -1127,8 +1125,7 @@ final class ReleaseManagementDisplay {
 		?ReleaseTrackingStatus $status = null,
 		string $reason = '',
 		string $detail = '',
-		string $reload_url = '',
-		?array $native_hold = null
+		string $reload_url = ''
 	): void {
 		if ( '' === $code ) {
 			return;
@@ -1140,7 +1137,7 @@ final class ReleaseManagementDisplay {
 			return;
 		}
 
-		$message_html = $this->linked_switch_result_html( $code, $type, $identifier, $reload_url, $native_hold );
+		$message_html = $this->linked_switch_result_html( $code, $type, $identifier, $reload_url );
 		$review       = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
 		$check        = $successful ? null : FeedbackFlash::check_result( $code, $detail );
 		$tone         = $successful
@@ -1203,111 +1200,12 @@ final class ReleaseManagementDisplay {
 		return $this->result_message( $code, false, '', '', null, $reason, $detail );
 	}
 
-	/**
-	 * Build an interactive switch-preflight refusal response for an active GitHub hold.
-	 *
-	 * @param array<string, mixed> $native_hold
-	 * @return array{successful:bool,code:string,data:array<string, mixed>}
-	 */
-	public function switch_hold_preflight_response( string $type, string $identifier, array $native_hold ): array {
-		$same_package = ( $native_hold['type'] ?? null ) === $type && ( $native_hold['identifier'] ?? null ) === $identifier;
-		if ( $same_package ) {
-			$template   = $this->switch_held_template( $type );
-			$link_label = __( 'release the hold', 'ran-booster' );
-			$link_url   = ! empty( $native_hold['readable'] )
-				? '#ran-booster-native-hold'
-				: ( is_string( $native_hold['url'] ?? null ) ? (string) $native_hold['url'] : '' );
-
-			return array(
-				'successful' => false,
-				'code'       => 'switch_held',
-				'data'       => array(
-					'message'          => sprintf( $template, $link_label ),
-					'message_template' => $template,
-					'link_label'       => $link_label,
-					'link_url'         => $link_url,
-				),
-			);
-		}
-
-		$held_name = is_string( $native_hold['name'] ?? null ) && '' !== $native_hold['name']
-			? $native_hold['name']
-			: __( 'another package', 'ran-booster' );
-		$link_url  = is_string( $native_hold['url'] ?? null ) ? $native_hold['url'] : '';
-		$template  = $this->switch_other_held_template();
-
-		return array(
-			'successful' => false,
-			'code'       => 'switch_other_held',
-			'data'       => array(
-				'message'          => sprintf( $template, $held_name ),
-				'message_template' => $template,
-				'link_label'       => $held_name,
-				'link_url'         => $link_url,
-			),
-		);
-	}
-
-	private function switch_held_template( string $type ): string {
-		if ( 'theme' === $type ) {
-			/* translators: %s: link to release the hold. */
-			return __( 'Install couldn\'t complete. Check this theme, then %s.', 'ran-booster' );
-		}
-
-		/* translators: %s: link to release the hold. */
-		return __( 'Install couldn\'t complete. Check this plugin, then %s.', 'ran-booster' );
-	}
-
-	private function switch_other_held_template(): string {
-		/* translators: %s: the held package's name, linked to the page that releases the hold. */
-		return __( 'GitHub installs are on hold: the last install of %s couldn\'t complete.', 'ran-booster' );
-	}
-
-	/** @param array<string, mixed>|null $native_hold */
 	private function linked_switch_result_html(
 		string $code,
 		string $type,
 		string $identifier,
-		string $reload_url,
-		?array $native_hold
+		string $reload_url
 	): ?string {
-		if ( 'branch_switch_held' === $code && is_string( $native_hold['url'] ?? null ) && '' !== $native_hold['url'] ) {
-			$link = '<a href="' . esc_url( $native_hold['url'] ) . '">' . esc_html__( 'review the install hold', 'ran-booster' ) . '</a>';
-
-			/* translators: %s: link to the install hold. */
-			return sprintf( esc_html__( 'A GitHub install hold blocked the switch to Branch. Please %s before trying again.', 'ran-booster' ), $link );
-		}
-
-		if ( 'switch_held' === $code ) {
-			$hold_url = null !== $native_hold && ! empty( $native_hold['readable'] )
-				? '#ran-booster-native-hold'
-				: ( is_string( $native_hold['url'] ?? null ) ? (string) $native_hold['url'] : '' );
-			$label    = esc_html__( 'release the hold', 'ran-booster' );
-			$link     = '' !== $hold_url
-				? '<a href="' . esc_url( $hold_url ) . '">' . $label . '</a>'
-				: $label;
-
-			return sprintf(
-				esc_html( $this->switch_held_template( $type ) ),
-				$link
-			);
-		}
-
-		if ( 'switch_other_held' === $code ) {
-			$held_name = is_string( $native_hold['name'] ?? null ) && '' !== $native_hold['name']
-				? $native_hold['name']
-				: __( 'another package', 'ran-booster' );
-			$held_url  = is_string( $native_hold['url'] ?? null ) ? $native_hold['url'] : '';
-			$link      = '' !== $held_url
-				? '<a href="' . esc_url( $held_url ) . '">' . esc_html( $held_name ) . '</a>'
-				: esc_html( $held_name );
-
-			return sprintf(
-				esc_html( $this->switch_other_held_template() ),
-				$link
-			);
-		}
-
 		if ( 'switch_not_confirmed' === $code ) {
 			if ( '' === $reload_url && '' !== $identifier && in_array( $type, array( 'plugin', 'theme' ), true ) ) {
 				$reload_url = add_query_arg(
@@ -1346,14 +1244,6 @@ final class ReleaseManagementDisplay {
 			'installed' => __( 'The published release was installed and is now managed by Booster. WordPress activation was not changed.', 'ran-booster' ),
 			'release_enabled' => $this->switch_enabled_message( $status ),
 			'switch_failed_unchanged' => $this->switch_failed_unchanged_message( $type, $status ),
-			'switch_held' => sprintf(
-				$this->switch_held_template( $type ),
-				__( 'release the hold', 'ran-booster' )
-			),
-			'switch_other_held' => sprintf(
-				$this->switch_other_held_template(),
-				__( 'another package', 'ran-booster' )
-			),
 			'switch_superseded' => __( 'This switch result no longer matches the current package settings. Review the current source and installed version.', 'ran-booster' ),
 			'switch_not_confirmed' => __( 'Booster hasn\'t confirmed the switch yet. Reload this page to check.', 'ran-booster' ),
 			'policy_disabled' => __( 'Updates are disabled for this package. Set Updates to Manual to switch.', 'ran-booster' ),
@@ -1382,7 +1272,6 @@ final class ReleaseManagementDisplay {
 			'refresh_check_failed' => FeedbackFlash::check_result( $code, $detail )[1] ?? '',
 			'source_changed' => __( 'Package settings changed after this browser page was opened. Refresh the page, review the current settings, then try again.', 'ran-booster' ),
 			'lock_unavailable' => __( 'The WordPress package updater lock blocked the switch to Branch. Wait for any running update or deployment to finish, then choose Use branch again. If the lock remains, ask your site administrator to check for an interrupted update.', 'ran-booster' ),
-			'branch_switch_held' => __( 'A GitHub install hold blocked the switch to Branch. Review the hold in Booster’s GitHub settings before trying again.', 'ran-booster' ),
 			'branch_switch_unavailable' => __( 'Booster could not verify the switch to Branch. Reload this page to check the current source. If the problem continues, ask your site administrator to check Booster’s storage.', 'ran-booster' ),
 			'source_paused' => __( 'Updates are paused by a site setting. No files were changed.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'This package already registers its own release updater. Use one release owner only.', 'ran-booster' ),

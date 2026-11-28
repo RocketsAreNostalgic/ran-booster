@@ -11,11 +11,8 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 use RAN\PackageRemoval\PackageRemovalGateway;
 use RAN\PackageRemoval\PackageRemovalService;
-use RAN\RepositoryProvider\GitHubProviderSelection;
-use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\Storage\AbstractPackageRepository;
 use RAN\Storage\Database;
-use RAN\Storage\GitHubSelectionStore;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\PluginRepository;
@@ -34,37 +31,20 @@ require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunc
 final class UnregisteredManagedPackageRecoveryTest extends TestCase {
 	private mixed $previous_database;
 	private AttemptRepositoryDatabase $db;
-	private GitHubSelectionStore $store;
-	private GitHubProviderSelection $selection;
 	private DeploymentAttemptRepository $attempts;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override.
 	protected function setUp(): void {
 		$this->previous_database = $GLOBALS['wpdb'] ?? null;
 		$this->db                = new AttemptRepositoryDatabase();
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated test database for lock, attempts and selection store.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated test database for lock and attempts.
 		$GLOBALS['wpdb'] = $this->db;
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = true;
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
-		$this->store = new GitHubSelectionStore( $this->db, 'wp_options' );
-		$bundled     = new GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
-		$this->store->initialize_bundled( $bundled );
-		$this->selection = new GitHubProviderSelection( $this->store, '/unused', $bundled );
-		$this->attempts  = new DeploymentAttemptRepository(
+		$this->attempts = new DeploymentAttemptRepository(
 			$this->db,
 			'wp_ran_booster_attempts',
-			database_lifecycle: $this->createStub( Database::class ),
-			selection: $this->selection
+			database_lifecycle: $this->createStub( Database::class )
 		);
 	}
 
@@ -264,7 +244,7 @@ final class UnregisteredManagedPackageRecoveryTest extends TestCase {
 		$gateway->expects( self::never() )->method( 'delete_plugin' );
 		$gateway->expects( self::never() )->method( 'delete_theme' );
 
-		$service      = new PackageRemovalService( $plugins, $themes, $gateway, $this->attempts, new WordPressUpdaterLock(), github_selection: $this->selection );
+		$service      = new PackageRemovalService( $plugins, $themes, $gateway, $this->attempts, new WordPressUpdaterLock() );
 		$confirmation = $service->unregistered_recovery_confirmation( $type, $identifier );
 
 		self::assertSame( $record + array( 'folder_absent' => $absent_on_disk ), $confirmation );
@@ -278,7 +258,7 @@ final class UnregisteredManagedPackageRecoveryTest extends TestCase {
 	}
 
 	#[DataProvider( 'package_type_provider' )]
-	public function test_active_native_hold_and_unresolved_attempts_refuse_unregistered_recovery( string $type, string $identifier, int $package_type ): void {
+	public function test_unresolved_attempts_and_occupied_lock_refuse_unregistered_recovery( string $type, string $identifier, int $package_type ): void {
 		unset( $package_type );
 		$record  = $this->recovery_record( $type, $identifier );
 		$plugins = $this->createMock( PluginRepository::class );
@@ -290,34 +270,9 @@ final class UnregisteredManagedPackageRecoveryTest extends TestCase {
 		$gateway->method( 'installed_targets' )->with( $type )->willReturn( array() );
 		$gateway->expects( self::never() )->method( 'delete_plugin' );
 		$gateway->expects( self::never() )->method( 'delete_theme' );
-		$service = new PackageRemovalService( $plugins, $themes, $gateway, $this->attempts, new WordPressUpdaterLock(), github_selection: $this->selection );
+		$service = new PackageRemovalService( $plugins, $themes, $gateway, $this->attempts, new WordPressUpdaterLock() );
 
-		// 1. Active #987 native install hold blocks both confirmation and execution.
-		$state                   = $this->store->read();
-		$held                    = $state;
-		$held['native_mutation'] = array(
-			'selection_generation' => 0,
-			'owner_tag'            => str_repeat( 'a', 32 ),
-			'target_type'          => $type,
-			'installed_identity'   => $identifier,
-			'phase'                => 'started',
-		);
-		self::assertTrue( $this->store->compare_and_swap( $state, $held ) );
-		try {
-			$service->unregistered_recovery_confirmation( $type, $identifier );
-			self::fail( 'Active native hold must refuse confirmation.' );
-		} catch ( \RuntimeException $failure ) {
-			self::assertSame( 'Native install hold prevents recovery.', $failure->getMessage() );
-		}
-		try {
-			$service->recover_unregistered( $type, $identifier, $record['adoption_token'], $record['digest'] );
-			self::fail( 'Active native hold must refuse unlink.' );
-		} catch ( \RuntimeException $failure ) {
-			self::assertSame( 'Native mutation ownership prevents recovery.', $failure->getMessage() );
-		}
-		self::assertTrue( $this->store->compare_and_swap( $held, $state ) );
-
-		// 2. Active deployment attempt blocks confirmation.
+		// 1. Active deployment attempt blocks confirmation.
 		$request        = new DeploymentRequest( 'org/broken', null, false, 'main', 'broken', null, DeploymentPolicy::MANUAL, 1, installed_identifier: $identifier, adoption_token: $record['adoption_token'] );
 		$this->db->rows = array(
 			array(
@@ -353,7 +308,7 @@ final class UnregisteredManagedPackageRecoveryTest extends TestCase {
 		}
 		$this->db->rows = array();
 
-		// 3. Occupied auto_updater.lock refuses unlink without reclaiming it.
+		// 2. Occupied auto_updater.lock refuses unlink without reclaiming it.
 		$this->db->option_rows['auto_updater.lock'] = (string) ( time() - 7200 );
 		try {
 			$service->recover_unregistered( $type, $identifier, $record['adoption_token'], $record['digest'] );
@@ -364,10 +319,10 @@ final class UnregisteredManagedPackageRecoveryTest extends TestCase {
 		self::assertArrayHasKey( 'auto_updater.lock', $this->db->option_rows );
 		unset( $this->db->option_rows['auto_updater.lock'] );
 
-		// 4. Registered target is refused as not unregistered.
+		// 3. Registered target is refused as not unregistered.
 		$registered_gateway = $this->createStub( PackageRemovalGateway::class );
 		$registered_gateway->method( 'installed_targets' )->willReturn( array( $identifier => 'Healthy Now' ) );
-		$registered_service = new PackageRemovalService( $plugins, $themes, $registered_gateway, $this->attempts, new WordPressUpdaterLock(), github_selection: $this->selection );
+		$registered_service = new PackageRemovalService( $plugins, $themes, $registered_gateway, $this->attempts, new WordPressUpdaterLock() );
 		try {
 			$registered_service->unregistered_recovery_confirmation( $type, $identifier );
 			self::fail( 'Registered package must not use unregistered recovery.' );

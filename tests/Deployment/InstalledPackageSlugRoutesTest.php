@@ -108,8 +108,7 @@ final class InstalledPackageSlugRoutesTest extends TestCase {
 		$this->attempts     = new DeploymentAttemptRepository(
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
-			database_lifecycle: $this->createStub( Database::class ),
-			selection: $this->selection
+			database_lifecycle: $this->createStub( Database::class )
 		);
 		$this->plugins      = $this->createMock( PluginRepository::class );
 		$this->themes       = $this->createMock( ThemeRepository::class );

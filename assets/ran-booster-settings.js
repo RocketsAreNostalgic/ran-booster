@@ -552,6 +552,15 @@
 				saved || next.unknown || state.intent > record.intent
 					? desired
 					: next.confirmed;
+			// htmx carries focus by id to the swapped-in native checkbox, and a
+			// focused checkbox keeps the styled Switch from mounting. Release
+			// it here; the focus restore below returns it to the Switch.
+			if (
+				record.focus === next.toggle.id &&
+				next.form.ownerDocument.activeElement === next.toggle
+			) {
+				next.toggle.blur();
+			}
 		}
 		if (next.unknown) {
 			next.form.elements.namedItem('ran_booster[token]').value =

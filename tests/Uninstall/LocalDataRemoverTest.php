@@ -78,6 +78,7 @@ final class LocalDataRemoverTest extends TestCase {
 			WordPressInstallationStore::OPTION_NAME       => array( 'current-webhook-record' ),
 			GeneralPreferenceStore::OPTION_NAME           => array( 'hide_github' => true ),
 			CoreSelfUpdateCheck::OPTION_NAME              => array( 'claim' => str_repeat( 'a', 32 ) ),
+			\RAN\WordPress\WordPressUpdaterLock::OWNER_OPTION => '1700000000.000000000000000000000000000|package_operation|1700000000',
 			'unrelated_option'                            => 'preserved',
 		);
 		foreach (

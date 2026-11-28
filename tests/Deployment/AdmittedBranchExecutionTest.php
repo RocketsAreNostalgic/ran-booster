@@ -47,8 +47,6 @@ use RuntimeException;
 use RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
 final class AdmittedBranchExecutionTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
-
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
 	private BoundaryPluginRepository $plugins;
@@ -67,8 +65,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
-			$this->createStub( \RAN\Storage\Database::class ),
-			selection: $this->queued_selection( $this->database )
+			$this->createStub( \RAN\Storage\Database::class )
 		);
 		$this->plugins          = new BoundaryPluginRepository();
 		$this->themes           = new BoundaryThemeRepository();
@@ -106,9 +103,9 @@ final class AdmittedBranchExecutionTest extends TestCase {
 				'prepare',
 				'preflight',
 				'resolved',
+				'verify',
 				'lock:start',
 				'frozen:live',
-				'verify',
 				'unchanged',
 				'maintenance',
 				'allowed',
@@ -160,6 +157,26 @@ final class AdmittedBranchExecutionTest extends TestCase {
 		$queries = implode( "\n", $this->database->queries );
 		self::assertStringContainsString( 'INSERT IGNORE INTO `wp_options`', $queries );
 		self::assertStringContainsString( 'DELETE FROM `wp_options`', $queries );
+	}
+
+	public function test_a_refused_manual_branch_deployment_leaves_the_refusing_holder_for_its_failure_notice(): void {
+		WordPressUpdaterLock::take_refusal();
+		$token   = ( new WordPressUpdaterLock() )->acquire();
+		$adapter = $this->adapter( $this->running_update(), new ProviderRegistry() );
+		$ran     = array();
+		try {
+			$adapter->run(
+				static function () use ( &$ran ): void {
+					$ran[] = 'mutation';
+				}
+			);
+		} catch ( RuntimeException $failure ) {
+			$ran[] = $failure->getMessage();
+		}
+		// Recording the terminal attempt takes no lock, so the refusal survives until the failure notice reports it.
+		$adapter->finish( DeploymentOutcome::CODE_LOCK_UNAVAILABLE );
+		self::assertSame( array( 'The WordPress updater is already running.' ), $ran );
+		self::assertSame( $token, WordPressUpdaterLock::take_refusal() );
 	}
 
 	public function test_provider_archive_is_cleaned_when_its_resolved_revision_is_invalid(): void {
@@ -219,7 +236,7 @@ final class AdmittedBranchExecutionTest extends TestCase {
 			$this->adapter( $legacy, new ProviderRegistry() )->declaration();
 			self::fail( 'Legacy update authority must not be reconstructed.' );
 		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_PROVIDER_SELECTION_CHANGED, $failure->outcome_code );
+			self::assertSame( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED, $failure->outcome_code );
 		}
 	}
 

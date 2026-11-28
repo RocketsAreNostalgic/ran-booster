@@ -142,7 +142,7 @@ const leftMounted = [
 	{
 		file: 'RAN/Admin/ManagedPluginFailureRows.php',
 		marker: 'class="update-message notice inline notice-error notice-alt"',
-		reason: 'Plugins rows load the Notice styles only while the failure notice is unacknowledged, and native-update-warning.js rewrites them',
+		reason: 'Plugins rows load the Notice styles only while the failure notice is unacknowledged, and native-update-error.js rewrites them',
 	},
 ];
 

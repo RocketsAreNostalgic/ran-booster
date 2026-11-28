@@ -41,7 +41,9 @@ namespace RAN\Tests\Deployment {
 		public ?\Closure $on_management_read = null;
 		/** @var \Closure():void|null */
 		public ?\Closure $on_lock_release = null;
-		public string $options            = 'wp_options';
+		/** @var \Closure(string):void|null Runs before each query or read, to interleave another request. */
+		public ?\Closure $before_query = null;
+		public string $options         = 'wp_options';
 		public \RAN\Tests\RepositoryProvider\SelectionContextDatabase $selection;
 		/** @var array<string, array<string, mixed>> */
 		public array $management_rows = array();
@@ -59,6 +61,10 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function get_row( string $query ): mixed {
+			if ( preg_match( "/^SELECT option_value FROM `wp_options` WHERE option_name = '([^']+)'$/", $query ) === 1 ) {
+				$value = $this->get_var( $query );
+				return null === $value ? null : (object) array( 'option_value' => $value );
+			}
 			return $this->selection->get_row( $query );
 		}
 		/** @var array<int, array<string, mixed>> */
@@ -70,23 +76,24 @@ namespace RAN\Tests\Deployment {
 		/** @var array<string, string> */
 		public array $option_rows = array();
 		/** @var list<string> */
-		public array $queries                = array();
-		public ?string $fail_query_contains  = null;
-		public ?\Throwable $query_failure    = null;
-		public ?string $zero_query_contains  = null;
-		public bool $fail_insert             = false;
-		public ?int $fail_insert_number      = null;
-		public bool $fail_reads              = false;
-		public ?int $abort_authority_read    = null;
-		public int $authority_reads          = 0;
-		public int $automatic_rollbacks      = 0;
-		public bool $fail_commit             = false;
-		public bool $fail_rollback           = false;
-		public bool $throw_rollback          = false;
-		public ?string $tamper_insert_column = null;
-		public mixed $tamper_insert_value    = null;
-		public ?string $tamper_update_column = null;
-		public mixed $tamper_update_value    = null;
+		public array $queries                      = array();
+		public ?string $fail_query_contains        = null;
+		public ?\Throwable $query_failure          = null;
+		public ?string $zero_query_contains        = null;
+		public bool $fail_insert                   = false;
+		public ?int $fail_insert_number            = null;
+		public bool $fail_reads                    = false;
+		public ?int $abort_authority_read          = null;
+		public int $authority_reads                = 0;
+		public bool $deadlock_next_management_lock = false;
+		public int $automatic_rollbacks            = 0;
+		public bool $fail_commit                   = false;
+		public bool $fail_rollback                 = false;
+		public bool $throw_rollback                = false;
+		public ?string $tamper_insert_column       = null;
+		public mixed $tamper_insert_value          = null;
+		public ?string $tamper_update_column       = null;
+		public mixed $tamper_update_value          = null;
 		/** @var array{rows: array<int, array<string, mixed>>, options: array<string, string>, activity: list<array<string,mixed>>}|null */
 		private ?array $snapshot      = null;
 		private int $insert_calls     = 0;
@@ -156,6 +163,7 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function query( string $query ): int|false {
+			$this->before_query?->__invoke( $query );
 			if ( str_starts_with( $query, '[' ) ) {
 				$result           = $this->selection->query( $query );
 				$this->last_error = $this->selection->last_error;
@@ -221,7 +229,14 @@ namespace RAN\Tests\Deployment {
 				unset( $activity );
 				return 0;
 			}
-			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('([^']+)', '([^']+)', 'no'\)$/", $query, $matches ) === 1 ) {
+			if ( preg_match( "/^INSERT INTO `wp_options` .* SELECT '(ran_booster_updater_lock_owner)', '([^']+)', 'off' FROM `wp_options` AS held WHERE held.option_name = '([^']+)' AND CAST\\(held.option_value AS BINARY\\) = CAST\\('([^']+)' AS BINARY\\) FOR UPDATE ON DUPLICATE KEY UPDATE option_value = '\\2', autoload = 'off'$/", $query, $matches ) === 1 ) {
+				if ( ( $this->option_rows[ $matches[3] ] ?? null ) !== $matches[4] ) {
+					return 0;
+				}
+				$this->option_rows[ $matches[1] ] = $matches[2];
+				return 1;
+			}
+			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('([^']+)', '([^']+)', 'off'\)$/", $query, $matches ) === 1 ) {
 				if ( isset( $this->option_rows[ stripslashes( $matches[1] ) ] ) ) {
 					return 0;
 				}
@@ -240,7 +255,7 @@ namespace RAN\Tests\Deployment {
 
 				return 1;
 			}
-			if ( preg_match( "/^DELETE FROM `wp_options` WHERE option_name = '([^']+)' AND (?:option_value = '([^']+)'|CAST\\(option_value AS BINARY\\) = CAST\\('([^']+)' AS BINARY\\))$/", $query, $matches ) === 1 ) {
+			if ( preg_match( "/^DELETE FROM `wp_options` WHERE option_name = '([^']+)' AND (?:option_value = '([^']+)'|CAST\\(option_value AS BINARY\\) = (?:CAST\\()?'([^']+)'(?: AS BINARY\\))?)$/", $query, $matches ) === 1 ) {
 				$name      = stripslashes( $matches[1] );
 				$raw_value = $matches[2] ?? '';
 				$value     = stripslashes( '' !== $raw_value ? $raw_value : ( $matches[3] ?? '' ) );
@@ -333,6 +348,7 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function get_var( string $query ): mixed {
+			$this->before_query?->__invoke( $query );
 			$this->queries[] = $query;
 			if ( 'SELECT @@lower_case_table_names' === $query ) {
 				return $this->selection->get_var( $query );
@@ -426,6 +442,13 @@ namespace RAN\Tests\Deployment {
 			}
 			if ( ( str_starts_with( $query, 'SELECT package, adoption_token' ) || str_starts_with( $query, 'SELECT *' ) ) && preg_match( "/BINARY package = BINARY '([^']+)'/", $query, $match ) === 1 ) {
 				$identifier = stripslashes( $match[1] );
+				if ( $this->deadlock_next_management_lock && str_ends_with( $query, ' FOR UPDATE' ) ) {
+					$this->deadlock_next_management_lock = false;
+					$this->rollback_snapshot(); // InnoDB deadlock victims lose the whole transaction.
+					++$this->automatic_rollbacks;
+					$this->last_error = 'Deadlock found when trying to get lock; try restarting transaction';
+					return null;
+				}
 				if ( null !== $this->on_management_read ) {
 					( $this->on_management_read )();
 				}

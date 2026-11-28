@@ -699,23 +699,28 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		self::assertSame( 0, $this->calls->events_under_lock() );
 	}
 
-	public function test_v1_retry_reuses_the_existing_pre_normalization_credential_id(): void {
-		$legacy      = '{"format":"ran-booster-package-blueprint","version":1,"packages":[{"type":"plugin","identifier":"fixture/fixture.php","display_name":"Fixture","provider":"alpha","provider_repository_id":"fixture-repository-id","repository":"fixture/repository","branch":"main","subdirectory":null}],"credentials":[{"provider":"alpha","label":"Portable credential","kind":"api-key","configuration":{"tenant":"fixture"},"secret":"synthetic-portable-value","packages":[{"type":"plugin","identifier":"fixture/fixture.php"}]}]}';
-		$expected_id = 'portable_b2d7585c1a4d059295f406fbedb6797a9d749300558f92ec50add5c';
-		// Seed the exact profile ID produced by the original V1 import algorithm.
-		$this->secrets->save_credential(
+	public function test_a_re_import_of_the_same_file_reuses_its_credential_without_a_write(): void {
+		$credential = new BlueprintCredential(
 			'alpha',
-			$expected_id,
-			$this->credential_metadata( 'Portable credential' ),
-			'synthetic-portable-value'
+			'Portable credential',
+			'api-key',
+			array( 'tenant' => 'fixture' ),
+			'synthetic-portable-value',
+			array(
+				array(
+					'type'       => 'plugin',
+					'identifier' => 'fixture/fixture.php',
+				),
+			)
 		);
-		$before = hash_file( 'sha256', $this->path );
-		foreach ( array( 1, 2 ) as $attempt ) {
-			$blueprint = PackageBlueprint::from_json( $legacy );
-			self::assertSame( array( $expected_id ), $this->secrets->import_credentials_if_absent( $blueprint, $blueprint->credentials[0] ), 'Retry ' . $attempt );
-			self::assertSame( $before, hash_file( 'sha256', $this->path ) );
-			self::assertCount( 1, $this->secrets->credential_profiles( 'alpha' ) );
-		}
+		$blueprint  = new PackageBlueprint( array( new BlueprintPackage( 'plugin', 'fixture/fixture.php', 'Fixture', 'alpha', 'fixture-repository-id', 'fixture/repository', 'main', null ) ), array( $credential ) );
+		$ids        = $this->secrets->import_credentials_if_absent( $blueprint, $credential );
+		$before     = hash_file( 'sha256', $this->path );
+		$reread     = PackageBlueprint::from_json( $blueprint->canonical_json() );
+
+		self::assertSame( $ids, $this->secrets->import_credentials_if_absent( $reread, $reread->credentials[0] ) );
+		self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+		self::assertCount( 1, $this->secrets->credential_profiles( 'alpha' ) );
 	}
 
 	public function test_tampered_and_authenticated_non_canonical_documents_fail_before_policy(): void {

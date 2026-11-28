@@ -38,8 +38,6 @@ use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
 final class OperatorActionDispatcherTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
-
 	private OperatorDispatcherCoordinator $coordinator;
 	/** @var list<string> */
 	private array $capture_directories = array();
@@ -431,8 +429,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			$database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-26 09:02:00 UTC' ),
-			database_lifecycle: $this->createStub( Database::class ),
-			selection: $this->queued_selection( $database )
+			database_lifecycle: $this->createStub( Database::class )
 		);
 		self::assertTrue( DeploymentAttempt::from_database( $database->rows[0] )->requires_operator_resolution() );
 		$_POST['ran_booster'] = array(
@@ -463,8 +460,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			$database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-26 09:05:00 UTC' ),
-			database_lifecycle: $this->createStub( Database::class ),
-			selection: $this->queued_selection( $database )
+			database_lifecycle: $this->createStub( Database::class )
 		);
 		$coordinator    = new DeploymentCoordinator(
 			$attempts,
@@ -507,11 +503,74 @@ final class OperatorActionDispatcherTest extends TestCase {
 		self::assertStringContainsString( "WHERE id = 12 AND state = 'running'", implode( "\n", $database->queries ) );
 	}
 
+	public function test_dispatcher_releases_only_the_confirmed_recorded_updater_lock(): void {
+		$database          = new AttemptRepositoryDatabase();
+		$previous_database = $GLOBALS['wpdb'] ?? null;
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The updater lock reads its row through this isolated fake.
+		$GLOBALS['wpdb'] = $database;
+		try {
+			$lock      = new WordPressUpdaterLock();
+			$token     = $lock->acquire();
+			$dashboard = $this->createMock( Dashboard::class );
+			$dashboard->expects( self::exactly( 3 ) )->method( 'add_failure_message' );
+			$dashboard->expects( self::once() )->method( 'add_message' )->with( 'The package lock was released.' );
+			$other  = '1700000000.' . str_repeat( '9', 27 );
+			$action = static fn ( string $lock_token ): string => 'ran-booster-release-updater-lock|' . $lock_token;
+			// The nonce action the rendered Release form actually mints for a recorded owner's token.
+			$minted = static function ( string $lock_token ): string {
+				$updater_lock_owner = array(
+					'token'      => $lock_token,
+					'operation'  => 'package_operation',
+					'started_at' => 1700000000,
+				);
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/updater-lock-owner.php';
+				if ( 1 !== preg_match( '/name="_wpnonce" value="(?:nonce-for-)?([^"]+)"/', (string) ob_get_clean(), $field ) ) {
+					self::fail( 'The Release form minted no nonce.' );
+				}
+				return html_entity_decode( $field[1], ENT_QUOTES );
+			};
+			self::assertSame( $action( $token ), $minted( $token ) );
+			$held = array();
+			// Unconfirmed; another token posted with this token's nonce; another token with its own nonce; no package capability; then confirmed.
+			foreach ( array(
+				array( $token, $token, false ),
+				array( $other, $token, true ),
+				array( $other, $other, true ),
+				array( $token, $token, true ),
+				array( $token, $token, true ),
+			) as $case => list( $posted, $form, $confirmed ) ) {
+				$GLOBALS['ran_booster_test_capabilities']['update_themes'] = 3 !== $case;
+				$_POST['_wpnonce']    = $minted( $form );
+				$_POST['ran_booster'] = array(
+					'action'     => 'release-updater-lock',
+					'lock_token' => $posted,
+				) + ( $confirmed ? array( 'confirm_stopped' => '1' ) : array() );
+				// WordPress verifies a nonce only against the action it was minted for.
+				$GLOBALS['ran_booster_test_nonce_valid'] = $minted( $form ) === $action( $posted );
+				try {
+					$this->dispatcher( $dashboard, lock: $lock )->dispatch_post_requests();
+					self::assertNotSame( 1, $case, 'A nonce minted for another token was accepted.' );
+				} catch ( \RuntimeException $failure ) {
+					self::assertSame( array( 1, 'Invalid nonce.' ), array( $case, $failure->getMessage() ) );
+				}
+				self::assertSame( $action( $posted ), end( $GLOBALS['ran_booster_test_nonce_checks'] ) );
+				$held[] = $database->option_rows['auto_updater.lock'] ?? null;
+			}
+			self::assertSame( array( $token, $token, $token, $token, null ), $held );
+			self::assertArrayNotHasKey( WordPressUpdaterLock::OWNER_OPTION, $database->option_rows );
+		} finally {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the database boundary replaced above.
+			$GLOBALS['wpdb'] = $previous_database;
+		}
+	}
+
 	private function dispatcher(
 		Dashboard $dashboard,
 		?TemporaryDebugCapture $capture = null,
 		?DeploymentAttemptRepository $attempts = null,
-		?DeploymentCoordinator $coordinator = null
+		?DeploymentCoordinator $coordinator = null,
+		?WordPressUpdaterLock $lock = null
 	): Dispatcher {
 		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
@@ -525,7 +584,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			new SecretsFile( null, array() ),
 			new ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
 			new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
-			$this->createStub( WordPressUpdaterLock::class ),
+			$lock ?? $this->createStub( WordPressUpdaterLock::class ),
 			$coordinator,
 			null,
 			null,

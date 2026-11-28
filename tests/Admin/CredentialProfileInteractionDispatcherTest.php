@@ -10,6 +10,7 @@ require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPr
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once __DIR__ . '/Interaction/AdminInteractionWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -267,7 +268,14 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 
 	#[DataProvider( 'unauthorized_actions' )]
 	public function test_every_profile_action_stops_before_sensitive_state_is_read( string $action, string $denial ): void {
-		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
+		foreach ( array( 'manage_options', 'activate_plugins' ) as $missing ) {
+			$GLOBALS['ran_booster_test_capabilities']      = array( $missing => false );
+			$GLOBALS['ran_booster_test_capability_checks'] = array();
+			$this->assert_profile_action_denied( $action, $denial, $missing );
+		}
+	}
+
+	private function assert_profile_action_denied( string $action, string $denial, string $missing ): void {
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->expects( self::never() )->method( 'credential_profiles' );
 		$secrets->expects( self::never() )->method( 'webhook_profiles' );
@@ -297,7 +305,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			self::assertSame( $denial, $failure->getMessage() );
 		}
 
-		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( 'manage_options' === $missing ? array( 'manage_options' ) : array( 'manage_options', 'activate_plugins' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
@@ -336,7 +344,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$expected_nonce = 'save-public-lookup-profile' === $action
 			? 'ran-booster-save-public-lookup-profile'
 			: 'ran-booster-save-secrets';
-		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( 'manage_options', 'activate_plugins' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( $expected_nonce ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
@@ -381,7 +389,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-canary', $response->feedback_message );
 		self::assertStringNotContainsString( 'secret-canary', $response->request->canonical_url );
 
-		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( 'manage_options', 'activate_plugins' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( 'ran-booster-save-secrets' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 
 		if ( 'save-access-profile' === $request['action'] ) {
@@ -494,6 +502,35 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertStringNotContainsString( 'secret-canary', $response->feedback_message );
 	}
 
+	/**
+	 * @param array<string, mixed> $request
+	 */
+	#[DataProvider( 'successful_mutations' )]
+	public function test_every_material_change_is_refused_when_the_site_disallows_file_changes( array $request ): void {
+		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
+		$before      = array( $this->secrets->credential_profiles( 'fixture' ), $this->secrets->webhook_profiles( 'fixture' ) );
+		$interaction = new CapturingProviderProfileInteraction();
+		$dashboard   = $this->getMockBuilder( Dashboard::class )->disableOriginalConstructor()->onlyMethods( array( 'add_message' ) )->getMock();
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$_GET['view']         = str_contains( $request['action'], 'access' ) ? 'credentials' : 'signing-secrets';
+		$_POST['ran_booster'] = $request;
+		$dispatcher           = $this->dispatcher( $dashboard, $this->secrets, $interaction, new InMemoryPublicRepositoryLookupProfileStore() );
+		$expected             = 'This site does not allow file changes, so Booster cannot change saved credentials.';
+
+		try {
+			if ( 'save-access-profile' === $request['action'] ) {
+				self::assertSame( $expected, $this->native_failure( $dashboard, $interaction, $dispatcher ) );
+			} else {
+				$response = $interaction->dispatch( $dispatcher );
+				self::assertSame( 'validation_failure', $response->kind );
+				self::assertSame( $expected, $response->feedback_message );
+			}
+		} finally {
+			unset( $GLOBALS['ran_booster_package_mutation_guard_file_mods'] );
+		}
+		self::assertSame( $before, array( $this->secrets->credential_profiles( 'fixture' ), $this->secrets->webhook_profiles( 'fixture' ) ) );
+	}
+
 	public function test_automatic_removal_uses_the_recorded_expiry_as_its_encrypted_deadline(): void {
 		$expires_on          = gmdate( 'Y-m-d', time() + 30 * 86400 );
 		$interaction         = new CapturingProviderProfileInteraction();
@@ -547,13 +584,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function test_known_provider_expiry_rejects_alater_submitted_date_before_saving(): void {
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->getMockBuilder( Dashboard::class )->disableOriginalConstructor()->onlyMethods( array( 'add_message' ) )->getMock();
-		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
-		$expiry_observations->record_provider_expiry(
-			'fixture',
-			'credential_existing',
-			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
-		);
+		$expiry_observations = $this->observed_expiry();
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$_GET['view']         = 'credentials';
 		$_POST['ran_booster'] = array(
@@ -591,13 +622,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function test_unchanged_provider_fallback_does_not_become_amanual_expiry(): void {
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->createMock( Dashboard::class );
-		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
-		$expiry_observations->record_provider_expiry(
-			'fixture',
-			'credential_existing',
-			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
-		);
+		$expiry_observations = $this->observed_expiry();
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
@@ -634,13 +659,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 	public function test_replacement_does_not_inherit_the_previous_tokens_provider_expiry(): void {
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->createMock( Dashboard::class );
-		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
-		$expiry_observations->record_provider_expiry(
-			'fixture',
-			'credential_existing',
-			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
-		);
+		$expiry_observations = $this->observed_expiry();
 		$dashboard->expects( self::never() )->method( 'add_message' );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
 		$_GET['view']         = 'credentials';
@@ -995,14 +1014,8 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			);
 		$interaction         = new CapturingProviderProfileInteraction();
 		$dashboard           = $this->getMockBuilder( Dashboard::class )->disableOriginalConstructor()->onlyMethods( array( 'add_message' ) )->getMock();
-		$expiry_observations = new InMemoryCredentialExpiryObservationStore();
+		$expiry_observations = $this->observed_expiry();
 		$expiry_observations->set_manual_expiry( 'fixture', 'credential_existing', '2026-09-01' );
-		$expiry_observations->record_provider_expiry(
-			'fixture',
-			'credential_existing',
-			CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ),
-			'2026-08-08T12:00:00Z'
-		);
 		$observation_before   = $expiry_observations->document;
 		$_POST['ran_booster'] = array(
 			'action'        => 'save-access-profile',
@@ -1138,7 +1151,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		$fiber->start();
 		self::assertTrue( $fiber->isTerminated(), 'Native failure must continue rendering this POST, not terminate with a redirect.' );
 		self::assertNull( $interaction->response );
-		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( 'manage_options', 'activate_plugins' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( 'ran-booster-save-secrets' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 		$draft = ( new \ReflectionMethod( Dashboard::class, 'requested_credential_form' ) )->invoke(
 			$dashboard,
@@ -1210,6 +1223,15 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertSame( 'ran_booster_credentials_error', $message['code'] );
 		self::assertIsString( $message['message'] );
 		return $message['message'];
+	}
+
+	/** A store bound to the fixture secrets, holding a provider observation of the existing credential. */
+	private function observed_expiry(): InMemoryCredentialExpiryObservationStore {
+		$store = new InMemoryCredentialExpiryObservationStore();
+		$store->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
+		$store->record_provider_expiry( 'fixture', 'credential_existing', CredentialExpiryReport::known( '2026-09-10T12:00:00Z' ), '2026-08-08T12:00:00Z', $this->secrets->credential_material_tag( 'fixture', 'credential_existing' ) ?? '' );
+
+		return $store;
 	}
 
 	private function seed_stored_profiles(): void {

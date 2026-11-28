@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use RAN\Dashboard;
+use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\{Admin\ProviderAdminMetadata, CredentialedPublicRepositoryBrowser, CredentialValidator, InvalidCredentialInput, InvalidWebhookInput, ProviderCode, ProviderRegistry, UnsupportedProviderCapability, WebhookNormalizer};
 use RAN\Secrets\SecretsFile;
@@ -31,11 +32,11 @@ class ProviderProfileAdminController {
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
 		private ?\RAN\Activity\ActivityStore $activity = null,
 		private ?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null,
-		private ?\RAN\Deployment\DeploymentAttemptRepository $deployment_attempts = null,
-		private ?\RAN\PackageRemoval\PackageRemovalService $package_removal = null
+		private ?\RAN\Deployment\DeploymentAttemptRepository $deployment_attempts = null
 	) {
 
 		$this->branch_check_evidence = $branch_check_evidence ?? new RepositoryBranchCheckEvidenceStore();
+		$this->expiry_observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 	}
 	/** @param array<string,mixed> $request Untrusted form data. */
 	public function adopt_github( array $request ): void {
@@ -82,86 +83,6 @@ class ProviderProfileAdminController {
 		$this->interaction->respond_to_provider_profile_success( $interaction_request, $message );
 	}
 
-	/**
-	 * Clear the hold on a held package Booster cannot read, once its folder is gone.
-	 *
-	 * @param array<string,mixed> $request Untrusted recovery confirmation.
-	 * @return 'cleared'|'present'|'busy'|'failed'|'lock_failed' The result the provider page shows beside the control.
-	 */
-	public function recover_github_native( array $request ): string {
-		$digest = $this->native_hold_digest( $request, 'ran-booster-recover-github-' );
-		try {
-			if ( null === $this->package_removal || '1' !== ( $request['confirmed_stopped'] ?? null ) || '1' !== ( $request['confirmed_removal'] ?? null ) ) {
-				throw new \RuntimeException( 'Fresh removal recovery confirmation is required.' );
-			}
-			$this->package_removal->recover_native_removal( $digest, true, true, static fn (): bool => self::native_hold_authorized() );
-			return 'cleared';
-		} catch ( \Throwable $failure ) {
-			return $this->native_hold_failure( $failure, 'native_removal_recovery_failed', true );
-		}
-	}
-
-	/**
-	 * Release the hold in place on a held package Booster can read.
-	 *
-	 * @param array<string,mixed> $request Untrusted release confirmation.
-	 * @return 'released'|'busy'|'failed'|'lock_failed' The result the package page shows beside the control.
-	 */
-	public function release_github_hold( array $request ): string {
-		$digest = $this->native_hold_digest( $request, 'ran-booster-release-github-hold-' );
-		try {
-			if ( null === $this->package_removal ) {
-				throw new \RuntimeException( 'Native hold release is unavailable.' );
-			}
-			$stopped = '1' === ( $request['confirmed_stopped'] ?? null );
-			$checked = '1' === ( $request['confirmed_checked'] ?? null );
-			$this->package_removal->release_native_hold( $digest, $stopped, $checked, static fn (): bool => self::native_hold_authorized() );
-			return 'released';
-		} catch ( \Throwable $failure ) {
-			$code = $this->native_hold_failure( $failure, 'native_hold_release_failed', false );
-			return 'present' !== $code ? $code : 'failed';
-		}
-	}
-
-	private static function native_hold_authorized(): bool {
-		return current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
-	}
-
-	/** @param array<string,mixed> $request */
-	private function native_hold_digest( array $request, string $nonce_action ): string {
-		if ( ! self::native_hold_authorized() ) {
-			wp_die( esc_html__( 'Contact a site administrator.', 'ran-booster' ) );
-		}
-		$digest = is_string( $request['review_digest'] ?? null ) && 1 === preg_match( '/\A[a-f0-9]{64}\z/D', $request['review_digest'] ) ? $request['review_digest'] : '';
-		check_admin_referer( $nonce_action . $digest );
-		return $digest;
-	}
-
-	/** @return 'present'|'busy'|'failed'|'lock_failed' */
-	private function native_hold_failure( \Throwable $failure, string $event, bool $removal ): string {
-		$lock_failed = $failure instanceof \RAN\PackageRemoval\NativeHoldLockReleaseFailure;
-		$context     = array( 'event' => $event );
-		if ( $lock_failed ) {
-			$context['outcome_code'] = 'lock_failed';
-		}
-		BoosterLogger::log_exception( 'native hold action failed', $failure->getPrevious() ?? $failure, $context );
-		if ( $lock_failed ) {
-			return 'lock_failed';
-		}
-		if ( true === $this->github_selection?->has_unclosed_transaction()
-			|| true === $this->package_removal?->has_unclosed_selection_transaction() ) {
-			return 'failed';
-		}
-		try {
-			if ( $this->package_removal?->native_hold_lock_busy() ) {
-				return 'busy';
-			}
-			return $removal && false === $this->package_removal?->native_hold_target_absent() ? 'present' : 'failed';
-		} catch ( \Throwable ) {
-			return 'failed';
-		}
-	}
-
 	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	public function manage_credential_profiles( array $request ): void {
 		$this->authorize( 'ran-booster-save-secrets' );
@@ -171,6 +92,17 @@ class ProviderProfileAdminController {
 			$provider = $this->provider_code( $request );
 			if ( null !== $this->interaction ) {
 				$interaction_request = $this->interaction->provider_profile_request( $action, $provider->value );
+			}
+			if ( PackageMutationGuard::file_mods_disabled() ) {
+				BoosterLogger::log(
+					'Credential change refused.',
+					array(
+						'operation'    => 'credential_profile',
+						'outcome_code' => 'file_mods_disallowed',
+					)
+				);
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
+				throw new CredentialRequestException( __( 'This site does not allow file changes, so Booster cannot change saved credentials.', 'ran-booster' ) );
 			}
 			$id = $this->profile_id( $request );
 			if ( 'delete-access-profile' === $action ) {
@@ -216,7 +148,13 @@ class ProviderProfileAdminController {
 				throw new CredentialRequestException( __( 'Credential validation is unavailable for this Git provider.', 'ran-booster' ) );
 			}
 			$activity_id = $this->begin_credential_activity( $provider, $id );
-			$result      = $validator->validate_credential( $id );
+			// A result is recorded only for the material that was checked; the tag is read before the provider call.
+			try {
+				$material_tag = $this->secrets->credential_material_tag( $provider, $id );
+			} catch ( \Throwable ) {
+				$material_tag = null;
+			}
+			$result = $validator->validate_credential( $id );
 			$this->complete_credential_activity( $activity_id, $result );
 			if ( null !== $result->failure ) {
 				BoosterLogger::log_failure(
@@ -230,18 +168,33 @@ class ProviderProfileAdminController {
 			}
 			if ( $result->is_valid() ) {
 				if ( null !== $result->expiry ) {
-
-					$this->expiry_observations->record_provider_expiry(
-						$provider->value,
-						$id,
-						$result->expiry,
-						gmdate( 'Y-m-d\\TH:i:s\\Z' )
-					);
-					if ( $result->expiry->is_known() && is_string( $result->expiry->expires_at ) ) {
-						$this->secrets->record_credential_provider_expiry(
-							$provider,
+					$skipped = 'material_tag_unavailable';
+					if ( null !== $material_tag ) {
+						$current = $this->expiry_observations->record_provider_expiry(
+							$provider->value,
 							$id,
-							substr( $result->expiry->expires_at, 0, 10 )
+							$result->expiry,
+							gmdate( 'Y-m-d\\TH:i:s\\Z' ),
+							$material_tag
+						);
+						// A configured constant is read-only, and validation never writes the sidecar while file changes are disallowed.
+						if ( SecretsFile::CONSTANT_PROFILE !== $id && $result->expiry->is_known() && is_string( $result->expiry->expires_at ) && ! PackageMutationGuard::file_mods_disabled() ) {
+							$current = $this->secrets->record_credential_provider_expiry(
+								$provider,
+								$id,
+								substr( $result->expiry->expires_at, 0, 10 ),
+								$material_tag
+							) && $current;
+						}
+						$skipped = $current ? null : 'material_tag_changed';
+					}
+					if ( null !== $skipped ) {
+						BoosterLogger::log(
+							'Credential validation result not recorded.',
+							array(
+								'operation'    => 'credential_validation',
+								'outcome_code' => $skipped,
+							)
 						);
 					}
 				}
@@ -636,8 +589,9 @@ class ProviderProfileAdminController {
 		}
 		return __( 'Push-to-Deploy secret removed.', 'ran-booster' );
 	}
+	/** Using, validating or changing a credential needs the same secret authority as the storage actions. */
 	private function authorize( string $nonce ): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'activate_plugins' ) ) {
 			$message = 'ran-booster-save-public-lookup-profile' === $nonce
 				? esc_html__( 'You do not have sufficient permissions to manage Booster Git provider settings.', 'ran-booster' )
 				: esc_html__( 'You do not have sufficient permissions to manage Booster credentials.', 'ran-booster' );

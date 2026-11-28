@@ -141,6 +141,9 @@ function fixture() {
 		focus(options) {
 			this.focusOptions = options;
 		},
+		scrollIntoView(options) {
+			this.scrollOptions = options;
+		},
 		hasAttribute(name) {
 			return errorAttributes.has(name);
 		},
@@ -1100,6 +1103,8 @@ test('enhanced mutation feedback allows only declared 422 error swaps and keeps 
 	assert.equal(state.error.hidden, false);
 	assert.equal(state.errorAttributes.has('role'), false);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	// Scroll-margin then keeps the failure clear of the sticky Admin Shell.
+	assert.deepEqual(state.error.scrollOptions, { block: 'nearest' });
 	assert.deepEqual(state.announcements, [
 		{ message: 'The setting could not be saved.', type: 'assertive' },
 	]);
@@ -2225,8 +2230,15 @@ test('package save feedback requires the matching authoritative edit response', 
 			getBoundingClientRect: () => ({ left: 0, width: 800 }),
 			insertAdjacentElement() {},
 		};
-		state.document.getElementById = (id) =>
-			id === 'ran-booster-package-edit-region' ? current : state.error;
+		state.document.getElementById = (id) => {
+			if (id === 'ran-booster-updater-lock-owner') {
+				// No lock owner notice is on this page.
+				return null;
+			}
+			return id === 'ran-booster-package-edit-region'
+				? current
+				: state.error;
+		};
 		if (scenario !== 'host-absent') {
 			state.window.ranBoosterFeedback = {
 				show: (message) => {
@@ -2316,6 +2328,133 @@ test('package save feedback requires the matching authoritative edit response', 
 				: [],
 			scenario
 		);
+	}
+});
+
+test('a refused settings save shows the lock owner beside its error until a failure names none', () => {
+	const state = fixture();
+	const save = state.button;
+	save.dataset = {
+		ranBoosterErrorTarget: '#ran-booster-package-mutation-error',
+	};
+	save.isConnected = true;
+	save.matches = (selector) =>
+		[
+			'[data-ran-booster-enhanced-mutation]',
+			'[data-ran-booster-package-settings-save]',
+			'a, button',
+		].includes(selector);
+	save.hasAttribute = () => false;
+	save.addEventListener = () => {};
+	save.removeEventListener = () => {};
+	save.form = {
+		elements: packageEditControls(
+			'plugin',
+			'edit-plugin',
+			'example/example.php'
+		),
+	};
+	const target = {
+		id: 'ran-booster-package-edit-region',
+		isConnected: true,
+		contains: () => true,
+	};
+	const page = [];
+	state.error.after = (node) => page.push(node);
+	state.error.id = 'ran-booster-package-mutation-error';
+	state.document.getElementById = (id) =>
+		id === state.error.id
+			? state.error
+			: (page.find((node) => node.id === id) ?? null);
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	const ownerNotice = (token) => ({
+		id: 'ran-booster-updater-lock-owner',
+		token,
+		remove() {
+			page.splice(page.indexOf(this), 1);
+		},
+	});
+	const refuse = (owner, attempted = true) => {
+		const region = {
+			querySelector(selector) {
+				if (selector === '#ran-booster-package-edit-form') {
+					return {
+						hasAttribute: (name) =>
+							attempted && name === 'data-ran-booster-attempted',
+						elements: packageEditControls(
+							'plugin',
+							'edit-plugin',
+							'example/example.php'
+						),
+					};
+				}
+				return selector === '#ran-booster-updater-lock-owner'
+					? owner
+					: null;
+			},
+			querySelectorAll: () => [],
+		};
+		state.window.DOMParser = class {
+			parseFromString() {
+				return { getElementById: () => region };
+			}
+		};
+		const detail = {
+			elt: save,
+			target,
+			xhr: {
+				status: 400,
+				addEventListener() {},
+				getResponseHeader: () => null,
+			},
+		};
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		state.listeners.get('htmx:beforeSwap')({ detail });
+		assert.equal(detail.shouldSwap, false);
+		state.listeners.get('htmx:afterRequest')({ detail });
+	};
+
+	// The server-rendered notice, bound to the refusing token, follows the inline error.
+	refuse(ownerNotice('first'));
+	assert.deepEqual(
+		page.map((node) => node.token),
+		['first']
+	);
+	assert.equal(state.error.hidden, false);
+	// A later refusal replaces it, and a failure that names no owner removes it.
+	refuse(ownerNotice('second'));
+	assert.deepEqual(
+		page.map((node) => node.token),
+		['second']
+	);
+	refuse(null);
+	assert.deepEqual(page, []);
+	// Only the authoritative attempted edit response may supply the notice.
+	refuse(ownerNotice('unattempted'), false);
+	assert.deepEqual(page, []);
+	// Failures that never reach the response check also clear an earlier notice,
+	// including Save and reinstall on a status the edit response does not own.
+	const reinstall = {
+		...save,
+		matches: (selector) =>
+			['[data-ran-booster-enhanced-mutation]', 'a, button'].includes(
+				selector
+			),
+	};
+	for (const [eventName, elt, status] of [
+		['htmx:sendError', save, 0],
+		['htmx:timeout', save, 0],
+		['htmx:responseError', reinstall, 503],
+	]) {
+		refuse(ownerNotice('refused'));
+		assert.equal(page.length, 1);
+		state.listeners.get(eventName)({
+			detail: { elt, target, xhr: { status, addEventListener() {} } },
+		});
+		assert.deepEqual(page, [], eventName);
 	}
 });
 

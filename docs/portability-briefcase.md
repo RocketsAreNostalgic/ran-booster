@@ -27,7 +27,7 @@ target collision and provider preflight check succeeds. It preserves the install
 files and activation state and records a Disabled deployment policy. It never
 claims the installed bytes equal the exported release. Absent Release targets,
 selected Release rows, and every readiness failure remain refused; installation
-is reserved for Stage 2. This changes no Portability API 4 interface.
+is reserved for Stage 2. This changes no Portability API 5 interface.
 
 **Existing release baseline:** the remaining reference describes the bounded implementation published
 in [Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).
@@ -39,7 +39,7 @@ compatible published Migrator release. The current delivery boundary below
 separates implemented operations from unfinished work.
 
 Blueprint V2 is the exported ZIP contract; valid canonical V1 archives are normalized at the input boundary. It is distinct from the
-request-local [Portability API 4](portability-api.md), which lets a trusted
+request-local [Portability API 5](portability-api.md), which lets a trusted
 source bridge review and adopt one already-installed package without an archive
 or credential transfer.
 
@@ -151,7 +151,8 @@ locator and source-specific tracking configuration. Branch records carry branch 
 code must parse, the repository locator must be acceptable to the provider
 layer, and the subdirectory must already be normalized.
 
-`BlueprintCredential` is the optional encrypted credential record. It keeps the
+`BlueprintCredential` is the optional credential record, carried only inside a
+sealed archive. It keeps the
 credential provider, label, kind, configuration, secret, and the package list
 that it belongs to. The record is normalized and bounded before it is written
 into a blueprint. Source profile IDs and local self-destruct dates are never
@@ -164,14 +165,20 @@ processing; generic PHP serialization is refused. The canonical Blueprint
 archive format and encryption are unchanged. Revealed strings and arrays remain
 ordinary PHP values, with no isolation or erasure guarantee.
 
-That omission also applies to older Blueprint V1 archives. A target cannot
-reconstruct whether Booster once had a source-local automatic-removal date, so
-legacy archives receive the same explicit import, saved-target or leave choice
-without any lifecycle assurance.
+Blueprint V1 documents that carry a credential are refused. Credentials travel
+only in sealed archives, which always hold a V2 document.
 
-`BlueprintArchive` writes and reads the briefcase ZIP. It supports a canonical
-JSON-only archive and an encrypted AES-256 variant when the runtime can prove
-that the ZipArchive AES-256 API is available.
+`BlueprintArchive` writes and reads the briefcase ZIP. A package-only
+Blueprint is stored as one canonical `blueprint.json` entry. A credential-bearing
+one is stored as one `blueprint.sealed.json` entry: the Blueprint JSON encrypted
+with libsodium's XChaCha20-Poly1305 under an Argon2id key derived from the
+password. The header (format, version, Argon2id parameters, salt and nonce) is
+authenticated with the ciphertext, and a header naming parameters outside the
+allowed set is refused before a key is derived.
+
+**Re-export required:** credential-bearing archives exported with the earlier
+ZIP AES-256 encryption are refused. Export them again from the source site.
+Package-only archives are unaffected.
 
 ## Current delivery boundary
 
@@ -316,16 +323,20 @@ hostname after normalization. If the hostname is unavailable, unsafe,
 unconvertible or too long to fit, the filename uses `site`.
 An enhanced download also falls back to
 `ran-booster-blueprint.zip` if its filename header is unavailable or invalid.
-The JSON entry inside the archive is always `blueprint.json`.
+The archive holds exactly one entry: `blueprint.json` for a package-only
+Blueprint, or `blueprint.sealed.json` for a credential-bearing one. A
+credential-bearing archive with a `blueprint.json` entry, or with a
+ZIP-encrypted entry, is not a valid current export.
 
 `PackageBlueprint::from_json()` accepts only canonical JSON that matches the
-computed output exactly. The current format is:
+computed output exactly. In a sealed archive this is the decrypted payload. The
+current format is:
 
 - format: `ran-booster-package-blueprint`
 - version: `2`
 - packages: a list of package records
-- credentials: a list of encrypted credential records when the briefcase option
-  is used
+- credentials: a list of credential records when the briefcase option is used;
+  a non-empty list is accepted only from a sealed archive
 
 The package record fields are:
 
@@ -359,13 +370,21 @@ The code currently enforces the following limits:
 - `PackageBlueprint::MAX_PACKAGES` is 128.
 - `PackageBlueprint::MAX_CREDENTIALS` is 128.
 - `BlueprintArchive::MAX_BYTES` is 1048576 bytes.
-- Encrypted briefcase passwords must be high-entropy strings between 20 and 256
-  characters.
-- Only AES-256 encryption is accepted for the encrypted branch.
+- Briefcase passwords must be between 20 and 256 characters, counted as
+  characters rather than bytes, with at least 10 distinct characters.
+- Only the sealed format is accepted for credentials; ZIP encryption is
+  refused.
 
 The code also rejects unsafe repository locators, control characters, duplicate
-package identities, duplicate encrypted credential payloads, and mismatched
+package identities, duplicate credential payloads, and mismatched
 package-to-credential associations.
+
+Package-only preview, export and Apply need `manage_options`. Credential
+material needs more authority. Exporting a selected credential also needs
+`activate_plugins`, and the password is checked before any secret is read.
+Importing a carried credential needs `activate_plugins` and is refused while
+`DISALLOW_FILE_MODS` or `wp_is_file_mod_allowed()` forbids file changes.
+Export changes nothing on the source site, so it has no file-change check.
 
 ## Operator procedures
 
@@ -432,7 +451,7 @@ Use the following mapping when a Transporter operation fails:
 
 ## What to read next
 
-- [Portability API 4](portability-api.md)
+- [Portability API 5](portability-api.md)
 - [Deployment execution](deployment-execution.md)
 - [Provider extension contract](provider-extension-contract.md)
 - [Custom git vendor setup](custom-git-vendors.md)

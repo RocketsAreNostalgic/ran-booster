@@ -10,6 +10,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\ExtensionInstaller;
 use RAN\Deployment\PreparedArtifact;
 use RAN\PackageArtifactLimit;
+use RAN\Tests\Support\CapturesBoosterLog;
 use RAN\WordPress\CorePackageExecutionResult;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\WordPressUpdaterLock;
@@ -20,6 +21,8 @@ use ZipArchive;
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
 final class ExtensionInstallerTest extends TestCase {
+	use CapturesBoosterLog;
+
 	private string $directory;
 	private string $zip;
 	/** @var array<string, string|bool> */
@@ -30,6 +33,7 @@ final class ExtensionInstallerTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override.
 	protected function setUp(): void {
 		require_once __DIR__ . '/ExtensionInstallerWordPressFunctions.php';
+		$this->start_log_capture();
 		$this->directory = sys_get_temp_dir() . '/ran-ext-installer-test-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Test-only fixture custody and cleanup.
 		mkdir( $this->directory, 0700 );
@@ -40,9 +44,10 @@ final class ExtensionInstallerTest extends TestCase {
 		self::assertTrue( $zip->addFromString( 'example/example.php', "<?php\n/*\nPlugin Name: Example\nVersion: 1.2.3\n*/\n" ) );
 		self::assertTrue( $zip->close() );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test-only fixture custody and cleanup.
-		$GLOBALS['ran_booster_extension_test_download'] = file_get_contents( $this->zip );
-		$GLOBALS['ran_booster_extension_test_plugins']  = array();
-		$this->entry                                    = array(
+		$GLOBALS['ran_booster_extension_test_download']         = file_get_contents( $this->zip );
+		$GLOBALS['ran_booster_extension_test_plugins']          = array();
+		$GLOBALS['ran_booster_package_mutation_guard_contexts'] = array();
+		$this->entry    = array(
 			'id'              => 'example',
 			'plugin'          => 'example/example.php',
 			'release_version' => '1.2.3',
@@ -51,12 +56,13 @@ final class ExtensionInstallerTest extends TestCase {
 			'compatible'      => true,
 			'state'           => 'Not installed',
 		);
-		$this->lock                                     = new FakeExtensionLock();
-		$this->executor                                 = new FakeExtensionExecutor();
+		$this->lock     = new FakeExtensionLock();
+		$this->executor = new FakeExtensionExecutor();
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override.
 	protected function tearDown(): void {
+		$this->stop_log_capture();
 		$iterator = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $this->directory, \FilesystemIterator::SKIP_DOTS ), \RecursiveIteratorIterator::CHILD_FIRST );
 		foreach ( $iterator as $entry ) {
 			if ( $entry->isDir() && ! $entry->isLink() ) {
@@ -78,9 +84,38 @@ final class ExtensionInstallerTest extends TestCase {
 		self::assertSame( 'installed', $this->installer()->install( 'example' ) );
 		self::assertSame( 1, $this->executor->calls );
 		self::assertSame( 1, $this->lock->acquires );
+		self::assertSame( array( 'ran-booster', 'ran-booster' ), $GLOBALS['ran_booster_package_mutation_guard_contexts'] );
+		self::assertSame( array(), $this->captured_log_lines() );
 		self::assertSame( $before, glob( sys_get_temp_dir() . '/ran-extension-*' ) );
 		self::assertFileExists( WP_PLUGIN_DIR . '/example/example.php' );
 		self::assertSame( PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES + 1, $GLOBALS['ran_booster_extension_test_limit'] );
+	}
+
+	public function test_guard_refusal_before_download_does_not_download_and_logs_codes_only(): void {
+		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
+		$before = glob( sys_get_temp_dir() . '/ran-extension-*' );
+		self::assertSame( 'failed', $this->installer()->install( 'example' ) );
+		self::assertArrayNotHasKey( 'ran_booster_extension_test_url', $GLOBALS );
+		self::assertSame( 0, $this->lock->acquires );
+		self::assertSame( 0, $this->executor->calls );
+		self::assertSame( array( 'ran-booster' ), $GLOBALS['ran_booster_package_mutation_guard_contexts'] );
+		self::assertSame( $before, glob( sys_get_temp_dir() . '/ran-extension-*' ) );
+		$lines = $this->captured_log_lines();
+		self::assertCount( 2, $lines );
+		self::assertSame( '[ran-booster] Extension install failed. {"operation":"extension_install","outcome_code":"failed","package_slug":"example"}', $lines[1] );
+	}
+
+	public function test_guard_refusal_inside_lock_stops_before_wordpress_install_and_cleans_temp(): void {
+		$this->lock->disallow_file_mods_on_acquire = true;
+		$before                                    = glob( sys_get_temp_dir() . '/ran-extension-*' );
+		self::assertSame( 'failed', $this->installer()->install( 'example' ) );
+		self::assertSame( 1, $this->lock->acquires );
+		self::assertSame( 0, $this->executor->calls );
+		self::assertSame( array( 'ran-booster', 'ran-booster' ), $GLOBALS['ran_booster_package_mutation_guard_contexts'] );
+		self::assertSame( $before, glob( sys_get_temp_dir() . '/ran-extension-*' ) );
+		$lines = $this->captured_log_lines();
+		self::assertCount( 2, $lines );
+		self::assertSame( '[ran-booster] Extension install failed. {"operation":"extension_install","outcome_code":"failed","package_slug":"example"}', $lines[1] );
 	}
 
 	public function test_download_over_the_configured_ceiling_is_refused_before_install(): void {
@@ -136,18 +171,19 @@ final class ExtensionInstallerTest extends TestCase {
 		$before = glob( sys_get_temp_dir() . '/ran-extension-*' );
 		self::assertSame( 'uncertain', $this->installer()->install( 'example' ) );
 		self::assertSame( 0, $this->executor->calls );
+		self::assertSame(
+			array( '[ran-booster] Extension install failed. {"operation":"extension_install","outcome_code":"uncertain","package_slug":"example"}' ),
+			$this->captured_log_lines()
+		);
 		$after = glob( sys_get_temp_dir() . '/ran-extension-*' );
 		self::assertIsArray( $before );
 		self::assertIsArray( $after );
 		$remaining = array_values( array_diff( $after, $before ) );
-		self::assertCount( 1, $remaining );
-		self::assertFileExists( $remaining[0] . '/release.zip.original' );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only fixture custody and cleanup.
-		unlink( $remaining[0] . '/release.zip.original' );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only fixture custody and cleanup.
-		unlink( $remaining[0] . '/release.zip' );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Test-only fixture custody and cleanup.
-		rmdir( $remaining[0] );
+		self::assertCount( 2, $remaining );
+		foreach ( $remaining as $path ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test-only fixture custody and cleanup.
+			unlink( $path );
+		}
 	}
 
 	public function test_uncertain_wordpress_failure_is_not_reported_as_success(): void {
@@ -156,12 +192,24 @@ final class ExtensionInstallerTest extends TestCase {
 		self::assertSame( 'uncertain', $this->installer()->install( 'example' ) );
 		self::assertSame( 1, $this->executor->calls );
 		self::assertSame( $before, glob( sys_get_temp_dir() . '/ran-extension-*' ) );
+		self::assertSame(
+			array( '[ran-booster] Extension install failed. {"operation":"extension_install","outcome_code":"uncertain","package_slug":"example"}' ),
+			$this->captured_log_lines()
+		);
 	}
 
 	public function test_unknown_and_incompatible_ids_do_not_download(): void {
 		self::assertSame( 'failed', $this->installer()->install( 'unknown' ) );
 		$this->entry['compatible'] = false;
 		self::assertSame( 'incompatible', $this->installer()->install( 'example' ) );
+		self::assertArrayNotHasKey( 'ran_booster_extension_test_url', $GLOBALS );
+	}
+
+	public function test_plugin_identifier_requires_exactly_one_valid_folder(): void {
+		foreach ( array( 'example.php', 'example/sub/example.php', 'con/example.php' ) as $invalid_plugin ) {
+			$this->entry['plugin'] = $invalid_plugin;
+			self::assertSame( 'failed', $this->installer()->install( 'example' ) );
+		}
 		self::assertArrayNotHasKey( 'ran_booster_extension_test_url', $GLOBALS );
 	}
 
@@ -172,9 +220,14 @@ final class ExtensionInstallerTest extends TestCase {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused in-process lock test double.
 final class FakeExtensionLock extends WordPressUpdaterLock {
-	public int $acquires = 0;
-	public function acquire(): string {
+	public int $acquires                       = 0;
+	public bool $disallow_file_mods_on_acquire = false;
+	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
+		unset( $owner_operation );
 		++$this->acquires;
+		if ( $this->disallow_file_mods_on_acquire ) {
+			$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
+		}
 		return 'token'; }
 	public function release( string $token ): bool {
 		return 'token' === $token; }

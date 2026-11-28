@@ -23,9 +23,8 @@ final class ProspectiveReleaseOperations {
 	}
 
 
-	/** @param array<string,mixed>|null $provider_expectation */
-	public function nonce_action( string $operation, string $type, ?array $provider_expectation ): string {
-		return $this->prospective->nonce_action( $operation, $type, $provider_expectation );
+	public function nonce_action( string $operation, string $type ): string {
+		return $this->prospective->nonce_action( $operation, $type );
 	}
 
 	/** @return list<string> */
@@ -88,7 +87,6 @@ final class ProspectiveReleaseOperations {
 
 	/**
 	 * @param array<string, mixed> $untrusted_repository
-	 * @param array<string,mixed>|null $provider_expectation
 	 * @return array{type:string,identifier:string,code:string,successful:bool,data:array<string,mixed>}
 	 */
 	public function execute(
@@ -99,8 +97,7 @@ final class ProspectiveReleaseOperations {
 		string $tag,
 		string $fingerprint,
 		string $channel,
-		string $nonce,
-		?array $provider_expectation
+		string $nonce
 	): array {
 		$outcome = static fn ( string $code, bool $successful, array $data = array() ): array => array(
 			'type'       => in_array( $type, array( 'plugin', 'theme' ), true ) ? $type : 'plugin',
@@ -129,7 +126,7 @@ final class ProspectiveReleaseOperations {
 
 			'inspect' => $this->prospective->inspect( $type, $repository, $release_id, $tag, $channel, $nonce ),
 
-			'install' => $this->prospective->install( $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce, $provider_expectation ),
+			'install' => $this->prospective->install( $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce ),
 		};
 		$code       = $result->code();
 		$data       = $this->normalize_prospective_data( $result->data() );
@@ -148,12 +145,7 @@ final class ProspectiveReleaseOperations {
 		}
 
 		if ( 'inspect' === $operation && $successful ) {
-			$expectation = $result->data()['provider_expectation'] ?? null;
-			if ( null !== $expectation && ! is_array( $expectation ) ) {
-				return $outcome( 'operation_failed', false );
-			}
-			$data['provider_expectation'] = $expectation;
-			$data['install_nonce']        = wp_create_nonce( $this->nonce_action( 'install', $type, $expectation ) );
+			$data['install_nonce'] = wp_create_nonce( $this->nonce_action( 'install', $type ) );
 		}
 
 		return $outcome( $code, $successful, $data );
@@ -301,8 +293,6 @@ final class ProspectiveReleaseOperations {
 	private function valid_prospective_result( string $operation, string $code, bool $successful, array $data ): bool {
 		$failure_codes = array(
 			'forbidden',
-			'provider_unavailable',
-			'provider_selection_changed',
 			'unsupported_provider',
 			'no_releases',
 			'release_invalid',

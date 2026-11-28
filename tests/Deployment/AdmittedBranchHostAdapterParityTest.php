@@ -67,8 +67,6 @@ use RAN\Tests\Support\RepositorySourceGuardDatabase;
 use ZipArchive;
 
 final class AdmittedBranchHostAdapterParityTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
-
 	private const MAXIMUM_ARTIFACT_BYTES = 1048576;
 	private const TOKEN_SENTINEL         = 'sntl-cred-7c1d';
 	private const URL_SENTINEL           = 'sntl-token-9f3a';
@@ -120,8 +118,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
-			$this->createStub( \RAN\Storage\Database::class ),
-			selection: $this->queued_selection( $this->database )
+			$this->createStub( \RAN\Storage\Database::class )
 		);
 		$this->plugins          = new ParityPluginRepository();
 		$this->themes           = new ParityThemeRepository();
@@ -370,9 +367,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$this->database->on_lock_release = function () use ( $settlement_fails, $archive ): void {
 			self::assertSame( 1, $archive->cleanup_calls );
 			self::assertSame( array(), glob( (string) $GLOBALS['ran_booster_admitted_temp_root'] . '/ran-booster-branch-updater/*' ) );
-			$this->database->queries              = array();
-			$this->database->abort_authority_read = $this->database->authority_reads + 1;
-			$this->database->fail_commit          = $settlement_fails;
+			$this->database->queries                       = array();
+			$this->database->deadlock_next_management_lock = true;
+			$this->database->fail_commit                   = $settlement_fails;
 		};
 		$executor                        = new ParityCoreExecutor();
 		$coordinator                     = $this->coordinator( new ParityRepositoryProvider( $archive ), executor: $executor );
@@ -440,7 +437,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			self::assertSame( array(), $this->database->option_rows );
 			self::assertDirectoryExists( $target . '/.git' );
 			self::assertStringNotContainsString( 'Deadlock', $lines );
-			self::assertStringContainsString( '"exception_class":"RAN\\\\Storage\\\\DatabaseLifecycleFailure"', $lines );
+			self::assertStringContainsString( '"exception_class":"RAN\\\\WPBranchUpdater\\\\V1\\\\Runtime\\\\AdmittedBranchDurabilityFailure"', $lines );
 			self::assertStringContainsString( '"exception_code":"0"', $lines );
 			self::assertStringContainsString( $this->database->rows[0]['correlation_id'], $lines );
 			if ( $settlement_fails ) {
@@ -902,7 +899,6 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	public function test_initial_identity_survives_admission_and_blocks_wrong_installed_main_file(): void {
 		$attempt = $this->running_install( 'example', expected_identifier: 'example/Main.php' );
 		self::assertSame( 'example/Main.php', $attempt->get_request()->expected_identifier );
-		self::assertNotNull( $attempt->get_request()->provider_selection_generation );
 		self::assertNull( $attempt->get_request()->installed_identifier );
 		$adapter     = $this->adapter( $attempt, new ParityRepositoryProvider( null ) );
 		$declaration = $adapter->declaration();
@@ -976,7 +972,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$adapter = $this->adapter( $attempt, $provider );
 		$this->download_fixture( 'example' );
 		$declaration = $adapter->declaration();
-		self::assertSame( $commit, $declaration->selected_commit );
+		// The Branch updater treats selected_commit as rollback intent, so an update keeps it host-side only.
+		self::assertNull( $declaration->selected_commit );
 		self::assertNull( $declaration->expected_head );
 		$artifact = $adapter->prepare( $declaration, $this->update_baseline() );
 		self::assertNotNull( $provider->last_request );
@@ -984,6 +981,18 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( $commit, $provider->last_request->ref );
 		self::assertNull( $provider->last_request->expected_branch );
 		$artifact->cleanup();
+	}
+
+	public function test_update_to_an_older_selected_commit_is_refused_as_a_downgrade(): void {
+		$commit   = str_repeat( 'b', 40 );
+		$archive  = new ParityProviderArchive( $commit );
+		$provider = new ParityRepositoryProvider( $archive, 2 );
+		$attempt  = $this->running_update( $commit );
+		$this->download_fixture( 'example', '0.0.1' );
+		$outcome = $this->coordinator( $provider )->execute_claimed( $attempt );
+		self::assertSame( DeploymentOutcome::CODE_DOWNGRADE_BLOCKED, $outcome->get_code() );
+		self::assertSame( $commit, $provider->last_request?->selected_commit );
+		self::assertSame( 1, $archive->cleanup_calls );
 	}
 
 	public function test_coordinator_preserves_historical_selection_and_checks_installed_postconditions(): void {
@@ -1047,73 +1056,6 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		$adapter->prepare( $adapter->declaration(), $this->update_baseline() )->cleanup();
 
 		self::assertSame( array( array( 'arguments', true ) ), $marked );
-	}
-
-	public function test_redirect_argument_callback_revocation_refuses_second_transport_and_cleans(): void {
-		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
-		$provider = new ParityRepositoryProvider( $archive );
-		$adapter  = $this->adapter( $this->running_update(), $provider );
-		$this->download_fixture( 'example' );
-		$GLOBALS['ran_booster_admitted_http_responses']    = array(
-			array(
-				'response' => array( 'code' => 302 ),
-				'headers'  => array( 'location' => 'https://example.test/redirected.zip' ),
-			),
-			200,
-		);
-		$GLOBALS['ran_booster_admitted_http_request_args'] = function ( string $url ): void {
-			if ( 'https://example.test/redirected.zip' === $url ) {
-				$this->database->selection->active_bytes = 'a:0:{}';
-			}
-		};
-		try {
-			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
-			self::fail( 'A late redirected-hop revocation must refuse before transport.' );
-		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $failure->outcome_code );
-		}
-		self::assertCount( 1, $GLOBALS['ran_booster_admitted_http_calls'] );
-		self::assertSame( 0, $GLOBALS['ran_booster_admitted_http_calls'][0]['arguments']['redirection'] );
-		self::assertSame( array(), $GLOBALS['ran_booster_admitted_http_guards'] );
-		self::assertSame( 1, $archive->cleanup_calls );
-	}
-
-	public function test_changed_generation_refuses_before_changed_package_or_provider_preparation(): void {
-		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
-		$provider = new ParityRepositoryProvider( $archive );
-		$attempt  = $this->running_update();
-		$state    = json_decode( $this->database->selection->selection->rows[0]->option_value, true, 8, JSON_THROW_ON_ERROR );
-		self::assertIsArray( $state );
-		$state['selection_generation'] = 1;
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact authority race fixture bypasses sanitization.
-		$this->database->selection->selection->rows[0]->option_value = json_encode( $state, JSON_THROW_ON_ERROR );
-		$this->plugins->managed                                      = array();
-		$adapter = $this->adapter( $attempt, $provider );
-		try {
-			$adapter->declaration();
-			self::fail( 'Stale queued work must require a fresh submission.' );
-		} catch ( AdmittedBranchStageFailure $failure ) {
-			self::assertSame( DeploymentOutcome::CODE_PROVIDER_SELECTION_CHANGED, $failure->outcome_code );
-		}
-		self::assertSame( 0, $provider->prepare_calls );
-		self::assertCount( 0, $GLOBALS['ran_booster_admitted_http_calls'] );
-	}
-
-	public function test_selection_loss_after_mutation_preserves_captured_completion_and_cleanup(): void {
-		$archive                  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
-		$provider                 = new ParityRepositoryProvider( $archive );
-		$executor                 = new ParityCoreExecutor();
-		$adapter                  = $this->adapter( $this->running_update(), $provider, executor: $executor );
-		$this->plugins->installed = $this->plugin( version: '2.0.0' );
-		$this->download_fixture( 'example' );
-		$executor->after_execution = function (): void {
-			$this->database->selection->active_bytes = 'a:0:{}';
-		};
-		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $this->deploy( $adapter ) );
-		self::assertSame( 1, $executor->calls );
-		self::assertSame( 1, $archive->cleanup_calls );
-		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
-		self::assertSame( array(), $this->database->option_rows );
 	}
 
 	public function test_concrete_provider_download_retries_transient_status_before_success(): void {
@@ -2018,8 +1960,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-09-14 00:00:00 UTC' ),
 			fn ( int $length ): string => str_repeat( chr( $this->random_byte++ ), $length ),
 			$this->createStub( Database::class ),
-			activity: new \RAN\Activity\ActivityStore( $this->database, 'wp_ran_booster_activity' ),
-			selection: $this->queued_selection( $this->database )
+			activity: new \RAN\Activity\ActivityStore( $this->database, 'wp_ran_booster_activity' )
 		);
 	}
 

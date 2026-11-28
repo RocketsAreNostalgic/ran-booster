@@ -21,6 +21,7 @@ final class CredentialSelfDestructPurger {
 		private PublicRepositoryLookupProfileStore $public_lookup_profiles,
 		private RepositoryBranchCheckEvidenceStore $branch_check_evidence
 	) {
+		$this->observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 	}
 
 	public function purge(): void {

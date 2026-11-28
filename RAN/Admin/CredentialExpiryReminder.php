@@ -31,6 +31,8 @@ final class CredentialExpiryReminder {
 		private CredentialExpiryObservationStore $observations,
 		?callable $clock = null
 	) {
+		// The reminder is built with the shared store and the secrets file it trusts provider observations against.
+		$this->observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 		$this->clock = null === $clock
 			? static fn (): DateTimeImmutable => new DateTimeImmutable( 'now', new DateTimeZone( 'UTC' ) )
 			: \Closure::fromCallable( $clock );

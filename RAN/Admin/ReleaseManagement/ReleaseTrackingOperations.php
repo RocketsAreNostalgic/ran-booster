@@ -115,39 +115,30 @@ final class ReleaseTrackingOperations {
 	}
 
 	/**
-	 * Settle the signed result against the current source and exact target hold.
+	 * Settle the signed result against the current source.
 	 *
-	 * @param array<string, mixed>|false|null $native_hold False when the hold read failed.
 	 * @return array{0: string, 1: bool} Code and success for display.
 	 */
 	public static function settled(
 		string $code,
 		bool $successful,
 		?ReleaseTrackingStatus $status,
-		array|false|null $native_hold = null,
-		string $type = '',
-		string $identifier = '',
 		string $attempt_revision = ''
 	): array {
-		if ( ! in_array( $code, array( 'release_enabled', 'switch_uncertain', 'switch_failed', 'switch_refused', 'native_hold' ), true ) ) {
+		if ( ! in_array( $code, array( 'release_enabled', 'switch_uncertain', 'switch_failed', 'switch_refused' ), true ) ) {
 			return array( $code, $successful );
 		}
 
 		$revision = ctype_digit( $attempt_revision ) ? (int) $attempt_revision : 0;
 		$branch   = PackageSource::BRANCH->value === $status?->source();
 		$releases = PackageSource::RELEASE_ASSET->value === $status?->source();
-		$refused  = ! $successful && in_array( $code, array( 'switch_refused', 'native_hold' ), true );
+		$refused  = ! $successful && 'switch_refused' === $code;
 		if ( $revision > 0 && null !== $status
 			&& $status->source_revision() > $revision + ( $refused || $branch ? 0 : 1 ) ) {
 			return array( 'switch_superseded', false );
 		}
 
-		if ( is_array( $native_hold ) ) {
-			return '' !== $type && '' !== $identifier && ( $native_hold['type'] ?? null ) === $type && ( $native_hold['identifier'] ?? null ) === $identifier
-				? array( 'switch_held', false )
-				: array( 'switch_other_held', false );
-		}
-		if ( null === $native_hold && $revision > 0 && null !== $status ) {
+		if ( $revision > 0 && null !== $status ) {
 			if ( 'release_enabled' === $code && $successful && $releases && $revision + 1 === $status->source_revision() ) {
 				return array( 'release_enabled', true );
 			}

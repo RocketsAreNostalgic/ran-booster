@@ -10,6 +10,7 @@ require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPr
 require_once dirname( __DIR__ ) . '/Support/WPError.php';
 require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Support/ProviderFailureWordPressFunctions.php';
+require_once dirname( __DIR__ ) . '/Deployment/PackageMutationGuardWordPressFunctions.php';
 
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
@@ -30,6 +31,8 @@ use RAN\Storage\CredentialUsageReader;
 use RAN\WordPress\WordPressUpdaterLock;
 
 final class CredentialValidationHtmxDispatcherTest extends TestCase {
+
+	private const TAG = '0123456789abcdef0123456789abcdef';
 	use \RAN\Tests\Support\CapturesBoosterLog;
 
 	private HtmxCredentialValidationTestController $controller;
@@ -84,7 +87,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		$dispatcher->dispatch_post_requests();
 
 		self::assertNull( $this->controller->response );
-		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( 'manage_options', 'activate_plugins' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( 'ran-booster-save-secrets' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
@@ -192,14 +195,19 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			'expired'     => array( CredentialValidationResult::invalid( new ProviderFailure( 'credential_expired', credential_expires_at: '2026-01-31T00:00:00Z' ) ), 'The credential expired on 2026-01-31.', 'credential_expired' ),
 			'under scope' => array( CredentialValidationResult::invalid( new ProviderFailure( 'permission_denied', 403 ) ), 'The credential lacks permission for this request.', 'permission_denied' ),
 			'store'       => array( CredentialValidationResult::unavailable( new ProviderFailure( 'credential_store_unavailable' ) ), 'Booster could not read the saved credential.', 'credential_store_unavailable' ),
+			'absent'      => array( CredentialValidationResult::invalid( new ProviderFailure( 'credential_missing' ) ), 'No credential is saved for this request.', 'credential_missing' ),
 			'rate limit'  => array( CredentialValidationResult::rate_limited( new ProviderFailure( 'rate_limited', 429, 180 ) ), 'The Git provider rate limit has been reached. Try again in about 3 minutes.', 'rate_limited' ),
 		);
 	}
 
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'carried_failure_provider' )]
 	public function test_a_carried_failure_gives_the_specific_core_copy_and_is_logged_by_reason( CredentialValidationResult $result, string $message, string $reason ): void {
-		$dashboard                  = $this->createMock( Dashboard::class );
-		$dispatcher                 = $this->dispatcher( $dashboard, $result );
+		$expiry = new InMemoryCredentialExpiryObservationStore();
+		$expiry->set_manual_expiry( 'bb', 'credential_1', '2027-01-01' );
+		$before  = $expiry->document;
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'record_credential_provider_expiry' );
+		$dispatcher                 = $this->dispatcher( $this->createMock( Dashboard::class ), $result, secrets: $secrets, expiry: $expiry );
 		$_SERVER['HTTP_HX_REQUEST'] = 'TRUE';
 		$_POST['ran_booster']       = $this->request();
 
@@ -210,6 +218,8 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			self::assertSame( $message, $response->error );
 			self::assertSame( 422, $response->status );
 		}
+		// A failed check, including absent or unreadable storage, keeps the profile's expiry untouched.
+		self::assertSame( $before, $expiry->document );
 		$lines = $this->captured_log_lines();
 		self::assertCount( 1, $lines );
 		self::assertStringContainsString( '"reason":"' . $reason . '"', $lines[0] );
@@ -271,10 +281,11 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			};
 			$before                                  = $evidence->credential_context( 'bb', 'credential_1' );
 			$expiry                                  = new InMemoryCredentialExpiryObservationStore();
+			$expiry->read_material_tags_with( static fn (): string => self::TAG );
 			$expiry->set_manual_expiry( 'bb', 'credential_1', '2027-01-01' );
-			$expiry->record_provider_expiry( 'bb', 'credential_1', \RAN\RepositoryProvider\CredentialExpiryReport::known( '2027-02-01T00:00:00Z' ), '2026-10-12T00:00:00Z' );
+			$expiry->record_provider_expiry( 'bb', 'credential_1', \RAN\RepositoryProvider\CredentialExpiryReport::known( '2027-02-01T00:00:00Z' ), '2026-10-12T00:00:00Z', self::TAG );
 			$secrets = $this->createMock( SecretsFile::class );
-			$secrets->expects( null === $expires_at ? self::never() : self::once() )->method( 'record_credential_provider_expiry' )->with( self::callback( static fn ( mixed $provider ): bool => $provider instanceof \RAN\RepositoryProvider\ProviderCode && 'bb' === $provider->value ), 'credential_1', '2027-04-30' );
+			$secrets->expects( null === $expires_at ? self::never() : self::once() )->method( 'record_credential_provider_expiry' )->with( self::callback( static fn ( mixed $provider ): bool => $provider instanceof \RAN\RepositoryProvider\ProviderCode && 'bb' === $provider->value ), 'credential_1', '2027-04-30', self::TAG )->willReturn( true );
 			$dispatcher           = $this->dispatcher(
 				$this->createMock( Dashboard::class ),
 				$result,
@@ -377,6 +388,76 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		self::assertSame( 'credential.valid', $completions[0]['args'][1] );
 	}
 
+	public function test_validation_keeps_the_advisory_observation_but_never_writes_the_sidecar_while_file_changes_are_disallowed(): void {
+		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = false;
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'record_credential_provider_expiry' );
+		$expiry               = new InMemoryCredentialExpiryObservationStore();
+		$_POST['ran_booster'] = $this->request();
+		try {
+			$this->dispatcher( $this->createMock( Dashboard::class ), CredentialValidationResult::valid( \RAN\RepositoryProvider\CredentialExpiryReport::known( '2027-04-30T12:34:56Z' ) ), secrets: $secrets, expiry: $expiry )->dispatch_post_requests();
+		} finally {
+			unset( $GLOBALS['ran_booster_package_mutation_guard_file_mods'] );
+		}
+		self::assertSame( '2027-04-30T12:34:56Z', $expiry->observations()['bb']['credential_1']['provider_expires_at'] ?? null );
+	}
+
+	public function test_a_configured_constant_validates_with_advisory_expiry_and_no_storage_mutation(): void {
+		foreach ( array( false, true ) as $htmx ) {
+			$expiry  = new InMemoryCredentialExpiryObservationStore();
+			$secrets = $this->createMock( SecretsFile::class );
+			$secrets->expects( self::never() )->method( 'record_credential_provider_expiry' );
+			$dashboard = $this->createMock( Dashboard::class );
+			$dashboard->expects( $htmx ? self::never() : self::once() )->method( 'add_message' )->with( 'Repository credential validated successfully.' );
+			$dispatcher           = $this->dispatcher( $dashboard, CredentialValidationResult::valid( \RAN\RepositoryProvider\CredentialExpiryReport::known( '2027-04-30T12:34:56Z' ) ), secrets: $secrets, expiry: $expiry );
+			$_POST['ran_booster'] = array( 'id' => SecretsFile::CONSTANT_PROFILE ) + $this->request();
+			if ( $htmx ) {
+				$_SERVER['HTTP_HX_REQUEST'] = 'true';
+			}
+			try {
+				$dispatcher->dispatch_post_requests();
+			} catch ( HtmxCredentialValidationResponse ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- The spy records the response below.
+			}
+			self::assertSame( $htmx ? 'Repository credential validated successfully.' : null, $this->controller->response['message'] ?? null );
+			self::assertSame( '2027-04-30T12:34:56Z', $expiry->get( 'bb', SecretsFile::CONSTANT_PROFILE )['provider_expires_at'] ?? null );
+		}
+	}
+
+	/** @return iterable<string, array{?string, bool, string}> */
+	public static function unbound_validation_cases(): iterable {
+		yield 'tag unreadable' => array( null, false, 'material_tag_unavailable' );
+		yield 'credential replaced before the deadline write' => array( self::TAG, true, 'material_tag_changed' );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'unbound_validation_cases' )]
+	public function test_a_result_is_recorded_only_against_the_tag_read_before_the_provider_call( ?string $tag, bool $observed, string $code ): void {
+		$order   = array();
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->method( 'credential_material_tag' )->willReturnCallback(
+			static function () use ( &$order, $tag ): ?string {
+				$order[] = 'tag';
+				return $tag;
+			}
+		);
+		$secrets->expects( null === $tag ? self::never() : self::once() )->method( 'record_credential_provider_expiry' )->with( self::anything(), 'credential_1', '2027-04-30', self::TAG )->willReturn( false );
+		$expiry               = new InMemoryCredentialExpiryObservationStore();
+		$_POST['ran_booster'] = $this->request();
+		$this->start_log_capture();
+		$this->dispatcher(
+			$this->createMock( Dashboard::class ),
+			CredentialValidationResult::valid( \RAN\RepositoryProvider\CredentialExpiryReport::known( '2027-04-30T12:34:56Z' ) ),
+			secrets: $secrets,
+			expiry: $expiry,
+			on_validate: static function () use ( &$order ): void {
+				$order[] = 'provider';
+			}
+		)->dispatch_post_requests();
+
+		self::assertSame( array( 'tag', 'provider' ), array_slice( $order, 0, 2 ) );
+		self::assertSame( $observed, isset( $expiry->get( 'bb', 'credential_1' )['provider_expires_at'] ) );
+		self::assertSame( array( '[ran-booster] Credential validation result not recorded. {"operation":"credential_validation","outcome_code":"' . $code . '"}' ), $this->captured_log_lines() );
+	}
+
 	/** @return array{action:string,provider:string,id:string} */
 	private function request(): array {
 		return array(
@@ -395,6 +476,10 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		$lock->expects( self::never() )->method( 'acquire' );
 		$lock->expects( self::never() )->method( 'release' );
 
+		// Stores start unbound: the controller gives them its own secrets file's tags.
+		if ( $secrets instanceof \PHPUnit\Framework\MockObject\MockObject ) {
+			$secrets->method( 'credential_material_tag' )->willReturn( self::TAG );
+		}
 		$this->controller = new HtmxCredentialValidationTestController(
 			$dashboard,
 			$providers,

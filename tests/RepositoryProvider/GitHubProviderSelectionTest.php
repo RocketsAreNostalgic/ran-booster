@@ -29,7 +29,8 @@ require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 final class GitHubProviderSelectionTest extends TestCase {
 	use \RAN\Tests\Support\QueuedSelectionFixture;
 
-	private const LOCK_TOKEN = '1700000000';
+	private const LOCK_TOKEN            = '1700000000';
+	private const FRACTIONAL_LOCK_TOKEN = '1700000000.123456789000000001999999999';
 
 	private string $root;
 	private SelectionContextDatabase $db;
@@ -229,7 +230,6 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertSame( 'Selected Example', $presenter->overview_provider_facts()['gh']['source_name'] );
 		self::assertNull( $selection['review'] );
 		self::assertNull( $selection['package_counts'] );
-		self::assertNull( $selection['recovery'] );
 	}
 
 	public function test_missing_selected_replacement_without_candidates_keeps_return_review_visible(): void {
@@ -1085,16 +1085,57 @@ final class GitHubProviderSelectionTest extends TestCase {
 	}
 
 	public function test_native_owner_tag_carries_the_exact_lock_token(): void {
-		$this->context()->begin_native_mutation( 'theme', 'first', static fn (): bool => true, self::LOCK_TOKEN );
-		$marker = $this->store->read()['native_mutation'];
-		self::assertIsArray( $marker );
-		$owner_tag = (string) $marker['owner_tag'];
-		self::assertMatchesRegularExpression( '/\A000000006553f100[0-9a-f]{16}\z/D', $owner_tag );
-		self::assertSame( self::LOCK_TOKEN, GitHubProviderSelection::native_lock_token( $marker ) );
-		$tampered = substr( $owner_tag, 0, -1 ) . ( '0' === substr( $owner_tag, -1 ) ? '1' : '0' );
+		// The Branch updater's grammar: a whole-seconds token, or seconds plus a 27-digit ownership fraction.
+		foreach ( array( self::LOCK_TOKEN, self::FRACTIONAL_LOCK_TOKEN, '4294967295.999999999999999999999999999', '1.000000000000000000000000000' ) as $token ) {
+			$context = $this->context();
+			$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, $token );
+			$marker  = $this->store->read()['native_mutation'];
+			self::assertIsArray( $marker );
+			self::assertSame( $owner, $marker['owner_tag'] );
+			self::assertMatchesRegularExpression( '/\A[0-9a-f]{8}[89a-f][0-9a-f]{7}[0-3][0-9a-f]{7}[0-3][0-9a-f]{7}\z/D', $owner );
+			self::assertSame( $token, GitHubProviderSelection::native_lock_token( $marker ) );
+			$tampered = substr( $owner, 0, -1 ) . ( '0' === substr( $owner, -1 ) ? '1' : '0' );
+			self::assertNotSame( $token, GitHubProviderSelection::native_lock_token( array( 'owner_tag' => $tampered ) ) );
+			$context->complete_native_mutation( $owner, 'theme', 'first', 'verified_success' );
+		}
 		// A tag that never carried a validated lock token is never mistaken for one.
-		foreach ( array( str_repeat( 'a', 32 ), str_repeat( '0', 32 ), str_repeat( '0', 16 ) . str_repeat( 'f', 16 ), str_repeat( '0', 20 ) . str_repeat( 'f', 12 ), '00abcd1234567890' . str_repeat( 'f', 16 ), '000000006553f100' . str_repeat( '0', 16 ), $tampered, 'not-a-tag' ) as $tag ) {
+		foreach ( array( str_repeat( 'a', 32 ), str_repeat( '0', 32 ), str_repeat( '0', 16 ) . str_repeat( 'f', 16 ), str_repeat( '0', 20 ) . str_repeat( 'f', 12 ), '00abcd1234567890' . str_repeat( 'f', 16 ), '000000006553f100' . str_repeat( '0', 16 ), '4000000000000000' . str_repeat( '0', 16 ), '400000001' . str_repeat( 'f', 23 ), 'not-a-tag' ) as $tag ) {
 			self::assertNull( GitHubProviderSelection::native_lock_token( array( 'owner_tag' => $tag ) ) );
+		}
+	}
+
+	public function test_native_owner_tag_encoding_is_identical_on_32_bit_php(): void {
+		// Golden tags, written as seconds then three words: every encoding step stays below 2^31, so a 32-bit PHP build must produce these exact bytes.
+		$vectors = array(
+			self::LOCK_TOKEN                         => implode( '', array( '6553f100', 'c0000000', '00000000', '00000000' ) ),
+			self::FRACTIONAL_LOCK_TOKEN              => implode( '', array( '6553f100', '875bcd15', '00000001', '3b9ac9ff' ) ),
+			// A distinct token from the same second gets a distinct tag.
+			'1700000000.123456789000000001999999998' => implode( '', array( '6553f100', '875bcd15', '00000001', '3b9ac9fe' ) ),
+			'4294967295.999999999999999999999999999' => implode( '', array( 'ffffffff', 'bb9ac9ff', '3b9ac9ff', '3b9ac9ff' ) ),
+		);
+		foreach ( $vectors as $token => $tag ) {
+			$token   = (string) $token;
+			$context = $this->context();
+			$owner   = $context->begin_native_mutation( 'theme', 'first', static fn (): bool => true, $token );
+			self::assertSame( $tag, $owner );
+			self::assertSame( $token, GitHubProviderSelection::native_lock_token( array( 'owner_tag' => $tag ) ) );
+			$context->complete_native_mutation( $owner, 'theme', 'first', 'verified_success' );
+		}
+		// A limited guard until this runs on 32-bit PHP: no literal shift wider than 28 bits and no mask above 31 bits.
+		$source = '';
+		foreach ( array( 'native_lock_token', 'native_lock_tag' ) as $method ) {
+			$reflection = new \ReflectionMethod( GitHubProviderSelection::class, $method );
+			$lines      = file( (string) $reflection->getFileName() );
+			self::assertIsArray( $lines );
+			$source .= implode( '', array_slice( $lines, $reflection->getStartLine() - 1, $reflection->getEndLine() - $reflection->getStartLine() + 1 ) );
+		}
+		preg_match_all( '/<<\s*([0-9]+)/', $source, $shifts );
+		foreach ( $shifts[1] as $shift ) {
+			self::assertLessThanOrEqual( 28, (int) $shift );
+		}
+		preg_match_all( '/0x([0-9A-Fa-f]+)/', $source, $literals );
+		foreach ( $literals[1] as $literal ) {
+			self::assertLessThanOrEqual( 0x7FFFFFFF, hexdec( $literal ) );
 		}
 	}
 
@@ -1107,7 +1148,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 	}
 
 	public function test_native_begin_refuses_a_malformed_lock_token(): void {
-		foreach ( array( '', '0', '012', 'abc', '1.5', '12345678901234567' ) as $token ) {
+		foreach ( array( '', '0', '012', 'abc', '1.5', '4294967296', '12345678901', '0.000000000000000000000000000', '1700000000.12345678900000000199999999', self::FRACTIONAL_LOCK_TOKEN . ' ' ) as $token ) {
 			try {
 				$this->context()->begin_native_mutation( 'theme', 'first', static fn (): bool => true, $token );
 				self::fail( 'Malformed lock token admitted mutation.' );

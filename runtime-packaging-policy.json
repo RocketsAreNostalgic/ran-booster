@@ -48,10 +48,6 @@
                     "kind": "file"
                 },
                 {
-                    "path": "bootstrap.php",
-                    "kind": "file"
-                },
-                {
                     "path": "src",
                     "kind": "directory"
                 }

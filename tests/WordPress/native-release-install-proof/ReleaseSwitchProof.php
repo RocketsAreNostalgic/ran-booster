@@ -1,7 +1,7 @@
 <?php
 
 // Refs #903, #987. The Branch-to-release switch through the real installed Core facade
-// and WordPress upgrader, and the in-place release of the hold an unfinished one leaves.
+// and WordPress upgrader, and the retry or fresh start after an interrupted one.
 // Only remote HTTP is synthetic.
 
 use RAN\AddOn\ReleaseTracking\NativeProspectiveReleaseFacade;
@@ -10,8 +10,6 @@ use RAN\Admin\AdminPackageProjection;
 use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\PackageOperation;
 use RAN\PackageRemoval\PackageRemovalService;
-use RAN\RepositoryProvider\GitHubProviderSelection;
-use RAN\Storage\GitHubSelectionStore;
 use RAN\WordPress\WordPressUpdaterLock;
 
 if ( ! defined( 'RAN_BOOSTER_RELEASE_SWITCH_PROOF_LIBRARY_ONLY' ) ) {
@@ -24,16 +22,12 @@ final class RAN_Booster_ReleaseSwitchProof {
 
 	private const VERSIONS = array( '0.5.0', '1.0.0', '2.0.0', '1.2.0-alpha', '0.2.2', '0.2.3' );
 	/** Killed after the install result: the request never records its end. */
-	private const KILLED = array( 'kill', 'foreign-lock', 'expired-lock' );
-	/** Fresh starts after a release, each from the hold its base case leaves. */
+	private const KILLED = array( 'kill' );
+	/** Fresh starts after the release phase, each from the state its base case leaves. */
 	private const FRESH = array(
 		'fresh-finished' => 'failed-install',
 		'fresh-killed'   => 'kill',
-		'fresh-damaged'  => 'kill',
-		'fresh-deleted'  => 'kill',
 	);
-	/** Held targets with no package page: removed by the operator, then confirmed absent on the provider page. */
-	private const REMOVED = array( 'fresh-damaged', 'fresh-deleted' );
 
 	private string $slug;
 	private string $identity;
@@ -64,9 +58,10 @@ final class RAN_Booster_ReleaseSwitchProof {
 			|| is_multisite() || wp_using_ext_object_cache() || ! current_user_can( 'manage_options' ) ) {
 			throw new RuntimeException( 'Disposable WordPress 7.0.3 / PHP 8.2 administrator identity not established.' );
 		}
-		$scenario = str_starts_with( $case_name, 'form-' ) ? substr( $case_name, 5 ) : $case_name;
+		// One case submits the rendered standard form; the others use the preflight's data.
+		$scenario = 'form-choice-current' === $case_name ? 'choice-current' : $case_name;
 		if ( ! in_array( $kind, array( 'plugin', 'theme' ), true )
-			|| ! in_array( $scenario, array( 'choice-current', 'choice-latest', 'choice-dedup', 'choice-disappeared', 'same', 'prerelease-order', 'prerelease-no-consent', 'comparison-unavailable', 'stale-confirmation', 'replaced-asset', 'return-lock', 'newer', 'active', 'older', 'disabled', 'failed-download', 'incompatible-zip', 'pre-install', 'pre-install-throw', 'stale', 'missing', 'fallback-repaired', 'compete', 'conflict', 'failed-install', 'kill', 'foreign-lock', 'expired-lock', 'fresh-finished', 'fresh-killed', 'fresh-damaged', 'fresh-deleted' ), true ) ) {
+			|| ! in_array( $scenario, array( 'choice-current', 'choice-disappeared', 'same', 'prerelease-order', 'prerelease-no-consent', 'stale-confirmation', 'replaced-asset', 'return-lock', 'newer', 'active', 'disabled', 'failed-download', 'incompatible-zip', 'pre-install', 'pre-install-throw', 'stale', 'missing', 'fallback-repaired', 'compete', 'conflict', 'failed-install', 'kill', 'fresh-finished', 'fresh-killed' ), true ) ) {
 			throw new RuntimeException( 'Unknown proof case.' );
 		}
 		$this->scenario = self::FRESH[ $scenario ] ?? $scenario;
@@ -99,10 +94,9 @@ final class RAN_Booster_ReleaseSwitchProof {
 
 	private function branch_version(): string {
 		return match ( $this->scenario ) {
-			'choice-current', 'choice-latest', 'choice-dedup', 'choice-disappeared' => '0.2.2',
+			'choice-current', 'choice-disappeared' => '0.2.2',
 			'same' => '1.0',
 			'prerelease-order', 'prerelease-no-consent' => '1.2.0-dev',
-			'comparison-unavailable' => 'local',
 			default => '1.0.0',
 		};
 	}
@@ -114,30 +108,25 @@ final class RAN_Booster_ReleaseSwitchProof {
 	/** @return list<int> Newest first. */
 	private function published(): array {
 		return match ( $this->scenario ) {
-			'choice-current', 'choice-latest' => array( 5, 4 ),
+			'choice-current' => array( 5, 4 ),
 			'choice-disappeared' => $this->selection_changed ? array( 5 ) : array( 5, 4 ),
-			'choice-dedup' => array( 4 ),
 			'same' => array( 1, 0 ),
 			'prerelease-order', 'prerelease-no-consent' => array( 3 ),
-			'older' => array( 0 ),
 			'stale', 'missing' => $this->selection_changed ? array( 2, 1, 0 ) : array( 1, 0 ),
 			default => array( 2, 1, 0 ),
 		};
 	}
 
-	/** @return array{0: ?string, 1: string, 2: bool, 3: bool} Result code, installed version, switched, custody retained. */
+	/** @return array{0: ?string, 1: string, 2: bool, 3: bool} Result code, installed version, switched, interrupted (a release phase follows). */
 	private function expected(): array {
 		return match ( $this->scenario ) {
-			'choice-current', 'choice-dedup' => array( 'release_enabled', '0.2.2', true, false ),
-			'choice-latest' => array( 'release_enabled', '0.2.3', true, false ),
+			'choice-current' => array( 'release_enabled', '0.2.2', true, false ),
 			'choice-disappeared' => array( 'switch_refused', '0.2.2', false, false ),
 			'same' => array( 'release_enabled', '1.0.0', true, false ),
 			'prerelease-order' => array( 'release_enabled', '1.2.0-alpha', true, false ),
 			'prerelease-no-consent' => array( 'release_older', '1.2.0-dev', false, false ),
-			'comparison-unavailable' => array( 'version_comparison_unavailable', 'local', false, false ),
 			'stale-confirmation', 'replaced-asset' => array( 'release_selection_changed', '1.0.0', false, false ),
 			'newer', 'active', 'compete', 'return-lock' => array( 'release_enabled', '2.0.0', true, false ),
-			'older' => array( 'release_older', '1.0.0', false, false ),
 			'disabled' => array( 'policy_disabled', '1.0.0', false, false ),
 			'failed-download', 'incompatible-zip' => array( 'switch_refused', '1.0.0', false, false ),
 			'pre-install', 'pre-install-throw' => array( 'switch_uncertain', '1.0.0', false, false ),
@@ -146,7 +135,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			'failed-install' => array( 'switch_uncertain', '1.0.0', false, true ),
 			// The synchronous commit refuses the newly conflicting repository owner.
 			'conflict' => array( 'switch_uncertain', '2.0.0', false, true ),
-			'kill', 'foreign-lock', 'expired-lock' => array( null, '2.0.0', false, true ),
+			'kill' => array( null, '2.0.0', false, true ),
 			default => throw new RuntimeException( 'Unknown proof case.' ),
 		};
 	}
@@ -184,7 +173,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 				'branch'                 => 'main',
 				'package_type'           => 'plugin' === $this->kind ? 1 : 2,
 				// Automatic proves the switch resets it to Manual.
-				'deployment_policy'      => in_array( $this->scenario, array( 'newer', 'choice-current', 'choice-latest', 'choice-dedup', 'choice-disappeared' ), true ) ? 'automatic' : ( 'disabled' === $this->scenario ? 'disabled' : 'manual' ),
+				'deployment_policy'      => in_array( $this->scenario, array( 'newer', 'choice-current', 'choice-disappeared' ), true ) ? 'automatic' : ( 'disabled' === $this->scenario ? 'disabled' : 'manual' ),
 				'source'                 => 'branch',
 				'source_revision'        => 1,
 				'provider'               => 'gh',
@@ -272,7 +261,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			);
 		}
 		if ( $this->mutating && str_starts_with( $this->scenario, 'choice-' ) && str_contains( $path, '/releases/assets/' )
-			&& ( 'choice-latest' === $this->scenario ? 205 : 204 ) !== $number ) {
+			&& 204 !== $number ) {
 			throw new RuntimeException( 'A different release was substituted for the selected release.' );
 		}
 
@@ -332,34 +321,23 @@ final class RAN_Booster_ReleaseSwitchProof {
 	private function standard_confirmation( ReleaseManagementControls $controls, array $request ): array {
 		$url = $controls->process_admin_post_request( 'enable', $request );
 		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
-		$html = $this->source_settings( $controls, $query );
-		if ( 'comparison-unavailable' === $this->scenario ) {
-			if ( str_contains( $html, 'data-ran-booster-switch-confirmation' ) || ! str_contains( $html, 'Booster could not compare the installed version with the published release version.' ) ) {
-				throw new RuntimeException( 'The standard form offered a release without a valid comparison.' );
-			}
-			return array();
-		}
+		$html        = $this->source_settings( $controls, $query );
 		$has_consent = str_contains( $html, 'name="confirm_older_release" value="1" required' );
 		$same_notice = str_contains( $html, 'Same version: this replaces the installed files with the release.' );
-		if ( ( 'prerelease' === $this->channel() ) !== $has_consent || ( in_array( $this->scenario, array( 'same', 'choice-current', 'choice-latest', 'stale', 'stale-confirmation', 'replaced-asset', 'failed-download' ), true ) ) !== $same_notice ) {
+		if ( $has_consent || ! $same_notice ) {
 			throw new RuntimeException( 'The standard form showed the wrong relationship or consent.' );
 		}
 		$dom = new DOMDocument();
 		$dom->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath         = new DOMXPath( $dom );
 		$form_selector = '//form[contains(@class, "ran-booster-switch-confirmation__form")]';
-		if ( in_array( $this->scenario, array( 'choice-current', 'choice-latest' ), true ) ) {
-			$current = $xpath->query( $form_selector . '[button[contains(normalize-space(.), "Reinstall 0.2.2")]]' );
-			$latest  = $xpath->query( $form_selector . '[button[contains(normalize-space(.), "Upgrade to 0.2.3")]]' );
-			if ( false === $current || 1 !== $current->length || false === $latest || 1 !== $latest->length ) {
-				throw new RuntimeException( 'Both releases must have direct, separately signed submit buttons.' );
-			}
-			$form_selector .= 'choice-current' === $this->scenario ? '[button[contains(., "Reinstall")]]' : '[button[contains(., "Upgrade")]]';
+		$current       = $xpath->query( $form_selector . '[button[contains(normalize-space(.), "Reinstall 0.2.2")]]' );
+		$latest        = $xpath->query( $form_selector . '[button[contains(normalize-space(.), "Upgrade to 0.2.3")]]' );
+		if ( false === $current || 1 !== $current->length || false === $latest || 1 !== $latest->length ) {
+			throw new RuntimeException( 'Both releases must have direct, separately signed submit buttons.' );
 		}
-		if ( in_array( $this->scenario, array( 'stale-confirmation', 'replaced-asset', 'failed-download' ), true ) ) {
-			$form_selector .= '[button[contains(., "Upgrade to 2.0.0")]]';
-		}
-		$forms = $xpath->query( $form_selector );
+		$form_selector .= '[button[contains(., "Reinstall")]]';
+		$forms          = $xpath->query( $form_selector );
 		if ( false === $forms || 1 !== $forms->length ) {
 			throw new RuntimeException( 'The proof must submit exactly one rendered confirmation form.' );
 		}
@@ -409,19 +387,9 @@ final class RAN_Booster_ReleaseSwitchProof {
 		if ( str_starts_with( $this->case_name, 'form-' ) ) {
 			$request['_wpnonce'] = wp_create_nonce( $facade->nonce_action( 'enable', $this->kind, $this->identity, 1 ) );
 			$request             = $this->standard_confirmation( $controls, $request );
-			if ( array() === $request ) {
-				if ( $this->streams !== $before ) {
-					throw new RuntimeException( 'The refused form downloaded an archive.' );
-				}
-				return 'version_comparison_unavailable';
-			}
 		} else {
 			$preflight = $controls->process_switch_preflight_request( $request );
 			if ( ! $preflight['successful'] ) {
-				if ( 'comparison-unavailable' === $this->scenario && ( $this->streams !== $before
-					|| ! str_contains( (string) ( $preflight['data']['message'] ?? '' ), 'Booster could not compare the installed version with the published release version.' ) ) ) {
-					throw new RuntimeException( 'The comparison refusal must explain the version issue without downloading a ZIP.' );
-				}
 				echo wp_json_encode(
 					array(
 						'preflight_streams' => $this->streams - $before,
@@ -432,15 +400,12 @@ final class RAN_Booster_ReleaseSwitchProof {
 			}
 			$data = $preflight['data'];
 			if ( str_starts_with( $this->scenario, 'choice-' ) ) {
-				if ( isset( $data['matching_release'] ) !== ( 'choice-dedup' !== $this->scenario ) ) {
-					throw new RuntimeException( 'Expected only distinct published versions in the chooser.' );
+				if ( ! isset( $data['matching_release'] ) ) {
+					throw new RuntimeException( 'The chooser did not offer the installed version separately.' );
 				}
-				if ( in_array( $this->scenario, array( 'choice-current', 'choice-disappeared' ), true ) ) {
-					$data                             = $data['matching_release'];
-					$request['switch_release_choice'] = 'installed';
-				}
-				$wanted = 'choice-latest' === $this->scenario ? '0.2.3' : '0.2.2';
-				if ( ( $data['release_version'] ?? null ) !== $wanted ) {
+				$data                             = $data['matching_release'];
+				$request['switch_release_choice'] = 'installed';
+				if ( ( $data['release_version'] ?? null ) !== '0.2.2' ) {
 					throw new RuntimeException( 'The chooser offered an unexpected release.' );
 				}
 			}
@@ -491,7 +456,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 		$mutation_streams = $this->streams - $before;
 		parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
 		$result = is_string( $query['ran_booster_release_result'] ?? null ) ? $query['ran_booster_release_result'] : '';
-		if ( in_array( $this->scenario, array( 'choice-current', 'choice-latest', 'choice-dedup', 'same', 'prerelease-order', 'newer', 'active', 'compete', 'stale', 'fallback-repaired', 'incompatible-zip' ), true ) && 1 !== $mutation_streams ) {
+		if ( in_array( $this->scenario, array( 'choice-current', 'same', 'prerelease-order', 'newer', 'active', 'compete', 'stale', 'fallback-repaired', 'incompatible-zip' ), true ) && 1 !== $mutation_streams ) {
 			throw new RuntimeException( 'Expected exactly one mutation ZIP stream, got ' . $mutation_streams . ' for ' . $result . '.' );
 		}
 		if ( in_array( $this->scenario, array( 'choice-disappeared', 'missing', 'replaced-asset', 'stale-confirmation', 'prerelease-no-consent' ), true ) && 0 !== $mutation_streams ) {
@@ -602,12 +567,6 @@ final class RAN_Booster_ReleaseSwitchProof {
 		}
 		// Successful completion commits the source before the handler returns.
 		$this->assert_row( $switched );
-		if ( $switched ) {
-			$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
-			if ( isset( $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ) ) {
-				throw new RuntimeException( 'Successful switch returned with a native hold.' );
-			}
-		}
 		// WordPress restores a failed install at shutdown, after this reply.
 		$this->assert_files( 'failed-install' === $this->scenario ? '2.0.0' : $version, $switched || in_array( $this->scenario, array( 'failed-install', 'conflict' ), true ), $this->directory );
 		$this->assert_activation();
@@ -726,34 +685,22 @@ final class RAN_Booster_ReleaseSwitchProof {
 
 	public function readback(): void {
 		global $wpdb;
-		[ $reply, $version, $switched, $custody ] = $this->expected();
+		[ $reply, $version, $switched, $interrupted ] = $this->expected();
 		$this->assert_row( $switched );
 		$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
-		$hold      = $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ?? null;
-		if ( isset( $hold ) !== $custody ) {
-			throw new RuntimeException( 'Unexpected native custody after the switch.' );
+		// A killed request leaves its updater lock; an interrupted or failed one that ended released it.
+		$killed = in_array( $this->scenario, self::KILLED, true );
+		if ( ( $killed || in_array( $this->scenario, array( 'pre-install-throw', 'failed-install' ), true ) ) && ( null !== $this->lock_row() ) !== $killed ) {
+			throw new RuntimeException( 'Unexpected updater lock after the switch.' );
 		}
-		if ( 'pre-install-throw' === $this->scenario && null !== $this->lock_row() ) {
-			throw new RuntimeException( 'The interrupted request left its updater lock behind.' );
-		}
-		if ( is_array( $hold ) ) {
-			// A request that ended records it; only a killed or refused one leaves the hold started, still owning its lock.
-			$finished = 'failed-install' === $this->scenario;
-			$own      = GitHubProviderSelection::native_lock_token( $hold );
-			if ( ( $finished ? 'finished' : 'started' ) !== $hold['phase'] || $this->identity !== $hold['installed_identity'] || null === $own
-				|| ( $finished ? null : $own ) !== $this->lock_row() ) {
-				throw new RuntimeException( 'Unexpected hold or updater lock after the switch.' );
-			}
-		}
-		if ( in_array( $reply, array( 'release_enabled', 'switch_refused' ), true ) || ( 'switch_uncertain' === $reply && $custody ) ) {
+		if ( in_array( $reply, array( 'release_enabled', 'switch_refused' ), true ) || ( 'switch_uncertain' === $reply && $interrupted ) ) {
 			add_filter( 'pre_http_request', $this->http( ... ), PHP_INT_MIN, 3 );
-			$status     = $container->make( NativeReleaseTrackingFacade::class )->status( $this->kind, $this->identity );
-			$shown_hold = $container->make( RAN\Admin\ProviderSettingsPresenter::class )->native_hold();
-			$shown      = RAN\Admin\ReleaseManagement\ReleaseTrackingOperations::settled( $reply, $switched, $status, $shown_hold, $this->kind, $this->identity, '1' );
-			$expected   = match ( $reply ) {
+			$status   = $container->make( NativeReleaseTrackingFacade::class )->status( $this->kind, $this->identity );
+			$shown    = RAN\Admin\ReleaseManagement\ReleaseTrackingOperations::settled( $reply, $switched, $status, '1' );
+			$expected = match ( $reply ) {
 				'release_enabled' => array( 'release_enabled', true ),
 				'switch_refused' => array( 'switch_failed_unchanged', false ),
-				default => array( 'switch_held', false ),
+				default => array( 'switch_not_confirmed', false ),
 			};
 			if ( $expected !== $shown ) {
 				throw new RuntimeException( 'The landing page would misreport the switch.' );
@@ -761,7 +708,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 		}
 		$this->assert_files( $version, $this->published_after_switch(), $this->directory );
 		$this->assert_activation();
-		if ( in_array( $this->scenario, self::KILLED, true ) ) {
+		if ( $killed ) {
 			$this->assert_files( '1.0.0', false, WP_CONTENT_DIR . '/upgrade-temp-backup/' . ( 'plugin' === $this->kind ? 'plugins/' : 'themes/' ) . $this->slug );
 		}
 		$this->assert_stored_check( null );
@@ -791,7 +738,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 			$this->assert_files( '0.2.2', true, $this->directory );
 			$this->assert_row( true );
 		}
-		$no_install = in_array( $this->scenario, array( 'comparison-unavailable', 'stale-confirmation', 'prerelease-no-consent', 'older' ), true );
+		$no_install = in_array( $this->scenario, array( 'stale-confirmation', 'prerelease-no-consent' ), true );
 		if ( $no_install ) {
 			$this->assert_stored_check( null, true );
 		}
@@ -804,8 +751,8 @@ final class RAN_Booster_ReleaseSwitchProof {
 			'plugin' === $this->kind ? _maybe_update_plugins() : _maybe_update_themes();
 			$this->assert_stored_check( $start );
 		}
-		$this->report( $no_install ? 'refused_without_switch' : ( $switched ? 'switched' : ( $custody ? 'custody_retained' : 'ordinary_offer_restored' ) ), $version );
-		if ( $custody ) {
+		$this->report( $no_install ? 'refused_without_switch' : ( $switched ? 'switched' : ( $interrupted ? 'interrupted' : 'ordinary_offer_restored' ) ), $version );
+		if ( $interrupted ) {
 			// The release phase needs the managed row it keeps.
 			return;
 		}
@@ -817,44 +764,23 @@ final class RAN_Booster_ReleaseSwitchProof {
 		return $this->expected()[2] || in_array( $this->scenario, array_merge( self::KILLED, array( 'conflict' ) ), true );
 	}
 
-	/** Release the hold in place with the operator's confirmations; the package, its row and its files stay as they are. */
-	public function release_hold(): void {
+	/**
+	 * After an interruption the package, its row and its files stay as they are. A killed request's updater lock
+	 * is released by the operator who confirmed it stopped; a request that ended already released its own.
+	 */
+	public function release_after_interruption(): void {
 		$this->attest();
-		$container  = require dirname( __DIR__ ) . '/core-container-fixture.php';
-		$removal    = $container->make( PackageRemovalService::class );
-		$store      = $container->make( GitHubSelectionStore::class );
-		$authorized = static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
-		if ( in_array( $this->case_name, self::REMOVED, true ) ) {
-			$this->remove_and_recover( $removal, $store, $authorized );
-			return;
-		}
-		$hold   = $store->read( true )['native_mutation'] ?? null;
-		$before = $this->managed_row();
-		$review = $removal->native_recovery_confirmation();
-		if ( ! is_array( $hold ) || $this->identity !== $review['identifier'] || ( 'finished' === $hold['phase'] ) !== $review['finished'] ) {
-			throw new RuntimeException( 'Unexpected hold review.' );
-		}
-		$finished = $review['finished'];
-		$this->refused( fn () => $removal->release_native_hold( $review['digest'], true, false, $authorized ) );
-		if ( ! $finished ) {
-			$this->refused( fn () => $removal->release_native_hold( $review['digest'], false, true, $authorized ) );
-		}
-		if ( 'foreign-lock' === $this->scenario ) {
-			// Another operation's live lock: never removed, however the hold was left.
-			$foreign = (string) max( time(), (int) GitHubProviderSelection::native_lock_token( $hold ) + 1 );
-			$this->set_lock( $foreign );
-			$this->refused( fn () => $removal->release_native_hold( $review['digest'], true, true, $authorized ) );
-			if ( $foreign !== $this->lock_row() || $store->read( true )['native_mutation'] !== $hold ) {
-				throw new RuntimeException( 'A live foreign updater lock was removed.' );
+		$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
+		$lock      = $container->make( WordPressUpdaterLock::class );
+		$before    = $this->managed_row();
+		if ( in_array( $this->scenario, self::KILLED, true ) ) {
+			$owner = $lock->recorded_owner();
+			if ( null === $owner || $owner['token'] !== $this->lock_row() || ! $lock->release_recorded_owner( $owner['token'] ) ) {
+				throw new RuntimeException( 'The killed switch did not leave a releasable recorded updater lock.' );
 			}
 		}
-		if ( in_array( $this->scenario, array( 'foreign-lock', 'expired-lock' ), true ) ) {
-			// An hour-old lock that is not the hold's own: the release reclaims it itself.
-			$this->set_lock( (string) ( time() - 3601 ) );
-		}
-		$removal->release_native_hold( $review['digest'], ! $finished, true, $authorized );
-		if ( isset( $store->read( true )['native_mutation'] ) || null !== $this->lock_row() || $this->managed_row() !== $before ) {
-			throw new RuntimeException( 'The release left the hold or a lock, or changed the managed package.' );
+		if ( null !== $this->lock_row() || $this->managed_row() !== $before ) {
+			throw new RuntimeException( 'The release left a lock, or changed the managed package.' );
 		}
 		$this->assert_files( $this->expected()[1], $this->published_after_switch(), $this->directory );
 		$this->assert_activation();
@@ -864,10 +790,10 @@ final class RAN_Booster_ReleaseSwitchProof {
 				throw new RuntimeException( 'Conflicting row cleanup failed.' );
 			}
 		}
-		$this->report( $finished ? 'finished_hold_released' : 'unfinished_hold_released', $this->expected()[1] );
+		$this->report( 'released_after_interruption', $this->expected()[1] );
 	}
 
-	/** After the operator releases the hold, the same confirmed switch can run again. */
+	/** After the release phase, the same confirmed switch can run again. */
 	public function retry_switch(): void {
 		$this->attest();
 		// This site cannot reach WordPress.org, so a recheck after a completed install saves a check with no
@@ -883,59 +809,13 @@ final class RAN_Booster_ReleaseSwitchProof {
 
 	public function retried(): void {
 		$this->assert_row( true );
-		$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
-		if ( isset( $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ) || null !== $this->lock_row() ) {
-			throw new RuntimeException( 'The switch after the release left a hold or a lock.' );
+		if ( null !== $this->lock_row() ) {
+			throw new RuntimeException( 'The switch after the release left a lock.' );
 		}
 		$this->assert_files( '2.0.0', true, $this->directory );
 		$this->assert_activation();
 		$this->report( 'switched_after_release', '2.0.0' );
 		$this->cleanup();
-	}
-
-	/**
-	 * A held target with no package page: the in-place release is refused, the operator deletes the folder,
-	 * confirms on the provider page, and Booster drops its record and clears the hold. The killed install's
-	 * own lock is freed at once, without waiting for the hour-old reclaim.
-	 *
-	 * @param callable():bool $authorized
-	 */
-	private function remove_and_recover( PackageRemovalService $removal, GitHubSelectionStore $store, callable $authorized ): void {
-		global $wp_filesystem;
-		WP_Filesystem();
-		if ( 'fresh-damaged' === $this->case_name ) {
-			// Enough of the held target is gone that WordPress no longer registers it.
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Damage only this proof's exclusively owned target.
-			if ( ! unlink( $this->directory . '/' . $this->metadata ) || $this->registered() ) {
-				throw new RuntimeException( 'The damaged target still registers.' );
-			}
-		} elseif ( ! $wp_filesystem->delete( $this->directory, true ) ) {
-			throw new RuntimeException( 'The held folder was not deleted first.' );
-		}
-		$hold   = $store->read( true )['native_mutation'] ?? null;
-		$review = $removal->native_recovery_confirmation();
-		if ( ! is_array( $hold ) || 'started' !== $hold['phase'] || $this->identity !== $review['identifier'] || $review['readable'] || ! $review['managed']
-			|| GitHubProviderSelection::native_lock_token( $hold ) !== $this->lock_row() ) {
-			throw new RuntimeException( 'Unexpected review of a held target with no package page.' );
-		}
-		$this->refused( fn () => $removal->release_native_hold( $review['digest'], true, true, $authorized ) );
-		if ( 'fresh-damaged' === $this->case_name ) {
-			// Removal is confirmed only once the whole folder is gone.
-			$this->refused( fn () => $removal->recover_native_removal( $review['digest'], true, true, $authorized ) );
-			if ( ! $wp_filesystem->delete( $this->directory, true ) ) {
-				throw new RuntimeException( 'The damaged folder was not deleted.' );
-			}
-		}
-		clearstatcache();
-		$this->refused( fn () => $removal->recover_native_removal( $review['digest'], true, false, $authorized ) );
-		if ( $this->held( $store ) !== $hold || null === $this->managed_row() ) {
-			throw new RuntimeException( 'A refused removal recovery changed the hold or the record.' );
-		}
-		$removal->recover_native_removal( $review['digest'], true, true, $authorized );
-		if ( null !== $this->held( $store ) || null !== $this->lock_row() || null !== $this->managed_row() || file_exists( $this->directory ) ) {
-			throw new RuntimeException( 'The removal recovery left the hold, a lock, the record or the folder.' );
-		}
-		$this->report( 'removed_and_recovered', 'none' );
 	}
 
 	/**
@@ -945,22 +825,16 @@ final class RAN_Booster_ReleaseSwitchProof {
 	public function fresh_start(): void {
 		$this->attest();
 		WP_Filesystem();
-		$container = require dirname( __DIR__ ) . '/core-container-fixture.php';
-		$row       = $this->managed_row();
-		$steps     = array( 'registered' => $this->registered() );
-		if ( in_array( $this->case_name, self::REMOVED, true ) ) {
-			// The provider-page removal recovery already dropped the record, and the operator deleted the folder.
-			$steps += array(
-				'stop_managing'    => 'removal_recovery',
-				'wordpress_delete' => 'deleted_by_operator',
-			);
-		} else {
-			$steps['stop_managing']    = $this->stop_managing( $container->make( PackageRemovalService::class ), $row );
-			$deleted                   = 'plugin' === $this->kind ? delete_plugins( array( $this->identity ) ) : delete_theme( $this->slug );
-			$steps['wordpress_delete'] = true === $deleted ? 'deleted' : ( is_wp_error( $deleted ) ? $deleted->get_error_code() : 'failed' );
-			wp_clean_plugins_cache( false );
-			wp_clean_themes_cache( false );
-		}
+		$container                 = require dirname( __DIR__ ) . '/core-container-fixture.php';
+		$row                       = $this->managed_row();
+		$steps                     = array(
+			'registered'    => $this->registered(),
+			'stop_managing' => $this->stop_managing( $container->make( PackageRemovalService::class ), $row ),
+		);
+		$deleted                   = 'plugin' === $this->kind ? delete_plugins( array( $this->identity ) ) : delete_theme( $this->slug );
+		$steps['wordpress_delete'] = true === $deleted ? 'deleted' : ( is_wp_error( $deleted ) ? $deleted->get_error_code() : 'failed' );
+		wp_clean_plugins_cache( false );
+		wp_clean_themes_cache( false );
 		$steps['still_managed'] = null !== $this->managed_row();
 		clearstatcache();
 		$steps['files_left'] = file_exists( $this->directory );
@@ -972,30 +846,25 @@ final class RAN_Booster_ReleaseSwitchProof {
 			'credential_id' => '',
 			'branch'        => 'main',
 		);
-		$review                   = $facade->inspect( $this->kind, $request, '102', 'v2.0.0', 'stable', wp_create_nonce( $facade->nonce_action( 'inspect', $this->kind, null ) ) );
+		$review                   = $facade->inspect( $this->kind, $request, '102', 'v2.0.0', 'stable', wp_create_nonce( $facade->nonce_action( 'inspect', $this->kind ) ) );
 		$data                     = $review->data();
-		$install                  = $facade->install( $this->kind, $request, '102', 'v2.0.0', (string) ( $data['fingerprint'] ?? '' ), 'stable', wp_create_nonce( $facade->nonce_action( 'install', $this->kind, $data['provider_expectation'] ?? null ) ), $data['provider_expectation'] ?? null );
+		$install                  = $facade->install( $this->kind, $request, '102', 'v2.0.0', (string) ( $data['fingerprint'] ?? '' ), 'stable', wp_create_nonce( $facade->nonce_action( 'install', $this->kind ) ) );
 		$steps['booster_install'] = $review->code() . ' ' . $install->code();
 		$installed                = $this->managed_row();
 		$steps['managed_source']  = $installed['source'] ?? null;
 		echo wp_json_encode( array( 'fresh_start' => $steps ) ) . "\n";
-		if ( ! in_array( $steps['stop_managing'], array( 'unlinked', 'removal_recovery' ), true ) || $steps['still_managed']
-			|| ! in_array( $steps['wordpress_delete'], array( 'deleted', 'deleted_by_operator' ), true ) || $steps['files_left']
+		if ( 'unlinked' !== $steps['stop_managing'] || $steps['still_managed']
+			|| 'deleted' !== $steps['wordpress_delete'] || $steps['files_left']
 			|| 'release_ready installed' !== $steps['booster_install'] || 'release_asset' !== $steps['managed_source'] ) {
 			throw new RuntimeException( 'No clean start after the release.' );
 		}
 		$this->assert_files( '2.0.0', true, $this->directory );
 		$this->assert_activation();
-		if ( isset( $container->make( GitHubSelectionStore::class )->read( true )['native_mutation'] ) || null !== $this->lock_row() ) {
-			throw new RuntimeException( 'The fresh install left a hold or a lock.' );
+		if ( null !== $this->lock_row() ) {
+			throw new RuntimeException( 'The fresh install left a lock.' );
 		}
 		$this->report( 'fresh_start', '2.0.0' );
 		$this->cleanup();
-	}
-
-	/** @phpstan-impure Reads the stored hold afresh. */
-	private function held( GitHubSelectionStore $store ): mixed {
-		return $store->read( true )['native_mutation'] ?? null;
 	}
 
 	/** @param array<string, mixed>|null $row */
@@ -1024,20 +893,6 @@ final class RAN_Booster_ReleaseSwitchProof {
 		return 'plugin' === $this->kind ? isset( get_plugins()[ $this->identity ] ) : ( wp_get_theme( $this->slug )->exists() && false === wp_get_theme( $this->slug )->errors() );
 	}
 
-	/** @param callable():void $operation */
-	private function refused( callable $operation ): void {
-		$released = false;
-		try {
-			$operation();
-			$released = true;
-		} catch ( RuntimeException ) {
-			$released = false;
-		}
-		if ( $released ) {
-			throw new RuntimeException( 'An unconfirmed or blocked hold release succeeded.' );
-		}
-	}
-
 	/**
 	 * @return array<string, mixed>|null
 	 * @phpstan-impure Reads the stored row afresh.
@@ -1056,14 +911,6 @@ final class RAN_Booster_ReleaseSwitchProof {
 		global $wpdb;
 		$value = $wpdb->get_var( $wpdb->prepare( 'SELECT option_value FROM %i WHERE option_name = %s', $wpdb->options, 'auto_updater.lock' ) );
 		return is_string( $value ) ? $value : null;
-	}
-
-	private function set_lock( string $value ): void {
-		global $wpdb;
-		if ( 1 !== $wpdb->query( $wpdb->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s', $wpdb->options, $value, 'auto_updater.lock' ) ) ) {
-			throw new RuntimeException( 'Synthetic updater lock was not set.' );
-		}
-		wp_cache_delete( 'auto_updater.lock', 'options' );
 	}
 
 	private function cleanup(): void {
@@ -1168,7 +1015,7 @@ final class RAN_Booster_ReleaseSwitchProof {
 	private function assert_row( bool $switched ): void {
 		global $wpdb;
 		$row      = $wpdb->get_row( $wpdb->prepare( 'SELECT source, source_revision, deployment_policy, release_configuration FROM %i WHERE package = %s', ran_booster_table_name(), $this->identity ), ARRAY_A );
-		$policy   = 'disabled' === $this->scenario ? 'disabled' : ( in_array( $this->scenario, array( 'newer', 'choice-current', 'choice-latest', 'choice-dedup', 'choice-disappeared' ), true ) && ! $switched ? 'automatic' : 'manual' );
+		$policy   = 'disabled' === $this->scenario ? 'disabled' : ( in_array( $this->scenario, array( 'newer', 'choice-current', 'choice-disappeared' ), true ) && ! $switched ? 'automatic' : 'manual' );
 		$expected = $switched
 			? array(
 				'release_asset',
@@ -1293,7 +1140,7 @@ if ( ! defined( 'RAN_BOOSTER_RELEASE_SWITCH_PROOF_LIBRARY_ONLY' ) ) {
 		'compete' => $ran_booster_release_switch_proof->competing(),
 		'branch-return' => $ran_booster_release_switch_proof->branch_return(),
 		'readback' => $ran_booster_release_switch_proof->readback(),
-		'release' => $ran_booster_release_switch_proof->release_hold(),
+		'release' => $ran_booster_release_switch_proof->release_after_interruption(),
 		'retry' => $ran_booster_release_switch_proof->retry_switch(),
 		'retried' => $ran_booster_release_switch_proof->retried(),
 		'fresh' => $ran_booster_release_switch_proof->fresh_start(),

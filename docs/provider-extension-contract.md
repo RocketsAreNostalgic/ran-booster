@@ -94,11 +94,12 @@ neither host policy nor native callbacks.
 
 `begin_native_mutation(type, identity)` rechecks the bound operation approval
 immediately before installed plugin/theme file mutation, then asks Core for its
-exact opaque update owner. Core still validates the staged target, selected
-implementation, package-mutation permission and native updater lock. Pass that
-owner unchanged to `complete_native_mutation(owner, type, identity, outcome)`.
-Completion deliberately remains callable after approval changes: it records
-exact-owner success or uncertainty without granting fresh permission. Host errors
+exact opaque update owner. Core still validates the staged target,
+package-mutation permission and native updater lock. Pass that owner unchanged
+to `complete_native_mutation(owner, type, identity, outcome)`. Completion
+deliberately remains callable after approval changes: it finishes the exact
+owner's success or uncertainty without granting fresh permission, and only a
+verified success commits a pending Branch-to-release switch. Host errors
 propagate; neither checkpoint makes a failed operation successful.
 
 Core currently supplies these native callbacks for its GitHub release update
@@ -845,6 +846,28 @@ must never return or persist raw response headers. Provider-reported expiry
 takes precedence over Booster's optional manual profile date. A provider that
 does not report expiry remains fully compatible and receives the same manual
 fallback, row status, and administrator notice behavior.
+
+Core records a result only for the credential that was checked. Before the
+provider call it reads the credential's material tag: a random value kept in
+the encrypted record and replaced with every new secret, or, for the read-only
+constant, an HMAC of the configured value under a key derived from the site's
+salts. The automatic-removal deadline is a compare-and-set under the secrets
+file lock, so it changes only while the record still carries that tag, and a
+provider-reported date can only bring it earlier. The advisory observation is
+checked against the tag before each write attempt, but a replacement can still
+land between that check and the option write; an observation is therefore
+stored under its tag and shown only while that tag is the credential's current
+one, so a stale one stays hidden. A stored credential keeps one observation.
+The constant keeps observations for up to two tags and drops the least recently
+written one when a third arrives, so a request that still holds a rotated value
+writes beside the new one rather than over it. If three different values are in
+flight at once, the current one can be dropped and stays hidden until the next
+validation. Replacement and purge cleanup keep only the observation of the
+current material, and a purged credential's tag can never be current again. The
+manual date is not tagged, and the purger runs without the updater lock, so
+purge cleanup also clears a manual date entered on a reused identifier before
+that cleanup runs. A result that is not recorded logs a coded line. A record
+saved before tags existed records nothing until it is next saved.
 
 A provider that implements `RepositoryBrowser` receives one public-owner or
 one selected-credential `RepositoryBrowseRequest`. It must claim every remote

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "3f903254180d3071613eb5f387b224ff",
+    "content-hash": "f713967df4cc33b380efbb5836582b5d",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -225,16 +225,16 @@
         },
         {
             "name": "ran/wp-branch-updater",
-            "version": "v1.0.0-beta.18",
+            "version": "v1.0.0-beta.20",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater.git",
-                "reference": "d1f715993a611e0c08f11f0d6a0da6ed1f483b44"
+                "reference": "dbb30d5247e5e74cf7336a5a68698fb67b0f4526"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-branch-updater/zipball/d1f715993a611e0c08f11f0d6a0da6ed1f483b44",
-                "reference": "d1f715993a611e0c08f11f0d6a0da6ed1f483b44",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-branch-updater/zipball/dbb30d5247e5e74cf7336a5a68698fb67b0f4526",
+                "reference": "dbb30d5247e5e74cf7336a5a68698fb67b0f4526",
                 "shasum": ""
             },
             "require": {
@@ -242,7 +242,7 @@
                 "ext-json": "*",
                 "ext-zip": "*",
                 "php": "^8.2",
-                "ran/updater-support": "^1.0.0-beta.10"
+                "ran/updater-support": "^1.0.0-beta.11"
             },
             "require-dev": {
                 "phpcompatibility/php-compatibility": "10.0.0-alpha2",
@@ -267,9 +267,6 @@
                 "test:analysis-bootstrap": [
                     "bash tests/analysis-bootstrap.sh"
                 ],
-                "test:contract": [
-                    "@php tests/contract.php"
-                ],
                 "test:architecture": [
                     "@php tests/architecture-normalisation-baseline.php"
                 ],
@@ -284,12 +281,6 @@
                 ],
                 "test:runner": [
                     "@php tests/admitted-runner.php"
-                ],
-                "test:hard-stop": [
-                    "@php tests/hard-stop.php"
-                ],
-                "test:journal": [
-                    "@php tests/journal-invariants.php"
                 ],
                 "test:identifier": [
                     "@php tests/installed-package-identifier.php"
@@ -330,19 +321,16 @@
                     "node --test tests/release-workflow-contract.test.mjs tests/release-classification.test.mjs"
                 ],
                 "lint:syntax": [
-                    "bash -o pipefail -c 'find src tests scripts -type f -name \"*.php\" -print0 | xargs -0 -n1 php -l && php -l bootstrap.php'"
+                    "bash -o pipefail -c 'find src tests scripts -type f -name \"*.php\" -print0 | xargs -0 -n1 php -l'"
                 ],
                 "test": [
                     "@test:analysis-bootstrap",
                     "@test:naming",
-                    "@test:contract",
                     "@test:architecture",
                     "@test:archive",
                     "@test:expanded-admission",
                     "@test:prepared-archive",
                     "@test:runner",
-                    "@test:hard-stop",
-                    "@test:journal",
                     "@test:identifier",
                     "@test:error-code",
                     "@test:screening",
@@ -369,7 +357,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater"
             },
-            "time": "2026-11-20T09:08:48+00:00"
+            "time": "2026-11-24T23:51:35+00:00"
         },
         {
             "name": "ran/wp-release-updater",

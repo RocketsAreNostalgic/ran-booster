@@ -343,6 +343,7 @@ final class ManagedReleaseStoreTest extends TestCase {
 	}
 
 	public function test_source_transitions_preserve_disabled_and_manual_and_reset_automatic(): void {
+		// Disabled to release is refused; see the test below.
 		foreach ( array(
 			'disabled'  => 'disabled',
 			'manual'    => 'manual',
@@ -353,6 +354,9 @@ final class ManagedReleaseStoreTest extends TestCase {
 				array( PackageSource::RELEASE_ASSET, PackageSource::BRANCH, null ),
 			) as $transition ) {
 				list( $expected_source, $new_source, $configuration ) = $transition;
+				if ( 'disabled' === $policy && PackageSource::RELEASE_ASSET === $new_source ) {
+					continue;
+				}
 				$database = new ManagedReleaseStoreDatabase(
 					array(
 						'package_type'          => 1,
@@ -389,43 +393,24 @@ final class ManagedReleaseStoreTest extends TestCase {
 		}
 	}
 
-	public function test_switch_completes_native_custody_inside_its_transaction_before_the_row_lock(): void {
-		$row      = array(
-			'package_type'          => 1,
-			'package'               => 'installed/example.php',
-			'source'                => PackageSource::BRANCH->value,
-			'source_revision'       => 4,
-			'source_previous'       => null,
-			'source_changed_at'     => null,
-			'source_changed_by'     => null,
-			'deployment_policy'     => 'manual',
-			'release_configuration' => null,
-		);
-		$token    = 'gh:fixture-repository:11111111-1111-4111-8111-111111111111';
-		$database = new ManagedReleaseStoreDatabase( $row );
-		$store    = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
-		$seen     = array();
-		self::assertTrue(
-			$store->transition(
-				'plugin',
-				'installed/example.php',
-				PackageSource::BRANCH,
-				4,
-				PackageSource::RELEASE_ASSET,
-				new ManagedReleaseConfiguration( 'installed', 'example.php' ),
-				7,
-				$token,
-				function ( object $connection, string $type, string $identifier ) use ( $database, &$seen ): void {
-					$seen = array( $connection === $database, $type, $identifier, $database->reads, end( $database->queries ) );
-				}
+	public function test_a_disabled_package_never_switches_to_release(): void {
+		$database = new ManagedReleaseStoreDatabase(
+			array(
+				'package_type'          => 1,
+				'package'               => 'installed/example.php',
+				'source'                => PackageSource::BRANCH->value,
+				'source_revision'       => 4,
+				'source_previous'       => null,
+				'source_changed_at'     => null,
+				'source_changed_by'     => null,
+				'deployment_policy'     => DeploymentPolicy::DISABLED->value,
+				'release_configuration' => null,
 			)
 		);
-		self::assertSame( array( true, 'plugin', 'installed/example.php', 0, 'START TRANSACTION' ), $seen );
-		self::assertSame( 'COMMIT', end( $database->queries ) );
-
-		$database = new ManagedReleaseStoreDatabase( $row );
 		$store    = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
-		try {
+
+		// The native Branch-to-release commit reads the locked row and refuses Disabled (#1264).
+		self::assertFalse(
 			$store->transition(
 				'plugin',
 				'installed/example.php',
@@ -434,21 +419,17 @@ final class ManagedReleaseStoreTest extends TestCase {
 				PackageSource::RELEASE_ASSET,
 				new ManagedReleaseConfiguration( 'installed', 'example.php' ),
 				7,
-				$token,
-				static function (): void {
-					throw new RuntimeException( 'custody changed' );
-				}
-			);
-			self::fail( 'A failed custody completion switched the source.' );
-		} catch ( RuntimeException $failure ) {
-			self::assertSame( 'custody changed', $failure->getMessage() );
-		}
+				'gh:fixture-repository:11111111-1111-4111-8111-111111111111'
+			)
+		);
+		self::assertSame( 1, $database->reads );
 		self::assertSame( array(), $database->updates );
 		self::assertSame( 'ROLLBACK', end( $database->queries ) );
+		self::assertNotContains( 'COMMIT', $database->queries );
 		self::assertSame( PackageSource::BRANCH->value, $database->row['source'] );
 	}
 
-	public function test_switch_commit_refuses_a_second_package_from_the_repository_and_rolls_back_custody_removal(): void {
+	public function test_switch_commit_refuses_a_second_package_from_the_repository(): void {
 		$database                    = new ManagedReleaseStoreDatabase(
 			array(
 				'package_type'          => 1,
@@ -469,7 +450,6 @@ final class ManagedReleaseStoreTest extends TestCase {
 			),
 		);
 		$store                       = new ManagedReleaseStore( $database, $this->createStub( Database::class ) );
-		$completed                   = false;
 		self::assertFalse(
 			$store->transition(
 				'plugin',
@@ -479,14 +459,9 @@ final class ManagedReleaseStoreTest extends TestCase {
 				PackageSource::RELEASE_ASSET,
 				new ManagedReleaseConfiguration( 'installed', 'example.php' ),
 				7,
-				'gh:fixture-repository:11111111-1111-4111-8111-111111111111',
-				static function () use ( &$completed ): void {
-					$completed = true;
-				}
+				'gh:fixture-repository:11111111-1111-4111-8111-111111111111'
 			)
 		);
-		// Custody removal ran in the transaction that the exclusivity refusal rolled back.
-		self::assertTrue( $completed );
 		self::assertSame( array(), $database->updates );
 		self::assertSame( 'ROLLBACK', end( $database->queries ) );
 		self::assertContains( 'START TRANSACTION', $database->queries );
@@ -625,185 +600,5 @@ final class ManagedReleaseStoreTest extends TestCase {
 				}
 			}
 		}
-	}
-
-	public function test_transition_in_transaction_uses_pinned_executor_with_binary_predicates_and_verifies_readback(): void {
-		$token         = 'gh:fixture-repository:11111111-1111-4111-8111-111111111111';
-		$configuration = new ManagedReleaseConfiguration( 'installed', 'example.php', 'prerelease' );
-		$state         = (object) array(
-			'type'                   => 1,
-			'package_type'           => 1,
-			'package'                => 'installed/example.php',
-			'source'                 => 'branch',
-			'source_revision'        => 3,
-			'source_previous'        => null,
-			'source_changed_at'      => null,
-			'source_changed_by'      => null,
-			'deployment_policy'      => 'automatic',
-			'release_configuration'  => null,
-			'adoption_token'         => $token,
-			'provider'               => 'gh',
-			'provider_repository_id' => 'fixture-repository',
-			'subdirectory'           => null,
-		);
-		$store         = new ManagedReleaseStore(
-			new ManagedReleaseStoreDatabase( (array) $state ),
-			$this->createStub( Database::class ),
-			static fn (): string => '2026-11-23 18:00:00'
-		);
-		/** @var list<array{query: string, arguments: list<int|string>, mode: string}> $executed */
-		$executed = array();
-		$execute  = static function ( string $query, array $arguments, string $mode ) use ( $state, &$executed ): int|array {
-			$executed[] = array(
-				'query'     => $query,
-				'arguments' => $arguments,
-				'mode'      => $mode,
-			);
-			if ( 'results' === $mode ) {
-				return array( clone $state );
-			}
-			if ( 'affected' === $mode ) {
-				$state->source                = (string) $arguments[1];
-				$state->source_revision       = (int) $arguments[2];
-				$state->source_previous       = (string) $arguments[3];
-				$state->source_changed_at     = (string) $arguments[4];
-				$state->source_changed_by     = (int) $arguments[5];
-				$state->deployment_policy     = (string) $arguments[6];
-				$state->release_configuration = (string) $arguments[7];
-				return 1;
-			}
-			throw new RuntimeException( 'Unexpected executor mode.' );
-		};
-
-		self::assertTrue(
-			$store->transition_in_transaction(
-				'plugin',
-				'installed/example.php',
-				PackageSource::BRANCH,
-				3,
-				PackageSource::RELEASE_ASSET,
-				$configuration,
-				7,
-				$token,
-				$execute
-			)
-		);
-		self::assertSame( 'release_asset', $state->source );
-		self::assertSame( 4, $state->source_revision );
-		self::assertSame( 'manual', $state->deployment_policy );
-		self::assertSame( $configuration->to_json(), $state->release_configuration );
-		self::assertCount( 4, $executed );
-		self::assertStringContainsString( 'CAST(package AS BINARY) = CAST(%s AS BINARY)', $executed[0]['query'] );
-		self::assertStringContainsString( 'CAST(provider_repository_id AS BINARY) = CAST(%s AS BINARY)', $executed[1]['query'] );
-		self::assertSame( 'affected', $executed[2]['mode'] );
-		self::assertStringContainsString( 'CAST(adoption_token AS BINARY) = CAST(%s AS BINARY)', $executed[2]['query'] );
-		self::assertStringContainsString( 'CAST(package AS BINARY) = CAST(%s AS BINARY)', $executed[2]['query'] );
-
-		$state->deployment_policy = 'manual';
-		self::assertFalse(
-			$store->transition_in_transaction(
-				'plugin',
-				'installed/example.php',
-				PackageSource::RELEASE_ASSET,
-				3,
-				PackageSource::BRANCH,
-				null,
-				0,
-				$token,
-				$execute
-			)
-		);
-		$state->source_revision = 4;
-		/** @var list<array{query: string, arguments: array<array-key, mixed>, mode: string}> $release_executed */
-		$release_executed = array();
-		$execute_release  = static function ( string $query, array $arguments, string $mode ) use ( $state, &$release_executed ): int|array {
-			$release_executed[] = array(
-				'query'     => $query,
-				'arguments' => $arguments,
-				'mode'      => $mode,
-			);
-			if ( 'results' === $mode ) {
-				return array( clone $state );
-			}
-			$state->source                = (string) $arguments[1];
-			$state->source_revision       = (int) $arguments[2];
-			$state->source_previous       = (string) $arguments[3];
-			$state->source_changed_at     = (string) $arguments[4];
-			$state->source_changed_by     = null;
-			$state->deployment_policy     = (string) $arguments[5];
-			$state->release_configuration = null;
-			return 1;
-		};
-		self::assertTrue(
-			$store->transition_in_transaction(
-				'plugin',
-				'installed/example.php',
-				PackageSource::RELEASE_ASSET,
-				4,
-				PackageSource::BRANCH,
-				null,
-				0,
-				$token,
-				$execute_release
-			)
-		);
-		self::assertSame( 'branch', $state->source );
-		self::assertSame( 5, $state->source_revision );
-		self::assertNull( $state->source_changed_by );
-		self::assertNull( $state->release_configuration );
-		self::assertCount( 4, $release_executed );
-		self::assertStringContainsString( 'source_changed_by = NULL', $release_executed[2]['query'] );
-		self::assertStringContainsString( 'release_configuration = NULL', $release_executed[2]['query'] );
-
-		$executed                                        = array();
-		$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array( \RAN\Portability\WpPusherCoexistencePolicy::WP_PUSHER_PLUGIN );
-		try {
-			$guard_rejected = false;
-			try {
-				$store->require_transition_ready();
-			} catch ( RuntimeException $failure ) {
-				$guard_rejected = str_contains( $failure->getMessage(), 'WP Pusher is active' );
-			}
-			self::assertTrue( $guard_rejected );
-
-			$GLOBALS['ran_booster_wp_pusher_active_plugins'] = 'malformed';
-			self::assertTrue(
-				$store->transition_in_transaction(
-					'plugin',
-					'installed/example.php',
-					PackageSource::BRANCH,
-					5,
-					PackageSource::RELEASE_ASSET,
-					$configuration,
-					7,
-					$token,
-					$execute
-				)
-			);
-			self::assertSame( 'release_asset', $state->source );
-			self::assertSame( 6, $state->source_revision );
-			self::assertCount( 4, $executed );
-		} finally {
-			$GLOBALS['ran_booster_wp_pusher_active_plugins'] = array();
-		}
-
-		$state->source            = PackageSource::BRANCH->value;
-		$state->deployment_policy = DeploymentPolicy::DISABLED->value;
-		$executed                 = array();
-		self::assertFalse(
-			$store->transition_in_transaction(
-				'plugin',
-				'installed/example.php',
-				PackageSource::BRANCH,
-				6,
-				PackageSource::RELEASE_ASSET,
-				$configuration,
-				7,
-				$token,
-				$execute
-			)
-		);
-		self::assertSame( 'branch', $state->source );
-		self::assertCount( 1, $executed, 'The pinned package read observes Disabled before the source update.' );
 	}
 }

@@ -892,10 +892,29 @@ final class AdminAssetContractTest extends TestCase {
 		}
 	}
 
+	public function test_sticky_sidebars_and_focus_targets_clear_the_sticky_admin_shell(): void {
+		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
+		self::assertStringContainsString( "--ran-booster-sticky-top: calc(\n\t\tvar(--ran-booster-shell-offset, 176px) + var(--ran-booster-space-16)\n\t);", $primitives );
+		self::assertStringContainsString( '--ran-admin-shell-scroll-margin: var(--ran-booster-sticky-top);', $primitives );
+		foreach ( array(
+			'65-package-settings.css' => 'package-summary',
+			'30-provider-cards.css'   => 'repository-detail__sidebar',
+		) as $file => $sidebar ) {
+			$css = $this->asset( 'ran-booster/' . $file );
+			self::assertStringContainsString( '.ran-booster-' . $sidebar . " {\n\tposition: sticky;\n\tinset-block-start: var(--ran-booster-sticky-top);", $css, $file );
+			// Only while it sticks, a sidebar taller than the window scrolls inside itself.
+			self::assertStringContainsString( "@media screen and (min-width: 961px) {\n\t.ran-booster-admin .ran-booster-" . $sidebar . " {\n\t\tmax-block-size: calc(\n\t\t\t100vh - var(--ran-booster-sticky-top) - var(--ran-booster-space-16)\n\t\t);\n\t\toverflow-y: auto;", $css, $file );
+			self::assertStringNotContainsString( 'inset-block-start: 54px', $css, $file );
+		}
+		$script = $this->asset( 'ran-booster.js' );
+		self::assertStringContainsString( "'--ran-booster-shell-offset'", $script );
+		self::assertStringContainsString( "box: 'border-box'", $script );
+	}
+
 	public function test_package_summary_contains_long_copy_and_truncates_only_the_repository_link(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
 
-		self::assertStringContainsString( ".ran-booster-package-summary {\n\tposition: sticky;\n\tinset-block-start: 54px;\n\tmin-inline-size: 0;", $settings );
+		self::assertStringContainsString( ".ran-booster-package-summary {\n\tposition: sticky;\n\tinset-block-start: var(--ran-booster-sticky-top);", $settings );
 		self::assertStringContainsString( ".ran-booster-package-summary > div {\n\tmin-inline-size: 0;", $settings );
 		self::assertStringContainsString( ".ran-booster-package-summary__meta {\n\tmargin:", $settings );
 		self::assertStringContainsString( 'overflow-wrap: anywhere;', $settings );
@@ -1142,7 +1161,10 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/:first-child,[^{]*> \[aria-hidden="true"\],[^{]*__entry-heading \{\s*display: contents;/', $narrow );
 		self::assertMatchesRegularExpression( '/__entry-title \{\s*grid-row: 1;\s*grid-column: 1;/', $narrow );
 		self::assertMatchesRegularExpression( '/__entry-meta\s*\) \{\s*grid-row: 1;\s*grid-column: 2;/', $narrow );
-		self::assertMatchesRegularExpression( '/> :last-child \{\s*grid-row: 1;\s*grid-column: 3;/', $narrow );
+		// The native chevron takes the mounted chevron's column, so nothing moves on mount.
+		self::assertMatchesRegularExpression( '/> :last-child,[^{]*> summary::after \{\s*grid-row: 1;\s*grid-column: 3;/', $narrow );
+		// The native summary outranks the shared fallback summary flex rule.
+		self::assertStringContainsString( "__installation-entry[data-ran-booster-ui-disclosure]:not(\n\t\t\t[data-ran-booster-ui-disclosure-warned]\n\t\t)\n\t\t> details[data-ran-booster-ui-disclosure-fallback]\n\t\t> summary,", $narrow );
 		// The strapline spans every column on its own row under the title, badge and chevron.
 		self::assertMatchesRegularExpression( '/__entry-description \{\s*grid-row: 2;\s*grid-column: 1 \/ -1;/', $narrow );
 		// The padding belongs to the header rules (16px Installation, 24px Settings), never to the narrow rule.

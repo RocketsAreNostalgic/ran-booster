@@ -19,9 +19,9 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_fixture_loaded_before_core_receives_only_exact_api_four_facade(): void {
+	public function test_fixture_loaded_before_core_receives_only_exact_api_five_facade(): void {
 		$this->load_fixture();
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 4 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 5 );
 
 		$this->run_hook( 'plugins_loaded' );
 		$this->run_hook( 'ran_booster_portability_ready', $this->facade() );
@@ -32,7 +32,7 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_fixture_loaded_after_core_uses_the_same_exact_contract(): void {
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 4 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 5 );
 		$this->load_fixture();
 
 		$this->run_hook( 'plugins_loaded' );
@@ -62,22 +62,23 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 			'API 1' => array( 1 ),
 			'API 2' => array( 2 ),
 			'API 3' => array( 3 ),
-			'API 5' => array( 5 ),
+			'API 4' => array( 4 ),
+			'API 6' => array( 6 ),
 		);
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	#[DataProvider( 'old_bridge_load_orders' )]
-	public function test_api_two_bridge_registers_no_feature_hooks_or_facade_calls_on_api_four( bool $core_first ): void {
+	public function test_api_two_bridge_registers_no_feature_hooks_or_facade_calls_on_api_five( bool $core_first ): void {
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
 		unset( $GLOBALS['ran_booster_fixture_portability_results'] );
 		if ( $core_first ) {
-			define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 4 );
+			define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 5 );
 		}
 		require dirname( __DIR__ ) . '/fixtures/ran-booster-fixture-portability-addon/old-api2-bridge.php';
 		if ( ! $core_first ) {
-			define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 4 );
+			define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 5 );
 		}
 
 		$this->run_hook( 'plugins_loaded' );
@@ -127,11 +128,10 @@ final class ExternalFixturePortabilityPluginTest extends TestCase {
 				);
 			}
 
-			public function apply( PortabilityCandidate $candidate, string $expected_fingerprint, string $nonce, ?array $provider_expectation ): PortabilityApplyResult {
+			public function apply( PortabilityCandidate $candidate, string $expected_fingerprint, string $nonce ): PortabilityApplyResult {
 				TestCase::assertSame( 'fixture/fixture.php', $candidate->identifier );
 				TestCase::assertSame( 'v1:' . str_repeat( 'a', 64 ), $expected_fingerprint );
 				TestCase::assertSame( 'fixture-apply-nonce', $nonce );
-				TestCase::assertNull( $provider_expectation );
 
 				return new PortabilityApplyResult(
 					PortabilityApplyResult::ADOPTED,

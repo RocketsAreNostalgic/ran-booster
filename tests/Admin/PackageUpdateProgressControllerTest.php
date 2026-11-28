@@ -18,8 +18,6 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Deployment/AttemptRepositoryDatabase.php';
 
 final class PackageUpdateProgressControllerTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
-
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $repository;
 
@@ -35,8 +33,7 @@ final class PackageUpdateProgressControllerTest extends TestCase {
 			'wp_ran_booster_deployment_attempts',
 			static fn (): DateTimeImmutable => new DateTimeImmutable( '2026-07-23 00:00:00 UTC' ),
 			static fn ( int $length ): string => str_repeat( "\x01", $length ),
-			$this->createStub( \RAN\Storage\Database::class ),
-			selection: $this->queued_selection( $this->database )
+			$this->createStub( \RAN\Storage\Database::class )
 		);
 	}
 

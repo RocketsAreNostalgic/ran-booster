@@ -26,9 +26,6 @@ use RAN\PackageRemoval\PackageRemovalResult;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\PackageSource;
 use RAN\Plugin;
-use RAN\RepositoryProvider\GitHubProviderSelection;
-use RAN\RepositoryProvider\GitHubReplacementDeclaration;
-use RAN\Storage\GitHubSelectionStore;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\PluginRepository;
@@ -138,7 +135,7 @@ final class PackageRemovalServiceTest extends TestCase {
 		$database             = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
 		$attempts             = $this->attempts( $database );
 		$lock                 = new RemovalUpdaterLock();
-		$service              = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $attempts, $lock, github_selection: $this->selection() );
+		$service              = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $attempts, $lock );
 		$confirmation         = $service->recovery_confirmation( 'plugin', 'example/example.php' );
 		$database->fail_reads = true;
 		try {
@@ -188,7 +185,7 @@ final class PackageRemovalServiceTest extends TestCase {
 					$database->fail_reads = true;
 				}
 				$lock    = new RemovalUpdaterLock();
-				$service = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $attempts, $lock, github_selection: $this->selection() );
+				$service = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $attempts, $lock );
 
 				try {
 					$service->recovery_confirmation( $type, $identifier );
@@ -273,8 +270,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->gateway,
 			$this->attempts(),
 			new RemovalUpdaterLock(),
-			$evidence,
-			github_selection: $this->selection()
+			$evidence
 		);
 
 		self::assertNotNull( $evidence->find( 'plugin', $fixture->plugin, 'profile-a' ) );
@@ -292,8 +288,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->gateway,
 			$this->attempts(),
 			new RemovalUpdaterLock(),
-			$evidence,
-			github_selection: $this->selection()
+			$evidence
 		);
 		$evidence->begin_check( 'plugin', $fixture->plugin, 'profile-a' );
 		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
@@ -317,8 +312,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->gateway,
 			$this->attempts(),
 			new RemovalUpdaterLock(),
-			$evidence,
-			github_selection: $this->selection()
+			$evidence
 		);
 		$evidence->begin_check( 'plugin', $fixture->plugin, 'profile-a' );
 		$evidence->record( 'plugin', $fixture->plugin, 'profile-a', 'verified' );
@@ -338,8 +332,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->themes,
 			$fixture->gateway,
 			$this->attempts(),
-			$lock,
-			github_selection: $this->selection()
+			$lock
 		);
 
 		$result = $service->execute(
@@ -350,111 +343,15 @@ final class PackageRemovalServiceTest extends TestCase {
 		self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
 	}
 
-	public function test_confirmed_unlink_without_native_selection_refuses_before_mutation(): void {
-		$fixture = $this->fixture();
-
-		$service = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), new RemovalUpdaterLock() );
-		$result  = $service->execute(
-			PackageOperation::from_input( 'unlink-plugin', $this->input() )
-		);
-
-		self::assertSame( 'failed', $result->status );
-		self::assertSame( 'management_state_uncertain', $result->outcome_code );
-		self::assertFalse( $fixture->plugins->unlinked );
-	}
-
-	public function test_native_marker_and_changed_lock_token_refuse_before_removal(): void {
-		foreach ( array( 'marker', 'token' ) as $fault ) {
-			$fixture = $this->fixture();
-			$lock    = new RemovalUpdaterLock();
-			if ( 'token' === $fault ) {
-				$lock->current = 'replacement-lock';
-			}
-			$service = new PackageRemovalService(
-				$fixture->plugins,
-				$fixture->themes,
-				$fixture->gateway,
-				$this->attempts(),
-				$lock,
-				github_selection: $this->selection( 'marker' === $fault ? array( 'plugin', 'example/alternate.php' ) : null )
-			);
-
-			$result = $service->execute( PackageOperation::from_input( 'unlink-plugin', $this->input() ) );
-			self::assertSame( 'operation_in_progress', $result->outcome_code );
-			self::assertFalse( $fixture->plugins->unlinked );
-		}
-	}
-
-	public function test_marker_refusal_release_failure_overrides_the_normal_refusal_result(): void {
-		$fixture          = $this->fixture();
-		$lock             = new RemovalUpdaterLock();
-		$lock->releasable = false;
-		$service          = new PackageRemovalService(
-			$fixture->plugins,
-			$fixture->themes,
-			$fixture->gateway,
-			$this->attempts(),
-			$lock,
-			github_selection: $this->selection( array( 'plugin', 'example/alternate.php' ) )
-		);
+	public function test_changed_lock_token_refuses_before_removal(): void {
+		$fixture       = $this->fixture();
+		$lock          = new RemovalUpdaterLock();
+		$lock->current = 'replacement-lock';
+		$service       = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), $lock );
 
 		$result = $service->execute( PackageOperation::from_input( 'unlink-plugin', $this->input() ) );
-		self::assertSame( 'operation_lock_failed', $result->outcome_code );
+		self::assertSame( 'operation_in_progress', $result->outcome_code );
 		self::assertFalse( $fixture->plugins->unlinked );
-		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
-	}
-
-	public function test_exact_marker_refuses_destructive_plugin_theme_and_legacy_recovery(): void {
-		foreach ( array( array( 'plugin', 'example/alternate.php', 'unlink-delete-plugin', $this->input() ), array( 'theme', 'example', 'unlink-delete-theme', $this->theme_input() ) ) as [ $type, $marker, $action, $input ] ) {
-			$fixture = $this->fixture();
-			$service = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), new RemovalUpdaterLock(), github_selection: $this->selection( array( $type, $marker ) ) );
-			$result  = $service->execute( PackageOperation::from_input( $action, $input ) );
-			$package = 'plugin' === $type ? $fixture->plugin : $fixture->theme;
-			self::assertSame( 'operation_in_progress', $result->outcome_code );
-			self::assertSame( DeploymentPolicy::MANUAL, $package->get_deployment_policy() );
-			self::assertSame( 7, $package->get_source_revision() );
-			self::assertSame( 'gh:R_example:11111111-1111-4111-8111-111111111111', $package->get_adoption_token() );
-			self::assertFalse( ( 'plugin' === $type ? $fixture->plugins : $fixture->themes )->unlinked );
-			self::assertSame( array(), $fixture->gateway->invalidated );
-		}
-
-		$fixture      = $this->fixture();
-		$lock         = new RemovalUpdaterLock();
-		$service      = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), $lock, github_selection: $this->selection( array( 'plugin', 'example/alternate.php' ) ) );
-		$confirmation = $service->recovery_confirmation( 'plugin', 'example/example.php' );
-		try {
-			$service->recover( 'plugin', 'example/example.php', $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] );
-			self::fail( 'Native ownership admitted legacy recovery.' );
-		} catch ( \RuntimeException ) {
-			self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
-			self::assertFalse( $fixture->plugins->unlinked );
-		}
-	}
-
-	public function test_corrupt_selection_storage_refuses_unlink_delete_and_legacy_recovery(): void {
-		foreach ( array( 'unlink-plugin', 'unlink-delete-plugin' ) as $action ) {
-			$fixture                                    = $this->fixture();
-			$database                                   = new \RAN\Tests\RepositoryProvider\SelectionContextDatabase();
-			$service                                    = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), new RemovalUpdaterLock(), github_selection: $this->selection( database: $database ) );
-			$database->selection->rows[0]->option_value = '{}';
-			$result                                     = $service->execute( PackageOperation::from_input( $action, $this->input() ) );
-			self::assertSame( 'management_state_uncertain', $result->outcome_code );
-			self::assertFalse( $fixture->plugins->unlinked );
-			self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
-		}
-		$fixture                                    = $this->fixture();
-		$database                                   = new \RAN\Tests\RepositoryProvider\SelectionContextDatabase();
-		$lock                                       = new RemovalUpdaterLock();
-		$service                                    = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), $lock, github_selection: $this->selection( database: $database ) );
-		$confirmation                               = $service->recovery_confirmation( 'plugin', 'example/example.php' );
-		$database->selection->rows[0]->option_value = '{}';
-		try {
-			$service->recover( 'plugin', 'example/example.php', $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] );
-			self::fail( 'Corrupt authority admitted legacy recovery.' );
-		} catch ( \RuntimeException ) {
-			self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
-			self::assertFalse( $fixture->plugins->unlinked );
-		}
 	}
 
 	public function test_recovery_confirmation_preflight_cannot_admit_a_replaced_lock_token(): void {
@@ -463,50 +360,10 @@ final class PackageRemovalServiceTest extends TestCase {
 		$fixture->gateway->on_installed_fingerprint = static function () use ( $lock ): void {
 			$lock->current = 'replacement-lock';
 		};
-		$service                                    = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), $lock, github_selection: $this->selection() );
+		$service                                    = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), $lock );
 		$result                                     = $service->execute( PackageOperation::from_input( 'unlink-plugin', $this->input() ) );
 		self::assertSame( 'operation_in_progress', $result->outcome_code );
 		self::assertFalse( $fixture->plugins->unlinked );
-	}
-
-	public function test_deletion_postcondition_cannot_admit_a_late_matching_marker(): void {
-		$fixture                                     = $this->fixture();
-		$store                                       = null;
-		$selection                                   = $this->selection(
-			after_initialize: static function ( GitHubSelectionStore $candidate ) use ( &$store ): void {
-				$store = $candidate;
-			}
-		);
-		$fixture->gateway->on_deletion_postcondition = static function () use ( &$store ): void {
-			if ( ! $store instanceof GitHubSelectionStore ) {
-				throw new \LogicException( 'Late-marker selection store is unavailable.' );
-			}
-			$state                    = $store->read();
-			$state['native_mutation'] = array(
-				'selection_generation' => 0,
-				'owner_tag'            => str_repeat( 'a', 32 ),
-				'target_type'          => 'plugin',
-				'installed_identity'   => 'example/alternate.php',
-				'phase'                => 'started',
-			);
-			self::assertTrue( $store->compare_and_swap( $store->read(), $state ) );
-		};
-		$service                                     = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), new RemovalUpdaterLock(), github_selection: $selection );
-		$result                                      = $service->execute( PackageOperation::from_input( 'unlink-delete-plugin', $this->input() ) );
-		self::assertSame( 'operation_in_progress', $result->outcome_code );
-		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
-		self::assertFalse( $fixture->plugins->unlinked );
-	}
-
-	public function test_selection_transaction_failure_fails_closed_before_unlink(): void {
-		$fixture                          = $this->fixture();
-		$database                         = new \RAN\Tests\RepositoryProvider\SelectionContextDatabase();
-		$service                          = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), new RemovalUpdaterLock(), github_selection: $this->selection( database: $database ) );
-		$database->selection->fail_commit = true;
-		$result                           = $service->execute( PackageOperation::from_input( 'unlink-plugin', $this->input() ) );
-		self::assertSame( 'management_state_uncertain', $result->outcome_code );
-		self::assertFalse( $fixture->plugins->unlinked );
-		self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
 	}
 
 	public function test_ordinary_removals_and_recovery_never_reclaim_raw_updater_locks(): void {
@@ -519,10 +376,12 @@ final class PackageRemovalServiceTest extends TestCase {
 				foreach ( array( 'unlink-plugin', 'unlink-delete-plugin' ) as $action ) {
 					$fixture                                    = $this->fixture();
 					$database->option_rows['auto_updater.lock'] = $held;
-					$service                                    = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts( $database ), new WordPressUpdaterLock(), github_selection: $this->selection() );
+					$service                                    = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts( $database ), new WordPressUpdaterLock() );
 					$result                                     = $service->execute( PackageOperation::from_input( $action, $this->input() ) );
 					self::assertSame( 'operation_in_progress', $result->outcome_code );
 					self::assertSame( $held, $database->option_rows['auto_updater.lock'] );
+					// The refused Unlink leaves the holder its read observed for the failure notice to name.
+					self::assertSame( $held, WordPressUpdaterLock::take_refusal() );
 					self::assertFalse( $fixture->plugins->unlinked );
 					self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
 					self::assertSame( 7, $fixture->plugin->get_source_revision() );
@@ -530,7 +389,7 @@ final class PackageRemovalServiceTest extends TestCase {
 				}
 
 				$fixture                                    = $this->fixture();
-				$service                                    = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts( $database ), new WordPressUpdaterLock(), github_selection: $this->selection() );
+				$service                                    = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts( $database ), new WordPressUpdaterLock() );
 				$confirmation                               = $service->recovery_confirmation( 'plugin', 'example/example.php' );
 				$database->option_rows['auto_updater.lock'] = $held;
 				try {
@@ -556,8 +415,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->themes,
 			$fixture->gateway,
 			$this->attempts(),
-			$lock,
-			github_selection: $this->selection()
+			$lock
 		);
 
 		$result = $service->execute(
@@ -578,8 +436,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->themes,
 			$fixture->gateway,
 			$this->attempts(),
-			$lock,
-			github_selection: $this->selection()
+			$lock
 		);
 
 		$result = $service->execute(
@@ -611,7 +468,7 @@ final class PackageRemovalServiceTest extends TestCase {
 					$repository->installed = false;
 					return true;
 				};
-				$service                                 = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), new RemovalUpdaterLock(), $evidence, $this->selection() );
+				$service                                 = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), new RemovalUpdaterLock(), $evidence );
 				$input                                   = 'plugin' === $type ? $this->input() : $this->theme_input();
 				self::assertSame( 'deleted', $service->execute( PackageOperation::from_input( 'unlink-delete-' . $type, $input ) )->status );
 				self::assertTrue( $repository->unlinked );
@@ -669,8 +526,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->themes,
 			$fixture->gateway,
 			$this->attempts(),
-			$lock,
-			github_selection: $this->selection()
+			$lock
 		);
 
 		$result = $service->execute(
@@ -690,8 +546,7 @@ final class PackageRemovalServiceTest extends TestCase {
 			$fixture->themes,
 			$fixture->gateway,
 			$this->attempts(),
-			$lock,
-			github_selection: $this->selection()
+			$lock
 		);
 
 		$result = $service->execute(
@@ -991,38 +846,8 @@ final class PackageRemovalServiceTest extends TestCase {
 			$plugins,
 			$themes,
 			$gateway,
-			new PackageRemovalService( $plugins, $themes, $gateway, $this->attempts(), new RemovalUpdaterLock(), github_selection: $this->selection() )
+			new PackageRemovalService( $plugins, $themes, $gateway, $this->attempts(), new RemovalUpdaterLock() )
 		);
-	}
-
-	/** @param array{string,string}|null $native_marker */
-	private function selection( ?array $native_marker = null, ?\RAN\Tests\RepositoryProvider\SelectionContextDatabase $database = null, ?\Closure $after_initialize = null ): GitHubProviderSelection {
-		$store   = new GitHubSelectionStore( $database ?? new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' );
-		$bundled = new GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array( 'github-classic-pat-v1' ),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
-		$store->initialize_bundled( $bundled );
-		$after_initialize?->__invoke( $store );
-		if ( null !== $native_marker ) {
-			$state                    = $store->read();
-			$state['native_mutation'] = array(
-				'selection_generation' => 0,
-				'owner_tag'            => str_repeat( 'a', 32 ),
-				'target_type'          => $native_marker[0],
-				'installed_identity'   => $native_marker[1],
-				'phase'                => 'started',
-			);
-			self::assertTrue( $store->compare_and_swap( $store->read(), $state ) );
-		}
-		return new GitHubProviderSelection( $store, '/unused', $bundled );
 	}
 }
 
@@ -1351,7 +1176,8 @@ final class RemovalUpdaterLock extends WordPressUpdaterLock {
 	/** @var list<string> */
 	public array $events = array();
 
-	public function acquire(): string {
+	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
+		unset( $owner_operation );
 		$this->events[] = 'acquire';
 		if ( ! $this->available ) {
 			throw new \RuntimeException( 'Fixture lock unavailable.' );
@@ -1360,7 +1186,8 @@ final class RemovalUpdaterLock extends WordPressUpdaterLock {
 		return 'fixture-lock';
 	}
 
-	public function try_acquire_without_reclaim(): ?string {
+	public function try_acquire_without_reclaim( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): ?string {
+		unset( $owner_operation );
 		$this->events[] = 'acquire';
 		return $this->available ? 'fixture-lock' : null;
 	}

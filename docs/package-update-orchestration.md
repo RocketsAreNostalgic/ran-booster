@@ -182,8 +182,7 @@ callout whenever such unregistered managed rows exist (covering both Branch and
 Releases across all providers), and direct `?package=<id>` visits route to the
 same recovery screen. Stopping management requires explicit checkbox confirmation
 bound to the record's adoption token and digest, holds `auto_updater.lock`, and
-refuses while an active deployment attempt or GitHub native install hold exists
-(directing to the GitHub provider page hold recovery when a hold is active).
+refuses while an active deployment attempt exists.
 Booster never silently prunes management records on page load and never deletes
 unregistered directories; after stopping management, distinct feedback reports
 whether the folder is already absent or must be removed from disk before
@@ -662,7 +661,8 @@ sequenceDiagram
     C->>B: Execute claimed attempt
     B->>P: Prepare authenticated immutable archive
     P-->>B: URL, auth, resolved ref, and expected-head verifier
-    B->>B: Download once, preflight, lock, and recheck target/head/artifact
+    B->>B: Download once, preflight, and make the last branch-head observation
+    B->>B: Lock, then recheck target, downgrade, artifact and maintenance
     B->>W: Local ZIP through Branch WordPressCorePackageExecutor
     W-->>B: Upgrader result and completion callback
     B->>D: Persist terminal outcome
@@ -682,8 +682,9 @@ Execution later rejects the attempt if that stored package source or revision
 has changed.
 
 The provider receives the configured branch as an expected-head constraint for
-webhook work. Before mutation it rejects a delayed push whose authenticated
-commit is no longer the branch head. Replayed deliveries with the same provider
+webhook work. In its last remote-head observation, before the updater lock is
+taken, it rejects a delayed push whose authenticated commit is no longer the
+branch head. Replayed deliveries with the same provider
 delivery ID and body digest reuse the existing admission and do not create
 another mutation. Reusing an ID with different authenticated content is a
 conflict.
@@ -704,8 +705,9 @@ running attempt
   → provider archive and immutable ref
   → archive preflight
   → resolved-ref journal write
+  → last provider branch-head check
   → WordPress auto_updater.lock
-  → post-lock source/applicable-head/artifact rechecks
+  → post-lock target/downgrade/artifact/maintenance rechecks
   → mutation fence
   → Branch WordPressCorePackageExecutor
   → WordPress upgrader
@@ -767,8 +769,8 @@ optimization candidates; it is not a runtime profile.
   hook, and cleanup boundaries. Arbitrary plugin callbacks or other processes
   can run between those boundaries, and cleanup must not delete a replaced
   path.
-- Push-to-Deploy verifies the provider branch head immediately before mutation.
-  This additional provider lookup prevents a delayed authenticated delivery
+- Push-to-Deploy verifies the provider branch head once more just before it
+  takes the updater lock. This additional provider lookup prevents a delayed authenticated delivery
   from deploying a commit that is no longer current.
 - The branch worker processes one attempt per real WP-Cron run. This limits
   request duration and serializes filesystem mutation, but can increase bulk
@@ -828,15 +830,9 @@ WordPress filesystem WP-CLI resolved.
 - A prospective install failure is synchronous and bounded. If files were
   installed but adoption or cleanup is uncertain, Core reports that state and
   does not claim the package is managed.
-- Retrying **Check releases** repeats discovery after cache invalidation. An
-  uncertain or interrupted GitHub native install or update retains the
-  site-wide GitHub install hold (`started` if the request never recorded its
-  end, or `finished` if it ended normally with an uncertain outcome), pausing
-  further GitHub-managed installs and provider changes until released in place
-  on the held package's page (when readable) or cleared via removal verification
-  on the GitHub page (when unreadable). Once no hold blocks the target, a failed
-  or released native Update can be retried through a new WordPress update
-  operation.
+- Retrying **Check releases** repeats discovery after cache invalidation. A
+  failed or uncertain native Update can be retried through a new WordPress
+  update operation.
 
 ### Tracked branches
 

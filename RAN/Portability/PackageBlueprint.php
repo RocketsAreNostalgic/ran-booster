@@ -79,7 +79,9 @@ final class PackageBlueprint {
 		} catch ( JsonException ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
-		if ( ! is_array( $data ) || ( count( $data ) !== 4 || array_diff( array( 'format', 'version', 'packages', 'credentials' ), array_keys( $data ) ) ) || self::FORMAT !== $data['format'] || ! in_array( $data['version'], array( 1, self::VERSION ), true ) || ! is_array( $data['packages'] ) || ! array_is_list( $data['packages'] ) || ! is_array( $data['credentials'] ) || ! array_is_list( $data['credentials'] ) ) {
+		// Credentials travel only in sealed archives, which always hold V2; a V1 document carrying credentials is refused.
+		if ( ! is_array( $data ) || ( count( $data ) !== 4 || array_diff( array( 'format', 'version', 'packages', 'credentials' ), array_keys( $data ) ) ) || self::FORMAT !== $data['format'] || ! in_array( $data['version'], array( 1, self::VERSION ), true ) || ! is_array( $data['packages'] ) || ! array_is_list( $data['packages'] ) || ! is_array( $data['credentials'] ) || ! array_is_list( $data['credentials'] )
+			|| ( 1 === $data['version'] && array() !== $data['credentials'] ) ) {
 			throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 		}
 		$legacy      = 1 === $data['version'];
@@ -88,23 +90,21 @@ final class PackageBlueprint {
 			if ( ! is_array( $record ) ) {
 				throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 			}
-			if ( ! $legacy ) {
-				$keys = array( 'provider', 'label', 'kind', 'configuration', 'secret', 'packages' );
-				if ( count( $record ) !== count( $keys ) || array_diff( $keys, array_keys( $record ) ) || ! is_array( $record['packages'] ) ) {
+			$keys = array( 'provider', 'label', 'kind', 'configuration', 'secret', 'packages' );
+			if ( count( $record ) !== count( $keys ) || array_diff( $keys, array_keys( $record ) ) || ! is_array( $record['packages'] ) ) {
+				throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
+			}
+			$record = array_replace( array_fill_keys( $keys, null ), $record );
+			foreach ( $record['packages'] as &$identity ) {
+				if ( ! is_array( $identity ) || count( $identity ) !== 2 || ! isset( $identity['type'], $identity['identifier'] ) ) {
 					throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
 				}
-				$record = array_replace( array_fill_keys( $keys, null ), $record );
-				foreach ( $record['packages'] as &$identity ) {
-					if ( ! is_array( $identity ) || count( $identity ) !== 2 || ! isset( $identity['type'], $identity['identifier'] ) ) {
-						throw new InvalidArgumentException( 'The portability blueprint is invalid.' );
-					}
-					$identity = array(
-						'type'       => $identity['type'],
-						'identifier' => $identity['identifier'],
-					);
-				}
-				unset( $identity );
+				$identity = array(
+					'type'       => $identity['type'],
+					'identifier' => $identity['identifier'],
+				);
 			}
+			unset( $identity );
 			$credentials[] = BlueprintCredential::from_array( $record );
 		}
 		$blueprint = new self(

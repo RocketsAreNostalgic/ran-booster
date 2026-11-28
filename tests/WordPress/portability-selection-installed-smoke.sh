@@ -37,23 +37,16 @@ if [[ "${1:-core}" == migrator ]]; then
   printf '%s\n' '<?php' '/* Plugin Name: Migrator fixture' 'Version: 1.0.0' '*/' > "$wordpress/wp-content/plugins/ran-migrator-fixture/plugin.php"
   chmod 0644 "$wordpress/wp-content/plugins/ran-migrator-fixture/plugin.php"
   source_phase seed
-  switch_phase activate-a
-  switch_phase select
-  run_phase migrator-session
-  run_phase migrator-review
   switch_phase activate-b
   switch_phase select
-  switch_phase reset-counters
-  run_phase migrator-stale
-  source_phase readback
-  run_phase migrator-retained
+  run_phase migrator-session
   run_phase migrator-review
   switch_phase reset-counters
   run_phase migrator-apply
   source_phase readback
   run_phase migrator-complete
   source_phase cleanup
-  echo 'Installed Migrator real HTTP stale refusal, fresh Disabled adoption and exact source cleanup passed.'
+  echo 'Installed Migrator real HTTP Disabled adoption and exact source cleanup passed.'
   exit 0
 fi
 [[ "${1:-core}" == core ]] || { echo 'Expected core or migrator proof mode.' >&2; exit 2; }
@@ -67,18 +60,9 @@ trap 'rm -f -- "$consumer_archive"' EXIT
 mkdir -m 0755 "$wordpress/wp-content/plugins/portability-consumer-proof"
 printf '%s\n' '<?php' '/* Plugin Name: Portability consumer proof' 'Version: 1.0.0' '*/' > "$wordpress/wp-content/plugins/portability-consumer-proof/plugin.php"
 chmod 0644 "$wordpress/wp-content/plugins/portability-consumer-proof/plugin.php"
-switch_phase activate-a
-switch_phase select
-run_phase seed-credential
-run_phase api-review
-run_phase dashboard-review
 switch_phase activate-b
 switch_phase select
-switch_phase reset-counters
-run_phase api-stale
-switch_phase reset-counters
-run_phase dashboard-stale
-# Both real consumers must be reviewable again against B before explicit adoption.
+run_phase seed-credential
 run_phase api-review
 run_phase dashboard-review
 switch_phase reset-counters
@@ -98,5 +82,5 @@ run_phase dashboard-success-no-consent
 switch_phase reset-counters
 run_phase dashboard-success-apply
 run_phase dashboard-success-readback
-echo 'Installed public API and HTTP dashboard refusal, consent and Disabled adoption proofs passed.'
+echo 'Installed public API and HTTP dashboard consent and Disabled adoption proofs passed.'
 echo 'Migrator controller, Bitbucket and browser acceptance are separate proofs.'

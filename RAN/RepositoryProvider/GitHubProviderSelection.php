@@ -482,14 +482,10 @@ final class GitHubProviderSelection {
 		$marker = $this->store->selection_transaction(
 			function ( \Closure $execute ) use ( $type, $identity, $owns_lock, $lock_token ): array {
 				$state = $this->store->read( true );
-				if ( isset( $state['native_mutation'] ) || ( null !== $lock_token && 1 !== preg_match( '/\A[1-9]\d{0,15}\z/D', $lock_token ) ) || ! $this->owns_native_lock( $owns_lock, $execute ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
+				if ( isset( $state['native_mutation'] ) || ( null !== $lock_token && null === self::native_lock_tag( $lock_token ) ) || ! $this->owns_native_lock( $owns_lock, $execute ) || ! $this->operation_allowed() || ! is_int( $state['selection_generation'] ) ) {
 						throw new \RuntimeException( 'GitHub native mutation is unavailable.' );
 				}
-				$prefix                  = null === $lock_token ? str_repeat( '0', 16 ) : sprintf( '%016x', (int) $lock_token );
-				$nonce                   = null === $lock_token ? '' : bin2hex( random_bytes( 4 ) );
-				$owner_tag               = null === $lock_token
-					? $prefix . bin2hex( random_bytes( 8 ) )
-					: $prefix . $nonce . substr( hash( 'sha256', 'ran-booster-native-lock-v1:' . $prefix . ':' . $nonce ), 0, 8 );
+				$owner_tag               = null === $lock_token ? str_repeat( '0', 16 ) . bin2hex( random_bytes( 8 ) ) : (string) self::native_lock_tag( $lock_token );
 				$marker                  = array(
 					'selection_generation' => $state['selection_generation'],
 					'owner_tag'            => $owner_tag,
@@ -604,19 +600,38 @@ final class GitHubProviderSelection {
 	 */
 	public static function native_lock_token( array $marker ): ?string {
 		$tag = $marker['owner_tag'] ?? null;
-		if ( ! is_string( $tag ) || 1 !== preg_match( '/\A([0-9a-f]{16})([0-9a-f]{8})([0-9a-f]{8})\z/D', $tag, $matches ) ) {
+		if ( ! is_string( $tag ) || 1 !== preg_match( '/\A([0-9a-f]{4})([0-9a-f]{4})([89a-f][0-9a-f]{7})([0-3][0-9a-f]{7})([0-3][0-9a-f]{7})\z/D', $tag, $matches ) ) {
 			return null;
 		}
-		$prefix = $matches[1];
-		if ( 1 !== preg_match( '/\A0+[1-9a-f][0-9a-f]{0,13}\z/D', $prefix ) ) {
+		$groups = array();
+		foreach ( array( $matches[3], $matches[4], $matches[5] ) as $word ) {
+			$groups[] = ( ( (int) hexdec( $word[0] ) & 3 ) << 28 ) | (int) hexdec( substr( $word, 1 ) );
+		}
+		$seconds = sprintf( '%.0f', (float) hexdec( $matches[1] ) * 65536.0 + (float) hexdec( $matches[2] ) );
+		$token   = 4 === ( (int) hexdec( $matches[3][0] ) & 4 ) ? $seconds : sprintf( '%s.%09d%09d%09d', $seconds, ...$groups );
+		// Only the canonical encoding of a valid token decodes.
+		return self::native_lock_tag( $token ) === $tag ? $token : null;
+	}
+
+	/**
+	 * Losslessly pack an updater lock token into the 32-hex owner tag, so recovery gets back the exact lock value.
+	 * Four 32-bit words: the seconds (up to 2^32 - 1), then the three nine-digit fraction groups (30 bits each).
+	 * The first group's two spare top bits carry the tag marker and the whole-seconds flag. Every integer stays
+	 * below 2^31, so 32-bit PHP builds produce the same tags.
+	 */
+	private static function native_lock_tag( string $token ): ?string {
+		if ( 1 !== preg_match( '/\A([1-9][0-9]{0,9})(?:\.([0-9]{9})([0-9]{9})([0-9]{9}))?\z/D', $token, $matches ) || (float) $matches[1] > 4294967295.0 ) {
 			return null;
 		}
-		$expected = substr( hash( 'sha256', 'ran-booster-native-lock-v1:' . $prefix . ':' . $matches[2] ), 0, 8 );
-		if ( ! hash_equals( $expected, $matches[3] ) ) {
-			return null;
+		$seconds = (float) $matches[1];
+		$high    = (int) floor( $seconds / 65536.0 );
+		$tag     = sprintf( '%04x%04x', $high, (int) ( $seconds - $high * 65536.0 ) );
+		$flags   = isset( $matches[2] ) ? 8 : 12;
+		foreach ( array( $matches[2] ?? '0', $matches[3] ?? '0', $matches[4] ?? '0' ) as $group ) {
+			$tag  .= sprintf( '%x%07x', $flags | ( (int) $group >> 28 ), (int) $group & 0xFFFFFFF );
+			$flags = 0;
 		}
-		$token = (string) hexdec( ltrim( $prefix, '0' ) );
-		return 1 === preg_match( '/\A[1-9]\d{0,15}\z/D', $token ) ? $token : null;
+		return $tag;
 	}
 
 	/** @return array<string,mixed> Internal recovery authority; never expose the native owner in public status. */

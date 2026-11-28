@@ -29,7 +29,7 @@ use RuntimeException;
  * Provider configuration stays opaque after the array check; provider policies
  * own the meaning and validation of its entries.
  *
- * @phpstan-type StoredCredential array{label:string,kind:string,configuration:array<array-key,mixed>,secret:string,self_destruct?:true,destroy_on?:string,provider_destroy_on?:string}
+ * @phpstan-type StoredCredential array{label:string,kind:string,configuration:array<array-key,mixed>,secret:string,self_destruct?:true,destroy_on?:string,provider_destroy_on?:string,material_tag?:string}
  * @phpstan-type StoredWebhook array{label:string,scope:string,target:string,authority_id:string,revision:positive-int,origin:'manual'|'assisted',secret:string}
  * @phpstan-type SecretsDocument array{schema_version:2,credentials:array<string,array<string,StoredCredential>>,webhooks:array<string,array<string,StoredWebhook>>}
  * @phpstan-type ConstantCredential array{id:'constant',provider:string,label:string,kind:string,configuration:array<array-key,mixed>,secret:string,source:'constant',immutable:true}
@@ -40,9 +40,12 @@ class SecretsFile {
 
 	public const SCHEMA_VERSION = 2;
 
-	public const CREDENTIALS          = 'credentials';
-	public const WEBHOOKS             = 'webhooks';
-	public const CONSTANT_PROFILE     = 'constant';
+	public const CREDENTIALS      = 'credentials';
+	public const WEBHOOKS         = 'webhooks';
+	public const CONSTANT_PROFILE = 'constant';
+
+	/** Domain label for the key that tags the read-only constant credential. */
+	private const MATERIAL_TAG_LABEL  = 'ran-booster-credential-material-tag-v1';
 	public const MAX_WEBHOOK_PROFILES = 16;
 
 	private ?string $path;
@@ -645,9 +648,9 @@ class SecretsFile {
 					$this->assert_credential_access( $entry['provider'], $entry['record'] );
 					$existing = $document[ self::CREDENTIALS ][ $entry['provider'] ][ $entry['id'] ] ?? null;
 					if ( null === $existing ) {
-						$document[ self::CREDENTIALS ][ $entry['provider'] ][ $entry['id'] ] = $entry['record'];
+						$document[ self::CREDENTIALS ][ $entry['provider'] ][ $entry['id'] ] = $entry['record'] + array( 'material_tag' => self::new_material_tag() );
 						$changed = true;
-					} elseif ( $existing !== $entry['record'] ) {
+					} elseif ( array_diff_key( $existing, array( 'material_tag' => true ) ) !== $entry['record'] ) {
 						throw new RuntimeException( 'A portability credential conflicts with an existing target credential.' );
 					}
 
@@ -698,6 +701,8 @@ class SecretsFile {
 			$metadata['configuration'] = array( 'owner' => '' );
 		}
 		$record = $this->validate_credential( $provider_code, $metadata, $secret, $submitted && ! $retain_secret );
+		// Observations of a credential stay bound to its secret: a new secret, or an untagged record, gets a new tag.
+		$record['material_tag'] = $retain_secret && is_string( $existing['material_tag'] ?? null ) ? $existing['material_tag'] : self::new_material_tag();
 
 		return $this->mutate(
 			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $record, $existing ): array {
@@ -734,30 +739,62 @@ class SecretsFile {
 	}
 
 	/**
+	 * Return the tag that binds expiry observations to a credential's current secret.
+	 *
+	 * File records carry a random tag that every new secret replaces; an untagged or
+	 * missing record has none. The read-only constant profile is tagged with an HMAC
+	 * of its value under a key derived from the site's salts, never an unkeyed hash.
+	 */
+	public function credential_material_tag( ProviderCode|string $provider, string $id ): ?string {
+		$provider_code = $this->provider_value( $provider );
+		if ( self::CONSTANT_PROFILE === $id ) {
+			$record = $this->constant_credential( $provider_code, $this->provider_policies->credential_policy( $provider ) );
+			$key    = hash_hmac( 'sha256', self::MATERIAL_TAG_LABEL, wp_salt( 'auth' ), true );
+
+			return null === $record ? null : substr( hash_hmac( 'sha256', $provider_code . "\0" . $record['secret'], $key ), 0, 32 );
+		}
+		$this->assert_writable_id( $id );
+		$tag = $this->file_document()[ self::CREDENTIALS ][ $provider_code ][ $id ]['material_tag'] ?? null;
+
+		return is_string( $tag ) ? $tag : null;
+	}
+
+	/**
 	 * Persist a provider-reported expiry for a self-destruct credential.
 	 *
 	 * This is deliberately separate from the advisory expiry observation option.
 	 * It remains encrypted with the credential and can only shorten its local
-	 * retention window.
+	 * retention window. The write is a compare-and-set under the file lock: it
+	 * applies only while the record still carries the tag read before validation.
+	 *
+	 * @return bool False when the credential was replaced or removed since that read.
 	 */
-	public function record_credential_provider_expiry( ProviderCode|string $provider, string $id, string $expires_on ): void {
+	public function record_credential_provider_expiry( ProviderCode|string $provider, string $id, string $expires_on, string $material_tag ): bool {
 		$this->assert_available();
 		$provider_code = $this->provider_value( $provider );
 		$this->assert_writable_id( $id );
 		$this->require_date( $expires_on, 'Credential provider expiry' );
 
-		$this->mutate(
-			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expires_on ): array {
+		return $this->mutate(
+			function ( #[\SensitiveParameter] array $document ) use ( $provider_code, $id, $expires_on, $material_tag ): array {
 				$record = $document[ self::CREDENTIALS ][ $provider_code ][ $id ] ?? null;
-				if ( ! is_array( $record ) || empty( $record['self_destruct'] ) ) {
-					return array( $document, null, false );
+				if ( ! is_array( $record ) || ! isset( $record['material_tag'] ) || ! hash_equals( $record['material_tag'], $material_tag ) ) {
+					return array( $document, false, false );
+				}
+				$current = $record['provider_destroy_on'] ?? null;
+				if ( empty( $record['self_destruct'] ) || ( null !== $current && $current <= $expires_on ) ) {
+					return array( $document, true, false );
 				}
 				$record['provider_destroy_on']                          = $expires_on;
 				$document[ self::CREDENTIALS ][ $provider_code ][ $id ] = $record;
 
-				return array( $document, null );
+				return array( $document, true );
 			}
 		);
+	}
+
+	private static function new_material_tag(): string {
+		return bin2hex( random_bytes( 16 ) );
 	}
 
 	/**
@@ -1884,7 +1921,7 @@ class SecretsFile {
 
 					$this->assert_writable_id( $id );
 					if ( self::CREDENTIALS === $collection ) {
-						$this->assert_only_keys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on' ), 'A provider credential contains unsupported fields.' );
+						$this->assert_only_keys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on', 'material_tag' ), 'A provider credential contains unsupported fields.' );
 						$normalised[ self::CREDENTIALS ][ $provider ][ $id ] = $this->validate_stored_credential( $record );
 					} else {
 						$normalised[ self::WEBHOOKS ][ $provider ][ $id ] = $this->validate_stored_webhook( $record );
@@ -1909,7 +1946,7 @@ class SecretsFile {
 	 * @return StoredCredential
 	 */
 	private function validate_stored_credential( #[\SensitiveParameter] array $record ): array {
-		$this->assert_only_keys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on' ), 'A provider credential contains unsupported fields.' );
+		$this->assert_only_keys( $record, array( 'label', 'kind', 'configuration', 'secret', 'self_destruct', 'destroy_on', 'provider_destroy_on', 'material_tag' ), 'A provider credential contains unsupported fields.' );
 		if ( ! is_array( $record['configuration'] ?? null ) ) {
 			throw new RuntimeException( 'A provider credential contains invalid configuration.' );
 		}
@@ -1946,6 +1983,12 @@ class SecretsFile {
 				$validated['provider_destroy_on'] = $provider_destroy_on;
 			}
 		}
+		if ( array_key_exists( 'material_tag', $record ) ) {
+			if ( ! is_string( $record['material_tag'] ) || 1 !== preg_match( '/\A[0-9a-f]{32}\z/', $record['material_tag'] ) ) {
+				throw new RuntimeException( 'A provider credential contains an invalid material tag.' );
+			}
+			$validated['material_tag'] = $record['material_tag'];
+		}
 
 		return $validated;
 	}
@@ -1978,6 +2021,7 @@ class SecretsFile {
 	 * @return StoredCredential
 	 */
 	private function revalidate_stored_credential( string $provider, #[\SensitiveParameter] array $record ): array {
+		$record    = array_diff_key( $record, array( 'material_tag' => true ) );
 		$validated = $this->validate_credential( $provider, $record, $record['secret'] ?? null );
 		if ( $validated !== $record ) {
 			throw new RuntimeException( 'Stored provider credential material is no longer canonical under the current policy.' );

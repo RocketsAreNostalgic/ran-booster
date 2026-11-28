@@ -43,10 +43,10 @@ The runtime path is intentionally serial:
 1. The normalized branch updater acquires and validates the provider archive;
    the Booster host boundary supplies provider custody, local readiness and
    capacity checks, durable journal updates, and target facts.
-1. The shared WordPress updater lock is acquired before filesystem mutation.
-   The admitted runner re-checks the target, provider head, artifact identity,
-   maintenance state and mutation fence before using its WordPress Core package
-   executor.
+1. The admitted runner makes its last provider branch-head check, then acquires
+   the shared WordPress updater lock before filesystem mutation. Under the lock
+   it re-checks the target, downgrade, artifact identity, maintenance state and
+   mutation fence before using its WordPress Core package executor.
 1. The attempt is finished with a terminal `DeploymentOutcome`.
 
 Branch-source manual installs and updates share this execution machinery. Web
@@ -184,10 +184,12 @@ It refuses to run outside `wp_doing_cron()`.
   its own plugin files.
 - `assert_deployment_target_count()` caps web hook fan-out at 64 targets.
 
-After archive preparation and lock acquisition, the admitted runner asks the
-host boundary to recheck the frozen target, provider head where applicable,
-artifact identity and maintenance state before writing the mutation fence and
-calling WordPress. These checks fail closed rather than infer safety from the
+After archive preparation and preflight, and before it takes the updater lock,
+the admitted runner asks the host boundary for its last remote-head
+observation where applicable. Under the lock it repeats the local checks: the
+frozen target and downgrade rule, artifact identity, maintenance state,
+mutation policy and preflight. Only then does it write the mutation fence and
+call WordPress. These checks fail closed rather than infer safety from the
 updater lock.
 
 ## Booster updates

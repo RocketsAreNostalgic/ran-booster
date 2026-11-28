@@ -48,6 +48,9 @@ class Dashboard {
 	/** @var list<mixed> */
 	public $messages = array();
 
+	/** @var array{token: string, operation: string, started_at: int}|null The recorded owner of a lock that refused this request's action. */
+	private ?array $updater_lock_owner = null;
+
 	/** @var Booster */
 	private $booster;
 
@@ -290,9 +293,6 @@ class Dashboard {
 			$data['provider_list_state']            = $this->requested_provider_list_state();
 			$data['replace_credential']             = $this->requested_provider_repository_id( 'replace_credential' );
 			$data['credential_form_request']        = $this->requested_credential_form( $data['provider'] );
-
-			$selected_provider_code     = is_string( $data['selected_provider'] ?? null ) ? $data['selected_provider'] : '';
-			$data['native_hold_result'] = $this->provider_settings->provider_native_hold_result( $selected_provider_code, $this->native_hold_result() );
 
 			$data['requested_repository_id']            = $this->requested_provider_repository_id();
 			$data                                       = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );
@@ -986,14 +986,6 @@ class Dashboard {
 						$this->requested_package_source_view(),
 						$this->requested_advanced_settings_open() || null !== $save_check_sentences
 					);
-					$native_hold                                   = $this->provider_settings->native_hold();
-					$package_native_hold                           = null !== $native_hold && $native_hold['readable'] && $native_hold['type'] === $type && $native_hold['identifier'] === $package->get_identifier() ? $native_hold : null;
-					$hold_active                                   = null !== $native_hold || 'recovery_required' === ( $this->provider_settings->github_selection_diagnostics()['state'] ?? null );
-					$hold_result                                   = $this->native_hold_result();
-					$edit_data['package_native_hold_result']       = null !== $hold_result && $hold_active && ( null === $package_native_hold || in_array( $hold_result['code'], array( 'released', 'cleared', 'lock_failed' ), true ) )
-						? null
-						: $hold_result;
-					$edit_data['package_native_hold']              = $package_native_hold;
 					$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
 					$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
 					$edit_data['repository_branch_check_args']     = PackageSource::BRANCH === $package->get_source()
@@ -1038,8 +1030,6 @@ class Dashboard {
 		$confirmation = null;
 		$reason       = __( 'Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package.', 'ran-booster' );
 		$blocker      = null;
-		$action_url   = null;
-		$action_label = null;
 		if ( '' !== $identifier ) {
 			$state = 'blocked';
 			try {
@@ -1072,14 +1062,7 @@ class Dashboard {
 						$confirmation = $removals->unregistered_recovery_confirmation( $type, $identifier );
 						$state        = 'unregistered';
 					} catch ( Throwable $unsafe ) {
-						if ( 'Native install hold prevents recovery.' === $unsafe->getMessage() ) {
-							$blocker      = __( 'A GitHub install hold is active for this package. Use GitHub provider hold recovery to clear the hold and stop managing it.', 'ran-booster' );
-							$native_hold  = $this->provider_settings->native_hold();
-							$action_url   = is_array( $native_hold ) && '' !== $native_hold['url']
-								? $native_hold['url']
-								: ( $this->provider_tab_url( 'gh' ) . '#ran-booster-native-hold' );
-							$action_label = __( 'Open GitHub hold recovery', 'ran-booster' );
-						} elseif ( 'Unresolved deployment work prevents recovery.' === $unsafe->getMessage() ) {
+						if ( 'Unresolved deployment work prevents recovery.' === $unsafe->getMessage() ) {
 							$blocker = __( 'Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again.', 'ran-booster' );
 						} else {
 							$blocker = __( 'Booster cannot verify the exact management record or operation state needed for safe disconnection. Resolve this uncertainty before trying again.', 'ran-booster' );
@@ -1125,8 +1108,6 @@ class Dashboard {
 				'recovery_reason'       => $reason,
 				'recovery_blocker'      => $blocker,
 				'recovery_confirmation' => $confirmation,
-				'recovery_action_url'   => $action_url,
-				'recovery_action_label' => $action_label,
 			)
 		);
 	}
@@ -1175,7 +1156,11 @@ class Dashboard {
 			}
 		}
 
+		\RAN\WordPress\WordPressUpdaterLock::take_refusal();
 		$outcome = $this->provider_settings->check_package_repository_branch( $type, $package );
+		if ( 'unable_to_check' === $outcome ) {
+			$this->name_refusing_lock_owner( \RAN\WordPress\WordPressUpdaterLock::take_refusal() );
+		}
 		set_transient( $marker, $outcome, 3600 );
 		BoosterLogger::log(
 			'repository branch check completed',
@@ -1287,89 +1272,6 @@ class Dashboard {
 			$input[ $key ] = $_GET[ 'return_' . $key ] ?? '';
 		}
 		return $this->package_list_query_arguments( $input );
-	}
-
-	public static function native_hold_result_nonce_action(
-		string $code,
-		string $folder = '',
-		string $type = 'plugin',
-		string $package = ''
-	): string {
-		return 'ran_booster_native_hold_result_' . hash(
-			'sha256',
-			implode( "\0", array( $code, $folder, $type, $package ) )
-		);
-	}
-
-	/** @return array{code:string,folder:string,type:string}|null The result of a hold action, shown beside its control. */
-	private function native_hold_result(): ?array {
-		if ( ! isset( $_GET['ran_booster_hold'], $_GET['_ran_booster_hold_nonce'] ) ) {
-			return null;
-		}
-		if ( false === wp_verify_nonce(
-			is_string( $_GET['_ran_booster_hold_nonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_ran_booster_hold_nonce'] ) ) : '',
-			self::native_hold_result_nonce_action(
-				is_string( $_GET['ran_booster_hold'] ) ? sanitize_key( wp_unslash( $_GET['ran_booster_hold'] ) ) : '',
-				isset( $_GET['ran_booster_hold_folder'] ) && is_string( $_GET['ran_booster_hold_folder'] ) ? sanitize_text_field( wp_unslash( $_GET['ran_booster_hold_folder'] ) ) : '',
-				isset( $_GET['ran_booster_hold_type'] ) && is_string( $_GET['ran_booster_hold_type'] )
-					? sanitize_key( wp_unslash( $_GET['ran_booster_hold_type'] ) )
-					: 'plugin',
-				isset( $_GET['package'] ) && is_string( $_GET['package'] ) ? sanitize_text_field( wp_unslash( $_GET['package'] ) ) : ''
-			)
-		) ) {
-			return null;
-		}
-		if ( ! is_string( $_GET['ran_booster_hold'] ) || ! is_string( $_GET['_ran_booster_hold_nonce'] ) ) {
-			return null;
-		}
-		$nonce = sanitize_text_field( wp_unslash( $_GET['_ran_booster_hold_nonce'] ) );
-		if ( '' === $nonce || wp_unslash( $_GET['_ran_booster_hold_nonce'] ) !== $nonce ) {
-			return null;
-		}
-		$code = sanitize_key( wp_unslash( $_GET['ran_booster_hold'] ) );
-		if ( wp_unslash( $_GET['ran_booster_hold'] ) !== $code
-			|| ! in_array( $code, array( 'released', 'cleared', 'present', 'busy', 'failed', 'lock_failed' ), true ) ) {
-			return null;
-		}
-		$folder = '';
-		if ( isset( $_GET['ran_booster_hold_folder'] ) ) {
-			if ( ! is_string( $_GET['ran_booster_hold_folder'] ) ) {
-				return null;
-			}
-			$candidate_folder = sanitize_text_field( wp_unslash( $_GET['ran_booster_hold_folder'] ) );
-			if ( wp_unslash( $_GET['ran_booster_hold_folder'] ) !== $candidate_folder
-				|| 1 !== preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._-]{0,190}\z#D', $candidate_folder ) ) {
-				return null;
-			}
-			$folder = $candidate_folder;
-		}
-		$type = 'plugin';
-		if ( isset( $_GET['ran_booster_hold_type'] ) ) {
-			if ( ! is_string( $_GET['ran_booster_hold_type'] ) ) {
-				return null;
-			}
-			$candidate_type = sanitize_key( wp_unslash( $_GET['ran_booster_hold_type'] ) );
-			if ( wp_unslash( $_GET['ran_booster_hold_type'] ) !== $candidate_type
-				|| ! in_array( $candidate_type, array( 'plugin', 'theme' ), true ) ) {
-				return null;
-			}
-			$type = $candidate_type;
-		}
-		if ( isset( $_GET['package'] ) ) {
-			if ( ! is_string( $_GET['package'] ) ) {
-				return null;
-			}
-			$candidate_package = sanitize_text_field( wp_unslash( $_GET['package'] ) );
-			if ( wp_unslash( $_GET['package'] ) !== $candidate_package
-				|| 1 !== preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}\z#D', $candidate_package ) ) {
-				return null;
-			}
-		}
-		return array(
-			'code'   => $code,
-			'folder' => $folder,
-			'type'   => $type,
-		);
 	}
 
 	private function requested_package_source_view(): string {
@@ -1488,6 +1390,19 @@ class Dashboard {
 		$this->record_message( $message, $failure, $context );
 	}
 
+	/** Name the Booster owner of a lock that refused this operator, only while that exact holder still holds it (#1180). */
+	public function name_refusing_lock_owner( ?string $holder ): void {
+		if ( null === $holder || 1 !== preg_match( \RAN\WordPress\WordPressUpdaterLock::OWNER_TOKEN, $holder ) ) {
+			return;
+		}
+		try {
+			$owner = ( new \RAN\WordPress\WordPressUpdaterLock() )->recorded_owner();
+		} catch ( Throwable ) {
+			$owner = null;
+		}
+		$this->updater_lock_owner = null !== $owner && hash_equals( $holder, $owner['token'] ) ? $owner : null;
+	}
+
 	/**
 	 * @param mixed $message Notice input is classified defensively before storage.
 	 * @param array<string, mixed> $context
@@ -1515,6 +1430,10 @@ class Dashboard {
 			);
 		}
 		$severity = $this->message_severity( $message );
+		// Any error after an action the updater lock refused names that lock's Booster owner (#1180).
+		if ( 'error' === $severity ) {
+			$this->name_refusing_lock_owner( \RAN\WordPress\WordPressUpdaterLock::take_refusal() );
+		}
 		if ( null !== $severity ) {
 			$context = array(
 				'diagnostic_id' => $this->message_diagnostic_id( $message, $severity ),
@@ -1927,6 +1846,7 @@ class Dashboard {
 		$data['name']     = $this->booster->get_name();
 
 		$data['core_self_update_development_notice'] = $this->core_self_update_development_notice;
+		$data['updater_lock_owner']                  = $this->updater_lock_owner;
 		if ( ! isset( $data['tabs'] ) ) {
 			$data['tabs'] = $this->tab_navigation( '' );
 		}

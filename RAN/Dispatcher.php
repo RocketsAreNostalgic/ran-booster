@@ -13,6 +13,7 @@ use RAN\Admin\ProviderProfileAdminController;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentCoordinator;
+use RAN\Deployment\PackageMutationGuard;
 use RAN\Logging\TemporaryDebugCapture;
 use RAN\RepositoryProvider\ProviderDiagnosticRequest;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -87,7 +88,8 @@ class Dispatcher {
 		$this->deployment_admin  = new DeploymentAdminController(
 			$dashboard,
 			$deployment_coordinator,
-			$deployment_attempts
+			$deployment_attempts,
+			updater_lock: $updater_lock
 		);
 	}
 
@@ -147,17 +149,6 @@ class Dispatcher {
 				return;
 			}
 
-			if ( 'recover-github-native' === $action ) {
-				$code = $this->provider_profiles->recover_github_native( $request );
-				$this->redirect_to( $this->native_hold_return( $request, $code, $this->dashboard->provider_tab_url( 'gh' ) ) );
-			}
-
-			if ( 'release-github-hold' === $action ) {
-				$code = $this->provider_profiles->release_github_hold( $request );
-				$type = 'theme' === ( $request['package_type'] ?? null ) ? 'theme' : 'plugin';
-				$this->redirect_to( $this->native_hold_return( $request, $code, add_query_arg( 'page', 'ran-booster-' . $type . 's', is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) ) );
-			}
-
 			if ( 'adopt-github' === $action ) {
 				$this->provider_profiles->adopt_github( $request );
 				$this->redirect_to( $this->dashboard->provider_tab_url( 'gh' ) );
@@ -190,6 +181,7 @@ class Dispatcher {
 
 			$deployment_actions = array(
 				'reconcile-deployment-worker',
+				'release-updater-lock',
 				'request-deployment-runner',
 				'resolve-needs-attention',
 			);
@@ -249,35 +241,6 @@ class Dispatcher {
 		}
 	}
 
-	/**
-	 * Back to the hold's control with its result. The package identity, folder and type return only as
-	 * values for that page to show; it never acts on them.
-	 *
-	 * @param array<string, mixed> $request
-	 */
-	private function native_hold_return( array $request, string $code, string $url ): string {
-		$args    = array( 'ran_booster_hold' => $code );
-		$package = '';
-		$folder  = '';
-		$type    = 'plugin';
-		if ( is_string( $request['package'] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}\z#D', $request['package'] ) ) {
-			$package         = $request['package'];
-			$args['package'] = $package;
-		}
-		if ( is_string( $request['hold_folder'] ?? null ) && 1 === preg_match( '#\A[A-Za-z0-9_][A-Za-z0-9._-]{0,190}\z#D', $request['hold_folder'] ) ) {
-			$folder                          = $request['hold_folder'];
-			$args['ran_booster_hold_folder'] = $folder;
-		}
-		if ( is_string( $request['package_type'] ?? null ) && in_array( $request['package_type'], array( 'plugin', 'theme' ), true ) ) {
-			$type                          = $request['package_type'];
-			$args['ran_booster_hold_type'] = $type;
-		}
-		$args['_ran_booster_hold_nonce'] = wp_create_nonce(
-			Dashboard::native_hold_result_nonce_action( $code, $folder, $type, $package )
-		);
-		return add_query_arg( $args, $url ) . '#ran-booster-native-hold';
-	}
-
 	protected function redirect_to( string $url ): never {
 		// A scoped package save follows the native redirect in the same XMLHttpRequest.
 		if ( $this->is_htmx_request() && 'ran-booster-package-edit-region' !== ( $_SERVER['HTTP_HX_TARGET'] ?? null ) ) {
@@ -331,6 +294,9 @@ class Dispatcher {
 			if ( ! current_user_can( $capability ) ) {
 				wp_die( esc_html__( 'You do not have sufficient permissions to configure Booster storage.', 'ran-booster' ) );
 			}
+		}
+		if ( PackageMutationGuard::file_mods_disabled() ) {
+			wp_die( esc_html__( 'This site does not allow file changes, so Booster cannot change its secure storage.', 'ran-booster' ) );
 		}
 
 		check_admin_referer( 'ran-booster-create-secure-storage' );
@@ -393,6 +359,9 @@ class Dispatcher {
 				wp_die( esc_html__( 'You do not have sufficient permissions to recover Booster storage.', 'ran-booster' ) );
 			}
 		}
+		if ( PackageMutationGuard::file_mods_disabled() ) {
+			wp_die( esc_html__( 'This site does not allow file changes, so Booster cannot change its secure storage.', 'ran-booster' ) );
+		}
 
 		check_admin_referer( 'ran-booster-adopt-secure-storage' );
 		if ( ! $this->storage_route_is_current( $request ) ) {
@@ -451,6 +420,9 @@ class Dispatcher {
 			if ( ! current_user_can( $capability ) ) {
 				wp_die( esc_html__( 'You do not have sufficient permissions to reset Booster storage.', 'ran-booster' ) );
 			}
+		}
+		if ( PackageMutationGuard::file_mods_disabled() ) {
+			wp_die( esc_html__( 'This site does not allow file changes, so Booster cannot change its secure storage.', 'ran-booster' ) );
 		}
 
 		check_admin_referer( 'ran-booster-reset-empty-storage' );
@@ -655,7 +627,7 @@ class Dispatcher {
 
 	/** @param array<string, mixed> $request */
 	private function run_troubleshooting( array $request ): void {
-		foreach ( array( 'manage_options', 'install_plugins', 'update_plugins', 'install_themes', 'update_themes' ) as $capability ) {
+		foreach ( array( 'manage_options', 'activate_plugins', 'install_plugins', 'update_plugins', 'install_themes', 'update_themes' ) as $capability ) {
 			if ( ! current_user_can( $capability ) ) {
 				wp_die( esc_html__( 'You do not have sufficient permissions to run troubleshooting.', 'ran-booster' ) );
 			}

@@ -1025,6 +1025,25 @@ test('a pointer to a coded notice goes once the notice is hidden or released, an
 	assert.equal(env.notices.length, 3);
 });
 
+test('a hidden coded notice gets no pointer until it is shown', () => {
+	const env = boot();
+	const notice = env.notice({
+		key: 'package_edit_failed',
+		intent: 'error',
+		text: 'The package changed.',
+	});
+	notice.hidden = true;
+	assert.equal(env.feedback.consume(), 0);
+	assert.equal(env.notices.length, 0);
+	assert.equal(notice.hasAttribute('data-ran-booster-feedback-taken'), false);
+	notice.hidden = false;
+	assert.equal(env.feedback.consume(), 1);
+	assert.deepEqual(
+		env.notices.map((item) => item.content),
+		['The package changed.']
+	);
+});
+
 test('a coded notice that is no longer in the page is never shown, so a failure is never snackbar-only', () => {
 	const env = boot();
 	env.notice({

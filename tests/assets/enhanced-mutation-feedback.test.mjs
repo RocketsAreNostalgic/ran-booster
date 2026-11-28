@@ -2524,6 +2524,7 @@ function bootFeedbackHost(state) {
 					unmounted: false,
 					render(tree) {
 						root.notices = tree.props.notices;
+						root.onRemove = tree.props.onRemove;
 						host.rendered = root.notices.length > 0;
 					},
 					unmount() {
@@ -2568,12 +2569,19 @@ function bootFeedbackHost(state) {
 		'URL',
 		feedbackSource
 	)(state.window, document, { now: () => 0 }, URL);
+	const live = () => {
+		const root = roots.at(-1);
+		return root && !root.unmounted ? root.notices : [];
+	};
 	return {
 		get pointers() {
-			const root = roots.at(-1);
-			return root && !root.unmounted
-				? root.notices.map((notice) => notice.content)
-				: [];
+			return live().map((notice) => notice.content);
+		},
+		get silent() {
+			return live().every((notice) => notice.spokenMessage === '');
+		},
+		dismiss() {
+			roots.at(-1).onRemove(live()[0].id);
 		},
 	};
 }
@@ -2663,6 +2671,15 @@ test('each enhanced save failure replaces the real host pointer, and one without
 
 	fail('package_edit_failed', 'The package changed.');
 	assert.equal(key(), 'package_edit_failed');
+	assert.deepEqual(host.pointers, ['The package changed.']);
+	// The same failure again is still one silent pointer.
+	fail('package_edit_failed', 'The package changed.');
+	assert.deepEqual(host.pointers, ['The package changed.']);
+	assert.equal(host.silent, true);
+	// A dismissed pointer comes back with the next identical failure.
+	host.dismiss();
+	assert.deepEqual(host.pointers, []);
+	fail('package_edit_failed', 'The package changed.');
 	assert.deepEqual(host.pointers, ['The package changed.']);
 	// Each later failure, the same key with new copy included, replaces the
 	// pointer, so a fourth still gets one.

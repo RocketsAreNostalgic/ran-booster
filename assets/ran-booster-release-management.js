@@ -1163,6 +1163,14 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		target.appendChild(document.createTextNode(message));
 	}
 
+	// The shared package error is reused: once this check rewrites or hides it,
+	// an earlier Save failure's key and pointer no longer describe it.
+	function releaseSharedNotice(sharedNotice) {
+		sharedNotice.removeAttribute('data-feedback-key');
+		sharedNotice.removeAttribute('data-ran-booster-feedback-taken');
+		window.ranBoosterFeedback?.consume?.();
+	}
+
 	function hideSwitchPreflightError() {
 		const sharedNotice = document.getElementById(
 			'ran-booster-package-mutation-error'
@@ -1175,6 +1183,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				primary.replaceChildren();
 			}
 			sharedNotice.hidden = true;
+			releaseSharedNotice(sharedNotice);
 		}
 		document
 			.querySelectorAll('[data-ran-booster-switch-preflight-error]')
@@ -1221,6 +1230,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				appendPreflightErrorContent(primary, data, fallback);
 				appendRetry(primary);
 				sharedNotice.hidden = false;
+				releaseSharedNotice(sharedNotice);
 				sharedNotice.scrollIntoView?.({ block: 'nearest' });
 				sharedNotice.focus?.();
 				return;

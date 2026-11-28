@@ -359,6 +359,7 @@
 				window.wp?.a11y?.speak?.(text, 'polite');
 			} else {
 				duplicate.target = target;
+				duplicate.notice = false;
 				duplicate.action = pointerAction(duplicate, action);
 				render();
 			}
@@ -482,7 +483,10 @@
 		document
 			.querySelectorAll('[data-ran-booster-ui-notice][data-feedback-key]')
 			.forEach((notice) => {
-				taken += notice.hasAttribute(TAKEN) ? 0 : present(notice);
+				taken +=
+					notice.hidden || notice.hasAttribute(TAKEN)
+						? 0
+						: present(notice);
 			});
 		return taken;
 	}

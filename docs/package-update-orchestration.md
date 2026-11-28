@@ -591,7 +591,7 @@ fail closed. Native Update does not create a Booster deployment attempt.
    theme identity is not installed, active, or already managed.
 4. The updater transfers its claimed file once. Core constructs the existing
    `PreparedArtifact` from the retained digest and local file identity and hands
-   that local ZIP to `CorePackageExecutor`.
+   that local ZIP to Branch Updater's `WordPressCorePackageExecutor`.
 5. WordPress installs the package. Core verifies installed identity and version
    and unchanged activation state, then adopts the package as a Manual
    `release_asset` source with release configuration and stable repository ID.
@@ -726,8 +726,8 @@ The difference is admission timing:
 At the tracked-branch installer boundary, Branch Updater’s
 `WordPressCorePackageExecutor` presents the already-local archive through a
 request-only native offer and pre-download hook. WordPress does not download
-the repository ZIP again. Core’s `CorePackageExecutor` serves prospective
-release installations only; it supplies the local archive directly to the
+the repository ZIP again. Prospective release installations use the same
+executor's install path, which supplies the local archive directly to the
 plugin or theme installer.
 
 The selected release updater does not accept that earlier local path. It admits
@@ -908,7 +908,7 @@ The current contracts are implemented in:
 - `RAN/RepositoryProvider/RepositoryReleaseArtifact.php`
 - `vendor/ran/booster-github-provider/src/GitHubReleaseArtifact.php`
 - `RAN/Deployment/PreparedArtifact.php`
-- `RAN/WordPress/CorePackageExecutor.php`
+- `vendor/ran/wp-branch-updater/src/WordPress/WordPressCorePackageExecutor.php`
 - `vendor/ran/wp-release-updater/src/Provider/GitHub/GitHubReleaseService.php`
 - `vendor/ran/wp-release-updater/src/WordPress/NativePackageUpdater.php`
 - `vendor/ran/wp-release-updater/src/Provider/GitHub/ProspectiveReleaseInspection.php`

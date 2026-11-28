@@ -64,7 +64,7 @@ use RAN\Storage\ThemeRepository;
 use RAN\Troubleshooting\LocalTroubleshootingService;
 use RAN\Troubleshooting\TroubleshootingService;
 use RAN\Webhook\SignedWebhookVerifier;
-use RAN\WordPress\CorePackageExecutor;
+use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RAN\WordPress\ManagedReleaseStore;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
@@ -293,7 +293,7 @@ final class BoosterServiceProvider {
 				$provider_tab_links
 			)
 		);
-		$container->bind( CorePackageExecutor::class, new CorePackageExecutor() );
+		$container->bind( WordPressCorePackageExecutor::class, new WordPressCorePackageExecutor() );
 		$container->bind( WordPressUpdaterLock::class, new WordPressUpdaterLock() );
 		$container->bind(
 			DeploymentCoordinator::class,
@@ -400,7 +400,7 @@ final class BoosterServiceProvider {
 		$container->bind( ReleaseTrackingFacade::class, $release_facade );
 		$prospective_facade = new NativeProspectiveReleaseFacade(
 			$container->make( PackageRepositoryRequestResolver::class ),
-			$container->make( CorePackageExecutor::class ),
+			$container->make( WordPressCorePackageExecutor::class ),
 			$container->make( PluginRepository::class ),
 			$container->make( ThemeRepository::class ),
 			$container->make( WordPressUpdaterLock::class ),

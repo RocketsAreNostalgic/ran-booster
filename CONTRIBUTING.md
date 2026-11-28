@@ -603,8 +603,6 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Storage/DatabaseLifecycleFailure.php`,
 `RAN/Storage/DatabaseCompatibilityFailure.php`,
 `RAN/PackageOperation.php`, `RAN/PackageRemoval/PackageRemovalResult.php`,
-`RAN/WordPress/CorePackageExecutionResult.php`,
-`RAN/WordPress/CorePackageExecutionFailure.php`,
 `RAN/Deployment/PackageMutationGuard.php`, `RAN/WordPress/CoreSelfUpdatePolicy.php`,
 `RAN/Admin/BulkPackageAction.php`, `RAN/Admin/BulkPackageActionFailure.php`,
 `RAN/Admin/BulkPackageResult.php`, `RAN/Admin/BulkPackageActionService.php`,
@@ -653,7 +651,6 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/PackageOperationService.php`,
 `RAN/PackageRemoval/PackageRemovalService.php`,
 `RAN/PackageRemoval/WordPressPackageRemovalGateway.php`,
-`RAN/WordPress/CorePackageExecutor.php`,
 `RAN/Logging/BoosterLogger.php`,
 `RAN/Logging/TemporaryDebugCapture.php`,
 `RAN/RepositoryProvider/ProviderDiagnosticRequest.php`,
@@ -971,9 +968,7 @@ PackageOperation uses owned snake_case methods, properties and parameters,
 including `is_private`. HTTP input keys and the eleven-field expected-package
 map are unchanged. Reserved-keyword parameter enforcement also covers this file.
 PackageRemovalResult keeps its status/outcome values and the service projection's
-`status` and `outcome_code` keys. CorePackageExecutionResult uses snake_case
-accessors; failure enum values and WordPress restoration classification remain
-unchanged. Branch Updater's distinct execution result retains its own contract.
+`status` and `outcome_code` keys.
 
 Mutation guard and native self-update policy PHP names use snake_case. Guard
 ordering, runtime restrictions, limits, release-marker schema and diagnostic keys

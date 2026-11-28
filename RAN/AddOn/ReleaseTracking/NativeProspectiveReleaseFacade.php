@@ -33,7 +33,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
 use RAN\Theme;
-use RAN\WordPress\CorePackageExecutor;
+use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\UpdaterSupport\V1\PackageDirectory;
@@ -62,7 +62,7 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 	 */
 	public function __construct(
 		private PackageRepositoryRequestResolver $repositories,
-		private CorePackageExecutor $executor,
+		private WordPressCorePackageExecutor $executor,
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
 		private WordPressUpdaterLock $updater_lock,
@@ -456,9 +456,17 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 							array( 'identifier' => $identifier )
 						);
 					} elseif ( ! $result->is_successful() ) {
-						$outcome = ProspectiveReleaseResult::failure(
-							$result->get_failure()->value ?? 'wordpress_failed'
+						$failure_code = $result->get_failure()->value ?? 'wordpress_failed';
+						BoosterLogger::log(
+							'prospective release install failed',
+							array(
+								'step'         => 'prospective_release_install',
+								'operation'    => $type,
+								'outcome_code' => $failure_code,
+								'event'        => $result->get_detail(),
+							)
 						);
+						$outcome = ProspectiveReleaseResult::failure( $failure_code );
 					} else {
 						$outcome = ProspectiveReleaseResult::failure(
 							'management_state_uncertain',

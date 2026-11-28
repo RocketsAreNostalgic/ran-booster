@@ -32,7 +32,6 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\Database;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
-use RAN\WordPress\CorePackageExecutor;
 use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 
 #[RunTestsInSeparateProcesses]

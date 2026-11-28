@@ -8,11 +8,11 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ExtensionInstaller;
-use RAN\Deployment\PreparedArtifact;
 use RAN\PackageArtifactLimit;
 use RAN\Tests\Support\CapturesBoosterLog;
-use RAN\WordPress\CorePackageExecutionResult;
-use RAN\WordPress\CorePackageExecutor;
+use RAN\WPBranchUpdater\V1\Contract\PreparedPackageArtifact;
+use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult;
+use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
 use ZipArchive;
@@ -234,11 +234,11 @@ final class FakeExtensionLock extends WordPressUpdaterLock {
 }
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused in-process executor test double.
-final class FakeExtensionExecutor extends CorePackageExecutor {
+final class FakeExtensionExecutor extends WordPressCorePackageExecutor {
 	public int $calls    = 0;
 	public bool $throws  = false;
 	public bool $install = false;
-	public function install_plugin( PreparedArtifact $artifact, string $package_slug, ?string $subdirectory ): CorePackageExecutionResult {
+	public function install_plugin( PreparedPackageArtifact $artifact, string $package_slug, ?string $subdirectory ): CorePackageExecutionResult {
 		if ( 'example' !== $package_slug || null !== $subdirectory ) {
 			throw new RuntimeException( 'Unexpected package target.' );
 		}

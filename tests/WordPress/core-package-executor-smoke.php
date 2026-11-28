@@ -11,11 +11,7 @@ require_once WP_PLUGIN_DIR . '/ran-booster/RAN/WordPress/BranchUpdaterBootstrap.
 RAN\WordPress\BranchUpdaterBootstrap::register();
 
 $ran_booster_executor_source = array(
-	RAN\Deployment\PreparedArtifact::class           => '/RAN/Deployment/PreparedArtifact.php',
-	RAN\Runtime\RuntimeSupport::class                => '/RAN/Runtime/RuntimeSupport.php',
-	RAN\WordPress\CorePackageExecutionFailure::class => '/RAN/WordPress/CorePackageExecutionFailure.php',
-	RAN\WordPress\CorePackageExecutionResult::class  => '/RAN/WordPress/CorePackageExecutionResult.php',
-	RAN\WordPress\CorePackageExecutor::class         => '/RAN/WordPress/CorePackageExecutor.php',
+	RAN\Deployment\PreparedArtifact::class => '/RAN/Deployment/PreparedArtifact.php',
 );
 foreach ( $ran_booster_executor_source as $ran_booster_class => $ran_booster_relative_path ) {
 	$ran_booster_source_path = $ran_booster_root . $ran_booster_relative_path;
@@ -30,8 +26,6 @@ foreach ( $ran_booster_executor_source as $ran_booster_class => $ran_booster_rel
 	}
 	require_once $ran_booster_source_path;
 }
-
-require_once __DIR__ . '/CorePackageSmokeArtifact.php';
 
 require_once ABSPATH . 'wp-admin/includes/file.php';
 require_once ABSPATH . 'wp-admin/includes/plugin.php';
@@ -90,7 +84,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 	private function exercise_plugins(): void {
 		$slug            = $this->slug( 'plugin' );
 		$identifier      = $slug . '/' . $slug . '.php';
-		$executor        = new RAN\WordPress\CorePackageExecutor();
+		$executor        = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor();
 		$branch_executor = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor();
 
 		$install = $this->artifact( 'plugin', $slug, '1.0.0', 'plugin-install', 'packages/' . $slug );
@@ -106,7 +100,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 					'plugin',
 					$identifier,
 					false,
-					static fn () => $branch_executor->update_plugin( new RAN\Tests\WordPress\CorePackageSmokeArtifact( $inactive ), $slug, null, $identifier )
+					static fn () => $branch_executor->update_plugin( $inactive, $slug, null, $identifier )
 				),
 				WP_PLUGIN_DIR
 			)
@@ -123,13 +117,13 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 				'plugin',
 				$identifier,
 				true,
-				fn () => $this->with_scrape_response( false, static fn () => $branch_executor->update_plugin( new RAN\Tests\WordPress\CorePackageSmokeArtifact( $same_version ), $slug, null, $identifier ) )
+				fn () => $this->with_scrape_response( false, static fn () => $branch_executor->update_plugin( $same_version, $slug, null, $identifier ) )
 			)
 		);
 		$this->assert_plugin( $identifier, '2.0.0', 'plugin-same-version', true );
 
 		$downgrade = $this->artifact( 'plugin', $slug, '1.5.0', 'plugin-downgrade' );
-		$this->assert_success( $this->with_scrape_response( false, static fn () => $branch_executor->update_plugin( new RAN\Tests\WordPress\CorePackageSmokeArtifact( $downgrade ), $slug, null, $identifier ) ) );
+		$this->assert_success( $this->with_scrape_response( false, static fn () => $branch_executor->update_plugin( $downgrade, $slug, null, $identifier ) ) );
 		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
 		// Production processes one deployment per request, while this smoke performs
@@ -157,7 +151,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		add_filter( 'upgrader_source_selection', $source_veto, 5, 4 );
 		try {
 			$failed = $branch_executor->update_plugin(
-				new RAN\Tests\WordPress\CorePackageSmokeArtifact( $this->artifact( 'plugin', $slug, '1.6.0', 'plugin-source-veto', null, null, true ) ),
+				$this->artifact( 'plugin', $slug, '1.6.0', 'plugin-source-veto', null, null, true ),
 				$slug,
 				null,
 				$identifier
@@ -167,8 +161,8 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		}
 		$this->assert_failure(
 			$failed,
-			RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_UNCERTAIN,
-			RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_RESTORED
+			RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure::WORDPRESS_UNCERTAIN,
+			RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure::WORDPRESS_RESTORED
 		);
 		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
@@ -176,7 +170,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		add_filter( 'auto_update_plugin', $blocked, 100, 2 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		try {
 			$refused = $branch_executor->update_plugin(
-				new RAN\Tests\WordPress\CorePackageSmokeArtifact( $this->artifact( 'plugin', $slug, '1.6.0', 'plugin-policy-refused' ) ),
+				$this->artifact( 'plugin', $slug, '1.6.0', 'plugin-policy-refused' ),
 				$slug,
 				null,
 				$identifier
@@ -184,12 +178,12 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		} finally {
 			remove_filter( 'auto_update_plugin', $blocked, 100 );
 		}
-		$this->assert_failure( $refused, RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_REFUSED );
+		$this->assert_failure( $refused, RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure::WORDPRESS_REFUSED );
 		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
 		$fatal    = $this->artifact( 'plugin', $slug, '4.0.0', 'plugin-fatal' );
-		$restored = $this->with_scrape_response( true, static fn () => $branch_executor->update_plugin( new RAN\Tests\WordPress\CorePackageSmokeArtifact( $fatal ), $slug, null, $identifier ) );
-		$this->assert_failure( $restored, RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_RESTORED );
+		$restored = $this->with_scrape_response( true, static fn () => $branch_executor->update_plugin( $fatal, $slug, null, $identifier ) );
+		$this->assert_failure( $restored, RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure::WORDPRESS_RESTORED );
 		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 	}
 
@@ -198,7 +192,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		$parent_slug     = $this->slug( 'parent-theme' );
 		$child_slug      = $this->slug( 'child-theme' );
 		$missing_parent  = $this->slug( 'missing-parent' );
-		$executor        = new RAN\WordPress\CorePackageExecutor();
+		$executor        = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor();
 		$branch_executor = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor();
 
 		$missing_requests = 0;
@@ -218,7 +212,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		} finally {
 			remove_filter( 'pre_http_request', $block_request, 100 );
 		}
-		$this->assert_failure( $missing, RAN\WordPress\CorePackageExecutionFailure::INVALID_REQUEST );
+		$this->assert_failure( $missing, RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure::INVALID_REQUEST );
 		if ( 0 !== $missing_requests || file_exists( get_theme_root() . '/' . $child_slug ) || $this->has_added_hooks( $before, $this->hook_fingerprint() ) ) {
 			throw new RuntimeException( 'A child theme with a missing parent reached mutation or a secondary request.' );
 		}
@@ -234,7 +228,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		}
 		// A parent named in another case could be the theme's own folder (PackageDirectory::names_collide()).
 		$self_parent = ucfirst( $parent_slug );
-		$this->assert_failure( $executor->install_theme( $this->artifact( 'theme', $self_parent, '1.0.0', 'self-parent', null, $parent_slug ), $self_parent, null ), RAN\WordPress\CorePackageExecutionFailure::INVALID_REQUEST );
+		$this->assert_failure( $executor->install_theme( $this->artifact( 'theme', $self_parent, '1.0.0', 'self-parent', null, $parent_slug ), $self_parent, null ), RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure::INVALID_REQUEST );
 
 		$theme_install = $this->artifact( 'theme', $slug, '1.0.0', 'theme-install' );
 		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_theme( $theme_install, $slug, null ) ) );
@@ -246,7 +240,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 				'theme',
 				$slug,
 				false,
-				fn () => $branch_executor->update_theme( new RAN\Tests\WordPress\CorePackageSmokeArtifact( $this->artifact( 'theme', $slug, '2.0.0', 'theme-inactive' ) ), $slug, null, $slug )
+				fn () => $branch_executor->update_theme( $this->artifact( 'theme', $slug, '2.0.0', 'theme-inactive' ), $slug, null, $slug )
 			)
 		);
 		$this->assert_theme( $slug, '2.0.0', 'theme-inactive', false );
@@ -256,7 +250,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 				'theme',
 				$slug,
 				true,
-				fn () => $branch_executor->update_theme( new RAN\Tests\WordPress\CorePackageSmokeArtifact( $this->artifact( 'theme', $slug, '3.0.0', 'theme-active', null, null, true ) ), $slug, null, $slug )
+				fn () => $branch_executor->update_theme( $this->artifact( 'theme', $slug, '3.0.0', 'theme-active', null, null, true ), $slug, null, $slug )
 			)
 		);
 		$this->assert_theme( $slug, '3.0.0', 'theme-active', true );
@@ -267,15 +261,15 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		$artifact = $this->artifact( 'plugin', $slug, '1.0.0', 'failure-fixture' );
 		$secret   = 'Authorization: Bearer never-retain-this';
 		$cases    = array(
-			array( false, RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_REFUSED ),
-			array( new WP_Error( 'provider_secret', $secret ), RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_FAILED ),
-			array( new RuntimeException( $secret ), RAN\WordPress\CorePackageExecutionFailure::WORDPRESS_UNCERTAIN ),
+			array( false, RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure::WORDPRESS_REFUSED ),
+			array( new WP_Error( 'provider_secret', $secret ), RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure::WORDPRESS_FAILED ),
+			array( new RuntimeException( $secret ), RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure::WORDPRESS_UNCERTAIN ),
 		);
 
 		foreach ( $cases as $case ) {
 			list( $value, $expected )  = $case;
 			$source_isolation_observed = false;
-			$executor                  = new RAN\WordPress\CorePackageExecutor(
+			$executor                  = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor(
 				static function ( string $action, string $type, string $path ) use ( $value, &$source_isolation_observed ): mixed {
 					$unrelated = apply_filters(
 						// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
@@ -332,7 +326,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		$slug     = $this->slug( 'install-hook' );
 		$artifact = $this->artifact( 'plugin', $slug, '1.0.0', 'install-hook' );
 		$observed = false;
-		$executor = new RAN\WordPress\CorePackageExecutor(
+		$executor = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor(
 			static function ( string $action, string $type, string $path ) use ( &$observed ): bool {
 				$exact = apply_filters(
 					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise the WordPress-owned lifecycle hook consumed by the runtime.
@@ -402,7 +396,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		add_filter( 'upgrader_pre_download', $observer, 20, 4 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		$before = $this->hook_fingerprint();
 		try {
-			$vetoed = ( new RAN\WordPress\CorePackageExecutor() )->install_plugin( $veto_artifact, $veto_slug, null );
+			$vetoed = ( new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor() )->install_plugin( $veto_artifact, $veto_slug, null );
 		} finally {
 			remove_filter( 'upgrader_pre_download', $veto, 5 );
 			remove_filter( 'upgrader_pre_download', $observer, 20 );
@@ -631,7 +625,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		}
 	}
 
-	private function assert_success( RAN\WordPress\CorePackageExecutionResult|RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult $result ): void {
+	private function assert_success( RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult $result ): void {
 		if ( ! $result->is_successful() ) {
 			// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 			throw new RuntimeException( 'WordPress core did not complete the disposable package operation: ' . ( $result->get_failure()->value ?? 'unknown_failure' ) );
@@ -639,11 +633,11 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 	}
 
 	private function assert_failure(
-		RAN\WordPress\CorePackageExecutionResult|RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult $result,
-		RAN\WordPress\CorePackageExecutionFailure $failure,
-		RAN\WordPress\CorePackageExecutionFailure ...$alternative_failures
+		RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult $result,
+		RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure $failure,
+		RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure ...$alternative_failures
 	): void {
-		if ( ! in_array( $result->get_failure()?->value, array_map( static fn ( RAN\WordPress\CorePackageExecutionFailure $item ): string => $item->value, array( $failure, ...$alternative_failures ) ), true ) ) {
+		if ( ! in_array( $result->get_failure()?->value, array_map( static fn ( RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure $item ): string => $item->value, array( $failure, ...$alternative_failures ) ), true ) ) {
 			$actual = $result->get_failure();
 			// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
 			throw new RuntimeException( 'The executor did not return the expected bounded failure: ' . ( null === $actual ? 'success' : $actual->value ) );

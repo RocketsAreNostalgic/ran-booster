@@ -316,7 +316,7 @@ class Booster {
 		require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		$installer = new \RAN\Admin\ExtensionInstaller(
 			$this->service( \RAN\WordPress\WordPressUpdaterLock::class ),
-			$this->service( \RAN\WordPress\CorePackageExecutor::class ),
+			$this->service( \RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor::class ),
 			fn(): array => $this->extension_cards( get_plugins() )
 		);
 		$result    = $installer->install( $id );

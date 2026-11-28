@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use RAN\Booster;
 use RAN\Internal\CoreContainer;
-use RAN\WordPress\CorePackageExecutor;
+use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
 
@@ -214,7 +214,7 @@ final class ExtensionInstallRequestTest extends TestCase {
 	public function test_unknown_id_returns_closed_failure_without_download(): void {
 		$container = new CoreContainer();
 		$container->bind( WordPressUpdaterLock::class, new WordPressUpdaterLock() );
-		$container->bind( CorePackageExecutor::class, new CorePackageExecutor() );
+		$container->bind( WordPressCorePackageExecutor::class, new WordPressCorePackageExecutor() );
 		try {
 			( new Booster( $container ) )->install_extension();
 			self::fail( 'Expected redirect.' ); } catch ( RuntimeException $failure ) {

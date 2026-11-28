@@ -541,3 +541,28 @@ unread (pre-release).
 **Reconsider if:** Booster again stores which implementation supplies GitHub
 across requests, or an uncertain native install needs a hold that outlives the
 request that started it.
+
+## 2026-11-28 Core's forked installer executor retired (#1238)
+
+Core no longer keeps its own copy of the WordPress installer executor.
+Prospective release installs and add-on installs now use Branch Updater's
+`WordPressCorePackageExecutor`, the same executor tracked branches use, and
+`PreparedArtifact` implements its `PreparedPackageArtifact` contract.
+`CorePackageExecutor`, `CorePackageExecutionResult` and
+`CorePackageExecutionFailure` are deleted.
+
+PU-001 is unchanged: release and branch paths still keep their own discovery,
+authority, durability, recovery and outcome owners. Its "Share only" list now
+means Branch Updater's executor where it names `CorePackageExecutor`. The
+2026-08-20 to 2026-09-01 PU-007 records above name `CorePackageExecutor` as
+history.
+
+The executor no longer refuses Multisite itself. Both callers refuse it before
+they reach the executor, through `RuntimeSupport` in the prospective release
+facade and `PackageMutationGuard` in the add-on installer.
+
+**Ruled out:** patching the forked copy's child-theme `Template:` header and
+case-variant root handling, and a thin Core wrapper around the shared executor.
+
+**Reconsider if:** Core needs an install behaviour the shared executor cannot
+provide without a Branch Updater release.

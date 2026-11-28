@@ -749,7 +749,7 @@ final class PackageOperationServiceTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__ ) . '/views/notices.php';
 			$html = (string) ob_get_clean();
-			self::assertStringContainsString( '<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error"', $html, $case );
+			self::assertStringContainsString( '<div data-feedback-key="package_edit_failed" role="alert" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error"', $html, $case );
 			self::assertStringContainsString( '<p>To use a different Git provider or repository, stop managing this package and adopt it again.</p>', $html, $case );
 		}
 	}

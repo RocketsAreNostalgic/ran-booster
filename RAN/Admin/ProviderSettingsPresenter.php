@@ -567,7 +567,8 @@ final readonly class ProviderSettingsPresenter {
 		if ( $package->is_private() ) {
 			return $package->get_credential_id();
 		}
-		return $this->public_lookup_profiles->get( (string) $package->get_provider_code() );
+		// The default lookup profile is a saved credential: without secret authority, the check stays anonymous (#1329).
+		return CredentialAuthority::held() ? $this->public_lookup_profiles->get( (string) $package->get_provider_code() ) : null;
 	}
 
 	/**

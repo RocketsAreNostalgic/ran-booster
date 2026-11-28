@@ -1192,6 +1192,96 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertArrayNotHasKey( 'feedback', $dashboard->messages[1] );
 	}
 
+	/** @return array<string, array{string, ?string, array<string, string>, bool}> */
+	public static function package_credential_choices(): array {
+		return array(
+			'install with a credential'             => array( 'install-plugin', null, array( 'credential_id' => 'deployment-profile' ), true ),
+			'install with a saved lookup profile'   => array(
+				'install-plugin',
+				null,
+				array(
+					'public_lookup_profile_id'            => 'lookup-profile',
+					'provider_repository_identity_source' => 'picker',
+				),
+				true,
+			),
+			'install anonymously'                   => array( 'install-plugin', null, array(), false ),
+			'edit to another credential'            => array( 'edit-plugin', 'deployment-profile', array( 'credential_id' => 'other-profile' ), true ),
+			'edit a theme to another credential'    => array( 'edit-theme', 'deployment-profile', array( 'credential_id' => 'other-profile' ), true ),
+			'edit a package without one to add one' => array( 'edit-plugin', null, array( 'credential_id' => 'deployment-profile' ), true ),
+			'edit keeping its own credential'       => array( 'edit-plugin', 'deployment-profile', array( 'credential_id' => ' deployment-profile ' ), false ),
+			'edit clearing its credential'          => array( 'edit-plugin', 'deployment-profile', array(), false ),
+		);
+	}
+
+	/** @param array<string, string> $choice */
+	#[DataProvider( 'package_credential_choices' )]
+	public function test_choosing_a_package_credential_needs_secret_authority( string $action, ?string $own, array $choice, bool $chooses ): void {
+		$request = array(
+			'action'            => $action,
+			'file'              => 'fixture/fixture.php',
+			'stylesheet'        => 'fixture',
+			'provider'          => 'gh',
+			'repository'        => 'owner/replacement',
+			'credential_id'     => '',
+			'branch'            => 'main',
+			'deployment_policy' => 'manual',
+		);
+		foreach ( array( 'manage_options', 'activate_plugins', null ) as $missing ) {
+			$GLOBALS['ran_booster_test_capabilities'] = null === $missing ? array() : array( $missing => false );
+			$package                                  = EditBoundaryPackage::make( 'edit-theme' === $action ? 'fixture' : 'fixture/fixture.php', 'gh', false, $own );
+			$provider                                 = new CapturingPublicLookupProvider();
+			$providers                                = new ProviderRegistry( array( $provider ) );
+			$dashboard                                = $this->createMock( Dashboard::class );
+			$messages                                 = array();
+			$dashboard->method( 'add_message' )->willReturnCallback(
+				static function ( mixed $message ) use ( &$messages ): void {
+					$messages[] = $message;
+				}
+			);
+			$dashboard->method( 'post_package_operation' )->willReturn( 'https://example.test/redirect' );
+
+			$result  = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, $action, array_merge( $request, $choice ), true );
+			$refused = $chooses && null !== $missing;
+
+			$case = ( $missing ?? 'authorized' ) . ': ' . $action;
+			self::assertSame( $refused ? false : 'https://example.test/redirect', $result, $case );
+			self::assertCount( $refused ? 0 : 1, $provider->requests, $case );
+			self::assertCount( $refused ? 1 : 0, $messages, $case );
+			if ( $refused ) {
+				self::assertInstanceOf( WP_Error::class, $messages[0] );
+				self::assertSame( 'ran_booster_credential_authority_missing', $messages[0]->get_error_code() );
+				self::assertSame( array( 'feedback' => str_starts_with( $action, 'install-' ) ? 'package_install_failed' : 'package_edit_failed' ), $messages[0]->get_error_data() );
+			}
+		}
+	}
+
+	public function test_a_credential_authority_refusal_logs_only_its_code(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'activate_plugins' => false );
+		$providers                                = new ProviderRegistry( array( new CapturingPublicLookupProvider() ) );
+		$dashboard                                = $this->message_dashboard();
+		$request                                  = array(
+			'action'            => 'install-plugin',
+			'provider'          => 'gh',
+			'repository'        => 'owner/secret-canary',
+			'credential_id'     => 'canary-profile',
+			'branch'            => 'canary-branch',
+			'deployment_policy' => 'manual',
+		);
+
+		$this->start_log_capture();
+		try {
+			$result = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), providers: $providers ) )->manage( $dashboard, 'install-plugin', $request, true );
+			$lines  = $this->captured_log_lines();
+		} finally {
+			$this->stop_log_capture();
+		}
+
+		self::assertFalse( $result );
+		self::assertSame( 'package_install_failed', $dashboard->messages[0]['feedback'] );
+		self::assertSame( array( '[ran-booster] admin error notice emitted {"diagnostic_id":"ran_booster_credential_authority_missing","event":"admin_notice","source":"admin"}' ), $lines );
+	}
+
 	private function message_dashboard(): Dashboard {
 		return new class() extends Dashboard {
 			public function __construct() {}

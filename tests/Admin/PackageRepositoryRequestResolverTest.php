@@ -36,6 +36,46 @@ use RAN\Tests\RepositoryProvider\Support\InertWebhookPolicy;
 
 final class PackageRepositoryRequestResolverTest extends TestCase {
 
+	/** @return array<string, array{array<string, mixed>, string, bool}> */
+	public static function credential_choices(): array {
+		return array(
+			'another credential'              => array( array( 'credential_id' => 'other-profile' ), 'own-profile', true ),
+			'a first credential'              => array( array( 'credential_id' => 'own-profile' ), '', true ),
+			'a lookup profile beside its own' => array(
+				array(
+					'credential_id'            => 'own-profile',
+					'public_lookup_profile_id' => 'lookup-profile',
+				),
+				'own-profile',
+				true,
+			),
+			'its own credential, as read'     => array( array( 'credential_id' => " own-profile\n" ), 'own-profile', false ),
+			'anonymous'                       => array(
+				array(
+					'credential_id'            => '  ',
+					'public_lookup_profile_id' => '',
+				),
+				'own-profile',
+				false,
+			),
+			'no credential fields'            => array( array(), '', false ),
+			'values that are not text'        => array(
+				array(
+					'credential_id'            => array( 'other-profile' ),
+					'public_lookup_profile_id' => 7,
+				),
+				'',
+				false,
+			),
+		);
+	}
+
+	/** @param array<string, mixed> $request */
+	#[DataProvider( 'credential_choices' )]
+	public function test_a_request_chooses_a_credential_only_when_it_names_one_the_package_does_not_use( array $request, string $own, bool $chooses ): void {
+		self::assertSame( $chooses, PackageRepositoryRequestResolver::chooses_credential( $request, $own ) );
+	}
+
 	/** @return list<array{string,bool,?string}> */
 	public static function save_branch_targets(): array {
 		return array( array( '', false, null ), array( 'feature/é', false, null ), array( 'feature/private', true, 'deployment-profile' ) );

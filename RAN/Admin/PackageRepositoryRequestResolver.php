@@ -36,6 +36,19 @@ final readonly class PackageRepositoryRequestResolver {
 		return '' === self::request_id( $request['credential_id'] ?? null ) && '' === self::request_id( $request['public_lookup_profile_id'] ?? null );
 	}
 
+	/**
+	 * Whether the request chooses a saved credential the package does not already use: a credential
+	 * other than its own, or a saved lookup profile. Keeping its own or going anonymous does not.
+	 *
+	 * @param array<string, mixed> $request Package form request.
+	 */
+	public static function chooses_credential( array $request, string $own_credential_id ): bool {
+		$credential_id = self::request_id( $request['credential_id'] ?? null );
+
+		return ( '' !== $credential_id && $credential_id !== $own_credential_id )
+			|| '' !== self::request_id( $request['public_lookup_profile_id'] ?? null );
+	}
+
 	/** A credential or lookup-profile ID from a request, normalized as resolution reads it. */
 	private static function request_id( mixed $value ): string {
 		return is_string( $value ) ? trim( wp_unslash( $value ) ) : '';

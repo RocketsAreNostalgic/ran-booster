@@ -5,8 +5,15 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use Closure;
+use RAN\Deployment\PackageMutationGuard;
 use RAN\Deployment\PreparedArtifact;
+use RAN\Logging\BoosterLogger;
 use RAN\PackageArtifactLimit;
+use RAN\UpdaterSupport\V1\ArchiveSafety;
+use RAN\UpdaterSupport\V1\PackageDirectory;
+use RAN\UpdaterSupport\V1\PluginFileIdentifier;
+use RAN\UpdaterSupport\V1\TemporaryArchive;
+use RAN\UpdaterSupport\V1\WordPressHeaders;
 use RAN\WordPress\CorePackageExecutor;
 use RAN\WordPress\WordPressUpdaterLock;
 use RuntimeException;
@@ -29,115 +36,98 @@ final class ExtensionInstaller {
 
 	/** Return a closed result vocabulary; never expose paths or remote errors. */
 	public function install( string $id ): string {
+		$extension = null;
+		$attempted = false;
+		$result    = 'failed';
 		try {
 			$extension = $this->find( $id );
-		} catch ( Throwable ) {
-			return 'failed';
-		}
-		if ( null === $extension ) {
-			return 'failed';
-		}
-		if ( ! $extension['compatible'] ) {
-			return 'incompatible';
-		}
-		if ( 'Not installed' !== $extension['state'] ) {
-			return 'already_installed';
-		}
-
-		$directory          = null;
-		$path               = null;
-		$artifact           = null;
-		$created            = null;
-		$directory_identity = null;
-		$attempted          = false;
-		$result             = 'failed';
-		try {
-			$maximum_bytes      = PackageArtifactLimit::resolve();
-			$directory          = $this->temporary_directory();
-			$directory_identity = lstat( $directory );
-			if ( false === $directory_identity ) {
-				throw new RuntimeException( 'Temporary directory identity unavailable.' );
+			if ( null === $extension ) {
+				throw new RuntimeException( 'Selected extension unavailable.' );
 			}
-			$path = $directory . '/release.zip';
-			$this->download( $extension, $path, $maximum_bytes, $created );
-			$identity = PreparedArtifact::regular_file_identity( $path );
-			if ( null === $identity || 0600 !== $identity['permissions'] || 1 !== $identity['links'] ) {
-				throw new RuntimeException( 'Invalid temporary artifact.' );
+			if ( ! $extension['compatible'] ) {
+				return 'incompatible';
 			}
-			$artifact = new PreparedArtifact(
-				$path,
-				$extension['id'],
-				$extension['release_version'],
-				$extension['asset_sha256'],
-				$identity['device'],
-				$identity['inode'],
-				$identity['size'],
-				$identity['permissions'],
-				$identity['links'],
-				$directory
-			);
-			$artifact->assert_unchanged();
-			$files  = $this->archive_files( $path, $extension, $maximum_bytes );
-			$result = $this->lock->run(
-				function () use ( $id, $extension, $artifact, $files, &$attempted ): string {
-					$current = $this->find( $id );
-					if ( null === $current || ! $current['compatible'] ) {
-							return 'incompatible';
+			if ( 'Not installed' !== $extension['state'] ) {
+				return 'already_installed';
+			}
+			PackageMutationGuard::assert_filesystem_mutation_allowed();
+			$maximum_bytes = PackageArtifactLimit::resolve();
+			$result        = TemporaryArchive::with_archive(
+				static fn (): string => wp_tempnam( 'ran-extension-' ),
+				function ( string $path, int $limit ) use ( $extension ): void {
+					$this->download( $extension, $path, $limit );
+				},
+				function ( string $path, string $digest ) use ( $id, $extension, $maximum_bytes, &$attempted ): string {
+					$identity = PreparedArtifact::regular_file_identity( $path );
+					if ( null === $identity || 0600 !== $identity['permissions'] || 1 !== $identity['links'] ) {
+						throw new RuntimeException( 'Invalid temporary artifact.' );
 					}
-					if ( 'Not installed' !== $current['state'] ) {
-						return 'already_installed';
-					}
-					foreach ( array( 'id', 'plugin', 'release_version', 'asset_url', 'asset_sha256' ) as $key ) {
-						if ( $current[ $key ] !== $extension[ $key ] ) {
-							return 'failed';
-						}
-					}
-					$slug        = dirname( $extension['plugin'] );
-					$destination = WP_PLUGIN_DIR . '/' . $slug;
-					clearstatcache( true, $destination );
-					if ( file_exists( $destination ) || is_link( $destination ) ) {
-						return 'already_installed';
-					}
+					$artifact = new PreparedArtifact(
+						$path,
+						$extension['id'],
+						$extension['release_version'],
+						$digest,
+						$identity['device'],
+						$identity['inode'],
+						$identity['size'],
+						$identity['permissions'],
+						$identity['links']
+					);
 					$artifact->assert_unchanged();
-					$attempted = true;
-					$execution = $this->executor->install_plugin( $artifact, $slug, null );
-					if ( ! $execution->is_successful() || ! $this->installed_matches( $destination, $files ) ) {
-						return 'uncertain';
-					}
-					wp_clean_plugins_cache( true );
-					$installed = get_plugins();
-					if ( ! isset( $installed[ $extension['plugin'] ] ) || ( $installed[ $extension['plugin'] ]['Version'] ?? null ) !== $extension['release_version'] || is_plugin_active( $extension['plugin'] ) ) {
-						return 'uncertain';
-					}
-					return 'installed';
-				}
-			);
-		} catch ( Throwable ) {
-			$result = $attempted ? 'uncertain' : 'failed';
-		} finally {
-			try {
-				if ( null !== $artifact ) {
-					$artifact->cleanup();
-				} elseif ( null !== $directory ) {
-					$current_directory = lstat( $directory );
-					if ( false === $current_directory || false === $directory_identity || null === $directory_identity || is_link( $directory ) || $current_directory['dev'] !== $directory_identity['dev'] || $current_directory['ino'] !== $directory_identity['ino'] ) {
-						throw new RuntimeException( 'Temporary directory identity changed.' );
-					}
-					if ( null !== $path && ( file_exists( $path ) || is_link( $path ) ) ) {
-						$current_file = PreparedArtifact::regular_file_identity( $path );
-						// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only the identity-checked file from a private Core-owned directory.
-						if ( null === $created || null === $current_file || $current_file['device'] !== $created['device'] || $current_file['inode'] !== $created['inode'] || 1 !== $current_file['links'] || ! unlink( $path ) ) {
-							throw new RuntimeException( 'Temporary artifact could not be removed.' );
+					$files = $this->archive_files( $path, $extension, $maximum_bytes );
+					return $this->lock->run(
+						function () use ( $id, $extension, $artifact, $files, &$attempted ): string {
+							$current = $this->find( $id );
+							if ( null === $current || ! $current['compatible'] ) {
+								return 'incompatible';
+							}
+							if ( 'Not installed' !== $current['state'] ) {
+								return 'already_installed';
+							}
+							foreach ( array( 'id', 'plugin', 'release_version', 'asset_url', 'asset_sha256' ) as $key ) {
+								if ( $current[ $key ] !== $extension[ $key ] ) {
+									return 'failed';
+								}
+							}
+							$slug        = dirname( $extension['plugin'] );
+							$destination = WP_PLUGIN_DIR . '/' . $slug;
+							clearstatcache( true, $destination );
+							if ( file_exists( $destination ) || is_link( $destination ) ) {
+								return 'already_installed';
+							}
+							PackageMutationGuard::assert_filesystem_mutation_allowed();
+							$artifact->assert_unchanged();
+							$attempted = true;
+							$execution = $this->executor->install_plugin( $artifact, $slug, null );
+							if ( ! $execution->is_successful() || ! $this->installed_matches( $destination, $files ) ) {
+								return 'uncertain';
+							}
+							wp_clean_plugins_cache( true );
+							$installed = get_plugins();
+							if ( ! isset( $installed[ $extension['plugin'] ] ) || ( $installed[ $extension['plugin'] ]['Version'] ?? null ) !== $extension['release_version'] || is_plugin_active( $extension['plugin'] ) ) {
+								return 'uncertain';
+							}
+							return 'installed';
 						}
-					}
-					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only the identity-checked empty private directory.
-					if ( ! rmdir( $directory ) ) {
-						throw new RuntimeException( 'Temporary directory could not be removed.' );
-					}
-				}
-			} catch ( Throwable ) {
-				$result = 'uncertain';
-			}
+					);
+				},
+				$maximum_bytes,
+				$extension['asset_sha256']
+			);
+		} catch ( Throwable $failure ) {
+			$result = $attempted || 'The temporary archive could not be removed.' === $failure->getMessage() ? 'uncertain' : 'failed';
+		}
+		if ( in_array( $result, array( 'failed', 'uncertain' ), true ) ) {
+			BoosterLogger::log(
+				'Extension install failed.',
+				array_filter(
+					array(
+						'operation'    => 'extension_install',
+						'outcome_code' => $result,
+						'package_slug' => $extension['id'] ?? null,
+					)
+				)
+			);
 		}
 		return $result;
 	}
@@ -153,7 +143,7 @@ final class ExtensionInstaller {
 					return null;
 				}
 			}
-			if ( ! is_bool( $extension['compatible'] ?? null ) || 1 !== preg_match( '/\A[a-z0-9-]+\/[a-z0-9-]+\.php\z/', $extension['plugin'] ) || 1 !== preg_match( '/\A[a-f0-9]{64}\z/', $extension['asset_sha256'] ) ) {
+			if ( ! is_bool( $extension['compatible'] ?? null ) || ! PluginFileIdentifier::is_valid( $extension['plugin'] ) || ! PackageDirectory::is_valid_name( dirname( $extension['plugin'] ) ) || 1 !== preg_match( '/\A[a-f0-9]{64}\z/', $extension['asset_sha256'] ) ) {
 				return null;
 			}
 			return array_intersect_key( $extension, array_flip( array( 'id', 'plugin', 'release_version', 'asset_url', 'asset_sha256', 'compatible', 'state' ) ) );
@@ -161,40 +151,8 @@ final class ExtensionInstaller {
 		return null;
 	}
 
-	private function temporary_directory(): string {
-		$directory = rtrim( sys_get_temp_dir(), DIRECTORY_SEPARATOR ) . '/ran-extension-' . bin2hex( random_bytes( 16 ) );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- A private random local directory owns downloaded bytes.
-		if ( ! mkdir( $directory, 0700 ) ) {
-			throw new RuntimeException( 'Temporary directory unavailable.' );
-		}
-		if ( is_link( $directory ) || 0700 !== ( fileperms( $directory ) & 0777 ) ) {
-			if ( ! is_link( $directory ) && is_dir( $directory ) ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the newly created empty private directory.
-				rmdir( $directory );
-			}
-			throw new RuntimeException( 'Temporary directory permissions unavailable.' );
-		}
-		return $directory;
-	}
-
-	/**
-	 * @param array{id: string, plugin: string, release_version: string, asset_url: string, asset_sha256: string, compatible: bool, state: string} $extension
-	 * @param array{device: int, inode: int, size: int, permissions: int, links: int}|null $created
-	 * @param-out array{device: int, inode: int, size: int, permissions: int, links: int} $created
-	 */
-	private function download( array $extension, string $path, int $maximum_bytes, ?array &$created ): void {
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Exclusive local creation establishes archive custody.
-		$file = fopen( $path, 'xb' );
-		if ( false === $file ) {
-			throw new RuntimeException( 'Temporary file unavailable.' );
-		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the exclusively created local file.
-		fclose( $file );
-		$initial = PreparedArtifact::regular_file_identity( $path );
-		if ( null === $initial ) {
-			throw new RuntimeException( 'Temporary file identity unavailable.' );
-		}
-		$created = $initial;
+	/** @param array{id: string, plugin: string, release_version: string, asset_url: string, asset_sha256: string, compatible: bool, state: string} $extension */
+	private function download( array $extension, string $path, int $maximum_bytes ): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Restrict the exact private temporary file before download.
 		if ( ! chmod( $path, 0600 ) ) {
 			throw new RuntimeException( 'Temporary file permissions unavailable.' );
@@ -209,11 +167,7 @@ final class ExtensionInstaller {
 				'limit_response_size' => $maximum_bytes + 1,
 			)
 		);
-		clearstatcache( true, $path );
-		$size         = filesize( $path );
-		$digest       = hash_file( 'sha256', $path );
-		$current_file = PreparedArtifact::regular_file_identity( $path );
-		if ( null === $current_file || $created['device'] !== $current_file['device'] || $created['inode'] !== $current_file['inode'] || 1 !== $current_file['links'] || 0600 !== $current_file['permissions'] || is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) || false === $size || $size <= 0 || $size > $maximum_bytes || ! is_string( $digest ) || ! hash_equals( $extension['asset_sha256'], $digest ) ) {
+		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
 			throw new RuntimeException( 'Selected release could not be verified.' );
 		}
 	}
@@ -223,7 +177,7 @@ final class ExtensionInstaller {
 	 */
 	private function archive_files( string $path, array $extension, int $maximum_bytes ): array {
 		$zip = new ZipArchive();
-		if ( true !== $zip->open( $path ) ) {
+		if ( true !== $zip->open( $path, ZipArchive::RDONLY ) ) {
 			throw new RuntimeException( 'Invalid selected release archive.' );
 		}
 		$prefix              = dirname( $extension['plugin'] ) . '/';
@@ -233,42 +187,34 @@ final class ExtensionInstaller {
 			$total_size = 0;
 			$entries    = array();
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native ZipArchive property.
-			if ( $zip->numFiles > 1000 ) {
+			if ( null !== ArchiveSafety::entry_count_failure( $zip->numFiles ) ) {
 				throw new RuntimeException( 'Too many release archive entries.' );
 			}
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native ZipArchive property.
 			for ( $i = 0; $i < $zip->numFiles; ++$i ) {
-				$name = $zip->getNameIndex( $i );
-				if ( ! is_string( $name ) || ! str_starts_with( $name, $prefix ) || str_contains( $name, '\\' ) || str_contains( $name, '//' ) || preg_match( '~(?:^|/)\.\.?(/|$)|[\x00-\x1f\x7f]~', $name ) ) {
+				$name  = $zip->getNameIndex( $i );
+				$entry = is_string( $name ) ? ArchiveSafety::normalize_path( $name ) : null;
+				if ( null === $entry || ! str_starts_with( $name, $prefix ) ) {
 					throw new RuntimeException( 'Invalid release archive path.' );
 				}
-				$normalized = rtrim( $name, '/' );
-				if ( isset( $entries[ $normalized ] ) ) {
-					throw new RuntimeException( 'Duplicate release archive entry.' );
+				$entries[]  = $entry;
+				$opsys      = 0;
+				$attributes = 0;
+				if ( ! $zip->getExternalAttributesIndex( $i, $opsys, $attributes ) || null !== ArchiveSafety::entry_type_reason( $opsys, $attributes, $entry['directory'] ) ) {
+					throw new RuntimeException( 'Release archive has a special entry.' );
 				}
-				$entries[ $normalized ] = true;
-				$opsys                  = 0;
-				$attributes             = 0;
-				if ( $zip->getExternalAttributesIndex( $i, $opsys, $attributes ) && 3 === $opsys ) {
-					$type = ( $attributes >> 16 ) & 0170000;
-					if ( 0 !== $type && ( str_ends_with( $name, '/' ) ? 0040000 !== $type : 0100000 !== $type ) ) {
-						throw new RuntimeException( 'Release archive has a special entry.' );
-					}
+				$stat   = $zip->statIndex( $i );
+				$policy = is_array( $stat ) ? ArchiveSafety::entry_policy_failure( $stat, $entry['directory'], $maximum_bytes - $total_size ) : 'entry_policy_metadata_invalid';
+				if ( ! is_array( $stat ) || ! is_int( $stat['size'] ?? null ) || null !== $policy ) {
+					throw new RuntimeException( 'archive_expanded_limit' === $policy ? 'Release archive is too large.' : 'Invalid release archive size.' );
 				}
-				if ( str_ends_with( $name, '/' ) ) {
+				if ( $entry['directory'] ) {
 					continue;
 				}
-				$relative = substr( $name, strlen( $prefix ) );
-				$stat     = $zip->statIndex( $i );
-				if ( ! is_array( $stat ) || ! isset( $stat['size'] ) || ! is_int( $stat['size'] ) || $stat['size'] < 0 ) {
-					throw new RuntimeException( 'Invalid release archive size.' );
-				}
-				if ( $stat['size'] > $maximum_bytes - $total_size ) {
-					throw new RuntimeException( 'Release archive is too large.' );
-				}
 				$total_size += $stat['size'];
+				$relative    = substr( $entry['path'], strlen( $prefix ) );
 				$stream      = $zip->getStream( $name );
-				if ( '' === $relative || isset( $files[ $relative ] ) || ! is_resource( $stream ) ) {
+				if ( ! is_resource( $stream ) ) {
 					throw new RuntimeException( 'Invalid release archive entry.' );
 				}
 				$hash = hash_init( 'sha256' );
@@ -280,13 +226,21 @@ final class ExtensionInstaller {
 					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the native stream opened for this ZIP member.
 					fclose( $stream );
 				}
-				if ( $name === $extension['plugin'] ) {
-					$header              = $zip->getFromIndex( $i, 8192 );
-					$plugin_header_valid = is_string( $header )
-						&& 1 === preg_match( '/^[ \t\/*#@]*Plugin Name:[ \t]*\S.+$/mi', $header )
-						&& 1 === preg_match( '/^[ \t\/*#@]*Version:[ \t]*' . preg_quote( $extension['release_version'], '/' ) . '[ \t]*$/mi', $header );
+				if ( $entry['path'] === $extension['plugin'] ) {
+					$header              = $zip->getFromIndex( $i, WordPressHeaders::MAX_BYTES );
+					$headers             = is_string( $header ) ? WordPressHeaders::parse(
+						$header,
+						array(
+							'Name'    => 'Plugin Name',
+							'Version' => 'Version',
+						)
+					) : array();
+					$plugin_header_valid = 1 === count( $headers['Name'] ?? array() ) && '' !== $headers['Name'][0] && array( $extension['release_version'] ) === ( $headers['Version'] ?? null );
 				}
 				$files[ $relative ] = hash_final( $hash );
+			}
+			if ( null !== ArchiveSafety::collision_failure( $entries ) ) {
+				throw new RuntimeException( 'Duplicate release archive entry.' );
 			}
 		} finally {
 			$zip->close();

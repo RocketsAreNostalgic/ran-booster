@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RAN\Storage;
 
 use RAN\Runtime\RuntimeSupport;
-use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 
 class Database {
 
@@ -20,7 +19,7 @@ class Database {
 	private ?DatabaseLifecycleFailure $lifecycle_failure      = null;
 	private ?int $lower_case_table_names                      = null;
 
-	public function __construct( private ?object $database = null, private ?GitHubReplacementDeclaration $bundled_declaration = null ) {
+	public function __construct( private ?object $database = null ) {
 	}
 
 	/**
@@ -280,10 +279,6 @@ class Database {
 			return false;
 		}
 
-		if ( null === $installed_version && ( ! $inspect_current_schema || null === $this->bundled_declaration ) ) {
-			throw new DatabaseLifecycleFailure( 'selection_install_required' );
-		}
-
 		$wpdb            = $this->schema_connection();
 		$package_table   = ran_booster_table_name();
 		$attempt_table   = self::attempt_table_name();
@@ -343,16 +338,6 @@ class Database {
 		foreach ( $tables as $table => $contract ) {
 			$this->verify_table( $table, $contract['columns'], $contract['indexes'] );
 		}
-
-		if ( ! isset( $wpdb->options ) || ! is_string( $wpdb->options ) || '' === $wpdb->options ) {
-			throw new DatabaseLifecycleFailure( 'selection_storage_unsupported' );
-		}
-		$selection = new GitHubSelectionStore( $wpdb, $wpdb->options );
-		if ( null === $installed_version && null !== $this->bundled_declaration ) {
-			$selection->initialize_bundled( $this->bundled_declaration );
-		}
-		// Explicit current-version verification never repairs missing or corrupt authority.
-		$selection->read( true );
 
 		if ( ! update_option( self::VERSION_OPTION, self::$booster_db_version, false )
 			// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Read the mutable expected version before get_option filters can run.
@@ -651,22 +636,6 @@ class Database {
 			'columns' => $columns,
 			'indexes' => $indexes,
 		);
-	}
-
-	/** Verify only the options invariants needed by the selection row, without altering WordPress tables. */
-	public function require_selection_storage( string $table ): void {
-		$shape = $this->inspect_table( $table, true );
-		foreach ( array( 'option_name', 'option_value', 'autoload' ) as $column ) {
-			if ( ! isset( $shape['columns'][ $column ] ) ) {
-				throw new DatabaseLifecycleFailure( 'selection_storage_unsupported' );
-			}
-		}
-		foreach ( $shape['indexes'] as $index ) {
-			if ( array( true, array( 'option_name' ) ) === $index ) {
-				return;
-			}
-		}
-		throw new DatabaseLifecycleFailure( 'selection_storage_unsupported' );
 	}
 
 	/**

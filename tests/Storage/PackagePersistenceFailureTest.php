@@ -12,8 +12,6 @@ use RAN\Package;
 use RAN\PackageSource;
 use RAN\Storage\AbstractPackageRepository;
 use RAN\Storage\Database;
-use RAN\BoosterGitHubProvider\V1\GitHubProvider;
-use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -35,8 +33,7 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 
 	private function install_fixture(): void {
 		$GLOBALS['ran_booster_storage_test_options'][ Database::VERSION_OPTION ] = false;
-		$declaration = new GitHubReplacementDeclaration( array_merge( array( 'plugin_basename' => 'ran-booster/ran-booster.php' ), GitHubProvider::compatibility_contract() ) );
-		( new Database( bundled_declaration: $declaration ) )->install();
+		( new Database() )->install();
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.

@@ -130,7 +130,6 @@ $ran_booster_core_development_notice->register();
 			// extension seam closes and the registry is sealed.
 			$provider_registry = $ran_booster_container->make( ProviderRegistry::class );
 			do_action( 'ran_booster_register_providers', $provider_registry );
-			$ran_booster_container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
 			$provider_registry->seal();
 
 			$core_version        = static fn (): string => (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );

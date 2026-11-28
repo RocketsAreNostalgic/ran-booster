@@ -106,7 +106,7 @@ namespace RAN\Tests\Deployment {
 		}
 
 		public function prepare( string $query, mixed ...$arguments ): string {
-			if ( in_array( \RAN\Storage\GitHubSelectionStore::OPTION, $arguments, true ) || in_array( 'active_plugins', $arguments, true ) || str_starts_with( $query, 'SHOW ' ) ) {
+			if ( in_array( 'active_plugins', $arguments, true ) || str_starts_with( $query, 'SHOW ' ) ) {
 				return $this->selection->prepare( $query, ...$arguments );
 			}
 			foreach ( $arguments as $argument ) {
@@ -369,7 +369,7 @@ namespace RAN\Tests\Deployment {
 		public function get_results( string $query ): ?array {
 			if ( str_starts_with( $query, '[' ) ) {
 				$data = json_decode( $query, true, 8, JSON_THROW_ON_ERROR );
-				if ( in_array( $data[1][1] ?? null, array( \RAN\Storage\GitHubSelectionStore::OPTION, 'active_plugins' ), true )
+				if ( 'active_plugins' === ( $data[1][1] ?? null )
 					&& ++$this->authority_reads === $this->abort_authority_read ) {
 					$this->abort_authority_read = null; // All later reads work again.
 					$this->rollback_snapshot(); // InnoDB deadlock victims lose the whole transaction.

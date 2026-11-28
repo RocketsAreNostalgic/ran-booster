@@ -19,15 +19,8 @@ final readonly class SignedWebhookVerifier {
 	public function __construct( private SecretsFile $secrets ) {
 	}
 
-	/** @param callable(): void|null $guard */
-	public function verify( WebhookRequest $request, ProviderWebhookPolicy $policy, ?callable $guard = null ): SignedWebhookVerification {
-		if ( null !== $guard ) {
-			$guard();
-		}
+	public function verify( WebhookRequest $request, ProviderWebhookPolicy $policy ): SignedWebhookVerification {
 		$signature = $this->signature( $request, $policy );
-		if ( null !== $guard ) {
-			$guard();
-		}
 
 		try {
 			$materials = $this->secrets->webhook_materials( $request->get_provider() );
@@ -35,9 +28,6 @@ final readonly class SignedWebhookVerifier {
 			throw $this->authentication_failed( 'secret_store_unavailable' );
 		}
 
-		if ( null !== $guard ) {
-			$guard();
-		}
 		if ( array() === $materials || count( $materials ) > SecretsFile::MAX_WEBHOOK_PROFILES ) {
 			throw $this->authentication_failed( array() === $materials ? 'profiles_missing' : 'profile_invalid' );
 		}

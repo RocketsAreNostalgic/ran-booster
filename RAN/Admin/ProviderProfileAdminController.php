@@ -30,59 +30,12 @@ class ProviderProfileAdminController {
 		private CredentialExpiryObservationStore $expiry_observations,
 		private ?CoreAdminInteractionFacade $interaction = null,
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
-		private ?\RAN\Activity\ActivityStore $activity = null,
-		private ?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null,
-		private ?\RAN\Deployment\DeploymentAttemptRepository $deployment_attempts = null
+		private ?\RAN\Activity\ActivityStore $activity = null
 	) {
 
 		$this->branch_check_evidence = $branch_check_evidence ?? new RepositoryBranchCheckEvidenceStore();
 		$this->expiry_observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 	}
-	/** @param array<string,mixed> $request Untrusted form data. */
-	public function adopt_github( array $request ): void {
-		$authorized = static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
-		if ( ! $authorized() ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to change the GitHub implementation.', 'ran-booster' ) );
-		}
-		$digest = is_string( $request['review_digest'] ?? null ) ? $request['review_digest'] : '';
-		check_admin_referer( 'ran-booster-adopt-github-' . $digest );
-		$interaction_request = $this->interaction?->github_adoption_request( false );
-		$failed              = false;
-		try {
-			$this->interaction?->github_adoption_request();
-			if ( null === $this->github_selection || null === $this->deployment_attempts || 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $digest ) ) {
-				throw new \RuntimeException( 'GitHub adoption is unavailable.' );
-			}
-			foreach ( array( 'confirmed', 'reuse_existing', 'acknowledge_incompatible' ) as $key ) {
-				if ( array_key_exists( $key, $request ) && '1' !== $request[ $key ] ) {
-					throw new \RuntimeException( 'Invalid GitHub adoption confirmation.' );
-				}
-			}
-			$this->github_selection->transition_selection(
-				$digest,
-				isset( $request['confirmed'] ),
-				isset( $request['reuse_existing'] ),
-				isset( $request['acknowledge_incompatible'] ),
-				$this->secrets,
-				$this->deployment_attempts,
-				$this->updater_lock,
-				$authorized
-			);
-			$message = __( 'GitHub implementation selection saved. Review current availability before continuing.', 'ran-booster' );
-		} catch ( \Throwable ) {
-			$failed  = true;
-			$message = __( 'GitHub adoption could not be verified. Review the current selection, credential permissions and recovery status before trying again.', 'ran-booster' );
-		}
-		if ( null === $interaction_request ) {
-			$this->dashboard->add_message( $failed ? new \WP_Error( 'ran_booster_github_adoption', $message ) : $message );
-			return;
-		}
-		if ( $failed ) {
-			$this->interaction->respond_to_provider_profile_validation_failure( $interaction_request, $message );
-		}
-		$this->interaction->respond_to_provider_profile_success( $interaction_request, $message );
-	}
-
 	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	public function manage_credential_profiles( array $request ): void {
 		$this->authorize( 'ran-booster-save-secrets' );

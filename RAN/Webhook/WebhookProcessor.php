@@ -9,8 +9,6 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 use RAN\Deployment\CredentialShapedRef;
 use RAN\Deployment\DeploymentCoordinator;
 use RAN\Logging\BoosterLogger;
-use RAN\RepositoryProvider\GitHubProviderSelection;
-use RuntimeException;
 use RAN\Deployment\DeploymentStorageFailure;
 use RAN\RepositoryProvider\InvalidProviderCode;
 use RAN\RepositoryProvider\ProviderCode;
@@ -30,7 +28,6 @@ final readonly class WebhookProcessor {
 		private ProviderRegistry $providers,
 		private DeploymentCoordinator $coordinator,
 		private SignedWebhookVerifier $verifier,
-		private ?GitHubProviderSelection $selection = null,
 		private ?InstallationStore $installations = null
 	) {
 	}
@@ -41,23 +38,14 @@ final readonly class WebhookProcessor {
 			return $this->response( 503, 'Webhook processing is unavailable on WordPress Multisite.' );
 		}
 
-		$guard = function () use ( $provider ): void {
-			if ( ! $this->available( $provider ) ) {
-				throw new RuntimeException( 'Webhook provider unavailable.' );
-			}
-		};
 		try {
 			$provider_code = ProviderCode::parse( $provider );
-			$guard();
-			$normalizer = $this->providers->require_capability( $provider_code, WebhookNormalizer::class );
-			$policy     = $normalizer->get_webhook_policy();
-			$guard();
-			$input = $request();
-			$guard();
-			$webhook      = new WebhookRequest( $provider_code, $input['body'], $input['headers'], $policy->get_retained_headers() );
-			$verification = $this->verifier->verify( $webhook, $policy, $guard );
-			$envelope     = $normalizer->normalize_webhook( $webhook->with_verification( $verification ) );
-			$guard();
+			$normalizer    = $this->providers->require_capability( $provider_code, WebhookNormalizer::class );
+			$policy        = $normalizer->get_webhook_policy();
+			$input         = $request();
+			$webhook       = new WebhookRequest( $provider_code, $input['body'], $input['headers'], $policy->get_retained_headers() );
+			$verification  = $this->verifier->verify( $webhook, $policy );
+			$envelope      = $normalizer->normalize_webhook( $webhook->with_verification( $verification ) );
 			if ( count( $envelope->get_events() ) > 32 ) {
 				throw new WebhookRejected( 400, 'Webhook event fan-out is too large.', 'event_fanout_exceeded' );
 			}
@@ -78,7 +66,6 @@ final readonly class WebhookProcessor {
 			foreach ( $envelope->get_events() as $event ) {
 
 				$authorized = $policy->authorize_webhook( $verification, $event->provider_repository_id, $event->repository );
-				$guard();
 				if ( ! $authorized ) {
 					throw new WebhookRejected( 401, 'Webhook authentication failed.', 'scope_mismatch' );
 				}
@@ -93,10 +80,6 @@ final readonly class WebhookProcessor {
 
 			return $this->response( 202, 'Webhook accepted.', $result );
 		} catch ( WebhookRejected $exception ) {
-			if ( ! $this->available( $provider ) ) {
-				BoosterLogger::capture_webhook( 'selection_unavailable' );
-				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
-			}
 			$reason = $exception->get_reason() ?? 'rejected';
 			// An unreadable secrets store is Booster's fault, so the provider may retry; every other refusal stays 401.
 			$status = 'secret_store_unavailable' === $reason ? 503 : $this->rejection_status( $exception->get_status_code() );
@@ -110,17 +93,9 @@ final readonly class WebhookProcessor {
 				$this->rejection_message( $status )
 			);
 		} catch ( InvalidProviderCode | UnknownProvider | UnsupportedProviderCapability ) {
-			if ( ! $this->available( $provider ) ) {
-				BoosterLogger::capture_webhook( 'selection_unavailable' );
-				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
-			}
 			BoosterLogger::capture_webhook( 'provider_not_found' );
 			return $this->response( 404, 'Webhook provider not found.' );
 		} catch ( DeploymentStorageFailure $failure ) {
-			if ( ! $this->available( $provider ) ) {
-				BoosterLogger::capture_webhook( 'selection_unavailable' );
-				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
-			}
 			if ( $failure->is_delivery_conflict() ) {
 				BoosterLogger::capture_webhook( 'delivery_conflict' );
 				return $this->response( 409, 'Webhook delivery conflict.' );
@@ -131,24 +106,12 @@ final readonly class WebhookProcessor {
 				? $this->response( 503, 'Webhook processing is temporarily unavailable.' )
 				: $this->response( 500, 'Webhook processing failed.' );
 		} catch ( CredentialShapedRef ) {
-			if ( ! $this->available( $provider ) ) {
-				BoosterLogger::capture_webhook( 'selection_unavailable' );
-				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
-			}
 			BoosterLogger::capture_webhook( 'configured_ref_refused' );
 			return $this->response( 400, 'Invalid webhook request.' );
 		} catch ( InvalidArgumentException ) {
-			if ( ! $this->available( $provider ) ) {
-				BoosterLogger::capture_webhook( 'selection_unavailable' );
-				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
-			}
 			BoosterLogger::capture_webhook( 'invalid_request' );
 			return $this->response( 400, 'Invalid webhook request.' );
 		} catch ( Throwable ) {
-			if ( ! $this->available( $provider ) ) {
-				BoosterLogger::capture_webhook( 'selection_unavailable' );
-				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
-			}
 			BoosterLogger::capture_webhook( 'processing_failure' );
 			return $this->response( 500, 'Webhook processing failed.' );
 		}
@@ -182,14 +145,6 @@ final readonly class WebhookProcessor {
 			InstallationStore::WRITE_APPLIED === $write ? 'Webhook delivery verified the recorded webhook.' : 'Webhook delivery verification could not be recorded.',
 			array( 'provider' => $verification->get_provider()->value )
 		);
-	}
-
-	private function available( string $provider ): bool {
-		try {
-			return 'gh' !== $provider || ( $this->selection?->webhook_access_allowed() ?? false );
-		} catch ( Throwable ) {
-			return false;
-		}
 	}
 
 	private function rejection_status( int $status ): int {

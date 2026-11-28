@@ -152,11 +152,16 @@ summary and a dismiss control. An info snackbar stands alone.
   Release workflow results still carry text in the URL (R16).
 - **Package operation failures.** Each failure notice carries a closed
   `package_<operation>_failed` key (`install`, `edit`, `update`, `unlink`,
-  `unlink_delete`, `recover`). On a full page load the notice renders with the
+  `unlink_delete`, `recover`); any other operation the guard refuses carries
+  `package_operation_failed`. On a full page load the notice renders with the
   key. An enhanced settings save does not swap its failure in: it copies the
   message into the shared package error region, so it also copies a valid key
   (`[a-z0-9_]{1,64}`) onto that region, clears an earlier taken mark and asks
-  the host to consume it. The region is then the pointer's target. An info
+  the host to consume it. The region is then the pointer's target. A failure
+  without a valid key, and a transport failure that shows the generic sentence
+  there, remove the key. Clearing the taken mark retires the earlier pointer:
+  the host drops a pointer whose coded notice is hidden or no longer taken, so
+  each failure replaces the last one's pointer instead of stacking. An info
   result, such as a deployment that is already running, carries no failure key.
 - **Result addresses.** A signed address authenticates the earlier action, not
   the present condition. On a full page load the host strips the result

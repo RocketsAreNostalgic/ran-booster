@@ -25,6 +25,10 @@ const css = fs.readFileSync(
 	),
 	'utf8'
 );
+const feedbackSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-feedback.js', import.meta.url),
+	'utf8'
+);
 const buttonCss = fs.readFileSync(
 	new URL('../../assets/ran-booster/10-buttons.css', import.meta.url),
 	'utf8'
@@ -2458,7 +2462,123 @@ test('a refused settings save shows the lock owner beside its error until a fail
 	}
 });
 
-test('a coded settings save failure keeps its key on the shown error so the host points at it', () => {
+// Boot the real feedback host on a fixture's window. It shows its snackbars
+// through a recorded SnackbarList and scans only the shared error region.
+function bootFeedbackHost(state) {
+	const roots = [];
+	const node = () => {
+		const marks = new Map();
+		const created = {
+			className: '',
+			style: {},
+			isConnected: true,
+			append() {},
+			remove() {
+				created.isConnected = false;
+			},
+			addEventListener() {},
+			setAttribute: (name, value) => marks.set(name, value),
+			hasAttribute: (name) => marks.has(name),
+			contains: () => false,
+			querySelector: () => (created.rendered ? {} : null),
+		};
+		return created;
+	};
+	const hosts = [];
+	const document = {
+		readyState: 'complete',
+		activeElement: null,
+		body: node(),
+		addEventListener() {},
+		getElementById: () => null,
+		querySelector: () => null,
+		querySelectorAll: (selector) =>
+			selector === '[data-ran-booster-ui-notice][data-feedback-key]' &&
+			state.error.hasAttribute('data-feedback-key')
+				? [state.error]
+				: [],
+		createElement() {
+			const created = node();
+			created.ownerDocument = document;
+			hosts.push(created);
+			return created;
+		},
+	};
+	Object.assign(state.window, {
+		innerHeight: 800,
+		setTimeout: () => 0,
+		getComputedStyle: () => ({
+			paddingLeft: '20px',
+			backgroundColor: 'rgba(0, 0, 0, 0.85)',
+		}),
+	});
+	Object.assign(state.window.wp, {
+		i18n: { __: (text) => text },
+		components: { SnackbarList() {} },
+		element: {
+			createElement: (component, props) => ({ component, props }),
+			flushSync: (callback) => callback(),
+			createRoot(host) {
+				const root = {
+					notices: [],
+					unmounted: false,
+					render(tree) {
+						root.notices = tree.props.notices;
+						host.rendered = root.notices.length > 0;
+					},
+					unmount() {
+						root.unmounted = true;
+					},
+				};
+				roots.push(root);
+				return root;
+			},
+		},
+	});
+	// The shared region: a coded notice whose primary paragraph holds the shown sentence.
+	const paragraph = {
+		get textContent() {
+			return state.error.textContent;
+		},
+		set textContent(value) {
+			state.error.textContent = String(value);
+		},
+	};
+	Object.assign(state.error, {
+		id: 'ran-booster-package-mutation-error',
+		isConnected: true,
+		textContent: '',
+		querySelector: (selector) =>
+			[
+				'p',
+				'[data-ran-booster-ui-notice-primary]',
+				'[data-ran-booster-ui-notice-content] > p',
+			].includes(selector)
+				? paragraph
+				: null,
+		querySelectorAll: () => [],
+	});
+	state.error.setAttribute('data-ran-booster-admin-mutation-error', '');
+	state.error.setAttribute('data-ran-booster-ui-notice', '');
+	state.error.setAttribute('data-ran-booster-ui-notice-intent', 'error');
+	Function(
+		'window',
+		'document',
+		'Date',
+		'URL',
+		feedbackSource
+	)(state.window, document, { now: () => 0 }, URL);
+	return {
+		get pointers() {
+			const root = roots.at(-1);
+			return root && !root.unmounted
+				? root.notices.map((notice) => notice.content)
+				: [];
+		},
+	};
+}
+
+test('each enhanced save failure replaces the real host pointer, and one without a key or a transport error clears it', () => {
 	const state = fixture();
 	const save = state.button;
 	save.dataset = {
@@ -2486,21 +2606,16 @@ test('a coded settings save failure keeps its key on the shown error so the host
 		isConnected: true,
 		contains: () => true,
 	};
-	state.error.id = 'ran-booster-package-mutation-error';
 	state.document.getElementById = (id) =>
-		id === state.error.id ? state.error : null;
-	const consumed = [];
-	state.window.ranBoosterFeedback = {
-		consume: () =>
-			consumed.push(state.error.getAttribute('data-feedback-key')),
-	};
+		id === 'ran-booster-package-mutation-error' ? state.error : null;
+	const host = bootFeedbackHost(state);
 	loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,
 		window: state.window,
 	})();
-	const fail = (key) => {
+	const fail = (key, message) => {
 		const notice = {
-			textContent: 'Nothing was saved.',
+			textContent: message,
 			closest: () => true,
 			hasAttribute: () => false,
 			getAttribute: (name) => (name === 'data-feedback-key' ? key : null),
@@ -2541,26 +2656,56 @@ test('a coded settings save failure keeps its key on the shown error so the host
 		state.listeners.get('htmx:beforeSwap')({ detail });
 		assert.equal(detail.shouldSwap, false);
 		state.listeners.get('htmx:afterRequest')({ detail });
+		assert.equal(state.error.hidden, false);
+		assert.equal(state.error.textContent, message);
 	};
+	const key = () => state.error.getAttribute('data-feedback-key');
 
-	// An earlier failure's taken mark is cleared, so the host takes the reused region again.
-	state.error.setAttribute('data-ran-booster-feedback-taken', '');
-	fail('package_edit_failed');
-	assert.equal(state.error.hidden, false);
-	assert.equal(
-		state.error.getAttribute('data-feedback-key'),
-		'package_edit_failed'
-	);
-	assert.equal(
-		state.error.hasAttribute('data-ran-booster-feedback-taken'),
-		false
-	);
-	assert.deepEqual(consumed, ['package_edit_failed']);
-	// A key that is not a closed code, or no key, leaves the error without a pointer.
-	for (const key of ['Package <b>failed</b>', null]) {
-		fail(key);
+	fail('package_edit_failed', 'The package changed.');
+	assert.equal(key(), 'package_edit_failed');
+	assert.deepEqual(host.pointers, ['The package changed.']);
+	// Each later failure, the same key with new copy included, replaces the
+	// pointer, so a fourth still gets one.
+	for (const [code, message] of [
+		['package_update_failed', 'The reinstall failed.'],
+		['package_edit_failed', 'The folder does not match.'],
+		['package_unlink_failed', 'The package could not be unlinked.'],
+	]) {
+		fail(code, message);
+		assert.equal(key(), code);
+		assert.deepEqual(host.pointers, [message], message);
+	}
+	// A failure without a closed key leaves the region without a key or pointer.
+	for (const uncoded of ['Package <b>failed</b>', null]) {
+		fail('package_edit_failed', 'The package changed.');
+		fail(uncoded, 'Nothing was saved.');
 		assert.equal(state.error.hasAttribute('data-feedback-key'), false);
-		assert.deepEqual(consumed, ['package_edit_failed']);
+		assert.deepEqual(host.pointers, []);
+	}
+	// So does a transport failure, which shows the generic sentence there.
+	const reinstall = {
+		...save,
+		matches: (selector) =>
+			['[data-ran-booster-enhanced-mutation]', 'a, button'].includes(
+				selector
+			),
+	};
+	for (const [eventName, elt, status] of [
+		['htmx:timeout', save, 0],
+		['htmx:responseError', reinstall, 503],
+	]) {
+		fail('package_edit_failed', 'The package changed.');
+		assert.deepEqual(host.pointers, ['The package changed.']);
+		state.listeners.get(eventName)({
+			detail: { elt, target, xhr: { status, addEventListener() {} } },
+		});
+		assert.equal(
+			state.error.textContent,
+			'We could not complete that request. Please try again.',
+			eventName
+		);
+		assert.equal(state.error.hasAttribute('data-feedback-key'), false);
+		assert.deepEqual(host.pointers, [], eventName);
 	}
 });
 

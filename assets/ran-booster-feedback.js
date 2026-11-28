@@ -238,10 +238,18 @@
 	}
 
 	// A pointer whose inline message was swapped away leads nowhere, so it
-	// goes instead of holding one of the slots.
+	// goes instead of holding one of the slots. So does a pointer to a coded
+	// notice that is hidden or was released for a new result (its taken mark
+	// cleared), as that notice no longer says what the pointer does.
 	function prune() {
 		state?.items
-			.filter((item) => item.target && !item.target.isConnected)
+			.filter(
+				({ target, notice }) =>
+					target &&
+					(!target.isConnected ||
+						(notice &&
+							(target.hidden || !target.hasAttribute(TAKEN))))
+			)
 			.forEach((item) => remove(item.uid));
 	}
 
@@ -438,6 +446,12 @@
 			// The notice is the record, so it stays; a success item goes.
 			if (notice) {
 				node.setAttribute(TAKEN, '');
+				const pointer = state.items.find(
+					(item) => item.target === node
+				);
+				if (pointer) {
+					pointer.notice = true;
+				}
 			} else {
 				node.remove();
 			}

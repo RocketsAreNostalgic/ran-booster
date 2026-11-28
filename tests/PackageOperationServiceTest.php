@@ -1996,19 +1996,14 @@ final class PackageOperationServiceTest extends TestCase {
 	}
 
 	public function test_an_unlink_and_delete_removal_failure_carries_its_feedback_key(): void {
-		$captured = null;
-		( new \ReflectionMethod( \RAN\Admin\PackageAdminController::class, 'removal_failure' ) )->invoke(
-			new \RAN\Admin\PackageAdminController(),
-			PackageOperation::from_input( 'unlink-delete-plugin', $this->input( 'unlink-delete-plugin' ) ),
-			'deletion_failed',
-			static function ( \WP_Error|array $message ) use ( &$captured ): void {
-				$captured = $message;
-			}
-		);
+		$dashboard = $this->dashboard( new OperationCoordinator() );
+		$input     = $this->input( 'unlink-delete-plugin', array( 'expected_adoption_token' => 'gh:R_example:22222222-2222-4222-8222-222222222222' ) );
+
+		self::assertFalse( $dashboard->post_package_operation( 'unlink-delete-plugin', $input ) );
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 
-		self::assertInstanceOf( \WP_Error::class, $captured );
-		self::assertSame( array( 'feedback' => 'package_unlink_delete_failed' ), $captured->get_error_data() );
+		self::assertSame( 'ran_booster_package_removal_stale', $dashboard->messages[0]['code'] );
+		self::assertSame( 'package_unlink_delete_failed', $dashboard->messages[0]['feedback'] );
 	}
 
 	/** @return list<array{string, string, string}> */

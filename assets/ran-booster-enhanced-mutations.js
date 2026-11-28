@@ -931,13 +931,14 @@
 				return;
 			}
 			const key = notice?.getAttribute?.('data-feedback-key') || '';
-			// The region is reused: an earlier failure's mark must not hide this one.
+			// The region is reused: clearing the taken mark retires an earlier
+			// failure's pointer and lets the host take this one.
 			region.removeAttribute('data-ran-booster-feedback-taken');
 			if (region.hidden || !/^[a-z0-9_]{1,64}$/.test(key)) {
 				region.removeAttribute('data-feedback-key');
-				return;
+			} else {
+				region.setAttribute('data-feedback-key', key);
 			}
-			region.setAttribute('data-feedback-key', key);
 			window.ranBoosterFeedback?.consume?.();
 		}
 
@@ -1589,6 +1590,15 @@
 							'ran-booster'
 						)
 					);
+					// The generic sentence replaced any coded failure shown there.
+					const region = errorRegion(form);
+					if (
+						region?.hasAttribute?.(
+							'data-ran-booster-admin-mutation-error'
+						)
+					) {
+						pointToFailure(region, null);
+					}
 				}
 			});
 		});

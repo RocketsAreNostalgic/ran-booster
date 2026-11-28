@@ -5,6 +5,19 @@
  * responsible for placement, content, state and interaction hooks.
  */
 
+/*
+ * Where sticky content may stop: below the sticky Admin Shell, with a gap.
+ * ran-booster.js publishes the shell's measured bottom edge; without it the
+ * fallback keeps the shell's own 192px focus and anchor allowance.
+ */
+
+.ran-booster-admin {
+	--ran-booster-sticky-top: calc(
+		var(--ran-booster-shell-offset, 176px) + var(--ran-booster-space-16)
+	);
+	--ran-admin-shell-scroll-margin: var(--ran-booster-sticky-top);
+}
+
 .ran-booster-admin .ran-booster-card:not([data-ran-booster-card="extensions"]) {
 	color: var(--ran-booster-text);
 	font-family: inherit;

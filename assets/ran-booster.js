@@ -14,6 +14,7 @@
 	}
 
 	onDomReady(function () {
+		initShellOffset();
 		initDocumentationDeepLinks();
 		initTroubleshootingCredentialChoices();
 		initProviderRepositoryFilter();
@@ -22,6 +23,46 @@
 		initAutoSubmitSelects();
 		initReceiverSetup();
 	});
+
+	// Publish where the sticky Admin Shell ends, however its rows wrap, so
+	// sticky sidebars and focused or targeted elements stop below it. In
+	// short windows the shell stops sticking, but WordPress keeps its admin
+	// bar fixed above 600px wide, so content must still clear the bar.
+	function initShellOffset() {
+		const shell = document.querySelector('header.ran-admin-shell');
+		if (!shell || typeof window.ResizeObserver !== 'function') {
+			return;
+		}
+		let published = '';
+		const fixedBarBottom = function () {
+			const bar = document.getElementById('wpadminbar');
+			return bar && window.getComputedStyle(bar).position === 'fixed'
+				? bar.getBoundingClientRect().bottom
+				: 0;
+		};
+		const publish = function () {
+			const style = window.getComputedStyle(shell);
+			const offset =
+				style.position === 'sticky'
+					? (parseFloat(style.top) || 0) +
+						shell.getBoundingClientRect().height
+					: fixedBarBottom();
+			const value = Math.ceil(offset) + 'px';
+			if (value !== published) {
+				published = value;
+				document.documentElement.style.setProperty(
+					'--ran-booster-shell-offset',
+					value
+				);
+			}
+		};
+		publish();
+		new window.ResizeObserver(publish).observe(shell, {
+			box: 'border-box',
+		});
+		// The shell's sticky top changes at the admin bar breakpoints.
+		window.addEventListener('resize', publish);
+	}
 
 	// The webhook receiver card: Automated/Manual tabs and the repository
 	// chooser. Without JavaScript both panels stay visible and the GET form
@@ -173,6 +214,7 @@
 			if (error) {
 				error.hidden = false;
 				error.focus?.({ preventScroll: true });
+				error.scrollIntoView?.({ block: 'nearest' });
 			}
 		}
 
@@ -528,6 +570,7 @@
 			if (error) {
 				error.hidden = false;
 				error.focus?.({ preventScroll: true });
+				error.scrollIntoView?.({ block: 'nearest' });
 			}
 		}
 

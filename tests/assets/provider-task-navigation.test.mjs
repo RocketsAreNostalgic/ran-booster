@@ -58,6 +58,9 @@ function fixture() {
 		focus(options) {
 			this.focusOptions = options;
 		},
+		scrollIntoView(options) {
+			this.scrollOptions = options;
+		},
 	};
 	const currentAttributes = new Map();
 	const current = {
@@ -444,6 +447,7 @@ test('provider task request failures retain the view and expose its alert', () =
 	assert.equal(state.progress.hidden, true);
 	assert.equal(state.error.hidden, false);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.error.scrollOptions, { block: 'nearest' });
 });
 
 test('only the owning provider request can clear progress or report failure', () => {

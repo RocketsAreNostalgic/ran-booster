@@ -216,6 +216,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 </div>
 	<?php if ( isset( $general_navigation ) ) { ?>
 <template data-ran-booster-general-navigation>
+		<?php $general_admin_url = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ); ?>
 		<?php foreach ( $general_navigation as $general_tab ) { ?>
 			<?php
 			if ( 'troubleshooting' === $general_tab['key'] ) {
@@ -223,10 +224,10 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 			}
 			?>
 			<?php if ( 'portability' === $general_tab['key'] ) { ?>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-plugins' ) ); ?>"><?php esc_html_e( 'Plugins', 'ran-booster' ); ?></a>
-		<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-themes' ) ); ?>"><?php esc_html_e( 'Themes', 'ran-booster' ); ?></a>
+		<a class="ran-section-navigation__link" href="<?php echo esc_url( $general_admin_url . '?page=ran-booster-plugins' ); ?>"><?php esc_html_e( 'Plugins', 'ran-booster' ); ?></a>
+		<a class="ran-section-navigation__link" href="<?php echo esc_url( $general_admin_url . '?page=ran-booster-themes' ); ?>"><?php esc_html_e( 'Themes', 'ran-booster' ); ?></a>
 	<?php } else { ?>
-		<a href="<?php echo esc_url( $general_tab['url'] ); ?>"><?php echo esc_html( $general_tab['label'] ); ?></a>
+		<a class="ran-section-navigation__link" href="<?php echo esc_url( $general_tab['url'] ); ?>"><?php echo esc_html( $general_tab['label'] ); ?></a>
 	<?php } ?>
 	<?php } ?>
 </template>

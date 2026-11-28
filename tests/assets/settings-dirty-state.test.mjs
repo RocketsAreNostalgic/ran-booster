@@ -337,6 +337,12 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 				this.focusOptions = options;
 				this.form.ownerDocument.activeElement = this;
 			},
+			blur() {
+				if (this.form.ownerDocument.activeElement === this) {
+					this.form.ownerDocument.activeElement =
+						this.form.ownerDocument.body;
+				}
+			},
 		});
 		form.save =
 			scope === 'numeric'
@@ -503,6 +509,8 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 								checked: this.checked,
 								disabled: this.disabled,
 							});
+							this.focusedOnUpdate =
+								this.form.ownerDocument.activeElement === this;
 						},
 					};
 		form.numeric =
@@ -1378,6 +1386,12 @@ test('HTMX-focused current native replacement follows success into the mounted s
 	const next = h.replace(h.make('hide', { saved: true, uiMounted: true }));
 	h.document.activeElement = next.toggle;
 	h.doc('htmx:afterSwap', { detail: { xhr } });
+	// A focused native checkbox would keep the styled Switch from mounting.
+	assert.equal(
+		next.toggle.events.at(-1).type,
+		'ran-booster:ui-switch-update'
+	);
+	assert.equal(next.toggle.focusedOnUpdate, false);
 	assert.equal(h.document.activeElement, next.uiButton);
 	assert.equal(next.uiButton.focusOptions.preventScroll, true);
 });

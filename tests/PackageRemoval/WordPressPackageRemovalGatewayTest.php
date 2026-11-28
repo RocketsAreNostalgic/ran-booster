@@ -89,6 +89,33 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 		}
 	}
 
+	public function test_identifier_rules_accept_installed_shapes_and_refuse_plugins_without_php(): void {
+		$root = sys_get_temp_dir() . '/ran-native-identifiers-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable physical absence fixture.
+		mkdir( $root . '/parent', 0700, true );
+		define( 'WP_PLUGIN_DIR', $root );
+		$gateway = new WordPressPackageRemovalGateway();
+		try {
+			// A nested theme, a root-level plugin file and a Windows-reserved theme folder are all listable by WordPress.
+			foreach ( array( array( 'theme', 'parent/child' ), array( 'plugin', 'hello.php' ), array( 'theme', 'aux' ) ) as list( $type, $identifier ) ) {
+				self::assertTrue( ( $gateway->deletion_postcondition( $type, $identifier, true ) )() );
+			}
+			foreach ( array( 'hello', 'folder/readme' ) as $unsafe ) {
+				try {
+					$gateway->deletion_postcondition( 'plugin', $unsafe, true );
+					self::fail( 'Plugin identifier without a PHP file accepted.' );
+				} catch ( RuntimeException $failure ) {
+					self::assertStringContainsString( 'unsafe', $failure->getMessage() );
+				}
+			}
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable test-owned directories.
+			rmdir( $root . '/parent' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable test-owned root.
+			rmdir( $root );
+		}
+	}
+
 	public function test_physical_deletion_observation_preserves_directory_and_parent_identity(): void {
 		$root = sys_get_temp_dir() . '/ran-booster-deletion-target-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exact disposable filesystem observation requires native inode, directory and link operations.

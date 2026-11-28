@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\PackageRemoval;
 
 use RAN\UpdaterSupport\V1\PackageDirectory;
+use RAN\UpdaterSupport\V1\PluginFileIdentifier;
 
 /**
  * Delegates package removal to WordPress so uninstall and deactivation hooks run.
@@ -72,7 +73,9 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 		$root     = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root( $identifier );
 		clearstatcache( true );
 		$configured_root = $root;
-		if ( ! preg_match( '/\A[a-zA-Z0-9][a-zA-Z0-9_.-]*(?:\/[a-zA-Z0-9][a-zA-Z0-9_.-]*)*\z/D', $identifier ) || is_link( $root ) || ( ! $allow_absent && ! $this->bounded_installed_path( $root, $relative ) ) ) {
+		// Themes keep the segment rule: PackageDirectory::is_valid_name() refuses folders WordPress can list as installed.
+		$valid = 'plugin' === $type ? PluginFileIdentifier::is_valid( $identifier ) : 1 === preg_match( '/\A[a-zA-Z0-9][a-zA-Z0-9_.-]*(?:\/[a-zA-Z0-9][a-zA-Z0-9_.-]*)*\z/D', $identifier );
+		if ( ! $valid || is_link( $root ) || ( ! $allow_absent && ! $this->bounded_installed_path( $root, $relative ) ) ) {
 			throw new \RuntimeException( 'The exact deletion target is unsafe.' );
 		}
 		$root     = realpath( $root );

@@ -894,6 +894,39 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		}
 	}
 
+	public function test_a_saved_credential_or_lookup_profile_needs_secret_authority_before_resolution(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'manage_options'   => true,
+			'activate_plugins' => false,
+		);
+		try {
+			foreach ( array( 'credential_id', 'public_lookup_profile_id', '' ) as $field ) {
+				$executor = new ProspectiveExecutor();
+				$facade   = $this->facade( new ProspectivePluginRepository(), $executor );
+				$request  = $this->repository_request();
+				if ( '' !== $field ) {
+					$request[ $field ] = 'profile_1';
+				}
+				$results = array(
+					$facade->list_candidates( 'plugin', $request, 'stable', 'valid-nonce' ),
+					$facade->inspect( 'plugin', $request, '42', 'v1.2.3', 'stable', 'valid-nonce' ),
+					$facade->install( 'plugin', $request, '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce' ),
+				);
+
+				self::assertSame( '' === $field, 'forbidden' !== $results[0]->code(), $field );
+				self::assertSame( '' === $field, 'forbidden' !== $results[1]->code(), $field );
+				self::assertSame( '' === $field, 'forbidden' !== $results[2]->code(), $field );
+				if ( '' !== $field ) {
+					self::assertSame( 0, ProspectiveRepositoryProvider::$resolve_calls, $field );
+					self::assertSame( 0, ProspectiveRepositoryProvider::$listing_calls + ProspectiveRepositoryProvider::$inspection_calls + ProspectiveRepositoryProvider::$acquisition_calls, $field );
+					self::assertSame( 0, $executor->install_calls, $field );
+				}
+			}
+		} finally {
+			unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_capability_checks'] );
+		}
+	}
+
 	public function test_invalid_channel_fails_before_any_prospective_release_work(): void {
 		$facade = $this->facade(
 			new ProspectivePluginRepository(),

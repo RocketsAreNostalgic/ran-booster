@@ -162,6 +162,12 @@ final class ReleaseWorkflowRequestController {
 					$outcome['diagnostic_code'] = 'nonce_expired';
 					break;
 				}
+				// Another saved credential needs secret authority; the package keeps its exact own one (#1329).
+				$credential_id = is_string( $request['booster_credential_id'] ?? null ) ? wp_unslash( $request['booster_credential_id'] ) : '';
+				if ( '' !== $credential_id && ! ( $package instanceof Package && $credential_id === $package->get_credential_id() ) && ! CredentialAuthority::held() ) {
+					$outcome = $this->workflow_result( $type, $identifier, 'workflow_unauthorised', false, '', 'credential_authorisation', 'credential_authorisation_unavailable' );
+					break;
+				}
 				if ( null !== $this->activity && $package instanceof Package ) {
 					$activity_id = $this->activity->begin( $provider_code, new ActivityRequest( 'workflow.' . $operation, $package->get_repository()->reference, $type, $identifier ), ( new RepositoryBranchCheckEvidenceStore() )->activity_context( $type, $package, 'workflow.assessment' ) );
 					$progress    = new ProgressOnly( new RecordedActivityOperation( $this->activity, $activity_id ) );
@@ -177,13 +183,10 @@ final class ReleaseWorkflowRequestController {
 					break;
 				}
 				$write               = ( 'setup' === $operation );
-				$credential_id       = is_string( $request['booster_credential_id'] ?? null ) ? wp_unslash( $request['booster_credential_id'] ) : '';
 				$local               = $this->workflow_provider_status( $status, $provider_target );
 				$credential_required = $write || ! $this->anonymous_workflow_inspection_allowed( $package );
-				// Another saved credential needs secret authority; the package keeps its exact own one (#1329).
 				if ( null === $local || strlen( $credential_id ) > 191 || ( '' === $credential_id && $credential_required )
-					|| ( '' !== $credential_id && ! in_array( $credential_id, array_column( $local->credential_choices(), 'id' ), true ) )
-					|| ( '' !== $credential_id && ! ( $package instanceof Package && $credential_id === $package->get_credential_id() ) && ! CredentialAuthority::held() ) ) {
+					|| ( '' !== $credential_id && ! in_array( $credential_id, array_column( $local->credential_choices(), 'id' ), true ) ) ) {
 					$outcome = $this->workflow_result( $type, $identifier, 'workflow_unauthorised', false, '', 'credential_authorisation', 'credential_authorisation_unavailable' );
 					break;
 				}

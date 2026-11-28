@@ -594,12 +594,24 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 			'activate_plugins' => false,
 		);
 		foreach ( array( 'other_credential', 'credential_1 ' ) as $stored ) {
-			$provider = new RepositoryReleaseWorkflowProviderDouble();
-			$url      = $this->controller( provider: $provider, stored_credential: $stored )->process_workflow_request( $this->request( 'inspect' ) );
+			foreach ( array(
+				'inspect' => '',
+				'setup'   => str_repeat( 'a', 32 ),
+			) as $operation => $preview ) {
+				$provider = new RepositoryReleaseWorkflowProviderDouble();
+				$url      = $this->controller( provider: $provider, stored_credential: $stored )->process_workflow_request( $this->request( $operation, $preview ) );
 
-			self::assertStringContainsString( 'workflow_unauthorised', $url, $stored );
-			self::assertSame( array(), $provider->calls, $stored );
+				self::assertStringContainsString( 'workflow_unauthorised', $url, $operation . ':' . $stored );
+				self::assertSame( 0, $provider->status_reads, $operation . ':' . $stored );
+				self::assertSame( array(), $provider->calls, $operation . ':' . $stored );
+			}
 		}
+
+		$provider                     = new RepositoryReleaseWorkflowProviderDouble();
+		[$controller, , $connection ] = $this->activity_fixture( $provider );
+		self::assertStringContainsString( 'workflow_unauthorised', $controller->process_workflow_request( $this->request( 'inspect' ) ) );
+		self::assertSame( array(), $connection->inserted );
+		self::assertSame( 0, $provider->status_reads );
 
 		$provider = new RepositoryReleaseWorkflowProviderDouble();
 		$this->controller( provider: $provider, stored_credential: 'credential_1' )->process_workflow_request( $this->request( 'inspect' ) );

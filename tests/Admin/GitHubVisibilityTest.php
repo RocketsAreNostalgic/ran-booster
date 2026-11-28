@@ -8,7 +8,11 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\GitHubVisibility;
+use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\RepositoryProvider\ProviderCredentialStore;
+use RAN\RepositoryProvider\ProviderRegistrationContext;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\Settings\GeneralPreferenceStore;
 use RAN\Tests\Admin\Support\GitHubSupplierState;
 use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
@@ -66,9 +70,20 @@ final class GitHubVisibilityTest extends TestCase {
 	}
 
 	public function test_github_stays_visible_when_its_bundled_module_failed_to_build(): void {
-		$providers = new ProviderRegistry( array( new ExternalFixtureProvider( 'bb' ) ) );
+		$credentials = $this->createStub( ProviderCredentialStore::class );
+		$evidence    = $this->createStub( AuthenticatedWebhookDeliveryEvidenceReader::class );
+		$providers   = new ProviderRegistry(
+			array( new ExternalFixtureProvider( 'bb' ) ),
+			credential_store_factory: static fn (): ProviderCredentialStore => $credentials,
+			delivery_evidence_reader_factory: static fn (): AuthenticatedWebhookDeliveryEvidenceReader => $evidence,
+			bundled_github_factory: static function ( ProviderCredentialStore $store, AuthenticatedWebhookDeliveryEvidenceReader $reader, ProviderRegistrationContext $context ): RepositoryProvider {
+				unset( $store, $reader, $context );
+				throw new RuntimeException( 'The bundled module failed to build.' );
+			}
+		);
 		$providers->seal();
 
+		self::assertNull( $providers->github_supplier() );
 		self::assertSame(
 			array(
 				'hidden'   => false,

@@ -44,10 +44,11 @@ authorized for implementation but is not delivered by this release. Earlier
 external-composition proofs do not qualify replacement or credential adoption.
 The registration order and bundled-only behavior described below apply to that
 released baseline. Core beta.37 delivered explicit replacement selection through
-the merged [#437 integration](https://github.com/RocketsAreNostalgic/ran-booster/pull/437);
-its presentation is documented in the
-[provider extension contract](provider-extension-contract.md#github-replacement-presentation),
-with coordination in [#411](https://github.com/RocketsAreNostalgic/ran-booster/issues/411). This baseline
+the merged [#437 integration](https://github.com/RocketsAreNostalgic/ran-booster/pull/437),
+with coordination in [#411](https://github.com/RocketsAreNostalgic/ran-booster/issues/411).
+Core beta.51 retired that selection in favour of a plugin superseding GitHub; the
+current presentation is documented in the
+[provider extension contract](provider-extension-contract.md#github-supplier-presentation). This baseline
 record is historical evidence, not current replacement instructions.
 
 ## Short answer

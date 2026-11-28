@@ -396,9 +396,8 @@ Normalizers may carry `payload_invalid`, `ignored_type`, `ignored_ref`,
 `probe_verified` describes successful probe verification. These Core webhook
 codes are separate from the frozen `ProviderFailure` vocabulary.
 
-Only the processor's final response boundary emits the diagnostic. Revocation
-suppresses any pending verification/normalization cause. HTTP status/body,
-signing, scope and admission authority are unchanged, except that
+Only the processor's final response boundary emits the diagnostic. HTTP
+status/body, signing, scope and admission authority are unchanged, except that
 `secret_store_unavailable` answers 503 `Webhook processing is temporarily
 unavailable.` so the host retries.
 Core also observes `provider_not_found`, `event_fanout_exceeded`,
@@ -550,7 +549,7 @@ current-head constraint. A provider may reject a vendor-unsupported hash length
 before credential or network access. GitHub accepts only 40-hex commits.
 
 Core appends the same optional field to `PackageOperation` and `DeploymentRequest`
-and preserves it through admission, queued request JSON and selection binding.
+and preserves it through admission and queued request JSON.
 Historical mode retains `PackageOperation::expected_package['branch']` as the
 unchanged destination management snapshot. It does not change the saved tracking
 branch or infer that installed files already equal the selected commit. Webhook
@@ -563,8 +562,6 @@ Core and Branch both check this and retain captured cleanup. Providers must repe
 fresh repository identity, credential/access and exact-commit verification at the
 existing final archive verifier even though no current-head constraint is present.
 Ordinary version-1 providers, including Bitbucket, keep ordinary Branch operations.
-GitHub's compatibility revision must change when this capability is introduced,
-so existing replacement consent cannot silently authorize a changed implementation.
 
 `prepare_archive()` resolves the requested branch, tag or commit exactly once to
 an immutable commit and builds the archive URL from that resolved value.
@@ -1469,42 +1466,21 @@ Diagnostic history contains only bounded status counts and partial-run reasons,
 not diagnostic messages or credentials. Expanded activity details show these
 safe facts. The existing operational stores and debug capture remain separate.
 
-## GitHub replacement presentation
+## GitHub supplier presentation
 
-Core owns replacement decisions and recovery independently of provider-supplied
-administration metadata. A healthy bundled GitHub selection with no enabled
-replacement has no adoption panel, even when GitHub packages are managed. A
-healthy selected replacement shows its plugin attribution and **Manage GitHub
-provider** disclosure. Neither resting state needs an adoption inventory read.
+Core owns how the GitHub supplier is presented, independently of
+provider-supplied administration metadata. While the bundled module supplies
+GitHub, nothing extra is shown. While a plugin supplies it through
+`ProviderRegistry::supersede_github()`, the GitHub page and Overview name that
+plugin, and administrators see a one-time notice when the supplier changes. A
+failed or conflicting claim leaves GitHub unavailable, with a fixed sentence
+that names the claiming plugins and never exception text. Booster does not fall
+back to the bundled module while a claim is active; see
+[provider registration](provider-registration-and-coexistence.md#supply-github-from-a-plugin).
 
-Enabling a candidate does not approve it. The GitHub page explains paused
-operations and offers **Review GitHub provider**. Review reveals affected package
-counts, credential compatibility and signing consequences before the existing
-explicit approvals. Declining consent leaves authority unchanged. Multiple enabled
-candidates still require deactivating the unwanted candidates before a fresh
-review; this UI does not elect a winner or change the single-candidate contract.
-
-To return to bundled GitHub, deactivate all replacement candidates and explicitly
-review and approve the return on the Core-owned GitHub page. A selected replacement
-that is missing or incompatible still shows actionable guidance, even when no
-candidate remains enabled. A selected active replacement whose provider factory
-throws during registration is the closed state `replacement_load_failed`: Core
-never exposes exception text, shows no approval (a new approval re-runs the same
-factory), and points to installing a build for this release or returning to
-bundled GitHub. The Installation report carries only the closed code.
-Interrupted installations retain their protected recovery confirmations;
-absence never causes silent fallback.
-
-Troubleshooting → Diagnostics puts explicit diagnostic checks and their current
-results first. Secondary **Installation details** contains **GitHub provider
-details** and standing **Booster Core updates** information; nested **Technical
-details** contains bounded local declarations, implementation identities, API
-revisions and capability/credential-format names. These are claims, not publisher
-or remote-access verification, and contain no credential values or private paths.
-The copyable Diagnostic report uses the same safe installation snapshot as the page,
-separately headed from diagnostic results. Initial and repeated full-page/enhanced
-renders retain this context without generic recovery links. Legitimate explicitly
-triggered recovery remains available through Core-owned operational routes.
-Provider configuration links to these details while retaining operational actions
-in Core. This presentation does not depend on the proposed Settings screen or the
-separate unused-GitHub hiding preference.
+Troubleshooting → Installation and the Diagnostic report carry the supplier
+only as a closed label (`Included with Booster`, `Add-on`, `Add-on failed to
+load` or `More than one add-on`), with no credential values or private paths.
+Provider configuration links to these details while retaining operational
+actions in Core. This presentation does not depend on the separate unused-GitHub
+hiding preference.

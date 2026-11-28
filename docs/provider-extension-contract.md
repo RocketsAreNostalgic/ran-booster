@@ -539,6 +539,12 @@ scopes authorization to the exact first request and removes authorization
 before any redirect is followed, including redirects on the same origin. Use
 that lifecycle for private archive access.
 
+Core follows at most one archive redirect. The redirect must be HTTPS without
+userinfo and is requested without the credential. Core keeps no provider host
+list, so a provider must not depend on a longer redirect chain: Core does not
+request a second redirect and settles the download as the closed provider
+failure for that redirect status.
+
 Historical acquisition is an explicit archive contract, separate from future Branch
 tracking. `ProviderMetadata::$archive_api_version` defaults to `1`; Core recognizes
 only `1` and `2`. Version `2` promises support for `ArchiveRequest::$selected_commit`,

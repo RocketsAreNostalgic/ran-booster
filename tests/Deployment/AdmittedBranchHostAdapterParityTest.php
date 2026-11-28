@@ -254,6 +254,23 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		}
 	}
 
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'plugin', 'example/example.php' ) )]
+	#[\PHPUnit\Framework\Attributes\TestWith( array( 'theme', 'example' ) )]
+	public function test_an_update_reads_its_exact_installed_target_and_never_its_folder( string $type, string $identifier ): void {
+		$adapter = $this->adapter( 'plugin' === $type ? $this->running_update() : $this->running_theme_update(), new ParityRepositoryProvider( null ) );
+		self::assertSame( $identifier, $adapter->installed( $adapter->declaration() )['identifier'] );
+		self::assertSame( 0, $this->plugins->folder_lookups + $this->themes->folder_lookups );
+	}
+
+	public function test_an_update_refuses_a_case_only_drift_of_its_installed_theme(): void {
+		$adapter     = $this->adapter( $this->running_theme_update(), new ParityRepositoryProvider( null ) );
+		$declaration = $adapter->declaration();
+		// A case-insensitive filesystem answers the admitted stylesheet with the folder's other case.
+		$this->themes->installed_case = 'Example';
+		$this->expectException( RuntimeException::class );
+		$adapter->installed( $declaration );
+	}
+
 	public function test_theme_working_copy_refusal_retains_the_same_closed_fact(): void {
 		$this->enable_activity();
 		$this->running_update();
@@ -2128,6 +2145,22 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
+	private function running_theme_update(): DeploymentAttempt {
+		$this->running_update();
+		$theme = new \RAN\Theme();
+		( new \ReflectionProperty( \RAN\Theme::class, 'stylesheet' ) )->setValue( $theme, 'example' );
+		( new \ReflectionProperty( \RAN\Theme::class, 'version' ) )->setValue( $theme, '1.0.0' );
+		$theme->set_repository( new ManagedRepository( 'gh', 'owner/example', 'R_example', 'main' ) );
+		$theme->set_adoption_token( 'gh:R_example:11111111-1111-4111-8111-111111111111' );
+		$theme->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
+		$theme->set_source( PackageSource::BRANCH, 1 );
+		$this->themes->managed                      = $theme;
+		$this->database->management['example']      = (string) $theme->get_adoption_token();
+		$this->database->management_rows['example'] = $this->database->management_rows['example/example.php'];
+		$request                                    = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::AUTOMATIC, 7, self::MAXIMUM_ARTIFACT_BYTES, 'example', $theme->get_adoption_token() );
+		return $this->attempts->admit_and_claim_manual( 'update', 'theme', 'gh', 'R_example', $request, 'main', 'branch', 1 );
+	}
+
 	private function running_update( ?string $selected_commit = null ): DeploymentAttempt {
 		$identifier                                     = (string) $this->plugins->managed['fixture']->get_identifier();
 		$this->database->management[ $identifier ]      = 'gh:R_example:11111111-1111-4111-8111-111111111111';
@@ -2373,6 +2406,7 @@ final class ParityPluginRepository extends PluginRepository {
 	public ?Plugin $by_identifier                  = null;
 	public ?PackageMutationResult $adoption_result = null;
 	public int $adopt_calls                        = 0;
+	public int $folder_lookups                     = 0;
 
 	public function __construct() {}
 
@@ -2382,6 +2416,7 @@ final class ParityPluginRepository extends PluginRepository {
 	}
 
 	public function from_slug( $slug ) {
+		++$this->folder_lookups;
 		if ( null !== $this->installed ) {
 			return $this->installed;
 		}
@@ -2427,7 +2462,14 @@ final class ParityPluginRepository extends PluginRepository {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This concrete test collaborator stays beside the only tests that exercise it.
 final class ParityThemeRepository extends ThemeRepository {
 	public ?\RAN\Theme $managed = null;
+	public int $folder_lookups  = 0;
+	/** The stylesheet case a case-insensitive filesystem would answer with, when it differs. */
+	public ?string $installed_case = null;
 	public function __construct() {}
+	public function from_slug( $slug ) {
+		++$this->folder_lookups;
+		return $this->managed ?? throw new RuntimeException( 'Missing installed theme: ' . $slug );
+	}
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The SQL boundary fixture returns its one managed theme.
 	public function all_deployment_themes( ?PackageSource $source = null ): array {
 		return null === $this->managed ? array() : array( 'fixture' => $this->managed );
@@ -2436,7 +2478,15 @@ final class ParityThemeRepository extends ThemeRepository {
 		return $this->managed ?? throw new RuntimeException( 'Missing managed theme: ' . $stylesheet );
 	}
 	public function installed_theme_from_stylesheet( string $stylesheet ): \RAN\Theme {
-		return $this->managed ?? throw new RuntimeException( 'Missing installed theme: ' . $stylesheet );
+		if ( null === $this->managed || (string) $this->managed->get_identifier() !== $stylesheet ) {
+			throw new RuntimeException( 'Missing installed theme: ' . $stylesheet );
+		}
+		if ( null === $this->installed_case ) {
+			return $this->managed;
+		}
+		$drifted = clone $this->managed;
+		( new \ReflectionProperty( \RAN\Theme::class, 'stylesheet' ) )->setValue( $drifted, $this->installed_case );
+		return $drifted;
 	}
 }
 

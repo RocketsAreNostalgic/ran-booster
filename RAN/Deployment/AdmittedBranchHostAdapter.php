@@ -420,7 +420,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			default => $this->themes->installed_theme_from_stylesheet( $known ),
 		};
 		$identifier = (string) $package->get_identifier();
-		if ( '' === $identifier || ( null !== $this->attempt->get_request()->expected_identifier && $identifier !== $this->attempt->get_request()->expected_identifier ) ) {
+		// Exact identity, so a case-only folder drift on a case-insensitive filesystem is refused here.
+		if ( '' === $identifier || ( null !== $known && $identifier !== $known ) || ( null !== $this->attempt->get_request()->expected_identifier && $identifier !== $this->attempt->get_request()->expected_identifier ) ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
 		}
 		return array( 'identifier' => $identifier ) + $this->package_runtime_state( $package );

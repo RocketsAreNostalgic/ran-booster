@@ -128,7 +128,7 @@ final class AdmittedBranchPathsTest extends TestCase {
 		$declaration = $adapter->declaration();
 		self::assertSame( 'shared/two.php', $adapter->frozen_target( $declaration, false )['identifier'] ?? null );
 		$adapter->recheck_managed( $declaration );
-		// After the update the folder lookup finds the sibling first; the postcondition reads the exact target.
+		// The postcondition reads the exact admitted file, never the folder, where the sibling would be found first.
 		self::assertSame( 'shared/two.php', $adapter->installed( $declaration )['identifier'] );
 	}
 

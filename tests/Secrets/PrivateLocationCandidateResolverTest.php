@@ -216,6 +216,21 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		}
 	}
 
+	public function test_bazaar_working_copy_ancestor_is_a_boundary(): void {
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
+		$wordpress = $this->root . '/account/site/public';
+		$content   = $wordpress . '/wp-content';
+		$plugin    = $content . '/plugins/ran-booster';
+		$private   = $this->root . '/account/private';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
+		self::assertTrue( mkdir( $private, 0700 ) );
+		self::assertTrue( $resolver->validate_configured( $private . '/ran-booster-store.json', $wordpress, $content, $plugin, $wordpress ) );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
+		self::assertTrue( mkdir( $this->root . '/account/.bzr', 0700 ) );
+		self::assertFalse( $resolver->validate_configured( $private . '/ran-booster-store.json', $wordpress, $content, $plugin, $wordpress ) );
+	}
+
 	public function test_rejects_unrelated_or_symlinked_boundaries(): void {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		mkdir( $this->root . '/other', 0700 );

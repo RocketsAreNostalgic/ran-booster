@@ -53,6 +53,24 @@ final class GitHubSupplierNoticeTest extends TestCase {
 		self::assertStringContainsString( 'GitHub is unavailable because the plugin that provides it could not load.', $this->render( ProviderRegistry::GITHUB_SUPERSEDE_FAILED ) );
 	}
 
+	public function test_a_named_failed_claim_escapes_the_plugin_name(): void {
+		$GLOBALS['ran_booster_supplier_plugins'] = array( 'alpha/alpha.php' => array( 'Name' => 'Alpha <b>"Provider"</b>' ) );
+		$output                                  = $this->render( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, array( 'alpha' ) );
+		self::assertStringContainsString( 'notice-warning', $output );
+		self::assertStringContainsString( '<p>GitHub is unavailable because Alpha &lt;b&gt;&quot;Provider&quot;&lt;/b&gt; could not load.</p>', $output );
+		self::assertSame( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, $GLOBALS['ran_booster_supplier_options'][ GitHubSupplierNotice::OPTION ] );
+	}
+
+	public function test_a_conflict_with_one_identified_claimant_names_no_one(): void {
+		self::assertStringContainsString( '<p>GitHub is unavailable because more than one plugin provides it.</p>', $this->render( ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT, array( 'alpha' ) ) );
+	}
+
+	public function test_a_failed_bundled_module_neither_announces_a_return_nor_clears_the_record(): void {
+		$GLOBALS['ran_booster_supplier_options'][ GitHubSupplierNotice::OPTION ] = 'alpha';
+		self::assertSame( '', $this->render( null ) );
+		self::assertSame( 'alpha', $GLOBALS['ran_booster_supplier_options'][ GitHubSupplierNotice::OPTION ] );
+	}
+
 	public function test_nothing_is_shown_or_recorded_without_both_capabilities_or_outside_scope(): void {
 		$GLOBALS['ran_booster_supplier_caps'] = array( 'manage_options' );
 		$without_capability                   = $this->render( 'alpha', array( 'alpha' ) );
@@ -65,7 +83,7 @@ final class GitHubSupplierNoticeTest extends TestCase {
 	}
 
 	/** @param list<string> $claimants */
-	private function render( string $supplier, array $claimants = array() ): string {
+	private function render( ?string $supplier, array $claimants = array() ): string {
 		$registry = new ProviderRegistry();
 		( new \ReflectionProperty( ProviderRegistry::class, 'github_supplier' ) )->setValue( $registry, $supplier );
 		( new \ReflectionProperty( ProviderRegistry::class, 'github_claims' ) )->setValue(

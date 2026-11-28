@@ -259,10 +259,11 @@ final class ProviderRegistry {
 		if ( ! is_string( $file ) || ! function_exists( 'plugin_basename' ) ) {
 			return null;
 		}
-		// Outside the plugin directories, plugin_basename() only trims the slashes.
+		// Outside the plugin directories, plugin_basename() only normalises and trims the path.
 		$relative = plugin_basename( $file );
 		$plugin   = strstr( $relative, '/', true );
-		if ( trim( str_replace( '\\', '/', $file ), '/' ) === $relative || false === $plugin
+		$file     = function_exists( 'wp_normalize_path' ) ? wp_normalize_path( $file ) : str_replace( '\\', '/', $file );
+		if ( trim( $file, '/' ) === $relative || false === $plugin
 			|| 1 !== preg_match( '/\A[A-Za-z0-9][A-Za-z0-9._-]{0,190}\z/D', $plugin )
 			|| in_array( $plugin, array( self::GITHUB_BUNDLED, self::GITHUB_SUPERSEDE_FAILED, self::GITHUB_SUPERSEDE_CONFLICT ), true ) ) {
 			return null;
@@ -272,7 +273,8 @@ final class ProviderRegistry {
 
 	/**
 	 * Who supplies `gh`: the bundled module, a claiming plugin's directory name, or
-	 * a supersede failure or conflict. Null when this registry does not own `gh`.
+	 * a supersede failure or conflict. Null when this registry does not own `gh`, or
+	 * when the bundled module failed to build.
 	 */
 	public function github_supplier(): ?string {
 		return $this->github_supplier;
@@ -280,7 +282,7 @@ final class ProviderRegistry {
 
 	/** @return list<string> Directory names of the plugins that claimed `gh`; an unidentified claim is omitted. */
 	public function github_claimants(): array {
-		return array_values( array_filter( array_column( $this->github_claims, 'plugin' ), 'is_string' ) );
+		return array_values( array_unique( array_filter( array_column( $this->github_claims, 'plugin' ), 'is_string' ) ) );
 	}
 
 	/** Core registers `gh` itself, after every plugin's registration callback has run. */
@@ -304,7 +306,8 @@ final class ProviderRegistry {
 		try {
 			$this->register_with_credential_store( 'gh', $factory );
 		} catch ( \Throwable ) {
-			$this->github_supplier = null === $claim ? self::GITHUB_BUNDLED : self::GITHUB_SUPERSEDE_FAILED;
+			// A bundled module that fails to build supplies nothing, so it must not read as bundled.
+			$this->github_supplier = null === $claim ? null : self::GITHUB_SUPERSEDE_FAILED;
 			BoosterLogger::log( 'GitHub provider registration failed.', array( 'outcome_code' => null === $claim ? 'bundled_failed' : self::GITHUB_SUPERSEDE_FAILED ) );
 		} finally {
 			$this->github_registering = false;

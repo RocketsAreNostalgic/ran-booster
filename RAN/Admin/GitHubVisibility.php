@@ -113,7 +113,7 @@ final class GitHubVisibility {
 	}
 
 	private function eligibility_reason(): string {
-		if ( null === $this->providers || ! $this->providers->is_sealed() ) {
+		if ( null === $this->providers || ! $this->providers->is_sealed() || null === $this->providers->github_supplier() ) {
 			return 'provider_registry_unknown';
 		}
 		$other_provider = false;

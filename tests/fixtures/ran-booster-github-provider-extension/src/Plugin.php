@@ -24,8 +24,8 @@ final class Plugin {
 			return;
 		}
 
-		// Loaded here rather than at plugin load: Booster's autoloader is prepended when Booster
-		// loads, after this plugin, so registering now puts this plugin's GitHub package first.
+		// Loaded here rather than at plugin load: this prepended autoloader would otherwise
+		// serve this plugin's shared packages to Booster as it boots.
 		require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 		$inner_registrar = require dirname( __DIR__ ) . '/vendor/ran/wp-release-updater/bootstrap.php';
 		$registrar       = new ReleaseUpdaterRegistrar( $inner_registrar );

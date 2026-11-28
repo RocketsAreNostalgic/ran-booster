@@ -18,7 +18,7 @@ final class BoosterDatabaseReadinessTest extends TestCase {
 	public static function readiness_outcomes(): iterable {
 		yield 'healthy' => array( null );
 		yield 'incompatible' => array( new DatabaseCompatibilityFailure( 'unsupported_engine' ) );
-		yield 'missing lifecycle' => array( new DatabaseLifecycleFailure( 'selection_install_required' ) );
+		yield 'missing lifecycle' => array( new DatabaseLifecycleFailure( 'schema_read_failed' ) );
 	}
 
 	#[DataProvider( 'readiness_outcomes' )]

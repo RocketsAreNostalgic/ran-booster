@@ -25,6 +25,8 @@ require_once __DIR__ . '/GitHubSupersedeWordPressFunctions.php';
 final class GitHubSupersedeRegistrationTest extends TestCase {
 	private int $bundled_calls = 0;
 
+	private bool $bundled_fails = false;
+
 	public function test_without_a_claim_core_registers_the_bundled_module_at_seal(): void {
 		$registry = $this->registry();
 		self::assertSame( 0, $this->bundled_calls );
@@ -102,6 +104,25 @@ final class GitHubSupersedeRegistrationTest extends TestCase {
 		$registry->supersede_github( self::alpha()['valid'] );
 	}
 
+	public function test_one_plugin_claiming_twice_is_a_conflict_that_names_it_once(): void {
+		$registry = $this->registry();
+		$registry->supersede_github( self::alpha()['valid'] );
+		$registry->supersede_github( self::alpha()['valid'] );
+		$registry->seal();
+		self::assertSame( ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT, $registry->github_supplier() );
+		self::assertSame( array( 'alpha' ), $registry->github_claimants() );
+		$this->assert_unavailable( $registry );
+	}
+
+	public function test_a_bundled_module_that_fails_to_build_does_not_read_as_bundled(): void {
+		$this->bundled_fails = true;
+		$registry            = $this->registry();
+		$registry->seal();
+		self::assertSame( 1, $this->bundled_calls );
+		self::assertNull( $registry->github_supplier() );
+		self::assertArrayNotHasKey( 'gh', $registry->metadata() );
+	}
+
 	private function assert_unavailable( ProviderRegistry $registry ): void {
 		self::assertSame( 0, $this->bundled_calls );
 		self::assertArrayNotHasKey( 'gh', $registry->metadata() );
@@ -122,6 +143,9 @@ final class GitHubSupersedeRegistrationTest extends TestCase {
 			bundled_github_factory: function ( ProviderCredentialStore $store, AuthenticatedWebhookDeliveryEvidenceReader $reader, ProviderRegistrationContext $context ) use ( $bundled ): RepositoryProvider {
 				unset( $store, $reader, $context );
 				++$this->bundled_calls;
+				if ( $this->bundled_fails ) {
+					throw new \RuntimeException( 'The bundled module failed to build.' );
+				}
 				return $bundled;
 			}
 		);

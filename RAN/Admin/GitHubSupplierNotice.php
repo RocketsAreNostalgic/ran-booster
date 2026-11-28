@@ -30,14 +30,15 @@ final class GitHubSupplierNotice {
 
 	/** One sentence naming who supplies GitHub, or null while the bundled module does. */
 	public function sentence(): ?string {
-		$names = implode( ', ', array_map( self::plugin_name( ... ), $this->providers->github_claimants() ) );
+		$claimants = $this->providers->github_claimants();
+		$names     = implode( ', ', array_map( self::plugin_name( ... ), $claimants ) );
 		return match ( $this->providers->github_supplier() ) {
 			null, ProviderRegistry::GITHUB_BUNDLED => null,
 			ProviderRegistry::GITHUB_SUPERSEDE_FAILED => '' === $names
 				? __( 'GitHub is unavailable because the plugin that provides it could not load.', 'ran-booster' )
 				/* translators: %s: plugin name. */
 				: sprintf( __( 'GitHub is unavailable because %s could not load.', 'ran-booster' ), $names ),
-			ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT => '' === $names
+			ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT => count( $claimants ) < 2
 				? __( 'GitHub is unavailable because more than one plugin provides it.', 'ran-booster' )
 				/* translators: %s: comma-separated plugin names. */
 				: sprintf( __( 'GitHub is unavailable because more than one plugin provides it: %s.', 'ran-booster' ), $names ),

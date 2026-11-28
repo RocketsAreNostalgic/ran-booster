@@ -49,5 +49,5 @@ function delete_option( string $name ): bool {
 /** @return array<string, array<string, string>> */
 // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress API stub for the isolated supplier notice test.
 function get_plugins(): array {
-	return array( 'alpha/alpha.php' => array( 'Name' => 'Alpha Provider' ) );
+	return $GLOBALS['ran_booster_supplier_plugins'] ?? array( 'alpha/alpha.php' => array( 'Name' => 'Alpha Provider' ) );
 }

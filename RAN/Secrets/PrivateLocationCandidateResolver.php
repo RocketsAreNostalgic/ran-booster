@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace RAN\Secrets;
 
+use RAN\UpdaterSupport\V1\TargetWorkingCopy;
+
 // Candidate discovery must inspect native paths rather than a WordPress transport.
 
 /**
@@ -292,11 +294,8 @@ final class PrivateLocationCandidateResolver {
 			$boundaries[] = $canonical;
 
 			for ( $ancestor = $canonical; '/' !== $ancestor; $ancestor = dirname( $ancestor ) ) {
-				foreach ( array( '.git', '.hg', '.svn' ) as $marker ) {
-					if ( file_exists( $ancestor . '/' . $marker ) || is_link( $ancestor . '/' . $marker ) ) {
-						$boundaries[] = $ancestor;
-						break;
-					}
+				if ( TargetWorkingCopy::is_working_copy( $ancestor ) ) {
+					$boundaries[] = $ancestor;
 				}
 			}
 		}

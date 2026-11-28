@@ -335,8 +335,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				(string) $package->get_provider_code(),
 				RepositoryReleaseNativeTargets::class
 			);
-			if ( $this->registrar->has_reserved_core_self_update_target( $type, $this->target_identity( $type, $identifier ) )
-				|| $targets->has_registered_native_target( $type, $this->target_identity( $type, $identifier ) ) ) {
+			if ( $this->registrar->has_reserved_core_self_update_target( $type, ManagedReleaseTargetRegistrar::target_identity( $type, $identifier ) )
+				|| $targets->has_registered_native_target( $type, ManagedReleaseTargetRegistrar::target_identity( $type, $identifier ) ) ) {
 				return false;
 			}
 			$preflight = $this->provider_preflight(
@@ -1213,7 +1213,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		string $package_root,
 		RepositoryReleaseNativeTargets $native_targets
 	): ReleaseTrackingEligibility {
-		$target_identity = $this->target_identity( $type, $identifier );
+		$target_identity = ManagedReleaseTargetRegistrar::target_identity( $type, $identifier );
 		if ( PackageSource::BRANCH === $package->get_source()
 			&& ( $this->registrar->has_reserved_core_self_update_target( $type, $target_identity )
 				|| $this->has_registered_target( $native_targets, $type, $target_identity ) ) ) {
@@ -1280,13 +1280,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED,
 			self::SUBDIRECTORY_MESSAGE
 		);
-	}
-
-	private function target_identity( string $type, string $identifier ): string {
-		// A full identifier keeps its separator handling, then folds whole: the documented collision_key() exception.
-		$identity = PackageDirectory::collision_key( str_replace( '\\', '/', $identifier ) );
-
-		return 'plugin' === $type ? ltrim( $identity, '/' ) : $identity;
 	}
 
 	private function update_uri( string $type, string $identifier ): string {

@@ -506,8 +506,10 @@ record, and that the Branch case from 2026-11-21 uses the same record.
   request that the lock refused, which covers refused manual Branch
   deployments, Unlink and Unlink and delete; a bulk action refused with
   `unavailable`, through the token in its signed result page; and a Check
-  branch that returns `unable_to_check`, on the page that ran it. GitHub
-  adoption and access-profile delete answer through the signed interaction
+  branch that returns `unable_to_check`, on the page that ran it. An in-page
+  settings save keeps its page and moves the response's server-rendered owner
+  notice beside its inline error; a later failure that names no owner removes
+  it. GitHub adoption and access-profile delete answer through the signed interaction
   flow, or through a redirect that carries no token, so they show no owner yet
   (#1336).
 - Activity pages offer no Release. A deployment attempt row holds no lock

@@ -547,6 +547,10 @@
 			}
 		}
 
+		function clearLockOwner() {
+			document.getElementById('ran-booster-updater-lock-owner')?.remove();
+		}
+
 		function errorRegion(form) {
 			const target = form.dataset.ranBoosterErrorTarget || '';
 			if (/^#[A-Za-z][A-Za-z0-9_-]*$/.test(target)) {
@@ -1179,6 +1183,17 @@
 								'ran-booster'
 							)
 					);
+					// A lock refusal names its Booster owner beside the error; any other failure clears it.
+					clearLockOwner();
+					const owner =
+						samePackage && attempted
+							? region.querySelector(
+									'#ran-booster-updater-lock-owner'
+								)
+							: null;
+					if (owner) {
+						errorRegion(save.form)?.after(owner);
+					}
 				}
 				return;
 			}
@@ -1541,6 +1556,15 @@
 						return;
 					}
 					pendingInteractionState = null;
+					if (
+						isPackageMutation(form) ||
+						form.hasAttribute?.('data-ran-booster-source-choice') ||
+						errorRegion(form)?.id ===
+							'ran-booster-package-mutation-error'
+					) {
+						// This failure names no lock owner, so an earlier refusal's notice goes.
+						clearLockOwner();
+					}
 					focusError(
 						form,
 						wp.i18n.__(

@@ -256,7 +256,11 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 };
 
 ?>
-<h2 class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is the item being edited. */ __( 'Edit %s', 'ran-booster' ), $package->name ) ); ?></h2>
+<h2 class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is the item being edited. */ __( 'Edit %s', 'ran-booster' ), $package->name ) ); ?>
+	<?php if ( true === ( $package_working_copy ?? false ) ) { ?>
+		<?php \RAN\Admin\Component\StatusBadge::print_tone( __( 'Working copy', 'ran-booster' ), 'warning' ); ?>
+	<?php } ?>
+</h2>
 
 <?php if ( $provider_unavailable ) { ?>
 	<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error">

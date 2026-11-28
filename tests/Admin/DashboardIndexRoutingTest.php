@@ -2874,6 +2874,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'package_extension_panels',
 				'package_source',
 				'package_paused',
+				'package_working_copy',
 				'repository_branch_check_outcome',
 				'repository_branch_check_evidence',
 				'repository_branch_check_args',

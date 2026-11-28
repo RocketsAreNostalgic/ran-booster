@@ -272,6 +272,12 @@ final class PackagePagePresenterTest extends TestCase {
 			self::assertSame( array( 'git-plugin/git-plugin.php', 'svn-plugin/svn-plugin.php' ), $plugins['package_working_copies'] );
 			self::assertSame( array( 'git-plugin/git-plugin.php' ), $filtered['package_working_copies'] );
 			self::assertSame( array( 'hg-theme', 'bzr-theme' ), $themes['package_working_copies'] );
+			self::assertTrue( PackagePagePresenter::plugin()->edit( $plugin( 'git-plugin/git-plugin.php' ), array(), null, 'branch' )['package_working_copy'] );
+			self::assertFalse( PackagePagePresenter::plugin()->edit( $plugin( 'hello.php' ), array(), null, 'branch' )['package_working_copy'] );
+			self::assertFalse( PackagePagePresenter::plugin()->edit( $plugin( 'clean-plugin/clean-plugin.php' ), array(), null, 'branch' )['package_working_copy'] );
+			self::assertTrue( PackagePagePresenter::theme()->edit( $theme( 'bzr-theme' ), array(), null, 'branch' )['package_working_copy'] );
+			self::assertFalse( PackagePagePresenter::theme()->edit( $theme( 'group/child' ), array(), null, 'branch' )['package_working_copy'] );
+			self::assertFalse( PackagePagePresenter::theme()->edit( $theme( 'clean-theme' ), array(), null, 'branch' )['package_working_copy'] );
 		} finally {
 			unset( $GLOBALS['ran_booster_presenter_theme_roots'] );
 			foreach ( array( $plugin_root . '/git-plugin/.git', $plugin_root . '/git-plugin', $plugin_root . '/svn-plugin/.svn', $plugin_root . '/svn-plugin', $plugin_root . '/hello/.git', $plugin_root . '/hello', $plugin_root . '/nested/.git', $plugin_root . '/nested', $plugin_root . '/clean-plugin', $plugin_root, $theme_root . '/hg-theme/.hg', $theme_root . '/hg-theme', $theme_root . '/group/child/.git', $theme_root . '/group/child', $theme_root . '/group', $theme_root . '/clean-theme', $theme_root, $alt_theme_dir . '/bzr-theme/.bzr', $alt_theme_dir . '/bzr-theme', $alt_theme_dir, $base ) as $dir ) {

@@ -1179,6 +1179,16 @@
 								'ran-booster'
 							)
 					);
+					// A lock refusal names its Booster owner beside the error; any other failure clears it.
+					document
+						.getElementById('ran-booster-updater-lock-owner')
+						?.remove();
+					const owner = (region || response).querySelector(
+						'#ran-booster-updater-lock-owner'
+					);
+					if (owner) {
+						errorRegion(save.form)?.after(owner);
+					}
 				}
 				return;
 			}

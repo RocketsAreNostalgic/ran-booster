@@ -2230,8 +2230,15 @@ test('package save feedback requires the matching authoritative edit response', 
 			getBoundingClientRect: () => ({ left: 0, width: 800 }),
 			insertAdjacentElement() {},
 		};
-		state.document.getElementById = (id) =>
-			id === 'ran-booster-package-edit-region' ? current : state.error;
+		state.document.getElementById = (id) => {
+			if (id === 'ran-booster-updater-lock-owner') {
+				// No lock owner notice is on this page.
+				return null;
+			}
+			return id === 'ran-booster-package-edit-region'
+				? current
+				: state.error;
+		};
 		if (scenario !== 'host-absent') {
 			state.window.ranBoosterFeedback = {
 				show: (message) => {
@@ -2322,6 +2329,106 @@ test('package save feedback requires the matching authoritative edit response', 
 			scenario
 		);
 	}
+});
+
+test('a refused settings save shows the lock owner beside its error until a failure names none', () => {
+	const state = fixture();
+	const save = state.button;
+	save.dataset = { ranBoosterErrorTarget: '#ran-booster-local-error' };
+	save.isConnected = true;
+	save.matches = (selector) =>
+		[
+			'[data-ran-booster-enhanced-mutation]',
+			'[data-ran-booster-package-settings-save]',
+			'a, button',
+		].includes(selector);
+	save.hasAttribute = () => false;
+	save.addEventListener = () => {};
+	save.removeEventListener = () => {};
+	save.form = {
+		elements: packageEditControls(
+			'plugin',
+			'edit-plugin',
+			'example/example.php'
+		),
+	};
+	const target = {
+		id: 'ran-booster-package-edit-region',
+		isConnected: true,
+		contains: () => true,
+	};
+	const page = [];
+	state.error.after = (node) => page.push(node);
+	state.document.getElementById = (id) =>
+		id === 'ran-booster-local-error'
+			? state.error
+			: (page.find((node) => node.id === id) ?? null);
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	const ownerNotice = (token) => ({
+		id: 'ran-booster-updater-lock-owner',
+		token,
+		remove() {
+			page.splice(page.indexOf(this), 1);
+		},
+	});
+	const refuse = (owner) => {
+		const region = {
+			querySelector(selector) {
+				if (selector === '#ran-booster-package-edit-form') {
+					return {
+						hasAttribute: (name) =>
+							name === 'data-ran-booster-attempted',
+						elements: packageEditControls(
+							'plugin',
+							'edit-plugin',
+							'example/example.php'
+						),
+					};
+				}
+				return selector === '#ran-booster-updater-lock-owner'
+					? owner
+					: null;
+			},
+			querySelectorAll: () => [],
+		};
+		state.window.DOMParser = class {
+			parseFromString() {
+				return { getElementById: () => region };
+			}
+		};
+		const detail = {
+			elt: save,
+			target,
+			xhr: {
+				status: 400,
+				addEventListener() {},
+				getResponseHeader: () => null,
+			},
+		};
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		state.listeners.get('htmx:beforeSwap')({ detail });
+		assert.equal(detail.shouldSwap, false);
+		state.listeners.get('htmx:afterRequest')({ detail });
+	};
+
+	// The server-rendered notice, bound to the refusing token, follows the inline error.
+	refuse(ownerNotice('first'));
+	assert.deepEqual(
+		page.map((node) => node.token),
+		['first']
+	);
+	assert.equal(state.error.hidden, false);
+	// A later refusal replaces it, and a failure that names no owner removes it.
+	refuse(ownerNotice('second'));
+	assert.deepEqual(
+		page.map((node) => node.token),
+		['second']
+	);
+	refuse(null);
+	assert.deepEqual(page, []);
 });
 
 test('retained completed results do not focus an unrelated static provider failure', () => {

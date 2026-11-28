@@ -436,7 +436,9 @@ This section is the single source for the contract.
   the static element, leaving no duplicate (R14). A coded notice stays, and its
   snackbar is an info message or only a pointer to it. A failure is never
   snackbar-only (R3).
-- The host never evicts a pointer to a persistent error (see Behaviour).
+- The host never evicts a live pointer to make room (see Behaviour); it drops
+  a pointer only when its target leaves the page, or when a coded notice it
+  took is hidden or released (its taken mark cleared) for a new result.
 
 If this proves arduous or becomes another subsystem to maintain, P1 falls back
 to signed data-free tokens without message text, as package and bulk results

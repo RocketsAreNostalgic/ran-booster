@@ -83,7 +83,7 @@ final class PackageAdminController {
 			PackageMutationGuard::assert_admin_action_allowed( $action, $request );
 		} catch ( RuntimeException $failure ) {
 			$dashboard->add_failure_message(
-				new WP_Error( 'ran_booster_unsupported_package_operation', $failure->getMessage() ),
+				new WP_Error( 'ran_booster_unsupported_package_operation', $failure->getMessage(), self::failure_feedback( $action ) ),
 				$failure,
 				array(
 					'operation' => $action,
@@ -100,7 +100,7 @@ final class PackageAdminController {
 			}
 		}
 		if ( in_array( $action, array( 'install-plugin', 'install-theme', 'edit-plugin', 'edit-theme' ), true ) ) {
-			$request = $this->resolve( $dashboard, $request, $stored_package );
+			$request = $this->resolve( $dashboard, $action, $request, $stored_package );
 			if ( null === $request ) {
 				return false;
 			}
@@ -165,7 +165,7 @@ final class PackageAdminController {
 				is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
 			);
 		} catch ( Throwable $failure ) {
-			$dashboard->add_failure_message( new WP_Error( 'ran_booster_recovery_failed', __( 'Booster could not confirm safe management removal. Refresh this page and review the current management and operation state before trying again.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery' ) );
+			$dashboard->add_failure_message( new WP_Error( 'ran_booster_recovery_failed', __( 'Booster could not confirm safe management removal. Refresh this page and review the current management and operation state before trying again.', 'ran-booster' ), self::failure_feedback( $action ) ), $failure, array( 'step' => 'package_recovery' ) );
 		}
 		return false;
 	}
@@ -269,14 +269,15 @@ final class PackageAdminController {
 						'message' => __( 'Package settings were saved before the reinstall.', 'ran-booster' ),
 					)
 				);
-				$operation = PackageOperation::update_from_saved_package( $operation, $result['package'] );
+				// The reinstall owns any failure from here, including a saved package it cannot reinstall.
 				$action    = 'update-' . $operation->package_type;
+				$operation = PackageOperation::update_from_saved_package( $operation, $result['package'] );
 				$result    = $this->operations->execute( $operation );
 			}
 		} catch ( PackageStorageFailure $failure ) {
 			status_header( 400 );
 			$dashboard->add_failure_message(
-				new WP_Error( $failure->get_diagnostic_id(), $failure->getMessage(), array( 'recovery_required' => $failure->is_recovery_required() ) ),
+				new WP_Error( $failure->get_diagnostic_id(), $failure->getMessage(), array( 'recovery_required' => $failure->is_recovery_required() ) + self::failure_feedback( $action ) ),
 				$failure,
 				array(
 					'operation' => $action,
@@ -292,7 +293,7 @@ final class PackageAdminController {
 		} catch ( PackageRepositoryChangeRejected ) {
 			status_header( 409 );
 			$add_context_message(
-				new WP_Error( 'ran_booster_package_repository_change_rejected', __( 'To use a different Git provider or repository, stop managing this package and adopt it again.', 'ran-booster' ) ),
+				new WP_Error( 'ran_booster_package_repository_change_rejected', __( 'To use a different Git provider or repository, stop managing this package and adopt it again.', 'ran-booster' ), self::failure_feedback( $action ) ),
 				array(
 					'operation' => $action,
 					'step'      => 'package_repository_change',
@@ -365,7 +366,7 @@ final class PackageAdminController {
 			$message = __( 'Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes.', 'ran-booster' );
 
 			$add_context_message(
-				new WP_Error( 'ran_booster_package_edit_conflict', $message ),
+				new WP_Error( 'ran_booster_package_edit_conflict', $message, self::failure_feedback( $action ) ),
 				array(
 					'operation'    => $operation->operation,
 					'package_type' => $operation->package_type,
@@ -725,7 +726,7 @@ final class PackageAdminController {
 			$message = __( 'Booster could not verify the managed package Git provider. No changes were made.', 'ran-booster' );
 		}
 		$dashboard->add_failure_message(
-			new WP_Error( 'ran_booster_unavailable_package_provider', $message ),
+			new WP_Error( 'ran_booster_unavailable_package_provider', $message, self::failure_feedback( $action ) ),
 			$failure,
 			array(
 				'operation' => $action,
@@ -739,7 +740,7 @@ final class PackageAdminController {
 	 * @param array<string, mixed> $request
 	 * @return array<string, mixed>|null
 	 */
-	private function resolve( Dashboard $dashboard, array $request, ?Package $stored_package = null ): ?array {
+	private function resolve( Dashboard $dashboard, string $action, array $request, ?Package $stored_package = null ): ?array {
 		// Disabled is the safer setting, so a deleted branch or rejected credential must not block it: an
 		// unchanged provider, repository, credential, subfolder and branch save without asking the provider.
 		if ( $stored_package instanceof Package
@@ -796,7 +797,7 @@ final class PackageAdminController {
 		if ( is_string( $request['provider'] ?? null ) && preg_match( '/^[a-z0-9][a-z0-9_-]{0,31}$/D', $request['provider'] ) === 1 ) {
 			$context['provider'] = $request['provider'];
 		}
-		$dashboard->add_failure_message( new WP_Error( 'ran_booster_repository_error', $message ), $failure, $context );
+		$dashboard->add_failure_message( new WP_Error( 'ran_booster_repository_error', $message, self::failure_feedback( $action ) ), $failure, $context );
 		return null;
 	}
 
@@ -1008,7 +1009,7 @@ final class PackageAdminController {
 		if ( null === $notice ) {
 			return $this->manual_failure( $dashboard, static function (): void {}, $failure, $action );
 		}
-		$dashboard->add_failure_message( $notice['message'], $failure, $notice['context'] );
+		$dashboard->add_failure_message( self::coded_notice( $notice['message'], $action ), $failure, $notice['context'] );
 		return false;
 	}
 
@@ -1018,7 +1019,7 @@ final class PackageAdminController {
 		if ( null === $notice ) {
 			return $this->manual_failure( $dashboard, $add_context_message, null, $action );
 		}
-		$add_context_message( $notice['message'], $notice['context'] );
+		$add_context_message( self::coded_notice( $notice['message'], $action ), $notice['context'] );
 		return false;
 	}
 
@@ -1027,7 +1028,7 @@ final class PackageAdminController {
 		status_header( 400 );
 		if ( $failure instanceof \RAN\Deployment\CredentialShapedRef ) {
 			$add_context_message(
-				new WP_Error( 'ran_booster_credential_shaped_ref', __( 'Deployment refused because the configured branch name resembles a credential. Rename the branch in the repository and configure Booster to use the new name.', 'ran-booster' ) ),
+				new WP_Error( 'ran_booster_credential_shaped_ref', __( 'Deployment refused because the configured branch name resembles a credential. Rename the branch in the repository and configure Booster to use the new name.', 'ran-booster' ), self::failure_feedback( $action ) ),
 				array(
 					'operation' => $action,
 					'step'      => 'manual_package_operation',
@@ -1035,7 +1036,7 @@ final class PackageAdminController {
 			);
 			return false;
 		}
-		$message = new WP_Error( 'ran_booster_manual_action_failed', __( 'RAN Booster could not complete this action. Reference: ran_booster_manual_action_failed.', 'ran-booster' ) );
+		$message = new WP_Error( 'ran_booster_manual_action_failed', __( 'RAN Booster could not complete this action. Reference: ran_booster_manual_action_failed.', 'ran-booster' ), self::failure_feedback( $action ) );
 		$context = array(
 			'operation' => $action,
 			'step'      => 'manual_package_operation',
@@ -1059,7 +1060,8 @@ final class PackageAdminController {
 					/* translators: 1: folder the installed plugin is in, 2: repository path of the package source, 3: folder that source would install as. */
 					? sprintf( __( 'This plugin is in the folder %1$s, but %2$s would install as %3$s.', 'ran-booster' ), ...$values )
 					/* translators: 1: folder the installed theme is in, 2: repository path of the package source, 3: folder that source would install as. */
-					: sprintf( __( 'This theme is in the folder %1$s, but %2$s would install as %3$s.', 'ran-booster' ), ...$values )
+					: sprintf( __( 'This theme is in the folder %1$s, but %2$s would install as %3$s.', 'ran-booster' ), ...$values ),
+				self::failure_feedback( $action )
 			),
 			array(
 				'operation' => $action,
@@ -1093,7 +1095,7 @@ final class PackageAdminController {
 				: DeploymentOutcomeMessage::for_code_html( $code );
 		}
 		$add_context_message(
-			new WP_Error( 'ran_booster_refused_' . $code, $message ),
+			new WP_Error( 'ran_booster_refused_' . $code, $message, self::failure_feedback( $action ) ),
 			array(
 				'operation'    => $action,
 				'outcome_code' => $code,
@@ -1158,12 +1160,41 @@ final class PackageAdminController {
 		};
 		status_header( 400 );
 		$add_context_message(
-			new WP_Error( 'ran_booster_package_removal_' . $code, $message ),
+			new WP_Error( 'ran_booster_package_removal_' . $code, $message, self::failure_feedback( $operation->operation ) ),
 			array(
 				'operation'    => $operation->operation,
 				'package_type' => $operation->package_type,
 				'step'         => 'package_removal',
 			)
+		);
+	}
+
+	/**
+	 * A deployment presenter notice with its failure key; an info notice, such as a running deployment, is not a failure and keeps none.
+	 *
+	 * @param array<string, string> $notice
+	 * @return array<string, string>
+	 */
+	private static function coded_notice( array $notice, string $action ): array {
+		return 'error' === ( $notice['type'] ?? null ) ? $notice + self::failure_feedback( $action ) : $notice;
+	}
+
+	/**
+	 * The closed feedback key a package operation failure carries, so its inline notice gets a pointer (#755 R4).
+	 *
+	 * @return array{feedback: string}
+	 */
+	private static function failure_feedback( string $action ): array {
+		return array(
+			'feedback' => match ( preg_replace( '/-(?:plugin|theme)\z/D', '', $action ) ) {
+				'install' => 'package_install_failed',
+				'recover' => 'package_recover_failed',
+				'edit' => 'package_edit_failed',
+				'update' => 'package_update_failed',
+				'unlink' => 'package_unlink_failed',
+				'unlink-delete', 'unlink-and-delete' => 'package_unlink_delete_failed',
+				default => 'package_operation_failed',
+			},
 		);
 	}
 }

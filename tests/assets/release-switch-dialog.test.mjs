@@ -373,6 +373,7 @@ function bootSwitchRuntime({
 	openDialogImpl,
 	noticeCreateImpl = null,
 	hasSharedErrorHost = true,
+	feedback = undefined,
 } = {}) {
 	const dom = createFakeDom({ hasSharedErrorHost });
 	const win = {
@@ -400,6 +401,7 @@ function bootSwitchRuntime({
 		ranBoosterNotice: noticeCreateImpl
 			? { create: noticeCreateImpl }
 			: undefined,
+		ranBoosterFeedback: feedback,
 	};
 
 	const context = {
@@ -1027,4 +1029,64 @@ test('metadata failure offers a fresh retry without changing the selected track'
 		requests[0].get('release_channel')
 	);
 	assert.equal(requests[1].get('switch_release_choice'), 'latest');
+});
+
+test('the release check releases an earlier Save failure pointer whenever it hides or rewrites the shared error', async () => {
+	const consumed = [];
+	let payload = { successful: false, data: { message: 'Not checked.' } };
+	const env = bootSwitchRuntime({
+		async fetchImpl() {
+			return {
+				ok: true,
+				async json() {
+					return payload;
+				},
+			};
+		},
+		openDialogImpl() {},
+		feedback: {
+			consume() {
+				const notice = env.doc.sharedErrorHost;
+				consumed.push({
+					hidden: notice.hidden,
+					key: notice.getAttribute('data-feedback-key'),
+					taken: notice.hasAttribute(
+						'data-ran-booster-feedback-taken'
+					),
+				});
+			},
+		},
+	});
+	const saveFailure = () => {
+		const notice = env.doc.sharedErrorHost;
+		notice.hidden = false;
+		notice.setAttribute('data-feedback-key', 'package_edit_failed');
+		notice.setAttribute('data-ran-booster-feedback-taken', '');
+		consumed.length = 0;
+	};
+	const released = (hidden) => ({ hidden, key: null, taken: false });
+
+	// A failed check hides the Save failure, then shows its own uncoded error.
+	saveFailure();
+	await env.triggerSubmit();
+	assert.match(env.doc.sharedErrorHost.textContent, /Not checked\./);
+	assert.deepEqual(consumed, [released(true), released(false)]);
+	// A check that succeeds leaves the shared error hidden and released.
+	payload = {
+		successful: true,
+		code: 'ready',
+		data: {
+			installed_version: '1.5.0',
+			release_version: '1.6.0',
+			release_identity: '101',
+			release_tag: 'v1.6.0',
+			confirmed_release_nonce: 'candidate-nonce',
+			version_relationship: 'newer',
+		},
+	};
+	env.form.submit = () => {};
+	saveFailure();
+	await env.triggerSubmit();
+	assert.equal(env.doc.sharedErrorHost.hidden, true);
+	assert.deepEqual(consumed, [released(true)]);
 });

@@ -1417,12 +1417,17 @@ class Dashboard {
 	 */
 	private function record_message( $message, ?Throwable $failure = null, array $context = array() ): void {
 		if ( is_wp_error( $message ) ) {
+			$data    = $message->get_error_data();
 			$message = array(
 				'type'    => 'error',
 				'code'    => $message->get_error_code(),
-				'data'    => $message->get_error_data(),
+				'data'    => $data,
 				'message' => $message->get_error_message(),
 			);
+			// A producer names its failure with a closed feedback key in the error data, so the notice gets a pointer (#755 R4).
+			if ( is_array( $data ) && is_string( $data['feedback'] ?? null ) && 1 === preg_match( '/\A[a-z0-9_]{1,64}\z/', $data['feedback'] ) ) {
+				$message['feedback'] = $data['feedback'];
+			}
 		} elseif ( is_string( $message ) ) {
 			$message = array(
 				'type'    => 'success',

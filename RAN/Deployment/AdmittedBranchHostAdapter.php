@@ -381,10 +381,14 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 				return null;
 			}
 
-			$package = $this->package_by_slug( (string) $data['package_type'], $request->package_slug );
+			if ( null === $deployment->installed_identifier || null === $request->installed_identifier ) {
+				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
+			}
+			// The admitted identifier is exact; a folder shared by several plugins is not ambiguous.
+			$package = $this->package_from_identifier( (string) $data['package_type'], $request->installed_identifier );
 			$this->assert_package_snapshot( $package, $data, $request );
 			$identifier = (string) $package->get_identifier();
-			if ( null === $deployment->installed_identifier || ! hash_equals( $deployment->installed_identifier, $identifier ) ) {
+			if ( ! hash_equals( $deployment->installed_identifier, $identifier ) ) {
 				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
 			}
 			return array( 'identifier' => $identifier ) + $this->package_runtime_state( $package );
@@ -402,7 +406,10 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 		$data    = $this->attempt->safe_data();
 		$request = $this->attempt->get_request();
 		try {
-			$this->assert_package_snapshot( $this->package_by_slug( (string) $data['package_type'], $request->package_slug ), $data, $request );
+			if ( null === $request->installed_identifier ) {
+				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
+			}
+			$this->assert_package_snapshot( $this->package_from_identifier( (string) $data['package_type'], $request->installed_identifier ), $data, $request );
 		} catch ( PackageStorageFailure $failure ) {
 			$this->stage_package_storage_failure( $failure );
 		}
@@ -410,7 +417,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 
 	public function installed( BranchDeploymentDeclaration $deployment ): array {
 		$this->assert_declaration( $deployment );
-		$package    = $this->installed_package( $deployment->package_type, $deployment->slug );
+		$package = $this->installed_package( $deployment->package_type, $deployment->slug );
+		$known   = $deployment->installed_identifier;
+		// In a shared folder the folder lookup can return a sibling plugin; an update re-reads its exact target.
+		if ( null !== $known && 'plugin' === $deployment->package_type && $package->get_identifier() !== $known ) {
+			$package = $this->plugins->installed_plugin_from_file( $known );
+		}
 		$identifier = (string) $package->get_identifier();
 		if ( '' === $identifier || ( null !== $this->attempt->get_request()->expected_identifier && $identifier !== $this->attempt->get_request()->expected_identifier ) ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
@@ -760,7 +772,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			}
 			return WP_PLUGIN_DIR;
 		}
-		return (string) get_theme_root();
+		// A theme in a secondary registered directory lives under its own root.
+		return (string) get_theme_root( $deployment->installed_identifier ?? $deployment->slug );
 	}
 
 	private function canonical_writable_directory( string $path ): ?string {
@@ -851,24 +864,13 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 		return 'plugin' === $type ? $this->plugins->from_slug( $slug ) : $this->themes->from_slug( $slug );
 	}
 
-	private function package_by_slug( string $type, string $slug ): Package {
-		$matches = array_filter(
-			'plugin' === $type ? $this->plugins->all_deployment_plugins() : $this->themes->all_deployment_themes(),
-			static fn ( Package $package ): bool => (string) $package->get_slug() === $slug
-		);
-		if ( 1 !== count( $matches ) ) {
-			throw new RuntimeException( 'The managed package identity is unavailable or ambiguous.' );
-		}
-		return reset( $matches );
-	}
-
 	private function package_from_identifier( string $type, string $identifier ): Package {
 		return 'plugin' === $type ? $this->plugins->booster_plugin_from_file( $identifier ) : $this->themes->booster_theme_from_stylesheet( $identifier );
 	}
 
 	private function destination_exists( string $type, string $slug ): bool {
 		// A full filesystem path: the filesystem decides, not the PackageDirectory folder-name rule.
-		$root = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root();
+		$root = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root( $slug );
 		return file_exists( $root . '/' . $slug ) || is_link( $root . '/' . $slug );
 	}
 

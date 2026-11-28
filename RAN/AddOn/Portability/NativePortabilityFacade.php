@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\AddOn\Portability;
 
+use RAN\Admin\CredentialAuthority;
 use RAN\Logging\BoosterLogger;
 use RAN\Portability\PortabilityApplicationService;
 use RAN\Runtime\RuntimeSupport;
@@ -109,7 +110,9 @@ final class NativePortabilityFacade extends PortabilityFacade {
 		bool $apply
 	): bool {
 		try {
+			// Verifying with a saved credential needs secret authority (#1329).
 			return ( $this->can_manage )( $candidate->type, $apply )
+				&& ( null === $candidate->credential_id || CredentialAuthority::held() )
 				&& ( $this->verify_nonce )(
 					$nonce,
 					$this->nonce_action( $operation, $candidate, $expected_fingerprint )

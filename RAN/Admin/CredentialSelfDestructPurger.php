@@ -24,6 +24,7 @@ final class CredentialSelfDestructPurger {
 		$this->observations->read_material_tags_with( $this->secrets->credential_material_tag( ... ) );
 	}
 
+	/** Runs even when file changes are disallowed: removing expired credentials is protective (#1329). */
 	public function purge(): void {
 		if ( ! $this->request_allowed() ) {
 			return;

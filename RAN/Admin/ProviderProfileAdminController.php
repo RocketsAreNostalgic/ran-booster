@@ -544,7 +544,7 @@ class ProviderProfileAdminController {
 	}
 	/** Using, validating or changing a credential needs the same secret authority as the storage actions. */
 	private function authorize( string $nonce ): void {
-		if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'activate_plugins' ) ) {
+		if ( ! CredentialAuthority::held() ) {
 			$message = 'ran-booster-save-public-lookup-profile' === $nonce
 				? esc_html__( 'You do not have sufficient permissions to manage Booster Git provider settings.', 'ran-booster' )
 				: esc_html__( 'You do not have sufficient permissions to manage Booster credentials.', 'ran-booster' );

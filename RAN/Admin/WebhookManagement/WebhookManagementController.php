@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 
 namespace RAN\Admin\WebhookManagement;
 
+use RAN\Admin\CredentialAuthority;
 use RAN\UpdaterSupport\V1\FailureText;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\AdminInteractionOutcome;
@@ -54,7 +55,7 @@ final class WebhookManagementController {
 		$this->validation = new WebhookValidationWrapper( $operations );
 		// Webhook operations read signing secrets and authenticate with saved credentials.
 		$this->can_manage   = null === $can_manage
-			? static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' )
+			? static fn (): bool => CredentialAuthority::held()
 			: \Closure::fromCallable( $can_manage );
 		$this->verify_nonce = null === $verify_nonce
 			? static fn ( string $nonce, string $action ): bool => 1 === wp_verify_nonce( $nonce, $action )

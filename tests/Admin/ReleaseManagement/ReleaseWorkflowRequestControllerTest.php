@@ -7,6 +7,7 @@ namespace RAN\Tests\Admin\ReleaseManagement;
 require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
 require_once __DIR__ . '/../Interaction/AdminInteractionWordPressFunctions.php';
 require_once __DIR__ . '/../../Support/NoticeIconGlobalWordPressFunctions.php';
+require_once __DIR__ . '/../../Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
 require_once __DIR__ . '/Support/ReleaseTrackingFacadeDouble.php';
 require_once __DIR__ . '/Support/RepositoryReleaseWorkflowProviderDouble.php';
@@ -17,6 +18,7 @@ require_once __DIR__ . '/../../Storage/StorageTestEnvironment.php';
 require_once __DIR__ . '/../../Activity/ActivityConnection.php';
 require_once __DIR__ . '/../../Activity/ActivityWordPressFunctions.php';
 
+use PHPUnit\Framework\Attributes\After;
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
@@ -38,6 +40,11 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 	#[Before]
 	public function reset_word_press(): void {
 		ReleaseManagementFixture::reset_word_press(); }
+
+	#[After]
+	public function forget_secret_authority(): void {
+		unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_capability_checks'] );
+	}
 
 
 	public function test_result_text_is_one_shot_and_nonce_bound_outside_the_url(): void {
@@ -581,6 +588,41 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		self::assertSame( array( 'preview' ), array_column( $provider->calls, 'operation' ) );
 	}
 
+	public function test_another_saved_credential_needs_secret_authority_but_the_package_keeps_its_exact_own(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'manage_options'   => true,
+			'activate_plugins' => false,
+		);
+		foreach ( array( 'other_credential', 'credential_1 ' ) as $stored ) {
+			foreach ( array(
+				'inspect' => '',
+				'setup'   => str_repeat( 'a', 32 ),
+			) as $operation => $preview ) {
+				$provider = new RepositoryReleaseWorkflowProviderDouble();
+				$url      = $this->controller( provider: $provider, stored_credential: $stored )->process_workflow_request( $this->request( $operation, $preview ) );
+
+				self::assertStringContainsString( 'workflow_unauthorised', $url, $operation . ':' . $stored );
+				self::assertSame( 0, $provider->status_reads, $operation . ':' . $stored );
+				self::assertSame( array(), $provider->calls, $operation . ':' . $stored );
+			}
+		}
+
+		$provider                     = new RepositoryReleaseWorkflowProviderDouble();
+		[$controller, , $connection ] = $this->activity_fixture( $provider );
+		self::assertStringContainsString( 'workflow_unauthorised', $controller->process_workflow_request( $this->request( 'inspect' ) ) );
+		self::assertSame( array(), $connection->inserted );
+		self::assertSame( 0, $provider->status_reads );
+
+		$provider = new RepositoryReleaseWorkflowProviderDouble();
+		$this->controller( provider: $provider, stored_credential: 'credential_1' )->process_workflow_request( $this->request( 'inspect' ) );
+		self::assertSame( array( 'credential_1' ), array_column( $provider->calls, 'credential_id' ) );
+
+		$GLOBALS['ran_booster_test_capabilities']['activate_plugins'] = true;
+		$provider = new RepositoryReleaseWorkflowProviderDouble();
+		$this->controller( provider: $provider, stored_credential: 'other_credential' )->process_workflow_request( $this->request( 'inspect' ) );
+		self::assertSame( array( 'credential_1' ), array_column( $provider->calls, 'credential_id' ) );
+	}
+
 	public function test_anonymous_public_inspection_passes_null_credential_and_permissions_and_nonce_do_not_reach_provider(): void {
 		$provider                         = new RepositoryReleaseWorkflowProviderDouble();
 		$request                          = $this->request( 'inspect' );
@@ -819,9 +861,9 @@ final class ReleaseWorkflowRequestControllerTest extends TestCase {
 		return array( $controller, $presenter, $connection, $package );
 	}
 
-	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null, ?ProviderRegistry $providers = null ): ReleaseWorkflowRequestController {
+	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null, ?ProviderRegistry $providers = null, ?string $stored_credential = null ): ReleaseWorkflowRequestController {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
-		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( provider_code: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), $providers ?? new ProviderRegistry( $registered ? array( $provider ) : array() ), $source_guard ?? $this->source_guard() );
+		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( provider_code: $provider->get_metadata()->code->value, credential_id: $stored_credential ), new ThemeRepositoryDouble(), $providers ?? new ProviderRegistry( $registered ? array( $provider ) : array() ), $source_guard ?? $this->source_guard() );
 	}
 
 	private function registry_without_metadata( RepositoryProvider $provider ): ProviderRegistry {

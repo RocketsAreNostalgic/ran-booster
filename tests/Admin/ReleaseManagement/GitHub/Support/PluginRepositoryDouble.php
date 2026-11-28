@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin\ReleaseManagement\GitHub\Support;
 
+use RAN\ManagedRepository;
+use RAN\PackageSource;
+use RAN\Plugin;
 use RAN\Storage\PluginRepository;
 use RuntimeException;
 
@@ -19,7 +22,8 @@ final class PluginRepositoryDouble extends PluginRepository {
 		private readonly bool $missing = false,
 		private readonly string $repository_id = '101',
 		private readonly string $repository = 'example/example',
-		private readonly bool $is_private = false
+		private readonly bool $is_private = false,
+		private readonly ?string $credential_id = null
 	) {
 		parent::__construct();
 	}
@@ -30,6 +34,28 @@ final class PluginRepositoryDouble extends PluginRepository {
 		$this->identifiers[] = (string) $file;
 		if ( $this->missing ) {
 			throw new RuntimeException( 'missing-package' );
+		}
+		if ( null !== $this->credential_id ) {
+			$plugin = Plugin::from_wp_array(
+				(string) $file,
+				array(
+					'Name'        => 'Example',
+					'PluginURI'   => '',
+					'Version'     => '1.0.0',
+					'Description' => '',
+					'Author'      => '',
+					'AuthorURI'   => '',
+					'TextDomain'  => 'example',
+					'DomainPath'  => '',
+					'Network'     => false,
+					'Title'       => 'Example',
+					'AuthorName'  => '',
+				)
+			);
+			$plugin->set_repository( new ManagedRepository( $this->provider_code, $this->repository, $this->repository_id, 'main', $this->is_private, $this->credential_id ) );
+			$plugin->set_source( PackageSource::BRANCH, $this->source_revision );
+
+			return $plugin;
 		}
 
 		return new class( $this->provider_code, $this->source_revision, (string) $file, $this->repository_id, $this->repository, $this->is_private ) implements \RAN\RepositoryPackageIdentity {

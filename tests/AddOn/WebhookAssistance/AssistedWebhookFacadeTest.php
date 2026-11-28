@@ -59,8 +59,8 @@ final class AssistedWebhookFacadeTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_default_authority_needs_the_secret_capability_before_offering_credentials(): void {
 		$GLOBALS['ran_booster_assisted_facade_capabilities'] = array( 'manage_options' );
-		// phpcs:ignore Squiz.PHP.Eval.Discouraged -- Isolated separate-process test defines the namespace-local WordPress capability check without leaking across tests.
-		eval( 'namespace RAN\\AddOn\\WebhookAssistance; function current_user_can( string $cap ): bool { return in_array( $cap, $GLOBALS["ran_booster_assisted_facade_capabilities"], true ); }' );
+		// phpcs:ignore Squiz.PHP.Eval.Discouraged -- Isolated separate-process test defines Core's credential-authority capability check without leaking across tests.
+		eval( 'namespace RAN\\Admin; function current_user_can( string $cap ): bool { return in_array( $cap, $GLOBALS["ran_booster_assisted_facade_capabilities"], true ); }' );
 		$secrets = new FixedFacadeSecretsFile();
 		$package = new FixedFacadePackage( new ManagedRepository( 'gh', 'owner/example', '101', 'main' ) );
 		$facade  = new AssistedWebhookFacade(

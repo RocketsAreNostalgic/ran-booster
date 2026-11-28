@@ -102,7 +102,7 @@ final class PackageAdminController {
 		if ( in_array( $action, array( 'install-plugin', 'install-theme', 'edit-plugin', 'edit-theme' ), true ) ) {
 			// Choosing a saved credential needs secret authority; a package keeps its own under its capabilities (#1318).
 			if ( PackageRepositoryRequestResolver::chooses_credential( $request, $stored_package )
-				&& ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'activate_plugins' ) ) ) {
+				&& ! CredentialAuthority::held() ) {
 				$dashboard->add_message( new WP_Error( 'ran_booster_credential_authority_missing', __( 'You do not have permission to choose a repository credential. Nothing was saved.', 'ran-booster' ), self::failure_feedback( $action ) ) );
 				return false;
 			}

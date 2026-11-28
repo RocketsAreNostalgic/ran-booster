@@ -128,6 +128,7 @@ final class BoosterServiceProvider {
 					return;
 				}
 
+				// Runs even when file changes are disallowed: tightening sidecar permissions is protective (#1329).
 				try {
 					$secrets->verify_and_secure();
 				} catch ( SecretsStorageUnavailable ) {

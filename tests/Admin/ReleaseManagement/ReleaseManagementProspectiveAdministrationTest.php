@@ -6,7 +6,9 @@ namespace RAN\Tests\Admin\ReleaseManagement;
 
 require_once __DIR__ . '/Support/ReleaseManagementWordPressFunctions.php';
 require_once __DIR__ . '/Support/ReleaseManagementFixtures.php';
+require_once __DIR__ . '/../../Support/RepositoryAdminWordPressFunctions.php';
 
+use PHPUnit\Framework\Attributes\After;
 use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -21,6 +23,11 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 	#[Before]
 	public function reset_word_press(): void {
 		ReleaseManagementFixture::reset_word_press();
+	}
+
+	#[After]
+	public function forget_secret_authority(): void {
+		unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_capability_checks'] );
 	}
 
 	public function test_legacy_candidate_execute_rejects_before_facade_or_reader_work(): void {
@@ -217,6 +224,33 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 			self::assertSame( 'denied' === $mode ? 'forbidden' : 'service_unavailable', $outcome['code'], $mode );
 			self::assertSame( array(), $prospective->calls, $mode );
 			unset( $GLOBALS['ran_booster_release_management_test_denied_capabilities'] );
+		}
+	}
+
+	public function test_a_saved_credential_or_lookup_profile_needs_secret_authority_before_any_provider_call(): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'manage_options'   => true,
+			'activate_plugins' => false,
+		);
+		foreach ( array( 'list_candidates', 'inspect', 'install' ) as $operation ) {
+			foreach ( array( 'credential_id', 'public_lookup_profile_id', '' ) as $field ) {
+				$prospective = new ProspectiveReleaseFacadeDouble();
+				$request     = $this->request( $operation );
+				unset( $request['ran_booster']['credential_id'] );
+				if ( '' !== $field ) {
+					$request['ran_booster'][ $field ] = 'profile_1';
+				}
+				$request['ran_booster_release_install_nonce'] = $this->nonce( 'install', 'plugin' );
+				$request['release_id']                        = '42';
+				$request['release_tag']                       = 'v1.2.3';
+				$request['release_fingerprint']               = 'v2:' . str_repeat( 'b', 64 );
+
+				$outcome = ReleaseManagementFixture::controls( prospective: $prospective )->process_prospective_request( $operation, $request );
+
+				$label = $operation . ':' . $field;
+				self::assertSame( '' === $field, 'forbidden' !== $outcome['code'], $label );
+				self::assertSame( '' === $field, array() !== $prospective->calls, $label );
+			}
 		}
 	}
 

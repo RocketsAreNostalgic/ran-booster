@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\AddOn\WebhookAssistance;
 
+use RAN\Admin\CredentialAuthority;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
@@ -44,7 +45,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	) {
 		// Webhook operations read signing secrets and authenticate with saved credentials.
 		$this->can_manage   = null === $can_manage
-			? static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' )
+			? static fn (): bool => CredentialAuthority::held()
 			: \Closure::fromCallable( $can_manage );
 		$this->endpoint     = null === $endpoint
 			? static fn ( string $provider_code ): string => rest_url( 'ran-booster/v1/webhooks/' . rawurlencode( $provider_code ) )

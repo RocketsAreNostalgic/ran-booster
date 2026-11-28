@@ -363,14 +363,15 @@ switch ( $ran_booster_phase ) {
 		if ( ! $ran_booster_row instanceof DOMElement ) {
 			throw new RuntimeException( 'Missing dashboard row.' );
 		}
-		update_option( 'ran_booster_consumer_dashboard_review', true, false );
+		// A string marker survives the option round trip into the next WP-CLI process; a boolean true reads back as '1'.
+		update_option( 'ran_booster_consumer_dashboard_review', 'reviewed', false );
 		wp_cache_delete( Fixture::COUNTERS, 'options' );
 		$ran_booster_counts_after = Fixture::counters();
 		$ran_booster_assert( $ran_booster_counts_after['a.credential_material_returns'] + $ran_booster_counts_after['b.credential_material_returns'] > $ran_booster_counts_before['a.credential_material_returns'] + $ran_booster_counts_before['b.credential_material_returns'], 'dashboard preview really used the temporary imported credential' );
 		break;
 	case 'dashboard-success-no-consent':
 	case 'dashboard-success-apply':
-		if ( true !== get_option( 'ran_booster_consumer_dashboard_review' ) ) {
+		if ( 'reviewed' !== get_option( 'ran_booster_consumer_dashboard_review' ) ) {
 			throw new RuntimeException( 'Fresh dashboard review prerequisite is missing.' );
 		}
 		$ran_booster_before = $ran_booster_snapshot();

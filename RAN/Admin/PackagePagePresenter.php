@@ -13,6 +13,7 @@ use RAN\Deployment\PackageSourceGate;
 use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
+use RAN\UpdaterSupport\V1\PackageDirectory;
 use RAN\UpdaterSupport\V1\TargetWorkingCopy;
 use Throwable;
 
@@ -731,11 +732,16 @@ final class PackagePagePresenter {
 	}
 
 	private function is_working_copy( Package $package ): bool {
+		$identifier = (string) $package->get_identifier();
+		$folder     = explode( '/', $identifier, 2 )[0];
+		if ( substr_count( $identifier, '/' ) !== ( 'plugin' === $this->type ? 1 : 0 ) || ! PackageDirectory::is_valid_name( $folder ) ) {
+			return false;
+		}
 		$root = 'plugin' === $this->type
 			? ( defined( 'WP_PLUGIN_DIR' ) ? WP_PLUGIN_DIR : '' )
-			: ( function_exists( __NAMESPACE__ . '\\get_theme_root' ) || function_exists( 'get_theme_root' ) ? get_theme_root( (string) $package->get_identifier() ) : '' );
+			: ( function_exists( __NAMESPACE__ . '\\get_theme_root' ) || function_exists( 'get_theme_root' ) ? get_theme_root( $identifier ) : '' );
 
-		return '' !== $root && TargetWorkingCopy::is_working_copy( rtrim( $root, '/\\' ) . '/' . (string) $package->get_slug() );
+		return '' !== $root && TargetWorkingCopy::is_working_copy( rtrim( $root, '/\\' ) . '/' . $folder );
 	}
 
 	private function clean_buffer( int $buffer_level ): void {

@@ -2405,6 +2405,18 @@ final class ParityPluginRepository extends PluginRepository {
 		throw new RuntimeException( 'Missing managed plugin.' );
 	}
 
+	public function installed_plugin_from_file( string $file ): Plugin {
+		if ( null !== $this->installed && (string) $this->installed->get_identifier() === $file ) {
+			return $this->installed;
+		}
+		foreach ( $this->managed as $plugin ) {
+			if ( (string) $plugin->get_identifier() === $file ) {
+				return $plugin;
+			}
+		}
+		throw new RuntimeException( 'Missing installed plugin.' );
+	}
+
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of adopt retains the production method contract; these inputs do not affect this controlled result.
 	public function adopt( Plugin $plugin ): PackageMutationResult {
 		++$this->adopt_calls;
@@ -2422,6 +2434,9 @@ final class ParityThemeRepository extends ThemeRepository {
 	}
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		return $this->managed ?? throw new RuntimeException( 'Missing managed theme: ' . $stylesheet );
+	}
+	public function installed_theme_from_stylesheet( string $stylesheet ): \RAN\Theme {
+		return $this->managed ?? throw new RuntimeException( 'Missing installed theme: ' . $stylesheet );
 	}
 }
 

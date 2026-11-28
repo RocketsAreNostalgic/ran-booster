@@ -70,6 +70,37 @@ final class UnsupportedMultisiteMutationBoundaryTest extends TestCase {
 		self::assertSame( '', $registrar->failure_code( 'plugin', 'example/example.php' ) );
 	}
 
+	public function test_extension_installer_refuses_before_download_lock_or_executor(): void {
+		// The installer's WordPress doubles load their own is_multisite(); keep it reporting Multisite.
+		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = true;
+		require_once dirname( __DIR__ ) . '/Admin/ExtensionInstallerWordPressFunctions.php';
+		self::assertFalse( RuntimeSupport::current()->allows_managed_operations() );
+		$catalogue_reads = 0;
+		$installer       = new \RAN\Admin\ExtensionInstaller(
+			$this->blank( WordPressUpdaterLock::class ),
+			$this->blank( WordPressCorePackageExecutor::class ),
+			static function () use ( &$catalogue_reads ): array {
+				++$catalogue_reads;
+				return array(
+					array(
+						'id'              => 'example',
+						'plugin'          => 'example/example.php',
+						'release_version' => '1.0.0',
+						'asset_url'       => 'https://example.test/example.zip',
+						'asset_sha256'    => str_repeat( 'a', 64 ),
+						'compatible'      => true,
+						'state'           => 'Not installed',
+					),
+				);
+			}
+		);
+
+		self::assertSame( 'failed', $installer->install( 'example' ) );
+		self::assertSame( 1, $catalogue_reads );
+		// The download runs before the lock and the executor, so neither was reached.
+		self::assertArrayNotHasKey( 'ran_booster_extension_test_url', $GLOBALS );
+	}
+
 	public function test_prospective_facade_rejects_listing_inspection_and_installation_before_authorization(): void {
 		$facade  = new NativeProspectiveReleaseFacade(
 			$this->blank( PackageRepositoryRequestResolver::class ),

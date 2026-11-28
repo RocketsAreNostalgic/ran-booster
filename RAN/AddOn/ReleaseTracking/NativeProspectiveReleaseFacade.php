@@ -459,11 +459,13 @@ final class NativeProspectiveReleaseFacade implements ProspectiveReleaseFacade {
 						$failure_code = $result->get_failure()->value ?? 'wordpress_failed';
 						BoosterLogger::log(
 							'prospective release install failed',
-							array(
-								'step'         => 'prospective_release_install',
-								'operation'    => $type,
-								'outcome_code' => $failure_code,
-								'event'        => $result->get_detail(),
+							array_filter(
+								array(
+									'step'         => 'prospective_release_install',
+									'operation'    => $type,
+									'outcome_code' => $failure_code,
+									'event'        => $result->get_detail(),
+								)
 							)
 						);
 						$outcome = ProspectiveReleaseResult::failure( $failure_code );

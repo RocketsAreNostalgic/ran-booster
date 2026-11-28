@@ -1861,6 +1861,10 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 'wordpress_failed', $result->code() );
 		self::assertSame( array(), $result->data() );
 		self::assertSame( 0, $plugins->adoption_calls );
+		$lines = $this->captured_log_lines();
+		self::assertCount( 1, $lines );
+		self::assertStringContainsString( '"outcome_code":"wordpress_failed"', $lines[0] );
+		self::assertStringNotContainsString( '"event"', $lines[0] );
 	}
 
 	public function test_unreadable_installed_target_reports_bounded_uncertainty(): void {

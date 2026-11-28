@@ -82,10 +82,9 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 	}
 
 	private function exercise_plugins(): void {
-		$slug            = $this->slug( 'plugin' );
-		$identifier      = $slug . '/' . $slug . '.php';
-		$executor        = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor();
-		$branch_executor = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor();
+		$slug       = $this->slug( 'plugin' );
+		$identifier = $slug . '/' . $slug . '.php';
+		$executor   = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor();
 
 		$install = $this->artifact( 'plugin', $slug, '1.0.0', 'plugin-install', 'packages/' . $slug );
 		$this->assert_success( $this->with_hook_restoration_check( static fn () => $executor->install_plugin( $install, $slug, 'packages/' . $slug ) ) );
@@ -100,7 +99,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 					'plugin',
 					$identifier,
 					false,
-					static fn () => $branch_executor->update_plugin( $inactive, $slug, null, $identifier )
+					static fn () => $executor->update_plugin( $inactive, $slug, null, $identifier )
 				),
 				WP_PLUGIN_DIR
 			)
@@ -117,13 +116,13 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 				'plugin',
 				$identifier,
 				true,
-				fn () => $this->with_scrape_response( false, static fn () => $branch_executor->update_plugin( $same_version, $slug, null, $identifier ) )
+				fn () => $this->with_scrape_response( false, static fn () => $executor->update_plugin( $same_version, $slug, null, $identifier ) )
 			)
 		);
 		$this->assert_plugin( $identifier, '2.0.0', 'plugin-same-version', true );
 
 		$downgrade = $this->artifact( 'plugin', $slug, '1.5.0', 'plugin-downgrade' );
-		$this->assert_success( $this->with_scrape_response( false, static fn () => $branch_executor->update_plugin( $downgrade, $slug, null, $identifier ) ) );
+		$this->assert_success( $this->with_scrape_response( false, static fn () => $executor->update_plugin( $downgrade, $slug, null, $identifier ) ) );
 		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
 		// Production processes one deployment per request, while this smoke performs
@@ -150,7 +149,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		};
 		add_filter( 'upgrader_source_selection', $source_veto, 5, 4 );
 		try {
-			$failed = $branch_executor->update_plugin(
+			$failed = $executor->update_plugin(
 				$this->artifact( 'plugin', $slug, '1.6.0', 'plugin-source-veto', null, null, true ),
 				$slug,
 				null,
@@ -169,7 +168,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		$blocked = static fn (): bool => false;
 		add_filter( 'auto_update_plugin', $blocked, 100, 2 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		try {
-			$refused = $branch_executor->update_plugin(
+			$refused = $executor->update_plugin(
 				$this->artifact( 'plugin', $slug, '1.6.0', 'plugin-policy-refused' ),
 				$slug,
 				null,
@@ -182,18 +181,17 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 
 		$fatal    = $this->artifact( 'plugin', $slug, '4.0.0', 'plugin-fatal' );
-		$restored = $this->with_scrape_response( true, static fn () => $branch_executor->update_plugin( $fatal, $slug, null, $identifier ) );
+		$restored = $this->with_scrape_response( true, static fn () => $executor->update_plugin( $fatal, $slug, null, $identifier ) );
 		$this->assert_failure( $restored, RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionFailure::WORDPRESS_RESTORED );
 		$this->assert_plugin( $identifier, '1.5.0', 'plugin-downgrade', true );
 	}
 
 	private function exercise_themes(): void {
-		$slug            = $this->slug( 'theme' );
-		$parent_slug     = $this->slug( 'parent-theme' );
-		$child_slug      = $this->slug( 'child-theme' );
-		$missing_parent  = $this->slug( 'missing-parent' );
-		$executor        = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor();
-		$branch_executor = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor();
+		$slug           = $this->slug( 'theme' );
+		$parent_slug    = $this->slug( 'parent-theme' );
+		$child_slug     = $this->slug( 'child-theme' );
+		$missing_parent = $this->slug( 'missing-parent' );
+		$executor       = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor();
 
 		$missing_requests = 0;
 		// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Preserve the WordPress callback argument positions; the fixture uses only the arguments needed for its controlled result.
@@ -240,7 +238,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 				'theme',
 				$slug,
 				false,
-				fn () => $branch_executor->update_theme( $this->artifact( 'theme', $slug, '2.0.0', 'theme-inactive' ), $slug, null, $slug )
+				fn () => $executor->update_theme( $this->artifact( 'theme', $slug, '2.0.0', 'theme-inactive' ), $slug, null, $slug )
 			)
 		);
 		$this->assert_theme( $slug, '2.0.0', 'theme-inactive', false );
@@ -250,7 +248,7 @@ final class RAN_Booster_CorePackageExecutorSmoke {
 				'theme',
 				$slug,
 				true,
-				fn () => $branch_executor->update_theme( $this->artifact( 'theme', $slug, '3.0.0', 'theme-active', null, null, true ), $slug, null, $slug )
+				fn () => $executor->update_theme( $this->artifact( 'theme', $slug, '3.0.0', 'theme-active', null, null, true ), $slug, null, $slug )
 			)
 		);
 		$this->assert_theme( $slug, '3.0.0', 'theme-active', true );

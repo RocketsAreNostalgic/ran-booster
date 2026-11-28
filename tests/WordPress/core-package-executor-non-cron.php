@@ -74,15 +74,8 @@ $ran_booster_executor = new WordPressCorePackageExecutor(
 	}
 );
 
-$ran_booster_branch_executor = new RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor(
-	static function ( string $action, string $type ) use ( &$ran_booster_calls ): bool {
-		$ran_booster_calls[] = array( $action, $type );
-		return false;
-	}
-);
-
 try {
-	$ran_booster_result = $ran_booster_branch_executor->update_plugin( $ran_booster_artifact, 'example', null, 'example/example.php' );
+	$ran_booster_result = $ran_booster_executor->update_plugin( $ran_booster_artifact, 'example', null, 'example/example.php' );
 	if ( 'wordpress_refused' !== $ran_booster_result->get_failure()?->value ) {
 		throw new RuntimeException( 'The non-cron update did not return the core operation result.' );
 	}

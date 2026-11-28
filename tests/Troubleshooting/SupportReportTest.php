@@ -189,7 +189,7 @@ final class SupportReportTest extends TestCase {
 		$text                                    = $captured['text'];
 		self::assertSame( 'ran-booster-support-19700101-001820.json', $captured['filename'] );
 		$data = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( 1, $data['schema_version'] );
+		self::assertSame( 2, $data['schema_version'] );
 		self::assertSame( '1970-01-01T00:18:20+00:00', $data['capture_started_at'] );
 		self::assertSame( '1970-01-01T00:18:20+00:00', $data['capture_ended_at'] );
 		foreach ( array( 'environment', 'installation', 'storage', 'managed_packages', 'diagnostics', 'activity', 'logging' ) as $section ) {
@@ -349,7 +349,7 @@ final class SupportReportTest extends TestCase {
 		}
 	}
 
-	public function test_report_distinguishes_attention_review_and_missing_selected_provider(): void {
+	public function test_report_distinguishes_attention_and_review_activity_stages(): void {
 		$this->environment();
 		$connection                              = new ActivityConnection();
 		$connection->read_results                = array(
@@ -372,26 +372,10 @@ final class SupportReportTest extends TestCase {
 			),
 		);
 		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
-		$facts                                   = new InstallationFacts(
-			new ProviderRegistry(),
-			github_observation: static fn(): array => array(
-				'state'                  => 'replacement_load_failed',
-				'admitted'               => false,
-				'selected'               => 'external',
-				'version'                => '2.3.4',
-				'provider_api'           => 15,
-				'compatibility_revision' => 'private-revision-canary',
-				'identity'               => null,
-			)
-		);
+		$facts                                   = new InstallationFacts( new ProviderRegistry() );
 		$text                                    = ( new SupportReport( $facts, activity: new ActivityStore( $connection ) ) )->generate( array() )['text'];
 		$data                                    = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
-		$selection                               = $data['sections']['installation']['data']['github_selection'];
-		self::assertSame( 'replacement_load_failed', $selection['state'] );
-		self::assertFalse( $selection['admitted'] );
-		self::assertSame( 'external', $selection['selected'] );
-		self::assertSame( '2.3.4', $selection['version'] );
-		self::assertSame( 15, $selection['provider_api'] );
+		self::assertArrayNotHasKey( 'github_selection', $data['sections']['installation']['data'] );
 		$records = $data['sections']['activity']['data']['records'];
 		self::assertSame( array( 'deployment.needs_attention', 'deployment.operator_reviewed', 'Unknown' ), array_column( $records, 'stage' ) );
 		self::assertSame( array( 'incomplete', 'incomplete', 'incomplete' ), array_column( $records, 'status' ) );
@@ -655,7 +639,7 @@ final class SupportReportTest extends TestCase {
 		self::assertIsString( $text );
 		self::assertLessThanOrEqual( SupportReport::MAX_BYTES, strlen( $text ) );
 		$data = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
-		self::assertSame( 1, $data['schema_version'] );
+		self::assertSame( 2, $data['schema_version'] );
 		self::assertSame( 'Partial', $data['coverage'] );
 		self::assertSame( 'Truncated', $data['sections']['environment']['state'] );
 		self::assertSame( 'output_byte_limit_exhausted', $data['sections']['environment']['data']['reason'] );

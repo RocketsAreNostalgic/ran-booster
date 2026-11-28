@@ -251,23 +251,7 @@ final class TroubleshootingViewTest extends TestCase {
 				),
 			),
 			'installation_details' => array(
-				'GitHub provider'    => array(
-					'Name'                     => '<Untrusted plugin>',
-					'Version'                  => '1.0',
-					'Source'                   => 'External plugin',
-					'Selection state'          => 'conflict',
-					'Operational availability' => 'Unavailable',
-					'Implementation'           => '<implementation>',
-					'Provider API'             => '15',
-					'Compatibility revision'   => '<revision>',
-					'Declared capabilities'    => '<capability>',
-					'Credential formats'       => '<format>',
-				),
-				'GitHub candidate 1' => array(
-					'Name'        => '<candidate>',
-					'Declaration' => 'Unavailable',
-				),
-				'Core updates'       => array(
+				'Core updates' => array(
 					'Marker commit' => '<commit>',
 				),
 			),
@@ -277,13 +261,13 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( 'id="ran-booster-github-provider-diagnostics"', $html );
 		self::assertStringNotContainsString( 'GitHub provider details', $html );
-		self::assertStringContainsString( 'GitHub replacement plugins detected', $html );
-		self::assertStringContainsString( 'Needs attention', $html );
+		self::assertStringNotContainsString( 'GitHub replacement plugins detected', $html );
+		self::assertStringNotContainsString( 'Needs attention', $html );
 		self::assertStringNotContainsString( 'These are local configuration details.', $html );
 		self::assertStringContainsString( 'Run protected checks, temporarily capture Booster events, or review recent update activity.', $html );
 		self::assertStringNotContainsString( 'Use Diagnostics to check repository access.', $html );
-		self::assertStringContainsString( '<summary aria-label="GitHub • 1.0"', $html );
-		foreach ( array( '<implementation>', '<revision>', '<candidate>', '<commit>', '<component-implementation>' ) as $claim ) {
+		self::assertStringContainsString( '<summary aria-label="GitHub"', $html );
+		foreach ( array( '<commit>', '<component-implementation>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );
 			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
 		}
@@ -306,7 +290,6 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-github-provider-diagnostics"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]//code[text()="<component-implementation>"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-github-provider-diagnostics"]/details[@data-ran-booster-ui-disclosure-fallback]//div[dt="Implementation fingerprint"]/dd/code[text()="<component-implementation>"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-github-provider-diagnostics"]/details[@data-ran-booster-ui-disclosure-fallback]//div[dt="Implementation ID"]/dd/code[text()="<implementation>"])' ) );
 		$rows = $xpath->query( '//dl[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields-list ")]/div' );
 		self::assertInstanceOf( \DOMNodeList::class, $rows );
 		self::assertGreaterThan( 0, $rows->length );
@@ -355,11 +338,11 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<code>fingerprint</code>', $html );
 	}
 
-	public function test_installation_entries_use_h4_titles_and_show_a_provider_problem_in_the_header(): void {
+	public function test_installation_entries_use_h4_titles_without_a_provider_warning_row(): void {
 		$troubleshooting_panel = 'installation';
 		$troubleshooting       = array(
-			'providers'            => array(),
-			'components'           => array(
+			'providers'  => array(),
+			'components' => array(
 				array(
 					'Name'           => 'GitHub',
 					'Provider'       => 'gh',
@@ -380,15 +363,6 @@ final class TroubleshootingViewTest extends TestCase {
 					'Installed' => 'Yes',
 				),
 			),
-			'installation_details' => array(
-				'GitHub provider' => array(
-					'Name'                     => 'Selected plugin',
-					'Source'                   => 'External replacement',
-					'Version'                  => '1.2',
-					'Selection state'          => 'missing',
-					'Operational availability' => 'Unavailable',
-				),
-			),
 		);
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
@@ -397,95 +371,15 @@ final class TroubleshootingViewTest extends TestCase {
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath   = new \DOMXPath( $document );
 		$class   = static fn( string $name ): string => 'contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__' . $name . ' ")';
-		$github  = '//div[@id="ran-booster-github-provider-diagnostics"]';
-		$summary = $github . '/details/summary';
-		$url     = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh';
-		// The warning is a direct child of the summary beside the heading slot (the Disclosure moves it out of the toggle when mounted), never in the heading or the body.
-		self::assertSame( 1, substr_count( $html, 'The selected GitHub provider plugin is not active or available.' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/span[' . $class( 'entry-warning' ) . ' and @data-ran-booster-ui-disclosure-warning and not(@aria-hidden) and not(@id) and normalize-space(.)="The selected GitHub provider plugin is not active or available. Review provider settings."])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/span[@data-ran-booster-ui-disclosure-warning]/a[@href="' . $url . '" and not(@target) and normalize-space(.)="Review provider settings"])' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $summary . '/span[@data-ran-booster-ui-disclosure-heading]//*[@data-ran-booster-ui-disclosure-warning or self::a])' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $github . '//div[@data-ran-booster-ui-disclosure-content]//*[contains(normalize-space(.), "Review provider settings")])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $github . '[@data-ran-booster-ui-disclosure-warned])' ) );
-		// The toggle has no description wiring for the warning.
-		self::assertSame( 0, substr_count( $html, 'aria-describedby="ran-booster-installation-entry-warning' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(//summary[@aria-describedby])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/span[@data-ran-booster-ui-disclosure-meta]/span[@data-ran-booster-badge and normalize-space(.)="Needs attention"])' ) );
-		// A healthy entry has no warning row.
-		$bitbucket = '//div[@data-ran-booster-ui-disclosure="installation-section" and details/summary[starts-with(@aria-label, "Bitbucket Cloud")]]';
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $bitbucket . '[not(@data-ran-booster-ui-disclosure-warned)]/details/summary[not(.//*[@data-ran-booster-ui-disclosure-warning])])' ) );
-		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-disclosure-warning' ) );
-		// An entry with nothing to expand is a real h4 (the GitHub provider always has technical fields, so a warning only reaches the disclosure header).
+		$summary = '//div[@id="ran-booster-github-provider-diagnostics"]/details/summary';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/span[@data-ran-booster-ui-disclosure-meta]/span[@data-ran-booster-badge and normalize-space(.)="Active"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '//span[' . $class( 'entry-description' ) . ' and normalize-space(.)="Included with Booster"])' ) );
+		// An entry with nothing to expand is a real h4.
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[' . $class( 'installation-entry--static' ) . ']/div[' . $class( 'entry-header' ) . ']/div[' . $class( 'entry-row' ) . ']/div[' . $class( 'entry-heading' ) . ']/h4[' . $class( 'entry-title' ) . ' and normalize-space(.)="Migrator"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//h4//h4 | //summary//h4 | //*[@role="heading"])' ) );
 		// The ruled section headings stay real h3 elements.
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//h3[@id="ran-booster-installation-heading" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-section__title--ruled ")])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//h3[@id="ran-booster-components-heading" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-section__title--ruled ")])' ) );
-	}
-
-	/**
-	 * @return array<string, array{0: string, 1: string}>
-	 */
-	public static function provider_problem_states(): array {
-		return array(
-			'missing'                 => array( 'missing', 'The selected GitHub provider plugin is not active or available. Review provider settings.' ),
-			'conflict'                => array( 'conflict', 'Multiple GitHub provider plugins need review. Review provider settings.' ),
-			'incompatible'            => array( 'incompatible', 'A GitHub provider plugin is incompatible. Review provider settings.' ),
-			'recovery_required'       => array( 'recovery_required', 'GitHub provider recovery is required. Review provider settings.' ),
-			'decision_required'       => array( 'decision_required', 'The GitHub provider selection needs a decision. Review provider settings.' ),
-			'replacement_load_failed' => array( 'replacement_load_failed', 'The selected GitHub provider could not load. Review provider settings.' ),
-			'storage_unavailable'     => array( 'storage_unavailable', 'GitHub provider selection could not be checked. Review provider settings.' ),
-		);
-	}
-
-	#[\PHPUnit\Framework\Attributes\DataProvider( 'provider_problem_states' )]
-	public function test_every_provider_problem_state_links_to_the_github_provider_page( string $state, string $message ): void {
-		$troubleshooting_panel = 'installation';
-		$troubleshooting       = array(
-			'providers'            => array(),
-			'components'           => array(
-				array(
-					'Name'     => 'GitHub',
-					'Provider' => 'gh',
-				),
-			),
-			'installation_details' => array(
-				'GitHub provider' => array(
-					'Name'            => 'Selected plugin',
-					'Source'          => 'External replacement',
-					'Selection state' => $state,
-				),
-			),
-		);
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
-		$html     = (string) ob_get_clean();
-		$document = new \DOMDocument();
-		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
-		$xpath   = new \DOMXPath( $document );
-		$warning = '//div[@id="ran-booster-github-provider-diagnostics"]/details/summary/span[@data-ran-booster-ui-disclosure-warning and not(@aria-hidden) and normalize-space(.)="' . $message . '"]';
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $warning . ')' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $warning . '/a[@href="https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh" and normalize-space(.)="Review provider settings"])' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(//summary[@aria-describedby])' ) );
-		self::assertStringNotContainsString( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#', $html );
-	}
-
-	public function test_a_static_installation_entry_renders_its_warning_row_inside_the_card_without_a_disclosure(): void {
-		$entry_title       = 'Static';
-		$entry_description = '';
-		$entry_badge       = '';
-		$entry_body        = '';
-		$entry_label       = 'Static';
-		$entry_warning     = 'Problem. <a href="https://example.test/">Review provider settings</a>.';
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/troubleshooting-installation-entry.php';
-		$html     = (string) ob_get_clean();
-		$document = new \DOMDocument();
-		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
-		$xpath = new \DOMXPath( $document );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(//details | //summary | //*[@aria-describedby])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(@class, "entry-header")]/span[contains(@class, "entry-warning") and not(@aria-hidden)]/a[@href="https://example.test/"])' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(//h4//span[contains(@class, "entry-warning")] | //div[contains(@class, "entry-row")]//span[contains(@class, "entry-warning")])' ) );
 	}
 
 	public function test_component_details_only_render_when_they_have_facts(): void {
@@ -556,46 +450,10 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Implemented capabilities', $html );
 	}
 
-	public function test_github_details_keep_special_facts_and_candidates_with_provider_row(): void {
+	public function test_installation_names_each_provider_source(): void {
 		$troubleshooting_panel = 'installation';
 		$troubleshooting       = array(
-			'providers'            => array(),
-			'components'           => array(
-				array(
-					'Name'     => 'GitHub',
-					'Provider' => 'gh',
-				),
-			),
-			'installation_details' => array(
-				'GitHub provider'    => array(
-					'Provider API'       => '15',
-					'Enabled candidates' => '2',
-				),
-				'GitHub candidate 1' => array( 'Name' => 'Candidate' ),
-			),
-		);
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
-		$html = (string) ob_get_clean();
-		self::assertStringContainsString( '<div id="ran-booster-github-provider-diagnostics" class="ran-booster-troubleshooting__installation-entry" data-ran-booster-ui-disclosure="installation-section" data-ran-booster-ui-disclosure-density="prominent">', $html );
-		self::assertStringContainsString( '<summary aria-label="GitHub">', $html );
-		self::assertStringContainsString( '<dt>Provider</dt><dd><code>gh</code>', $html );
-		self::assertStringContainsString( '<dt>Provider API</dt><dd><code>15</code>', $html );
-		self::assertStringContainsString( '<dt>Name</dt><dd><code>Candidate</code>', $html );
-		self::assertStringContainsString( 'Showing 1 of 2 replacement plugins.', $html );
-		unset( $troubleshooting['installation_details']['GitHub provider']['Provider API'] );
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
-		$candidate_only = (string) ob_get_clean();
-		self::assertStringContainsString( '<div id="ran-booster-github-provider-diagnostics" class="ran-booster-troubleshooting__installation-entry" data-ran-booster-ui-disclosure="installation-section" data-ran-booster-ui-disclosure-density="prominent">', $candidate_only );
-		self::assertStringContainsString( '<dt>Name</dt><dd><code>Candidate</code>', $candidate_only );
-		self::assertStringContainsString( 'Showing 1 of 2 replacement plugins.', $candidate_only );
-	}
-
-	public function test_installation_distinguishes_provider_state_and_candidate_truncation(): void {
-		$troubleshooting_panel = 'installation';
-		$troubleshooting       = array(
-			'components'           => array(
+			'components' => array(
 				array(
 					'Name'           => 'GitHub',
 					'Provider'       => 'gh',
@@ -617,34 +475,15 @@ final class TroubleshootingViewTest extends TestCase {
 					'Version'   => '1.0',
 				),
 			),
-			'installation_details' => array(
-				'GitHub provider' => array(
-					'Name'                     => 'Selected plugin',
-					'Source'                   => 'External replacement',
-					'Version'                  => '1.2',
-					'Selection state'          => 'missing',
-					'Operational availability' => 'Unavailable',
-					'Implementation'           => 'declared-id',
-					'Enabled candidates'       => '8',
-					'API credential format 1'  => 'github-classic-pat-v1',
-					'Capability 1'             => 'RAN\\RepositoryProvider\\CredentialValidator',
-				),
-			),
 		);
-		for ( $index = 1; $index <= 4; ++$index ) {
-			$troubleshooting['installation_details'][ 'GitHub candidate ' . $index ] = array( 'Name' => 'Candidate ' . $index );
-		}
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'Selected provider: Selected plugin', $html );
-		self::assertStringContainsString( 'The selected GitHub provider plugin is not active or available.', $html );
-		self::assertStringContainsString( 'Showing 4 of 8 replacement plugins.', $html );
+		self::assertStringContainsString( 'Included with Booster', $html );
+		self::assertStringNotContainsString( 'Provider source unknown', $html );
+		self::assertStringNotContainsString( 'replacement plugins', $html );
 		self::assertStringContainsString( 'Implementation fingerprint', $html );
-		self::assertStringContainsString( 'Implementation ID', $html );
 		self::assertStringContainsString( '<code>CredentialValidator</code>, <code>RepositoryBrowser</code>', $html );
-		self::assertStringContainsString( 'Classic PAT', $html );
-		self::assertStringNotContainsString( 'RAN\\RepositoryProvider\\CredentialValidator', $html );
 		self::assertStringContainsString( 'Provider extension: Bitbucket Cloud', $html );
 		self::assertStringContainsString( 'Installed extension', $html );
 		$version_separator = ' <span class="ran-booster-troubleshooting__version-separator" aria-hidden="true">•</span> ';
@@ -654,33 +493,12 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '>Inactive</span>', $html );
 		self::assertMatchesRegularExpression( '/>\s*Status unavailable\s*<\/span>/', $html );
 
-		$troubleshooting['components'][1]['Name']                                      = '<Custom integration>';
-		$troubleshooting['installation_details']['GitHub provider']['Name']            = '<Replacement>';
-		$troubleshooting['installation_details']['GitHub provider']['Selection state'] = 'available';
-		$troubleshooting['installation_details']['GitHub provider']['Operational availability'] = 'Available';
+		$troubleshooting['components'][1]['Name'] = '<Custom integration>';
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'Provider extension: &lt;Replacement&gt;', $html );
 		self::assertStringContainsString( 'Provider extension: &lt;Custom integration&gt;', $html );
-		self::assertStringNotContainsString( '<Replacement>', $html );
 		self::assertStringNotContainsString( '<Custom integration>', $html );
-		self::assertStringNotContainsString( 'Rockets Are Nostalgic', $html );
-
-		$troubleshooting['installation_details']['GitHub provider']['Source'] = 'Bundled with Booster';
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
-		$html = (string) ob_get_clean();
-		// A bundled provider can be replaced, so the card names its origin and never falls back to an unknown source.
-		self::assertStringContainsString( 'Included with Booster', $html );
-		self::assertStringNotContainsString( 'Provider source unknown', $html );
-
-		$troubleshooting['installation_details']['GitHub provider']['Source'] = 'External replacement';
-		$troubleshooting['installation_details']['GitHub provider']['Name']   = 'Unavailable';
-		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
-		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'Provider source unknown', $html );
 		self::assertStringNotContainsString( 'Rockets Are Nostalgic', $html );
 	}
 
@@ -864,7 +682,7 @@ final class TroubleshootingViewTest extends TestCase {
 				),
 				array( 'Unavailable', 'high', 'error' ),
 				array( 'Status unavailable', 'none', 'neutral' ),
-				array( 'Needs attention', 'medium', 'warning' ),
+				array( 'Unknown', 'none', 'neutral' ),
 			),
 			array(
 				null,
@@ -882,9 +700,8 @@ final class TroubleshootingViewTest extends TestCase {
 		);
 		foreach ( $cases as $case ) {
 			$troubleshooting  = array(
-				'storage'              => null === $case[0] ? array() : array( 'state' => $case[0] ),
-				'components'           => array( $case[3] ),
-				'installation_details' => array( 'GitHub provider' => array( 'Selection state' => 'conflict' ) ),
+				'storage'    => null === $case[0] ? array() : array( 'state' => $case[0] ),
+				'components' => array( $case[3] ),
 			);
 			$core_self_update = array(
 				'effective_mode' => $case[1],
@@ -2342,7 +2159,7 @@ final class TroubleshootingViewTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exercise a deterministic frozen JSON fixture with strict encoding errors.
 		$report_json     = json_encode(
 			array(
-				'schema_version' => 1,
+				'schema_version' => 2,
 				'sections'       => array(
 					'environment' => array(
 						'state' => 'Included',
@@ -2541,7 +2358,7 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 		$preview = html_entity_decode( $matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 		self::assertSame( $report_json, $preview );
-		self::assertSame( 1, json_decode( $preview, true, 512, JSON_THROW_ON_ERROR )['schema_version'] );
+		self::assertSame( 2, json_decode( $preview, true, 512, JSON_THROW_ON_ERROR )['schema_version'] );
 		self::assertSame( '<tag> & \"quoted\"', json_decode( $preview, true, 512, JSON_THROW_ON_ERROR )['sections']['environment']['data']['example'] );
 		self::assertStringContainsString( '<summary>Evidence and recovery guidance</summary>', $html );
 		self::assertStringContainsString( 'Diagnostic runs from the last hour are included automatically.', $html );

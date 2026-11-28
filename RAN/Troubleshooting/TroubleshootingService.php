@@ -47,11 +47,10 @@ final class TroubleshootingService {
 
 	/**
 	 * Standing facts never enumerate credential documents or execute checks.
-	 * @param array<string,mixed>|null $selection
 	 * @param array<string,mixed> $storage
 	 * @return array<string,mixed>
 	 */
-	public function installation_payload( ?array $selection, array $storage ): array {
+	public function installation_payload( array $storage ): array {
 		$facts   = $this->installation_facts ?? new InstallationFacts( $this->providers, $this->core_self_update );
 		$payload = array(
 			'providers'              => array(),
@@ -67,7 +66,7 @@ final class TroubleshootingService {
 			'report'                 => '',
 			'core_self_update'       => $facts->core(),
 		);
-		$payload = $this->with_installation_context( $payload, $selection );
+		$payload = $this->with_installation_context( $payload );
 		unset( $payload['installation_details'][ __( 'Diagnostic Git provider', 'ran-booster' ) ] );
 		$payload['environment']          = $facts->environment();
 		$payload['storage']              = $storage;
@@ -222,37 +221,16 @@ final class TroubleshootingService {
 	 * Add one captured, passive installation snapshot to both display and support report.
 	 *
 	 * @param array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>,retention_available?:bool} $payload
-	 * @param array<string,mixed>|null $github_selection
 	 * @return array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>,installation_details:array<string,array<string,string>>}
 	 */
-	public function with_installation_context( array $payload, ?array $github_selection ): array {
-		$selected = $payload['selected_provider'];
-		$current  = is_array( $github_selection['current'] ?? null ) ? $github_selection['current'] : array();
-		$source   = match ( true ) {
-			'bundled' === ( $current['selected'] ?? null ) => __( 'Bundled with Booster', 'ran-booster' ),
-			is_array( $current['declaration'] ?? null ) => __( 'External replacement', 'ran-booster' ),
-			default => __( 'Unknown', 'ran-booster' ),
-		};
-		$sections = array(
+	public function with_installation_context( array $payload ): array {
+		$selected    = $payload['selected_provider'];
+		$sections    = array(
 			__( 'Diagnostic Git provider', 'ran-booster' ) => array(
 				__( 'Git provider', 'ran-booster' )      => $this->installation_value( $payload['providers'][ $selected ] ?? null, 'label' ),
 				__( 'Git provider code', 'ran-booster' ) => $this->installation_value( $selected, 'slug' ),
 			),
-			__( 'GitHub provider', 'ran-booster' )         => array(
-				__( 'Source', 'ran-booster' )          => $source,
-				__( 'Selection state', 'ran-booster' ) => $this->installation_value( $github_selection['state'] ?? null, 'slug' ),
-				__( 'Operational availability', 'ran-booster' ) => match ( $github_selection['available'] ?? null ) {
-					true => __( 'Available', 'ran-booster' ),
-					false => __( 'Unavailable', 'ran-booster' ),
-					default => __( 'Unknown', 'ran-booster' ),
-				},
-			) + $this->installation_declaration( $current['declaration'] ?? null ),
 		);
-		$candidates = is_array( $github_selection['candidates'] ?? null ) ? $github_selection['candidates'] : array();
-		foreach ( array_values( array_slice( $candidates, 0, 4 ) ) as $index => $candidate ) {
-			$sections[ sprintf( /* translators: %d: enabled replacement candidate number. */ __( 'GitHub candidate %d', 'ran-booster' ), $index + 1 ) ] = $this->installation_declaration( $candidate );
-		}
-		$sections[ __( 'GitHub provider', 'ran-booster' ) ][ __( 'Enabled candidates', 'ran-booster' ) ] = (string) count( $candidates );
 		$core        = $payload['core_self_update'];
 		$core_fields = array(
 			'installed_version' => array( __( 'Installed version', 'ran-booster' ), 'version' ),
@@ -302,44 +280,13 @@ final class TroubleshootingService {
 		return $payload;
 	}
 
-	/** @return array<string,string> */
-	private function installation_declaration( mixed $declaration ): array {
-		$declaration = is_array( $declaration ) ? $declaration : array();
-		$rows        = array();
-		foreach ( array(
-			'display_name'           => array( __( 'Name', 'ran-booster' ), 'label' ),
-			'display_version'        => array( __( 'Version', 'ran-booster' ), 'version' ),
-			'implementation_id'      => array( __( 'Implementation', 'ran-booster' ), 'slug' ),
-			'provider_api_version'   => array( __( 'Provider API', 'ran-booster' ), 'version' ),
-			'compatibility_revision' => array( __( 'Compatibility revision', 'ran-booster' ), 'version' ),
-			'webhook_signing_format' => array( __( 'Webhook signing format', 'ran-booster' ), 'slug' ),
-		) as $key => $field ) {
-			$value             = $declaration[ $key ] ?? null;
-			$rows[ $field[0] ] = $this->installation_value( 'provider_api_version' === $key ? ( is_int( $value ) && $value >= 0 && $value <= 999 ? (string) $value : null ) : $value, $field[1] );
-		}
-		foreach ( array(
-			/* translators: %d: locally declared capability number. */
-			'facets'                 => array( __( 'Capability %d', 'ran-booster' ), 'class' ),
-			/* translators: %d: locally declared credential format number. */
-			'api_credential_formats' => array( __( 'API credential format %d', 'ran-booster' ), 'slug' ),
-		) as $key => $field ) {
-			$values = $declaration[ $key ] ?? null;
-			if ( is_array( $values ) && array_is_list( $values ) && count( $values ) <= 32 ) {
-				foreach ( $values as $index => $value ) {
-					$rows[ sprintf( $field[0], $index + 1 ) ] = $this->installation_value( $value, $field[1] );
-				}
-			}
-		}
-		return $rows;
-	}
-
 	/**
 	 * A declared technical identifier, shown only when it fits the fixed grammar for its field, otherwise `Unavailable`.
 	 *
 	 * These are Core or provider declared identifiers, not failure text, so they do not pass through FailureText.
 	 * A token prefix, URL, path or long opaque run matches none of the grammars.
 	 *
-	 * @param 'label'|'slug'|'version'|'commit'|'class' $kind
+	 * @param 'label'|'slug'|'version'|'commit' $kind
 	 */
 	private function installation_value( mixed $value, string $kind ): string {
 		$grammar = match ( $kind ) {
@@ -350,8 +297,6 @@ final class TroubleshootingService {
 			// A version, the literal Unknown that Core reports when a package version cannot be read, or a Composer dev version.
 			'version' => '/\A(?:Unknown|dev-[A-Za-z0-9._-]{1,60}|(?=.{1,64}\z)[0-9]+(?:\.(?:[0-9]+|x))*-dev|(?=.{1,64}\z)v?[0-9]+(?:\.[0-9]+){0,3}(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?(?:\+[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?)\z/',
 			'commit' => '/\A(?:[0-9a-f]{40}|[0-9a-f]{64})\z/',
-			// A Booster interface or class name: the RAN namespace and identifier segments.
-			'class' => '/\A(?=.{1,191}\z)(?!.*(?:gh[pousr]_|github_pat_|glpat-))(?!.*[A-Za-z0-9]{41})RAN(?:\\\\[A-Za-z_][A-Za-z0-9_]*)+\z/',
 		};
 
 		return is_string( $value ) && 1 === preg_match( $grammar, $value ) ? $value : __( 'Unavailable', 'ran-booster' );

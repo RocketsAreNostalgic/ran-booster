@@ -2,13 +2,10 @@
 /**
  * @var array<string, mixed> $troubleshooting
  * @var array<string, mixed> $core_self_update
- * @var string|null $selection_provider_tab_url
  */
 if ( ! defined( 'WPINC' ) ) {
 	die; }
 $installation        = is_array( $troubleshooting['installation_details'] ?? null ) ? $troubleshooting['installation_details'] : array();
-$github_fields       = $installation[ __( 'GitHub provider', 'ran-booster' ) ] ?? array();
-$github_basic_labels = array( __( 'Source', 'ran-booster' ), __( 'Version', 'ran-booster' ), __( 'Selection state', 'ran-booster' ), __( 'Operational availability', 'ran-booster' ) );
 $environment         = is_array( $troubleshooting['environment'] ?? null ) ? $troubleshooting['environment'] : array();
 $environment_summary = array_intersect_key( $environment, array_flip( array( 'WordPress', 'PHP' ) ) );
 $environment_details = array_diff_key( $environment, $environment_summary );
@@ -159,72 +156,28 @@ if ( array() === $components ) {
 <p><?php esc_html_e( 'Provider and extension information is unavailable.', 'ran-booster' ); ?></p>
 	<?php
 }
-$basic_labels          = array( 'Installed', 'Active', 'Version', 'Admission', 'Selection', 'Availability' );
-$github_problem_states = array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'replacement_load_failed', 'storage_unavailable' );
+$basic_labels = array( 'Installed', 'Active', 'Version', 'Admission', 'Selection', 'Availability' );
 foreach ( $components as $component ) {
-	$component_name          = $component['Name'] ?? __( 'Unknown', 'ran-booster' );
-	$technical_fields        = array_diff_key( $component, array_flip( array_merge( $basic_labels, array( 'Name', 'Capabilities' ) ) ) );
-	$has_capabilities        = is_string( $component['Capabilities'] ?? null ) && '' !== $component['Capabilities'];
-	$is_github               = ( $component['Provider'] ?? '' ) === 'gh';
-	$selection_state         = $github_fields[ __( 'Selection state', 'ran-booster' ) ] ?? null;
-	$github_available        = $github_fields[ __( 'Operational availability', 'ran-booster' ) ] ?? null;
-	$problem                 = $is_github && ( in_array( $selection_state, $github_problem_states, true ) || __( 'Unavailable', 'ran-booster' ) === $github_available );
-	$active                  = $component['Active'] ?? null;
-	$component_status        = $problem ? __( 'Needs attention', 'ran-booster' ) : ( 'No' === $active ? __( 'Inactive', 'ran-booster' ) : ( 'Yes' === $active || ( isset( $component['Provider'] ) && 'Admitted' === ( $component['Admission'] ?? null ) && ( ! $is_github || __( 'Available', 'ran-booster' ) === $github_available ) ) ? __( 'Active', 'ran-booster' ) : __( 'Unknown', 'ran-booster' ) ) );
-	$tone                    = $problem ? 'warning' : ( __( 'Active', 'ran-booster' ) === $component_status ? 'ok' : 'neutral' );
-	$version                 = $is_github ? ( $github_fields[ __( 'Version', 'ran-booster' ) ] ?? null ) : ( $component['Version'] ?? null );
-	$source                  = null;
-	$github_problem_messages = array(
-		/* translators: %s: link to the GitHub provider settings. */
-		'missing'                 => __( 'The selected GitHub provider plugin is not active or available. %s.', 'ran-booster' ),
-		/* translators: %s: link to the GitHub provider settings. */
-		'conflict'                => __( 'Multiple GitHub provider plugins need review. %s.', 'ran-booster' ),
-		/* translators: %s: link to the GitHub provider settings. */
-		'incompatible'            => __( 'A GitHub provider plugin is incompatible. %s.', 'ran-booster' ),
-		/* translators: %s: link to the GitHub provider settings. */
-		'recovery_required'       => __( 'GitHub provider recovery is required. %s.', 'ran-booster' ),
-		/* translators: %s: link to the GitHub provider settings. */
-		'decision_required'       => __( 'The GitHub provider selection needs a decision. %s.', 'ran-booster' ),
-		/* translators: %s: link to the GitHub provider settings. */
-		'replacement_load_failed' => __( 'The selected GitHub provider could not load. %s.', 'ran-booster' ),
-		/* translators: %s: link to the GitHub provider settings. */
-		'storage_unavailable'     => __( 'GitHub provider selection could not be checked. %s.', 'ran-booster' ),
-	);
-	if ( $is_github ) {
-		$selected_name = null;
-		if ( __( 'Bundled with Booster', 'ran-booster' ) === ( $github_fields[ __( 'Source', 'ran-booster' ) ] ?? null ) ) {
-			$selected_name = __( 'Included with Booster', 'ran-booster' );
-		} elseif ( __( 'External replacement', 'ran-booster' ) === ( $github_fields[ __( 'Source', 'ran-booster' ) ] ?? null ) && is_string( $github_fields[ __( 'Name', 'ran-booster' ) ] ?? null ) && __( 'Unavailable', 'ran-booster' ) !== $github_fields[ __( 'Name', 'ran-booster' ) ] ) {
-			$selected_name = $github_fields[ __( 'Name', 'ran-booster' ) ];
-		}
-		if ( null !== $selected_name ) {
-			if ( $problem || __( 'Available', 'ran-booster' ) !== $github_available ) {
-				$source = sprintf( /* translators: %s: configured GitHub provider name. */ __( 'Selected provider: %s', 'ran-booster' ), $selected_name );
-			} elseif ( __( 'Bundled with Booster', 'ran-booster' ) === ( $github_fields[ __( 'Source', 'ran-booster' ) ] ?? null ) ) {
-				$source = $selected_name;
-			} else {
-				$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $selected_name );
-			}
-		}
-	} elseif ( ! isset( $component['Provider'] ) && 'Yes' === ( $component['Installed'] ?? null ) ) {
+	$component_name   = $component['Name'] ?? __( 'Unknown', 'ran-booster' );
+	$technical_fields = array_diff_key( $component, array_flip( array_merge( $basic_labels, array( 'Name', 'Capabilities' ) ) ) );
+	$has_capabilities = is_string( $component['Capabilities'] ?? null ) && '' !== $component['Capabilities'];
+	$is_github        = ( $component['Provider'] ?? '' ) === 'gh';
+	$active           = $component['Active'] ?? null;
+	$component_status = 'No' === $active ? __( 'Inactive', 'ran-booster' ) : ( 'Yes' === $active || ( isset( $component['Provider'] ) && 'Admitted' === ( $component['Admission'] ?? null ) ) ? __( 'Active', 'ran-booster' ) : __( 'Unknown', 'ran-booster' ) );
+	$tone             = __( 'Active', 'ran-booster' ) === $component_status ? 'ok' : 'neutral';
+	$version          = $component['Version'] ?? null;
+	$source           = null;
+	if ( ! isset( $component['Provider'] ) && 'Yes' === ( $component['Installed'] ?? null ) ) {
 		$source = __( 'Installed extension', 'ran-booster' );
 	} elseif ( isset( $component['Provider'] ) && 'Yes' === $active && isset( $component['Name'] ) ) {
 		$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $component['Name'] );
+	} elseif ( $is_github ) {
+		$source = __( 'Included with Booster', 'ran-booster' );
 	}
 	// The dot is decorative, so the heading is announced as the name and version.
 	$version_markup = is_string( $version ) && '' !== $version
 		? ' <span class="ran-booster-troubleshooting__version-separator" aria-hidden="true">•</span> <code class="ran-booster-troubleshooting__version">' . esc_html( $version ) . '</code>'
 		: '';
-	// Every problem state is resolved on the GitHub provider page, which explains
-	// the state and hosts the recovery and decision forms.
-	$entry_warning = '';
-	if ( $problem ) {
-		$provider_settings_url  = $selection_provider_tab_url ?? ( ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster&tab=gh' );
-		$provider_settings_link = '<a href="' . esc_url( $provider_settings_url ) . '">' . esc_html__( 'Review provider settings', 'ran-booster' ) . '</a>';
-		/* translators: %s: link to the GitHub provider settings. */
-		$problem_message = $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. %s.', 'ran-booster' );
-		$entry_warning   = sprintf( esc_html( $problem_message ), $provider_settings_link );
-	}
 	ob_start();
 	if ( array() !== $technical_fields || $has_capabilities ) {
 		?>
@@ -244,78 +197,14 @@ foreach ( $components as $component ) {
 			?>
 		</dd></div>
 	<?php } ?>
-		<?php if ( $is_github ) { ?>
-			<?php
-			if ( isset( $github_fields[ __( 'Implementation', 'ran-booster' ) ] ) ) {
-				?>
-			<div><dt><?php esc_html_e( 'Implementation ID', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $github_fields[ __( 'Implementation', 'ran-booster' ) ] ); ?></code></dd></div><?php } ?>
-			<?php foreach ( array( __( 'Compatibility revision', 'ran-booster' ), __( 'Webhook signing format', 'ran-booster' ), __( 'Provider API', 'ran-booster' ) ) as $field_label ) { ?>
-				<?php
-				if ( isset( $github_fields[ $field_label ] ) ) {
-					?>
-				<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $github_fields[ $field_label ] ); ?></code></dd></div><?php } ?>
-		<?php } ?>
-			<?php
-			$credential_formats = array();
-			for ( $index = 1; $index <= 32; ++$index ) {
-				/* translators: %d: locally declared credential format number. */
-				$format = $github_fields[ sprintf( __( 'API credential format %d', 'ran-booster' ), $index ) ] ?? null;
-				if ( 'github-classic-pat-v1' === $format ) {
-					$credential_formats[] = __( 'Classic PAT', 'ran-booster' ); }
-				if ( 'github-fine-grained-pat-v1' === $format ) {
-					$credential_formats[] = __( 'Fine-grained PAT', 'ran-booster' ); }
-			}
-			if ( array() !== $credential_formats ) {
-				?>
-			<div><dt><?php esc_html_e( 'Supported credential types', 'ran-booster' ); ?></dt><dd><?php echo esc_html( implode( ', ', $credential_formats ) ); ?></dd></div>
-			<?php } ?>
-	<?php } ?>
 </dl>
-		<?php
-		if ( $is_github ) {
-			$candidate_heading = false;
-			$candidate_shown   = 0;
-			$candidate_total   = $github_fields[ __( 'Enabled candidates', 'ran-booster' ) ] ?? null;
-			for ( $index = 1; $index <= 4; ++$index ) {
-				/* translators: %d: enabled replacement candidate number. */
-				$candidate = $installation[ sprintf( __( 'GitHub candidate %d', 'ran-booster' ), $index ) ] ?? null;
-				if ( ! is_array( $candidate ) ) {
-					continue; }
-				++$candidate_shown;
-				if ( ! $candidate_heading ) {
-					?>
-		<h5><?php esc_html_e( 'GitHub replacement plugins detected', 'ran-booster' ); ?></h5>
-					<?php
-					$candidate_heading = true; }
-				?>
-		<dl class="ran-booster-troubleshooting__fields-list">
-				<?php
-				foreach ( array( __( 'Name', 'ran-booster' ), __( 'Version', 'ran-booster' ), __( 'Implementation', 'ran-booster' ), __( 'Compatibility revision', 'ran-booster' ), __( 'Provider API', 'ran-booster' ), __( 'Webhook signing format', 'ran-booster' ) ) as $field_label ) {
-					if ( isset( $candidate[ $field_label ] ) ) {
-						?>
-			<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $candidate[ $field_label ] ); ?></code></dd></div>
-						<?php
-					}
-				}
-				?>
-															</dl>
-				<?php
-			}
-			if ( is_string( $candidate_total ) && ctype_digit( $candidate_total ) && (int) $candidate_total > $candidate_shown ) {
-				?>
-			<p><?php /* translators: 1: displayed replacement plugins, 2: total replacement plugins. */ ?><?php echo esc_html( sprintf( __( 'Showing %1$d of %2$d replacement plugins.', 'ran-booster' ), $candidate_shown, (int) $candidate_total ) ); ?></p>
-				<?php
-			}
-		}
-		?>
-
 		<?php
 	}
 	$entry_body        = (string) ob_get_clean();
 	$entry_title       = esc_html( $component_name ) . $version_markup;
 	$entry_label       = is_string( $version ) && '' !== $version ? $component_name . ' • ' . $version : $component_name;
 	$entry_description = null !== $source || isset( $component['Provider'] ) ? esc_html( $source ?? __( 'Provider source unknown', 'ran-booster' ) ) : '';
-	$entry_badge       = \RAN\Admin\Component\StatusBadge::for_intent( (string) $component_status, 'ok' === $tone ? 'stable' : ( 'warning' === $tone ? 'medium' : 'none' ) );
+	$entry_badge       = \RAN\Admin\Component\StatusBadge::for_intent( (string) $component_status, 'ok' === $tone ? 'stable' : 'none' );
 	$entry_id          = $is_github ? 'ran-booster-github-provider-diagnostics' : '';
 	require __DIR__ . '/troubleshooting-installation-entry.php';
 }

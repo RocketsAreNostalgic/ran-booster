@@ -91,6 +91,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 	private const DOWNLOAD_ATTEMPTS = 2;
 	private const RETRY_AFTER_CAP   = 5;
 
+	/** Core follows one archive redirect and keeps no provider host list, so a longer chain is refused. */
+	private const ARCHIVE_REDIRECT_LIMIT = 1;
+
 	private ?ProviderPreparedArchive $provider_archive = null;
 	private ?string $mutation_lock_token               = null;
 	private bool $provider_archive_cleaned             = false;
@@ -568,8 +571,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 			$authorize_retry = $archive instanceof AuthenticatedPreparedArchive ? $archive->reserve_download_retry( static fn ( #[\SensitiveParameter] array $args ): bool => $owns_call() && $stream_matches( $args ) ) : null;
 			$url             = $archive->get_url();
 			$this->assert_safe_https_url( $url );
+			$redirects = 0;
 			for ( $attempt = 1; $attempt <= self::DOWNLOAD_ATTEMPTS; ++$attempt ) {
-				for ( $redirect = 0; 3 >= $redirect; ++$redirect ) {
+				while ( true ) {
 					$authenticated = false;
 					$guard         = function ( mixed $preempt, #[\SensitiveParameter] array $arguments, string $request_url ) use ( $url, $owns_call, $stream_matches, &$authenticated, $retry_outcome, $initial_hop, $authorize_retry ): mixed {
 						if ( ! $owns_call() ) {
@@ -619,6 +623,19 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 					if ( ! in_array( $status, array( 301, 302, 303, 307, 308 ), true ) ) {
 						break;
 					}
+					// The redirect status itself then settles as the closed provider failure below.
+					if ( self::ARCHIVE_REDIRECT_LIMIT <= $redirects ) {
+						BoosterLogger::log(
+							'branch archive redirect refused',
+							$this->attempt->log_context() + array(
+								'step'        => 'prepare_archive',
+								'event'       => 'archive_redirect_limit',
+								'http_status' => (string) $status,
+							)
+						);
+						break;
+					}
+					++$redirects;
 					$location = wp_remote_retrieve_header( $response, 'location' );
 					if ( ! is_string( $location ) ) {
 						$this->stage( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );

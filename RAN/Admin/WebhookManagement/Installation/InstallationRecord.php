@@ -24,13 +24,13 @@ final readonly class InstallationRecord {
 		private string $created_at,
 		private string $checked_at
 	) {
-		if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{0,31}$/', $provider_code )
+		if ( 1 !== preg_match( '/^[a-z][a-z0-9-]{0,31}$/D', $provider_code )
 			|| '' === trim( $repository_id )
 			|| '' === trim( $repository )
 			|| '' === trim( $hook_id )
 			|| strlen( $hook_id ) > 191
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $hook_id )
-			|| 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $management_credential_id )
+			|| 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $management_credential_id )
 			|| '' === trim( $webhook_profile_id )
 			|| ! in_array( $webhook_profile_scope, array( 'owner', 'repository' ), true )
 			|| $webhook_profile_revision < 1
@@ -181,6 +181,6 @@ final readonly class InstallationRecord {
 	}
 
 	private function valid_timestamp( string $timestamp ): bool {
-		return 1 === preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $timestamp );
+		return 1 === preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/D', $timestamp );
 	}
 }

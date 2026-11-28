@@ -620,11 +620,6 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		yield 'initial retry' => array( array( $limited, 200 ), array( true, true ) );
 		yield 'ordinary redirect' => array( array( $redirect, 200 ), array( true, false ) );
 		yield 'redirect after initial retry' => array( array( $limited, $redirect, 200 ), array( true, true, false ) );
-		$back = array(
-			'response' => array( 'code' => 307 ),
-			'headers'  => array( 'location' => 'https://api.github.com/repos/owner/install-plugin/zipball/' . str_repeat( 'a', 40 ) ),
-		);
-		yield 'anonymous redirect back to the initial URL' => array( array( $redirect, $back, 200 ), array( true, false, false ) );
 		yield 'transient on redirect' => array( array( $redirect, $limited, 200 ), array( true, false, false ) );
 	}
 
@@ -659,6 +654,60 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			}
 			self::assertSame( $authenticated, isset( $calls[ $index ]['arguments']['headers']['Authorization'] ) );
 		}
+	}
+
+	/** @return iterable<string, array{list<int|array<string,mixed>>,list<bool>,int}> */
+	public static function refused_second_redirects(): iterable {
+		$redirect = array(
+			'response' => array( 'code' => 302 ),
+			'headers'  => array( 'location' => 'https://example.test/download.zip' ),
+		);
+		$back     = array(
+			'response' => array( 'code' => 307 ),
+			'headers'  => array( 'location' => 'https://api.github.com/repos/owner/install-plugin/zipball/' . str_repeat( 'a', 40 ) ),
+		);
+		$limited  = array(
+			'response' => array( 'code' => 429 ),
+			'headers'  => array( 'retry-after' => '0' ),
+		);
+		yield 'anonymous redirect back to the initial URL' => array( array( $redirect, $back, 200 ), array( true, false ), 307 );
+		yield 'second redirect after a retry of the first' => array( array( $redirect, $limited, $redirect, 200 ), array( true, false, false ), 302 );
+	}
+
+	/**
+	 * @param list<int|array<string,mixed>> $responses
+	 * @param list<bool>                    $expected_auth
+	 */
+	#[DataProvider( 'refused_second_redirects' )]
+	public function test_guarded_github_archive_never_requests_a_second_redirect( array $responses, array $expected_auth, int $status ): void {
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array( $this->github_repository_response( true, 'owner/install-plugin', 'R_install_plugin' ), $this->github_sha_response( str_repeat( 'a', 40 ) ) )
+		);
+		$this->download_fixture( 'example' );
+		$adapter                                        = $this->adapter(
+			$this->running_install( 'example', is_private: true, credential_id: 'private-profile' ),
+			$this->guarded_github_provider( array( 'private-profile' => self::TOKEN_SENTINEL ) )
+		);
+		$GLOBALS['ran_booster_admitted_http_responses'] = $responses;
+		$lines = $this->captured_logs(
+			static function () use ( $adapter, $status ): void {
+				try {
+					$adapter->prepare( $adapter->declaration(), null );
+					self::fail( 'A second archive redirect must be refused.' );
+				} catch ( AdmittedBranchStageFailure $failure ) {
+					self::assertSame( DeploymentOutcome::from_provider_failure( new RuntimeException( '', $status ) )->get_code(), $failure->outcome_code );
+				}
+			}
+		);
+
+		$calls = $GLOBALS['ran_booster_admitted_http_calls'];
+		self::assertCount( count( $expected_auth ), $calls );
+		foreach ( $expected_auth as $index => $authenticated ) {
+			self::assertSame( $authenticated, isset( $calls[ $index ]['arguments']['headers']['Authorization'] ) );
+		}
+		self::assertStringContainsString( '"event":"archive_redirect_limit"', $lines );
+		self::assertStringContainsString( '"http_status":"' . $status . '"', $lines );
+		self::assertStringNotContainsString( 'example.test', $lines );
 	}
 
 	/** @return iterable<string, array{mixed, bool}> */
@@ -1308,7 +1357,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		yield 'WP_Error message carrying the signed URL' => array( array( $transport ), null, DeploymentOutcome::CODE_ARCHIVE_DOWNLOAD_FAILED );
 		yield '302 with a token query, then 404' => array( array( $redirect, 404 ), null, DeploymentOutcome::CODE_PROVIDER_REPOSITORY_MISSING );
 		yield '302 with a token query, then 503' => array( array( $redirect, 503 ), null, DeploymentOutcome::from_provider_failure( new RuntimeException( '', 503 ) )->get_code() );
-		yield 'redirects that never end' => array( array( $redirect, $redirect, $redirect, $redirect ), null, DeploymentOutcome::from_provider_failure( new RuntimeException( '', 302 ) )->get_code() );
+		yield 'a second redirect' => array( array( $redirect, $redirect, 200 ), null, DeploymentOutcome::from_provider_failure( new RuntimeException( '', 302 ) )->get_code() );
 		yield 'redirect to plain HTTP with a token' => array( array( $unsafe( 'http://cdn.example.test/a.zip?token=' . self::URL_SENTINEL ) ), null, $invalid );
 		yield 'redirect with userinfo' => array( array( $unsafe( 'https://user:' . self::URL_SENTINEL . '@cdn.example.test/a.zip' ) ), null, $invalid );
 		yield 'initial URL with userinfo and a token' => array( array(), 'https://user:' . self::URL_SENTINEL . '@example.test/a.zip?token=' . self::URL_SENTINEL, $invalid );

@@ -202,7 +202,7 @@ final readonly class PackageRepositoryRequestResolver {
 
 		$credential_input = $request['credential_id'] ?? null;
 		$credential_id    = self::request_id( $credential_input );
-		if ( '' !== $credential_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/', $credential_id ) ) {
+		if ( '' !== $credential_id && 1 !== preg_match( '/^[A-Za-z0-9_-]{3,64}$/D', $credential_id ) ) {
 			throw new InvalidArgumentException( 'Choose a valid repository credential.' );
 		}
 

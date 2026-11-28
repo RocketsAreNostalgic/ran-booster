@@ -108,6 +108,18 @@ final class WebhookProfileStorageTest extends TestCase {
 		}
 	}
 
+	public function test_writable_ids_refuse_a_trailing_newline(): void {
+		foreach ( array( 'delete_credential', 'delete_webhook' ) as $method ) {
+			$refusal = '';
+			try {
+				$this->secrets->{$method}( 'gh', "credential_1\n" );
+			} catch ( RuntimeException $exception ) {
+				$refusal = $exception->getMessage();
+			}
+			self::assertSame( 'Credential ID is invalid or immutable.', $refusal, $method );
+		}
+	}
+
 	public function test_owner_and_repository_authority_keys_are_unique(): void {
 		$this->secrets->save_webhook( 'gh', null, $this->owner( 'Owner', 'ExampleOwner' ), str_repeat( 'a', 32 ) );
 		$this->secrets->save_webhook( 'gh', null, $this->repository( 'Repository', 'owner/example', '101' ), str_repeat( 'b', 32 ) );

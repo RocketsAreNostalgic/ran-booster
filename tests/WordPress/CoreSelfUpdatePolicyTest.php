@@ -27,7 +27,7 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
-		foreach ( array( '.git', 'composer.json', 'ran-booster-release.json', 'ran-booster.php' ) as $entry ) {
+		foreach ( array( '.git', '.svn', '.hg', '.bzr', 'composer.json', 'ran-booster-release.json', 'ran-booster.php' ) as $entry ) {
 			$path = $this->directory . '/' . $entry;
 			if ( is_file( $path ) || is_link( $path ) ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable focused fixture cleanup.
@@ -69,13 +69,18 @@ final class CoreSelfUpdatePolicyTest extends TestCase {
 
 	public function test_source_checkout_wins_over_an_otherwise_valid_marker(): void {
 		$this->write_marker( '1.2.3', str_repeat( 'b', 40 ) );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
-		self::assertTrue( mkdir( $this->directory . '/.git', 0700 ) );
+		foreach ( array( '.git', '.svn', '.hg', '.bzr' ) as $marker ) {
+			$path = $this->directory . '/' . $marker;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
+			self::assertTrue( mkdir( $path, 0700 ) );
 
-		$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->plugin_file(), plugin_version: '1.2.3' );
+			$policy = CoreSelfUpdatePolicy::detect( plugin_file: $this->plugin_file(), plugin_version: '1.2.3' );
 
-		self::assertFalse( $policy->allows_native_discovery() );
-		self::assertSame( 'source_checkout', $policy->diagnostics()['reason'] );
+			self::assertFalse( $policy->allows_native_discovery(), $marker );
+			self::assertSame( 'source_checkout', $policy->diagnostics()['reason'], $marker );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable focused fixture cleanup.
+			self::assertTrue( rmdir( $path ) );
+		}
 	}
 
 	public function test_composer_source_metadata_disables_auto_mode(): void {

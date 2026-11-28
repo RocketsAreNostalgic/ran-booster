@@ -227,4 +227,50 @@ final class PackagePagePresenterTest extends TestCase {
 		self::assertSame( array(), $projection['badges'] );
 		self::assertSame( '', $projection['status'] );
 	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_index_lists_working_copy_packages_from_the_updater_target_folders(): void {
+		$plugin_root = sys_get_temp_dir() . '/ran-working-copy-presenter-' . bin2hex( random_bytes( 6 ) );
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- Emulate the WordPress-owned path in a separate process.
+		define( 'WP_PLUGIN_DIR', $plugin_root );
+		require_once dirname( __DIR__ ) . '/Deployment/DeploymentCoordinatorWordPressFunctions.php';
+		$theme_root = get_theme_root();
+		foreach ( array( $plugin_root . '/git-plugin/.git', $plugin_root . '/svn-plugin/.svn', $plugin_root . '/clean-plugin', $theme_root . '/hg-theme/.hg', $theme_root . '/bzr-theme/.bzr', $theme_root . '/clean-theme' ) as $dir ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable test directory tree.
+			mkdir( $dir, 0700, true );
+		}
+		$plugin = static function ( string $slug ): \RAN\Plugin {
+			$item = \RAN\Plugin::from_wp_array( "$slug/$slug.php", array_fill_keys( array( 'Name', 'PluginURI', 'Version', 'Description', 'Author', 'AuthorURI', 'TextDomain', 'DomainPath', 'Title', 'AuthorName' ), '' ) + array( 'Network' => false ) );
+			$item->set_repository( new \RAN\ManagedRepository( 'gh', 'owner/' . $slug, 'repository-1', 'main' ) );
+			return $item;
+		};
+		$theme  = static function ( string $slug ): \RAN\Theme {
+			$item = new \RAN\Theme();
+			( new \ReflectionProperty( \RAN\Theme::class, 'stylesheet' ) )->setValue( $item, $slug );
+			$item->set_repository( new \RAN\ManagedRepository( 'gh', 'owner/' . $slug, 'repository-1', 'main' ) );
+			return $item;
+		};
+		$state  = array(
+			'search'    => '',
+			'provider'  => '',
+			'source'    => '',
+			'policy'    => '',
+			'attention' => '',
+		);
+		$view   = new \RAN\Admin\DeploymentAdminPresenter();
+		try {
+			$plugins = PackagePagePresenter::plugin()->index( array( $plugin( 'git-plugin' ), $plugin( 'svn-plugin' ), $plugin( 'clean-plugin' ) ), array(), $state, $view );
+			$themes  = PackagePagePresenter::theme()->index( array( $theme( 'hg-theme' ), $theme( 'bzr-theme' ), $theme( 'clean-theme' ) ), array(), $state, $view );
+			self::assertSame( array( 'git-plugin/git-plugin.php', 'svn-plugin/svn-plugin.php' ), $plugins['package_working_copies'] );
+			self::assertSame( array( 'hg-theme', 'bzr-theme' ), $themes['package_working_copies'] );
+		} finally {
+			foreach ( array( $plugin_root . '/git-plugin/.git', $plugin_root . '/git-plugin', $plugin_root . '/svn-plugin/.svn', $plugin_root . '/svn-plugin', $plugin_root . '/clean-plugin', $plugin_root, $theme_root . '/hg-theme/.hg', $theme_root . '/hg-theme', $theme_root . '/bzr-theme/.bzr', $theme_root . '/bzr-theme', $theme_root . '/clean-theme', $theme_root ) as $dir ) {
+				if ( is_dir( $dir ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable test directory cleanup.
+					rmdir( $dir );
+				}
+			}
+		}
+	}
 }

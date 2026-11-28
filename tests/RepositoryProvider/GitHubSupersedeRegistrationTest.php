@@ -36,6 +36,7 @@ final class GitHubSupersedeRegistrationTest extends TestCase {
 		self::assertSame( ProviderRegistry::GITHUB_BUNDLED, $registry->github_supplier() );
 		self::assertSame( array(), $registry->github_claimants() );
 		self::assertArrayHasKey( 'gh', $registry->metadata() );
+		self::assertFalse( $registry->bundled_github_failed() );
 	}
 
 	public function test_a_plugin_claim_registers_in_place_of_the_bundled_module(): void {
@@ -117,10 +118,24 @@ final class GitHubSupersedeRegistrationTest extends TestCase {
 	public function test_a_bundled_module_that_fails_to_build_does_not_read_as_bundled(): void {
 		$this->bundled_fails = true;
 		$registry            = $this->registry();
+		$before_seal         = $registry->bundled_github_failed();
 		$registry->seal();
 		self::assertSame( 1, $this->bundled_calls );
 		self::assertNull( $registry->github_supplier() );
 		self::assertArrayNotHasKey( 'gh', $registry->metadata() );
+		self::assertFalse( $before_seal );
+		self::assertTrue( $registry->bundled_github_failed() );
+	}
+
+	public function test_a_registry_without_the_bundled_module_or_with_a_failed_claim_is_not_a_bundled_failure(): void {
+		$foreign = new ProviderRegistry();
+		$foreign->seal();
+		self::assertFalse( $foreign->bundled_github_failed() );
+		$claimed = $this->registry();
+		$claimed->supersede_github( require dirname( __DIR__ ) . '/fixtures/github-supersede/beta/factory.php' );
+		$claimed->supersede_github( self::alpha()['valid'] );
+		$claimed->seal();
+		self::assertFalse( $claimed->bundled_github_failed() );
 	}
 
 	private function assert_unavailable( ProviderRegistry $registry ): void {

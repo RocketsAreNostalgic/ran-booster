@@ -22,7 +22,7 @@ final class AdminTabRegistry {
 
 		$metadata_rows = $providers->administration_metadata();
 		// The GitHub page stays reachable while GitHub is unavailable, so it can say why.
-		if ( null !== $providers->github_supplier() && ! in_array( 'gh', array_map( static fn ( \RAN\RepositoryProvider\ProviderMetadata $metadata ): string => $metadata->code->value, $metadata_rows ), true ) ) {
+		if ( ( null !== $providers->github_supplier() || $providers->bundled_github_failed() ) && ! in_array( 'gh', array_map( static fn ( \RAN\RepositoryProvider\ProviderMetadata $metadata ): string => $metadata->code->value, $metadata_rows ), true ) ) {
 			$this->add( AdminTab::provider( new \RAN\RepositoryProvider\ProviderMetadata( \RAN\RepositoryProvider\ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' ) ) );
 		}
 

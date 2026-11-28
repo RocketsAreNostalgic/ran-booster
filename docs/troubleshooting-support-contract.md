@@ -240,8 +240,9 @@ collect evidence through an unavailable bootstrap or recover pre-capture events.
 Installation and the support report no longer project GitHub replacement
 selection state, declarations or candidates; #1253 retired them. The GitHub
 component row carries one `supplier` choice instead: `Included with Booster`,
-`Add-on`, `Add-on failed to load` or `More than one add-on`. When a claim fails
-or conflicts, the row stays with admission `Not admitted` and availability
+`Included module failed to load`, `Add-on`, `Add-on failed to load` or `More
+than one add-on`. When a claim fails or conflicts, or the bundled module fails
+to load, the row stays with admission `Not admitted` and availability
 `Unavailable`. Installation names the supplying plugin; the report does not.
 
 ## Verification and custody

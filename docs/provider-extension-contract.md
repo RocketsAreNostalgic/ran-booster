@@ -1476,10 +1476,13 @@ return to the bundled module. A failed or conflicting claim leaves GitHub unavai
 that names the claiming plugins Booster could identify and never exception
 text. Booster does not fall back to the bundled module while a claim is active;
 see [provider registration](provider-registration-and-coexistence.md#supply-github-from-a-plugin).
+If the bundled module itself fails to build, the GitHub page and Installation
+show one fixed sentence instead and no notice is shown.
 
 Troubleshooting → Installation shows the same sentence for the GitHub row, or
 `Included with Booster` while the bundled module supplies it. The Diagnostic
 report carries the supplier only as a closed label (`Included with Booster`,
-`Add-on`, `Add-on failed to load` or `More than one add-on`), with no plugin
+`Included module failed to load`, `Add-on`, `Add-on failed to load` or `More
+than one add-on`), with no plugin
 names, credential values or private paths. This presentation does not depend on
 the separate unused-GitHub hiding preference.

@@ -95,7 +95,7 @@ final readonly class ProviderSettingsPresenter {
 
 	public function build( ?string $selected_provider = null ): array {
 		$available = $this->admin_providers();
-		if ( null !== $this->providers->github_supplier() && ( 'gh' === $selected_provider || ( null === $selected_provider && array() === $available ) ) && ! isset( $available['gh'] ) ) {
+		if ( ( null !== $this->providers->github_supplier() || $this->providers->bundled_github_failed() ) && ( 'gh' === $selected_provider || ( null === $selected_provider && array() === $available ) ) && ! isset( $available['gh'] ) ) {
 			return array(
 				'selected_provider'            => 'gh',
 				'providers'                    => $this->tabs( $available, 'gh' ),
@@ -235,12 +235,13 @@ final readonly class ProviderSettingsPresenter {
 
 	/**
 	 * Where an operator restores a Git provider that is not registered: the GitHub provider page while a
-	 * plugin's claim on GitHub failed or conflicts, otherwise Extensions, which lists the providers to install or activate.
+	 * plugin's claim on GitHub failed or conflicts, or the bundled module failed to load, otherwise Extensions,
+	 * which lists the providers to install or activate.
 	 *
 	 * @return array{page: string, tab?: string}
 	 */
 	public function provider_restore_args( string $provider_code ): array {
-		return 'gh' === $provider_code && in_array( $this->providers->github_supplier(), array( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT ), true )
+		return 'gh' === $provider_code && ( $this->providers->bundled_github_failed() || in_array( $this->providers->github_supplier(), array( ProviderRegistry::GITHUB_SUPERSEDE_FAILED, ProviderRegistry::GITHUB_SUPERSEDE_CONFLICT ), true ) )
 			? array(
 				'page' => 'ran-booster',
 				'tab'  => 'gh',

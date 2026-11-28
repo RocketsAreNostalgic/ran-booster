@@ -28,8 +28,6 @@ use RAN\Deployment\DeploymentStorageFailure;
 use RuntimeException;
 
 final class DeploymentWorkerTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
-
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
 	private WorkerCoordinator $coordinator;
@@ -47,8 +45,7 @@ final class DeploymentWorkerTest extends TestCase {
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
-			$this->createStub( \RAN\Storage\Database::class ),
-			selection: $this->queued_selection( $this->database )
+			$this->createStub( \RAN\Storage\Database::class )
 		);
 		$this->coordinator = new WorkerCoordinator();
 	}

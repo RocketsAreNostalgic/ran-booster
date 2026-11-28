@@ -27,7 +27,6 @@ final class RepositorySourceGuard {
 	}
 
 	/**
-	 * @param (callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null))|null $execute
 	 * @return array{allowed: bool, code: string, relationship_count: int, release_count: int, owner_type: ?int, owner_package: ?string, other_packages: list<array{type:int,identifier:string}>}
 	 */
 	public function assess(
@@ -36,29 +35,10 @@ final class RepositorySourceGuard {
 		int $self_type,
 		string $self_package,
 		PackageSource $proposed_source,
-		bool $lock = false,
-		?callable $execute = null
+		bool $lock = false
 	): array {
 		if ( ! self::identity_is_valid( $provider, $provider_repository_id, $self_type, $self_package ) ) {
 			return self::unavailable();
-		}
-		if ( null !== $execute ) {
-			try {
-				$rows = $execute(
-					'SELECT package_type AS type, package, source, provider, provider_repository_id FROM %i WHERE provider = %s AND CAST(provider_repository_id AS BINARY) = CAST(%s AS BINARY)' . ( $lock ? ' FOR UPDATE' : '' ),
-					array( ran_booster_table_name(), $provider, $provider_repository_id ),
-					'results'
-				);
-			} catch ( DatabaseLifecycleFailure $failure ) {
-				throw $failure;
-			} catch ( \Throwable ) {
-				return self::unavailable();
-			}
-			if ( ! is_array( $rows ) || count( $rows ) !== count( array_filter( $rows, 'is_object' ) ) ) {
-				return self::unavailable();
-			}
-
-			return self::assess_rows( $rows, $provider, $provider_repository_id, $self_type, $self_package, $proposed_source );
 		}
 		$this->lifecycle?->require_ready();
 		$database = $this->database;

@@ -38,8 +38,6 @@ use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 #[RunTestsInSeparateProcesses]
 #[PreserveGlobalState( false )]
 final class OperatorActionDispatcherTest extends TestCase {
-	use \RAN\Tests\Support\QueuedSelectionFixture;
-
 	private OperatorDispatcherCoordinator $coordinator;
 	/** @var list<string> */
 	private array $capture_directories = array();
@@ -431,8 +429,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			$database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-26 09:02:00 UTC' ),
-			database_lifecycle: $this->createStub( Database::class ),
-			selection: $this->queued_selection( $database )
+			database_lifecycle: $this->createStub( Database::class )
 		);
 		self::assertTrue( DeploymentAttempt::from_database( $database->rows[0] )->requires_operator_resolution() );
 		$_POST['ran_booster'] = array(
@@ -463,8 +460,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 			$database,
 			'wp_ran_booster_deployment_attempts',
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-26 09:05:00 UTC' ),
-			database_lifecycle: $this->createStub( Database::class ),
-			selection: $this->queued_selection( $database )
+			database_lifecycle: $this->createStub( Database::class )
 		);
 		$coordinator    = new DeploymentCoordinator(
 			$attempts,

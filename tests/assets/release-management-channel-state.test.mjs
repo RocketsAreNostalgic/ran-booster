@@ -1023,7 +1023,7 @@ test('the Add Releases failure adds the lookup-credential hint only for a retrya
 	);
 });
 
-test('inspection context and its nonce travel together to final form submission', () => {
+test('the inspection nonce travels to final form submission', () => {
 	const fields = new Map();
 	let submissions = 0;
 	const form = {
@@ -1063,33 +1063,20 @@ test('inspection context and its nonce travel together to final form submission'
 		wp: { i18n: { __: (text) => text, sprintf: (text) => text } },
 		setup: { querySelector: () => ({}) },
 	});
-	for (const expectation of [
-		null,
-		{
-			provider_code: 'gh',
-			selection_generation: 7,
-			implementation_fingerprint: 'b'.repeat(64),
-		},
-	]) {
-		harness.showReady({
-			release_id: '42',
-			tag: 'v1.0.0',
-			version: '1.0.0',
-			fingerprint: `v2:${'a'.repeat(64)}`,
-			provider_expectation: expectation,
-			install_nonce: 'review-bound-nonce',
-		});
-		harness.installRelease({ preventDefault() {} });
-		assert.deepEqual(
-			JSON.parse(fields.get('provider_expectation').value),
-			expectation
-		);
-		assert.equal(
-			fields.get('ran_booster_release_install_nonce').value,
-			'review-bound-nonce'
-		);
-	}
-	assert.equal(submissions, 2);
+	harness.showReady({
+		release_id: '42',
+		tag: 'v1.0.0',
+		version: '1.0.0',
+		fingerprint: `v2:${'a'.repeat(64)}`,
+		install_nonce: 'review-bound-nonce',
+	});
+	harness.installRelease({ preventDefault() {} });
+	assert.equal(
+		fields.get('ran_booster_release_install_nonce').value,
+		'review-bound-nonce'
+	);
+	assert.equal(fields.has('provider_expectation'), false);
+	assert.equal(submissions, 1);
 });
 
 test('a stale in-flight inspection cannot restore install authority after source change', async () => {
@@ -1125,11 +1112,6 @@ test('a stale in-flight inspection cannot restore install authority after source
 		successful: true,
 		code: 'release_ready',
 		data: {
-			provider_expectation: {
-				provider_code: 'gh',
-				selection_generation: 1,
-				implementation_fingerprint: 'a'.repeat(64),
-			},
 			install_nonce: 'old-review-nonce',
 		},
 	});

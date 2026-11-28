@@ -176,7 +176,7 @@ final class InstallationFacts {
 			'RAN_BOOSTER_PROVIDER_API_VERSION'          => self::exact_integer_constant( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 ),
 			'RAN_BOOSTER_ADDON_API_VERSION'             => self::exact_integer_constant( 'RAN_BOOSTER_ADDON_API_VERSION', 17 ),
 			'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' => self::exact_integer_constant( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 ),
-			'RAN_BOOSTER_PORTABILITY_API_VERSION'       => self::exact_integer_constant( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 4 ),
+			'RAN_BOOSTER_PORTABILITY_API_VERSION'       => self::exact_integer_constant( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 5 ),
 			'RAN_BOOSTER_RUNTIME_MODE'                  => self::choice_constant( 'RAN_BOOSTER_RUNTIME_MODE', array( 'single_site_supported', 'multisite_unsupported' ) ),
 		);
 		try {

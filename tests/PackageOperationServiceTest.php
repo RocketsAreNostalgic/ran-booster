@@ -34,12 +34,9 @@ use RAN\PackageRemoval\PackageRemovalGateway;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\PackageSource;
 use RAN\Plugin;
-use RAN\RepositoryProvider\GitHubProviderSelection;
-use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\Database;
-use RAN\Storage\GitHubSelectionStore;
 use RAN\Storage\PluginNotFound;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
@@ -2303,82 +2300,12 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
-	public function test_active_github_native_mutation_hold_blocks_link_installed_adopt_release_and_edit(): void {
-		$store   = new GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' );
-		$bundled = new GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
-		$store->initialize_bundled( $bundled );
-		$state                   = $store->read( true );
-		$next                    = $state;
-		$next['native_mutation'] = array(
-			'selection_generation' => $state['selection_generation'],
-			'owner_tag'            => str_repeat( '0', 16 ) . str_repeat( 'a', 16 ),
-			'target_type'          => 'plugin',
-			'installed_identity'   => 'example/example.php',
-			'phase'                => 'started',
-		);
-		self::assertTrue( $store->compare_and_swap( $state, $next ) );
-		$selection = new GitHubProviderSelection( $store, '/unused', $bundled );
-
-		$plugin  = $this->plugin();
-		$plugins = new OperationPluginRepository( $plugin );
-		$themes  = new OperationThemeRepository( new OperationTheme( 'example' ) );
-		$lock    = new OperationUpdaterLock();
-		$service = $this->service( $plugins, $themes, new OperationCoordinator(), $lock, github_selection: $selection );
-
-		foreach ( array(
-			'link_installed' => fn () => $service->execute(
-				PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) )
-			),
-			'adopt_release'  => fn () => $service->adopt_release(
-				PackageOperation::from_input(
-					'install-plugin',
-					$this->input(
-						'install-plugin',
-						array(
-							'dry-run'           => '1',
-							'exact_identifier'  => '1',
-							'file'              => 'example/example.php',
-							'deployment_policy' => 'disabled',
-						)
-					)
-				),
-				new ManagedReleaseConfiguration( 'example', 'example.php' ),
-				static fn (): bool => true
-			),
-			'edit'           => fn () => $service->execute(
-				PackageOperation::from_input( 'edit-plugin', $this->input( 'edit-plugin', array( 'branch' => 'develop' ) ) )
-			),
-		) as $case => $attempt ) {
-			try {
-				$attempt();
-				self::fail( $case . ' must be blocked by an active native_mutation hold.' );
-			} catch ( \RuntimeException $failure ) {
-				self::assertStringContainsString( 'pending GitHub native update', $failure->getMessage(), $case );
-			}
-		}
-
-		self::assertNull( $plugins->stored );
-		self::assertSame( array(), $plugins->edited );
-		self::assertSame( 'main', $plugin->get_branch() );
-	}
-
 	private function service(
 		OperationPluginRepository $plugins,
 		OperationThemeRepository $themes,
 		OperationCoordinator $coordinator,
 		?OperationUpdaterLock $updater_lock = null,
-		?RepositorySourceGuardDatabase $source_database = null,
-		?GitHubProviderSelection $github_selection = null
+		?RepositorySourceGuardDatabase $source_database = null
 	): PackageOperationService {
 		$updater_lock ??= new OperationUpdaterLock();
 		if ( null === $source_database ) {
@@ -2413,28 +2340,10 @@ final class PackageOperationServiceTest extends TestCase {
 			$plugins,
 			$themes,
 			$coordinator,
-			new PackageRemovalService( $plugins, $themes, new OperationRemovalGateway(), $attempts, $updater_lock, github_selection: $github_selection ?? $this->selection() ),
+			new PackageRemovalService( $plugins, $themes, new OperationRemovalGateway(), $attempts, $updater_lock ),
 			$updater_lock,
-			new RepositorySourceGuard( $source_database, $this->createStub( Database::class ) ),
-			$github_selection
+			new RepositorySourceGuard( $source_database, $this->createStub( Database::class ) )
 		);
-	}
-
-	private function selection(): GitHubProviderSelection {
-		$store   = new GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' );
-		$bundled = new GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
-		$store->initialize_bundled( $bundled );
-		return new GitHubProviderSelection( $store, '/unused', $bundled );
 	}
 
 	private function dashboard( OperationCoordinator $coordinator, ?Plugin $plugin = null, ?\RAN\RepositoryProvider\ProviderRegistry $providers = null ): Dashboard {

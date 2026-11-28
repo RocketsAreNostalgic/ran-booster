@@ -1085,32 +1085,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 
 	const boundSwitchDocuments = new WeakSet();
 
-	function safeSameOriginUrl(rawUrl) {
-		if (typeof rawUrl !== 'string' || !rawUrl.trim()) {
-			return '';
-		}
-		try {
-			const base =
-				window.location?.href || 'https://example.invalid/wp-admin/';
-			const resolved = new URL(rawUrl, base);
-			if (
-				resolved.protocol !== 'http:' &&
-				resolved.protocol !== 'https:'
-			) {
-				return '';
-			}
-			if (
-				window.location?.origin &&
-				resolved.origin !== window.location.origin
-			) {
-				return '';
-			}
-			return rawUrl.startsWith('#') ? rawUrl : resolved.href;
-		} catch {
-			return '';
-		}
-	}
-
 	function setHiddenInput(form, name, value) {
 		let input = form.querySelector(
 			'input[type="hidden"][name="' + name + '"]'
@@ -1173,29 +1147,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	}
 
 	function appendPreflightErrorContent(target, data, fallbackMessage) {
-		const template =
-			typeof data?.message_template === 'string'
-				? data.message_template
-				: '';
-		const linkLabel =
-			typeof data?.link_label === 'string' ? data.link_label : '';
-		const safeLinkUrl = safeSameOriginUrl(data?.link_url);
-		if (template && linkLabel && template.includes('%s')) {
-			const parts = template.split('%s');
-			target.appendChild(document.createTextNode(parts[0] || ''));
-			if (safeLinkUrl) {
-				const link = document.createElement('a');
-				link.href = safeLinkUrl;
-				link.textContent = linkLabel;
-				target.appendChild(link);
-			} else {
-				target.appendChild(document.createTextNode(linkLabel));
-			}
-			target.appendChild(
-				document.createTextNode(parts.slice(1).join('%s'))
-			);
-			return;
-		}
 		let message =
 			typeof data?.message === 'string' && data.message
 				? data.message
@@ -2424,14 +2375,12 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			releaseChannel() !== selectedRelease.channel ||
 			!validFingerprint(data.fingerprint) ||
 			typeof data.install_nonce !== 'string' ||
-			!data.install_nonce ||
-			!('provider_expectation' in data)
+			!data.install_nonce
 		) {
 			showUnavailable('unable_to_check');
 			return;
 		}
 		selectedRelease.fingerprint = data.fingerprint;
-		selectedRelease.providerExpectation = data.provider_expectation;
 		selectedRelease.installNonce = data.install_nonce;
 		setChoiceState('available');
 		setStatus(
@@ -2515,9 +2464,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			release_id: selectedRelease.id,
 			release_tag: selectedRelease.tag,
 			release_fingerprint: selectedRelease.fingerprint,
-			provider_expectation: JSON.stringify(
-				selectedRelease.providerExpectation
-			),
 			ran_booster_release_install_nonce: selectedRelease.installNonce,
 			release_channel: selectedRelease.channel,
 		};

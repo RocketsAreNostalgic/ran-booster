@@ -43,15 +43,11 @@ final class ReleaseManagementControls {
 	private readonly ReleaseManagementDisplay $display;
 	private readonly RepositorySourceGuard $source_guard;
 
-	/** @var \Closure(): (?array<string, mixed>) */
-	private \Closure $native_hold;
-
 	/** @var \Closure(): bool */
 	private \Closure $updates_forced_off;
 
 	/**
-	 * @param (callable(): (?array<string, mixed>))|null $native_hold
-	 * @param (callable(): bool)|null                     $updates_forced_off
+	 * @param (callable(): bool)|null $updates_forced_off
 	 * @param (callable(string,string,int,string,string,string,string,?array{identity:string,tag:string,version:string,installed_version?:string,confirmation?:array{artifact_identity:string,artifact_sha256:string,installed_version:string}}):\RAN\AddOn\ReleaseTracking\ReleaseTrackingResult)|null $confirmed_enable
 	 */
 	public function __construct(
@@ -61,7 +57,6 @@ final class ReleaseManagementControls {
 		ManagedReleaseBrowser $managed_browser,
 		?RepositorySourceGuard $source_guard = null,
 		private readonly ?ProviderTabLinks $links = null,
-		?callable $native_hold = null,
 		?callable $updates_forced_off = null,
 		?callable $confirmed_enable = null
 	) {
@@ -73,7 +68,6 @@ final class ReleaseManagementControls {
 		$this->prospective_operations = new ProspectiveReleaseOperations( $prospective, $read_candidates );
 
 		$this->source_guard       = $source_guard ?? new RepositorySourceGuard();
-		$this->native_hold        = null === $native_hold ? static fn (): ?array => null : \Closure::fromCallable( $native_hold );
 		$this->updates_forced_off = null === $updates_forced_off ? static fn (): bool => PackageMutationGuard::file_mods_disabled() : \Closure::fromCallable( $updates_forced_off );
 	}
 
@@ -227,8 +221,6 @@ final class ReleaseManagementControls {
 		$status                = null === $package ? null : $this->package_status( $package );
 		$repository_conflict   = null === $package ? array() : $this->repository_conflict_packages( $package, $status );
 		$nonces                = null === $package ? array() : $this->package_nonce_actions( $package, $status );
-		$native_hold_read      = $this->request_boundary( $this->native_hold, false );
-		$native_hold           = is_array( $native_hold_read ) ? $native_hold_read : null;
 		$policy_read           = $this->request_boundary( $this->updates_forced_off, null );
 		$updates_forced_off    = false !== $policy_read;
 		$switch_confirmation   = null;
@@ -239,7 +231,7 @@ final class ReleaseManagementControls {
 		if ( 'edit' === $mode && null !== $result && '' !== $code && ! $duplicate_conflict ) {
 			if ( $this->is_switch_confirmation_code( $code ) ) {
 				if ( $release_pane ) {
-					$blocker = $this->switch_blocker( $type, $result['identifier'], $status, $result['channel'], $policy_read, $native_hold_read );
+					$blocker = $this->switch_blocker( $type, $status, $result['channel'], $policy_read );
 					if ( '' === $blocker && ( null === $status || hash( 'sha256', ( $nonces['enable'] ?? '' ) . '|' . $status->installed_version() ) !== $result['detail'] ) ) {
 						$blocker = 'release_selection_changed';
 					}
@@ -248,7 +240,7 @@ final class ReleaseManagementControls {
 					}
 					if ( '' !== $blocker ) {
 						ob_start();
-						$this->display->render_operation_notice( $blocker, false, $type, $result['identifier'], native_hold: $native_hold );
+						$this->display->render_operation_notice( $blocker, false, $type, $result['identifier'] );
 						$operation_notice_html = (string) ob_get_clean();
 					} elseif ( null !== $status ) {
 						$chooser = $this->switch_choices( $type, $status->identifier(), $status->source_revision(), $result['channel'], $status, $nonces['enable'] );
@@ -260,10 +252,10 @@ final class ReleaseManagementControls {
 					}
 				}
 			} elseif ( ! $this->is_top_level_switch_outcome( $code ) ) {
-				[ $code, $successful ] = ReleaseTrackingOperations::settled( $code, $result['successful'], $status, $native_hold_read, $result['type'], $result['identifier'], $result['detail'] );
+				[ $code, $successful ] = ReleaseTrackingOperations::settled( $code, $result['successful'], $status, $result['detail'] );
 				$reload_url            = '' !== $result['identifier'] ? $this->return_url( $result['type'], $result['identifier'], true ) : '';
 				ob_start();
-				$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $successful, $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'], $reload_url, $native_hold ), null );
+				$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $successful, $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'], $reload_url ), null );
 				$operation_notice_html = (string) ob_get_clean();
 			}
 		}
@@ -387,11 +379,9 @@ final class ReleaseManagementControls {
 		}
 
 		$status                = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->fresh_status( $result['type'], $result['identifier'] ), null );
-		$native_hold_read      = $this->request_boundary( $this->native_hold, false );
-		$native_hold           = is_array( $native_hold_read ) ? $native_hold_read : null;
-		[ $code, $successful ] = ReleaseTrackingOperations::settled( $code, $result['successful'], $status, $native_hold_read, $result['type'], $result['identifier'], $result['detail'] );
+		[ $code, $successful ] = ReleaseTrackingOperations::settled( $code, $result['successful'], $status, $result['detail'] );
 		$reload_url            = '' !== $result['identifier'] ? $this->return_url( $result['type'], $result['identifier'], true ) : '';
-		\RAN\Admin\BoosterNoticeScope::render( fn () => $this->request_boundary( fn () => $this->display->render_operation_notice( $code, $successful, $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'], $reload_url, $native_hold ), null ) );
+		\RAN\Admin\BoosterNoticeScope::render( fn () => $this->request_boundary( fn () => $this->display->render_operation_notice( $code, $successful, $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'], $reload_url ), null ) );
 	}
 
 	/**
@@ -429,7 +419,6 @@ final class ReleaseManagementControls {
 				<p><?php esc_html_e( 'Switching to releases installs the newest release on the selected track. A package with Updates set to Disabled can\'t switch to releases. Switching in either direction turns Automatic into Manual; Manual and Disabled stay as they are. Webhook settings don\'t change.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'Use Check releases on the managed Plugins or Themes screen to refresh release metadata. Booster validates the candidate, but WordPress remains the installer. Open WordPress updates to use the administrator’s normal WordPress update workflow.', 'ran-booster' ); ?></p>
 				<h3><?php esc_html_e( 'Recovery and support', 'ran-booster' ); ?></h3>
-				<p><?php esc_html_e( 'If an install can\'t complete, GitHub installs on this site go on hold. Open the package\'s page, check it, then release the hold.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'Installed but unmanaged means a package now exists but Booster did not adopt it. Verify its installed version and activation state before using Link an already installed plugin (or theme) or retrying. An uncertain state or cleanup failure does not claim installation success: inspect installed packages and Booster management before retrying.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'If a release is blocked, publish a corrected release rather than editing installed metadata. You can return the package to branch management from its settings. If the selected Git provider capability becomes unavailable, Booster preserves package source state while suppressing release offers, downloads and mutations.', 'ran-booster' ); ?></p>
 				<p><a href="<?php echo esc_url( 'https://github.com/RocketsAreNostalgic/ran-booster/blob/main/docs/package-update-orchestration.md' ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Package update orchestration guide', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
@@ -522,8 +511,8 @@ final class ReleaseManagementControls {
 			fn (): array => array(
 				'providers' => $this->prospective_operations->supported_provider_codes( $type ),
 				'nonces'    => array(
-					'listCandidates' => $this->prospective_operations->nonce_action( 'list_candidates', $type, null ),
-					'inspect'        => $this->prospective_operations->nonce_action( 'inspect', $type, null ),
+					'listCandidates' => $this->prospective_operations->nonce_action( 'list_candidates', $type ),
+					'inspect'        => $this->prospective_operations->nonce_action( 'inspect', $type ),
 					'install'        => '',
 				),
 			),
@@ -610,7 +599,7 @@ final class ReleaseManagementControls {
 			: '';
 		if ( 'install_chosen' === $operation && '' !== $type && '' !== $identifier && $revision > 0
 			&& current_user_can( 'manage_options' ) && current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' )
-			&& ! $this->updates_forced_off_for_display() && null === $this->request_boundary( $this->native_hold, false ) ) {
+			&& ! $this->updates_forced_off_for_display() ) {
 			$channel = $this->release_channel_from( $request );
 			$code    = $this->request_boundary( fn (): string => $this->managed_browser->install_chosen( $type, $identifier, $revision, $channel, $request ), 'install_failed' );
 			$outcome = $this->package_outcome( $type, $identifier, $code, 'chosen_installed' === $code );
@@ -715,7 +704,7 @@ final class ReleaseManagementControls {
 			FeedbackFlash::enqueue( $outcome['code'] );
 		} else {
 			// A result that is not a success is its inline notice, which the host reads and which stays the record.
-			// The landing page also reads the current source and native hold after a switch to Releases.
+			// The landing page also reads the current source after a switch to Releases.
 			$url = add_query_arg( $this->result_query_arguments( $outcome, $channel ), $url );
 		}
 
@@ -756,13 +745,9 @@ final class ReleaseManagementControls {
 			return $this->preflight_error_payload( 'invalid_request' );
 		}
 
-		$status      = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->status( $type, $identifier, $revision ), null );
-		$native_hold = $this->request_boundary( $this->native_hold, false );
-		$policy      = $this->request_boundary( $this->updates_forced_off, null );
-		$blocker     = $this->switch_blocker( $type, $identifier, $status, $channel, $policy, $native_hold );
-		if ( in_array( $blocker, array( 'switch_held', 'switch_other_held' ), true ) && is_array( $native_hold ) ) {
-			return $this->display->switch_hold_preflight_response( $type, $identifier, $native_hold );
-		}
+		$status  = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->status( $type, $identifier, $revision ), null );
+		$policy  = $this->request_boundary( $this->updates_forced_off, null );
+		$blocker = $this->switch_blocker( $type, $status, $channel, $policy );
 		if ( '' !== $blocker || null === $status ) {
 			return $this->preflight_error_payload( $blocker );
 		}
@@ -913,12 +898,9 @@ final class ReleaseManagementControls {
 				'switch_failed',
 				'switch_refused',
 				'switch_uncertain',
-				'native_hold',
 				'policy_disabled',
 				'policy_forced_off',
-				'switch_held',
 				'switch_not_confirmed',
-				'switch_other_held',
 				'switch_failed_unchanged',
 			),
 			true
@@ -929,16 +911,14 @@ final class ReleaseManagementControls {
 		return 'switch_choose' === $code;
 	}
 
-	/** @param array<string,mixed>|false|null $native_hold */
-	private function switch_blocker( string $type, string $identifier, ?ReleaseTrackingStatus $status, string $channel, ?bool $policy, array|false|null $native_hold ): string {
+	private function switch_blocker( string $type, ?ReleaseTrackingStatus $status, string $channel, ?bool $policy ): string {
 		return match ( true ) {
 			! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'update_plugins' : 'update_themes' ) => 'forbidden',
-			null === $status || null === $policy || false === $native_hold => 'unable_to_check',
+			null === $status || null === $policy => 'unable_to_check',
 			PackageSource::BRANCH->value !== $status->source() || ! $status->eligible() => 'source_changed',
 			$policy => 'policy_forced_off',
 			'disabled' === $status->deployment_policy() => 'policy_disabled',
 			PackageSourceGate::pauses( PackageSource::RELEASE_ASSET, $channel ) => 'source_paused',
-			is_array( $native_hold ) => ( $native_hold['type'] ?? null ) === $type && ( $native_hold['identifier'] ?? null ) === $identifier ? 'switch_held' : 'switch_other_held',
 			default => '',
 		};
 	}
@@ -1021,7 +1001,7 @@ final class ReleaseManagementControls {
 			)
 		);
 
-		if ( ! empty( $outcome['data']['chosen_install'] ) && ( $this->updates_forced_off_for_display() || null !== $this->request_boundary( $this->native_hold, false ) ) ) {
+		if ( ! empty( $outcome['data']['chosen_install'] ) && $this->updates_forced_off_for_display() ) {
 			unset( $outcome['data']['chosen_install'] );
 		}
 
@@ -1046,22 +1026,7 @@ final class ReleaseManagementControls {
 		if ( ! current_user_can( 'manage_options' ) || ! current_user_can( 'plugin' === $type ? 'install_plugins' : 'install_themes' ) ) {
 			return $this->prospective_outcome( $type, 'forbidden' );
 		}
-		$expectation = null;
-		if ( 'install' === $operation ) {
-			$raw = $request['provider_expectation'] ?? null;
-			if ( ! is_string( $raw ) || strlen( $raw ) > 512 ) {
-				return $fallback;
-			}
-			try {
-				$expectation = json_decode( wp_unslash( $raw ), true, 4, JSON_THROW_ON_ERROR );
-			} catch ( \JsonException ) {
-				return $fallback;
-			}
-			if ( null !== $expectation && ! is_array( $expectation ) ) {
-				return $fallback;
-			}
-		}
-		$nonce_action = $this->request_boundary( fn (): string => $this->prospective_operations->nonce_action( $operation, $type, $expectation ), null );
+		$nonce_action = $this->request_boundary( fn (): string => $this->prospective_operations->nonce_action( $operation, $type ), null );
 		if ( null === $nonce_action || '' === $nonce_action ) {
 			return $this->prospective_outcome( $type, 'service_unavailable' );
 		}
@@ -1078,7 +1043,7 @@ final class ReleaseManagementControls {
 		$channel     = array_key_exists( 'release_channel', $request ) ? $this->release_channel_from( $request ) : 'stable';
 
 		$outcome         = $this->request_boundary(
-			fn (): array => 'list_candidates' === $operation ? $this->prospective_operations->list_candidates( $type, $repository, $channel ) : $this->prospective_operations->execute( $operation, $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce, $expectation ),
+			fn (): array => 'list_candidates' === $operation ? $this->prospective_operations->list_candidates( $type, $repository, $channel ) : $this->prospective_operations->execute( $operation, $type, $repository, $release_id, $tag, $fingerprint, $channel, $nonce ),
 			$this->prospective_outcome( $type, 'service_unavailable' )
 		);
 		$outcome['data'] = $this->lookup_data( $outcome['code'], $outcome['data'] );
@@ -1328,8 +1293,8 @@ final class ReleaseManagementControls {
 		return $this->request_boundary(
 			fn (): array => array(
 				'providers'       => $this->prospective_operations->supported_provider_codes( $type ),
-				'list_candidates' => wp_create_nonce( $this->prospective_operations->nonce_action( 'list_candidates', $type, null ) ),
-				'inspect'         => wp_create_nonce( $this->prospective_operations->nonce_action( 'inspect', $type, null ) ),
+				'list_candidates' => wp_create_nonce( $this->prospective_operations->nonce_action( 'list_candidates', $type ) ),
+				'inspect'         => wp_create_nonce( $this->prospective_operations->nonce_action( 'inspect', $type ) ),
 				'install'         => '',
 			),
 			array()

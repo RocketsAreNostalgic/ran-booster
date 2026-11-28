@@ -12,7 +12,7 @@ evidence. Preserve the earlier rationale when recording a changed decision.
 Current Transporter behavior is documented in the
 [Transporter Blueprint guide](portability-briefcase.md), and the independent
 public extension boundary is documented in
-[Portability API 4](portability-api.md).
+[Portability API 5](portability-api.md).
 
 ## Evidence baseline
 
@@ -187,3 +187,24 @@ credentials and site URLs, which would bypass the Blueprint's review and
 credential handling. Settings reproduction stays outside the portability
 roadmap (#365, #427). Reconsider only if WordPress gains option ownership
 metadata and a reviewed transfer path for secret-bearing values.
+
+## Portability provider-expectation fence retired — 28 November 2026
+
+Portability API 4 bound a GitHub review to its Apply through a
+destination-local `provider_expectation`: the selected replacement's selection
+generation and implementation fingerprint. Review fingerprints, Apply nonces,
+the dashboard's release-review nonce and every Blueprint Apply step refused
+with `provider_selection_changed` when the selection had moved. #1253 retires
+GitHub replacement selection in favour of a stateless boot-time override, so
+the destination keeps no selection generation or implementation fingerprint
+to bind. Portability API 5 removes the expectation from review results,
+`nonce_action()` and `apply()`, and verifies a GitHub package like any other
+registered provider.
+
+The fingerprint and nonces still bind the full candidate, the
+provider-resolved repository identity and privacy, the review action and
+reason, the reviewed release and the credential decisions. Apply still
+re-reviews from live state, and an unregistered provider still blocks as
+`provider_unavailable`. No compatibility path keeps API 4; Booster is
+pre-release. Reconsider only if Core again holds destination-local provider
+selection state that can change between review and Apply.

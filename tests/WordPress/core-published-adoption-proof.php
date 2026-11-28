@@ -177,7 +177,7 @@ return static function ( CoreContainer $container, string $type, string $identif
 					$request['_wpnonce'] = wp_create_nonce( $managed->nonce_action( $operation, $type, $identifier, $revision, 'stable' ) );
 					$outcome             = $controls->process_managed_browser_request( $operation, $request );
 				} else {
-					$request['_wpnonce'] = wp_create_nonce( $prospective->nonce_action( $operation, $type, null ) );
+					$request['_wpnonce'] = wp_create_nonce( $prospective->nonce_action( $operation, $type ) );
 					$outcome             = $controls->process_prospective_request( $operation, $request );
 				}
 				$data                         = $outcome['data'];

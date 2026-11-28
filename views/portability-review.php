@@ -297,8 +297,6 @@ $has_credential_decisions         = array() !== array_filter(
 				?>
 				<tbody>
 				<tr data-portability-row="<?php echo esc_attr( (string) $row_index ); ?>" data-portability-action="<?php echo esc_attr( $review_action ); ?>"
-					<?php if ( isset( $row['provider_expectation'] ) ) : ?>
-					data-portability-provider-expectation="<?php echo esc_attr( (string) wp_json_encode( $row['provider_expectation'] ) ); ?>"<?php endif; ?>
 					<?php if ( null !== $release_review && null !== $release_review_nonce ) : ?>
 					data-portability-release-review="<?php echo esc_attr( (string) wp_json_encode( $release_review ) ); ?>"
 					data-portability-release-review-nonce="<?php echo esc_attr( $release_review_nonce ); ?>"<?php endif; ?>

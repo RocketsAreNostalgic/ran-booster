@@ -1,6 +1,6 @@
-# Portability API 4
+# Portability API 5
 
-Portability API 4 is Core's narrow, request-local adoption boundary for a
+Portability API 5 is Core's narrow, request-local adoption boundary for a
 trusted source bridge. It reviews one already-installed plugin or theme and may
 adopt that package into Booster with deployment policy forced to Disabled.
 
@@ -8,23 +8,25 @@ It is not the Transporter Blueprint format, a general migration API, or an
 installer. The [Transporter Blueprint guide](portability-briefcase.md) documents
 the separate Blueprint ZIP workflow.
 
-Portability API 4 is published in
+Portability API 5 replaces API 4, which was published in
 [Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).
-Source bridges must still qualify their API 4 forwarding and compatible host;
-Core publication does not certify or publish a satellite. See the
+There is no compatibility path: a bridge that requires exact API 4 does not
+register on an API 5 host. Source bridges must still qualify their API 5
+forwarding and compatible host; Core publication does not certify or publish a
+satellite. See the
 [WP Pusher migration status](operator-journeys.md#migrate-retained-wp-pusher-packages)
 before using Migrator.
 
 ## Version and service delivery
 
-A consumer must require exact Portability API 4:
+A consumer must require exact Portability API 5:
 
 ```php
 add_action(
 	'plugins_loaded',
 	static function (): void {
 		if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' )
-			|| 4 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
+			|| 5 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
 			return;
 		}
 
@@ -48,7 +50,7 @@ not replayed. The callback receives only the portability facade; it does not rec
 Core's container, repositories, provider clients, credential store, filesystem
 paths, or cleanup authority.
 
-Portability API 4 is independently versioned. A source bridge does not need
+Portability API 5 is independently versioned. A source bridge does not need
 Add-on API 17 or Provider API 14, although Core continues to use its registered
 providers internally.
 
@@ -57,7 +59,7 @@ A source bridge may separately feature-detect Core's additive
 row without a page refresh. Core derives the target from bounded presentation
 identity based on the installed candidate, never from a source row ID, source
 key or source revision. This presentation transport does not change
-Portability API 4 authorization, review, Apply, target verification or
+Portability API 5 authorization, review, Apply, target verification or
 source-cleanup ownership. See
 [Enhanced administration interaction API](enhanced-admin-interactions.md).
 
@@ -90,32 +92,25 @@ The bridge owns its source state and uses the facade in this order:
 1. Fresh-read and validate the source record.
 2. Build the current candidate.
 3. Derive the review action with
-   `nonce_action( 'review', $candidate, null, null )`, create that WordPress nonce, and call
+   `nonce_action( 'review', $candidate, null )`, create that WordPress nonce, and call
    `review( $candidate, $nonce )`.
 4. Display the returned closed action, reason, message, and opaque `v1:`
    fingerprint.
 5. Before Apply, fresh-read the source again and require its bridge-owned
    fingerprint to be unchanged.
 6. Derive the Apply action with
-   `nonce_action( 'apply', $candidate, $review->fingerprint, $review->provider_expectation )`, create that
+   `nonce_action( 'apply', $candidate, $review->fingerprint )`, create that
    WordPress nonce, and call
-   `apply( $candidate, $review->fingerprint, $nonce, $review->provider_expectation )`.
+   `apply( $candidate, $review->fingerprint, $nonce )`.
 7. Remove source authority only when Apply returns `target_verified = true` and
    a final exact source comparison succeeds.
 
-The readonly `provider_expectation` result is destination-local context. For
-GitHub it contains exactly `provider_code: gh`, a nonnegative integer
-`selection_generation`, and a lowercase SHA-256 `implementation_fingerprint`.
-It is bound into both review fingerprint and Apply nonce. Other providers accept
-only null. Review nonce arguments remain explicitly null; Apply arguments are
-all required. A missing or malformed GitHub expectation requires fresh review.
-Key order is canonicalized without reading live provider state.
-
-Do not serialize this expectation into portable Blueprint data or treat it as
-implementation approval. Stale Apply refuses before credential lookup,
-transferred-material persistence, or provider I/O. A matching expectation still
-requires fresh source, destination, capability, and nonce checks. Preview
-observation reuse never caches selection authority.
+The review fingerprint binds the complete candidate, the provider-resolved
+repository identity and privacy, and the review action and reason. The Apply
+nonce binds the candidate digest and that exact fingerprint. Apply repeats the
+review from live state and refuses with `review_changed` when the recomputed
+fingerprint differs. Every provider, including GitHub, is reviewed and applied
+the same way.
 
 `nonce_action()` scopes a nonce; it neither creates a nonce nor grants authority.
 Core independently checks `manage_options`, the applicable plugin or theme
@@ -200,7 +195,7 @@ reconcile from the two live authorities.
 
 ## Deliberate limits
 
-Portability API 4 does not provide:
+Portability API 5 does not provide:
 
 - package installation, file replacement, activation, or deployment enablement;
 - credential creation, transfer, display, validation, or deletion;
@@ -212,11 +207,15 @@ Portability API 4 does not provide:
 Material rejected approaches and their reconsideration triggers remain in the
 private architecture review archive; they are not public runtime contracts.
 
-## PHP naming transition
+## Version changes
 
-API 3 uses snake_case PHP methods, named parameters and promoted properties.
-It requires a matching source bridge; API 2 callers are not compatible. The
-serialized candidate keys, nonce action prefixes and review fingerprint format
-remain unchanged, including canonical hash payload version 2. Renaming PHP
-identifiers does not invalidate a previously generated review solely by changing
-its hash inputs. Authorization and fresh review/apply checks remain mandatory.
+API 5 removes the API 4 `provider_expectation`: the review result no longer
+carries it, `nonce_action()` and `apply()` no longer accept it, and Apply no
+longer refuses with `provider_selection_changed`. The canonical candidate and
+review hash payloads move to version 4, so a review or Apply nonce generated
+under API 4 is not accepted; review again. Candidate keys, nonce action
+prefixes and the `v1:` fingerprint format are unchanged.
+
+API 3 introduced snake_case PHP methods, named parameters and promoted
+properties. It required a matching source bridge; API 2 callers are not
+compatible. Authorization and fresh review/apply checks remain mandatory.

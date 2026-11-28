@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Run only on a marked disposable site with the Core archive under test installed.
-# The held cases leave the native hold; their release phase releases it in place and the switch is retried.
+# Interrupted cases release a killed request's updater lock, then retry the switch or start afresh.
 : "${RAN_RELEASE_SWITCH_PROOF_SITE:?Set the isolated disposable WordPress root}"
 : "${RAN_RELEASE_SWITCH_PROOF_CORE_ZIP:?Set the Core archive under test}"
 PHP_BIN="${PHP_BIN:-php}"
@@ -13,7 +13,7 @@ export PHP_BIN WP_CLI_BIN RAN_RELEASE_SWITCH_PROOF_SITE RAN_RELEASE_SWITCH_PROOF
 proof="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/ReleaseSwitchProof.php"
 queue=()
 for package_type in ${RAN_RELEASE_SWITCH_PROOF_TYPES:-plugin theme}; do
-    for scenario in ${RAN_RELEASE_SWITCH_PROOF_CASES:-choice-disappeared form-choice-current same prerelease-order prerelease-no-consent stale-confirmation replaced-asset return-lock newer active disabled failed-download incompatible-zip pre-install pre-install-throw stale missing fallback-repaired compete conflict failed-install kill foreign-lock expired-lock fresh-finished fresh-killed fresh-damaged fresh-deleted}; do
+    for scenario in ${RAN_RELEASE_SWITCH_PROOF_CASES:-choice-disappeared form-choice-current same prerelease-order prerelease-no-consent stale-confirmation replaced-asset return-lock newer active disabled failed-download incompatible-zip pre-install pre-install-throw stale missing fallback-repaired compete conflict failed-install kill fresh-finished fresh-killed}; do
         queue+=("$package_type:$scenario")
     done
 done
@@ -26,7 +26,7 @@ for index in "${!queue[@]}"; do
     scenario="${queue[index]#*:}"
     phases="seed run readback"
     case "$scenario" in
-        conflict|failed-install|kill|foreign-lock|expired-lock) phases="$phases release retry retried" ;;
+        conflict|failed-install|kill) phases="$phases release retry retried" ;;
         return-lock) phases="seed run branch-return" ;;
         fresh-*) phases="$phases release fresh" ;;
     esac
@@ -40,7 +40,7 @@ for index in "${!queue[@]}"; do
         status=0
         RAN_RELEASE_SWITCH_PROOF_TYPE="$package_type" RAN_RELEASE_SWITCH_PROOF_CASE="$scenario" RAN_RELEASE_SWITCH_PROOF_PHASE="$phase" RAN_RELEASE_SWITCH_PROOF_SEED_NEXT="$next" \
             "$PHP_BIN" -d memory_limit=512M "$WP_CLI_BIN" eval-file "$proof" --path="$RAN_RELEASE_SWITCH_PROOF_SITE" --user="$RAN_RELEASE_SWITCH_PROOF_USER" || status=$?
-        if [[ "$phase" == run && "$scenario" =~ ^(kill|foreign-lock|expired-lock|fresh-killed|fresh-damaged|fresh-deleted)$ ]]; then
+        if [[ "$phase" == run && "$scenario" =~ ^(kill|fresh-killed)$ ]]; then
             [[ "$status" == 137 ]] || { echo "Expected SIGKILL exit 137, got $status" >&2; exit 1; }
         elif [[ "$status" != 0 ]]; then
             exit "$status"

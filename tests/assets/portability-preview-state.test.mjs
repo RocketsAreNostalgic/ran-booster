@@ -101,9 +101,6 @@ function row(
 	const item = {
 		choice,
 		getAttribute(attribute) {
-			if (attribute === 'data-portability-provider-expectation') {
-				return item.providerExpectation ?? null;
-			}
 			if (attribute === 'data-portability-release-review') {
 				return item.releaseReview ?? null;
 			}
@@ -1681,7 +1678,6 @@ test('each Apply request carries its complete selected subset and later Apply re
 			submitted.push({
 				row: data.get('row'),
 				selected: data.getAll('selected_rows[]'),
-				expectation: data.get('provider_expectation') ?? null,
 				releaseReview: data.get('release_review') ?? null,
 				releaseReviewNonce: data.get('release_review_nonce') ?? null,
 			});
@@ -1708,12 +1704,6 @@ test('each Apply request carries its complete selected subset and later Apply re
 		await tick();
 		state.rows()[1].choice.checked = false;
 		state.listeners.get('root:change')({ target: state.rows()[1].choice });
-		const expectation = JSON.stringify({
-			provider_code: 'gh',
-			selection_generation: 4,
-			implementation_fingerprint: 'a'.repeat(64),
-		});
-		state.rows()[2].providerExpectation = expectation;
 		state.rows()[2].releaseReview = JSON.stringify({ release_id: '366' });
 		state.rows()[2].releaseReviewNonce = 'release-review-nonce';
 		const applying = state.listeners.get('apply:click')();
@@ -1721,12 +1711,11 @@ test('each Apply request carries its complete selected subset and later Apply re
 			{
 				row: '2',
 				selected: ['2', '9'],
-				expectation: null,
 				releaseReview: null,
 				releaseReviewNonce: null,
 			},
 		]);
-		state.rows()[2].providerExpectation = 'changed-after-apply-start';
+		state.rows()[2].releaseReview = 'changed-after-apply-start';
 		// Changing a checkbox during the batch cannot change its declared subset.
 		state.rows()[2].choice.checked = false;
 		finishFirst();
@@ -1735,14 +1724,12 @@ test('each Apply request carries its complete selected subset and later Apply re
 			{
 				row: '2',
 				selected: ['2', '9'],
-				expectation: null,
 				releaseReview: null,
 				releaseReviewNonce: null,
 			},
 			{
 				row: '9',
 				selected: ['2', '9'],
-				expectation,
 				releaseReview: JSON.stringify({ release_id: '366' }),
 				releaseReviewNonce: 'release-review-nonce',
 			},
@@ -1751,13 +1738,11 @@ test('each Apply request carries its complete selected subset and later Apply re
 		state.rows().forEach((item, index) => {
 			item.choice.checked = index === 1;
 		});
-		state.rows()[1].providerExpectation = expectation;
 		state.listeners.get('root:change')({ target: state.rows()[1].choice });
 		await state.listeners.get('apply:click')();
 		assert.deepEqual(submitted.at(-1), {
 			row: '5',
 			selected: ['5'],
-			expectation,
 			releaseReview: null,
 			releaseReviewNonce: null,
 		});

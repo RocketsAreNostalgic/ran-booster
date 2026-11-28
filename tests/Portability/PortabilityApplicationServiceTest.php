@@ -62,9 +62,6 @@ require_once __DIR__ . '/WpPusherCoexistenceWordPressFunctions.php';
 require_once __DIR__ . '/../Support/RepositorySourceGuardDatabase.php';
 
 final class PortabilityApplicationServiceTest extends TestCase {
-	/** @var array{provider_code:string,selection_generation:int,implementation_fingerprint:string}|null */
-	private ?array $provider_expectation = null;
-
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_wp_pusher_active_plugins']  = array();
@@ -108,7 +105,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			$item      = $service->review( $blueprint )[0];
 			self::assertSame( 'none', $item->reason->value );
 			foreach ( array( 'install', 'managed', 'blocked' ) as $forged_action ) {
-				self::assertSame( 'skipped', $service->apply( $blueprint, 0, $forged_action, array(), null, true, true, null, $this->provider_expectation )['status'] );
+				self::assertSame( 'skipped', $service->apply( $blueprint, 0, $forged_action, array(), null, true, true, null )['status'] );
 			}
 		}
 	}
@@ -123,7 +120,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$package   = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', 'main', null, null, array( 'commit' => str_repeat( 'a', 40 ) ) );
 		$blueprint = new PackageBlueprint( array( $package ) );
 		$service->review( $blueprint );
-		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, true, true, null, $this->provider_expectation )['status'] );
+		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, true, true, null )['status'] );
 	}
 
 	#[DataProvider( 'unsupported_initial_identifiers' )]
@@ -135,7 +132,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$blueprint = new PackageBlueprint( array( $package ) );
 		// A capitalised root folder would install in lower case, which the plan now names as a folder mismatch.
 		self::assertSame( 'Example/main.php' === $identifier ? 'package_folder_mismatch' : 'unsupported_blueprint_operation', $service->review( $blueprint )[0]->reason->value );
-		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, false, true, null, $this->provider_expectation )['status'] );
+		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, false, true, null )['status'] );
 	}
 
 	/** @return iterable<string,array{string}> */
@@ -183,7 +180,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$blueprint  = new PackageBlueprint( array( $package ) );
 		$review     = $service->review( $blueprint )[0];
 		self::assertSame( $capable ? 'install' : 'blocked', $review->action->value );
-		$result = $service->apply( $blueprint, 0, 'install', array(), null, false, true, null, $review->provider_expectation ?? $this->provider_expectation );
+		$result = $service->apply( $blueprint, 0, 'install', array(), null, false, true, null );
 		self::assertSame( $capable ? 'failed' : 'skipped', $result['status'] );
 		self::assertSame( 'unknown', $service->compare_local( $package )['installed_equality'] );
 	}
@@ -205,7 +202,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$GLOBALS['ran_booster_test_environment_type'] = 'production';
 		$GLOBALS['ran_booster_test_home_url']         = 'https://example.com';
 		try {
-			$result = $service->apply( $blueprint, 0, 'install', array(), null, false, true, null, $review->provider_expectation ?? $this->provider_expectation );
+			$result = $service->apply( $blueprint, 0, 'install', array(), null, false, true, null );
 		} finally {
 			unset( $GLOBALS['ran_booster_test_environment_type'], $GLOBALS['ran_booster_test_home_url'] );
 		}
@@ -231,7 +228,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$branch  = $this->package();
 		$release = new BlueprintPackage( 'plugin', 'release/release.php', 'Release', $branch->provider, $branch->provider_repository_id, $branch->repository, '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php' ) );
 		$service = $this->service( $plugins, $themes, $provider );
-		$result  = $service->apply( new PackageBlueprint( array( $branch, $release ) ), 0, 'install', array(), null, true, true, array( 0, 1 ), $this->provider_expectation );
+		$result  = $service->apply( new PackageBlueprint( array( $branch, $release ) ), 0, 'install', array(), null, true, true, array( 0, 1 ) );
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertStringContainsString( 'selected packages conflict', $result['message'] );
 	}
@@ -259,10 +256,9 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$provider->expects( self::once() )->method( 'resolve_repository' )->willReturn( $this->descriptor() );
 		$facade = $this->createMock( ProspectiveReleaseFacade::class );
 		$facade->expects( self::exactly( 2 ) )->method( 'nonce_action' )->willReturnCallback(
-			static function ( string $operation, string $type, ?array $expectation ): string {
+			static function ( string $operation, string $type ): string {
 				self::assertContains( $operation, array( 'list_candidates', 'inspect' ) );
 				self::assertSame( 'plugin', $type );
-				self::assertNull( $expectation );
 				return 'nonce-' . $operation;
 			}
 		);
@@ -338,68 +334,6 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		);
 	}
 
-	public function test_release_install_preview_refuses_selection_changed_during_inspection(): void {
-		$plugins = $this->createStub( PluginRepository::class );
-		$plugins->method( 'is_installed' )->willReturn( false );
-		$plugins->method( 'has_management_record' )->willReturn( false );
-		$provider = $this->provider();
-		$provider->method( 'resolve_repository' )->willReturn( $this->descriptor() );
-		$catalog   = new ProviderSecretPolicyCatalog();
-		$secrets   = new SecretsFile( null, array(), $catalog );
-		$registry  = new ProviderRegistry( array( $provider ), $catalog );
-		$selection = GitHubSelectionTestFixture::bind( $registry );
-		$store     = ( new \ReflectionProperty( $selection, 'store' ) )->getValue( $selection );
-		$database  = ( new \ReflectionProperty( $store, 'connection' ) )->getValue( $store );
-		$state     = new \ReflectionProperty( $selection, 'state' );
-		$facade    = $this->createMock( ProspectiveReleaseFacade::class );
-		$facade->method( 'nonce_action' )->willReturn( 'nonce' );
-		$facade->method( 'list_candidates' )->willReturn(
-			ProspectiveReleaseResult::success(
-				'release_candidates_available',
-				array(
-					'candidates' => array(
-						array(
-							'release_id' => '42',
-							'tag'        => 'v1.2.3',
-							'version'    => '1.2.3',
-						),
-					),
-				)
-			)
-		);
-		$facade->method( 'inspect' )->willReturnCallback(
-			static function () use ( $database, $state, $selection ): ProspectiveReleaseResult {
-				foreach ( $database->selection->rows as $row ) {
-					if ( 'ran_booster_github_selection' === $row->option_name ) {
-						$row->option_value = str_replace( '"selection_generation":0', '"selection_generation":1', $row->option_value );
-					}
-				}
-				$current                         = $state->getValue( $selection );
-				$current['selection_generation'] = 1;
-				$state->setValue( $selection, $current );
-				return ProspectiveReleaseResult::success(
-					'release_ready',
-					array(
-						'release_id'   => '42',
-						'tag'          => 'v1.2.3',
-						'version'      => '1.2.3',
-						'channel'      => 'stable',
-						'package_root' => 'example',
-						'main_file'    => 'example.php',
-						'fingerprint'  => 'v2:' . str_repeat( 'a', 64 ),
-					)
-				);
-			}
-		);
-		$service = new PortabilityApplicationService( new BlueprintReviewer( $plugins, $this->createStub( ThemeRepository::class ) ), new BlueprintRepositoryVerifier( $registry, $secrets, $selection ), ( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(), $secrets, prospective_releases: $facade );
-		$package = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, new ManagedReleaseConfiguration( 'example', 'example.php' ) );
-
-		$result = $service->review( new PackageBlueprint( array( $package ) ) )[0];
-
-		self::assertSame( TargetPackageAction::BLOCKED, $result->action );
-		self::assertSame( TargetPackageReason::PROVIDER_SELECTION_CHANGED, $result->reason );
-	}
-
 	public function test_release_install_preview_does_not_inspect_a_second_candidate_after_first_inspection_fails(): void {
 		$plugins = $this->createMock( PluginRepository::class );
 		$plugins->method( 'is_installed' )->willReturn( false );
@@ -450,7 +384,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$provider->expects( self::never() )->method( 'resolve_repository' );
 		$package = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, new ManagedReleaseConfiguration( 'example', 'example.php' ) );
 
-		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $this->provider_expectation );
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null );
 
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertSame( TargetPackageReason::RELEASE_REVIEW_CHANGED->message(), $result['message'] );
@@ -466,7 +400,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$review                = $this->release_review();
 		$review['fingerprint'] = str_repeat( 'a', 64 );
 
-		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $this->provider_expectation, $review );
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $review );
 
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertSame( TargetPackageReason::RELEASE_REVIEW_CHANGED->message(), $result['message'] );
@@ -520,7 +454,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			'main_file'    => 'example.php',
 		);
 
-		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $this->provider_expectation, $review );
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $review );
 
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertSame( TargetPackageReason::RELEASE_REVIEW_CHANGED->message(), $result['message'] );
@@ -583,7 +517,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			)
 		);
 		$facade->expects( self::once() )->method( 'install' )->willReturnCallback(
-			static function ( string $type, array $request, string $release_id, string $tag, string $fingerprint, string $channel, string $nonce, ?array $expectation, ?string $identifier, DeploymentPolicy $policy ): ProspectiveReleaseResult {
+			static function ( string $type, array $request, string $release_id, string $tag, string $fingerprint, string $channel, string $nonce, ?string $identifier, DeploymentPolicy $policy ): ProspectiveReleaseResult {
 				self::assertSame( 'plugin', $type );
 				self::assertSame( '42', $release_id );
 				self::assertSame( 'v1.2.3', $tag );
@@ -592,7 +526,6 @@ final class PortabilityApplicationServiceTest extends TestCase {
 				self::assertSame( 'example/example.php', $identifier );
 				self::assertSame( DeploymentPolicy::DISABLED, $policy );
 				self::assertSame( 'disabled', $request['deployment_policy'] );
-				self::assertNotNull( $expectation );
 				self::assertSame( wp_create_nonce( 'nonce' ), $nonce );
 				return ProspectiveReleaseResult::success( 'installed' );
 			}
@@ -611,7 +544,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			'main_file'    => 'example.php',
 		);
 
-		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade, store: $store )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $this->provider_expectation, $review );
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade, store: $store )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $review );
 
 		self::assertSame( 'installed', $result['status'] );
 	}
@@ -629,7 +562,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$facade->expects( self::never() )->method( 'install' );
 		$package = $this->release_package();
 
-		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $this->provider_expectation, $this->release_review() );
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $this->release_review() );
 
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertSame( 'none', $result['credential_state'] );
@@ -728,7 +661,6 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			false,
 			true,
 			null,
-			$this->provider_expectation,
 			$preview->release_review
 		);
 
@@ -824,7 +756,6 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			false,
 			true,
 			null,
-			$this->provider_expectation,
 			$preview->release_review
 		);
 
@@ -917,7 +848,6 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			false,
 			true,
 			null,
-			$this->provider_expectation,
 			$preview->release_review
 		);
 
@@ -960,7 +890,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$store         = $this->createStub( ManagedReleaseStore::class );
 		$store->method( 'configuration' )->willReturn( $configuration );
 
-		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade, store: $store )->apply( new PackageBlueprint( array( $this->release_package() ) ), 0, 'install', array(), null, false, true, null, $this->provider_expectation, $this->release_review() );
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade, store: $store )->apply( new PackageBlueprint( array( $this->release_package() ) ), 0, 'install', array(), null, false, true, null, $this->release_review() );
 
 		self::assertSame( 'failed', $result['status'] );
 		self::assertSame( 'none', $result['credential_state'] );
@@ -993,7 +923,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$store         = $this->createStub( ManagedReleaseStore::class );
 		$store->method( 'configuration' )->willReturn( $configuration );
 
-		$result = $this->service( $this->createStub( PluginRepository::class ), $themes, $provider, prospective: $facade, store: $store )->apply( new PackageBlueprint( array( $this->release_theme_package() ) ), 0, 'install', array(), null, false, true, null, $this->provider_expectation, $this->release_theme_review() );
+		$result = $this->service( $this->createStub( PluginRepository::class ), $themes, $provider, prospective: $facade, store: $store )->apply( new PackageBlueprint( array( $this->release_theme_package() ) ), 0, 'install', array(), null, false, true, null, $this->release_theme_review() );
 
 		self::assertSame( 'installed', $result['status'] );
 	}
@@ -1038,7 +968,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$facade->expects( self::once() )->method( 'install' )->willReturn( ProspectiveReleaseResult::failure( $code ) );
 		$package = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, new ManagedReleaseConfiguration( 'example', 'example.php' ) );
 
-		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $this->provider_expectation, $this->release_review() );
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade )->apply( new PackageBlueprint( array( $package ) ), 0, 'install', array(), null, false, true, null, $this->release_review() );
 
 		self::assertSame( 'failed', $result['status'] );
 		self::assertStringContainsString( $message, $result['message'] );
@@ -1102,15 +1032,15 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		);
 		$provider->method( 'has_registered_native_target' )->willReturn( false );
 		self::assertInstanceOf( RepositoryProvider::class, $provider );
-		$catalog   = new ProviderSecretPolicyCatalog();
-		$registry  = new ProviderRegistry( array( $provider ), $catalog );
-		$selection = GitHubSelectionTestFixture::bind( $registry );
-		$lock      = $this->createStub( WordPressUpdaterLock::class );
+		$catalog  = new ProviderSecretPolicyCatalog();
+		$registry = new ProviderRegistry( array( $provider ), $catalog );
+		$lock     = $this->createStub( WordPressUpdaterLock::class );
 		$lock->method( 'acquire' )->willReturn( 'lock' );
+		$lock->method( 'try_acquire_without_reclaim' )->willReturn( 'lock' );
 		$lock->method( 'release' )->willReturn( 'uncertain' !== $mode );
 		$lock->method( 'current_token' )->willReturn( 'lock' );
 		$guard      = new RepositorySourceGuard( new RepositorySourceGuardDatabase(), $this->createStub( Database::class ) );
-		$registrar  = new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $registry, $selection, $guard );
+		$registrar  = new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $registry, $guard );
 		$facade     = new NativeReleaseTrackingFacade( $plugins, $themes, $store, $registrar, $lock, $registry, metadata_eligible: static fn (): bool => true, source_guard: $guard );
 		$operations = new PackageOperationService( $plugins, $themes, $this->createStub( DeploymentCoordinator::class ), ( new ReflectionClass( PackageRemovalService::class ) )->newInstanceWithoutConstructor(), $lock, $guard );
 		$secrets    = $this->createMock( SecretsFile::class );
@@ -1128,15 +1058,14 @@ final class PortabilityApplicationServiceTest extends TestCase {
 				'secret'   => 'synthetic-preview-material',
 			)
 		);
-		$service   = new PortabilityApplicationService( new BlueprintReviewer( $plugins, $themes ), new BlueprintRepositoryVerifier( $registry, $secrets, $selection ), $operations, $secrets, $facade, $store );
+		$service   = new PortabilityApplicationService( new BlueprintReviewer( $plugins, $themes ), new BlueprintRepositoryVerifier( $registry, $secrets ), $operations, $secrets, $facade, $store );
 		$blueprint = new PackageBlueprint( array( new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, $config ) ) );
 		$item      = $service->review( $blueprint, array(), array( 0 => 'profile' ) )[0];
 		self::assertSame( TargetPackageReason::NONE, $item->reason );
 		self::assertSame( TargetPackageAction::ADOPT, $item->action );
-		self::assertSame( $selection->expectation(), $item->provider_expectation );
 		if ( 'revoked' === $mode ) {
 			try {
-				$service->apply( $blueprint, 0, 'adopt', array(), 'profile', true, true, null, $item->provider_expectation );
+				$service->apply( $blueprint, 0, 'adopt', array(), 'profile', true, true, null );
 				self::fail( 'The final credential verification must refuse a revoked target profile.' );
 			} catch ( RuntimeException $failure ) {
 				self::assertStringContainsString( 'not ready for published release tracking', $failure->getMessage() );
@@ -1145,7 +1074,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			return;
 		}
 
-		$result = $service->apply( $blueprint, 0, 'adopt', array(), 'profile', true, true, null, $item->provider_expectation );
+		$result = $service->apply( $blueprint, 0, 'adopt', array(), 'profile', true, true, null );
 		if ( 'uncertain' === $mode ) {
 			self::assertSame( 'failed', $result['status'] );
 			self::assertStringContainsString( 'could not confirm the release adoption outcome', $result['message'] );
@@ -1177,8 +1106,8 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$release   = new BlueprintPackage( 'plugin', 'release/release.php', 'Release', $branch->provider, $branch->provider_repository_id, $branch->repository, '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php' ) );
 		$blueprint = new PackageBlueprint( array( $branch, $release ) );
 		$service   = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider );
-		self::assertSame( 'failed', $service->apply( $blueprint, 0, 'install', array(), null, false, false, array( 0 ), $this->provider_expectation )['status'] );
-		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, false, true, array( 0, 1 ), $this->provider_expectation )['status'] );
+		self::assertSame( 'failed', $service->apply( $blueprint, 0, 'install', array(), null, false, false, array( 0 ) )['status'] );
+		self::assertSame( 'skipped', $service->apply( $blueprint, 0, 'install', array(), null, false, true, array( 0, 1 ) )['status'] );
 	}
 
 	/** @param array<int,mixed> $selection */
@@ -1189,7 +1118,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$provider = $this->provider();
 		$provider->expects( self::never() )->method( 'resolve_repository' );
 		$this->expectException( InvalidArgumentException::class );
-		$this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'install', array(), null, true, true, $selection, $this->provider_expectation );
+		$this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'install', array(), null, true, true, $selection );
 	}
 
 	/** @return iterable<string,array{array<int,mixed>}> */
@@ -1226,7 +1155,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$service   = $this->service( $plugins, $themes, $provider );
 		$blueprint = new PackageBlueprint( $packages );
 		foreach ( $packages as $row => $package ) {
-			$result = $service->apply( $blueprint, $row, 'install', array(), null, false, false, null, $this->provider_expectation );
+			$result = $service->apply( $blueprint, $row, 'install', array(), null, false, false, null );
 			self::assertSame( 'failed', $result['status'] );
 		}
 		self::assertSame( array_map( static fn ( BlueprintPackage $package ): string => $package->identifier, $packages ), $identifiers );
@@ -1250,7 +1179,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$provider->expects( self::never() )->method( 'resolve_repository' );
 
 		$this->expectException( InvalidArgumentException::class );
-		$this->service( $plugins, $themes, $provider )->apply( new PackageBlueprint( array( $this->package() ) ), $row, 'install', array(), null, true, true, null, $this->provider_expectation );
+		$this->service( $plugins, $themes, $provider )->apply( new PackageBlueprint( array( $this->package() ) ), $row, 'install', array(), null, true, true, null );
 	}
 
 	/** @return iterable<string, array{int}> */
@@ -1274,7 +1203,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$provider->expects( self::never() )->method( 'resolve_repository' );
 		$blueprint = new PackageBlueprint( array( new BlueprintPackage( 'theme', 'other-theme', 'Other', 'gh', 'other-id', 'owner/other', 'main', null ), $this->package() ) );
 
-		$result = $this->service( $plugins, $themes, $provider )->apply( $blueprint, 1, 'adopt', array(), null, true, true, null, $this->provider_expectation );
+		$result = $this->service( $plugins, $themes, $provider )->apply( $blueprint, 1, 'adopt', array(), null, true, true, null );
 
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertStringContainsString( 'changed since review', $result['message'] );
@@ -1289,7 +1218,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 
 		$this->expectException( PackageStorageFailure::class );
 		$this->expectExceptionMessage( 'database requirements' );
-		$this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'install', array(), null, true, true, null, $this->provider_expectation );
+		$this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'install', array(), null, true, true, null );
 	}
 
 	#[DataProvider( 'early_refusals' )]
@@ -1300,7 +1229,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$plugins->method( 'has_management_record' )->willReturn( false );
 		$provider->expects( self::never() )->method( 'resolve_repository' );
 
-		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $this->package() ) ), 0, $installed ? 'adopt' : 'install', array(), null, $adopt, $can_install, null, $this->provider_expectation );
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $this->package() ) ), 0, $installed ? 'adopt' : 'install', array(), null, $adopt, $can_install, null );
 
 		self::assertSame( $status, $result['status'] );
 		self::assertSame( 'none', $result['credential_state'] );
@@ -1323,7 +1252,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$plugins->expects( self::never() )->method( 'installed_plugin_from_file' );
 		$provider->expects( self::once() )->method( 'resolve_repository' )->willReturn( $this->descriptor( 'different-id' ) );
 
-		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'adopt', array(), null, true, true, null, $this->provider_expectation );
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'adopt', array(), null, true, true, null );
 
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertSame( 'none', $result['credential_state'] );
@@ -1350,7 +1279,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			}
 		);
 		$lock = $this->createMock( WordPressUpdaterLock::class );
-		$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'test-lock' );
+		$lock->expects( self::once() )->method( 'try_acquire_without_reclaim' )->willReturn( 'test-lock' );
 		$lock->expects( self::once() )->method( 'release' )->with( 'test-lock' )->willReturn( true );
 		$operations = new PackageOperationService(
 			$plugins,
@@ -1368,9 +1297,9 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			$input          = new PortabilityCandidate( 'plugin', 'example/example.php', 'Example', 'gh', 'owner/repository', 'main' );
 			$review         = $service->review_candidate( $input );
 			$changed->value = false;
-			$service->apply_candidate( $input, $review->fingerprint, $review->provider_expectation );
+			$service->apply_candidate( $input, $review->fingerprint );
 		} else {
-			$service->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'adopt', array(), null, true, true, null, $this->provider_expectation );
+			$service->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'adopt', array(), null, true, true, null );
 		}
 	}
 
@@ -1407,7 +1336,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 			$lifecycle->expects( self::once() )->method( 'require_ready' );
 		}
 		$lock = $this->createMock( WordPressUpdaterLock::class );
-		$lock->expects( self::once() )->method( 'acquire' )->willReturn( 'test-lock' );
+		$lock->expects( self::once() )->method( 'try_acquire_without_reclaim' )->willReturn( 'test-lock' );
 		$lock->expects( self::once() )->method( 'release' )->with( 'test-lock' )->willReturn( true );
 		$operations = new PackageOperationService(
 			$plugins,
@@ -1419,7 +1348,7 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		);
 		$this->expectException( PackageStorageFailure::class );
 		$this->expectExceptionMessage( $unsupported ? 'database requirements' : 'already supplies releases' );
-		$this->service( $plugins, $themes, $provider, $operations )->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'adopt', array(), null, true, true, null, $this->provider_expectation );
+		$this->service( $plugins, $themes, $provider, $operations )->apply( new PackageBlueprint( array( $this->package() ) ), 0, 'adopt', array(), null, true, true, null );
 	}
 
 	/** @return iterable<string, array{bool}> */
@@ -1528,14 +1457,12 @@ final class PortabilityApplicationServiceTest extends TestCase {
 	}
 
 	private function service( PluginRepository $plugins, ThemeRepository $themes, RepositoryProvider $provider, ?PackageOperationService $operations = null, ?ProspectiveReleaseFacade $prospective = null, ?ManagedReleaseStore $store = null, ?SecretsFile $secrets = null ): PortabilityApplicationService {
-		$catalog                    = new ProviderSecretPolicyCatalog();
-		$secrets                  ??= new SecretsFile( null, array(), $catalog );
-		$registry                   = new ProviderRegistry( array( $provider ), $catalog );
-		$selection                  = GitHubSelectionTestFixture::bind( $registry );
-		$this->provider_expectation = $selection->expectation();
+		$catalog   = new ProviderSecretPolicyCatalog();
+		$secrets ??= new SecretsFile( null, array(), $catalog );
+		$registry = new ProviderRegistry( array( $provider ), $catalog );
 		return new PortabilityApplicationService(
 			new BlueprintReviewer( $plugins, $themes ),
-			new BlueprintRepositoryVerifier( $registry, $secrets, $selection ),
+			new BlueprintRepositoryVerifier( $registry, $secrets ),
 			$operations ?? ( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
 			$secrets,
 			release_store: $store ?? new ManagedReleaseStore(),

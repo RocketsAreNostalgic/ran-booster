@@ -680,7 +680,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 1, $lock->acquires );
 
 		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
-		self::assertSame( 1, $lock->token_reads );
+		// Ownership is read before and after the authority reads.
+		self::assertSame( 2, $lock->token_reads );
 		$registrar->complete_native_mutation( $upgrader, self::NATIVE_EXTRA );
 
 		self::assertSame( array(), $lock->releases );
@@ -1014,7 +1015,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		try {
 			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 			self::fail( 'Foreign authority read replaced the lock.' );
-		} catch ( \RuntimeException ) {
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'GitHub native lock ownership changed before mutation.', $exception->getMessage() );
 			self::assertSame( array(), $lock->releases );
 		}
 	}

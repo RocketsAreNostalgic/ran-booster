@@ -480,6 +480,10 @@ final class ManagedReleaseTargetRegistrar {
 		if ( isset( $this->switches[ $key ] ) && true === $this->attempts?->has_unresolved_target_attempt( $type, $identity, true ) ) {
 			throw new \RuntimeException( 'A deployment attempt still owns the switched package.' );
 		}
+		// The authority reads above can run foreign code; admit only the lock this update staged.
+		if ( $pending['lock'] !== $this->updater_lock->current_token() ) {
+			throw new \RuntimeException( 'GitHub native lock ownership changed before mutation.' );
+		}
 		$owner                                        = bin2hex( random_bytes( 16 ) );
 		$this->native_updates[ $key ]['native_owner'] = $owner;
 

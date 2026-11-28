@@ -65,6 +65,20 @@ final class GitHubVisibilityTest extends TestCase {
 		}
 	}
 
+	public function test_github_stays_visible_when_its_bundled_module_failed_to_build(): void {
+		$providers = new ProviderRegistry( array( new ExternalFixtureProvider( 'bb' ) ) );
+		$providers->seal();
+
+		self::assertSame(
+			array(
+				'hidden'   => false,
+				'eligible' => false,
+				'reason'   => 'provider_registry_unknown',
+			),
+			( new GitHubVisibility( new GeneralPreferenceStore(), $providers, new GitHubVisibilityConnection() ) )->projection()
+		);
+	}
+
 	public function test_management_admission_locks_the_exact_github_provider_range_before_save_work(): void {
 		$connection = new GitHubVisibilityConnection();
 		$visibility = new GitHubVisibility( new GeneralPreferenceStore(), connection: $connection );

@@ -249,11 +249,11 @@ final readonly class ProviderSettingsPresenter {
 	}
 
 	/**
-	 * Who supplies GitHub, for Troubleshooting. Its name is kept until Dashboard stops asking for it.
+	 * Who supplies GitHub, for Troubleshooting.
 	 *
 	 * @return array{message:?string}
 	 */
-	public function github_selection_diagnostics(): array {
+	public function github_supplier_diagnostics(): array {
 		return array( 'message' => $this->github_supplier?->sentence() );
 	}
 

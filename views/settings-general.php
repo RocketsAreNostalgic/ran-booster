@@ -80,7 +80,6 @@ $visibility_reasons     = array(
 	'no_other_provider'         => __( 'Another active non-GitHub provider is required before this can be hidden.', 'ran-booster' ),
 	'active_github_replacement' => __( 'GitHub remains visible while a plugin other than Booster provides it.', 'ran-booster' ),
 	'github_management_present' => __( 'GitHub remains visible while this site manages GitHub packages.', 'ran-booster' ),
-	'github_selection_unknown'  => __( 'GitHub remains visible until its local management state is known.', 'ran-booster' ),
 	'provider_registry_unknown' => __( 'GitHub remains visible until provider availability is known.', 'ran-booster' ),
 );
 $hide                   = $field( 'hide_github' );

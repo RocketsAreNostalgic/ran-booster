@@ -864,7 +864,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'panel' => 'diagnostics',
 		);
 		$diagnostics = $dashboard->get_index()['data'];
-		self::assertSame( array( 'message' => $sentence ), $diagnostics['github_selection_diagnostics'] );
+		self::assertSame( $sentence, $diagnostics['troubleshooting']['github_supplier'] );
 		self::assertArrayNotHasKey( 'github_supplier', $diagnostics );
 	}
 
@@ -1906,11 +1906,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=bb&view=credentials&replace_credential=saved', $credential_url->invoke( $instance, array( 'provider' => 'bb' ) + $failure ), $emitter );
 		}
 		$hidden_dashboard = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_visibility: $visibility );
-		$_GET             = array(
-			'tab'   => 'troubleshooting',
-			'panel' => 'installation',
-		);
-		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $hidden_dashboard->get_index()['data']['selection_provider_tab_url'] );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $hidden_dashboard->provider_tab_url( 'gh' ) );
 		$_GET = array( 'tab' => 'gh' );
 
 		$secrets = $this->createMock( SecretsFile::class );
@@ -1958,11 +1954,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		$dashboard = $this->dashboard( $this->throwing_secrets(), providers: $providers, github_supplier: new \RAN\Admin\GitHubSupplierNotice( $providers ), github_visibility: $visibility );
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $dashboard->provider_tab_url( 'gh' ) );
-		$_GET = array(
-			'tab'   => 'troubleshooting',
-			'panel' => 'installation',
-		);
-		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $dashboard->get_index()['data']['selection_provider_tab_url'] );
 		$_GET = array( 'tab' => 'gh' );
 		$data = $dashboard->get_index()['data'];
 		self::assertArrayNotHasKey( 'route_not_found', $data );

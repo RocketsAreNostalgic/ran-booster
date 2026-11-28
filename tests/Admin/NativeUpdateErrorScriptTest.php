@@ -64,7 +64,25 @@ final class NativeUpdateErrorScriptTest extends TestCase {
 		self::assertSame( array(), array_filter( $GLOBALS['ran_booster_native_warning_actions'], static fn ( array $action ): bool => 'heartbeat_received' === $action['hook'] ) );
 	}
 
-	private function booster(): Booster {
+	public function test_the_github_supplier_notice_hooks_site_admin_screens_only(): void {
+		$rendered = new \ArrayObject();
+		$this->booster( $rendered )->init();
+		foreach ( array(
+			'admin_notices'         => 1,
+			'network_admin_notices' => 0,
+		) as $hook => $expected ) {
+			$rendered->exchangeArray( array() );
+			foreach ( $GLOBALS['ran_booster_native_warning_actions'] as $action ) {
+				if ( $hook === $action['hook'] ) {
+					$action['callback']();
+				}
+			}
+			self::assertCount( $expected, $rendered, $hook );
+		}
+	}
+
+	/** @param \ArrayObject<int,string>|null $supplier_renders Records each GitHub supplier notice render. */
+	private function booster( ?\ArrayObject $supplier_renders = null ): Booster {
 		$container = new CoreContainer();
 		foreach ( array(
 			'RAN\\Admin\\ProviderTabLinks',
@@ -84,6 +102,21 @@ final class NativeUpdateErrorScriptTest extends TestCase {
 			'RAN\\Admin\\GitHubSupplierNotice',
 			'RAN\\Admin\\ManagedPluginFailureRows',
 		) as $service ) {
+			if ( 'RAN\\Admin\\GitHubSupplierNotice' === $service && null !== $supplier_renders ) {
+				$container->bind(
+					$service,
+					new class( $supplier_renders ) {
+						/** @param \ArrayObject<int,string> $renders */
+						public function __construct( private \ArrayObject $renders ) {
+						}
+
+						public function render(): void {
+							$this->renders->append( 'render' );
+						}
+					}
+				);
+				continue;
+			}
 			$container->bind(
 				$service,
 				new class() {

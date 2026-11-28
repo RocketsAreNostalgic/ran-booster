@@ -523,6 +523,8 @@ final class PackageRemovalServiceTest extends TestCase {
 					$result                                     = $service->execute( PackageOperation::from_input( $action, $this->input() ) );
 					self::assertSame( 'operation_in_progress', $result->outcome_code );
 					self::assertSame( $held, $database->option_rows['auto_updater.lock'] );
+					// The refused Unlink leaves the holder its read observed for the failure notice to name.
+					self::assertSame( $held, WordPressUpdaterLock::take_refusal() );
 					self::assertFalse( $fixture->plugins->unlinked );
 					self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
 					self::assertSame( 7, $fixture->plugin->get_source_revision() );
@@ -1351,7 +1353,8 @@ final class RemovalUpdaterLock extends WordPressUpdaterLock {
 	/** @var list<string> */
 	public array $events = array();
 
-	public function acquire(): string {
+	public function acquire( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): string {
+		unset( $owner_operation );
 		$this->events[] = 'acquire';
 		if ( ! $this->available ) {
 			throw new \RuntimeException( 'Fixture lock unavailable.' );
@@ -1360,7 +1363,8 @@ final class RemovalUpdaterLock extends WordPressUpdaterLock {
 		return 'fixture-lock';
 	}
 
-	public function try_acquire_without_reclaim(): ?string {
+	public function try_acquire_without_reclaim( string $owner_operation = WordPressUpdaterLock::DEFAULT_OPERATION ): ?string {
+		unset( $owner_operation );
 		$this->events[] = 'acquire';
 		return $this->available ? 'fixture-lock' : null;
 	}

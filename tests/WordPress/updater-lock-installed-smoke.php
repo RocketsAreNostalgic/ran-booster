@@ -23,6 +23,7 @@ final class RAN_Booster_UpdaterLockInstalledSmoke {
 			$token                = $lock->acquire();
 			$this->owned_tokens[] = $token;
 			$this->check( $token === $this->row() && $token === $lock->current_token(), 'The actual facade must acquire and read its exact native row.' );
+			$this->check( ( $lock->recorded_owner()['token'] ?? null ) === $token, 'The facade must record its owner through the locking write on this database.' );
 			$this->check_cache( false );
 			$this->prime_cache();
 			$this->check( ! $lock->release( $token . '-wrong' ), 'Wrong-token release must fail.' );

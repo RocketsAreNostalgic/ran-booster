@@ -43,10 +43,10 @@ The runtime path is intentionally serial:
 1. The normalized branch updater acquires and validates the provider archive;
    the Booster host boundary supplies provider custody, local readiness and
    capacity checks, durable journal updates, and target facts.
-1. The shared WordPress updater lock is acquired before filesystem mutation.
-   The admitted runner re-checks the target, provider head, artifact identity,
-   maintenance state and mutation fence before using its WordPress Core package
-   executor.
+1. The admitted runner makes its last provider branch-head check, then acquires
+   the shared WordPress updater lock before filesystem mutation. Under the lock
+   it re-checks the target, downgrade, artifact identity, maintenance state and
+   mutation fence before using its WordPress Core package executor.
 1. The attempt is finished with a terminal `DeploymentOutcome`.
 
 Branch-source manual installs and updates share this execution machinery. Web

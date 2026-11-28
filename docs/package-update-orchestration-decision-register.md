@@ -79,6 +79,7 @@ Release Deployments `main` at `986b8aa`, and updater `main` at `2d9300c`.
 | PU-036 | Deliberate non-goal | One repository release serving several managed packages | Asset-to-package mapping, coordinated versioning and additional packaging conventions would expand the release contract and support surface. | Keep workflow-independent consumption of one compatible uploaded package ZIP. Booster workflow setup is optional; users may publish manually or with their own automation. | A separate explicit product decision approves a multi-package artifact and ownership contract; relaxing PU-035 alone is not sufficient. |
 | PU-037 | Current boundary | A switch from Branch to published releases that changes only the stored source (the 2026-11-16 fallback), and any Core installer, marker file, receipt, saga or stored switch state | The owner decided on #903 (2026-11-21) that the switch installs the chosen release. WordPress's native upgrader and the existing install custody already own installation and recovery. | The registrar admits the package for this request only. The updater's exact-release filter offers the chosen release, with no refresh before the upgrade, and one native upgrade runs. The source changes only on a verified install, inside the transaction that ends the install's custody. A refused or failed switch stays on Branch, and WordPress rechecks for updates at the end of the request. An uncertain or interrupted install keeps custody and uses the existing recovery. An older release is refused until the interface passes the "older is intended" argument after the operator confirms. A package whose Updates setting is Disabled or forced off by the site's configuration is refused; the operator sets Manual first. No failure message says the previous version was restored or implies a backup exists. | WordPress gains a supported way to install one exact version of one package; the completion can no longer stay inside the source transaction; or PU-036 changes. |
 | PU-038 | Current boundary / Deferred | A late Level B ownership hook, database named locks, arbitrary/shorter lock-age deletion, file-lock proof as P0 authority, per-package hold storage, or a third "refused before files changed" completion outcome (#987) | WordPress offers no hook between its backup move and file copy; database named locks give false proof across reconnects/pools; file locks do not generalize off single local disks; arbitrary lock deletion can remove a live update's lock; and per-package holds or a third outcome add stored/protocol complexity for rare cases. | Record `finished` vs `started` on the existing hold marker; offer in-place release on the package page for readable targets; keep removal verification on the GitHub page for missing, damaged, or unmanaged targets; carry the owner's `auto_updater.lock` token in `owner_tag` (omitted for WordPress automatic updates, which rely on WordPress's shared run lock) so confirmed release of an unfinished hold frees only its exact lock and inherits WordPress's one-hour stale-lock reclaim as fallback. | File-lock proof is justified by killed-request holds in practice (file lock), the "refused before files changed" case proves common (#987), or per-package holds are promoted (#1179). |
+| PU-039 | Current boundary | A second lock, a lock token carrying Booster data, an attempt-row lock field, or releasing a Booster lock by its age (#1180) | `auto_updater.lock` must keep the Branch updater's WordPress-compatible token, a second lock repeats PU-004's stale-owner machinery, and elapsed time never proves that a killed request stopped. | `WordPressUpdaterLock` writes one non-autoloaded `ran_booster_updater_lock_owner` option holding the token, operation and start time whenever Booster takes the lock and removes it on release. After a refused action, a record is shown with a confirmed Release action only while its token is both the refusing holder and the exact current lock row; any other lock keeps the hour-old reclaim. | A Booster lock path cannot write the record beside its acquisition, or WordPress gives `auto_updater.lock` its own owner metadata. |
 
 PU-014 remains the historical reason Core must not simply omit its target
 registration. Its reconsideration trigger is satisfied by updater
@@ -451,3 +452,65 @@ request recorded its end (`finished`) or never recorded completion (`started`).
   unfinished hold's confirmed recovery frees only that exact lock row before
   taking `auto_updater.lock` normally; any other lock falls back to WordPress's
   inherited one-hour stale-lock reclaim without relying on external cron runs.
+
+## 2026-11-27 identifiable Booster updater locks (#1180)
+
+### PU-039: one lock-owner record beside `auto_updater.lock`
+
+A request killed while holding `auto_updater.lock` blocked every Booster
+package action for up to an hour, with no screen saying why. The owner decided
+on 2026-11-27 that Booster's locks are identifiable through one lock-owner
+record, and that the Branch case from 2026-11-21 uses the same record.
+
+**Ruled out:**
+
+- A second lock or reservation (PU-004).
+- Carrying Booster data in the lock token: the token stays the Branch updater's
+  WordPress-compatible value, so WordPress and the updater keep reading it.
+- A lock-token field on the deployment attempt row: replaced by the shared
+  record.
+- Releasing a lock because of its age: elapsed time is not evidence that the
+  owning request stopped.
+
+**Accepted shape:**
+
+- Every Booster path takes the lock through `RAN\WordPress\WordPressUpdaterLock`,
+  which writes `ran_booster_updater_lock_owner` with the token, the operation
+  and the start time, and removes it on release. Callers that do not yet name
+  their operation record `package_operation`; #1228 item 1 has them pass a
+  specific code.
+- The transactional acquisition writes the record in the same transaction, so
+  the lock is not taken without it. Elsewhere a failed record write keeps the
+  lock and only falls back to the hour-old reclaim.
+- The record is written only while the lock row still holds the writer's exact
+  token, through a locking read of that row, so a replacing owner cannot slip
+  between the check and the write under READ COMMITTED. When the write finds
+  the row no longer holds the token, the request does not own the lock: its
+  acquisition fails and nothing runs.
+- A record counts only while its token is the exact current lock row. A record
+  left behind and a lock WordPress took for its own updates (PU-017) therefore
+  never show an owner.
+- The #987 hold and its recovery lock have different lifetimes. The hold lives
+  in the GitHub selection record across requests until an operator releases it,
+  and its `owner_tag` recovery (PU-038) stays separate from this record. The
+  recovery request takes `auto_updater.lock` through
+  `acquire_replacing_owner()` or `acquire()`, so while it holds the lock it is
+  recorded like any other operation, and the record goes when it releases.
+- Booster names a lock's operation and start time only when the recorded
+  token is the holder that refused the action, read by the same query that
+  refused it, and offers Release behind an explicit confirmation that the
+  operation stopped. The form's nonce is bound to that token, and Release
+  deletes only that exact lock row. Each acquisition clears any refusal left
+  from earlier in the request, so a later success never names an old holder.
+- Where it is named: any error notice on a Dashboard page rendered in the
+  request that the lock refused, which covers refused manual Branch
+  deployments, Unlink and Unlink and delete; a bulk action refused with
+  `unavailable`, through the token in its signed result page; and a Check
+  branch that returns `unable_to_check`, on the page that ran it. GitHub
+  adoption and access-profile delete answer through the signed interaction
+  flow, or through a redirect that carries no token, so they show no owner yet
+  (#1336).
+- Activity pages offer no Release. A deployment attempt row holds no lock
+  token, so nothing ties whoever holds the lock now to a stopped attempt.
+- Persistent-state cost: one option row per site, not autoloaded, removed on
+  uninstall.

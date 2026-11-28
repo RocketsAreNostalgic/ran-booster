@@ -25,6 +25,8 @@ use RuntimeException;
 require_once __DIR__ . '/../Deployment/AttemptRepositoryDatabase.php';
 
 final class WordPressUpdaterLockTest extends TestCase {
+	private const OWNER = 'ran_booster_updater_lock_owner';
+
 	private AttemptRepositoryDatabase $database;
 	private mixed $previous_database;
 
@@ -39,6 +41,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 
 	#[After]
 	protected function restore_database(): void {
+		WordPressUpdaterLock::take_refusal();
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the WordPress database boundary installed by this isolated test.
 		$GLOBALS['wpdb'] = $this->previous_database;
 	}
@@ -106,17 +109,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 		$fresh  = (string) ( time() + 600 );
 		$stale  = (string) ( time() - 7200 );
 		$store  = new GitHubSelectionStore( $this->database, 'wp_options' );
-		$bundle = new GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
+		$bundle = self::bundled_declaration();
 		$store->initialize_bundled( $bundle );
 		$selection = new GitHubProviderSelection( $store, '/unused', $bundle );
 
@@ -332,17 +325,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 	}
 
 	public function test_core_and_the_branch_updater_agree_on_a_fractional_row_at_the_expiry_cutoff(): void {
-		$declaration = new GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
+		$declaration = self::bundled_declaration();
 		$store       = new GitHubSelectionStore( $this->database, 'wp_options' );
 		$store->initialize_bundled( $declaration );
 		$selection = new GitHubProviderSelection( $store, '/unused', $declaration );
@@ -379,6 +362,210 @@ final class WordPressUpdaterLockTest extends TestCase {
 		self::assertSame( array( false, false, true, true ), $results[ (string) $cutoff ] );
 	}
 
+	public function test_every_booster_acquisition_records_its_owner_and_release_removes_it(): void {
+		$lock  = $this->lock_at( 1700000000 );
+		$token = $lock->acquire( 'branch_deployment' );
+		self::assertSame( $token . '|branch_deployment|1700000000', $this->database->option_rows[ self::OWNER ] );
+		self::assertSame(
+			array(
+				'token'      => $token,
+				'operation'  => 'branch_deployment',
+				'started_at' => 1700000000,
+			),
+			$lock->recorded_owner()
+		);
+		self::assertTrue( $lock->release( $token ) );
+		self::assertSame( array(), $this->database->option_rows );
+
+		// Callers that pass no operation, or an invalid code, record the generic one.
+		$token = (string) $lock->try_acquire_without_reclaim();
+		self::assertSame( WordPressUpdaterLock::DEFAULT_OPERATION, $lock->recorded_owner()['operation'] ?? null );
+		$replacement = $lock->acquire_replacing_owner( $token, 'Not A Code' );
+		self::assertSame( $replacement . '|package_operation|1700000000', $this->database->option_rows[ self::OWNER ] );
+		self::assertTrue( $lock->release( $replacement ) );
+		$seen = null;
+		$lock->run(
+			function () use ( $lock, &$seen ): void {
+				$seen = $lock->recorded_owner()['operation'] ?? null;
+			},
+			owner_operation: 'extension_install'
+		);
+		self::assertSame( 'extension_install', $seen );
+		self::assertSame( array(), $this->database->option_rows );
+	}
+
+	public function test_a_lock_the_record_does_not_name_is_never_shown_or_released(): void {
+		$lock   = new WordPressUpdaterLock();
+		$token  = $lock->acquire();
+		$record = $this->database->option_rows[ self::OWNER ];
+		// A different lock row (WordPress's own, or another owner) or a malformed record names no Booster owner.
+		foreach ( array(
+			(string) time() => $record,
+			$token          => $token . '|package_operation',
+		) as $row => $owner ) {
+			$this->database->option_rows['auto_updater.lock'] = (string) $row;
+			$this->database->option_rows[ self::OWNER ]       = $owner;
+			self::assertNull( $lock->recorded_owner() );
+			self::assertFalse( $lock->release_recorded_owner( $token ) );
+			self::assertSame( (string) $row, $this->database->option_rows['auto_updater.lock'] );
+		}
+		unset( $this->database->option_rows['auto_updater.lock'] );
+		self::assertNull( $lock->recorded_owner() );
+
+		$this->database->option_rows['auto_updater.lock'] = $token;
+		$this->database->option_rows[ self::OWNER ]       = $record;
+		self::assertFalse( $lock->release_recorded_owner( $token . '1' ) );
+		self::assertSame( $token, $this->database->option_rows['auto_updater.lock'] );
+		self::assertTrue( $lock->release_recorded_owner( $token ) );
+		self::assertSame( array(), $this->database->option_rows );
+	}
+
+	public function test_a_lost_owner_record_keeps_the_lock_and_shows_no_owner(): void {
+		// A failed write, and zero rows that come with a database error, both keep the lock without an owner.
+		// The log carries the normalised operation code, never the raw operation.
+		foreach ( array(
+			'fail_query_contains' => 'Not a code <b>',
+			'zero_query_contains' => 'package_operation',
+		) as $failure => $operation ) {
+			$database               = $this->database;
+			$database->{$failure}   = 'ON DUPLICATE KEY UPDATE';
+			$database->before_query = static function ( string $query ) use ( $database ): void {
+				$database->last_error = str_contains( $query, 'ON DUPLICATE KEY UPDATE' ) ? 'database details must not escape' : '';
+			};
+			$lock                   = new WordPressUpdaterLock();
+			$token                  = '';
+			$logged                 = $this->logged_lines(
+				static function () use ( $lock, $operation, &$token ): void {
+					$token = $lock->acquire( $operation );
+				}
+			);
+			$database->{$failure}   = null;
+			$database->before_query = null;
+			$database->last_error   = '';
+			self::assertSame( array( '[ran-booster] updater lock owner not recorded {"step":"updater_lock_owner","operation":"package_operation","event":"write_failed"}' ), $logged, $failure );
+			self::assertSame( $token, $database->option_rows['auto_updater.lock'] );
+			self::assertArrayNotHasKey( self::OWNER, $database->option_rows );
+			self::assertNull( $lock->recorded_owner() );
+			self::assertTrue( $lock->release( $token ) );
+		}
+	}
+
+	public function test_a_request_that_lost_the_lock_before_recording_its_owner_never_runs_the_operation(): void {
+		$other  = '1700000000.' . str_repeat( '7', 27 );
+		$lock   = new class( $this->database, $other ) extends WordPressUpdaterLock {
+			private bool $paused = false;
+
+			public function __construct( private AttemptRepositoryDatabase $db, private string $other ) {}
+
+			protected function now(): int {
+				// Another owner takes the lock while this request pauses between acquiring it and recording its owner.
+				if ( ! $this->paused ) {
+					$this->paused                               = true;
+					$this->db->option_rows['auto_updater.lock'] = $this->other;
+					$this->db->option_rows['ran_booster_updater_lock_owner'] = $this->other . '|package_operation|1700000000';
+				}
+				return time();
+			}
+		};
+		$ran    = array();
+		$logged = $this->logged_lines(
+			static function () use ( $lock, &$ran ): void {
+				try {
+					$lock->run(
+						static function () use ( &$ran ): void {
+							$ran[] = 'operation';
+						}
+					);
+				} catch ( RuntimeException $failure ) {
+					$ran[] = $failure->getMessage();
+				}
+			}
+		);
+		self::assertSame( array( 'The WordPress updater is already running.' ), $ran );
+		self::assertSame( array( '[ran-booster] updater lock owner not recorded {"step":"updater_lock_owner","operation":"package_operation","event":"ownership_lost"}' ), $logged );
+		self::assertSame( $other, $this->database->option_rows['auto_updater.lock'] );
+		self::assertSame( $other . '|package_operation|1700000000', $this->database->option_rows[ self::OWNER ] );
+		// The lost request observed no holder that refused it, so no owner is named for it.
+		self::assertNull( WordPressUpdaterLock::take_refusal() );
+	}
+
+	/**
+	 * @param callable(): void $action
+	 * @return list<string>
+	 */
+	private function logged_lines( callable $action ): array {
+		$directory = sys_get_temp_dir() . '/ran-updater-lock-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new TemporaryDebugCapture( $directory . '/secrets.json' );
+		BoosterLogger::configure_capture( $capture );
+		try {
+			$capture->start();
+			$action();
+			return array_values( array_map( 'strval', array_column( $capture->snapshot()['entries'], 'line' ) ) );
+		} finally {
+			BoosterLogger::configure_capture( null );
+			foreach ( (array) glob( $directory . '/*' ) as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Isolated capture fixture.
+				unlink( (string) $file );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Isolated capture fixture.
+			rmdir( $directory );
+		}
+	}
+
+	public function test_transactional_acquisition_records_its_owner_in_the_same_transaction(): void {
+		$now         = time();
+		$lock        = $this->lock_at( $now );
+		$declaration = self::bundled_declaration();
+		$store       = new GitHubSelectionStore( $this->database, 'wp_options' );
+		$store->initialize_bundled( $declaration );
+		$selection = new GitHubProviderSelection( $store, '/unused', $declaration );
+		$acquire   = fn (): ?string => $selection->without_native_mutation_hold( fn ( callable $execute ): ?string => $lock->acquire_or_reclaim_expired_sql( $selection->uses_connection( ... ), $execute, 'release_install' ) );
+		// A free lock, then an expired one reclaimed.
+		foreach ( array( null, ( $now - 3601 ) . '.000000000000000000000000000' ) as $held ) {
+			if ( null !== $held ) {
+				$this->database->option_rows['auto_updater.lock'] = $held;
+			}
+			$token = (string) $acquire();
+			self::assertSame( $token . '|release_install|' . $now, $this->database->option_rows[ self::OWNER ] );
+			self::assertSame( $token, $this->database->option_rows['auto_updater.lock'] );
+		}
+		// The record is part of the acquisition: when it cannot be written, the lock is not taken either.
+		unset( $this->database->option_rows['auto_updater.lock'], $this->database->option_rows[ self::OWNER ] );
+		$this->database->fail_query_contains = 'ON DUPLICATE KEY UPDATE';
+		try {
+			$acquire();
+			self::fail( 'A lost owner record must abort the transactional acquisition.' );
+		} catch ( DeploymentStorageFailure | DatabaseLifecycleFailure ) {
+			self::assertArrayNotHasKey( 'auto_updater.lock', $this->database->option_rows );
+		}
+	}
+
+	private static function bundled_declaration(): GitHubReplacementDeclaration {
+		return new GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+	}
+
+	private function lock_at( int $now ): WordPressUpdaterLock {
+		return new class( $now ) extends WordPressUpdaterLock {
+			public function __construct( private int $fixed_now ) {}
+
+			protected function now(): int {
+				return $this->fixed_now;
+			}
+		};
+	}
+
 	public function test_ordinary_release_override_failure_preserves_its_identity_during_stale_acquisition(): void {
 		$this->database->option_rows['auto_updater.lock'] = (string) ( time() - 7200 );
 		$failure = new RuntimeException( 'ordinary release callback' );
@@ -412,17 +599,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 	public function test_acquire_or_reclaim_expired_sql_is_atomic_inside_selection_transaction_without_cache_callbacks(): void {
 		$lock      = new WordPressUpdaterLock();
 		$store     = new GitHubSelectionStore( $this->database, 'wp_options' );
-		$bundled   = new GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
+		$bundled   = self::bundled_declaration();
 		$state     = $store->initialize_bundled( $bundled );
 		$selection = new GitHubProviderSelection( $store, '/unused', $bundled );
 
@@ -562,17 +739,7 @@ final class WordPressUpdaterLockTest extends TestCase {
 	public function test_without_native_mutation_hold_delivers_reclaimed_token_before_selection_cache_exception_and_skips_callback_on_uncertain_commit(): void {
 		$lock    = new WordPressUpdaterLock();
 		$store   = new GitHubSelectionStore( $this->database, 'wp_options' );
-		$bundled = new GitHubReplacementDeclaration(
-			array(
-				'plugin_basename'        => 'booster.php',
-				'implementation_id'      => 'bundled',
-				'compatibility_revision' => '1',
-				'provider_api_version'   => 15,
-				'api_credential_formats' => array(),
-				'webhook_signing_format' => null,
-				'facets'                 => array(),
-			)
-		);
+		$bundled = self::bundled_declaration();
 		$store->initialize_bundled( $bundled );
 		$selection = new GitHubProviderSelection( $store, '/unused', $bundled );
 

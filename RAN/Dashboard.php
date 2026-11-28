@@ -48,6 +48,9 @@ class Dashboard {
 	/** @var list<mixed> */
 	public $messages = array();
 
+	/** @var array{token: string, operation: string, started_at: int}|null The recorded owner of a lock that refused this request's action. */
+	private ?array $updater_lock_owner = null;
+
 	/** @var Booster */
 	private $booster;
 
@@ -1175,7 +1178,11 @@ class Dashboard {
 			}
 		}
 
+		\RAN\WordPress\WordPressUpdaterLock::take_refusal();
 		$outcome = $this->provider_settings->check_package_repository_branch( $type, $package );
+		if ( 'unable_to_check' === $outcome ) {
+			$this->name_refusing_lock_owner( \RAN\WordPress\WordPressUpdaterLock::take_refusal() );
+		}
 		set_transient( $marker, $outcome, 3600 );
 		BoosterLogger::log(
 			'repository branch check completed',
@@ -1488,6 +1495,19 @@ class Dashboard {
 		$this->record_message( $message, $failure, $context );
 	}
 
+	/** Name the Booster owner of a lock that refused this operator, only while that exact holder still holds it (#1180). */
+	public function name_refusing_lock_owner( ?string $holder ): void {
+		if ( null === $holder || 1 !== preg_match( \RAN\WordPress\WordPressUpdaterLock::OWNER_TOKEN, $holder ) ) {
+			return;
+		}
+		try {
+			$owner = ( new \RAN\WordPress\WordPressUpdaterLock() )->recorded_owner();
+		} catch ( Throwable ) {
+			$owner = null;
+		}
+		$this->updater_lock_owner = null !== $owner && hash_equals( $holder, $owner['token'] ) ? $owner : null;
+	}
+
 	/**
 	 * @param mixed $message Notice input is classified defensively before storage.
 	 * @param array<string, mixed> $context
@@ -1515,6 +1535,10 @@ class Dashboard {
 			);
 		}
 		$severity = $this->message_severity( $message );
+		// Any error after an action the updater lock refused names that lock's Booster owner (#1180).
+		if ( 'error' === $severity ) {
+			$this->name_refusing_lock_owner( \RAN\WordPress\WordPressUpdaterLock::take_refusal() );
+		}
 		if ( null !== $severity ) {
 			$context = array(
 				'diagnostic_id' => $this->message_diagnostic_id( $message, $severity ),
@@ -1927,6 +1951,7 @@ class Dashboard {
 		$data['name']     = $this->booster->get_name();
 
 		$data['core_self_update_development_notice'] = $this->core_self_update_development_notice;
+		$data['updater_lock_owner']                  = $this->updater_lock_owner;
 		if ( ! isset( $data['tabs'] ) ) {
 			$data['tabs'] = $this->tab_navigation( '' );
 		}

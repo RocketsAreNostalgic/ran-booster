@@ -1116,14 +1116,15 @@ final class ManagedReleaseTargetRegistrar {
 	): string {
 		$root = 'plugin' === $type
 			? ( defined( 'WP_PLUGIN_DIR' ) ? WP_PLUGIN_DIR : '' )
-			: ( function_exists( 'get_theme_root' ) ? get_theme_root() : '' );
+			// A theme in a secondary registered directory lives under its own root.
+			: ( function_exists( 'get_theme_root' ) && null !== $installed_identity ? get_theme_root( $installed_identity ) : '' );
 		if ( '' === $root || null === $installed_identity ) {
 			throw new \RuntimeException( 'The managed release metadata root is unavailable.' );
 		}
 
 		return 'plugin' === $type
-			? rtrim( $root, '/\\' ) . '/' . $installed_identity
-			: rtrim( $root, '/\\' ) . '/' . $installed_identity . '/' . $configuration->metadata_file();
+			? trailingslashit( $root ) . $installed_identity
+			: trailingslashit( $root ) . $installed_identity . '/' . $configuration->metadata_file();
 	}
 
 	private static function plugin_target_identity( string $identifier ): string {

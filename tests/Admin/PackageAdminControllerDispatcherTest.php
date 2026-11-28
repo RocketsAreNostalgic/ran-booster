@@ -44,6 +44,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
+use WP_Error;
 
 final class PackageAdminControllerDispatcherTest extends TestCase {
 
@@ -67,7 +68,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );
 		$expected = 'ref_not_found' === $reason ? 'The selected branch could not be found. Check the branch name on the provider.' : 'The Git provider redirected the request somewhere that is not allowed.';
-		$dashboard->expects( self::once() )->method( 'add_failure_message' )->with( self::callback( static fn ( mixed $message ): bool => is_array( $message ) && $expected === $message['message'] ) );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' )->with( self::callback( static fn ( mixed $message ): bool => $message instanceof WP_Error && $expected === $message->get_error_message() ) );
 		$request               = $this->unchanged_edit_request();
 		$request['stylesheet'] = 'fixture';
 		$result                = ( new PackageAdminController( repositories: new PackageRepositoryRequestResolver( $providers ), plugins: new EditBoundaryPluginRepository( $package ), themes: new EditBoundaryThemeRepository( $package ), providers: $providers ) )->manage( $dashboard, 'edit-' . $type, $request, true );
@@ -234,8 +235,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			->method( 'add_failure_message' )
 			->with(
 				self::callback(
-					static fn ( mixed $message ): bool => is_array( $message )
-						&& 'GitHub is limiting lookups from this site. Try again later. Nothing was saved.' === $message['message']
+					static fn ( mixed $message ): bool => $message instanceof WP_Error
+						&& 'GitHub is limiting lookups from this site. Try again later. Nothing was saved.' === $message->get_error_message()
 				)
 			);
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );
@@ -298,8 +299,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	public function test_a_paused_refusal_links_the_setting_says_no_files_were_changed_and_logs_only_its_code(): void {
 		$captured = $this->paused_refusal();
 
-		self::assertIsArray( $captured[0] );
-		self::assertSame( 'Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>. No files were changed.', $captured[0]['message'] );
+		self::assertInstanceOf( \WP_Error::class, $captured[0] );
+		self::assertSame( 'Updates are paused by a <a href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>. No files were changed.', $captured[0]->get_error_message() );
 		self::assertSame(
 			array(
 				'operation'    => 'update-plugin',
@@ -314,8 +315,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => false );
 		$captured                                 = $this->paused_refusal();
 
-		self::assertIsArray( $captured[0] );
-		self::assertSame( 'Updates are paused by a site setting. No files were changed.', $captured[0]['message'] );
+		self::assertInstanceOf( \WP_Error::class, $captured[0] );
+		self::assertSame( 'Updates are paused by a site setting. No files were changed.', $captured[0]->get_error_message() );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
@@ -324,8 +325,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = true;
 		$captured                                        = $this->paused_refusal();
 
-		self::assertIsArray( $captured[0] );
-		self::assertStringContainsString( '<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>', $captured[0]['message'] );
+		self::assertInstanceOf( \WP_Error::class, $captured[0] );
+		self::assertStringContainsString( '<a href="https://example.test/wp-admin/network/admin.php?page=ran-booster-settings#ran-booster-general-branch_sources">site setting</a>', $captured[0]->get_error_message() );
 	}
 
 	/** @return array{0: \WP_Error|array<string, mixed>|null, 1: array<string, string>} */
@@ -441,8 +442,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 
 		self::assertFalse( $result );
-		self::assertIsArray( $captured[0] );
-		self::assertSame( 'ran_booster_refused_provider_failed', $captured[0]['code'] );
+		self::assertInstanceOf( \WP_Error::class, $captured[0] );
+		self::assertSame( 'ran_booster_refused_provider_failed', $captured[0]->get_error_code() );
 		self::assertSame(
 			array(
 				'operation'    => 'install-plugin',
@@ -455,8 +456,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$messages = array(
 			array(
 				'type'    => 'error',
-				'code'    => $captured[0]['code'],
-				'message' => $captured[0]['message'],
+				'code'    => $captured[0]->get_error_code(),
+				'message' => $captured[0]->get_error_message(),
 			),
 		);
 		ob_start();
@@ -707,9 +708,9 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$dashboard            = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )->method( 'add_failure_message' )->with(
 			self::callback(
-				static fn ( mixed $message ): bool => is_array( $message )
-				&& 'ran_booster_unavailable_package_provider' === $message['code']
-				&& 'Booster could not verify the managed package Git provider. No changes were made.' === $message['message']
+				static fn ( mixed $message ): bool => $message instanceof WP_Error
+				&& 'ran_booster_unavailable_package_provider' === $message->get_error_code()
+				&& 'Booster could not verify the managed package Git provider. No changes were made.' === $message->get_error_message()
 			),
 			self::isInstanceOf( \TypeError::class )
 		);
@@ -762,8 +763,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			->method( 'add_failure_message' )
 			->with(
 				self::callback(
-					static fn ( mixed $message ): bool => is_array( $message )
-						&& 'ran_booster_unavailable_package_provider' === $message['code']
+					static fn ( mixed $message ): bool => $message instanceof WP_Error
+						&& 'ran_booster_unavailable_package_provider' === $message->get_error_code()
 				)
 			);
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );
@@ -878,8 +879,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			->method( 'add_failure_message' )
 			->with(
 				self::callback(
-					static fn ( mixed $message ): bool => is_array( $message )
-						&& 'Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments.' === $message['message']
+					static fn ( mixed $message ): bool => $message instanceof WP_Error
+						&& 'Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments.' === $message->get_error_message()
 				)
 			);
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );
@@ -1003,8 +1004,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			->method( 'add_failure_message' )
 			->with(
 				self::callback(
-					static fn ( mixed $message ): bool => is_array( $message )
-						&& 'GitHub is limiting lookups from this site. Try again later. Nothing was saved.' === $message['message']
+					static fn ( mixed $message ): bool => $message instanceof WP_Error
+						&& 'GitHub is limiting lookups from this site. Try again later. Nothing was saved.' === $message->get_error_message()
 				)
 			);
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );
@@ -1027,8 +1028,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			->method( 'add_failure_message' )
 			->with(
 				self::callback(
-					static fn ( mixed $message ): bool => is_array( $message )
-						&& 'The repository changed identity. Review the package source.' === $message['message']
+					static fn ( mixed $message ): bool => $message instanceof WP_Error
+						&& 'The repository changed identity. Review the package source.' === $message->get_error_message()
 				),
 				self::anything(),
 				self::callback( static fn ( array $context ): bool => 'repository_identity_changed' === ( $context['reason'] ?? null ) )
@@ -1108,7 +1109,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$dashboard->expects( self::once() )
 			->method( 'add_failure_message' )
 			->with(
-				self::callback( static fn ( array $notice ): bool => ! str_contains( print_r( $notice, true ), 'sntl-cred' ) ), // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Flattens the notice data for the leak assertion.
+				self::callback( static fn ( \WP_Error $notice ): bool => ! str_contains( $notice->get_error_message() . print_r( $notice->get_error_data(), true ), 'sntl-cred' ) ), // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Flattens the notice data for the leak assertion.
 				self::anything(),
 				self::callback( static fn ( array $context ): bool => ! str_contains( implode( ' ', $context ), 'sntl-cred' ) )
 			);
@@ -1147,13 +1148,8 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 	}
 
 	#[DataProvider( 'coded_package_failures' )]
-	public function test_each_package_operation_failure_carries_its_closed_feedback_key( string $action, string $feedback, bool $save_lookup ): void {
-		$recorded  = array();
-		$record    = static function ( mixed $message ) use ( &$recorded ): void {
-			$recorded[] = $message;
-		};
-		$dashboard = $this->createMock( Dashboard::class );
-		$dashboard->method( 'add_failure_message' )->willReturnCallback( $record );
+	public function test_each_package_operation_failure_notice_carries_its_closed_feedback_key( string $action, string $feedback, bool $save_lookup ): void {
+		$dashboard = $this->message_dashboard();
 		if ( $save_lookup ) {
 			$providers = new ProviderRegistry( array( new FailingLookupProvider( 404 ) ) );
 			( new PackageAdminController(
@@ -1163,13 +1159,27 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			) )->manage( $dashboard, $action, $this->unchanged_edit_request(), true );
 		} else {
 			// Unconfigured operations fail every action through the manual failure path.
-			( new PackageAdminController() )->perform( $dashboard, $action, array(), array(), $record );
+			( new PackageAdminController() )->perform( $dashboard, $action, array(), array(), static fn ( \WP_Error|array $message ) => $dashboard->add_message( $message ) );
 		}
 
-		self::assertCount( 1, $recorded );
-		self::assertIsArray( $recorded[0] );
-		self::assertSame( 'error', $recorded[0]['type'] );
-		self::assertSame( $feedback, $recorded[0]['feedback'] );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( 'error', $dashboard->messages[0]['type'] );
+		self::assertSame( $feedback, $dashboard->messages[0]['feedback'] );
+	}
+
+	public function test_only_a_closed_feedback_key_in_error_data_reaches_the_notice(): void {
+		$dashboard = $this->message_dashboard();
+		$dashboard->add_message( new \WP_Error( 'ran_booster_example', 'Failed.', array( 'feedback' => 'Not a <key>' ) ) );
+		$dashboard->add_message( new \WP_Error( 'ran_booster_example', 'Failed.', 'package_edit_failed' ) );
+
+		self::assertArrayNotHasKey( 'feedback', $dashboard->messages[0] );
+		self::assertArrayNotHasKey( 'feedback', $dashboard->messages[1] );
+	}
+
+	private function message_dashboard(): Dashboard {
+		return new class() extends Dashboard {
+			public function __construct() {}
+		};
 	}
 
 	#[\PHPUnit\Framework\Attributes\TestWith( array( '1' ) )]

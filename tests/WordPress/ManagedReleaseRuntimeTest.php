@@ -719,6 +719,39 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array( '1700000002' ), $lock->releases );
 	}
 
+	public function test_native_begin_refuses_a_second_owner_and_keeps_the_first(): void {
+		[ $registrar, $lock ] = $this->native_plugin_registrar( $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL ) );
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+		try {
+			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+			self::fail( 'A second begin replaced the native owner.' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'GitHub native mutation already has an owner.', $exception->getMessage() );
+		}
+		self::assertSame( array(), $lock->releases );
+		$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'uncertain' );
+		self::assertSame( array( '1700000002' ), $lock->releases );
+	}
+
+	public function test_native_completion_rejects_an_unknown_outcome_before_releasing_the_lock(): void {
+		[ $registrar, $lock ] = $this->native_plugin_registrar( $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL ) );
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+		try {
+			$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'succeeded' );
+			self::fail( 'An unknown outcome completed the native mutation.' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'GitHub native completion outcome is invalid.', $exception->getMessage() );
+		}
+		self::assertSame( array(), $lock->releases );
+		// State is kept, so the owner can still finish with a known outcome.
+		$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'uncertain' );
+		self::assertSame( array( '1700000002' ), $lock->releases );
+	}
+
 	public function test_native_completion_rejects_wrong_owner_and_releases_the_lock_only_after_completion(): void {
 		[ $registrar, $lock ] = $this->native_plugin_registrar( $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL ) );
 		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );
@@ -727,7 +760,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		try {
 			$registrar->complete_provider_native_mutation( 'wrong', 'plugin', self::NATIVE_PLUGIN, 'verified_success' );
 			self::fail( 'Wrong owner released the lock.' );
-		} catch ( \RuntimeException ) {
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'GitHub native completion owner changed.', $exception->getMessage() );
 			self::assertSame( array(), $lock->releases );
 		}
 		$lock->release_succeeds = false;
@@ -961,7 +995,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			try {
 				$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 				self::fail( 'Staging changed captured authority.' );
-			} catch ( \RuntimeException ) {
+			} catch ( \RuntimeException $exception ) {
+				self::assertSame( 'The managed release authority changed after staging.', $exception->getMessage() );
 				self::assertSame( array(), $lock->releases );
 			}
 		}
@@ -975,7 +1010,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		try {
 			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 			self::fail( 'Revoked mutation permission admitted.' );
-		} catch ( \RuntimeException ) {
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'RAN Booster package mutations are unavailable while WP Pusher is active. Deactivate WP Pusher before continuing.', $exception->getMessage() );
 			self::assertSame( array(), $lock->releases );
 		}
 	}
@@ -988,7 +1024,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		try {
 			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
 			self::fail( 'Unavailable target admitted.' );
-		} catch ( \RuntimeException ) {
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'The managed release authority changed after staging.', $exception->getMessage() );
 			self::assertSame( array(), $lock->releases );
 		}
 	}

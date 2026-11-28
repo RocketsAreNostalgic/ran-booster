@@ -27,7 +27,7 @@ target collision and provider preflight check succeeds. It preserves the install
 files and activation state and records a Disabled deployment policy. It never
 claims the installed bytes equal the exported release. Absent Release targets,
 selected Release rows, and every readiness failure remain refused; installation
-is reserved for Stage 2. This changes no Portability API 4 interface.
+is reserved for Stage 2. This changes no Portability API 5 interface.
 
 **Existing release baseline:** the remaining reference describes the bounded implementation published
 in [Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).

@@ -138,39 +138,6 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 	}
 
 	/**
-	 * Atomically take over an interrupted operation's updater lock (or an absent lock row) using a
-	 * fresh WordPress-compatible timestamp token guaranteed to differ from $expected_owner so
-	 * concurrent recovery requests against the same reviewed hold cannot mistake the active recovery
-	 * lock for the interrupted owner's lock.
-	 */
-	public function acquire_replacing_owner( string $expected_owner, string $owner_operation = self::DEFAULT_OPERATION ): string {
-		self::$refused_by = null;
-		$options_table    = $this->require_options_table();
-		$now              = $this->now();
-		do {
-			$token = $this->new_token();
-		} while ( $token === $expected_owner );
-
-		if ( $this->replace_lock_value( $options_table, $expected_owner, $token ) || $this->insert_lock_value( $options_table, $token ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
-			return $this->recorded( $token, $owner_operation ) ?? throw $this->contention_failure();
-		}
-
-		$stored = $this->read_lock_value( $options_table );
-		if ( ! self::valid_token( $stored ) || self::live_token( $stored, $now ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
-			throw $this->contention_failure( $stored );
-		}
-		if ( ! $this->replace_lock_value( $options_table, $stored, $token ) ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
-			throw $this->contention_failure();
-		}
-
-		// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed internal contention failure without database or request input.
-		return $this->recorded( $token, $owner_operation ) ?? throw $this->contention_failure();
-	}
-
-	/**
 	 * The Booster operation holding the lock, only while its record names the exact current lock row. Elapsed
 	 * time is never evidence that the operation stopped.
 	 *
@@ -429,48 +396,6 @@ class WordPressUpdaterLock extends BranchWordPressUpdaterLock {
 			throw DeploymentStorageFailure::unavailable();
 		}
 		return $wpdb->options;
-	}
-
-	private function replace_lock_value( string $options_table, string $expected, string $replacement ): bool {
-		global $wpdb;
-		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'query' ) ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		try {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic byte-exact compare-and-set handoff for the uncached auto_updater.lock row.
-			$result = $wpdb->query( $wpdb->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s AND CAST(option_value AS BINARY) = CAST(%s AS BINARY)', $options_table, $replacement, self::OPTION_NAME, $expected ) );
-		} catch ( Throwable ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		if ( false === $result ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		if ( 1 === $result ) {
-			$this->invalidate_lock_cache();
-			return true;
-		}
-		return false;
-	}
-
-	private function insert_lock_value( string $options_table, string $token ): bool {
-		global $wpdb;
-		if ( ! is_object( $wpdb ) || ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'query' ) ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		try {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic absent-row acquisition for the uncached auto_updater.lock row.
-			$result = $wpdb->query( $wpdb->prepare( 'INSERT IGNORE INTO %i (option_name, option_value, autoload) VALUES (%s, %s, %s)', $options_table, self::OPTION_NAME, $token, 'off' ) );
-		} catch ( Throwable ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		if ( false === $result ) {
-			throw DeploymentStorageFailure::unavailable();
-		}
-		if ( 1 === $result ) {
-			$this->invalidate_lock_cache();
-			return true;
-		}
-		return false;
 	}
 
 	private function read_lock_value( string $options_table, string $option_name = self::OPTION_NAME ): ?string {

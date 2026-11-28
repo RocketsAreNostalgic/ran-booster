@@ -53,118 +53,11 @@ class ManagedReleaseStore {
 		return ManagedReleaseConfiguration::from_json( $value );
 	}
 
-	public function connection(): ?object {
-		return $this->database;
-	}
-
 	public function require_transition_ready(): void {
 		PackageMutationGuard::assert_package_mutation_allowed();
 		$this->write_connection();
 	}
 
-	/**
-	 * Run the source CAS transition inside a caller-owned pinned single-session transaction
-	 * (such as GitHubSelectionStore::selection_transaction()). Call require_transition_ready()
-	 * for WordPress mutation-guard and storage readiness checks before opening the transaction;
-	 * the caller owns COMMIT and ROLLBACK.
-	 *
-	 * @param callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null) $execute
-	 */
-	public function transition_in_transaction(
-		string $type,
-		string $identifier,
-		PackageSource $expected_source,
-		int $expected_revision,
-		PackageSource $new_source,
-		?ManagedReleaseConfiguration $configuration,
-		int $user_id,
-		string $expected_adoption_token,
-		callable $execute
-	): bool {
-		RuntimeSupport::assert_managed_operations_allowed();
-		if ( ! $this->valid_transition_arguments( $type, $identifier, $expected_source, $expected_revision, $new_source, $configuration, $user_id, $expected_adoption_token ) ) {
-			return false;
-		}
-		$before = $this->row( $type, $identifier, true, $expected_adoption_token, $execute );
-		if ( PackageSource::RELEASE_ASSET === $new_source ) {
-			if ( DeploymentPolicy::DISABLED->value === ( $before->deployment_policy ?? null ) ) {
-				return false;
-			}
-			$this->assert_release_subdirectory( $before );
-		}
-		$context = $this->transition_before_context( $before, $expected_adoption_token, $expected_source, $expected_revision );
-		if ( null === $context ) {
-			return false;
-		}
-		$assessment = ( new RepositorySourceGuard( $this->database, $this->lifecycle ) )->assess(
-			$context['provider'],
-			$context['provider_repository_id'],
-			self::type_id( $type ),
-			$identifier,
-			$new_source,
-			true,
-			$execute
-		);
-		if ( ! $assessment['allowed'] ) {
-			if ( 'repository_source_unavailable' === $assessment['code'] ) {
-				throw new ManagedReleaseRepositorySourceUnavailable( 'The repository source relationship is unavailable.' );
-			}
-			return false;
-		}
-		$policy      = is_string( $before->deployment_policy ?? null ) ? $before->deployment_policy : '';
-		$next_policy = self::next_transition_policy( $policy );
-		$config_json = $configuration?->to_json();
-		$sets        = array(
-			'source = %s',
-			'source_revision = %d',
-			'source_previous = %s',
-			'source_changed_at = %s',
-		);
-		/** @var list<int|string> $arguments */
-		$arguments = array(
-			ran_booster_table_name(),
-			$new_source->value,
-			$expected_revision + 1,
-			$expected_source->value,
-			( $this->clock )(),
-		);
-		if ( $user_id > 0 ) {
-			$sets[]      = 'source_changed_by = %d';
-			$arguments[] = $user_id;
-		} else {
-			$sets[] = 'source_changed_by = NULL';
-		}
-		$sets[]      = 'deployment_policy = %s';
-		$arguments[] = $next_policy;
-		if ( null !== $config_json ) {
-			$sets[]      = 'release_configuration = %s';
-			$arguments[] = $config_json;
-		} else {
-			$sets[] = 'release_configuration = NULL';
-		}
-		array_push(
-			$arguments,
-			$expected_adoption_token,
-			self::type_id( $type ),
-			$identifier,
-			$expected_source->value,
-			$expected_revision,
-			$policy
-		);
-		$updated = $execute(
-			'UPDATE %i SET ' . implode( ', ', $sets ) . ' WHERE CAST(adoption_token AS BINARY) = CAST(%s AS BINARY) AND package_type = %d AND CAST(package AS BINARY) = CAST(%s AS BINARY) AND source = %s AND source_revision = %d AND deployment_policy = %s',
-			$arguments,
-			'affected'
-		);
-		if ( 1 !== $updated ) {
-			return false;
-		}
-
-		$after = $this->row( $type, $identifier, true, $expected_adoption_token, $execute );
-		return $this->transition_after_matches( $after, $expected_adoption_token, $new_source, $expected_revision, $expected_source, $config_json, $next_policy );
-	}
-
-	/** @param (callable(object,string,string):void)|null $native_complete Protected native custody removal in this transaction, before the package row lock. */
 	public function transition(
 		string $type,
 		string $identifier,
@@ -173,8 +66,7 @@ class ManagedReleaseStore {
 		PackageSource $new_source,
 		?ManagedReleaseConfiguration $configuration,
 		int $user_id,
-		string $expected_adoption_token,
-		?callable $native_complete = null
+		string $expected_adoption_token
 	): bool {
 		PackageMutationGuard::assert_package_mutation_allowed();
 		if ( ! $this->valid_transition_arguments( $type, $identifier, $expected_source, $expected_revision, $new_source, $configuration, $user_id, $expected_adoption_token ) ) {
@@ -192,11 +84,13 @@ class ManagedReleaseStore {
 			return false;
 		}
 		try {
-			if ( null !== $native_complete ) {
-				$native_complete( $database, $type, $identifier );
-			}
 			$before = $this->row( $type, $identifier, true, $expected_adoption_token );
 			if ( PackageSource::RELEASE_ASSET === $new_source ) {
+				// A disabled package never switches to release, whoever asks (#1264).
+				if ( DeploymentPolicy::DISABLED->value === ( $before->deployment_policy ?? null ) ) {
+					$database->query( 'ROLLBACK' );
+					return false;
+				}
 				$this->assert_release_subdirectory( $before );
 			}
 			$context = $this->transition_before_context( $before, $expected_adoption_token, $expected_source, $expected_revision );
@@ -379,24 +273,8 @@ class ManagedReleaseStore {
 		}
 	}
 
-	/** @param (callable(string, list<int|string>, 'affected'|'var'|'results'): (int|string|list<object>|null))|null $execute */
-	private function row( string $type, string $identifier, bool $lock = false, ?string $token = null, ?callable $execute = null ): object {
+	private function row( string $type, string $identifier, bool $lock = false, ?string $token = null ): object {
 		$this->assert_identity( $type, $identifier );
-		if ( null !== $execute ) {
-			$arguments = null === $token
-				? array( ran_booster_table_name(), self::type_id( $type ), $identifier )
-				: array( ran_booster_table_name(), self::type_id( $type ), $identifier, $token );
-			$rows      = $execute(
-				'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND CAST(package AS BINARY) = CAST(%s AS BINARY)' . ( null !== $token ? ' AND CAST(adoption_token AS BINARY) = CAST(%s AS BINARY)' : '' ) . ' LIMIT 2' . ( $lock ? ' FOR UPDATE' : '' ),
-				$arguments,
-				'results'
-			);
-			if ( ! is_array( $rows ) || 1 !== count( $rows ) ) {
-				throw new RuntimeException( 'The managed release package row is unavailable.' );
-			}
-
-			return $rows[0];
-		}
 		$database  = $this->read_connection();
 		$arguments = null === $token
 			? array( ran_booster_table_name(), self::type_id( $type ), $identifier )

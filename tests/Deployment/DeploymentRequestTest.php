@@ -49,6 +49,15 @@ final class DeploymentRequestTest extends TestCase {
 
 		self::assertSame( $request->to_json(), $restored->to_json() );
 		self::assertArrayNotHasKey( 'provider_selection_generation', $restored->to_array() );
+
+		foreach ( array( '-1', '"7"', 'null', '7.0', '7 ' ) as $malformed ) {
+			try {
+				DeploymentRequest::from_json( str_replace( '"provider_selection_generation":7', '"provider_selection_generation":' . $malformed, $stored ) );
+				self::fail( 'A malformed retired selection generation decoded.' );
+			} catch ( InvalidArgumentException $failure ) {
+				self::assertSame( 'The stored deployment request is invalid.', $failure->getMessage() );
+			}
+		}
 	}
 
 	public function test_initial_identity_rejects_noncanonical_or_wrong_slug(): void {

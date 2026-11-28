@@ -77,8 +77,11 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 			self::assertInstanceOf( \Closure::class, $guard );
 			self::assertSame( $selection, ( new \ReflectionFunction( $guard ) )->getClosureThis() );
 		}
-		$webhooks = $container->make( \RAN\Webhook\WebhookProcessor::class );
-		self::assertSame( $selection, ( new \ReflectionProperty( $webhooks, 'selection' ) )->getValue( $webhooks ) );
+		// provider_refusal() allows an attempt when no selection is injected, so the wiring is pinned here.
+		foreach ( array( \RAN\Deployment\DeploymentAttemptRepository::class, \RAN\Webhook\WebhookProcessor::class ) as $consumer_type ) {
+			$consumer = $container->make( $consumer_type );
+			self::assertSame( $selection, ( new \ReflectionProperty( $consumer, 'selection' ) )->getValue( $consumer ) );
+		}
 		$container->bind( \RAN\Dashboard::class, $this->createStub( \RAN\Dashboard::class ) );
 		foreach ( array( \RAN\Admin\ProviderSettingsPresenter::class, \RAN\Admin\ProviderProfileAdminController::class ) as $type ) {
 			$consumer = $container->make( $type );
@@ -88,6 +91,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 		$profiles          = $container->make( \RAN\Admin\ProviderProfileAdminController::class );
 		$adoption_attempts = ( new \ReflectionProperty( $profiles, 'deployment_attempts' ) )->getValue( $profiles );
 		self::assertInstanceOf( \RAN\Deployment\DeploymentAttemptRepository::class, $adoption_attempts );
+		self::assertSame( $selection, ( new \ReflectionProperty( $adoption_attempts, 'selection' ) )->getValue( $adoption_attempts ) );
 		self::assertSame( $container->make( \RAN\WordPress\WordPressUpdaterLock::class ), ( new \ReflectionProperty( $profiles, 'updater_lock' ) )->getValue( $profiles ) );
 		self::assertTrue( $container->make( \RAN\Admin\AdminTabRegistry::class )->resolve( 'gh' )->is_provider() );
 		$verifier = $container->make( \RAN\Portability\BlueprintRepositoryVerifier::class );

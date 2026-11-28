@@ -108,6 +108,10 @@ final readonly class DeploymentRequest {
 		}
 		// Fail-safe for attempt rows stored before #1253: drop the retired selection generation and check the rest as canonical.
 		if ( is_array( $data ) && array_key_exists( 'provider_selection_generation', $data ) ) {
+			// The old encoder stored only a non-negative int, in canonical JSON.
+			if ( ! is_int( $data['provider_selection_generation'] ) || $data['provider_selection_generation'] < 0 || self::encode( $data ) !== $json ) {
+				throw new InvalidArgumentException( 'The stored deployment request is invalid.' );
+			}
 			unset( $data['provider_selection_generation'] );
 			$json = self::encode( $data );
 		}

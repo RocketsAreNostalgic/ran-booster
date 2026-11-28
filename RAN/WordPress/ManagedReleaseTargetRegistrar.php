@@ -468,6 +468,9 @@ final class ManagedReleaseTargetRegistrar {
 		if ( null === $pending || 'gh' !== $pending['authority']['provider'] || null === $pending['lock'] ) {
 			throw new \RuntimeException( 'GitHub native lock ownership is unavailable.' );
 		}
+		if ( isset( $pending['native_owner'] ) ) {
+			throw new \RuntimeException( 'GitHub native mutation already has an owner.' );
+		}
 		if ( $pending['lock'] !== $this->updater_lock->current_token()
 			|| ( $pending['automatic'] && ( ! function_exists( 'doing_action' ) || ! doing_action( 'wp_maybe_auto_update' ) ) ) ) {
 			throw new \RuntimeException( 'GitHub native authority is unavailable.' );
@@ -497,6 +500,9 @@ final class ManagedReleaseTargetRegistrar {
 		$switch  = $this->switches[ $key ] ?? null;
 		if ( null === $pending || ( $pending['native_owner'] ?? null ) !== $owner ) {
 			throw new \RuntimeException( 'GitHub native completion owner changed.' );
+		}
+		if ( ! in_array( $outcome, array( 'verified_success', 'uncertain' ), true ) ) {
+			throw new \RuntimeException( 'GitHub native completion outcome is invalid.' );
 		}
 		$committed = false;
 		$refused   = 'verified_success' === $outcome ? 'commit_refused' : 'outcome_uncertain';

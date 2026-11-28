@@ -622,6 +622,23 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function test_portability_api_five_host_hides_install_for_the_api_four_migrator(): void {
+		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 5 );
+		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
+
+		$output = $this->render();
+
+		self::assertSame( 1, substr_count( $output, 'class="compatibility-incompatible"' ) );
+		self::assertSame( 2, substr_count( $output, 'The selected version 0.1.0-beta.11 release requires a different version of Booster. Review its documentation before installing or updating.' ) );
+		self::assertSame( 1, substr_count( $output, '>Install</button>' ) );
+		self::assertStringContainsString( 'name="extension_id" value="ran-booster-bitbucket"', $output );
+		self::assertStringNotContainsString( 'name="extension_id" value="ran-booster-wp-pusher-migrator"', $output );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_inactive_card_offers_nonce_bound_activation_and_plugin_search(): void {
 		$this->define_apis_compatible_with_existing_extension_catalogue();
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array(

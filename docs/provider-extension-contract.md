@@ -205,18 +205,19 @@ callback URL and one saved credential ID:
   fails. No matching hook succeeds with delivery `absent`.
 - `ping` asks the provider to ping the single matching hook. Success means the
   request was accepted, not that a delivery arrived. No matching hook fails with
-  delivery `absent`. A provider with no remote ping endpoint fails with its own
-  code and remediation.
+  delivery `absent`. A provider with no remote ping endpoint fails at once with
+  its own code and remediation, without contacting the remote.
 - `delete` removes the single matching hook. Success requires delivery `absent`,
   proven by a readable hook list without a match, so a hook that was already
   gone is a success.
 
-Before it lists or changes any hook, every action confirms remotely that the
-repository still resolves to the stable repository ID. A mismatch, or a
-repository that cannot be read, fails with code `repository_identity_mismatch`
-or a provider-owned code; no hook is read or changed and no secret is sent. The
-provider then reads the repository's complete hook list, and an unreadable,
-invalid or incomplete list fails.
+Before it lists or changes any hook, every action that contacts the provider
+confirms remotely that the repository still resolves to the stable repository
+ID. It fails with `repository_identity_mismatch` on a mismatch, or with a
+provider-owned code when the repository cannot be read; either way no hook is
+read or changed and no secret is sent. The provider then reads the
+repository's complete hook list, and an unreadable, invalid or incomplete list
+fails.
 
 There is no hook ID in the contract. A hook matches only when its configured
 delivery URL is byte-for-byte identical to the callback URL Core supplies;
@@ -228,8 +229,9 @@ is informational; Core never stores it or passes it back.
 
 Every refusal before a remote change has state `failed`, never `ambiguous` or
 `partial`, because Core releases a signing secret it created for the attempt
-only after a `failed` result. After a remote change, an unconfirmed outcome is
-`partial` or `ambiguous` unless the provider proves the change was undone.
+only after a `failed` result. Once a remote change is attempted, an unconfirmed
+outcome is `partial` or `ambiguous` unless the provider proves that no remote
+change remains or that it was undone.
 Results reuse `RepositoryWebhookOperationResult` with its existing bounds. No
 action reports `verified`: only an authenticated inbound delivery verifies the
 signing secret. There are no read-only assessment methods; a credential that

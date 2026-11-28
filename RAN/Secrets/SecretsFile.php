@@ -92,7 +92,7 @@ class SecretsFile {
 	public function credentials_for( ProviderCode|string $provider ): ProviderCredentialStore {
 		$provider = $provider instanceof ProviderCode ? $provider : ProviderCode::parse( $provider );
 
-		return new BoundProviderCredentialStore( $this, $provider );
+		return new BoundProviderCredentialStore( $this, $provider, $this->provider_policies );
 	}
 
 	/**

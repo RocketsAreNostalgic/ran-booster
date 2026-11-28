@@ -417,7 +417,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptReasonJournal, A
 
 	public function installed( BranchDeploymentDeclaration $deployment ): array {
 		$this->assert_declaration( $deployment );
-		$package    = $this->installed_package( $deployment->package_type, $deployment->slug );
+		$package = $this->installed_package( $deployment->package_type, $deployment->slug );
+		$known   = $deployment->installed_identifier;
+		// In a shared folder the folder lookup can return a sibling plugin; an update re-reads its exact target.
+		if ( null !== $known && 'plugin' === $deployment->package_type && $package->get_identifier() !== $known ) {
+			$package = $this->plugins->installed_plugin_from_file( $known );
+		}
 		$identifier = (string) $package->get_identifier();
 		if ( '' === $identifier || ( null !== $this->attempt->get_request()->expected_identifier && $identifier !== $this->attempt->get_request()->expected_identifier ) ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );

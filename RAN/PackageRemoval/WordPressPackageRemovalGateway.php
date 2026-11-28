@@ -256,7 +256,8 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 			return false;
 		}
 		$path = $root . DIRECTORY_SEPARATOR . $relative;
-		if ( is_link( $path ) ) {
+		// is_link() follows a trailing separator, so test the entry itself.
+		if ( is_link( rtrim( $path, '/\\' ) ) ) {
 			return false;
 		}
 		$resolved = realpath( $path );

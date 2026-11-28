@@ -117,7 +117,7 @@ final class AdmittedBranchPathsTest extends TestCase {
 			$attempt,
 			$attempts,
 			$plugins,
-			new PathsThemeRepository(),
+			$this->createStub( ThemeRepository::class ),
 			new ProviderRegistry(),
 			new RepositorySourceGuard( new RepositorySourceGuardDatabase(), $this->createStub( Database::class ) ),
 			new WordPressUpdaterLock(),
@@ -128,6 +128,8 @@ final class AdmittedBranchPathsTest extends TestCase {
 		$declaration = $adapter->declaration();
 		self::assertSame( 'shared/two.php', $adapter->frozen_target( $declaration, false )['identifier'] ?? null );
 		$adapter->recheck_managed( $declaration );
+		// After the update the folder lookup finds the sibling first; the postcondition reads the exact target.
+		self::assertSame( 'shared/two.php', $adapter->installed( $declaration )['identifier'] );
 	}
 
 	public function test_release_custody_copies_under_the_word_press_temp_directory_without_a_doubled_separator(): void {
@@ -207,9 +209,17 @@ final class PathsPluginRepository extends PluginRepository {
 	public function booster_plugin_from_file( $file ) {
 		return $this->managed[ (string) $file ] ?? throw new RuntimeException( 'Missing managed plugin.' );
 	}
-}
 
-// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- This lane-local collaborator stays beside the only test that uses it.
-final class PathsThemeRepository extends ThemeRepository {
-	public function __construct() {}
+	public function from_slug( $slug ) {
+		foreach ( $this->managed as $plugin ) {
+			if ( (string) $plugin->get_slug() === (string) $slug ) {
+				return $plugin;
+			}
+		}
+		throw new RuntimeException( 'Missing installed plugin.' );
+	}
+
+	public function installed_plugin_from_file( string $file ): Plugin {
+		return $this->managed[ $file ] ?? throw new RuntimeException( 'Missing installed plugin.' );
+	}
 }
